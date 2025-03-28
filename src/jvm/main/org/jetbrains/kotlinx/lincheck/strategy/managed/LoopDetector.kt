@@ -896,8 +896,8 @@ private class ReplayModeLoopDetectorHelper(
  */
 internal fun afterSpinCycleTraceCollected(
     trace: MutableList<TracePoint>,
-    callStackTrace: List<CallStackTraceElement>,
-    spinCycleMethodCallsStackTraces: List<List<CallStackTraceElement>>,
+    callStackTrace: List<MethodCallTracePoint>,
+    spinCycleMethodCallsStackTraces: List<List<MethodCallTracePoint>>,
     iThread: Int,
     currentActorId: Int,
     beforeMethodCallSwitch: Boolean
@@ -926,13 +926,13 @@ internal fun afterSpinCycleTraceCollected(
         var firstI = spinCycleFirstTracePointCallStackTrace.lastIndex
         var count = 0
         while (firstI >= 0) {
-            val methodInvocationHash = spinCycleFirstTracePointCallStackTrace[firstI].tracePoint.methodInvocationHash
+            val methodInvocationHash = spinCycleFirstTracePointCallStackTrace[firstI].methodInvocationHash
             // Comparing corresponding calls.
-            if (methodInvocationHash != currentCallStackTrace[currentI].tracePoint.methodInvocationHash) break
+            if (methodInvocationHash != currentCallStackTrace[currentI].methodInvocationHash) break
             // Check for the last trace point before the cycle.
             if ((tracePointBeforeCycle != null) &&
                 (tracePointBeforeCycle.callStackTrace.lastIndex >= firstI) &&
-                (tracePointBeforeCycle.callStackTrace[firstI].tracePoint.methodInvocationHash == methodInvocationHash)
+                (tracePointBeforeCycle.callStackTrace[firstI].methodInvocationHash == methodInvocationHash)
             ) break
 
             currentI--
@@ -952,16 +952,16 @@ internal fun afterSpinCycleTraceCollected(
 /**
  * @return Max common prefix of the [StackTraceElement] of the provided [spinCycleTracePoints]
  */
-private fun getCommonMinStackTrace(spinCycleTracePoints: List<TracePoint>, spinCycleMethodCallsStackTraces: List<List<CallStackTraceElement>>): List<CallStackTraceElement> {
+private fun getCommonMinStackTrace(spinCycleTracePoints: List<TracePoint>, spinCycleMethodCallsStackTraces: List<List<MethodCallTracePoint>>): List<MethodCallTracePoint> {
     val callStackTraces = spinCycleTracePoints.map { it.callStackTrace } + spinCycleMethodCallsStackTraces
     var count = 0
     outer@while (true) {
         if (count == callStackTraces[0].size) break
-        val stackTraceElement = callStackTraces[0][count].tracePoint.stackTraceElement
+        val stackTraceElement = callStackTraces[0][count].stackTraceElement
         for (i in 1 until callStackTraces.size) {
             val traceElements = callStackTraces[i]
             if (count == traceElements.size) break@outer
-            if (stackTraceElement != traceElements[count].tracePoint.stackTraceElement) break@outer
+            if (stackTraceElement != traceElements[count].stackTraceElement) break@outer
         }
         count++
     }

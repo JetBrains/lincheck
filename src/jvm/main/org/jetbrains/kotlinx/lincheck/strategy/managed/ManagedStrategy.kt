@@ -528,7 +528,7 @@ abstract class ManagedStrategy(
                 iThread = currentThreadId,
                 actorId = currentActorId[currentThreadId]!!,
                 startedThreadId = forkedThreadId,
-                callStackTrace = callStackTrace[currentThreadId]!!,
+                callStackTrace = callStackTrace[currentThreadId]!!.map { it.tracePoint },
             )
             traceCollector!!.passCodeLocation(tracePoint)
         }
@@ -590,7 +590,7 @@ abstract class ManagedStrategy(
                 iThread = currentThreadId,
                 actorId = currentActorId[currentThreadId]!!,
                 joinedThreadId = joinThreadId,
-                callStackTrace = callStackTrace[currentThreadId]!!,
+                callStackTrace = callStackTrace[currentThreadId]!!.map { it.tracePoint },
             )
             traceCollector!!.passCodeLocation(tracePoint)
         }
@@ -824,7 +824,7 @@ abstract class ManagedStrategy(
             MonitorEnterTracePoint(
                 iThread = iThread,
                 actorId = currentActorId[iThread]!!,
-                callStackTrace = callStackTrace[iThread]!!,
+                callStackTrace = callStackTrace[iThread]!!.map { it.tracePoint },
                 codeLocation = codeLocation
             )
         } else {
@@ -867,7 +867,7 @@ abstract class ManagedStrategy(
             val tracePoint = MonitorExitTracePoint(
                 iThread = iThread,
                 actorId = currentActorId[iThread]!!,
-                callStackTrace = callStackTrace[iThread]!!,
+                callStackTrace = callStackTrace[iThread]!!.map { it.tracePoint },
                 codeLocation = codeLocation
             )
             traceCollector!!.passCodeLocation(tracePoint)
@@ -880,7 +880,7 @@ abstract class ManagedStrategy(
             ParkTracePoint(
                 iThread = iThread,
                 actorId = currentActorId[iThread]!!,
-                callStackTrace = callStackTrace[iThread]!!,
+                callStackTrace = callStackTrace[iThread]!!.map { it.tracePoint },
                 codeLocation = codeLocation
             )
         } else {
@@ -906,7 +906,7 @@ abstract class ManagedStrategy(
             val tracePoint = UnparkTracePoint(
                 iThread = currentThreadId,
                 actorId = currentActorId[currentThreadId]!!,
-                callStackTrace = callStackTrace[currentThreadId]!!,
+                callStackTrace = callStackTrace[currentThreadId]!!.map { it.tracePoint },
                 codeLocation = codeLocation
             )
             traceCollector?.passCodeLocation(tracePoint)
@@ -919,7 +919,7 @@ abstract class ManagedStrategy(
             WaitTracePoint(
                 iThread = iThread,
                 actorId = currentActorId[iThread]!!,
-                callStackTrace = callStackTrace[iThread]!!,
+                callStackTrace = callStackTrace[iThread]!!.map { it.tracePoint },
                 codeLocation = codeLocation
             )
         } else {
@@ -952,7 +952,7 @@ abstract class ManagedStrategy(
             val tracePoint = NotifyTracePoint(
                 iThread = iThread,
                 actorId = currentActorId[iThread]!!,
-                callStackTrace = callStackTrace[iThread]!!,
+                callStackTrace = callStackTrace[iThread]!!.map { it.tracePoint },
                 codeLocation = codeLocation
             )
             traceCollector?.passCodeLocation(tracePoint)
@@ -1020,7 +1020,7 @@ abstract class ManagedStrategy(
                 ownerRepresentation = if (isStatic) className.toSimpleClassName() else findOwnerName(obj!!),
                 iThread = iThread,
                 actorId = currentActorId[iThread]!!,
-                callStackTrace = callStackTrace[iThread]!!,
+                callStackTrace = callStackTrace[iThread]!!.map { it.tracePoint },
                 fieldName = fieldName,
                 codeLocation = codeLocation,
                 isLocal = false,
@@ -1048,7 +1048,7 @@ abstract class ManagedStrategy(
                 ownerRepresentation = null,
                 iThread = iThread,
                 actorId = currentActorId[iThread]!!,
-                callStackTrace = callStackTrace[iThread]!!,
+                callStackTrace = callStackTrace[iThread]!!.map { it.tracePoint },
                 fieldName = "${adornedStringRepresentation(array)}[$index]",
                 codeLocation = codeLocation,
                 isLocal = false,
@@ -1090,7 +1090,7 @@ abstract class ManagedStrategy(
                 ownerRepresentation = if (isStatic) className.toSimpleClassName() else findOwnerName(obj!!),
                 iThread = iThread,
                 actorId = currentActorId[iThread]!!,
-                callStackTrace = callStackTrace[iThread]!!,
+                callStackTrace = callStackTrace[iThread]!!.map { it.tracePoint },
                 fieldName = fieldName,
                 codeLocation = codeLocation,
                 isLocal = false,
@@ -1117,7 +1117,7 @@ abstract class ManagedStrategy(
                 ownerRepresentation = null,
                 iThread = iThread,
                 actorId = currentActorId[iThread]!!,
-                callStackTrace = callStackTrace[iThread]!!,
+                callStackTrace = callStackTrace[iThread]!!.map { it.tracePoint },
                 fieldName = "${adornedStringRepresentation(array)}[$index]",
                 codeLocation = codeLocation,
                 isLocal = false,
@@ -1688,7 +1688,7 @@ abstract class ManagedStrategy(
             methodInvocationHash = methodInvocationHash,
             className = className,
             methodName = methodName,
-            callStackTrace = callStackTrace,
+            callStackTrace = callStackTrace.map { it.tracePoint },
             codeLocation = codeLocation,
             isStatic = (owner == null)
         )
@@ -1926,7 +1926,7 @@ abstract class ManagedStrategy(
     private fun <T : TracePoint> doCreateTracePoint(constructor: (iThread: Int, actorId: Int, CallStackTrace) -> T): T {
         val iThread = threadScheduler.getCurrentThreadId()
         val actorId = currentActorId[iThread] ?: Int.MIN_VALUE
-        return constructor(iThread, actorId, callStackTrace[iThread]?.toList() ?: emptyList())
+        return constructor(iThread, actorId, callStackTrace[iThread]?.map { it.tracePoint } ?: emptyList())
     }
 
     fun enableReplayModeForIdeaPlugin() {
@@ -1999,13 +1999,13 @@ abstract class ManagedStrategy(
         val trace: List<TracePoint> = _trace
         private var spinCycleStartAdded = false
 
-        private val spinCycleMethodCallsStackTraces: MutableList<List<CallStackTraceElement>> = mutableListOf()
+        private val spinCycleMethodCallsStackTraces: MutableList<List<MethodCallTracePoint>> = mutableListOf()
 
         fun newSwitch(iThread: Int, reason: SwitchReason, beforeMethodCallSwitch: Boolean = false) {
             if (reason == SwitchReason.ActiveLock) {
                 afterSpinCycleTraceCollected(
                     trace = _trace,
-                    callStackTrace = callStackTrace[iThread]!!,
+                    callStackTrace = callStackTrace[iThread]!!.map { it.tracePoint },
                     spinCycleMethodCallsStackTraces = spinCycleMethodCallsStackTraces,
                     iThread = iThread,
                     currentActorId = currentActorId[iThread]!!,
@@ -2020,7 +2020,7 @@ abstract class ManagedStrategy(
                 iThread = iThread,
                 actorId = currentActorId[iThread]!!,
                 reason = reason,
-                callStackTrace = callStackTrace,
+                callStackTrace = callStackTrace.map { it.tracePoint },
             )
             spinCycleStartAdded = false
         }
@@ -2033,13 +2033,13 @@ abstract class ManagedStrategy(
             val currentThreadId = threadScheduler.getCurrentThreadId()
             if (!loopDetector.replayModeCurrentlyInSpinCycle) return
             if (spinCycleStartAdded) {
-                spinCycleMethodCallsStackTraces += callStackTrace[currentThreadId]!!.toList()
+                spinCycleMethodCallsStackTraces += callStackTrace[currentThreadId]!!.map { it.tracePoint }
                 return
             }
             val spinCycleStartTracePoint = SpinCycleStartTracePoint(
                 iThread = currentThreadId,
                 actorId = currentActorId[currentThreadId]!!,
-                callStackTrace = callStackTrace[currentThreadId]!!,
+                callStackTrace = callStackTrace[currentThreadId]!!.map { it.tracePoint },
             )
             _trace.add(spinCycleStartTracePoint)
             spinCycleStartAdded = true
@@ -2064,7 +2064,7 @@ abstract class ManagedStrategy(
                 iThread = currentThreadId,
                 actorId = currentActorId[currentThreadId]!!,
                 stateRepresentation = stateRepresentation,
-                callStackTrace = callStackTrace,
+                callStackTrace = callStackTrace.map { it.tracePoint },
             )
 
         }
@@ -2073,7 +2073,7 @@ abstract class ManagedStrategy(
             val currentThreadId = threadScheduler.getCurrentThreadId()
             afterSpinCycleTraceCollected(
                 trace = _trace,
-                callStackTrace = callStackTrace[currentThreadId]!!,
+                callStackTrace = callStackTrace[currentThreadId]!!.map { it.tracePoint },
                 spinCycleMethodCallsStackTraces = spinCycleMethodCallsStackTraces,
                 iThread = iThread,
                 currentActorId = currentActorId[iThread]!!,

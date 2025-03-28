@@ -125,7 +125,7 @@ private fun StringBuilder.appendTraceRepresentation(
 /**
  * Convert trace events to the final form of a matrix of strings.
  */
-private fun splitToColumns(nThreads: Int, traceRepresentation:  List<List<TraceEventRepresentation>>): List<TableSectionColumnsRepresentation> {
+private fun splitToColumns(nThreads: Int, traceRepresentation: List<List<TraceEventRepresentation>>): List<TableSectionColumnsRepresentation> {
     return traceRepresentation.map { sectionRepresentation ->
         val result = List(nThreads) { mutableListOf<String>() }
         for (event in sectionRepresentation) {
@@ -264,9 +264,8 @@ internal fun constructTraceGraph(
 
         for (call in event.callStackTrace) {
             // Switch events that happen as a first event of the method are lifted out of the method in the trace
-            val callId = call.tracePoint.callId
-            if (!callNodes.containsKey(callId) && event is SwitchEventTracePoint) break
-            val callNode = callNodes.computeIfAbsent(callId) {
+            if (!callNodes.containsKey(call.callId) && event is SwitchEventTracePoint) break
+            val callNode = callNodes.computeIfAbsent(call.callId) {
                 // create a new call node if needed
                 val result = traceGraphNodes.createAndAppend { lastNode ->
                     val callDepth = innerNode.callDepth + 1
@@ -276,7 +275,7 @@ internal fun constructTraceGraph(
                         prefixCallDepth -= 1
                     }
                     val prefix = prefixFactory.prefixForCallNode(iThread, prefixCallDepth)
-                    CallNode(prefix, iThread, lastNode, callDepth, call.tracePoint)
+                    CallNode(prefix, iThread, lastNode, callDepth, call)
                 }
                 // make it a child of the previous node
                 innerNode.addInternalEvent(result)
@@ -363,7 +362,7 @@ private fun removeNestedThreadStartPoints(trace: List<TracePoint>) = trace
     .filter { it is ThreadStartTracePoint }
     .forEach { tracePoint -> 
         val threadCreationCall = tracePoint.callStackTrace.dropLast(1).lastOrNull()
-        if(threadCreationCall?.tracePoint?.isThreadCreation() == true) {
+        if(threadCreationCall?.isThreadCreation() == true) {
             tracePoint.callStackTrace = tracePoint.callStackTrace.dropLast(1)
         }
     }
@@ -384,9 +383,9 @@ private fun removeSyntheticFieldAccessTracePoints(trace: List<TracePoint>) {
         .filter { it is ReadTracePoint || it is WriteTracePoint }
         .forEach { point ->
             val lastCall = point.callStackTrace.lastOrNull() ?: return@forEach
-            if (isSyntheticFieldAccess(lastCall.tracePoint.methodName)) {
-                if (point is ReadTracePoint) point.codeLocation = lastCall.tracePoint.codeLocation
-                if (point is WriteTracePoint) point.codeLocation = lastCall.tracePoint.codeLocation
+            if (isSyntheticFieldAccess(lastCall.methodName)) {
+                if (point is ReadTracePoint) point.codeLocation = lastCall.codeLocation
+                if (point is WriteTracePoint) point.codeLocation = lastCall.codeLocation
                 point.callStackTrace = point.callStackTrace.dropLast(1)
             }
         }
@@ -403,17 +402,17 @@ private fun isSyntheticFieldAccess(methodName: String): Boolean =
  * we need to recursively traverse each point.
  */
 private fun compressCallStackTrace(
-    callStackTrace: List<CallStackTraceElement>, 
+    callStackTrace: List<MethodCallTracePoint>,
     removed: HashSet<Int>,
     seen: HashSet<Int> = HashSet(),
-): List<CallStackTraceElement> {
+): List<MethodCallTracePoint> {
     val oldStacktrace = callStackTrace.toMutableList()
-    val compressedStackTrace = mutableListOf<CallStackTraceElement>()
+    val compressedStackTrace = mutableListOf<MethodCallTracePoint>()
     while (oldStacktrace.isNotEmpty()) {
         val currentElement = oldStacktrace.removeFirst()
         
         // if element was removed (or seen) by previous iteration continue
-        val currentElementCallId = currentElement.tracePoint.callId
+        val currentElementCallId = currentElement.callId
         if (removed.contains(currentElementCallId)) continue
         if (seen.contains(currentElementCallId)) {
             compressedStackTrace.add(currentElement)
@@ -424,8 +423,8 @@ private fun compressCallStackTrace(
         // if next element is null, we reached end of list
         val nextElement = oldStacktrace.firstOrNull()
         if (nextElement == null) {
-            currentElement.tracePoint.callStackTrace = 
-                compressCallStackTrace(currentElement.tracePoint.callStackTrace, removed, seen)
+            currentElement.callStackTrace =
+                compressCallStackTrace(currentElement.callStackTrace, removed, seen)
             compressedStackTrace.add(currentElement)
             break
         }
@@ -434,28 +433,28 @@ private fun compressCallStackTrace(
         if (isUserThreadStart(currentElement, nextElement)) {
             // we do not mark currentElement as removed, since that is a unique call from Thread.kt
             // marking it prevents starts of other threads from being detected.
-            removed.add(nextElement.tracePoint.callId)
+            removed.add(nextElement.callId)
             continue
         }
         
         // Check if current and next are compressible
-        if (isCompressiblePair(currentElement.tracePoint.methodName, nextElement.tracePoint.methodName)) {
+        if (isCompressiblePair(currentElement.methodName, nextElement.methodName)) {
             // Combine fields of next and current, and store in current
-            currentElement.tracePoint.methodName = nextElement.tracePoint.methodName
-            currentElement.tracePoint.parameters = nextElement.tracePoint.parameters
-            currentElement.tracePoint.callStackTrace =
-                compressCallStackTrace(currentElement.tracePoint.callStackTrace, removed, seen)
+            currentElement.methodName = nextElement.methodName
+            currentElement.parameters = nextElement.parameters
+            currentElement.callStackTrace =
+                compressCallStackTrace(currentElement.callStackTrace, removed, seen)
 
-            check(currentElement.tracePoint.returnedValue == nextElement.tracePoint.returnedValue)
-            check(currentElement.tracePoint.thrownException == nextElement.tracePoint.thrownException)
+            check(currentElement.returnedValue == nextElement.returnedValue)
+            check(currentElement.thrownException == nextElement.thrownException)
             
             // Mark next as removed
-            removed.add(nextElement.tracePoint.callId)
+            removed.add(nextElement.callId)
             compressedStackTrace.add(currentElement)
             continue
         }
-        currentElement.tracePoint.callStackTrace = 
-            compressCallStackTrace(currentElement.tracePoint.callStackTrace, removed, seen)
+        currentElement.callStackTrace =
+            compressCallStackTrace(currentElement.callStackTrace, removed, seen)
         compressedStackTrace.add(currentElement)
     }
     return compressedStackTrace
@@ -479,11 +478,11 @@ private fun actorNodeResultRepresentation(result: Result?, failure: LincheckFail
  * Used by [compressCallStackTrace] to remove the two `invoke()` lines at the beginning of 
  * a user-defined thread trace.
  */
-private fun isUserThreadStart(currentElement: CallStackTraceElement, nextElement: CallStackTraceElement): Boolean =
-       currentElement.tracePoint.stackTraceElement.methodName == "run"
-    && currentElement.tracePoint.stackTraceElement.fileName == "Thread.kt"
-    && currentElement.tracePoint.methodName == "invoke"
-    && nextElement.tracePoint.methodName == "invoke"
+private fun isUserThreadStart(currentElement: MethodCallTracePoint, nextElement: MethodCallTracePoint): Boolean =
+       currentElement.stackTraceElement.methodName == "run"
+    && currentElement.stackTraceElement.fileName == "Thread.kt"
+    && currentElement.methodName == "invoke"
+    && nextElement.methodName == "invoke"
 
 private fun isCompressiblePair(currentName: String, nextName: String): Boolean =
     isDefaultPair(currentName, nextName) || isAccessPair(currentName, nextName)
