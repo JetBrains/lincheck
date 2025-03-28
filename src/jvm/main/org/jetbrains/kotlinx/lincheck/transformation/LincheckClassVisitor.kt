@@ -77,6 +77,7 @@ internal class LincheckClassVisitor(
                 mv
             }
         }
+        val intrinsicDelegateVisitor = mv
         fun MethodVisitor.newAdapter() = GeneratorAdapter(this, access, methodName, desc)
         if (methodName == "<clinit>") {
             mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
@@ -92,7 +93,7 @@ internal class LincheckClassVisitor(
         }
         // In some newer versions of JDK, `ThreadPoolExecutor` uses
         // the internal `ThreadContainer` classes to manage threads in the pool;
-        // This class, in turn, has the method `start,
+        // This class, in turn, has the method `start`,
         // that does not directly call `Thread.start` to start a thread,
         // but instead uses internal API `JavaLangAccess.start`.
         // To detect threads started in this way, we instrument this class
@@ -158,14 +159,16 @@ internal class LincheckClassVisitor(
         // We can do further instrumentation in methods of the custom thread subclasses,
         // but not in the `java.lang.Thread` itself.
         if (isThreadClass(className.toCanonicalClassName())) {
+            // Must appear last in the code, to completely hide intrinsic candidate methods from all transformers
+            mv = IntrinsicCandidateMethodFilter(className, methodName, desc, intrinsicDelegateVisitor.newAdapter(), mv.newAdapter())
             return mv
         }
         if (access and ACC_SYNCHRONIZED != 0) {
             mv = SynchronizedMethodTransformer(fileName, className, methodName, mv.newAdapter(), classVersion)
         }
-        // `skipVisitor` must not capture `MethodCallTransformer`
+        // `coverageDelegateVisitor` must not capture `MethodCallTransformer`
         // (to filter static method calls inserted by coverage library)
-        val skipVisitor: MethodVisitor = mv
+        val coverageDelegateVisitor: MethodVisitor = mv
         mv = MethodCallTransformer(fileName, className, methodName, mv.newAdapter())
         mv = MonitorTransformer(fileName, className, methodName, mv.newAdapter())
         mv = WaitNotifyTransformer(fileName, className, methodName, mv.newAdapter())
@@ -193,11 +196,13 @@ internal class LincheckClassVisitor(
         }
         val locals: Map<Int, List<LocalVariableInfo>> = methods[methodName + desc] ?: emptyMap()
         mv = LocalVariablesAccessTransformer(fileName, className, methodName, mv.newAdapter(), locals)
-        // Must appear in code after `SharedMemoryAccessTransformer` (to be able to skip this transformer)
-        mv = CoverageBytecodeFilter(
-            skipVisitor.newAdapter(),
-            mv.newAdapter()
-        )
+        // Must appear in code after `SharedMemoryAccessTransformer` (to be able to skip this transformer).
+        // It can appear earlier in code than `IntrinsicCandidateMethodFilter` because if kover instruments intrinsic methods
+        // (which cannot disallow) then we don't need to hide coverage instrumentation from lincheck,
+        // because lincheck will not see intrinsic method bodies at all.
+        mv = CoverageBytecodeFilter(coverageDelegateVisitor.newAdapter(), mv.newAdapter())
+        // Must appear last in the code, to completely hide intrinsic candidate methods from all transformers
+        mv = IntrinsicCandidateMethodFilter(className, methodName, desc, intrinsicDelegateVisitor.newAdapter(), mv.newAdapter())
         return mv
     }
 

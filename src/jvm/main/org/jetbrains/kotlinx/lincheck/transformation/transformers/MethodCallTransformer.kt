@@ -79,8 +79,9 @@ internal class MethodCallTransformer(
             (opcode != INVOKESTATIC) -> newLocal(receiverType).also { storeLocal(it) }
             else -> null
         }
+        val methodId = MethodIds.getMethodId(owner, name, desc)
         // STACK: <empty>
-        processMethodCallEnter(owner, name, desc, receiverLocal, argumentsArrayLocal)
+        processMethodCallEnter(owner, name, desc, methodId, receiverLocal, argumentsArrayLocal)
         // STACK: deterministicCallDescriptor
         val deterministicMethodDescriptorLocal = newLocal(OBJECT_TYPE)
         val deterministicCallIdLocal = newLocal(LONG_TYPE)
@@ -111,6 +112,7 @@ internal class MethodCallTransformer(
                     returnType,
                     deterministicCallIdLocal,
                     deterministicMethodDescriptorLocal,
+                    methodId,
                     receiverLocal,
                     argumentsArrayLocal,
                 )
@@ -134,6 +136,7 @@ internal class MethodCallTransformer(
         className: String,
         methodName: String,
         desc: String,
+        methodId: Int,
         receiverLocal: Int?,
         argumentsArrayLocal: Int
     ) = adapter.run {
@@ -142,12 +145,12 @@ internal class MethodCallTransformer(
         push(methodName)
         loadNewCodeLocationId()
         // STACK: className, methodName, codeLocation
-        push(MethodIds.getMethodId(className, methodName, desc))
         push(desc)
-        // STACK: className, methodName, codeLocation, methodId, methodDesc
+        // STACK: className, methodName, codeLocation, methodDesc
+        push(methodId)
         pushReceiver(receiverLocal)
         loadLocal(argumentsArrayLocal)
-        // STACK: className, methodName, codeLocation, methodId, methodDesc, receiver?, argumentsArray
+        // STACK: className, methodName, codeLocation, methodDesc, methodId, receiver?, argumentsArray
         invokeStatic(Injections::onMethodCall)
         // STACK: deterministicCallDescriptor
         invokeBeforeEventIfPluginEnabled("method call ${this@MethodCallTransformer.methodName}", setMethodEventId = true)
@@ -220,6 +223,7 @@ internal class MethodCallTransformer(
         returnType: Type,
         deterministicCallIdLocal: Int,
         deterministicMethodDescriptorLocal: Int,
+        methodId: Int,
         receiverLocal: Int?,
         argumentsArrayLocal: Int
     ) = adapter.run {
@@ -232,6 +236,7 @@ internal class MethodCallTransformer(
         push(methodName)
         loadLocal(deterministicCallIdLocal)
         loadLocal(deterministicMethodDescriptorLocal)
+        push(methodId)
         pushReceiver(receiverLocal)
         loadLocal(argumentsArrayLocal)
         resultLocal?.let {

@@ -20,6 +20,7 @@ import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.kotlinx.lincheck.util.runInsideIgnoredSection
 import sun.nio.ch.lincheck.*
+import sun.nio.ch.lincheck.Types.*
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicFieldUpdaterNames.getAtomicFieldUpdaterDescriptor
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceMethodType.*
@@ -1328,6 +1329,27 @@ abstract class ManagedStrategy(
         }
     }
 
+    /**
+     * Propagates the modification done by intrinsic calls to the strategy.
+     * This functionality is required, because we cannot instrument intrinsic methods directly.
+     *
+     * *Must be called from [runInsideIgnoredSection].*
+     */
+    private fun processIntrinsicMethodEffects(
+        methodId: Int,
+        result: Any?
+    ) {
+        check(MethodIds.isIntrinsicMethod(methodId)) { "Processing intrinsic method effect of non-intrinsic call" }
+        val intrinsicDescriptor = MethodIds.getIntrinsicMethodDescriptor(methodId)
+
+        if (
+            intrinsicDescriptor.isArraysCopyOfIntrinsic() ||
+            intrinsicDescriptor.isArraysCopyOfRangeIntrinsic()
+        ) {
+            result?.let { afterNewObjectCreation(it) }
+        }
+    }
+
     private fun methodGuaranteeType(
         owner: Any?,
         className: String,
@@ -1433,11 +1455,17 @@ abstract class ManagedStrategy(
         methodName: String,
         descriptorId: Long,
         deterministicMethodDescriptor: Any?,
+        methodId: Int,
         receiver: Any?,
         params: Array<Any?>,
         result: Any?
     ) = runInsideIgnoredSection {
         require(deterministicMethodDescriptor is DeterministicMethodDescriptor<*, *>?)
+        // process intrinsic candidate methods
+        if (MethodIds.isIntrinsicMethod(methodId)) {
+            processIntrinsicMethodEffects(methodId, result)
+        }
+
         if (isInTraceDebuggerMode && isFirstReplay && deterministicMethodDescriptor != null) {
             deterministicMethodDescriptor.saveFirstResultWithCast(receiver, params, KResult.success(result)) {
                 nativeMethodCallStatesTracker.setState(descriptorId, deterministicMethodDescriptor.methodCallInfo, it)
