@@ -48,6 +48,7 @@ internal class ModelCheckingStrategy(
     private val generationRandom = Random(0)
     // The interleaving that will be studied on the next invocation.
     private lateinit var currentInterleaving: Interleaving
+    private var isReplayingSpinCycle = false
 
     // Tracker of objects' allocations and object graph topology.
     override val objectTracker: ObjectTracker? = if (isInTraceDebuggerMode) null else LocalObjectManager()
@@ -57,6 +58,11 @@ internal class ModelCheckingStrategy(
     override val parkingTracker: ParkingTracker = ModelCheckingParkingTracker(allowSpuriousWakeUps = true)
 
     override fun nextInvocation(): Boolean {
+        // if we are in spin-cycle replay mode, then next invocation always exist,
+        // since we just repeat the previous one.
+        if (isReplayingSpinCycle) {
+            return true
+        }
         replayNumber = 0
         currentInterleaving = root.nextInterleaving()
             ?: return false
@@ -67,12 +73,14 @@ internal class ModelCheckingStrategy(
     override fun initializeInvocation() {
         super.initializeInvocation()
         currentInterleaving.initialize()
+        isReplayingSpinCycle = false
         replayNumber++
     }
 
     override fun enableSpinCycleReplay() {
         super.enableSpinCycleReplay()
         currentInterleaving.rollbackAfterSpinCycleFound()
+        isReplayingSpinCycle = true
     }
 
     override fun initializeReplay() {
