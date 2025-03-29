@@ -11,6 +11,8 @@
 package sun.nio.ch.lincheck;
 
 import java.lang.invoke.CallSite;
+import java.lang.invoke.MethodHandles;
+import java.lang.reflect.Constructor;
 
 import static sun.nio.ch.lincheck.Types.convertAsmMethodType;
 
@@ -631,5 +633,25 @@ public class Injections {
 
     public static void setLastMethodCallEventId() {
         getEventTracker().setLastMethodCallEventId();
+    }
+    
+    
+    private static Constructor<MethodHandles.Lookup> lookUpPrivateConstructor = null;
+    
+    public static Class<?> getClassForNameOrNull(String name) {
+        try {
+            return Class.forName(name);
+        } catch (ClassNotFoundException e) {
+            return null;
+        }
+    } 
+    
+    public static MethodHandles.Lookup trustedLookup(Class<?> callerClass) throws Exception {
+        if (lookUpPrivateConstructor == null) {
+            Constructor<MethodHandles.Lookup> declaredConstructor = MethodHandles.Lookup.class.getDeclaredConstructor(Class.class, int.class);
+            declaredConstructor.setAccessible(true);
+            lookUpPrivateConstructor = declaredConstructor;
+        }
+        return lookUpPrivateConstructor.newInstance(callerClass, -1);
     }
 }
