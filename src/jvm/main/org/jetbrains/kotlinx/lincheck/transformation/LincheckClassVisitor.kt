@@ -140,7 +140,9 @@ internal class LincheckClassVisitor(
             if (isInTraceDebuggerMode) {
                 // Lincheck does not support true identity hash codes (it always uses zeroes),
                 // so there is no need for the `DeterministicInvokeDynamicTransformer` there.
-                mv = DeterministicInvokeDynamicTransformer(fileName, className, methodName, mv.newAdapter())
+                mv = DeterministicInvokeDynamicTransformer(
+                    fileName, className, methodName, classVersion, mv.newAdapter()
+                )
             }
             mv = run {
                 val st = ConstructorArgumentsSnapshotTrackerTransformer(fileName, className, methodName, mv.newAdapter(), classVisitor::isInstanceOf)
@@ -177,7 +179,7 @@ internal class LincheckClassVisitor(
         if (isInTraceDebuggerMode) {
             // Lincheck does not support true identity hash codes (it always uses zeroes),
             // so there is no need for the `DeterministicInvokeDynamicTransformer` there.
-            mv = DeterministicInvokeDynamicTransformer(fileName, className, methodName, mv.newAdapter())
+            mv = DeterministicInvokeDynamicTransformer(fileName, className, methodName, classVersion, mv.newAdapter())
         } else {
             // In trace debugger mode we record hash codes of tracked objects and substitute them on re-run,
             // otherwise, we track all hash code calls in the instrumented code
