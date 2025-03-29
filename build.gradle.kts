@@ -177,6 +177,10 @@ tasks {
         if (testInTraceDebuggerMode.toBoolean()) {
             extraArgs.add("-Dlincheck.traceDebuggerMode=true")
         }
+        val dumpTransformedSources: String by project
+        if (dumpTransformedSources.toBoolean()) {
+            extraArgs.add("-Dlincheck.dumpTransformedSources=true")
+        }
         extraArgs.add("-Dlincheck.version=$version")
         findProperty("lincheck.logFile")?.let { extraArgs.add("-Dlincheck.logFile=${it as String}") }
         findProperty("lincheck.logLevel")?.let { extraArgs.add("-Dlincheck.logLevel=${it as String}") }

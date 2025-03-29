@@ -22,10 +22,11 @@ import java.io.File
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 import kotlin.reflect.jvm.kotlinFunction
-import kotlin.system.exitProcess
 
 private const val TRACE_DEBUGGER_MODE_PROPERTY = "lincheck.traceDebuggerMode"
+private const val DUMP_TRANSFORMED_SOURCES_PROPERTY = "lincheck.dumpTransformedSources"
 val isInTraceDebuggerMode by lazy { System.getProperty(TRACE_DEBUGGER_MODE_PROPERTY, "false").toBoolean() }
+val dumpTransformedSources by lazy { System.getProperty(DUMP_TRANSFORMED_SOURCES_PROPERTY, "false").toBoolean() }
 
 internal object TraceDebuggerInjections {
     @JvmStatic

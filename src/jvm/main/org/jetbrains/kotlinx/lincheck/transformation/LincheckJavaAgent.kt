@@ -11,6 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.transformation
 
 import net.bytebuddy.agent.ByteBuddyAgent
+import org.jetbrains.kotlinx.lincheck.dumpTransformedSources
 import org.jetbrains.kotlinx.lincheck.util.runInsideIgnoredSection
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.MODEL_CHECKING
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.STRESS
@@ -29,6 +30,8 @@ import org.objectweb.asm.Type
 import org.objectweb.asm.tree.ClassNode
 import sun.misc.Unsafe
 import java.io.File
+import java.io.PrintWriter
+import java.io.StringWriter
 import java.lang.instrument.ClassFileTransformer
 import java.lang.instrument.Instrumentation
 import java.lang.reflect.Modifier
@@ -413,7 +416,18 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         val visitor = LincheckClassVisitor(writer, instrumentationMode, methods)
         try {
             reader.accept(visitor, ClassReader.EXPAND_FRAMES)
-            writer.toByteArray()
+            writer.toByteArray().also {
+                if (dumpTransformedSources) {
+                    val cr = ClassReader(it)
+                    val sw = StringWriter()
+                    val pw = PrintWriter(sw)
+                    cr.accept(org.objectweb.asm.util.TraceClassVisitor(pw), 0)
+
+                    File("build/transformedBytecode/${classNode.name}.txt")
+                        .apply { parentFile.mkdirs() }
+                        .writeText(sw.toString())
+                }
+            }
         } catch (e: Throwable) {
             System.err.println("Unable to transform $internalClassName")
             e.printStackTrace()
