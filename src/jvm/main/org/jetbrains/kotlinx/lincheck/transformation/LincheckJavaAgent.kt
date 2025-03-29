@@ -398,7 +398,7 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         return transformImpl(loader, internalClassName, classBytes)
     }
 
-    private fun transformImpl(
+    internal fun transformImpl(
         loader: ClassLoader?,
         internalClassName: String,
         classBytes: ByteArray
