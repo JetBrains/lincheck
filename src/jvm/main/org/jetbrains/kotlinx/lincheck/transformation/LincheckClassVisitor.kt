@@ -16,6 +16,7 @@ import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.commons.*
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
 import org.jetbrains.kotlinx.lincheck.transformation.transformers.*
+import org.jetbrains.kotlinx.lincheck.util.Logger
 import sun.nio.ch.lincheck.*
 
 internal class LincheckClassVisitor(
@@ -69,7 +70,10 @@ internal class LincheckClassVisitor(
         exceptions: Array<String>?
     ): MethodVisitor {
         var mv = super.visitMethod(access, methodName, desc, signature, exceptions)
-        if (access and ACC_NATIVE != 0) return mv
+        if (access and ACC_NATIVE != 0) {
+            Logger.debug { "Skipping native method $className.$methodName" }
+            return mv
+        }
         if (instrumentationMode == STRESS) {
             return if (methodName != "<clinit>" && methodName != "<init>") {
                 CoroutineCancellabilitySupportTransformer(mv, access, className, methodName, desc)

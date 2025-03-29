@@ -1466,6 +1466,9 @@ abstract class ManagedStrategy(
             processIntrinsicMethodEffects(methodId, result)
         }
 
+        if (deterministicMethodDescriptor != null) {
+            Logger.debug { "On method return with descriptor $deterministicMethodDescriptor: $result" }
+        }
         if (isInTraceDebuggerMode && isFirstReplay && deterministicMethodDescriptor != null) {
             deterministicMethodDescriptor.saveFirstResultWithCast(receiver, params, KResult.success(result)) {
                 nativeMethodCallStatesTracker.setState(descriptorId, deterministicMethodDescriptor.methodCallInfo, it)
@@ -1514,6 +1517,9 @@ abstract class ManagedStrategy(
         params: Array<Any?>,
         throwable: Throwable
     ) = runInsideIgnoredSection {
+        if (deterministicMethodDescriptor != null) {
+            Logger.debug { "On method exception with descriptor $deterministicMethodDescriptor:\n${throwable.stackTraceToString()}" }
+        }
         require(deterministicMethodDescriptor is DeterministicMethodDescriptor<*, *>?)
         if (isInTraceDebuggerMode && isFirstReplay && deterministicMethodDescriptor != null) {
             deterministicMethodDescriptor.saveFirstResult(receiver, params, KResult.failure(throwable)) {
