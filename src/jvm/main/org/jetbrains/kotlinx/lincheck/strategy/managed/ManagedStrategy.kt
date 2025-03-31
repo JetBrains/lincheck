@@ -9,8 +9,8 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import sun.nio.ch.lincheck.*
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.beforeEvent as ideaPluginBeforeEvent
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
@@ -28,12 +28,10 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.adorne
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.cleanObjectNumeration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
-import org.jetbrains.kotlinx.lincheck.strategy.native_calls.DeterministicMethodDescriptor
-import org.jetbrains.kotlinx.lincheck.strategy.native_calls.MethodCallInfo
-import org.jetbrains.kotlinx.lincheck.strategy.native_calls.getDeterministicMethodDescriptorOrNull
-import org.jetbrains.kotlinx.lincheck.strategy.native_calls.runFromStateWithCast
-import org.jetbrains.kotlinx.lincheck.strategy.native_calls.saveFirstResultWithCast
-import org.jetbrains.kotlinx.lincheck.trace.*
+import org.jetbrains.kotlinx.lincheck.strategy.native_calls.*
+import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.kotlinx.lincheck.beforeEvent as ideaPluginBeforeEvent
 import org.objectweb.asm.ConstantDynamic
 import org.objectweb.asm.Handle
 import java.lang.invoke.CallSite
@@ -43,6 +41,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
+import kotlinx.coroutines.*
 import kotlin.Result as KResult
 import org.objectweb.asm.commons.Method.getMethod as getAsmMethod
 
@@ -874,11 +873,11 @@ abstract class ManagedStrategy(
         callStackTrace[iThread]!!.clear()
         suspendedFunctionsStack[iThread]!!.clear()
         loopDetector.onActorStart(iThread)
-        
-        val actor = if (actorId < scenario.threads[iThread].size) scenario.threads[iThread][actorId] 
+
+        val actor = if (actorId < scenario.threads[iThread].size) scenario.threads[iThread][actorId]
         else validationFunction
         check(actor != null) { "Could not find current actor" }
-        
+
         val methodDescriptor = getAsmMethod(actor.method).descriptor
         addBeforeMethodCallTracePoint(
             owner = runner.testInstance,
@@ -1462,6 +1461,7 @@ abstract class ManagedStrategy(
         atomicMethodDescriptor: AtomicMethodDescriptor?,
         deterministicMethodDescriptor: DeterministicMethodDescriptor<*, *>?,
     ): ManagedGuaranteeType? {
+        val ownerName = owner?.javaClass?.canonicalName ?: className
         if (atomicMethodDescriptor != null) {
             return ManagedGuaranteeType.ATOMIC
         }
@@ -1469,15 +1469,17 @@ abstract class ManagedStrategy(
         if (deterministicMethodDescriptor != null) {
             return ManagedGuaranteeType.IGNORE
         }
-        userDefinedGuarantees?.forEach { guarantee ->
-            val ownerName = owner?.javaClass?.canonicalName ?: className
-            if (guarantee.classPredicate(ownerName) && guarantee.methodPredicate(methodName)) {
-                return guarantee.type
-            }
-        }
         // Ignore methods called on standard I/O streams
         when (owner) {
             System.`in`, System.out, System.err -> return ManagedGuaranteeType.IGNORE
+        }
+        if (isSilentMethodByDefault(ownerName, methodName)) {
+            return ManagedGuaranteeType.SILENT
+        }
+        userDefinedGuarantees?.forEach { guarantee ->
+            if (guarantee.classPredicate(ownerName) && guarantee.methodPredicate(methodName)) {
+                return guarantee.type
+            }
         }
         return null
     }
@@ -1549,10 +1551,17 @@ abstract class ManagedStrategy(
         if (guarantee == null) {
             loopDetector.beforeMethodCall(codeLocation, params)
         }
-        // if the method is atomic or should be ignored, then we enter an ignored section
-        if (guarantee == ManagedGuaranteeType.IGNORE ||
-            guarantee == ManagedGuaranteeType.ATOMIC) {
-            enterIgnoredSection()
+        // if the method has certain guarantees, enter the corresponding section
+        when (guarantee) {
+            ManagedGuaranteeType.IGNORE,
+            // TODO: atomic should have different semantics compared to ignored
+            ManagedGuaranteeType.ATOMIC -> {
+                enterIgnoredSection()
+            }
+            ManagedGuaranteeType.SILENT -> {
+                enterSilentSection()
+            }
+            else -> {}
         }
         return deterministicMethodDescriptor
     }
@@ -1570,7 +1579,7 @@ abstract class ManagedStrategy(
         if (deterministicMethodDescriptor != null) {
             Logger.debug { "On method return with descriptor $deterministicMethodDescriptor: $result" }
         }
-        
+
         require(deterministicMethodDescriptor is DeterministicMethodDescriptor<*, *>?)
         // process intrinsic candidate methods
         if (MethodIds.isIntrinsicMethod(methodId)) {
@@ -1609,10 +1618,17 @@ abstract class ManagedStrategy(
                 traceCollector!!.addStateRepresentation()
             }
         }
-        // if the method is atomic or ignored, then we leave an ignored section
-        if (guarantee == ManagedGuaranteeType.IGNORE ||
-            guarantee == ManagedGuaranteeType.ATOMIC) {
-            leaveIgnoredSection()
+        // if the method has certain guarantees, leave the corresponding section
+        when (guarantee) {
+            ManagedGuaranteeType.IGNORE,
+            // TODO: atomic should have different semantics compared to ignored
+            ManagedGuaranteeType.ATOMIC -> {
+                leaveIgnoredSection()
+            }
+            ManagedGuaranteeType.SILENT -> {
+                leaveSilentSection()
+            }
+            else -> {}
         }
     }
 
@@ -1655,10 +1671,17 @@ abstract class ManagedStrategy(
             afterMethodCall(threadId, tracePoint)
             traceCollector!!.addStateRepresentation()
         }
-        // if the method is atomic or ignored, then we leave an ignored section
-        if (guarantee == ManagedGuaranteeType.IGNORE ||
-            guarantee == ManagedGuaranteeType.ATOMIC) {
-            leaveIgnoredSection()
+        // if the method has certain guarantees, leave the corresponding section
+        when (guarantee) {
+            ManagedGuaranteeType.IGNORE,
+            // TODO: atomic should have different semantics compared to ignored
+            ManagedGuaranteeType.ATOMIC -> {
+                leaveIgnoredSection()
+            }
+            ManagedGuaranteeType.SILENT -> {
+                leaveSilentSection()
+            }
+            else -> {}
         }
     }
 
@@ -2056,7 +2079,7 @@ abstract class ManagedStrategy(
             suspendedFunctionsStack[iThread]!!.add(callStackTrace.last())
             popShadowStackFrame()
             callStackTrace.removeLast()
-            
+
             // Hack to include actor
             if (callStackTrace.size == 1 && callStackTrace.first().tracePoint.isRootCall) {
                 suspendedFunctionsStack[iThread]!!.add(callStackTrace.first())
@@ -2072,7 +2095,15 @@ abstract class ManagedStrategy(
     }
 
     protected fun inSilentSection(): Boolean {
-        return false;
+        return false
+    }
+
+    protected fun enterSilentSection() {
+        return
+    }
+
+    protected fun leaveSilentSection() {
+        return
     }
 
     // == LOGGING METHODS ==
@@ -2214,7 +2245,7 @@ abstract class ManagedStrategy(
         }
 
         fun passCodeLocation(tracePoint: TracePoint?) {
-            if (tracePoint !is SectionDelimiterTracePoint && tracePoint?.isActorMethodCallTracePoint() == false) {
+            if (tracePoint !is SectionDelimiterTracePoint && tracePoint?.isActorMethodCallTracePoint() == false){
                 checkActiveLockDetected()
             }
             // tracePoint can be null here if trace is not available, e.g. in case of suspension

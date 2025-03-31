@@ -77,7 +77,13 @@ class ManagedStrategyGuarantee private constructor(
     }
 }
 
+@Suppress("UNUSED_PARAMETER")
+internal fun isSilentMethodByDefault(className: String, methodName: String): Boolean {
+    return false
+}
+
 internal enum class ManagedGuaranteeType {
     IGNORE,
-    ATOMIC
+    ATOMIC,
+    SILENT,
 }
