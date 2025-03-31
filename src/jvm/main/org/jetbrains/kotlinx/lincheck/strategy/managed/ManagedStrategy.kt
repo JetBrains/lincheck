@@ -171,7 +171,7 @@ abstract class ManagedStrategy(
      */
     // TODO: unify with `shadowStack`
     // TODO: handle coroutine resumptions (i.e., unify with `suspendedFunctionsStack`)
-    private val methodGuaranteesStack = mutableThreadMapOf<MutableList<ManagedGuaranteeType>>()
+    private val methodGuaranteesStack = mutableThreadMapOf<MutableList<ManagedGuaranteeType?>>()
 
     /**
      * In case when the plugin is enabled, we also enable [eventIdStrictOrderingCheck] property and check
@@ -1686,8 +1686,8 @@ abstract class ManagedStrategy(
     }
 
     private fun enterMethodGuaranteeSection(threadId: ThreadId, guarantee: ManagedGuaranteeType?) {
+        methodGuaranteesStack[threadId]!!.add(guarantee)
         if (guarantee != null) {
-            methodGuaranteesStack[threadId]!!.add(guarantee)
             if (guarantee == ManagedGuaranteeType.IGNORE ||
                 // TODO: atomic should have different semantics compared to ignored
                 guarantee == ManagedGuaranteeType.ATOMIC
@@ -1705,9 +1705,9 @@ abstract class ManagedStrategy(
             ) {
                 leaveIgnoredSection()
             }
-            methodGuaranteesStack[threadId]!!.removeLast().ensure {
-                it == guarantee
-            }
+        }
+        methodGuaranteesStack[threadId]!!.removeLast().ensure {
+            it == guarantee
         }
     }
 
