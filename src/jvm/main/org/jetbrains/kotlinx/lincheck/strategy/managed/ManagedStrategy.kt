@@ -300,8 +300,6 @@ abstract class ManagedStrategy(
             //  see https://github.com/JetBrains/lincheck/issues/590
             return suddenResult
         }
-        // Unexpected `ThreadAbortedError` should be thrown.
-        check(result is UnexpectedExceptionInvocationResult)
         // Otherwise return the sudden result
         return suddenResult
     }
@@ -439,7 +437,6 @@ abstract class ManagedStrategy(
     /**
      * Create a new switch point, where a thread context switch can occur.
      * @param iThread the current thread
-     * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
      * @param codeLocation the byte-code location identifier of the point in code.
      */
     private fun newSwitchPoint(iThread: Int, codeLocation: Int, tracePoint: TracePoint?) {
@@ -457,11 +454,7 @@ abstract class ManagedStrategy(
                 // Additional check is required, because main thread will be marked as finished
                 // even if it hasn't completed its `postExecution` actors yet.
                 it.threadsResults[0].size == scenario.initExecution.size + scenario.parallelExecution.size + scenario.postExecution.size
-            } &&
-            threadScheduler.getRegisteredThreads().keys.none {
-                threadScheduler.isBlocked(it) &&
-                threadScheduler.getBlockingReason(it)!! !is BlockingReason.Parked
-            } // no blocked user threads exists (only parked threads permitted)
+            }
         ) {
             // The main thread finished its execution (actually all `TestThread`s did): successfully or not, we don't care.
             // If all user threads (those that are not `TestThread` instances) are not blocked, then abort
@@ -695,6 +688,25 @@ abstract class ManagedStrategy(
             )
             traceCollector!!.passCodeLocation(tracePoint)
         }
+    }
+
+    /**
+     * [afterThreadFork] is invoked after each `thread.start()` method call and is required to insert
+     * a switch point in the current thread to trigger context switch to forked thread.
+     */
+    override fun afterThreadFork() = runInsideIgnoredSection {
+        val threadId = threadScheduler.getCurrentThreadId()
+        val tracePoint = if (collectTrace) {
+            AfterThreadForkTracePoint(
+                iThread = threadId,
+                actorId = currentActorId[threadId]!!,
+                // dropping the call to `thread.start()`, so it does not appear in the output trace
+                callStackTrace = callStackTrace[threadId]!!.dropLast(1),
+            )
+        } else {
+            null
+        }
+        newSwitchPoint(threadId, UNKNOWN_CODE_LOCATION, tracePoint)
     }
 
     override fun beforeThreadStart() = runInsideIgnoredSection {

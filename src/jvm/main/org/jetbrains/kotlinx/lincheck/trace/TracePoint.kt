@@ -468,7 +468,7 @@ internal class ThreadStartTracePoint(
     }
 }
 
-internal class ThreadJoinTracePoint( 
+internal class ThreadJoinTracePoint(
     iThread: Int, actorId: Int,
     val joinedThreadDisplayNumber: Int,
     callStackTrace: CallStackTrace,

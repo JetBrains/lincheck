@@ -39,18 +39,6 @@ internal class ThreadTransformer(
 
     override fun visitCode() = adapter.run {
         visitCode()
-        if (isThreadStartMethod(methodName, desc)) {
-            // STACK: <empty>
-            loadThis()
-            // STACK: forkedThread
-            invokeStatic(Injections::beforeThreadFork)
-            // STACK: isTracePoint
-            ifStatement(
-                condition = {},
-                thenClause = { invokeBeforeEventIfPluginEnabled("thread fork") },
-                elseClause = {},
-            )
-        }
         if (isThreadRunMethod(methodName, desc)) {
             // STACK: <empty>
             visitTryCatchBlock(runMethodTryBlockStart, runMethodTryBlockEnd, runMethodCatchBlock, null)
@@ -61,7 +49,6 @@ internal class ThreadTransformer(
     }
 
     override fun visitInsn(opcode: Int) = adapter.run {
-        // TODO: this approach does not support thread interruptions and any other thrown exceptions
         if (isThreadRunMethod(methodName, desc) && opcode == Opcodes.RETURN) {
             // STACK: <empty>
             invokeStatic(Injections::afterThreadFinish)
@@ -80,12 +67,6 @@ internal class ThreadTransformer(
         // STACK: exception
         invokeStatic(Injections::onThreadRunException)
         // STACK: <empty>
-
-        // Notify that the thread has finished.
-        // TODO: currently does not work, because `ManagedStrategy::onThreadFinish`
-        //   assumes the thread finish injection is called under normal managed execution,
-        //   i.e., in non-aborted state
-        // invokeStatic(Injections::afterThreadFinish)
 
         visitInsn(Opcodes.RETURN)
         visitMaxs(maxStack, maxLocals)
@@ -109,10 +90,30 @@ internal class ThreadTransformer(
                 pop2()
             }
             push(withTimeout)
-            // STACK: joiningThread
+            // STACK: joiningThread, withTimeout
             invokeStatic(Injections::threadJoin)
             // STACK: <empty>
             invokeBeforeEventIfPluginEnabled("thread join")
+            return
+        }
+        // track for thread.start() method calls
+        if (isThreadStartCall(owner, name, desc)) {
+            // STACK: forkedThread
+            dup()
+            // STACK: forkedThread, forkedThread
+            invokeStatic(Injections::beforeThreadFork)
+            // STACK: forkedThread, isTracePoint
+            ifStatement(
+                condition = {},
+                thenClause = { invokeBeforeEventIfPluginEnabled("thread fork") },
+                elseClause = {},
+            )
+            // STACK: forkedThread
+            dup()
+            // STACK: forkedThread, forkedThread
+            adapter.visitMethodInsn(opcode, owner, name, desc, itf)
+            // STACK: forkedThread
+            invokeStatic(Injections::afterThreadFork)
             return
         }
         // In some newer versions of JDK, some of the java library classes
@@ -132,22 +133,26 @@ internal class ThreadTransformer(
                 elseClause = {},
             )
             // STACK: thread
+            dup()
             loadLocal(threadContainerLocal)
-            // STACK: thread, threadContainer
+            // STACK: thread, thread, threadContainer
+            adapter.visitMethodInsn(opcode, owner, name, desc, itf)
+            // STACK: thread
+            invokeStatic(Injections::afterThreadFork)
+            return
         }
         adapter.visitMethodInsn(opcode, owner, name, desc, itf)
     }
 
-    private fun isThreadStartMethod(methodName: String, desc: String): Boolean =
-        methodName == "start" && desc == VOID_METHOD_DESCRIPTOR && isThreadSubClass(className.toCanonicalClassName())
-    
     private fun isJavaLangAccessThreadStartMethod(className: String, methodName: String): Boolean =
         methodName == "start" && isJavaLangAccessClass(className.toCanonicalClassName())
 
     private fun isThreadRunMethod(methodName: String, desc: String): Boolean =
         methodName == "run" && desc == VOID_METHOD_DESCRIPTOR && isThreadSubClass(className.toCanonicalClassName())
 
-    // TODO: add support for thread joins with time limit
+    private fun isThreadStartCall(className: String, methodName: String, desc: String): Boolean =
+        methodName == "start" && desc == VOID_METHOD_DESCRIPTOR && isThreadSubClass(className.toCanonicalClassName())
+
     private fun isThreadJoinCall(className: String, methodName: String, desc: String) =
         // no need to check for thread subclasses here, since join methods are marked as final
         methodName == "join" && isThreadClass(className.toCanonicalClassName()) && (

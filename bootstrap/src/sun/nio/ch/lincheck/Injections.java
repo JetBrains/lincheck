@@ -165,6 +165,21 @@ public class Injections {
     }
 
     /**
+     * Current thread reports that it started the `forkedThread`
+     * (meaning that the invocation of `forkedThread.start()` is finished).
+     */
+    public static void afterThreadFork(Thread forkedThread) {
+        // TestThread does not require to be tracked via `afterThreadFork`
+        if (forkedThread instanceof TestThread) return;
+        ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
+        if (descriptor == null) {
+            return;
+        }
+        EventTracker tracker = descriptor.getEventTracker();
+        tracker.afterThreadFork();
+    }
+
+    /**
      * Current thread entered its {@code run} method.
      */
     public static void beforeThreadStart() {

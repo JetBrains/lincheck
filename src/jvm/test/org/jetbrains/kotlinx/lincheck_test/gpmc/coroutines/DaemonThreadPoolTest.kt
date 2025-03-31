@@ -11,32 +11,78 @@
 package org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines
 
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
 import org.jetbrains.kotlinx.lincheck.ExperimentalModelCheckingAPI
+import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.runConcurrentTest
 import org.junit.Test
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.concurrent.thread
 
-@OptIn(ExperimentalModelCheckingAPI::class, DelicateCoroutinesApi::class)
+
+@OptIn(ExperimentalModelCheckingAPI::class)
 class DaemonThreadPoolTest {
-    //@Ignore("Daemon threads are treated as active, see https://github.com/JetBrains/lincheck/issues/542")
+
     @Test
     fun testUselessThreadPool() {
         runConcurrentTest(1000) {
-            val pool = Executors.newFixedThreadPool(2).asCoroutineDispatcher()
+            val pool = Executors.newFixedThreadPool(1).asCoroutineDispatcher()
             runBlocking(pool) { /* do nothing */ }
-            // pool.close() -- should not be required
+            // pool.close() -- we do not need this call, because lincheck will
+            //                 abort background threads, when main is finished
+        }
+    }
+
+    @Test(expected = LincheckAssertionError::class)
+    fun testBackgroundThreadsDeadlock() {
+        runConcurrentTest(1000) {
+            val sync1 = Any()
+            val sync2 = Any()
+            thread(start = false) {
+                synchronized(sync1) {
+                    synchronized(sync2) {
+                    }
+                }
+            }.start()
+
+            thread(start = false) {
+                synchronized(sync2) {
+                    synchronized(sync1) {
+                    }
+                }
+            }.start()
         }
     }
 
     @Test
-    fun testInfiniteCoroutineAsDaemon() {
+    fun testInfiniteBackgroundThreads() {
         runConcurrentTest(1000) {
-            val pool = Executors.newFixedThreadPool(1).asCoroutineDispatcher()
-            var x = 0
-            GlobalScope.launch(pool) {
-                // 1. coroutine has no parent job
-                // 2. coroutine uses thread from the `pool`
-                while (true) x++
+            val atomic = AtomicInteger(0)
+            thread {
+                while (true) atomic.incrementAndGet()
+            }
+            val t2 = thread(start = false) {
+                while (true) atomic.decrementAndGet()
+            }
+            t2.isDaemon = true
+            t2.start()
+        }
+    }
+
+    @Test(expected = LincheckAssertionError::class)
+    fun testBackgroundCoroutinesDeadlock() {
+        runConcurrentTest(1000) {
+            Executors.newFixedThreadPool(2).asCoroutineDispatcher().use { pool ->
+                val m = Mutex()
+                runBlocking(pool) {
+                    launch(pool) {
+                        m.lock()
+                    }
+                    launch(pool) {
+                        m.lock()
+                    }
+                }
             }
         }
     }
