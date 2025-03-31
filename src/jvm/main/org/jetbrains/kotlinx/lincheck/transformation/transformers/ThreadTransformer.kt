@@ -140,13 +140,10 @@ internal class ThreadTransformer(
                 elseClause = {},
             )
             // STACK: thread
-            dup()
             loadLocal(threadContainerLocal)
-            // STACK: thread, thread, threadContainer
-            adapter.visitMethodInsn(opcode, owner, name, desc, itf)
-            // STACK: thread
-            invokeStatic(Injections::afterThreadFork)
-            return
+            // STACK: thread, threadContainer
+            // No need to invoke `Injections::afterThreadFork` here, because it
+            // will be handled in the `Thread::start` condition. Otherwise, we fork thread twice
         }
         adapter.visitMethodInsn(opcode, owner, name, desc, itf)
     }
