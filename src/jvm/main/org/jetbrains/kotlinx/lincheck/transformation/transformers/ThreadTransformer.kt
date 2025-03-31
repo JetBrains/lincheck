@@ -49,6 +49,7 @@ internal class ThreadTransformer(
     }
 
     override fun visitInsn(opcode: Int) = adapter.run {
+        // TODO: this approach does not support thread interruptions and any other thrown exceptions
         if (isThreadRunMethod(methodName, desc) && opcode == Opcodes.RETURN) {
             // STACK: <empty>
             invokeStatic(Injections::afterThreadFinish)
@@ -67,6 +68,12 @@ internal class ThreadTransformer(
         // STACK: exception
         invokeStatic(Injections::onThreadRunException)
         // STACK: <empty>
+
+        // Notify that the thread has finished.
+        // TODO: currently does not work, because `ManagedStrategy::onThreadFinish`
+        //   assumes the thread finish injection is called under normal managed execution,
+        //   i.e., in non-aborted state
+        // invokeStatic(Injections::afterThreadFinish)
 
         visitInsn(Opcodes.RETURN)
         visitMaxs(maxStack, maxLocals)
