@@ -445,34 +445,34 @@ abstract class ManagedStrategy(
 
     /**
      * Create a new switch point, where a thread context switch can occur.
-     * @param iThread the current thread
+     * @param threadId the current thread id.
      * @param codeLocation the byte-code location identifier of the point in code.
      */
-    private fun newSwitchPoint(iThread: Int, codeLocation: Int, beforeMethodCallSwitch: Boolean = false) {
+    private fun newSwitchPoint(threadId: Int, codeLocation: Int, beforeMethodCallSwitch: Boolean = false) {
         // re-throw abort error if the thread was aborted
-        if (threadScheduler.isAborted(iThread)) {
+        if (threadScheduler.isAborted(threadId)) {
             threadScheduler.abortCurrentThread()
         }
         // check we are in the right thread
-        check(iThread == threadScheduler.scheduledThreadId)
+        check(threadId == threadScheduler.scheduledThreadId)
         // check if we need to switch
         val shouldSwitch = when {
             // check if a switch is required in replay mode
             loopDetector.replayModeEnabled -> loopDetector.shouldSwitchInReplayMode()
             // do not make thread switches inside a silent section
-            inSilentSection() -> false
+            inSilentSection(threadId) -> false
             // otherwise, as strategy if thread switch is needed
-            else -> shouldSwitch(iThread)
+            else -> shouldSwitch(threadId)
         }
         // check if live-lock is detected
-        val decision = loopDetector.visitCodeLocation(iThread, codeLocation)
+        val decision = loopDetector.visitCodeLocation(threadId, codeLocation)
         if (decision != LoopDetector.Decision.Idle) {
-            processLoopDetectorDecision(iThread, codeLocation, decision, beforeMethodCallSwitch = beforeMethodCallSwitch)
+            processLoopDetectorDecision(threadId, codeLocation, decision, beforeMethodCallSwitch = beforeMethodCallSwitch)
             return
         }
         // if strategy requested thread switch, then do it
         if (shouldSwitch) {
-            val switchHappened = switchCurrentThread(iThread, beforeMethodCallSwitch = beforeMethodCallSwitch)
+            val switchHappened = switchCurrentThread(threadId, beforeMethodCallSwitch = beforeMethodCallSwitch)
             if (switchHappened) {
                 loopDetector.initializeFirstCodeLocationAfterSwitch(codeLocation)
             }
@@ -1711,8 +1711,8 @@ abstract class ManagedStrategy(
         }
     }
 
-    protected fun inSilentSection(): Boolean {
-        return false
+    protected fun inSilentSection(threadId: ThreadId): Boolean {
+        return (methodGuaranteesStack[threadId]!!.lastOrNull() == ManagedGuaranteeType.SILENT)
     }
 
     private fun isResumptionMethodCall(
