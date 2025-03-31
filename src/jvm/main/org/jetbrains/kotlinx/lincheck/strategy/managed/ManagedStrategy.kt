@@ -200,7 +200,7 @@ abstract class ManagedStrategy(
      *   to communicate coroutine resumption event to the plugin.
      */
     private var skipNextBeforeEvent = false
-    
+
     init {
         ObjectLabelFactory.isGPMCMode = isGeneralPurposeModelCheckingScenario(scenario)
     }
@@ -451,7 +451,11 @@ abstract class ManagedStrategy(
         check(iThread == threadScheduler.scheduledThreadId)
         // check if we need to switch
         val shouldSwitch = when {
+            // check if a switch is required in replay mode
             loopDetector.replayModeEnabled -> loopDetector.shouldSwitchInReplayMode()
+            // do not make thread switches inside a silent section
+            inSilentSection() -> false
+            // otherwise, as strategy if thread switch is needed
             else -> shouldSwitch(iThread)
         }
         // check if live-lock is detected
@@ -654,7 +658,7 @@ abstract class ManagedStrategy(
         } else {
             emptyList()
         }
-    
+
     /**
      * Converts lincheck threadId to displayable thread number for the trace.
      * In case of GPMC the numbers shift -1.
@@ -1200,7 +1204,7 @@ abstract class ManagedStrategy(
     override fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int): Boolean = runInsideIgnoredSection {
         updateSnapshotOnArrayElementAccess(array, index)
         objectTracker?.registerObjectLink(fromObject = array, toObject = value)
-        
+
         if (!shouldTrackArrayAccess(array)) {
             return false
         }
@@ -1291,18 +1295,18 @@ abstract class ManagedStrategy(
             objectTracker?.registerNewObject(obj)
         }
     }
-    
+
     private fun shouldTrackArrayAccess(obj: Any?): Boolean = shouldTrackObjectAccess(obj)
 
     private fun shouldTrackFieldAccess(obj: Any?, fieldName: String): Boolean =
       shouldTrackObjectAccess(obj) && !isStackRecoveryFieldAccess(obj, fieldName)
-    
+
     private fun shouldTrackObjectAccess(obj: Any?): Boolean {
         // by default, we track accesses to all objects
         if (objectTracker == null) return true
         return objectTracker!!.shouldTrackObjectAccess(obj ?: StaticObject)
     }
-    
+
     private fun isStackRecoveryFieldAccess(obj: Any?, fieldName: String?): Boolean =
         obj is Continuation<*> && (fieldName == "label" || fieldName?.startsWith("L$") == true)
 
@@ -2065,6 +2069,10 @@ abstract class ManagedStrategy(
 
         popShadowStackFrame()
         callStackTrace.removeLast()
+    }
+
+    protected fun inSilentSection(): Boolean {
+        return false;
     }
 
     // == LOGGING METHODS ==
