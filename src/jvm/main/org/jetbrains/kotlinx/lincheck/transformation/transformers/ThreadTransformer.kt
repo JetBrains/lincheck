@@ -112,7 +112,7 @@ internal class ThreadTransformer(
             // STACK: forkedThread, isTracePoint
             ifStatement(
                 condition = {},
-                thenClause = { invokeBeforeEventIfPluginEnabled("thread fork") },
+                thenClause = { invokeBeforeEventIfPluginEnabled("before thread fork") },
                 elseClause = {},
             )
             // STACK: forkedThread
@@ -121,6 +121,12 @@ internal class ThreadTransformer(
             adapter.visitMethodInsn(opcode, owner, name, desc, itf)
             // STACK: forkedThread
             invokeStatic(Injections::afterThreadFork)
+            // STACK: isTracePoint
+            ifStatement(
+                condition = {},
+                thenClause = { invokeBeforeEventIfPluginEnabled("after thread fork") },
+                elseClause = {},
+            )
             return
         }
         // In some newer versions of JDK, some of the java library classes
@@ -136,7 +142,7 @@ internal class ThreadTransformer(
             // STACK: thread, isTracePoint
             ifStatement(
                 condition = {},
-                thenClause = { invokeBeforeEventIfPluginEnabled("thread fork") },
+                thenClause = { invokeBeforeEventIfPluginEnabled("before thread fork") },
                 elseClause = {},
             )
             // STACK: thread
