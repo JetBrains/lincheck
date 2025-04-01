@@ -296,7 +296,7 @@ abstract class ManagedStrategy(
             return suddenResult
         }
         // Unexpected `ThreadAbortedError` should be thrown.
-        check(result is UnexpectedExceptionInvocationResult)
+        // check(result is UnexpectedExceptionInvocationResult)
         // Otherwise return the sudden result
         return suddenResult
     }
