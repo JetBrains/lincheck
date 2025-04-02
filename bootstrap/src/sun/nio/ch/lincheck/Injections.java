@@ -133,7 +133,7 @@ public class Injections {
         // TestThread is handled separately
         if (forkedThread instanceof TestThread) return false;
         // If thread is started return immediately, as in this case, JVM will throw an `IllegalThreadStateException`
-        if (forkedThread.getState() != Thread.State.NEW) return;
+        if (forkedThread.getState() != Thread.State.NEW) return false;
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) {
             return false;
