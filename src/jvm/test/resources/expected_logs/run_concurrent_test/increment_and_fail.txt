@@ -1,25 +1,25 @@
 = Concurrent test failed =
 
 java.lang.IllegalStateException: Check failed.
-	at org.jetbrains.kotlinx.lincheck_test.representation.IncrementAndFailConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:77)
-	at org.jetbrains.kotlinx.lincheck_test.representation.IncrementAndFailConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:70)
-	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:42)
-	at java.base/java.lang.Thread.run(Thread.java:833)
+	at org.jetbrains.kotlinx.lincheck_test.representation.IncrementAndFailConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:82)
+	at org.jetbrains.kotlinx.lincheck_test.representation.IncrementAndFailConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:75)
+	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:47)
+	at java.base/java.lang.Thread.run(Thread.java:840)
 
 The following interleaving leads to the error:
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-|                                                                                                   Thread 1                                                                                                   |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| IncrementAndFailConcurrentRepresentationTest#1.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:42) |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                    Thread 1                                                                                     |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:47) |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 
 Detailed trace:
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-|                                                                                                   Thread 1                                                                                                   |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| IncrementAndFailConcurrentRepresentationTest#1.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:42) |
-|   block(): threw IllegalStateException at IncrementAndFailConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:70)                                                                         |
-|     x ➜ 1 at IncrementAndFailConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:76)                                                                                                      |
-|     x = 2 at IncrementAndFailConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:76)                                                                                                      |
-|   result: IllegalStateException #1                                                                                                                                                                           |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                    Thread 1                                                                                     |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:47) |
+|   block(): threw IllegalStateException at IncrementAndFailConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:75)                                            |
+|     x ➜ 1 at IncrementAndFailConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:81)                                                                         |
+|     x = 2 at IncrementAndFailConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:81)                                                                         |
+|   result: IllegalStateException #1                                                                                                                                              |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
