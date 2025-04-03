@@ -269,11 +269,6 @@ internal object LincheckJavaAgent {
      * @param processedObjects A set of processed objects to avoid infinite recursion.
      */
     private fun ensureObjectIsTransformed(obj: Any, processedObjects: MutableSet<Any>) {
-        if (obj is Array<*>) {
-            obj.filterNotNull().forEach { ensureObjectIsTransformed(it, processedObjects) }
-            return
-        }
-
         var clazz: Class<*> = obj.javaClass
         val className = clazz.name
 
@@ -281,9 +276,16 @@ internal object LincheckJavaAgent {
             isJavaLambdaClass(className) -> {
                 ensureClassHierarchyIsTransformed(getJavaLambdaEnclosingClass(className))
             }
+            obj is Array<*> -> {
+                obj.filterNotNull().forEach {
+                    ensureObjectIsTransformed(it, processedObjects)
+                }
+                return
+            }
             else -> {
                 if (!instrumentation.isModifiableClass(obj.javaClass) ||
-                    !shouldTransform(obj.javaClass.name, instrumentationMode)) {
+                    !shouldTransform(obj.javaClass.name, instrumentationMode)
+                ) {
                     return
                 }
                 ensureClassHierarchyIsTransformed(clazz)
