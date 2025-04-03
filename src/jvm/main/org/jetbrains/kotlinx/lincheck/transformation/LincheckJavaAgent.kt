@@ -274,9 +274,6 @@ internal object LincheckJavaAgent {
             return
         }
 
-        if (processedObjects.contains(obj)) return
-        processedObjects += obj
-
         var clazz: Class<*> = obj.javaClass
         val className = clazz.name
 
@@ -285,9 +282,16 @@ internal object LincheckJavaAgent {
                 ensureClassHierarchyIsTransformed(getJavaLambdaEnclosingClass(className))
             }
             else -> {
+                if (!instrumentation.isModifiableClass(obj.javaClass) ||
+                    !shouldTransform(obj.javaClass.name, instrumentationMode)) {
+                    return
+                }
                 ensureClassHierarchyIsTransformed(clazz)
             }
         }
+
+        if (processedObjects.contains(obj)) return
+        processedObjects += obj
 
         while (true) {
             clazz.declaredFields
