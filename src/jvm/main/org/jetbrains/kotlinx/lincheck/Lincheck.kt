@@ -8,6 +8,8 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+@file:JvmName("Lincheck")
+
 package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.execution.*
@@ -31,13 +33,15 @@ annotation class ExperimentalModelCheckingAPI
  * @param block lambda which body will be a target for the interleavings exploration.
  */
 @ExperimentalModelCheckingAPI
-fun <R> runConcurrentTest(
+@JvmOverloads
+fun runConcurrentTest(
     invocations: Int = DEFAULT_INVOCATIONS_COUNT,
-    block: () -> R
+    block: Runnable
 ) {
+    // TODO: do not use DSL to avoid spending 300ms in Kotlin Reflection
     val scenario = scenario {
         parallel {
-            thread { actor(GeneralPurposeModelCheckingWrapper<R>::run, block) }
+            thread { actor(GeneralPurposeModelCheckingWrapper::runGPMCTest, block) }
         }
     }
 
@@ -74,8 +78,8 @@ fun <R> runConcurrentTest(
     }
 }
 
-internal class GeneralPurposeModelCheckingWrapper<R>() {
-    fun run(block: () -> R) = block()
+internal class GeneralPurposeModelCheckingWrapper {
+    fun runGPMCTest(block: Runnable) = block.run()
 }
 
 /**
