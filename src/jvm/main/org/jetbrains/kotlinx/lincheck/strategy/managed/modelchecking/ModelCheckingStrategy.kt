@@ -407,8 +407,8 @@ internal class ModelCheckingMonitorTracker : MonitorTracker {
     private val acquiredMonitors = IdentityHashMap<Any, MonitorAcquiringInfo>()
 
     // Maintains a set of monitors on which each thread is waiting.
-    // Note, that a thread can wait on a free monitor if it is waiting for a `notify` call.
-    // Stores `null` if thread is not waiting on any monitor.
+    // Note that a thread can wait on a free monitor if it is waiting for a `notify` call.
+    // Stores `null` if the thread is not waiting on any monitor.
     private val waitingMonitor = mutableMapOf<ThreadId, MonitorAcquiringInfo?>()
 
     override fun registerThread(threadId: Int) {
@@ -474,15 +474,14 @@ internal class ModelCheckingMonitorTracker : MonitorTracker {
      * returns `true` until the corresponding [notify] is invoked.
      */
     override fun waitOnMonitor(threadId: Int, monitor: Any): Boolean {
-        // TODO: we can add spurious wakeups here
+        // TODO: we can add spurious wake-ups here
         var info = acquiredMonitors[monitor]
         if (info != null) {
-            // in case when lock is currently acquired by another thread continue waiting
-            if (info.threadId != threadId)
-                return true
+            // in case when the lock is currently acquired by another thread, continue waiting
+            if (info.threadId != threadId) return true
             // in case when current thread owns the lock we release it
-            // in order to give other thread a chance to acquire it
-            // and put the current thread into waiting state
+            // to give other threads a chance to acquire it,
+            // and we put the current thread into the waiting state
             info.waitForNotify = true
             waitingMonitor[threadId] = info
             acquiredMonitors.remove(monitor)
@@ -494,12 +493,17 @@ internal class ModelCheckingMonitorTracker : MonitorTracker {
             "Monitor should have been acquired by this thread"
         }
         // if there has been no `notify` yet continue waiting
-        if (info.waitForNotify)
-            return true
+        if (info.waitForNotify) return true
         // otherwise acquire monitor restoring its re-entrance depth
         acquiredMonitors[monitor] = info
         waitingMonitor[threadId] = null
         return false
+    }
+
+    override fun interruptWait(threadId: Int) {
+        check(isWaiting(threadId))
+        val info = waitingMonitor[threadId]!!
+        info.waitForNotify = false
     }
 
     /**
@@ -549,6 +553,10 @@ class ModelCheckingParkingTracker(val allowSpuriousWakeUps: Boolean = false) : P
 
     override fun unpark(threadId: Int, unparkedThreadId: Int) {
         parked[unparkedThreadId] = false
+    }
+
+    override fun interruptPark(threadId: Int) {
+        parked[threadId] = false
     }
 
     override fun isParked(threadId: Int): Boolean =

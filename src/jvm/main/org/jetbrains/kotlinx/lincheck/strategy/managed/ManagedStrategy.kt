@@ -519,6 +519,10 @@ abstract class ManagedStrategy(
         blockingReason: BlockingReason? = null,
         tracePoint: TracePoint? = null
     ): Boolean {
+        // before blocking the thread, interrupt it if the interruption flag is set
+        if (blockingReason != null && blockingReason.throwsInterruptedException()) {
+            throwIfInterrupted()
+        }
         val switchReason = blockingReason.toSwitchReason()
         val mustSwitch = (blockingReason != null) && (blockingReason !is BlockingReason.LiveLocked)
         val nextThread = chooseThreadSwitch(iThread, mustSwitch)
@@ -543,8 +547,10 @@ abstract class ManagedStrategy(
 
     private fun chooseThreadSwitch(iThread: Int, mustSwitch: Boolean = false): Int {
         onNewSwitch(iThread, mustSwitch)
-        val threads = switchableThreads(iThread)
+        // unblock interrupted threads
+        unblockInterruptedThreads()
         // do the switch if there is an available thread
+        val threads = switchableThreads(iThread)
         if (threads.isNotEmpty()) {
             val nextThread = chooseThread(iThread).also {
                 check(it in threads) {
@@ -576,6 +582,32 @@ abstract class ManagedStrategy(
     private fun setCurrentThread(nextThread: Int) {
         loopDetector.onThreadSwitch(nextThread)
         threadScheduler.scheduleThread(nextThread)
+    }
+
+    private fun throwIfInterrupted() {
+        if (Thread.interrupted()) {
+            throw InterruptedException()
+        }
+    }
+
+    private fun unblockInterruptedThreads() {
+        for ((threadId, thread) in threadScheduler.getRegisteredThreads()) {
+            if (threadScheduler.isBlocked(threadId) && thread.isInterrupted) {
+                val blockingReason = threadScheduler.getBlockingReason(threadId)
+                if (blockingReason != null && blockingReason.isInterruptible()) {
+                    threadScheduler.unblockThread(threadId)
+                    when (blockingReason) {
+                        is BlockingReason.Parked -> {
+                            parkingTracker.interruptPark(threadId)
+                        }
+                        is BlockingReason.Waiting -> {
+                            monitorTracker.interruptWait(threadId)
+                        }
+                        else -> {}
+                    }
+                }
+            }
+        }
     }
 
     private fun abortWithSuddenInvocationResult(invocationResult: InvocationResult): Nothing {
@@ -914,11 +946,15 @@ abstract class ManagedStrategy(
      */
     override fun wait(monitor: Any, withTimeout: Boolean): Unit = runInsideIgnoredSection {
         if (withTimeout) return // timeouts occur instantly
+        // we check the interruption flag both before entering `wait` and after,
+        // to ensure the monitor is acquired when `InterruptionException` is thrown
+        throwIfInterrupted()
         val iThread = threadScheduler.getCurrentThreadId()
         while (monitorTracker.waitOnMonitor(iThread, monitor)) {
             unblockAcquiringThreads(iThread, monitor)
             switchCurrentThread(iThread, BlockingReason.Waiting)
         }
+        throwIfInterrupted()
     }
 
     override fun notify(monitor: Any, codeLocation: Int, notifyAll: Boolean): Unit = runInsideIgnoredSection {

@@ -70,6 +70,14 @@ interface MonitorTracker {
     fun notify(threadId: Int, monitor: Any, notifyAll: Boolean)
 
     /**
+     * Interrupts a thread's waiting on a monitor.
+     *
+     * @param threadId the ID of the thread whose waiting state should be interrupted.
+     * @throws IllegalStateException if the thread does not wait on some monitor.
+     */
+    fun interruptWait(threadId: Int)
+
+    /**
      * Checks if a thread with the given ID is waiting on some monitor.
      *
      * @param threadId the id of the thread to check.
