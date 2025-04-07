@@ -16,6 +16,7 @@ import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.thread
 import kotlin.concurrent.withLock
 import org.junit.Test
+import org.junit.Ignore
 
 class InterruptionTest {
 
@@ -116,6 +117,28 @@ class InterruptionTest {
         testClass = this::class,
         testOperation = this::interruptWait,
         expectedOutcomes = setOf(true),
+    )
+
+    fun uncaughtInterruptedException() {
+        var counter = AtomicInteger(0)
+        val lock = Any()
+
+        val t = thread {
+            synchronized(lock) {
+                @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
+                (lock as Object).wait()
+                counter.incrementAndGet()
+            }
+        }
+        t.interrupt()
+        t.join()
+    }
+
+    @Ignore // blocked by https://github.com/JetBrains/lincheck/issues/596
+    @Test(timeout = TIMEOUT)
+    fun uncaughtInterruptedExceptionTest() = modelCheckerTest(
+        testClass = this::class,
+        testOperation = this::uncaughtInterruptedException,
     )
 
     fun interruptJoin(): Boolean {
