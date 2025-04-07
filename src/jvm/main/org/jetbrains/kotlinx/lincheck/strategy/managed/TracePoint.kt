@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
+import org.jetbrains.kotlinx.lincheck.strategy.BlockingReason
 import org.jetbrains.kotlinx.lincheck.util.ThreadId
 import kotlin.collections.map
 import org.jetbrains.kotlinx.lincheck.transformation.CodeLocations
@@ -489,6 +490,16 @@ internal sealed class SwitchReason(private val reason: String) {
 
     // display switch reason
     override fun toString() = reason
+}
+
+internal fun BlockingReason?.toSwitchReason(): SwitchReason = when (this) {
+    is BlockingReason.Locked        -> SwitchReason.LockWait
+    is BlockingReason.LiveLocked    -> SwitchReason.ActiveLock
+    is BlockingReason.Waiting       -> SwitchReason.MonitorWait
+    is BlockingReason.Parked        -> SwitchReason.ParkWait
+    is BlockingReason.Suspended     -> SwitchReason.Suspended
+    is BlockingReason.ThreadJoin    -> SwitchReason.ThreadJoinWait(joinedThreadId)
+    else                            -> SwitchReason.StrategySwitch
 }
 
 /**

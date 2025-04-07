@@ -20,7 +20,6 @@ import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.kotlinx.lincheck.util.runInsideIgnoredSection
 import sun.nio.ch.lincheck.*
-import sun.nio.ch.lincheck.Types.*
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicFieldUpdaterNames.getAtomicFieldUpdaterDescriptor
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceMethodType.*
@@ -520,15 +519,7 @@ abstract class ManagedStrategy(
         blockingReason: BlockingReason? = null,
         tracePoint: TracePoint? = null
     ): Boolean {
-        val switchReason = when (blockingReason) {
-            is BlockingReason.Locked        -> SwitchReason.LockWait
-            is BlockingReason.LiveLocked    -> SwitchReason.ActiveLock
-            is BlockingReason.Waiting       -> SwitchReason.MonitorWait
-            is BlockingReason.Parked        -> SwitchReason.ParkWait
-            is BlockingReason.Suspended     -> SwitchReason.Suspended
-            is BlockingReason.ThreadJoin    -> SwitchReason.ThreadJoinWait(blockingReason.joinedThreadId)
-            else                            -> SwitchReason.StrategySwitch
-        }
+        val switchReason = blockingReason.toSwitchReason()
         val mustSwitch = (blockingReason != null) && (blockingReason !is BlockingReason.LiveLocked)
         val nextThread = chooseThreadSwitch(iThread, mustSwitch)
         val switchHappened = (iThread != nextThread)
