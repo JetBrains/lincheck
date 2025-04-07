@@ -16,7 +16,6 @@ import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.thread
 import kotlin.concurrent.withLock
 import org.junit.Test
-import org.junit.Ignore
 
 class InterruptionTest {
 
@@ -191,7 +190,9 @@ class InterruptionTest {
                 } catch (e: InterruptedException) {
                     wasInterrupted = true
                 } finally {
-                    lock.unlock()
+                    if (!wasInterrupted) {
+                        lock.unlock()
+                    }
                 }
             }
             t.interrupt()
@@ -201,7 +202,6 @@ class InterruptionTest {
         return wasInterrupted
     }
 
-    @Ignore
     @Test(timeout = TIMEOUT)
     fun interruptReentrantLockTest() = modelCheckerTest(
         testClass = this::class,
@@ -210,11 +210,11 @@ class InterruptionTest {
     )
 
     fun multipleInterrupts(): Int {
-        var interruptCount = 0
+        var interruptCount = AtomicInteger(0)
         var counter = AtomicInteger(0)
         val lock = Any()
 
-        val t = thread(start = false) {
+        val t = thread {
             for (i in 1..3) {
                 try {
                     synchronized(lock) {
@@ -223,7 +223,7 @@ class InterruptionTest {
                         counter.incrementAndGet()
                     }
                 } catch (e: InterruptedException) {
-                    interruptCount++
+                    interruptCount.incrementAndGet()
                     // check that interrupt status is reset
                     check(!Thread.currentThread().isInterrupted)
                 }
@@ -231,10 +231,13 @@ class InterruptionTest {
         }
         for (i in 1..3) {
             t.interrupt()
+            while (interruptCount.get() < i) {
+                Thread.yield()
+            }
         }
         t.join()
 
-        return interruptCount
+        return interruptCount.get()
     }
 
     @Test(timeout = TIMEOUT)
@@ -259,6 +262,7 @@ class InterruptionTest {
                     (lock as Object).wait()
                 }
             } catch (e: InterruptedException) {
+                check(!Thread.currentThread().isInterrupted)
                 wasInterrupted = true
             }
         }
