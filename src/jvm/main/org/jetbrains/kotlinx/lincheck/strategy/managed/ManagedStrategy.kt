@@ -590,6 +590,12 @@ abstract class ManagedStrategy(
         }
     }
 
+    /**
+     * Iterates through all blocked threads and unblocks each thread
+     * that was interrupted (i.e., the interrupted flag is set), and
+     * its blocking reason is interruptible.
+     * Also, notifies the respective tracker about interruption.
+     */
     private fun unblockInterruptedThreads() {
         for ((threadId, thread) in threadScheduler.getRegisteredThreads()) {
             if (threadScheduler.isBlocked(threadId) && thread.isInterrupted) {
