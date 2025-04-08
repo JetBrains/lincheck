@@ -20,7 +20,6 @@ import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.kotlinx.lincheck.util.runInsideIgnoredSection
 import sun.nio.ch.lincheck.*
-import sun.nio.ch.lincheck.Types.*
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicFieldUpdaterNames.getAtomicFieldUpdaterDescriptor
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceMethodType.*
@@ -426,7 +425,7 @@ abstract class ManagedStrategy(
     }
 
 
-    // == EXECUTION CONTROL METHODS ==
+    // == THREAD SCHEDULING METHODS ==
 
     /**
      * Create a new switch point, where a thread context switch can occur.
@@ -443,35 +442,33 @@ abstract class ManagedStrategy(
         check(iThread == threadScheduler.scheduledThreadId)
         // check if we need to switch
         val shouldSwitch = when {
-            /*
-             * When replaying executions, it's important to repeat the same thread switches
-             * recorded in the loop detector history during the last execution.
-             * For example, suppose that interleaving say us to switch
-             * from thread 1 to thread 2 at execution position 200.
-             * But after execution 10, a spin cycle with period 2 occurred,
-             * so we will switch from the spin cycle.
-             * When we leave this cycle due to the switch for the first time,
-             * interleaving execution counter may be near 200 and the strategy switch will happen soon.
-             * But on the replay run, we will switch from thread 1 early, after 12 operations,
-             * but no strategy switch will be performed for the next 200-12 operations.
-             * This leads to the results of another execution, compared to the original failure results.
-             * To avoid this bug when we're replaying some executions,
-             * we have to follow only loop detector's history during the last execution.
-             * In the considered example, we will retain that we will switch soon after
-             * the spin cycle in thread 1, so no bug will appear.
-             */
-            loopDetector.replayModeEnabled ->
-                loopDetector.shouldSwitchInReplayMode()
-            /*
-             * In the regular mode, we use loop detector only to determine should we
-             * switch current thread or not due to new or early detection of spin locks.
-             * Regular thread switches are dictated by the current interleaving.
-             */
-            else ->
-                (runner.currentExecutionPart == PARALLEL) && shouldSwitch(iThread)
+            loopDetector.replayModeEnabled -> loopDetector.shouldSwitchInReplayMode()
+            else -> shouldSwitch(iThread)
         }
         // check if live-lock is detected
         val decision = loopDetector.visitCodeLocation(iThread, codeLocation)
+        if (decision != LoopDetector.Decision.Idle) {
+            processLoopDetectorDecision(iThread, codeLocation, tracePoint, decision)
+            return
+        }
+        // if strategy requested thread switch, then do it
+        if (shouldSwitch) {
+            val switchHappened = switchCurrentThread(iThread, tracePoint = tracePoint)
+            if (switchHappened) {
+                loopDetector.initializeFirstCodeLocationAfterSwitch(codeLocation)
+            }
+            traceCollector?.passCodeLocation(tracePoint)
+            return
+        }
+        if (!loopDetector.replayModeEnabled) {
+            loopDetector.onNextExecutionPoint(codeLocation)
+        }
+        traceCollector?.passCodeLocation(tracePoint)
+    }
+
+    private fun processLoopDetectorDecision(iThread: Int, codeLocation: Int, tracePoint: TracePoint?,
+                                            decision: LoopDetector.Decision) {
+        check(decision != LoopDetector.Decision.Idle)
         // if we reached maximum number of events threshold, then fail immediately
         if (decision == LoopDetector.Decision.EventsThresholdReached) {
             failDueToDeadlock()
@@ -500,22 +497,142 @@ abstract class ManagedStrategy(
                 loopDetector.initializeFirstCodeLocationAfterSwitch(codeLocation)
             }
             traceCollector?.passCodeLocation(tracePoint)
-            return
         }
-        // if strategy requested thread switch, then do it
-        if (shouldSwitch) {
-            val switchHappened = switchCurrentThread(iThread, tracePoint = tracePoint)
-            if (switchHappened) {
-                loopDetector.initializeFirstCodeLocationAfterSwitch(codeLocation)
-            }
-            traceCollector?.passCodeLocation(tracePoint)
-            return
-        }
-        if (!loopDetector.replayModeEnabled) {
-            loopDetector.onNextExecutionPoint(codeLocation)
-        }
-        traceCollector?.passCodeLocation(tracePoint)
     }
+
+    /**
+     * Returns whether the specified thread is active and
+     * can continue its execution (i.e., is not blocked/finished).
+     */
+    private fun isActive(iThread: Int): Boolean =
+        threadScheduler.isSchedulable(iThread) &&
+        // TODO: coroutine suspensions are currently handled separately from `ThreadScheduler`
+        !(isSuspended[iThread]!! && !runner.isCoroutineResumed(iThread, currentActorId[iThread]!!))
+
+    /**
+     * A regular thread switch to another thread.
+     *
+     * @return true if this thread actually switched to another thread, false otherwise.
+     */
+    private fun switchCurrentThread(
+        iThread: Int,
+        blockingReason: BlockingReason? = null,
+        tracePoint: TracePoint? = null
+    ): Boolean {
+        // before blocking the thread, interrupt it if the interruption flag is set
+        if (blockingReason != null && blockingReason.throwsInterruptedException()) {
+            throwIfInterrupted()
+        }
+        val switchReason = blockingReason.toSwitchReason()
+        val mustSwitch = (blockingReason != null) && (blockingReason !is BlockingReason.LiveLocked)
+        val nextThread = chooseThreadSwitch(iThread, mustSwitch)
+        val switchHappened = (iThread != nextThread)
+        if (switchHappened) {
+            if (blockingReason != null &&
+                // active live-lock currently does not block thread
+                blockingReason !is BlockingReason.LiveLocked &&
+                // TODO: coroutine suspensions are currently handled separately from `ThreadScheduler`
+                blockingReason !is BlockingReason.Suspended
+            ) {
+                blockThread(iThread, blockingReason)
+            }
+            traceCollector?.newSwitch(iThread, switchReason,
+                beforeMethodCallSwitch = (tracePoint != null && tracePoint is MethodCallTracePoint)
+            )
+            setCurrentThread(nextThread)
+        }
+        threadScheduler.awaitTurn(iThread)
+        return switchHappened
+    }
+
+    private fun chooseThreadSwitch(iThread: Int, mustSwitch: Boolean = false): Int {
+        onNewSwitch(iThread, mustSwitch)
+        // unblock interrupted threads
+        unblockInterruptedThreads()
+        // do the switch if there is an available thread
+        val threads = switchableThreads(iThread)
+        if (threads.isNotEmpty()) {
+            val nextThread = chooseThread(iThread).also {
+                check(it in threads) {
+                    """
+                        Trying to switch the execution to thread $it,
+                        but only the following threads are eligible to switch: $threads
+                    """.trimIndent()
+                }
+            }
+            return nextThread
+        }
+        // otherwise exit if the thread switch is optional, or all threads are finished
+        if (!mustSwitch || threadScheduler.areAllThreadsFinished()) {
+           return iThread
+        }
+        // try to resume some suspended thread
+        val suspendedThread = (0 until nThreads).firstOrNull {
+           !threadScheduler.isFinished(it) && isSuspended[it]!!
+        }
+        if (suspendedThread != null) {
+           return suspendedThread
+        }
+        // any other situation is considered to be a deadlock
+        val result = ManagedDeadlockInvocationResult(runner.collectExecutionResults())
+        abortWithSuddenInvocationResult(result)
+    }
+
+    @JvmName("setNextThread")
+    private fun setCurrentThread(nextThread: Int) {
+        loopDetector.onThreadSwitch(nextThread)
+        threadScheduler.scheduleThread(nextThread)
+    }
+
+    private fun throwIfInterrupted() {
+        if (Thread.interrupted()) {
+            throw InterruptedException()
+        }
+    }
+
+    /**
+     * Iterates through all blocked threads and unblocks each thread
+     * that was interrupted (i.e., the interrupted flag is set), and
+     * its blocking reason is interruptible.
+     * Also, notifies the respective tracker about interruption.
+     */
+    private fun unblockInterruptedThreads() {
+        for ((threadId, thread) in threadScheduler.getRegisteredThreads()) {
+            if (threadScheduler.isBlocked(threadId) && thread.isInterrupted) {
+                val blockingReason = threadScheduler.getBlockingReason(threadId)
+                if (blockingReason != null && blockingReason.isInterruptible()) {
+                    threadScheduler.unblockThread(threadId)
+                    when (blockingReason) {
+                        is BlockingReason.Parked -> {
+                            parkingTracker.interruptPark(threadId)
+                        }
+                        is BlockingReason.Waiting -> {
+                            monitorTracker.interruptWait(threadId)
+                        }
+                        else -> {}
+                    }
+                }
+            }
+        }
+    }
+
+    private fun abortWithSuddenInvocationResult(invocationResult: InvocationResult): Nothing {
+        suddenInvocationResult = invocationResult
+        threadScheduler.abortOtherThreads()
+        threadScheduler.abortCurrentThread()
+    }
+
+    /**
+     * Threads to which an execution can be switched from thread [iThread].
+     */
+    protected fun switchableThreads(iThread: Int) =
+        if (runner.currentExecutionPart == PARALLEL) {
+            (0 until threadScheduler.nThreads).filter { it != iThread && isActive(it) }
+        } else {
+            emptyList()
+        }
+
+    // == LISTENING METHODS ==
 
     override fun beforeThreadFork(thread: Thread, descriptor: ThreadDescriptor) = runInsideIgnoredSection {
         val currentThreadId = threadScheduler.getCurrentThreadId()
@@ -715,110 +832,6 @@ abstract class ManagedStrategy(
         disableAnalysis()
     }
 
-    /**
-     * Returns whether the specified thread is active and
-     * can continue its execution (i.e. is not blocked/finished).
-     */
-    private fun isActive(iThread: Int): Boolean =
-        threadScheduler.isSchedulable(iThread) &&
-        // TODO: coroutine suspensions are currently handled separately from `ThreadScheduler`
-        !(isSuspended[iThread]!! && !runner.isCoroutineResumed(iThread, currentActorId[iThread]!!))
-
-    /**
-     * A regular context thread switch to another thread.
-     *
-     * @return was this thread actually switched to another or not.
-     */
-    private fun switchCurrentThread(
-        iThread: Int,
-        blockingReason: BlockingReason? = null,
-        tracePoint: TracePoint? = null
-    ): Boolean {
-        val switchReason = when (blockingReason) {
-            is BlockingReason.Locked        -> SwitchReason.LockWait
-            is BlockingReason.LiveLocked    -> SwitchReason.ActiveLock
-            is BlockingReason.Waiting       -> SwitchReason.MonitorWait
-            is BlockingReason.Parked        -> SwitchReason.ParkWait
-            is BlockingReason.Suspended     -> SwitchReason.Suspended
-            is BlockingReason.ThreadJoin    -> SwitchReason.ThreadJoinWait(blockingReason.joinedThreadId)
-            else                            -> SwitchReason.StrategySwitch
-        }
-        val mustSwitch = (blockingReason != null) && (blockingReason !is BlockingReason.LiveLocked)
-        val nextThread = chooseThreadSwitch(iThread, mustSwitch)
-        val switchHappened = (iThread != nextThread)
-        if (switchHappened) {
-            if (blockingReason != null &&
-                // active live-lock currently does not block thread
-                blockingReason !is BlockingReason.LiveLocked &&
-                // TODO: coroutine suspensions are currently handled separately from `ThreadScheduler`
-                blockingReason !is BlockingReason.Suspended
-            ) {
-                blockThread(iThread, blockingReason)
-            }
-            traceCollector?.newSwitch(iThread, switchReason,
-                beforeMethodCallSwitch = (tracePoint != null && tracePoint is MethodCallTracePoint)
-            )
-            setCurrentThread(nextThread)
-        }
-        threadScheduler.awaitTurn(iThread)
-        return switchHappened
-    }
-
-    private fun chooseThreadSwitch(iThread: Int, mustSwitch: Boolean = false): Int {
-        onNewSwitch(iThread, mustSwitch)
-        val threads = switchableThreads(iThread)
-        // do the switch if there is an available thread
-        if (threads.isNotEmpty()) {
-            val nextThread = chooseThread(iThread).also {
-                check(it in threads) {
-                    """
-                        Trying to switch the execution to thread $it,
-                        but only the following threads are eligible to switch: $threads
-                    """.trimIndent()
-                }
-            }
-            return nextThread
-        }
-        // otherwise exit if the thread switch is optional, or all threads are finished
-        if (!mustSwitch || threadScheduler.areAllThreadsFinished()) {
-           return iThread
-        }
-        // try to resume some suspended thread
-        val suspendedThread = (0 until nThreads).firstOrNull {
-           !threadScheduler.isFinished(it) && isSuspended[it]!!
-        }
-        if (suspendedThread != null) {
-           return suspendedThread
-        }
-        // any other situation is considered to be a deadlock
-        val result = ManagedDeadlockInvocationResult(runner.collectExecutionResults())
-        abortWithSuddenInvocationResult(result)
-    }
-
-    @JvmName("setNextThread")
-    private fun setCurrentThread(nextThread: Int) {
-        loopDetector.onThreadSwitch(nextThread)
-        threadScheduler.scheduleThread(nextThread)
-    }
-
-    private fun abortWithSuddenInvocationResult(invocationResult: InvocationResult): Nothing {
-        suddenInvocationResult = invocationResult
-        threadScheduler.abortOtherThreads()
-        threadScheduler.abortCurrentThread()
-    }
-
-    /**
-     * Threads to which an execution can be switched from thread [iThread].
-     */
-    protected fun switchableThreads(iThread: Int) =
-        if (runner.currentExecutionPart == PARALLEL) {
-            (0 until threadScheduler.nThreads).filter { it != iThread && isActive(it) }
-        } else {
-            emptyList()
-        }
-
-    // == LISTENING METHODS ==
-
     override fun beforeLock(codeLocation: Int): Unit = runInsideIgnoredSection {
         val iThread = threadScheduler.getCurrentThreadId()
         val tracePoint = if (collectTrace) {
@@ -939,11 +952,15 @@ abstract class ManagedStrategy(
      */
     override fun wait(monitor: Any, withTimeout: Boolean): Unit = runInsideIgnoredSection {
         if (withTimeout) return // timeouts occur instantly
+        // we check the interruption flag both before entering `wait` and after,
+        // to ensure the monitor is acquired when `InterruptionException` is thrown
+        throwIfInterrupted()
         val iThread = threadScheduler.getCurrentThreadId()
         while (monitorTracker.waitOnMonitor(iThread, monitor)) {
             unblockAcquiringThreads(iThread, monitor)
             switchCurrentThread(iThread, BlockingReason.Waiting)
         }
+        throwIfInterrupted()
     }
 
     override fun notify(monitor: Any, codeLocation: Int, notifyAll: Boolean): Unit = runInsideIgnoredSection {

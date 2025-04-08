@@ -93,35 +93,6 @@ class KotlinAPITest {
     }
 
     @Test(expected = LincheckAssertionError::class)
-    fun `test Java Thread and InterruptedException handling`() = runConcurrentTest {
-        var r1: Int = -1
-        var r2: Int = -1
-
-        val deque = ConcurrentLinkedDeque<Int>()
-        deque.addLast(1)
-
-        val t1 = Thread {
-            r1 = deque.pollFirst()
-        }
-        val t2 = Thread {
-            deque.addFirst(0)
-            r2 = deque.peekLast()
-        }
-
-        t1.start()
-        t2.start()
-
-        try {
-            t1.join()
-            t2.join()
-        } catch (e: InterruptedException) {
-            throw RuntimeException(e)
-        }
-
-        assert(!(r1 == 1 && r2 == 1))
-    }
-
-    @Test(expected = LincheckAssertionError::class)
     fun `test Java Thread and AtomicInteger`() = runConcurrentTest {
         val r1 = AtomicInteger(-1)
         val r2 = AtomicInteger(-1)

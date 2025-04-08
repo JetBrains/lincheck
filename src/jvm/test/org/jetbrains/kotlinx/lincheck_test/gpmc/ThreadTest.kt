@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 import org.junit.Test
 
-class ThreadStartJoinTest {
+class ThreadTest {
 
     fun threadStart(): Int {
         val counter = AtomicInteger(0)
@@ -78,4 +78,3 @@ class ThreadStartJoinTest {
     )
 
 }
-

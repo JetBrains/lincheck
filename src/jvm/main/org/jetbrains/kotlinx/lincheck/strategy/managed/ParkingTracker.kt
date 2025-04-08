@@ -47,6 +47,14 @@ interface ParkingTracker {
     fun unpark(threadId: Int, unparkedThreadId: Int)
 
     /**
+     * Interrupts the parking state of the thread with the specified id.
+     *
+     * @param threadId the id of the thread to interrupt from being parked.
+     * @throws IllegalStateException if the thread is not parked.
+     */
+    fun interruptPark(threadId: Int)
+
+    /**
      * Checks whether a thread with the specified id is currently parked or not.
      *
      * @param threadId the id of the thread to check for parking status.
