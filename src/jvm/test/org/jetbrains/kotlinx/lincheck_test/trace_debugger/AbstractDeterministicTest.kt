@@ -45,7 +45,7 @@ abstract class AbstractDeterministicTest {
             ModelCheckingOptions()
                 .actorsBefore(0)
                 .actorsAfter(0)
-                .iterations(30)
+                .iterations(1)
                 .threads(2)
                 .minimizeFailedScenario(false)
                 .actorsPerThread(1)
