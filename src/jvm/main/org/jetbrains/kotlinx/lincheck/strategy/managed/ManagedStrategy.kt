@@ -500,6 +500,9 @@ abstract class ManagedStrategy(
         }
     }
 
+    /**
+     * Returns whether in test thread [iThread] coroutine has been suspended but not yet resumed.
+     */
     private fun isTestThreadCoroutineSuspended(iThread: Int): Boolean =
         (
             isTestThread(iThread) &&
