@@ -690,6 +690,12 @@ abstract class ManagedStrategy(
         } else {
             // re-throw any non-internal exception,
             // so it will be treated as the final result of `Thread::run`.
+            disableAnalysis()
+            Logger.info { "Exception was thrown in user thread \"Thread-$currentThreadId\":" }
+            Logger.info(exception)
+            // current thread will not be put in the ABORTED state, like in `onInternalException` case,
+            // thus, it is still executed in isolation, and we can finish it properly
+            onThreadFinish(currentThreadId)
             throw exception
         }
     }
@@ -2039,9 +2045,6 @@ abstract class ManagedStrategy(
     /**
      * Logs thread events such as thread switches and passed code locations.
      */
-    /**
-     * Logs thread events such as thread switches and passed code locations.
-     */
     private inner class TraceCollector {
         private val _trace = mutableListOf<TracePoint>()
         val trace: List<TracePoint> = _trace
@@ -2114,7 +2117,6 @@ abstract class ManagedStrategy(
                 stateRepresentation = stateRepresentation,
                 callStackTrace = callStackTrace,
             )
-
         }
 
         fun passObstructionFreedomViolationTracePoint(iThread: Int, beforeMethodCall: Boolean) {
