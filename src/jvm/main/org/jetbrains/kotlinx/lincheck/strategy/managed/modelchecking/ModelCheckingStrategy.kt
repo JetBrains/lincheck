@@ -598,8 +598,8 @@ class ModelCheckingParkingTracker(val allowSpuriousWakeUps: Boolean = false) : P
         parked[threadId] = true
     }
 
-    override fun waitUnpark(threadId: Int): Boolean {
-        return isParked(threadId)
+    override fun waitUnpark(threadId: Int, allowSpuriousWakeUp: Boolean): Boolean {
+        return isParked(threadId, allowSpuriousWakeUp)
     }
 
     override fun unpark(threadId: Int, unparkedThreadId: Int) {
@@ -611,7 +611,10 @@ class ModelCheckingParkingTracker(val allowSpuriousWakeUps: Boolean = false) : P
     }
 
     override fun isParked(threadId: Int): Boolean =
-        !allowSpuriousWakeUps && parked[threadId]!!
+        isParked(threadId, allowSpuriousWakeUp = false)
+
+    private fun isParked(threadId: Int, allowSpuriousWakeUp: Boolean): Boolean =
+        if (this.allowSpuriousWakeUps && allowSpuriousWakeUp) false else parked[threadId]!!
 
     override fun reset() {
         parked.clear()

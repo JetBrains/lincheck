@@ -987,7 +987,9 @@ abstract class ManagedStrategy(
         newSwitchPoint(iThread, codeLocation)
         traceCollector?.passCodeLocation(tracePoint)
         parkingTracker.park(iThread)
-        while (parkingTracker.waitUnpark(iThread)) {
+        // forbid spurious wake-ups if inside silent sections
+        val allowSpuriousWakeUp = shouldAllowSpuriousUnpark(iThread, codeLocation)
+        while (parkingTracker.waitUnpark(iThread, allowSpuriousWakeUp)) {
             // switch to another thread and wait till an unpark event happens
             switchCurrentThread(iThread, BlockingReason.Parked)
         }
@@ -1007,6 +1009,22 @@ abstract class ManagedStrategy(
             )
             traceCollector?.passCodeLocation(tracePoint)
         }
+    }
+
+    private fun shouldAllowSpuriousUnpark(threadId: ThreadId, codeLocation: Int): Boolean {
+        val stackTraceElement = CodeLocations.stackTrace(codeLocation)
+        val guaranteesStack = methodGuaranteesStack[threadId]!!
+        // TODO: refactor, track LockSupport.park directly instead
+        val guarantee = if (
+            stackTraceElement.className == "java/util/concurrent/locks/LockSupport" &&
+            stackTraceElement.methodName == "park"
+        ) {
+            guaranteesStack.getOrNull(guaranteesStack.size - 2)
+        } else {
+            guaranteesStack.lastOrNull()
+        }
+        // allow spurious wake-up, unless inside a silent section
+        return (guarantee != ManagedGuaranteeType.SILENT)
     }
 
     override fun beforeWait(codeLocation: Int): Unit = runInsideIgnoredSection {
