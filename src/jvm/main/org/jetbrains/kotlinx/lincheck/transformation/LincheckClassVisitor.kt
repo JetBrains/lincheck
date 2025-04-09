@@ -16,6 +16,7 @@ import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.commons.*
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
 import org.jetbrains.kotlinx.lincheck.transformation.transformers.*
+import org.jetbrains.kotlinx.lincheck.util.Logger
 import sun.nio.ch.lincheck.*
 
 internal class LincheckClassVisitor(
@@ -69,7 +70,10 @@ internal class LincheckClassVisitor(
         exceptions: Array<String>?
     ): MethodVisitor {
         var mv = super.visitMethod(access, methodName, desc, signature, exceptions)
-        if (access and ACC_NATIVE != 0) return mv
+        if (access and ACC_NATIVE != 0) {
+            Logger.debug { "Skipping transformation of the native method $className.$methodName" }
+            return mv
+        }
         if (instrumentationMode == STRESS) {
             return if (methodName != "<clinit>" && methodName != "<init>") {
                 CoroutineCancellabilitySupportTransformer(mv, access, className, methodName, desc)
@@ -140,7 +144,9 @@ internal class LincheckClassVisitor(
             if (isInTraceDebuggerMode) {
                 // Lincheck does not support true identity hash codes (it always uses zeroes),
                 // so there is no need for the `DeterministicInvokeDynamicTransformer` there.
-                mv = DeterministicInvokeDynamicTransformer(fileName, className, methodName, mv.newAdapter())
+                mv = DeterministicInvokeDynamicTransformer(
+                    fileName, className, methodName, classVersion, mv.newAdapter()
+                )
             }
             mv = run {
                 val st = ConstructorArgumentsSnapshotTrackerTransformer(fileName, className, methodName, mv.newAdapter(), classVisitor::isInstanceOf)
@@ -177,7 +183,7 @@ internal class LincheckClassVisitor(
         if (isInTraceDebuggerMode) {
             // Lincheck does not support true identity hash codes (it always uses zeroes),
             // so there is no need for the `DeterministicInvokeDynamicTransformer` there.
-            mv = DeterministicInvokeDynamicTransformer(fileName, className, methodName, mv.newAdapter())
+            mv = DeterministicInvokeDynamicTransformer(fileName, className, methodName, classVersion, mv.newAdapter())
         } else {
             // In trace debugger mode we record hash codes of tracked objects and substitute them on re-run,
             // otherwise, we track all hash code calls in the instrumented code

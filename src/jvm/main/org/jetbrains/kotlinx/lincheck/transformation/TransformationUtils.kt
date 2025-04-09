@@ -184,7 +184,10 @@ internal fun GeneratorAdapter.storeArguments(methodDescriptor: String): IntArray
 /**
  * Executes a try-catch-finally block within the context of the GeneratorAdapter.
  * 
- * Attention: this method does not insert `finally` blocks before inner return and throw statements.
+ * **Attention**:
+ * * This method does not insert `finally` blocks before inner return and throw statements.
+ * * It is forbidden to jump from the blocks outside and between them.
+ * * The operand stack must be empty by the beginning of the [tryCatchFinally].
  *
  * @param tryBlock The code block to be executed in the try section.
  * @param exceptionType The type of exception to be caught in the `catch` section, or null to catch all exceptions.

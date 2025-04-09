@@ -40,6 +40,7 @@ internal class DeterministicInvokeDynamicTransformer(
     fileName: String,
     className: String,
     methodName: String,
+    private val classVersion: Int,
     adapter: GeneratorAdapter
 ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
     override fun visitInvokeDynamicInsn(
@@ -208,7 +209,24 @@ internal class DeterministicInvokeDynamicTransformer(
         require(bootstrapMethodParameterTypes[2] == methodTypeType)
 
         // pushing predefined arguments manually
-        invokeStatic(MethodHandles::lookup)
+        if (classVersion == 52 /* Java 8 */) {
+            invokeInsideIgnoredSection {
+                push(this@DeterministicInvokeDynamicTransformer.className.replace('/', '.'))
+                invokeStatic(Injections::getClassForNameOrNull)
+                dup()
+                val endLabel = newLabel()
+                val ifNonNullLabel = newLabel()
+                ifNonNull(ifNonNullLabel)
+                pop()
+                invokeStatic(MethodHandles::lookup)
+                goTo(endLabel)
+                visitLabel(ifNonNullLabel)
+                invokeStatic(Injections::trustedLookup)
+                visitLabel(endLabel)
+            }
+        } else {
+            invokeStatic(MethodHandles::lookup)
+        }
         visitLdcInsn(name)
         visitLdcInsn(Type.getMethodType(descriptor))
         val jvmPredefinedParametersCount = 3

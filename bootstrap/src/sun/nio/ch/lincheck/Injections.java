@@ -11,6 +11,8 @@
 package sun.nio.ch.lincheck;
 
 import java.lang.invoke.CallSite;
+import java.lang.invoke.MethodHandles;
+import java.lang.reflect.Constructor;
 
 import static sun.nio.ch.lincheck.Types.convertAsmMethodType;
 
@@ -633,5 +635,47 @@ public class Injections {
 
     public static void setLastMethodCallEventId() {
         getEventTracker().setLastMethodCallEventId();
+    }
+
+    /**
+     * Attempts to retrieve the Class object associated with the given class name.
+     * If the class is not found, it returns null instead of throwing an exception.
+     *
+     * @param name the fully qualified name of the desired class
+     * @return the Class object for the class with the specified name, 
+     *         or null if the class cannot be located
+     */
+    public static Class<?> getClassForNameOrNull(String name) {
+        try {
+            return Class.forName(name);
+        } catch (ClassNotFoundException e) {
+            return null;
+        }
+    }
+
+
+    private static Constructor<MethodHandles.Lookup> lookUpPrivateConstructor = null;
+
+    /**
+     * Provides a trusted MethodHandles.Lookup for the given class,
+     * bypassing JDK 8-specific restrictions written in the {@link MethodHandles} implementation.
+     * <p> 
+     * In JDK 8 there are additional <a href="https://github.com/frohoff/jdk8u-jdk/blob/da0da73ab82ed714dc5be94acd2f0d00fbdfe2e9/src/share/classes/java/lang/invoke/MethodHandles.java#L681">restrictions</a>,
+     * breaking {@code MethodHandles.lookup()} from being called from the Java standard library.
+     * Calling it is necessary for {@code invokedynamic} handling in the trace debugger.
+     * <p> 
+     * The function instead calls a private constructor with the TRUSTED mode via reflection.
+     *
+     * @param callerClass the class for which the trusted {@link MethodHandles.Lookup} is to be created
+     * @return a trusted {@link MethodHandles.Lookup} instance for the specified class
+     * @throws Exception if an error occurs while creating the trusted lookup instance
+     */
+    public static MethodHandles.Lookup trustedLookup(Class<?> callerClass) throws Exception {
+        if (lookUpPrivateConstructor == null) {
+            Constructor<MethodHandles.Lookup> declaredConstructor = MethodHandles.Lookup.class.getDeclaredConstructor(Class.class, int.class);
+            declaredConstructor.setAccessible(true);
+            lookUpPrivateConstructor = declaredConstructor;
+        }
+        return lookUpPrivateConstructor.newInstance(callerClass, -1);
     }
 }

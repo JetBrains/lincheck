@@ -1477,6 +1477,10 @@ abstract class ManagedStrategy(
         params: Array<Any?>,
         result: Any?
     ) = runInsideIgnoredSection {
+        if (deterministicMethodDescriptor != null) {
+            Logger.debug { "On method return with descriptor $deterministicMethodDescriptor: $result" }
+        }
+        
         require(deterministicMethodDescriptor is DeterministicMethodDescriptor<*, *>?)
         // process intrinsic candidate methods
         if (MethodIds.isIntrinsicMethod(methodId)) {
@@ -1531,6 +1535,9 @@ abstract class ManagedStrategy(
         params: Array<Any?>,
         throwable: Throwable
     ) = runInsideIgnoredSection {
+        if (deterministicMethodDescriptor != null) {
+            Logger.debug { "On method exception with descriptor $deterministicMethodDescriptor:\n${throwable.stackTraceToString()}" }
+        }
         require(deterministicMethodDescriptor is DeterministicMethodDescriptor<*, *>?)
         if (isInTraceDebuggerMode && isFirstReplay && deterministicMethodDescriptor != null) {
             deterministicMethodDescriptor.saveFirstResult(receiver, params, KResult.failure(throwable)) {
