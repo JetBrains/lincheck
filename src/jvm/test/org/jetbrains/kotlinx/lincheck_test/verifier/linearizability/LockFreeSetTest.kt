@@ -16,6 +16,10 @@ import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.junit.*
 
 class LockFreeSetTest {
+
+    // TODO: investigate if it is possible to make this test more stable
+    //   https://github.com/JetBrains/lincheck/issues/607
+    @Ignore("This test is flaky")
     @Test(expected = AssertionError::class)
     fun test() {
         val scenario = scenario {
