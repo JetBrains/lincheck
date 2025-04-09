@@ -81,7 +81,7 @@ abstract class ManagedStrategy(
 
     protected val threadScheduler = ManagedThreadScheduler()
 
-    // Which threads are suspended?
+    // Which test threads are suspended?
     private val isSuspended = mutableThreadMapOf<Boolean>()
 
     // Current actor id for each thread.
@@ -501,13 +501,22 @@ abstract class ManagedStrategy(
     }
 
     /**
+     * Returns whether in test thread [iThread] coroutine has been suspended but not yet resumed.
+     */
+    private fun isTestThreadCoroutineSuspended(iThread: Int): Boolean =
+        (
+            isTestThread(iThread) &&
+            // TODO: coroutine suspensions are currently handled separately from `ThreadScheduler`
+            isSuspended[iThread]!! &&
+            !runner.isCoroutineResumed(iThread, currentActorId[iThread]!!)
+        )
+
+    /**
      * Returns whether the specified thread is active and
      * can continue its execution (i.e., is not blocked/finished).
      */
     private fun isActive(iThread: Int): Boolean =
-        threadScheduler.isSchedulable(iThread) &&
-        // TODO: coroutine suspensions are currently handled separately from `ThreadScheduler`
-        !(isSuspended[iThread]!! && !runner.isCoroutineResumed(iThread, currentActorId[iThread]!!))
+        threadScheduler.isSchedulable(iThread) && !isTestThreadCoroutineSuspended(iThread)
 
     /**
      * A regular thread switch to another thread.
@@ -657,7 +666,7 @@ abstract class ManagedStrategy(
         // do not track unregistered threads
         if (currentThreadId < 0) return
         // scenario threads are handled separately
-        if (currentThreadId < scenario.nThreads) return
+        if (isTestThread(currentThreadId)) return
         onThreadStart(currentThreadId)
         enableAnalysis()
     }
@@ -667,7 +676,7 @@ abstract class ManagedStrategy(
         // do not track unregistered threads
         if (currentThreadId < 0) return
         // scenario threads are handled separately by the runner itself
-        if (currentThreadId < scenario.nThreads) return
+        if (isTestThread(currentThreadId)) return
         disableAnalysis()
         onThreadFinish(currentThreadId)
     }
@@ -683,7 +692,7 @@ abstract class ManagedStrategy(
         // do not track unregistered threads
         if (currentThreadId < 0) return
         // scenario threads are handled separately by the runner itself
-        if (currentThreadId < scenario.nThreads) return
+        if (isTestThread(currentThreadId)) return
         // check if the exception is internal
         if (isInternalException(exception)) {
             onInternalException(currentThreadId, exception)
@@ -723,7 +732,7 @@ abstract class ManagedStrategy(
     fun registerThread(thread: Thread, descriptor: ThreadDescriptor): ThreadId {
         val threadId = threadScheduler.registerThread(thread, descriptor)
         isSuspended[threadId] = false
-        currentActorId[threadId] = if (threadId < scenario.nThreads) -1 else 0
+        currentActorId[threadId] = if (isTestThread(threadId)) -1 else 0
         callStackTrace[threadId] = mutableListOf()
         suspendedFunctionsStack[threadId] = mutableListOf()
         shadowStack[threadId] = arrayListOf(ShadowStackFrame(runner.testInstance))
@@ -750,7 +759,7 @@ abstract class ManagedStrategy(
     override fun awaitUserThreads(timeoutNano: Long): Long {
         var remainingTime = timeoutNano
         for ((threadId, _) in getRegisteredThreads()) {
-            if (threadId < scenario.nThreads) continue // do not wait for Lincheck threads
+            if (isTestThread(threadId)) continue // do not wait for Lincheck threads
             val elapsedTime = threadScheduler.awaitThreadFinish(threadId, remainingTime)
             if (elapsedTime < 0) {
                 remainingTime = -1
@@ -1455,7 +1464,7 @@ abstract class ManagedStrategy(
         // since there is already a switch point between the suspension point and resumption
         if (guarantee == ManagedGuaranteeType.ATOMIC &&
             // do not create a trace point on resumption
-            !isResumptionMethodCall(threadId, className, methodName, params, atomicMethodDescriptor)
+            !(isTestThread(threadId) && isResumptionMethodCall(threadId, className, methodName, params, atomicMethodDescriptor))
         ) {
             // re-use last call trace point
             newSwitchPoint(threadId, codeLocation, callStackTrace[threadId]!!.lastOrNull()?.tracePoint)
@@ -1606,6 +1615,9 @@ abstract class ManagedStrategy(
         methodParams: Array<Any?>,
         atomicMethodDescriptor: AtomicMethodDescriptor?,
     ): Boolean {
+        check(isTestThread(threadId)) {
+            "Special coroutines handling methods should only be called from test threads"
+        }
         // optimization - first quickly check if the method is atomics API method,
         // in which case it cannot be suspended/resumed method
         if (atomicMethodDescriptor != null) return false
@@ -1620,6 +1632,9 @@ abstract class ManagedStrategy(
      */
     internal fun afterCoroutineSuspended(iThread: Int) {
         check(threadScheduler.getCurrentThreadId() == iThread)
+        check(isTestThread(iThread)) {
+            "Special coroutines handling methods should only be called from test threads"
+        }
         isSuspended[iThread] = true
         if (runner.isCoroutineResumed(iThread, currentActorId[iThread]!!)) {
             // `UNKNOWN_CODE_LOCATION`, because we do not know the actual code location
@@ -1635,8 +1650,11 @@ abstract class ManagedStrategy(
      * if a coroutine was resumed.
      */
     internal fun afterCoroutineResumed() {
-        val currentThreadId = threadScheduler.getCurrentThreadId()
-        isSuspended[currentThreadId] = false
+        val iThread = threadScheduler.getCurrentThreadId()
+        check(isTestThread(iThread)) {
+            "Special coroutines handling methods should only be called from test threads"
+        }
+        isSuspended[iThread] = false
     }
 
     /**
@@ -1645,6 +1663,9 @@ abstract class ManagedStrategy(
      */
     internal fun afterCoroutineCancelled() {
         val iThread = threadScheduler.getCurrentThreadId()
+        check(isTestThread(iThread)) {
+            "Special coroutines handling methods should only be called from test threads"
+        }
         isSuspended[iThread] = false
         // method will not be resumed after suspension, so clear prepared for resume call stack
         suspendedFunctionsStack[iThread]!!.clear()
@@ -1661,8 +1682,8 @@ abstract class ManagedStrategy(
         atomicMethodDescriptor: AtomicMethodDescriptor?,
     ) {
         val callStackTrace = callStackTrace[threadId]!!
-        val suspendedMethodStack = suspendedFunctionsStack[threadId]!!
-        if (isResumptionMethodCall(threadId, className, methodName, methodParams, atomicMethodDescriptor)) {
+        if (isTestThread(threadId) && isResumptionMethodCall(threadId, className, methodName, methodParams, atomicMethodDescriptor)) {
+            val suspendedMethodStack = suspendedFunctionsStack[threadId]!!
             // In case of resumption, we need to find a call stack frame corresponding to the resumed function
             var elementIndex = suspendedMethodStack.indexOfFirst {
                 it.tracePoint.className == className && it.tracePoint.methodName == methodName
@@ -2041,6 +2062,10 @@ abstract class ManagedStrategy(
     }
 
     // == UTILITY METHODS ==
+
+    private fun isTestThread(threadId: Int): Boolean {
+        return threadId in (0 ..< nThreads)
+    }
 
     /**
      * Logs thread events such as thread switches and passed code locations.
