@@ -2,6 +2,7 @@
 .idea/*
 !.idea/vcs.xml
 !.idea/copyright
+!.idea/runConfigurations/*
 *.iml
 
 # Gradle
