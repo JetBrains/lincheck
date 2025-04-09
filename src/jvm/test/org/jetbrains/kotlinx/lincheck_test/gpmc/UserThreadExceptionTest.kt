@@ -21,17 +21,65 @@ import kotlin.concurrent.thread
 class UserThreadExceptionTest {
 
     @Test
-    fun testInfiniteBackgroundThreadError() {
-        runConcurrentTest(10000) {
+    fun testUserThreadException() {
+        runConcurrentTest {
+            val t = thread {
+                check(false)
+            }
+            t.join()
+        }
+    }
+
+    @Test
+    fun testExceptionInInnerUserThread() {
+        runConcurrentTest {
+            val t = thread {
+                val inner = thread {
+                    check(false)
+                }
+
+                inner.join()
+            }
+
+            t.join() // should join with no problems
+        }
+    }
+
+    @Test
+    fun testUnhandledExceptionCallback() {
+        runConcurrentTest {
+            val t = thread(start = false) {
+                throw RuntimeException("Some exception")
+            }
+            t.setUncaughtExceptionHandler { _, err ->
+                check(err is RuntimeException)
+                // then just do nothing
+            }
+            t.start()
+            t.join() // should join with no problems
+        }
+    }
+
+    @Test
+    fun testFinallyBlockInUserThread() {
+        runConcurrentTest {
             val x = AtomicInteger()
             val t = thread {
-                x.incrementAndGet()
-                check(false)
-                x.incrementAndGet()
+                try {
+                    check(false)
+                }
+                finally {
+                    // Finally block will be executed before this thread
+                    // will be finished by the strategy, which is expected.
+                    // Because strategy wraps the `Thread::run` method in
+                    // `try {} finally {}` which is the most outer
+                    // try-finally block in the thread body
+                    x.incrementAndGet()
+                }
             }
-            x.incrementAndGet()
+
             t.join()
-            check(x.get() == 2)
+            check(x.get() == 1)
         }
     }
 }

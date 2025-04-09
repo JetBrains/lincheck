@@ -16,7 +16,6 @@ import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.thread
 import kotlin.concurrent.withLock
 import org.junit.Test
-import org.junit.Ignore
 
 class InterruptionTest {
 
@@ -134,7 +133,6 @@ class InterruptionTest {
         t.join()
     }
 
-    @Ignore // blocked by https://github.com/JetBrains/lincheck/issues/596
     @Test(timeout = TIMEOUT)
     fun uncaughtInterruptedExceptionTest() = modelCheckerTest(
         testClass = this::class,

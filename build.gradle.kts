@@ -184,6 +184,7 @@ tasks {
         extraArgs.add("-Dlincheck.version=$version")
         findProperty("lincheck.logFile")?.let { extraArgs.add("-Dlincheck.logFile=${it as String}") }
         findProperty("lincheck.logLevel")?.let { extraArgs.add("-Dlincheck.logLevel=${it as String}") }
+        findProperty("lincheck.dumpTransformedSources")?.let { extraArgs.add("-Dlincheck.dumpTransformedSources=${it as String}") }
         jvmArgs(extraArgs)
     }
 

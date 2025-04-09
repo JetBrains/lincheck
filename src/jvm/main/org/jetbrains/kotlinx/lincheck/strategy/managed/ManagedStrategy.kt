@@ -691,6 +691,10 @@ abstract class ManagedStrategy(
             // re-throw any non-internal exception,
             // so it will be treated as the final result of `Thread::run`.
             disableAnalysis()
+            Logger.info { "Exception was thrown in user thread:" }
+            Logger.info(exception)
+            // current thread will not be put in the ABORTED state, like in `onInternalException` case,
+            // thus, it is still executed in isolation, and we can finish it properly
             onThreadFinish(currentThreadId)
             throw exception
         }
