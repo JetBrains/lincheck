@@ -505,7 +505,7 @@ abstract class ManagedStrategy(
      */
     private fun isTestThreadCoroutineSuspended(iThread: Int): Boolean =
         (
-           isTestThread(iThread) &&
+            isTestThread(iThread) &&
             // TODO: coroutine suspensions are currently handled separately from `ThreadScheduler`
             isSuspended[iThread]!! &&
             !runner.isCoroutineResumed(iThread, currentActorId[iThread]!!)
