@@ -500,17 +500,19 @@ abstract class ManagedStrategy(
         }
     }
 
+    private fun isTestThreadCoroutineSuspended(iThread: Int): Boolean =
+        (
+            isTestThread(iThread) &&
+            // TODO: coroutine suspensions are currently handled separately from `ThreadScheduler`
+            (isSuspended[iThread]!! && !runner.isCoroutineResumed(iThread, currentActorId[iThread]!!))
+        )
+
     /**
      * Returns whether the specified thread is active and
      * can continue its execution (i.e., is not blocked/finished).
      */
     private fun isActive(iThread: Int): Boolean =
-        threadScheduler.isSchedulable(iThread) &&
-        // TODO: coroutine suspensions are currently handled separately from `ThreadScheduler`
-        (
-            !isTestThread(iThread) ||
-            !(isSuspended[iThread]!! && !runner.isCoroutineResumed(iThread, currentActorId[iThread]!!))
-        )
+        threadScheduler.isSchedulable(iThread) && !isTestThreadCoroutineSuspended(iThread)
 
     /**
      * A regular thread switch to another thread.
@@ -1609,7 +1611,9 @@ abstract class ManagedStrategy(
         methodParams: Array<Any?>,
         atomicMethodDescriptor: AtomicMethodDescriptor?,
     ): Boolean {
-        check(isTestThread(threadId)) { "Special coroutines handling is only required for test threads" }
+        check(isTestThread(threadId)) {
+            "Special coroutines handling methods should only be called from test threads"
+        }
         // optimization - first quickly check if the method is atomics API method,
         // in which case it cannot be suspended/resumed method
         if (atomicMethodDescriptor != null) return false
@@ -1624,7 +1628,9 @@ abstract class ManagedStrategy(
      */
     internal fun afterCoroutineSuspended(iThread: Int) {
         check(threadScheduler.getCurrentThreadId() == iThread)
-        check(isTestThread(iThread)) { "Special coroutines handling is only required for test threads" }
+        check(isTestThread(iThread)) {
+            "Special coroutines handling methods should only be called from test threads"
+        }
         isSuspended[iThread] = true
         if (runner.isCoroutineResumed(iThread, currentActorId[iThread]!!)) {
             // `UNKNOWN_CODE_LOCATION`, because we do not know the actual code location
@@ -1641,7 +1647,9 @@ abstract class ManagedStrategy(
      */
     internal fun afterCoroutineResumed() {
         val iThread = threadScheduler.getCurrentThreadId()
-        check(isTestThread(iThread)) { "Special coroutines handling is only required for test threads" }
+        check(isTestThread(iThread)) {
+            "Special coroutines handling methods should only be called from test threads"
+        }
         isSuspended[iThread] = false
     }
 
@@ -1651,7 +1659,9 @@ abstract class ManagedStrategy(
      */
     internal fun afterCoroutineCancelled() {
         val iThread = threadScheduler.getCurrentThreadId()
-        check(isTestThread(iThread)) { "Special coroutines handling is only required for test threads" }
+        check(isTestThread(iThread)) {
+            "Special coroutines handling methods should only be called from test threads"
+        }
         isSuspended[iThread] = false
         // method will not be resumed after suspension, so clear prepared for resume call stack
         suspendedFunctionsStack[iThread]!!.clear()
@@ -2050,7 +2060,7 @@ abstract class ManagedStrategy(
     // == UTILITY METHODS ==
 
     private fun isTestThread(threadId: Int): Boolean {
-        return threadId in (0..<nThreads)
+        return threadId in (0 ..< nThreads)
     }
 
     /**
