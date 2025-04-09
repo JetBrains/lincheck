@@ -42,6 +42,9 @@ abstract class AbstractTraceDebuggerIntegrationTest {
                         val jvmArgs = options.jvmArgs?.toMutableList() ?: mutableListOf()
                         jvmArgs.add("-Dlincheck.traceDebuggerMode=true")
                         jvmArgs.add("-javaagent:${pathToFatJar.absolutePath}=$testClassName,$testMethodName,${fileToDump.absolutePath}")
+                        
+                        jvmArgs.add("-XX:+UnlockExperimentalVMOptions") // Enables -XX:hashCode
+                        jvmArgs.add("-XX:hashCode=3") // Use global counter for identityHashCode
                         options.jvmArgs = jvmArgs
                     }
                 }

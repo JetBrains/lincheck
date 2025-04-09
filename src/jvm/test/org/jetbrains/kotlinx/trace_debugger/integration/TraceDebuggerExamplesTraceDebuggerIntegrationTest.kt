@@ -16,7 +16,6 @@ import org.junit.Test
 class TraceDebuggerExamplesTraceDebuggerIntegrationTest: AbstractTraceDebuggerIntegrationTest() {
     override val projectPath: String = "build/integrationTestProjects/TraceDebuggerExamples"
 
-    @Ignore
     @Test
     fun `tests org_examples_integration_bugs_LinkedHashSetTest putAnObjectWithoutDefinedHashCode`() {
         runGradleTest(
@@ -26,7 +25,7 @@ class TraceDebuggerExamplesTraceDebuggerIntegrationTest: AbstractTraceDebuggerIn
         )
     }
 
-    @Ignore
+    @Ignore("`class.java.declaredMethods` call returns nondeterministic results")
     @Test
     fun `tests org_examples_integration_bugs_ReflectionTest sortMethods`() {
         runGradleTest(
