@@ -16,6 +16,7 @@ import org.junit.Test
 class TraceDebuggerExamplesTraceDebuggerIntegrationTest: AbstractTraceDebuggerIntegrationTest() {
     override val projectPath: String = "build/integrationTestProjects/TraceDebuggerExamples"
 
+    @Ignore("Different hash code value when running on CI")
     @Test
     fun `tests org_examples_integration_bugs_LinkedHashSetTest putAnObjectWithoutDefinedHashCode`() {
         runGradleTest(
