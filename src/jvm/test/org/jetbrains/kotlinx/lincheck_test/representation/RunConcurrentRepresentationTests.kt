@@ -386,7 +386,7 @@ class IncorrectHashmapRunConcurrentRepresentationTest : BaseRunConcurrentReprese
 class ThreadPoolRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>("run_concurrent_test/thread_pool/thread_pool") {
     // TODO: check why flakiness appears in this test
     override val isFlakyTest: Boolean
-        get() = true
+        get() = false
 
     @Before
     fun setUp() {
