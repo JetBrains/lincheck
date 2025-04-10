@@ -37,18 +37,18 @@ internal fun MethodDescriptor.isArraysCopyOfIntrinsic(): Boolean {
         className == "java.util.Arrays" &&
         methodName == "copyOf" &&
         (
-//            (
-//                returnType == ARRAY_OF_OBJECTS_TYPE &&
-//                argumentTypes == listOf(ARRAY_OF_OBJECTS_TYPE, INT_TYPE)
-//            ) ||
+            (
+                returnType == ARRAY_OF_OBJECTS_TYPE &&
+                argumentTypes == listOf(ARRAY_OF_OBJECTS_TYPE, INT_TYPE)
+            ) ||
             (
                 returnType == ARRAY_OF_OBJECTS_TYPE &&
                 argumentTypes == listOf(ARRAY_OF_OBJECTS_TYPE, INT_TYPE, CLASS_TYPE)
-            ) /*||
+            ) ||
             ARRAY_OF_PRIMITIVE_TYPES.any {
                 returnType == it &&
                 argumentTypes == listOf(it, INT_TYPE)
-            }*/
+            }
         )
     )
 }
