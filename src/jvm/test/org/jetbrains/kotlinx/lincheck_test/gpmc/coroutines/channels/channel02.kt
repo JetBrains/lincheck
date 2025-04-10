@@ -75,7 +75,7 @@ fun main(dispatcher: CoroutineDispatcher): Unit = runBlocking(dispatcher) {
     }
 }
 
-class ChannelTest01 : BaseChannelTest() {
+class ChannelTest02 : BaseChannelTest() {
 
     override fun block(dispatcher: CoroutineDispatcher) {
         runBlocking(dispatcher) { main(dispatcher) }

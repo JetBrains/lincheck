@@ -15,8 +15,10 @@ import org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.FixedThreadPoolCorout
 import org.junit.Test
 
 abstract class BaseChannelTest(
-    shouldFail: Boolean = false
-) : FixedThreadPoolCoroutineTest(shouldFail) {
+    shouldFail: Boolean = false,
+    invocations: Int = 1000,
+    nThreads: Int = 2,
+) : FixedThreadPoolCoroutineTest(shouldFail, invocations, nThreads) {
 
     abstract fun block(dispatcher: CoroutineDispatcher)
 

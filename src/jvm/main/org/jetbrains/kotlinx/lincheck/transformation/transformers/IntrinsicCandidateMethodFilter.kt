@@ -31,6 +31,8 @@ internal class IntrinsicCandidateMethodFilter(
     override fun visitCode() {
         // Java 8 does not have `@HotSpotIntrinsicCandidate`/`@IntrinsicCandidate` annotations, thus,
         // here we manually specify intrinsic methods that could lead to error in lincheck analysis.
+        // Also, some methods are intrinsified even though they do not have mentioned annotations
+        // (such as Arrays.copyOf(...) methods).
         val methodDescriptor = MethodDescriptor(className.toCanonicalClassName(), methodName, methodDesc)
         if (methodDescriptor.isTrackedIntrinsic()) {
             MethodIds.registerIntrinsicMethod(methodDescriptor)

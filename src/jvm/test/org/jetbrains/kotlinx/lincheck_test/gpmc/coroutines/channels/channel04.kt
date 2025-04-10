@@ -88,7 +88,7 @@ fun main(dispatcher: CoroutineDispatcher): Unit = runBlocking(dispatcher) {
     initiateDeadlock(classA, classB, dispatcher)
 }
 
-class ChannelTest01 : BaseChannelTest(true) {
+class ChannelTest04 : BaseChannelTest(true) {
 
     override fun block(dispatcher: CoroutineDispatcher) {
         runBlocking(dispatcher) { main(dispatcher) }

@@ -57,13 +57,15 @@ suspend fun receive(channel: Channel<Int>) {
     for (y in channel) {
         results.compute(y) { _, v -> if (v == null) 1 else v + 1 }
     }
-    results.entries.map { Pair(it.key, it.value) }.containsAll(listOf(
-        Pair(2, 1),
-        Pair(4, 1),
-        Pair(6, 1),
-        Pair(8, 1),
-        Pair(10, 1)
-    ))
+    check(
+        results.entries.map { Pair(it.key, it.value) }.containsAll(listOf(
+            Pair(2, 1),
+            Pair(4, 1),
+            Pair(6, 1),
+            Pair(8, 1),
+            Pair(10, 1)
+        ))
+    )
 }
 
 fun main(dispatcher: CoroutineDispatcher): Unit = runBlocking(dispatcher) {
@@ -79,11 +81,6 @@ fun main(dispatcher: CoroutineDispatcher): Unit = runBlocking(dispatcher) {
 }
 
 class ChannelTest05 : BaseChannelTest() {
-    @Before
-    fun before() {
-        // TODO: hangs on isolated jvms test on CI
-        assumeFalse(true)
-    }
 
     override fun block(dispatcher: CoroutineDispatcher) {
         runBlocking(dispatcher) { main(dispatcher) }
