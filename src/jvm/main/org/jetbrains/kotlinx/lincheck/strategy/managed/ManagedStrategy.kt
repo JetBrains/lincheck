@@ -593,6 +593,15 @@ abstract class ManagedStrategy(
         if (!mustSwitch || threadScheduler.areAllThreadsFinished()) {
            return iThread
         }
+        // try to unpark some parked thread
+        val parkedThreadId = threadScheduler.getRegisteredThreads().keys.firstOrNull { threadId ->
+            threadScheduler.getBlockingReason(threadId) is BlockingReason.Parked
+        }
+        if (parkedThreadId != null) {
+            parkingTracker.unpark(iThread, parkedThreadId)
+            threadScheduler.unblockThread(parkedThreadId)
+            return parkedThreadId
+        }
         // try to resume some suspended thread
         val suspendedThread = (0 until nThreads).firstOrNull {
            !threadScheduler.isFinished(it) && isSuspended[it]!!
