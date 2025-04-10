@@ -79,6 +79,13 @@ class ManagedStrategyGuarantee private constructor(
 
 @Suppress("UNUSED_PARAMETER")
 internal fun isSilentMethodByDefault(className: String, methodName: String): Boolean {
+    if (className.startsWith("java.util.concurrent.")) {
+        if (className.startsWith("java.util.concurrent.AbstractExecutorService")) return true
+        if (className.startsWith("java.util.concurrent.locks.AbstractQueuedSynchronizer")) return true
+        if (className.startsWith("java.util.concurrent.ThreadPoolExecutor")) return true
+        if (className.startsWith("java.util.concurrent.ForkJoinPool")) return true
+        if (className == "java.util.concurrent.FutureTask") return true
+    }
     return false
 }
 
