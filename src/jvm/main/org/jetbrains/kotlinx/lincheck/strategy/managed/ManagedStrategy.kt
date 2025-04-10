@@ -589,8 +589,8 @@ abstract class ManagedStrategy(
             }
             return nextThread
         }
-        // otherwise exit if the thread switch is optional, or all threads are finished
-        if (!mustSwitch || threadScheduler.areAllThreadsFinished()) {
+        // exit if all threads are finished
+        if (threadScheduler.areAllThreadsFinished()) {
             return iThread
         }
         // try to unpark some parked thread
@@ -608,6 +608,10 @@ abstract class ManagedStrategy(
         }
         if (suspendedThread != null) {
            return suspendedThread
+        }
+        // if the thread switch is optional, continue with the current thread
+        if (!mustSwitch) {
+            return iThread
         }
         // any other situation is considered to be a deadlock
         val result = ManagedDeadlockInvocationResult(runner.collectExecutionResults())
