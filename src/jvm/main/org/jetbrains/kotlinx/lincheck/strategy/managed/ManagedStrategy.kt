@@ -1708,24 +1708,20 @@ abstract class ManagedStrategy(
 
     private fun enterMethodGuaranteeSection(threadId: ThreadId, guarantee: ManagedGuaranteeType?) {
         methodGuaranteesStack[threadId]!!.add(guarantee)
-        if (guarantee != null) {
-            if (guarantee == ManagedGuaranteeType.IGNORE ||
-                // TODO: atomic should have different semantics compared to ignored
-                guarantee == ManagedGuaranteeType.ATOMIC
-            ) {
-                enterIgnoredSection()
-            }
+        if (guarantee == ManagedGuaranteeType.IGNORE ||
+            // TODO: atomic should have different semantics compared to ignored
+            guarantee == ManagedGuaranteeType.ATOMIC
+        ) {
+            enterIgnoredSection()
         }
     }
 
     private fun leaveMethodGuaranteeSection(threadId: ThreadId, guarantee: ManagedGuaranteeType?) {
-        if (guarantee != null) {
-            if (guarantee == ManagedGuaranteeType.IGNORE ||
-                // TODO: atomic should have different semantics compared to ignored
-                guarantee == ManagedGuaranteeType.ATOMIC
-            ) {
-                leaveIgnoredSection()
-            }
+        if (guarantee == ManagedGuaranteeType.IGNORE ||
+            // TODO: atomic should have different semantics compared to ignored
+            guarantee == ManagedGuaranteeType.ATOMIC
+        ) {
+            leaveIgnoredSection()
         }
         methodGuaranteesStack[threadId]!!.removeLast().ensure {
             it == guarantee
