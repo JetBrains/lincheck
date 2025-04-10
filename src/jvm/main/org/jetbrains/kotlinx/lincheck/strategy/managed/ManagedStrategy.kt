@@ -1695,8 +1695,10 @@ abstract class ManagedStrategy(
         when (owner) {
             System.`in`, System.out, System.err -> return ManagedGuaranteeType.IGNORE
         }
-        if (isSilentMethodByDefault(ownerName, methodName)) {
-            return ManagedGuaranteeType.SILENT
+        val silentGuarantee = getDefaultSilentSectionGuarantee(ownerName, methodName)
+            ?.ensure { it.isSilent() }
+        if (silentGuarantee != null) {
+            return silentGuarantee
         }
         userDefinedGuarantees?.forEach { guarantee ->
             if (guarantee.classPredicate(ownerName) && guarantee.methodPredicate(methodName)) {
@@ -1707,7 +1709,12 @@ abstract class ManagedStrategy(
     }
 
     private fun enterMethodGuaranteeSection(threadId: ThreadId, guarantee: ManagedGuaranteeType?) {
-        methodGuaranteesStack[threadId]!!.add(guarantee)
+        val guaranteesStack = methodGuaranteesStack[threadId]!!
+        if ((guarantee == null || guarantee == ManagedGuaranteeType.SILENT) && guaranteesStack.lastOrNull() == ManagedGuaranteeType.SILENT_NESTED) {
+            guaranteesStack.add(ManagedGuaranteeType.SILENT_NESTED)
+        } else {
+            guaranteesStack.add(guarantee)
+        }
         if (guarantee == ManagedGuaranteeType.IGNORE ||
             // TODO: atomic should have different semantics compared to ignored
             guarantee == ManagedGuaranteeType.ATOMIC
@@ -1724,12 +1731,12 @@ abstract class ManagedStrategy(
             leaveIgnoredSection()
         }
         methodGuaranteesStack[threadId]!!.removeLast().ensure {
-            it == guarantee
+            it == guarantee || ((guarantee == null || guarantee == ManagedGuaranteeType.SILENT) && it == ManagedGuaranteeType.SILENT_NESTED)
         }
     }
 
     protected fun inSilentSection(threadId: ThreadId): Boolean {
-        return (methodGuaranteesStack[threadId]!!.lastOrNull() == ManagedGuaranteeType.SILENT)
+        return (methodGuaranteesStack[threadId]!!.lastOrNull()?.isSilent() ?: false)
     }
 
     private fun isResumptionMethodCall(

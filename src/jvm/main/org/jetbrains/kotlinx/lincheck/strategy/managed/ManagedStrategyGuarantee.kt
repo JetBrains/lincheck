@@ -78,19 +78,34 @@ class ManagedStrategyGuarantee private constructor(
 }
 
 @Suppress("UNUSED_PARAMETER")
-internal fun isSilentMethodByDefault(className: String, methodName: String): Boolean {
+internal fun getDefaultSilentSectionGuarantee(className: String, methodName: String): ManagedGuaranteeType? {
     if (className.startsWith("java.util.concurrent.")) {
-        if (className.startsWith("java.util.concurrent.AbstractExecutorService")) return true
-        if (className.startsWith("java.util.concurrent.locks.AbstractQueuedSynchronizer")) return true
-        if (className.startsWith("java.util.concurrent.ThreadPoolExecutor")) return true
-        if (className.startsWith("java.util.concurrent.ForkJoinPool")) return true
-        if (className == "java.util.concurrent.FutureTask") return true
+        if (isJavaExecutorService(className)) {
+            if (methodName == "submit") {
+                return ManagedGuaranteeType.SILENT_NESTED
+            }
+            return ManagedGuaranteeType.SILENT
+        }
+        if (className.startsWith("java.util.concurrent.locks.AbstractQueuedSynchronizer"))
+            return ManagedGuaranteeType.SILENT
+        if (className == "java.util.concurrent.FutureTask")
+            return ManagedGuaranteeType.SILENT
     }
-    return false
+    return null
 }
+
+private fun isJavaExecutorService(className: String) =
+    className.startsWith("java.util.concurrent.AbstractExecutorService") ||
+    className.startsWith("java.util.concurrent.ThreadPoolExecutor") ||
+    className.startsWith("java.util.concurrent.ForkJoinPool")
 
 internal enum class ManagedGuaranteeType {
     IGNORE,
     ATOMIC,
     SILENT,
+    SILENT_NESTED,
 }
+
+internal fun ManagedGuaranteeType.isSilent() =
+    this == ManagedGuaranteeType.SILENT         ||
+    this == ManagedGuaranteeType.SILENT_NESTED
