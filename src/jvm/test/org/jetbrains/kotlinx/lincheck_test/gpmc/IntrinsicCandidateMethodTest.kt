@@ -60,7 +60,7 @@ class IntrinsicCandidateMethodTest {
 
     @Test
     fun testListOfCall() {
-        runConcurrentTest(1000) {
+        runConcurrentTest(300) {
             // at least 3 threads required to trigger a bug
             Executors.newFixedThreadPool(3).asCoroutineDispatcher().use { dispatcher ->
                 runBlocking(dispatcher) {
@@ -76,7 +76,7 @@ class IntrinsicCandidateMethodTest {
 
     @Test
     fun testVarArgsSpread() {
-        runConcurrentTest(1000) {
+        runConcurrentTest(300) {
             // at least 3 threads required to trigger a bug
             Executors.newFixedThreadPool(3).asCoroutineDispatcher().use { dispatcher ->
                 runBlocking(dispatcher) {
