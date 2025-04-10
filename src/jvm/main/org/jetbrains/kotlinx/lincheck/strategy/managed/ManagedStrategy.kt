@@ -749,7 +749,8 @@ abstract class ManagedStrategy(
             disableAnalysis()
             Logger.info { "Exception was thrown in user thread \"Thread-$currentThreadId\":" }
             Logger.info(exception)
-            // current thread will not be put in the ABORTED state, like in `onInternalException` case,
+            // the current thread will not be put in the ABORTED state,
+            // like in the ` onInternalException ` case,
             // thus, it is still executed in isolation, and we can finish it properly
             onThreadFinish(currentThreadId)
             throw exception
