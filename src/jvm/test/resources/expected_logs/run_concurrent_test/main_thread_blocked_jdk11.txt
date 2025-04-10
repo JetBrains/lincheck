@@ -9,9 +9,10 @@ The following interleaving leads to the error:
 |     q.take() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:101)                                    |
 |       lock.lockInterruptibly() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:414)                                                             |
 |       ConditionObject#1.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:417)                                                            |
-|         LockSupport.park(ConditionObject#1) at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2081)              |
-|           LockSupport.setBlocker(Thread#1, ConditionObject#1) at LockSupport.park(LockSupport.java:193)                                            |
-|           PARK at LockSupport.park(LockSupport.java:194)                                                                                           |
+|         /* The following events repeat infinitely: */                                                                                              |
+|     ┌╶> LockSupport.park(ConditionObject#1) at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2081)              |
+|     |   NonfairSync#1.isOnSyncQueue(Node#1): false at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2080)       |
+|     └╶╶ switch (reason: active lock detected)                                                                                                      |
 | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 All unfinished threads are in deadlock
 
@@ -29,9 +30,15 @@ Detailed trace:
 |               compareAndSetState(0, 1): true at ReentrantLock$Sync.nonfairTryAcquire(ReentrantLock.java:130)                                       |
 |                 state.compareAndSet(0, 1): true at AbstractQueuedSynchronizer.compareAndSetState(AbstractQueuedSynchronizer.java:612)              |
 |       ConditionObject#1.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:417)                                                            |
-|         LockSupport.park(ConditionObject#1) at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2081)              |
-|           LockSupport.setBlocker(Thread#1, ConditionObject#1) at LockSupport.park(LockSupport.java:193)                                            |
-|             Unsafe#1.putObject(Thread#1, 76, ConditionObject#1) at LockSupport.setBlocker(LockSupport.java:144)                                    |
-|           PARK at LockSupport.park(LockSupport.java:194)                                                                                           |
+|         /* The following events repeat infinitely: */                                                                                              |
+|     ┌╶> LockSupport.park(ConditionObject#1) at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2081)              |
+|     |     LockSupport.setBlocker(Thread#1, ConditionObject#1) at LockSupport.park(LockSupport.java:193)                                            |
+|     |       Unsafe#1.putObject(Thread#1, 76, ConditionObject#1) at LockSupport.setBlocker(LockSupport.java:144)                                    |
+|     |     PARK at LockSupport.park(LockSupport.java:194)                                                                                           |
+|     |     LockSupport.setBlocker(Thread#1, null) at LockSupport.park(LockSupport.java:195)                                                         |
+|     |       Unsafe#1.putObject(Thread#1, 76, null) at LockSupport.setBlocker(LockSupport.java:144)                                                 |
+|     |   NonfairSync#1.isOnSyncQueue(Node#1): false at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2080)       |
+|     |     node.waitStatus ➜ -2 at AbstractQueuedSynchronizer.isOnSyncQueue(AbstractQueuedSynchronizer.java:1673)                                   |
+|     └╶╶ switch (reason: active lock detected)                                                                                                      |
 | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 All unfinished threads are in deadlock

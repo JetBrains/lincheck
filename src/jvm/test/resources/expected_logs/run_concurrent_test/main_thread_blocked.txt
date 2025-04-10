@@ -11,8 +11,9 @@ The following interleaving leads to the error:
 |       ConditionObject#1.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:420)                                                            |
 |         LockSupport.setCurrentBlocker(ConditionObject#1) at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1612) |
 |         ForkJoinPool.managedBlock(ConditionNode#1) at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1623)       |
-|           LockSupport.park() at AbstractQueuedSynchronizer$ConditionNode.block(AbstractQueuedSynchronizer.java:506)                                |
-|             PARK at LockSupport.park(LockSupport.java:341)                                                                                         |
+|           /* The following events repeat infinitely: */                                                                                            |
+|       ┌╶> LockSupport.park() at AbstractQueuedSynchronizer$ConditionNode.block(AbstractQueuedSynchronizer.java:506)                                |
+|       └╶╶ switch (reason: active lock detected)                                                                                                    |
 | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 All unfinished threads are in deadlock
 
@@ -32,7 +33,9 @@ Detailed trace:
 |         LockSupport.setCurrentBlocker(ConditionObject#1) at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1612)           |
 |           Unsafe#1.putReferenceOpaque(Thread#1, 76, ConditionObject#1) at LockSupport.setCurrentBlocker(LockSupport.java:161)                                |
 |         ForkJoinPool.managedBlock(ConditionNode#1) at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1623)                 |
-|           LockSupport.park() at AbstractQueuedSynchronizer$ConditionNode.block(AbstractQueuedSynchronizer.java:506)                                          |
-|             PARK at LockSupport.park(LockSupport.java:341)                                                                                                   |
+|           /* The following events repeat infinitely: */                                                                                                      |
+|       ┌╶> LockSupport.park() at AbstractQueuedSynchronizer$ConditionNode.block(AbstractQueuedSynchronizer.java:506)                                          |
+|       |     PARK at LockSupport.park(LockSupport.java:341)                                                                                                   |
+|       └╶╶ switch (reason: active lock detected)                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 All unfinished threads are in deadlock
