@@ -552,7 +552,7 @@ abstract class ManagedStrategy(
             throwIfInterrupted()
         }
         val switchReason = blockingReason.toSwitchReason(::iThreadToDisplayNumber)
-        val mustSwitch = (blockingReason != null) && !blockingReason.allowsSpuriousUnblocking()
+        val mustSwitch = (blockingReason != null) && !blockingReason.allowsSpuriousWakeUps()
         val nextThread = chooseThreadSwitch(iThread, mustSwitch)
         val switchHappened = (iThread != nextThread)
         if (switchHappened) {
