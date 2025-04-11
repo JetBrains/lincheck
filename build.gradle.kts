@@ -53,6 +53,7 @@ kotlin {
         val integrationTest by compilations.creating {
             defaultSourceSet {
                 associateWith(compilations["main"])
+                associateWith(compilations["test"])
             }
         }
     }
