@@ -274,7 +274,7 @@ tasks {
     }
 
     val jvmTestIsolated = register<Test>("jvmTestIsolated") {
-        group = "verification"
+        group = jvmTest.get().group
         testClassesDirs = jvmTest.get().testClassesDirs
         classpath = jvmTest.get().classpath
         enableAssertions = true
@@ -287,7 +287,7 @@ tasks {
 
     val jvmIntegrationTest = register<Test>("jvmIntegrationTest") {
         val compilation = kotlin.targets["jvm"].compilations["integrationTest"]
-        group = "verification"
+        group = jvmTest.get().group
         testClassesDirs = compilation.output.classesDirs
         classpath = compilation.runtimeDependencyFiles!! + compilation.output.allOutputs
         enableAssertions = true
