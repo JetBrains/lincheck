@@ -588,36 +588,59 @@ internal class ModelCheckingMonitorTracker : MonitorTracker {
 
 class ModelCheckingParkingTracker(val allowSpuriousWakeUps: Boolean = false) : ParkingTracker {
 
-    private val parked = mutableThreadMapOf<Boolean>()
+    private object PERMIT
+
+    private enum class State {
+        UNPARKED, PARKED, INTERRUPTED,
+    }
+
+    private class Handle {
+        var state: State = State.UNPARKED
+        var permit: PERMIT? = null
+    }
+
+    private val handle = mutableMapOf<ThreadId, Handle>()
 
     override fun registerThread(threadId: Int) {
-        parked[threadId] = false
+        handle[threadId] = Handle()
     }
 
     override fun park(threadId: Int) {
-        parked[threadId] = true
+        val handle = this.handle[threadId]!!
+        handle.state = State.PARKED
     }
 
     override fun waitUnpark(threadId: Int, allowSpuriousWakeUp: Boolean): Boolean {
-        return isParked(threadId, allowSpuriousWakeUp)
+        if (isParked(threadId, allowSpuriousWakeUp)) return true
+        val handle = this.handle[threadId]!!
+        handle.state = State.UNPARKED
+        handle.permit = null
+        return false
     }
 
     override fun unpark(threadId: Int, unparkedThreadId: Int) {
-        parked[unparkedThreadId] = false
+        val handle = this.handle[unparkedThreadId]!!
+        handle.permit = PERMIT
     }
 
     override fun interruptPark(threadId: Int) {
-        parked[threadId] = false
+        val handle = this.handle[threadId]!!
+        handle.state = State.INTERRUPTED
     }
 
     override fun isParked(threadId: Int): Boolean =
         isParked(threadId, allowSpuriousWakeUp = false)
 
-    private fun isParked(threadId: Int, allowSpuriousWakeUp: Boolean): Boolean =
-        if (this.allowSpuriousWakeUps && allowSpuriousWakeUp) false else parked[threadId]!!
+    private fun isParked(threadId: Int, allowSpuriousWakeUp: Boolean): Boolean {
+        if (this.allowSpuriousWakeUps && allowSpuriousWakeUp) {
+            return false
+        }
+        val handle = this.handle[threadId]!!
+        return (handle.state == State.PARKED) && (handle.permit == null)
+    }
 
     override fun reset() {
-        parked.clear()
+        handle.clear()
     }
 
 }
