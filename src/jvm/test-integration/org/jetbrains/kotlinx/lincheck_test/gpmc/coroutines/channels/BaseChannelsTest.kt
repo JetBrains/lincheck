@@ -16,7 +16,7 @@ import org.junit.Test
 
 abstract class BaseChannelTest(
     shouldFail: Boolean = false,
-    invocations: Int = 250,
+    invocations: Int = 1000,
     nThreads: Int = 2,
 ) : FixedThreadPoolCoroutineTest(shouldFail, invocations, nThreads) {
 
