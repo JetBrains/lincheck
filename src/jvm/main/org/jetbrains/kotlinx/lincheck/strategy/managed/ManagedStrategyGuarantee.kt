@@ -100,11 +100,15 @@ private fun isJavaExecutorService(className: String) =
     className.startsWith("java.util.concurrent.ForkJoinPool")
 
 internal enum class ManagedGuaranteeType {
-    IGNORE,
-    ATOMIC,
+    REGULAR,
     SILENT,
     SILENT_NESTED,
+    ATOMIC,
+    IGNORE,
 }
+
+internal fun ManagedGuaranteeType.isCallStackPropagating() =
+    this.ordinal >= ManagedGuaranteeType.SILENT_NESTED.ordinal
 
 internal fun ManagedGuaranteeType.isSilent() =
     this == ManagedGuaranteeType.SILENT         ||

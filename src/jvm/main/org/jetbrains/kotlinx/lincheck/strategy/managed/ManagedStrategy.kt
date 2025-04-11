@@ -12,14 +12,10 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import sun.nio.ch.lincheck.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
-import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.transformation.*
-import org.jetbrains.kotlinx.lincheck.util.*
-import org.jetbrains.kotlinx.lincheck.util.runInsideIgnoredSection
-import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicFieldUpdaterNames.getAtomicFieldUpdaterDescriptor
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceMethodType.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.FieldSearchHelper.findFinalFieldWithOwner
@@ -29,14 +25,17 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
 import org.jetbrains.kotlinx.lincheck.strategy.native_calls.*
 import org.jetbrains.kotlinx.lincheck.beforeEvent as ideaPluginBeforeEvent
+import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.jetbrains.kotlinx.lincheck.util.*
 import org.objectweb.asm.ConstantDynamic
 import org.objectweb.asm.Handle
 import java.lang.invoke.CallSite
 import java.lang.reflect.*
-import java.util.concurrent.TimeoutException
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.Continuation
+import java.util.concurrent.TimeoutException
+import kotlinx.coroutines.CancellableContinuation
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 import kotlin.Result as KResult
 import org.objectweb.asm.commons.Method.getMethod as getAsmMethod
@@ -167,7 +166,7 @@ abstract class ManagedStrategy(
      */
     // TODO: unify with `shadowStack`
     // TODO: handle coroutine resumptions (i.e., unify with `suspendedFunctionsStack`)
-    private val methodGuaranteesStack = mutableThreadMapOf<MutableList<ManagedGuaranteeType?>>()
+    private val methodGuaranteesStack = mutableThreadMapOf<MutableList<ManagedGuaranteeType>>()
 
     /**
      * In case when the plugin is enabled, we also enable [eventIdStrictOrderingCheck] property and check
@@ -1526,7 +1525,7 @@ abstract class ManagedStrategy(
             deterministicMethodDescriptor,
         )
         // in case if a static method is called, ensure its class is instrumented
-        if (receiver == null && atomicMethodDescriptor == null && guarantee == null) { // static method
+        if (receiver == null && atomicMethodDescriptor == null && guarantee == ManagedGuaranteeType.REGULAR) {
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
         }
         // in case of atomics API setter method call, notify the object tracker about a new link between objects
@@ -1557,7 +1556,7 @@ abstract class ManagedStrategy(
             loopDetector.passParameters(params)
         }
         // notify loop detector about the method call
-        if (guarantee == null) {
+        if (guarantee == ManagedGuaranteeType.REGULAR) {
             loopDetector.beforeMethodCall(codeLocation, params)
         }
         // if the method has certain guarantees, enter the corresponding section
@@ -1691,7 +1690,7 @@ abstract class ManagedStrategy(
         methodName: String,
         atomicMethodDescriptor: AtomicMethodDescriptor?,
         deterministicMethodDescriptor: DeterministicMethodDescriptor<*, *>?,
-    ): ManagedGuaranteeType? {
+    ): ManagedGuaranteeType {
         val ownerName = owner?.javaClass?.canonicalName ?: className
         if (atomicMethodDescriptor != null) {
             return ManagedGuaranteeType.ATOMIC
@@ -1714,13 +1713,14 @@ abstract class ManagedStrategy(
                 return guarantee.type
             }
         }
-        return null
+        return ManagedGuaranteeType.REGULAR
     }
 
-    private fun enterMethodGuaranteeSection(threadId: ThreadId, guarantee: ManagedGuaranteeType?) {
+    private fun enterMethodGuaranteeSection(threadId: ThreadId, guarantee: ManagedGuaranteeType) {
         val guaranteesStack = methodGuaranteesStack[threadId]!!
-        if ((guarantee == null || guarantee == ManagedGuaranteeType.SILENT) && guaranteesStack.lastOrNull() == ManagedGuaranteeType.SILENT_NESTED) {
-            guaranteesStack.add(ManagedGuaranteeType.SILENT_NESTED)
+        val currentGuarantee = guaranteesStack.lastOrNull()
+        if (currentGuarantee != null && currentGuarantee.isCallStackPropagating() && guarantee < currentGuarantee) {
+            guaranteesStack.add(currentGuarantee)
         } else {
             guaranteesStack.add(guarantee)
         }
@@ -1732,15 +1732,15 @@ abstract class ManagedStrategy(
         }
     }
 
-    private fun leaveMethodGuaranteeSection(threadId: ThreadId, guarantee: ManagedGuaranteeType?) {
+    private fun leaveMethodGuaranteeSection(threadId: ThreadId, guarantee: ManagedGuaranteeType) {
         if (guarantee == ManagedGuaranteeType.IGNORE ||
             // TODO: atomic should have different semantics compared to ignored
             guarantee == ManagedGuaranteeType.ATOMIC
         ) {
             leaveIgnoredSection()
         }
-        methodGuaranteesStack[threadId]!!.removeLast().ensure {
-            it == guarantee || ((guarantee == null || guarantee == ManagedGuaranteeType.SILENT) && it == ManagedGuaranteeType.SILENT_NESTED)
+        methodGuaranteesStack[threadId]!!.removeLast().ensure { currentGuarantee ->
+            currentGuarantee == guarantee || (currentGuarantee.isCallStackPropagating() && guarantee < currentGuarantee)
         }
     }
 
