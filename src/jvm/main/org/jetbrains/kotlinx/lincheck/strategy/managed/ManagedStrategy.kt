@@ -1002,7 +1002,7 @@ abstract class ManagedStrategy(
             analysisSectionStack.lastOrNull()
         }
         // allow spurious wake-up, unless inside a silent section
-        return (section != AnalysisSectionType.SILENT)
+        return !(section != null && section.isSilent())
     }
 
     override fun unpark(thread: Thread, codeLocation: Int): Unit = runInsideIgnoredSection {
