@@ -15,8 +15,6 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.channels.BaseChannelTest
-import org.junit.Assume.assumeFalse
-import org.junit.Before
 
 class Processor {
     val channel1 = Channel<Int>()
