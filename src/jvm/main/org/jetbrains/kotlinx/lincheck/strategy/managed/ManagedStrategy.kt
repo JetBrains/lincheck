@@ -1006,22 +1006,6 @@ abstract class ManagedStrategy(
         }
     }
 
-    override fun unpark(thread: Thread, codeLocation: Int): Unit = runInsideIgnoredSection {
-        val currentThreadId = threadScheduler.getCurrentThreadId()
-        val unparkedThreadId = threadScheduler.getThreadId(thread)
-        parkingTracker.unpark(currentThreadId, unparkedThreadId)
-        unblockParkedThread(unparkedThreadId)
-        if (collectTrace) {
-            val tracePoint = UnparkTracePoint(
-                iThread = currentThreadId,
-                actorId = currentActorId[currentThreadId]!!,
-                callStackTrace = callStackTrace[currentThreadId]!!,
-                codeLocation = codeLocation
-            )
-            traceCollector?.passCodeLocation(tracePoint)
-        }
-    }
-
     private fun shouldAllowSpuriousUnpark(threadId: ThreadId, codeLocation: Int): Boolean {
         val stackTraceElement = CodeLocations.stackTrace(codeLocation)
         val analysisSectionStack = this.analysisSectionStack[threadId]!!
@@ -1036,6 +1020,22 @@ abstract class ManagedStrategy(
         }
         // allow spurious wake-up, unless inside a silent section
         return (section != AnalysisSectionType.SILENT)
+    }
+
+    override fun unpark(thread: Thread, codeLocation: Int): Unit = runInsideIgnoredSection {
+        val currentThreadId = threadScheduler.getCurrentThreadId()
+        val unparkedThreadId = threadScheduler.getThreadId(thread)
+        parkingTracker.unpark(currentThreadId, unparkedThreadId)
+        unblockParkedThread(unparkedThreadId)
+        if (collectTrace) {
+            val tracePoint = UnparkTracePoint(
+                iThread = currentThreadId,
+                actorId = currentActorId[currentThreadId]!!,
+                callStackTrace = callStackTrace[currentThreadId]!!,
+                codeLocation = codeLocation
+            )
+            traceCollector?.passCodeLocation(tracePoint)
+        }
     }
 
     override fun beforeWait(codeLocation: Int): Unit = runInsideIgnoredSection {
