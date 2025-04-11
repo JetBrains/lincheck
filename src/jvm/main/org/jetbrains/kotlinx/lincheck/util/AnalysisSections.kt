@@ -14,20 +14,76 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import sun.nio.ch.lincheck.ThreadDescriptor
 import sun.nio.ch.lincheck.Injections
 
+/**
+ * Represents different types of analysis sections within the Lincheck framework.
+ * These sections provide various analysis guarantees and characteristics.
+ *
+ * The sections are ordered by the strength of the provided guarantees, from weakest to strongest.
+ *
+ *   - [NORMAL]: normal section without special handling.
+ *     Inside normal sections, all events are tracked.
+ *     All the events occurring inside a normal section are added to the trace,
+ *     unless other factors prevent it.
+ *     Thread switch points can occur arbitrarily within a normal section.
+ *
+ *   - [SILENT]: silent sections are used to mute analysis.
+ *     Note that events are still tracked inside silent sections, but
+ *     they are not added to the trace by default.
+ *     Thread switch points can occur inside a silent section only if they are forced.
+ *     For instance, because of some blocking synchronization primitive,
+ *     like an attempt to acquire a monitor that is already held by another thread.
+ *
+ *  - [SILENT_PROPAGATING] same as the silent section, but propagates down the call stack (see below).
+ *
+ *  - [ATOMIC]: code inside an atomic section behaves like an atomic indivisible operation.
+ *    Technically, the atomic section is a stronger version of the nested silent section,
+ *    with an additional guarantee that thread switch points cannot occur inside an atomic section at all.
+ *    TODO: "no-switch-points inside atomic section" guarantee is not checked currently.
+ *
+ *  - [IGNORE]: code inside ignored sections is completely ignored by the framework.
+ *    No analysis is performed and no events are tracked inside an ignored section.
+ *
+ * Section types can be split into two categories: local and propagating (see [isCallStackPropagating]).
+ *
+ *   - Local section is only applied to the current method in the call stack.
+ *     Other methods down the call stack can reside in different analysis section types,
+ *     including weaker section types.
+ *     Thus, it is possible to have an alternating sequence of different section types in the call stack.
+ *
+ *   - Propagating sections propagate down the call stack.
+ *     Other methods down the call stack can only reside in the same analysis section, or a stronger one.
+ *
+ * Local sections are required to support methods like `ConcurrentHashMap.computeIfAbsent(key, lambda)`.
+ * The method `computeIfAbsent` itself can be trusted and
+ * not analyzed by the framework in the user code by default.
+ * However, the user-provided lambda is not trusted and needs to be analyzed.
+ *
+ * Thus, `computeIfAbsent` can be put into a (local, non-propagating) silent section.
+ * As such, code inside `computeIfAbsent` will be muted,
+ * but if this method calls the provided lambda, it still will be analyzed fully.
+ *
+ * Local sections:
+ *   - [NORMAL]
+ *   - [SILENT]
+ * Propagating sections:
+ *   - [SILENT_PROPAGATING]
+ *   - [ATOMIC]
+ *   - [IGNORE]
+ */
 internal enum class AnalysisSectionType {
-    REGULAR,
+    NORMAL,
     SILENT,
-    SILENT_NESTED,
+    SILENT_PROPAGATING,
     ATOMIC,
     IGNORE,
 }
 
 internal fun AnalysisSectionType.isCallStackPropagating() =
-    this.ordinal >= AnalysisSectionType.SILENT_NESTED.ordinal
+    this >= AnalysisSectionType.SILENT_PROPAGATING
 
 internal fun AnalysisSectionType.isSilent() =
     this == AnalysisSectionType.SILENT         ||
-    this == AnalysisSectionType.SILENT_NESTED
+    this == AnalysisSectionType.SILENT_PROPAGATING
 
 /**
  * Enables analysis for the current thread.
@@ -115,7 +171,7 @@ internal fun getDefaultSilentSectionType(className: String, methodName: String):
     if (className.startsWith("java.util.concurrent.")) {
         if (isJavaExecutorService(className)) {
             if (methodName == "submit") {
-                return AnalysisSectionType.SILENT_NESTED
+                return AnalysisSectionType.SILENT_PROPAGATING
             }
             return AnalysisSectionType.SILENT
         }

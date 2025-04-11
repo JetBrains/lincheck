@@ -1525,7 +1525,7 @@ abstract class ManagedStrategy(
             deterministicMethodDescriptor,
         )
         // in case if a static method is called, ensure its class is instrumented
-        if (receiver == null && atomicMethodDescriptor == null && section == AnalysisSectionType.REGULAR) {
+        if (receiver == null && atomicMethodDescriptor == null && section == AnalysisSectionType.NORMAL) {
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
         }
         // in case of atomics API setter method call, notify the object tracker about a new link between objects
@@ -1556,7 +1556,7 @@ abstract class ManagedStrategy(
             loopDetector.passParameters(params)
         }
         // notify loop detector about the method call
-        if (section == AnalysisSectionType.REGULAR) {
+        if (section == AnalysisSectionType.NORMAL) {
             loopDetector.beforeMethodCall(codeLocation, params)
         }
         // if the method has certain guarantees, enter the corresponding section
@@ -1713,7 +1713,7 @@ abstract class ManagedStrategy(
                 return guarantee.type
             }
         }
-        return AnalysisSectionType.REGULAR
+        return AnalysisSectionType.NORMAL
     }
 
     private fun enterAnalysisSection(threadId: ThreadId, section: AnalysisSectionType) {
