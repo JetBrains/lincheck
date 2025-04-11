@@ -178,7 +178,6 @@ internal inline fun <R> runOutsideIgnoredSection(block: () -> R): R {
     }
 }
 
-@Suppress("UNUSED_PARAMETER")
 internal fun getDefaultSilentSectionType(className: String, methodName: String): AnalysisSectionType? {
     if (className.startsWith("java.util.concurrent.")) {
         if (isJavaExecutorService(className)) {

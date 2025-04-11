@@ -552,7 +552,7 @@ abstract class ManagedStrategy(
             throwIfInterrupted()
         }
         val switchReason = blockingReason.toSwitchReason(::iThreadToDisplayNumber)
-        val mustSwitch = (blockingReason != null) && !blockingReason.allowsSpuriousWakeUps()
+        val mustSwitch = (blockingReason != null) && (blockingReason !is BlockingReason.LiveLocked)
         val nextThread = chooseThreadSwitch(iThread, mustSwitch)
         val switchHappened = (iThread != nextThread)
         if (switchHappened) {
@@ -588,18 +588,9 @@ abstract class ManagedStrategy(
             }
             return nextThread
         }
-        // exit if all threads are finished
-        if (threadScheduler.areAllThreadsFinished()) {
-            return iThread
-        }
-        // try to unpark some parked thread
-        val parkedThreadId = threadScheduler.getRegisteredThreads().keys.firstOrNull { threadId ->
-            threadScheduler.getBlockingReason(threadId) is BlockingReason.Parked
-        }
-        if (parkedThreadId != null) {
-            parkingTracker.unpark(iThread, parkedThreadId)
-            threadScheduler.unblockThread(parkedThreadId)
-            return parkedThreadId
+        // otherwise exit if the thread switch is optional, or all threads are finished
+        if (!mustSwitch || threadScheduler.areAllThreadsFinished()) {
+           return iThread
         }
         // try to resume some suspended thread
         val suspendedThread = (0 until nThreads).firstOrNull {
@@ -607,10 +598,6 @@ abstract class ManagedStrategy(
         }
         if (suspendedThread != null) {
            return suspendedThread
-        }
-        // if the thread switch is optional, continue with the current thread
-        if (!mustSwitch) {
-            return iThread
         }
         // any other situation is considered to be a deadlock
         val result = ManagedDeadlockInvocationResult(runner.collectExecutionResults())
@@ -995,14 +982,10 @@ abstract class ManagedStrategy(
         traceCollector?.passCodeLocation(tracePoint)
         parkingTracker.park(iThread)
         // forbid spurious wake-ups if inside silent sections
-        var allowSpuriousWakeUp = shouldAllowSpuriousUnpark(iThread, codeLocation)
+        val allowSpuriousWakeUp = shouldAllowSpuriousUnpark(iThread, codeLocation)
         while (parkingTracker.waitUnpark(iThread, allowSpuriousWakeUp)) {
             // switch to another thread and wait till an unpark event happens
-            val switchHappened = switchCurrentThread(iThread, BlockingReason.Parked)
-            // if the thread cannot switch, then allow spurious wake-up
-            if (!switchHappened) {
-                allowSpuriousWakeUp = true
-            }
+            switchCurrentThread(iThread, BlockingReason.Parked)
         }
     }
 

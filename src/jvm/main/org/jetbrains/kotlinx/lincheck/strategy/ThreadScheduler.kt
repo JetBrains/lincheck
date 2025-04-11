@@ -67,10 +67,6 @@ sealed class BlockingReason {
     data class  ThreadJoin(val joinedThreadId: ThreadId) : BlockingReason()
 }
 
-fun BlockingReason.allowsSpuriousWakeUps(): Boolean =
-    // this is BlockingReason.Parked        ||
-    this is BlockingReason.LiveLocked
-
 fun BlockingReason.isInterruptible(): Boolean =
     this is BlockingReason.Parked       ||
     this is BlockingReason.Waiting      ||
