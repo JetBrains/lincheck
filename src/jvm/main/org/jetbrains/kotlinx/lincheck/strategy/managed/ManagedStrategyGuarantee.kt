@@ -9,6 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import org.jetbrains.kotlinx.lincheck.util.*
 import kotlin.reflect.*
 
 /**
@@ -33,7 +34,7 @@ fun forClasses(classPredicate: (fullClassName: String) -> Boolean) = ManagedStra
 class ManagedStrategyGuarantee private constructor(
     internal val classPredicate: (fullClassName: String) -> Boolean,
     internal val methodPredicate: (methodName: String) -> Boolean,
-    internal val type: ManagedGuaranteeType
+    internal val type: AnalysisSectionType
 ) {
     class MethodBuilder internal constructor(
         private val classPredicate: (fullClassName: String) -> Boolean
@@ -63,7 +64,7 @@ class ManagedStrategyGuarantee private constructor(
          * interesting code locations inside, and no switch point will be added due to the
          * specified method calls.
          */
-        fun ignore() = ManagedStrategyGuarantee(classPredicate, methodPredicate, ManagedGuaranteeType.IGNORE)
+        fun ignore() = ManagedStrategyGuarantee(classPredicate, methodPredicate, AnalysisSectionType.IGNORE)
 
         /**
          * The methods will be treated by model checking strategy as an atomic operation, so that
@@ -73,43 +74,6 @@ class ManagedStrategyGuarantee private constructor(
          * In contract with the [ignore] mode, switch points are added right before and after the
          * specified method calls.
          */
-        fun treatAsAtomic() = ManagedStrategyGuarantee(classPredicate, methodPredicate, ManagedGuaranteeType.ATOMIC)
+        fun treatAsAtomic() = ManagedStrategyGuarantee(classPredicate, methodPredicate, AnalysisSectionType.ATOMIC)
     }
 }
-
-@Suppress("UNUSED_PARAMETER")
-internal fun getDefaultSilentSectionGuarantee(className: String, methodName: String): ManagedGuaranteeType? {
-    if (className.startsWith("java.util.concurrent.")) {
-        if (isJavaExecutorService(className)) {
-            if (methodName == "submit") {
-                return ManagedGuaranteeType.SILENT_NESTED
-            }
-            return ManagedGuaranteeType.SILENT
-        }
-        if (className.startsWith("java.util.concurrent.locks.AbstractQueuedSynchronizer"))
-            return ManagedGuaranteeType.SILENT
-        if (className == "java.util.concurrent.FutureTask")
-            return ManagedGuaranteeType.SILENT
-    }
-    return null
-}
-
-private fun isJavaExecutorService(className: String) =
-    className.startsWith("java.util.concurrent.AbstractExecutorService") ||
-    className.startsWith("java.util.concurrent.ThreadPoolExecutor") ||
-    className.startsWith("java.util.concurrent.ForkJoinPool")
-
-internal enum class ManagedGuaranteeType {
-    REGULAR,
-    SILENT,
-    SILENT_NESTED,
-    ATOMIC,
-    IGNORE,
-}
-
-internal fun ManagedGuaranteeType.isCallStackPropagating() =
-    this.ordinal >= ManagedGuaranteeType.SILENT_NESTED.ordinal
-
-internal fun ManagedGuaranteeType.isSilent() =
-    this == ManagedGuaranteeType.SILENT         ||
-    this == ManagedGuaranteeType.SILENT_NESTED

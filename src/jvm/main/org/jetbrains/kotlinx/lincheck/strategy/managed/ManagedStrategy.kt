@@ -162,11 +162,11 @@ abstract class ManagedStrategy(
     private val shadowStack = mutableThreadMapOf<ArrayList<ShadowStackFrame>>()
 
     /**
-     * For each thread, stores a stack of entered method guarantees sections.
+     * For each thread, stores a stack of entered analysis sections.
      */
     // TODO: unify with `shadowStack`
     // TODO: handle coroutine resumptions (i.e., unify with `suspendedFunctionsStack`)
-    private val methodGuaranteesStack = mutableThreadMapOf<MutableList<ManagedGuaranteeType>>()
+    private val analysisSectionStack = mutableThreadMapOf<MutableList<AnalysisSectionType>>()
 
     /**
      * In case when the plugin is enabled, we also enable [eventIdStrictOrderingCheck] property and check
@@ -787,7 +787,7 @@ abstract class ManagedStrategy(
         callStackTrace[threadId] = mutableListOf()
         suspendedFunctionsStack[threadId] = mutableListOf()
         shadowStack[threadId] = arrayListOf(ShadowStackFrame(runner.testInstance))
-        methodGuaranteesStack[threadId] = arrayListOf()
+        analysisSectionStack[threadId] = arrayListOf()
         lastReadTracePoint[threadId] = null
         randoms[threadId] = InjectedRandom(threadId + 239L)
         objectTracker?.registerThread(threadId, thread)
@@ -805,7 +805,7 @@ abstract class ManagedStrategy(
         callStackTrace.clear()
         suspendedFunctionsStack.clear()
         shadowStack.clear()
-        methodGuaranteesStack.clear()
+        analysisSectionStack.clear()
         randoms.clear()
     }
 
@@ -1024,18 +1024,18 @@ abstract class ManagedStrategy(
 
     private fun shouldAllowSpuriousUnpark(threadId: ThreadId, codeLocation: Int): Boolean {
         val stackTraceElement = CodeLocations.stackTrace(codeLocation)
-        val guaranteesStack = methodGuaranteesStack[threadId]!!
+        val analysisSectionStack = this.analysisSectionStack[threadId]!!
         // TODO: refactor, track LockSupport.park directly instead
-        val guarantee = if (
+        val section = if (
             stackTraceElement.className == "java/util/concurrent/locks/LockSupport" &&
             stackTraceElement.methodName == "park"
         ) {
-            guaranteesStack.getOrNull(guaranteesStack.size - 2)
+            analysisSectionStack.getOrNull(analysisSectionStack.size - 2)
         } else {
-            guaranteesStack.lastOrNull()
+            analysisSectionStack.lastOrNull()
         }
         // allow spurious wake-up, unless inside a silent section
-        return (guarantee != ManagedGuaranteeType.SILENT)
+        return (section != AnalysisSectionType.SILENT)
     }
 
     override fun beforeWait(codeLocation: Int): Unit = runInsideIgnoredSection {
@@ -1519,13 +1519,13 @@ abstract class ManagedStrategy(
             methodId = methodId,
         )
         val deterministicMethodDescriptor = getDeterministicMethodDescriptorOrNull(methodCallInfo)
-        // get method's concurrency guarantee
-        val guarantee = methodGuaranteeType(receiver, className, methodName,
+        // get method's analysis section type
+        val section = methodAnalysisSectionType(receiver, className, methodName,
             atomicMethodDescriptor,
             deterministicMethodDescriptor,
         )
         // in case if a static method is called, ensure its class is instrumented
-        if (receiver == null && atomicMethodDescriptor == null && guarantee == ManagedGuaranteeType.REGULAR) {
+        if (receiver == null && atomicMethodDescriptor == null && section == AnalysisSectionType.REGULAR) {
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
         }
         // in case of atomics API setter method call, notify the object tracker about a new link between objects
@@ -1545,7 +1545,7 @@ abstract class ManagedStrategy(
         // in case of an atomic method, we create a switch point before the method call;
         // note that in case we resume atomic method there is no need to create the switch point,
         // since there is already a switch point between the suspension point and resumption
-        if (guarantee == ManagedGuaranteeType.ATOMIC &&
+        if (section == AnalysisSectionType.ATOMIC &&
             // do not create a trace point on resumption
             !(isTestThread(threadId) && isResumptionMethodCall(threadId, className, methodName, params, atomicMethodDescriptor))
         ) {
@@ -1556,11 +1556,11 @@ abstract class ManagedStrategy(
             loopDetector.passParameters(params)
         }
         // notify loop detector about the method call
-        if (guarantee == ManagedGuaranteeType.REGULAR) {
+        if (section == AnalysisSectionType.REGULAR) {
             loopDetector.beforeMethodCall(codeLocation, params)
         }
         // if the method has certain guarantees, enter the corresponding section
-        enterMethodGuaranteeSection(threadId, guarantee)
+        enterAnalysisSection(threadId, section)
         return deterministicMethodDescriptor
     }
 
@@ -1594,8 +1594,8 @@ abstract class ManagedStrategy(
         // check if the called method is an atomics API method
         // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
         val atomicMethodDescriptor = getAtomicMethodDescriptor(receiver, methodName)
-        // get method's concurrency guarantee
-        val guarantee = methodGuaranteeType(receiver, className, methodName,
+        // get method's analysis section type
+        val section = methodAnalysisSectionType(receiver, className, methodName,
             atomicMethodDescriptor,
             deterministicMethodDescriptor,
         )
@@ -1617,7 +1617,7 @@ abstract class ManagedStrategy(
             }
         }
         // if the method has certain guarantees, leave the corresponding section
-        leaveMethodGuaranteeSection(threadId, guarantee)
+        leaveAnalysisSection(threadId, section)
     }
 
     override fun onMethodCallException(
@@ -1643,8 +1643,8 @@ abstract class ManagedStrategy(
         // check if the called method is an atomics API method
         // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
         val atomicMethodDescriptor = getAtomicMethodDescriptor(receiver, methodName)
-        // get method's concurrency guarantee
-        val guarantee = methodGuaranteeType(receiver, className, methodName,
+        // get method's analysis section type
+        val section = methodAnalysisSectionType(receiver, className, methodName,
             atomicMethodDescriptor,
             deterministicMethodDescriptor,
         )
@@ -1660,7 +1660,7 @@ abstract class ManagedStrategy(
             traceCollector!!.addStateRepresentation()
         }
         // if the method has certain guarantees, leave the corresponding section
-        leaveMethodGuaranteeSection(threadId, guarantee)
+        leaveAnalysisSection(threadId, section)
     }
 
     private fun <T> KResult<T>.toBootstrapResult() =
@@ -1684,68 +1684,69 @@ abstract class ManagedStrategy(
         }
     }
 
-    private fun methodGuaranteeType(
+    private fun methodAnalysisSectionType(
         owner: Any?,
         className: String,
         methodName: String,
         atomicMethodDescriptor: AtomicMethodDescriptor?,
         deterministicMethodDescriptor: DeterministicMethodDescriptor<*, *>?,
-    ): ManagedGuaranteeType {
+    ): AnalysisSectionType {
         val ownerName = owner?.javaClass?.canonicalName ?: className
         if (atomicMethodDescriptor != null) {
-            return ManagedGuaranteeType.ATOMIC
+            return AnalysisSectionType.ATOMIC
         }
         // TODO: decide if we need to introduce special `DETERMINISTIC` guarantee?
         if (deterministicMethodDescriptor != null) {
-            return ManagedGuaranteeType.IGNORE
+            return AnalysisSectionType.IGNORE
         }
         // Ignore methods called on standard I/O streams
         when (owner) {
-            System.`in`, System.out, System.err -> return ManagedGuaranteeType.IGNORE
+            System.`in`, System.out, System.err -> return AnalysisSectionType.IGNORE
         }
-        val silentGuarantee = getDefaultSilentSectionGuarantee(ownerName, methodName)
+        val silentSection = getDefaultSilentSectionType(ownerName, methodName)
             ?.ensure { it.isSilent() }
-        if (silentGuarantee != null) {
-            return silentGuarantee
+        if (silentSection != null) {
+            return silentSection
         }
         userDefinedGuarantees?.forEach { guarantee ->
             if (guarantee.classPredicate(ownerName) && guarantee.methodPredicate(methodName)) {
                 return guarantee.type
             }
         }
-        return ManagedGuaranteeType.REGULAR
+        return AnalysisSectionType.REGULAR
     }
 
-    private fun enterMethodGuaranteeSection(threadId: ThreadId, guarantee: ManagedGuaranteeType) {
-        val guaranteesStack = methodGuaranteesStack[threadId]!!
-        val currentGuarantee = guaranteesStack.lastOrNull()
-        if (currentGuarantee != null && currentGuarantee.isCallStackPropagating() && guarantee < currentGuarantee) {
-            guaranteesStack.add(currentGuarantee)
+    private fun enterAnalysisSection(threadId: ThreadId, section: AnalysisSectionType) {
+        val analysisSectionStack = this.analysisSectionStack[threadId]!!
+        val currentSection = analysisSectionStack.lastOrNull()
+        if (currentSection != null && currentSection.isCallStackPropagating() && section < currentSection) {
+            analysisSectionStack.add(currentSection)
         } else {
-            guaranteesStack.add(guarantee)
+            analysisSectionStack.add(section)
         }
-        if (guarantee == ManagedGuaranteeType.IGNORE ||
+        if (section == AnalysisSectionType.IGNORE ||
             // TODO: atomic should have different semantics compared to ignored
-            guarantee == ManagedGuaranteeType.ATOMIC
+            section == AnalysisSectionType.ATOMIC
         ) {
             enterIgnoredSection()
         }
     }
 
-    private fun leaveMethodGuaranteeSection(threadId: ThreadId, guarantee: ManagedGuaranteeType) {
-        if (guarantee == ManagedGuaranteeType.IGNORE ||
+    private fun leaveAnalysisSection(threadId: ThreadId, section: AnalysisSectionType) {
+        if (section == AnalysisSectionType.IGNORE ||
             // TODO: atomic should have different semantics compared to ignored
-            guarantee == ManagedGuaranteeType.ATOMIC
+            section == AnalysisSectionType.ATOMIC
         ) {
             leaveIgnoredSection()
         }
-        methodGuaranteesStack[threadId]!!.removeLast().ensure { currentGuarantee ->
-            currentGuarantee == guarantee || (currentGuarantee.isCallStackPropagating() && guarantee < currentGuarantee)
+        val analysisSectionStack = this.analysisSectionStack[threadId]!!
+        analysisSectionStack.removeLast().ensure { currentSection ->
+            currentSection == section || (currentSection.isCallStackPropagating() && section < currentSection)
         }
     }
 
     protected fun inSilentSection(threadId: ThreadId): Boolean {
-        return (methodGuaranteesStack[threadId]!!.lastOrNull()?.isSilent() ?: false)
+        return (analysisSectionStack[threadId]!!.lastOrNull()?.isSilent() ?: false)
     }
 
     private fun isResumptionMethodCall(

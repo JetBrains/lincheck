@@ -11,8 +11,23 @@
 package org.jetbrains.kotlinx.lincheck.util
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
-import sun.nio.ch.lincheck.Injections
 import sun.nio.ch.lincheck.ThreadDescriptor
+import sun.nio.ch.lincheck.Injections
+
+internal enum class AnalysisSectionType {
+    REGULAR,
+    SILENT,
+    SILENT_NESTED,
+    ATOMIC,
+    IGNORE,
+}
+
+internal fun AnalysisSectionType.isCallStackPropagating() =
+    this.ordinal >= AnalysisSectionType.SILENT_NESTED.ordinal
+
+internal fun AnalysisSectionType.isSilent() =
+    this == AnalysisSectionType.SILENT         ||
+    this == AnalysisSectionType.SILENT_NESTED
 
 /**
  * Enables analysis for the current thread.
@@ -94,3 +109,25 @@ internal inline fun <R> runOutsideIgnoredSection(block: () -> R): R {
         descriptor.restoreIgnoredSectionDepth(depth)
     }
 }
+
+@Suppress("UNUSED_PARAMETER")
+internal fun getDefaultSilentSectionType(className: String, methodName: String): AnalysisSectionType? {
+    if (className.startsWith("java.util.concurrent.")) {
+        if (isJavaExecutorService(className)) {
+            if (methodName == "submit") {
+                return AnalysisSectionType.SILENT_NESTED
+            }
+            return AnalysisSectionType.SILENT
+        }
+        if (className.startsWith("java.util.concurrent.locks.AbstractQueuedSynchronizer"))
+            return AnalysisSectionType.SILENT
+        if (className == "java.util.concurrent.FutureTask")
+            return AnalysisSectionType.SILENT
+    }
+    return null
+}
+
+private fun isJavaExecutorService(className: String) =
+    className.startsWith("java.util.concurrent.AbstractExecutorService") ||
+    className.startsWith("java.util.concurrent.ThreadPoolExecutor") ||
+    className.startsWith("java.util.concurrent.ForkJoinPool")
