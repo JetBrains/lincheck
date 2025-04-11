@@ -1520,12 +1520,12 @@ abstract class ManagedStrategy(
         )
         val deterministicMethodDescriptor = getDeterministicMethodDescriptorOrNull(methodCallInfo)
         // get method's analysis section type
-        val section = methodAnalysisSectionType(receiver, className, methodName,
+        val methodSection = methodAnalysisSectionType(receiver, className, methodName,
             atomicMethodDescriptor,
             deterministicMethodDescriptor,
         )
         // in case if a static method is called, ensure its class is instrumented
-        if (receiver == null && atomicMethodDescriptor == null && section == AnalysisSectionType.NORMAL) {
+        if (receiver == null && atomicMethodDescriptor == null && methodSection == AnalysisSectionType.NORMAL) {
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
         }
         // in case of atomics API setter method call, notify the object tracker about a new link between objects
@@ -1545,7 +1545,7 @@ abstract class ManagedStrategy(
         // in case of an atomic method, we create a switch point before the method call;
         // note that in case we resume atomic method there is no need to create the switch point,
         // since there is already a switch point between the suspension point and resumption
-        if (section == AnalysisSectionType.ATOMIC &&
+        if (methodSection == AnalysisSectionType.ATOMIC &&
             // do not create a trace point on resumption
             !(isTestThread(threadId) && isResumptionMethodCall(threadId, className, methodName, params, atomicMethodDescriptor))
         ) {
@@ -1556,11 +1556,11 @@ abstract class ManagedStrategy(
             loopDetector.passParameters(params)
         }
         // notify loop detector about the method call
-        if (section == AnalysisSectionType.NORMAL) {
+        if (methodSection == AnalysisSectionType.NORMAL) {
             loopDetector.beforeMethodCall(codeLocation, params)
         }
         // if the method has certain guarantees, enter the corresponding section
-        enterAnalysisSection(threadId, section)
+        enterAnalysisSection(threadId, methodSection)
         return deterministicMethodDescriptor
     }
 
@@ -1595,7 +1595,7 @@ abstract class ManagedStrategy(
         // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
         val atomicMethodDescriptor = getAtomicMethodDescriptor(receiver, methodName)
         // get method's analysis section type
-        val section = methodAnalysisSectionType(receiver, className, methodName,
+        val methodSection = methodAnalysisSectionType(receiver, className, methodName,
             atomicMethodDescriptor,
             deterministicMethodDescriptor,
         )
@@ -1617,7 +1617,7 @@ abstract class ManagedStrategy(
             }
         }
         // if the method has certain guarantees, leave the corresponding section
-        leaveAnalysisSection(threadId, section)
+        leaveAnalysisSection(threadId, methodSection)
     }
 
     override fun onMethodCallException(
@@ -1644,7 +1644,7 @@ abstract class ManagedStrategy(
         // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
         val atomicMethodDescriptor = getAtomicMethodDescriptor(receiver, methodName)
         // get method's analysis section type
-        val section = methodAnalysisSectionType(receiver, className, methodName,
+        val methodSection = methodAnalysisSectionType(receiver, className, methodName,
             atomicMethodDescriptor,
             deterministicMethodDescriptor,
         )
@@ -1660,7 +1660,7 @@ abstract class ManagedStrategy(
             traceCollector!!.addStateRepresentation()
         }
         // if the method has certain guarantees, leave the corresponding section
-        leaveAnalysisSection(threadId, section)
+        leaveAnalysisSection(threadId, methodSection)
     }
 
     private fun <T> KResult<T>.toBootstrapResult() =
