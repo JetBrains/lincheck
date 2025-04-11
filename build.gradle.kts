@@ -303,7 +303,8 @@ tasks {
     }
 
     check {
-        dependsOn(jvmTestIsolated)
+        dependsOn += jvmTestIsolated
+        setDependsOn(dependsOn.filter { it != jvmIntegrationTest })
     }
 
     withType<Jar> {
