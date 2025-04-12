@@ -13,8 +13,9 @@ The following interleaving leads to the error:
 |         enableWait(ConditionNode#1): 1 at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1605)                   |
 |         LockSupport.setCurrentBlocker(ConditionObject#1) at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1606) |
 |         ForkJoinPool.managedBlock(ConditionNode#1) at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1614)       |
-|           LockSupport.park() at AbstractQueuedSynchronizer$ConditionNode.block(AbstractQueuedSynchronizer.java:505)                                |
-|             PARK at LockSupport.park(LockSupport.java:341)                                                                                         |
+|           blocker.block() at ForkJoinPool.managedBlock(ForkJoinPool.java:3137)                                                                     |
+|             LockSupport.park() at AbstractQueuedSynchronizer$ConditionNode.block(AbstractQueuedSynchronizer.java:505)                              |
+|               PARK at LockSupport.park(LockSupport.java:341)                                                                                       |
 | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 All unfinished threads are in deadlock
 
@@ -54,7 +55,8 @@ Detailed trace:
 |         LockSupport.setCurrentBlocker(ConditionObject#1) at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1606)           |
 |           Unsafe#1.putReferenceOpaque(Thread#1, 76, ConditionObject#1) at LockSupport.setCurrentBlocker(LockSupport.java:161)                                |
 |         ForkJoinPool.managedBlock(ConditionNode#1) at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1614)                 |
-|           LockSupport.park() at AbstractQueuedSynchronizer$ConditionNode.block(AbstractQueuedSynchronizer.java:505)                                          |
-|             PARK at LockSupport.park(LockSupport.java:341)                                                                                                   |
+|           blocker.block() at ForkJoinPool.managedBlock(ForkJoinPool.java:3137)                                                                               |
+|             LockSupport.park() at AbstractQueuedSynchronizer$ConditionNode.block(AbstractQueuedSynchronizer.java:505)                                        |
+|               PARK at LockSupport.park(LockSupport.java:341)                                                                                                 |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 All unfinished threads are in deadlock
