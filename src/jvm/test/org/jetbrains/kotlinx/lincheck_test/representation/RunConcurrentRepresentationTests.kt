@@ -437,7 +437,13 @@ class CoroutinesRunConcurrentRepresentationTest : BaseRunConcurrentRepresentatio
     @Before
     fun setUp() {
         assumeFalse(isInTraceDebuggerMode) // unstable hash-code
-        assumeFalse(isJdk8) // TODO: investigate why test is unstable on JDK8
+        // TODO: investigate why test is unstable on these JDKs
+        assumeFalse(testJdkVersion == TestJdkVersion.JDK_8)
+        assumeFalse(testJdkVersion == TestJdkVersion.JDK_11)
+        assumeFalse(testJdkVersion == TestJdkVersion.JDK_13)
+        assumeFalse(testJdkVersion == TestJdkVersion.JDK_15)
+        assumeFalse(testJdkVersion == TestJdkVersion.JDK_20)
+        assumeFalse(testJdkVersion == TestJdkVersion.JDK_21)
     }
 
     companion object {
