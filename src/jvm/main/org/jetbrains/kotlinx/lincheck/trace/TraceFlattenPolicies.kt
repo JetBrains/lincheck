@@ -20,6 +20,12 @@ package org.jetbrains.kotlinx.lincheck.trace
  */
 internal interface TraceFlattenPolicy {
     /**
+     * Returns `true` if trace point which corresponds to the [currentNode] is **not** virtual.
+     */
+    fun isVisibleNode(currentNode: TraceNode): Boolean =
+        !currentNode.tracePoint.isVirtual
+
+    /**
      * Should return true if [traceNode] should be included in the trace according to [TraceFlattenPolicy].
      * Makes sure current node is included in list of descendants.
      */
@@ -43,7 +49,7 @@ internal interface TraceFlattenPolicy {
 internal class VerboseTraceFlattenPolicy : TraceFlattenPolicy {
 
     override fun shouldIncludeThisNode(currentNode: TraceNode): Boolean = when (currentNode) {
-        is EventNode -> !currentNode.tracePoint.isVirtual
+        is EventNode -> isVisibleNode(currentNode)
         else -> true
     }
 
@@ -79,7 +85,7 @@ internal class VerboseTraceFlattenPolicy : TraceFlattenPolicy {
 internal class ShortTraceFlattenPolicy : TraceFlattenPolicy {
     override fun shouldIncludeThisNode(currentNode: TraceNode): Boolean = when (currentNode) {
         is EventNode -> with(currentNode) {
-            !tracePoint.isVirtual && (
+            isVisibleNode(currentNode) && (
                     isLast && tracePoint.isBlocking
                             || tracePoint is SwitchEventTracePoint
                             || tracePoint is ObstructionFreedomViolationExecutionAbortTracePoint
@@ -91,7 +97,7 @@ internal class ShortTraceFlattenPolicy : TraceFlattenPolicy {
 
     override fun beforeFlattenChildren(currentNode: TraceNode, childDescendants: List<List<TraceNode>>): List<List<TraceNode>> {
         // Insert siblings if necessary (for short trace)
-        // if not verbose and atleast one child has no descendants and one other child has
+        // if not verbose and at least one child has no descendants and one other child has
         if (childDescendants.any { it.isNotEmpty() } && childDescendants.any { it.isEmpty() }) {
             // add all siblings
             return childDescendants.mapIndexed { i, descendantList -> if (descendantList.isEmpty()) listOf(currentNode.children[i]) else descendantList }
@@ -150,7 +156,7 @@ internal fun TraceNode.flattenNodes(policy: TraceFlattenPolicy): List<TraceNode>
     // Alter children list according to policy
     val changedDescendantsOfChildren = policy.beforeFlattenChildren(this, descendantsOfChildren)
 
-    val descendants = changedDescendantsOfChildren.flatten()
+    val descendants = changedDescendantsOfChildren.flatten().filter(policy::isVisibleNode)
 
     val flattened = if (policy.shouldIncludeThisNode(this) || descendants.isNotEmpty()) listOf(this) + descendants else descendants
 

@@ -698,7 +698,7 @@ abstract class ManagedStrategy(
                 iThread = threadId,
                 actorId = currentActorId[threadId]!!,
                 // dropping the call to `thread.start()`, so it does not appear in the output trace
-                callStackTrace = callStackTrace[threadId]!!.dropLast(1),
+                callStackTrace = callStackTrace[threadId]!!.dropLast(1)
             )
         } else {
             null
