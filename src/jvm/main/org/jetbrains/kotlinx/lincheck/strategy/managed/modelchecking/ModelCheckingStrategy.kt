@@ -135,6 +135,22 @@ internal class ModelCheckingStrategy(
             protected set
         val isInitialized get() = ::choices.isInitialized
 
+        override fun toString(): String = getStringRepresentation()
+
+        protected abstract fun getStringRepresentation(indent: String = ""): String
+
+        protected fun StringBuilder.appendChoices(indent: String = ""): StringBuilder {
+            if (isInitialized) {
+                append("[" + choices.map { it.value }.joinToString(", ") + "]\n")
+                choices.forEach { choice ->
+                    append("${indent}\t${choice.value}: ${choice.node.getStringRepresentation("${indent}\t").trim()}\n")
+                }
+            } else {
+                append(" not initialized\n")
+            }
+            return this
+        }
+
         fun nextInterleaving(): Interleaving? {
             if (isFullyExplored) {
                 // Increase the maximum number of switches that can be used,
@@ -211,6 +227,11 @@ internal class ModelCheckingStrategy(
             updateExplorationStatistics()
             return interleaving
         }
+
+        override fun getStringRepresentation(indent: String): String = StringBuilder()
+            .append("${indent}ThreadChoosingNode: threads=")
+            .appendChoices(indent)
+            .toString()
     }
 
     /**
@@ -231,11 +252,16 @@ internal class ModelCheckingStrategy(
             updateExplorationStatistics()
             return interleaving
         }
+
+        override fun getStringRepresentation(indent: String): String = StringBuilder()
+            .append("${indent}SwitchChoosingNode: switch points=")
+            .appendChoices(indent)
+            .toString()
     }
 
     private inner class Choice(val node: InterleavingTreeNode, val value: Int) {
         override fun toString(): String {
-            return "Choice(node=$node, value=$value)"
+            return "Choice(node=${node.javaClass.simpleName}, value=$value)"
         }
     }
 
@@ -285,6 +311,12 @@ internal class ModelCheckingStrategy(
 
         fun chooseThread(iThread: Int): Int =
             if (nextThreadToSwitch.hasNext()) {
+                check(executionPosition == -1 || executionPosition in switchPositions) {
+                    """
+                        Attempt to switch thread on execution position which does not correspond to any saved switch position.
+                        Execution position: $executionPosition, switch positions: $switchPositions.
+                    """.trimIndent()
+                }
                 // Use the predefined choice.
                 nextThreadToSwitch.next()
             } else {
@@ -306,9 +338,19 @@ internal class ModelCheckingStrategy(
          */
         fun newExecutionPosition(iThread: Int) {
             executionPosition++
-            if (executionPosition > switchPositions.lastOrNull() ?: -1) {
+            if (executionPosition > (switchPositions.lastOrNull() ?: -1)) {
                 // Add a new thread choosing node corresponding to the switch at the current execution position.
-                lastNotInitializedNodeChoices?.add(Choice(ThreadChoosingNode(switchableThreads(iThread)), executionPosition))
+                lastNotInitializedNodeChoices?.apply {
+                    switchableThreads(iThread).let {
+                        check(threadSwitchChoices.lastOrNull() !in it) {
+                            """
+                                Attempt to add a thread choice node with the option for switching to the same thread.
+                                Threads switches: $threadSwitchChoices, added new thread options: $it, current thread: $iThread.
+                            """.trimIndent()
+                        }
+                        add(Choice(ThreadChoosingNode(it), executionPosition))
+                    }
+                }
             }
         }
 
