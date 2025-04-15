@@ -23,9 +23,3 @@ Exception stack traces:
 	at org.jetbrains.kotlinx.lincheck_test.representation.trace_debugger.FailingCustomRandomCallRepresentationTest.operation(RandomRepresentationTests.kt:40)
 	at java.base/java.lang.Thread.run(Thread.java:840)
 
-Detailed trace:
-| ---------------------------------------- |
-|                 Thread 1                 |
-| ---------------------------------------- |
-| operation(): IllegalArgumentException #1 |
-| ---------------------------------------- |

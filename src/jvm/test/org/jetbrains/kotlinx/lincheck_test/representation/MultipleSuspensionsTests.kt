@@ -19,6 +19,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import org.jetbrains.kotlinx.lincheck.util.ensure
+import org.junit.Ignore
 import org.junit.Test
 
 /**
