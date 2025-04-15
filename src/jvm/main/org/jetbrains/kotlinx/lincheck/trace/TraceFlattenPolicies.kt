@@ -166,7 +166,9 @@ internal fun SingleThreadedTable<TraceNode>.extractPreExpandedNodes(flattenPolic
 
 // virtual trace points are not displayed in the trace
 private val TracePoint.isVirtual: Boolean get() = when (this) {
-    is ThreadStartTracePoint, is ThreadJoinTracePoint -> true
+    is ThreadStartTracePoint,
+    is ThreadJoinTracePoint,
+    is AfterThreadForkTracePoint -> true
     else -> false
 }
 

@@ -126,4 +126,31 @@ class DaemonThreadPoolTest {
             }
         }
     }
+
+    @Test
+    fun testJavaThreadPoolFutures() {
+        runConcurrentTest(1000) {
+            val pool = Executors.newFixedThreadPool(3)
+            val f1 = pool.submit {}
+            val f2 = pool.submit {}
+            val f3 = pool.submit {}
+
+            f1.get()
+            f2.get()
+            f3.get()
+            // no explicit shutdown
+        }
+    }
+
+    @Test
+    fun testJavaThreadPoolAsyncTasks() {
+        runConcurrentTest(1000) {
+            val pool = Executors.newFixedThreadPool(3)
+            // fire and forget
+            pool.execute {}
+            pool.execute {}
+            pool.execute {}
+            // no explicit shutdown
+        }
+    }
 }
