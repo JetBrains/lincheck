@@ -368,7 +368,14 @@ abstract class ManagedStrategy(
         val threadNames = MutableList<String>(registeredThreads.size) { "" }
         threadScheduler.getRegisteredThreads().forEach { threadId, thread ->
             val threadNumber = ObjectLabelFactory.getObjectNumber(Thread::class.java, thread)
-            threadNames[threadId] = "Thread $threadNumber"
+            if (isGeneralPurposeModelCheckingScenario(scenario)) {
+                when (threadNumber) {
+                    1 -> threadNames[threadId] = "Main Thread"
+                    else -> threadNames[threadId] = "Thread ${threadNumber - 1}"
+                }
+            } else {
+                threadNames[threadId] = "Thread $threadNumber"
+            }
         }
         val trace = Trace(traceCollector!!.trace, threadNames)
 
