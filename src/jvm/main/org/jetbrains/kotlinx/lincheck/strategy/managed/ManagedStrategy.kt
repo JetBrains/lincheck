@@ -1610,7 +1610,7 @@ abstract class ManagedStrategy(
             // we should probably refactor and fix that, because it is very inconvenient
             if (callStackTrace[threadId]!!.isEmpty()) return
             val tracePoint = callStackTrace[threadId]!!.last().tracePoint
-            tracePoint.initializeThrownException(throwable)
+            if (!tracePoint.isActor) tracePoint.initializeThrownException(throwable)
             afterMethodCall(threadId, tracePoint)
             traceCollector!!.addStateRepresentation()
         }
