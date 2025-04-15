@@ -34,6 +34,61 @@ class DaemonThreadPoolTest {
         }
     }
 
+    @Test
+    fun testUselessThreadPoolWithMultipleCoroutines() {
+        runConcurrentTest(1000) {
+            val pool = Executors.newFixedThreadPool(5).asCoroutineDispatcher()
+            runBlocking(pool) {
+                val c1 = launch(pool) {}
+                val c2 = launch(pool) {}
+                val c3 = launch(pool) {}
+                val c4 = launch(pool) {}
+                val c5 = launch(pool) {}
+
+                c1.join()
+                c2.join()
+                c3.join()
+                c4.join()
+                c5.join()
+            }
+            // pool.close() -- no manual closing
+        }
+    }
+
+    @Test
+    fun testInfiniteBackgroundThreads() {
+        runConcurrentTest(1000) {
+            val atomic = AtomicInteger(0)
+            thread {
+                while (true) atomic.incrementAndGet()
+            }
+            val t2 = thread(start = false) {
+                while (true) atomic.decrementAndGet()
+            }
+            t2.isDaemon = true
+            t2.start()
+        }
+    }
+
+    @Test
+    fun testManyInfiniteBackgroundThreads() {
+        runConcurrentTest(1000) {
+            val atomic = AtomicInteger(0)
+            thread {
+                while (true) atomic.incrementAndGet()
+            }
+            thread {
+                while (true) atomic.incrementAndGet()
+            }
+            thread {
+                while (true) atomic.incrementAndGet()
+            }
+            thread {
+                while (true) atomic.incrementAndGet()
+            }
+        }
+    }
+
     @Test(expected = LincheckAssertionError::class)
     fun testBackgroundThreadsDeadlock() {
         runConcurrentTest(1000) {
@@ -52,21 +107,6 @@ class DaemonThreadPoolTest {
                     }
                 }
             }.start()
-        }
-    }
-
-    @Test
-    fun testInfiniteBackgroundThreads() {
-        runConcurrentTest(1000) {
-            val atomic = AtomicInteger(0)
-            thread {
-                while (true) atomic.incrementAndGet()
-            }
-            val t2 = thread(start = false) {
-                while (true) atomic.decrementAndGet()
-            }
-            t2.isDaemon = true
-            t2.start()
         }
     }
 
