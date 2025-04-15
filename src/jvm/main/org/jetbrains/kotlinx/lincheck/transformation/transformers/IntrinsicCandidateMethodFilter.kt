@@ -17,7 +17,6 @@ import org.jetbrains.kotlinx.lincheck.util.MethodDescriptor
 import org.jetbrains.kotlinx.lincheck.util.isTrackedIntrinsic
 import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.MethodVisitor
-import java.util.*
 
 
 internal class IntrinsicCandidateMethodFilter(

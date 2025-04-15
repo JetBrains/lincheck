@@ -56,7 +56,7 @@ internal fun MethodDescriptor.isArraysCopyOfIntrinsic(): Boolean {
 internal fun MethodDescriptor.isArraysCopyOfRangeIntrinsic(): Boolean {
     return (
         className == "java.util.Arrays" &&
-        methodName == "copyOfRange" &&
+        methodName.contains("copyOfRange") &&
         (
             (
                 returnType == ARRAY_OF_OBJECTS_TYPE &&

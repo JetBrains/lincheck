@@ -32,7 +32,7 @@ class IntrinsicCandidateMethodTest {
 
     @Test
     fun testArraysCopyOfCall() {
-        runConcurrentTest(1000) {
+        runConcurrentTest(2000) {
             val threads = mutableListOf<Thread>()
             val l = CountDownLatch(1)
 
@@ -59,7 +59,7 @@ class IntrinsicCandidateMethodTest {
 
     @Test
     fun testListOfCall() {
-        runConcurrentTest(300) {
+        runConcurrentTest(2000) {
             // at least 3 threads required to trigger a bug
             Executors.newFixedThreadPool(3).asCoroutineDispatcher().use { dispatcher ->
                 runBlocking(dispatcher) {
@@ -75,7 +75,7 @@ class IntrinsicCandidateMethodTest {
 
     @Test
     fun testVarArgsSpread() {
-        runConcurrentTest(300) {
+        runConcurrentTest(2000) {
             // at least 3 threads required to trigger a bug
             Executors.newFixedThreadPool(3).asCoroutineDispatcher().use { dispatcher ->
                 runBlocking(dispatcher) {
