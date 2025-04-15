@@ -44,7 +44,7 @@ abstract class AbstractTraceDebuggerIntegrationTest {
                         jvmArgs.add("-javaagent:${pathToFatJar.absolutePath}=$testClassName,$testMethodName,${fileToDump.absolutePath}")
                         
                         jvmArgs.add("-XX:+UnlockExperimentalVMOptions") // Enables -XX:hashCode
-                        jvmArgs.add("-XX:hashCode=3") // Use global counter for identityHashCode
+                        jvmArgs.add("-XX:hashCode=2") // Use constant 1 for hash code
                         options.jvmArgs = jvmArgs
                     }
                 }

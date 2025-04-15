@@ -200,8 +200,9 @@ tasks {
         if (!ideaActive) {
             // We need to be able to run these tests in IntelliJ IDEA.
             // Unfortunately, the current Gradle support doesn't detect
-            // the `jvmTestIsolated` task.
+            // the `jvmTestIsolated` and `traceDebuggerIntegrationTest` tasks.
             exclude("**/*IsolatedTest*")
+            exclude("org/jetbrains/kotlinx/trace_debugger/integration/*")
         }
         // Do not run JdkUnsafeTraceRepresentationTest on Java 12 or earlier,
         // as this test relies on specific ConcurrentHashMap implementation.
@@ -234,6 +235,20 @@ tasks {
         testLogging.showStandardStreams = true
         outputs.upToDateWhen { false } // Always run tests when called
         include("**/*IsolatedTest*")
+        configureJvmTestCommon()
+        forkEvery = 1
+    }
+
+    val traceDebuggerIntegrationTest = register<Test>("traceDebuggerIntegrationTest") {
+        dependsOn(traceDebuggerIntegrationTestsPrerequisites)
+
+        group = jvmTest.get().group
+        testClassesDirs = jvmTest.get().testClassesDirs
+        classpath = jvmTest.get().classpath
+        enableAssertions = true
+        testLogging.showStandardStreams = true
+        outputs.upToDateWhen { false } // Always run tests when called
+        include("org/jetbrains/kotlinx/trace_debugger/integration/*")
         configureJvmTestCommon()
         forkEvery = 1
     }
