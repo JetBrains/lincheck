@@ -269,6 +269,7 @@ abstract class ManagedStrategy(
         objectTracker?.reset()
         monitorTracker.reset()
         parkingTracker.reset()
+        constants.clear()
         resetThreads()
     }
 
@@ -1226,6 +1227,8 @@ abstract class ManagedStrategy(
         }
     }
 
+    private var lastReadFieldName: String? = null
+
     /**
      * Returns `true` if a switch point is created.
      */
@@ -1236,6 +1239,9 @@ abstract class ManagedStrategy(
         // The following call checks all the static fields.
         if (isStatic) {
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
+        }
+        if (isStatic && isFinal && collectTrace) {
+            lastReadFieldName = fieldName
         }
         // Optimization: do not track final field reads
         if (isFinal) {
@@ -1299,6 +1305,12 @@ abstract class ManagedStrategy(
 
     override fun afterRead(value: Any?) = runInsideIgnoredSection {
         if (collectTrace) {
+            if (lastReadFieldName != null) {
+                if (value != null) {
+                    constants[value] = lastReadFieldName
+                }
+                lastReadFieldName = null
+            }
             val iThread = threadScheduler.getCurrentThreadId()
             lastReadTracePoint[iThread]?.initializeReadValue(adornedStringRepresentation(value), objectFqTypeName(value))
             lastReadTracePoint[iThread] = null
@@ -2172,23 +2184,15 @@ abstract class ManagedStrategy(
         // lookup for the object in local variables and use the local variable name if found
         val shadowStackFrame = shadowStack[threadId]!!.last()
         shadowStackFrame.getLastAccessVariable(owner)?.let { return it }
+        // lookup for a field name.
+        findFieldName(owner)?.let { return it }
         // lookup for the final field uniquely owning the object
-        val finalFieldWithOwner = findFinalFieldWithOwner(runner.testInstance, owner)
+        constants[owner]?.let { return it }
         // if no such field found return object's string representation
-        if (finalFieldWithOwner == null) {
-            return adornedStringRepresentation(owner)
-        }
-        if (finalFieldWithOwner !is OwnerWithName.InstanceOwnerWithName) {
-            return null
-        }
-        // if such a field is found - construct representation with its owner and name
-        val fieldOwner = finalFieldWithOwner.owner
-        val fieldName = finalFieldWithOwner.fieldName
-        if (isCurrentStackFrameReceiver(fieldOwner)) {
-            return fieldName
-        }
-        return "${adornedStringRepresentation(fieldOwner)}.$fieldName"
+        return adornedStringRepresentation(owner)
     }
+
+    private val constants = IdentityHashMap<Any, String>() // object -> fieldName
 
     /**
      * Checks if [owner] is the `this` object (i.e., receiver) of the currently executed method call.
@@ -2197,6 +2201,18 @@ abstract class ManagedStrategy(
         val currentThreadId = threadScheduler.getCurrentThreadId()
         val stackTraceElement = shadowStack[currentThreadId]!!.last()
         return (owner === stackTraceElement.instance)
+    }
+
+    private fun findFieldName(instance: Any): String? {
+        val currentThreadId = threadScheduler.getCurrentThreadId()
+        val stackTraceElement = shadowStack[currentThreadId]!!.last()
+        val currentThis = stackTraceElement.instance
+        currentThis?.javaClass?.allDeclaredFieldWithSuperclasses?.forEach { field ->
+            if (readFieldSafely(currentThis, field).getOrNull() === instance) {
+                return field.name
+            }
+        }
+        return null
     }
 
     /* Methods to control the current call context. */
