@@ -26,11 +26,13 @@ Detailed trace:
 |         value ➜ 0 at CounterDerived.increment(MethodHandlesLookupTests.kt:178)                                                                                                  |
 |         value = 2 at CounterDerived.increment(MethodHandlesLookupTests.kt:178)                                                                                                  |
 |       methodHandle.invoke(CounterDerived#1) at MethodHandlesFindSpecialRepresentationTest.doTest(MethodHandlesLookupTests.kt:30)                                                |
-|         CounterDerived#1.value ➜ 2 at Counter.increment(MethodHandlesLookupTests.kt:158)                                                                                        |
-|         CounterDerived#1.value = 3 at Counter.increment(MethodHandlesLookupTests.kt:158)                                                                                        |
+|         MethodHandle.linkToSpecial(CounterDerived#1, MemberName#1) at DirectMethodHandle$Holder.invokeSpecial(DirectMethodHandle$Holder:0)                                      |
+|           CounterDerived#1.value ➜ 2 at Counter.increment(MethodHandlesLookupTests.kt:158)                                                                                      |
+|           CounterDerived#1.value = 3 at Counter.increment(MethodHandlesLookupTests.kt:158)                                                                                      |
 |       methodHandle.invokeExact(CounterDerived#1) at MethodHandlesFindSpecialRepresentationTest.doTest(MethodHandlesLookupTests.kt:31)                                           |
-|         CounterDerived#1.value ➜ 3 at Counter.increment(MethodHandlesLookupTests.kt:158)                                                                                        |
-|         CounterDerived#1.value = 4 at Counter.increment(MethodHandlesLookupTests.kt:158)                                                                                        |
+|         MethodHandle.linkToSpecial(CounterDerived#1, MemberName#1) at DirectMethodHandle$Holder.invokeSpecial(DirectMethodHandle$Holder:0)                                      |
+|           CounterDerived#1.value ➜ 3 at Counter.increment(MethodHandlesLookupTests.kt:158)                                                                                      |
+|           CounterDerived#1.value = 4 at Counter.increment(MethodHandlesLookupTests.kt:158)                                                                                      |
 |       counter.value ➜ 4 at MethodHandlesFindSpecialRepresentationTest.doTest(MethodHandlesLookupTests.kt:32)                                                                    |
 |   result: IllegalStateException #1                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

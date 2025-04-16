@@ -15,6 +15,7 @@ import org.jetbrains.kotlinx.lincheck_test.util.testJdkVersion
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.MethodType
 
+// TODO find out why this test output is different on mac for jdk15
 class MethodHandlesFindSpecialRepresentationTest : BaseMethodHandleLookupRepresentationTest(
         "method_handles/find_special"
 ) {
