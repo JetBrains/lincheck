@@ -41,7 +41,7 @@ Detailed trace:
 |           node.setStatusRelaxed(3) at AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1504)                            |
 |             Unsafe#1.putInt(ConditionNode#1, 12, 3) at AbstractQueuedSynchronizer$Node.setStatusRelaxed(AbstractQueuedSynchronizer.java:474)                 |
 |         LockSupport.setCurrentBlocker(ConditionObject#1) at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1614)           |
-|           Unsafe#1.putReferenceOpaque(Thread#1, 88, ConditionObject#1) at LockSupport.setCurrentBlocker(LockSupport.java:162)                                |
+|           Unsafe#1.putReferenceOpaque(Thread#0, 88, ConditionObject#1) at LockSupport.setCurrentBlocker(LockSupport.java:162)                                |
 |         canReacquire(ConditionNode#1): false at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1616)                       |
 |           node.prev ➜ null at AbstractQueuedSynchronizer$ConditionObject.canReacquire(AbstractQueuedSynchronizer.java:1528)                                  |
 |         node.status ➜ 3 at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1620)                                            |
