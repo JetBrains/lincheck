@@ -199,6 +199,13 @@ abstract class ManagedStrategy(
      *   to communicate coroutine resumption event to the plugin.
      */
     private var skipNextBeforeEvent = false
+    
+    init {
+        if (isGeneralPurposeModelCheckingScenario(scenario)) 
+            ObjectLabelFactory.setNumerationStartFor(Thread::class.java, 0) 
+        else 
+            ObjectLabelFactory.setNumerationStartFor(Thread::class.java, 1)
+    }
 
     override fun close() {
         super.close()
@@ -368,13 +375,9 @@ abstract class ManagedStrategy(
         val threadNames = MutableList<String>(registeredThreads.size) { "" }
         threadScheduler.getRegisteredThreads().forEach { threadId, thread ->
             val threadNumber = ObjectLabelFactory.getObjectNumber(Thread::class.java, thread)
-            if (isGeneralPurposeModelCheckingScenario(scenario)) {
-                when (threadNumber) {
-                    1 -> threadNames[threadId] = "Main Thread"
-                    else -> threadNames[threadId] = "Thread ${threadNumber - 1}"
-                }
-            } else {
-                threadNames[threadId] = "Thread $threadNumber"
+            when (threadNumber) {
+                0 -> threadNames[threadId] = "Main Thread"
+                else -> threadNames[threadId] = "Thread $threadNumber"
             }
         }
         val trace = Trace(traceCollector!!.trace, threadNames)
@@ -541,7 +544,7 @@ abstract class ManagedStrategy(
         if (blockingReason != null && blockingReason.throwsInterruptedException()) {
             throwIfInterrupted()
         }
-        val switchReason = blockingReason.toSwitchReason()
+        val switchReason = blockingReason.toSwitchReason(::iThreadToDisplayNumber)
         val mustSwitch = (blockingReason != null) && (blockingReason !is BlockingReason.LiveLocked)
         val nextThread = chooseThreadSwitch(iThread, mustSwitch)
         val switchHappened = (iThread != nextThread)
@@ -649,6 +652,13 @@ abstract class ManagedStrategy(
         } else {
             emptyList()
         }
+    
+    /**
+     * Converts lincheck threadId to displayable thread number for the trace.
+     * In case of GPMC the numbers shift -1.
+     */
+    internal fun iThreadToDisplayNumber(iThread: Int): Int =
+        threadScheduler.getThread(iThread)?.let { ObjectLabelFactory.getObjectNumber(Thread::class.java, it) } ?: -1
 
     // == LISTENING METHODS ==
 
@@ -663,7 +673,7 @@ abstract class ManagedStrategy(
             val tracePoint = ThreadStartTracePoint(
                 iThread = currentThreadId,
                 actorId = currentActorId[currentThreadId]!!,
-                startedThreadId = forkedThreadId,
+                startedThreadDisplayNumber = iThreadToDisplayNumber(forkedThreadId),
                 callStackTrace = callStackTrace[currentThreadId]!!,
             )
             traceCollector!!.passCodeLocation(tracePoint)
@@ -744,7 +754,7 @@ abstract class ManagedStrategy(
             val tracePoint = ThreadJoinTracePoint(
                 iThread = currentThreadId,
                 actorId = currentActorId[currentThreadId]!!,
-                joinedThreadId = joinThreadId,
+                joinedThreadDisplayNumber = iThreadToDisplayNumber(joinThreadId),
                 callStackTrace = callStackTrace[currentThreadId]!!,
             )
             traceCollector!!.passCodeLocation(tracePoint)

@@ -13,6 +13,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import org.jetbrains.kotlinx.lincheck.util.*
 import kotlin.coroutines.Continuation
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Helps to assign number to an object and to create its beautiful representation to provide to the trace.
@@ -20,6 +21,7 @@ import java.util.*
 object ObjectLabelFactory {
 
     internal val objectNumeration = Collections.synchronizedMap(WeakHashMap<Class<*>, MutableMap<Any, Int>>())
+    private val numerationStartPoints = ConcurrentHashMap<Class<*>, Int>()
 
     internal fun adornedStringRepresentation(any: Any?): String {
         if (any == null) return "null"
@@ -49,11 +51,22 @@ object ObjectLabelFactory {
 
     internal fun getObjectNumber(clazz: Class<*>, obj: Any): Int = objectNumeration
         .computeIfAbsent(clazz) { IdentityHashMap() }
-        .computeIfAbsent(obj) { 1 + objectNumeration[clazz]!!.size }
+        .computeIfAbsent(obj) { (getStartPointFor(clazz) - 1) + objectNumeration[clazz]!!.size + 1 }
 
     internal fun cleanObjectNumeration() {
         objectNumeration.clear()
     }
+
+    /**
+     * Allows to set where we should start counting for a specific class of objects.
+     * For instance threads start counting at 0 while in GPMC mode but start at 1 in lincheck mode.
+     * Default object numeration starts at 1.
+     */
+    internal fun setNumerationStartFor(clazz: Class<*>, start: Int) {
+        numerationStartPoints[clazz] = start
+    }
+    
+    private fun getStartPointFor(clazz: Class<*>): Int = numerationStartPoints.getOrDefault(clazz, 1)
 
     private val Class<*>.simpleNameForAnonymous: String
         get() {
