@@ -75,6 +75,9 @@ public interface EventTracker {
     void onMethodCallReturn(String className, String methodName, long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Object result);
     void onMethodCallException(String className, String methodName, long descriptorId, Object descriptor, Object receiver, Object[] params, Throwable t);
 
+    void onInlineMethodCall(String methodName, int methodId, int codeLocation);
+    void onInlineMethodCallReturn(String className, int methodId);
+
     BootstrapResult<?> invokeDeterministicallyOrNull(long descriptorId, Object descriptor, Object receiver, Object[] params);
 
     InjectedRandom getThreadLocalRandom();

@@ -609,6 +609,20 @@ public class Injections {
         return 0;
     }
 
+    /**
+     * Called from the instrumented code before any kotlin inlined method call.
+     */
+    public static void onInlineMethodCall(String methodName, int methodId, int codeLocation) {
+        getEventTracker().onInlineMethodCall(methodName, methodId, codeLocation);
+    }
+
+    /**
+     * Called from the instrumented code after any kotlin inline method successful call, i.e., without any exception.
+     */
+    public static void onInlineMethodCallReturn(String methodName, int methodId) {
+        getEventTracker().onInlineMethodCallReturn(methodName, methodId);
+    }
+
     // == Methods required for the IDEA Plugin integration ==
 
     public static boolean shouldInvokeBeforeEvent() {

@@ -142,11 +142,3 @@ internal class LocalVariablesAccessTransformer(
         else -> throw IllegalArgumentException("Invalid opcode: $opcode")
     }
 }
-
-private fun List<LocalVariableInfo>.isUniqueVariable(): Boolean {
-    val name = first().name
-    val type = first().type
-    return all { it.name == name && it.type == type }
-}
-
-internal data class LocalVariableInfo(val name: String, val labelIndexRange: Pair<Label, Label>, val type: Type)

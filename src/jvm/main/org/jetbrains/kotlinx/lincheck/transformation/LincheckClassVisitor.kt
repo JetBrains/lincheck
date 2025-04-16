@@ -22,7 +22,7 @@ import sun.nio.ch.lincheck.*
 internal class LincheckClassVisitor(
     private val classVisitor: SafeClassWriter,
     private val instrumentationMode: InstrumentationMode,
-    private val methods: Map<String, Map<Int, List<LocalVariableInfo>>>,
+    private val methods: Map<String, MethodVariables>,
 ) : ClassVisitor(ASM_API, classVisitor) {
     private var classVersion = 0
 
@@ -200,8 +200,9 @@ internal class LincheckClassVisitor(
             sv.analyzer = aa
             aa
         }
-        val locals: Map<Int, List<LocalVariableInfo>> = methods[methodName + desc] ?: emptyMap()
+        val locals: Map<Int, List<LocalVariableInfo>> = methods[methodName + desc]?.variables ?: emptyMap()
         mv = LocalVariablesAccessTransformer(fileName, className, methodName, mv.newAdapter(), locals)
+        mv = InlineMethodCallTransformer(fileName, className, methodName, mv.newAdapter(), methods[methodName + desc] ?: MethodVariables())
         // Must appear in code after `SharedMemoryAccessTransformer` (to be able to skip this transformer).
         // It can appear earlier in code than `IntrinsicCandidateMethodFilter` because if kover instruments intrinsic methods
         // (which cannot disallow) then we don't need to hide coverage instrumentation from lincheck,
