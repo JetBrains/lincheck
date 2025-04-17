@@ -16,15 +16,8 @@ import org.junit.Assert
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.util.*
 
 abstract class AbstractTraceDebuggerIntegrationTest {
-    companion object {
-        private val OS: String = System.getProperty("os.name").lowercase(Locale.getDefault())
-
-        private fun isWindows(): Boolean = OS.contains("win")
-    }
-
     abstract val projectPath: String
 
     private fun buildGradleInitScriptToDumpTrace(
@@ -52,9 +45,9 @@ abstract class AbstractTraceDebuggerIntegrationTest {
         """.trimIndent()
     }
 
-    private fun getGolderDataPathFor(testClassName: String, testMethodName: String): String {
+    private fun getGolderDataFileFor(testClassName: String, testMethodName: String): File {
         val projectName = File(projectPath).name
-        return File("").absolutePath + "/src/jvm/integrationTestData/$projectName/${testClassName}_$testMethodName.txt"
+        return File("src/jvm/test-trace-debugger-integration/resources/integrationTestData/$projectName/${testClassName}_$testMethodName.txt")
     }
 
     private fun createInitScriptAsTempFile(content: String): File {
@@ -84,7 +77,7 @@ abstract class AbstractTraceDebuggerIntegrationTest {
         }
 
         // TODO decide how to test: with gold data or run twice?
-        val expectedOutput = File(getGolderDataPathFor(testClassName, testMethodName))
+        val expectedOutput = getGolderDataFileFor(testClassName, testMethodName)
         if (expectedOutput.exists()) {
             Assert.assertEquals(expectedOutput.readText(), tmpFile.readText())
         } else {

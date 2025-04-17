@@ -31,7 +31,8 @@ repositories {
 
 fun SourceDirectorySet.configureTestSources() {
     srcDir("src/jvm/test")
-    
+    srcDir("src/jvm/test-trace-debugger-integration")
+
     val jdkToolchainVersion: String by project
     if (jdkToolchainVersion.toInt() >= 11) {
         srcDir("src/jvm/test-jdk11")
@@ -77,11 +78,21 @@ kotlin {
             val junitVersion: String by project
             val jctoolsVersion: String by project
             val mockkVersion: String by project
-            val gradleToolingApiVersion: String by project
             dependencies {
                 implementation("junit:junit:$junitVersion")
                 implementation("org.jctools:jctools-core:$jctoolsVersion")
                 implementation("io.mockk:mockk:${mockkVersion}")
+            }
+        }
+
+        create("traceDebuggerTest") {
+            kotlin.configureTestSources()
+        }
+
+        dependencies {
+            sourceSets.named("traceDebuggerTest") {
+                val gradleToolingApiVersion: String by project
+
                 implementation("org.gradle:gradle-tooling-api:${gradleToolingApiVersion}")
                 runtimeOnly("org.slf4j:slf4j-simple:1.7.10")
             }
@@ -117,6 +128,7 @@ sourceSets.test {
     java.configureTestSources()
     resources {
         srcDir("src/jvm/test/resources")
+        srcDir("src/jvm/test-trace-debugger-integration/resources")
     }
 }
 
@@ -241,16 +253,8 @@ tasks {
 
     val traceDebuggerIntegrationTest = register<Test>("traceDebuggerIntegrationTest") {
         dependsOn(traceDebuggerIntegrationTestsPrerequisites)
-
-        group = jvmTest.get().group
-        testClassesDirs = jvmTest.get().testClassesDirs
-        classpath = jvmTest.get().classpath
-        enableAssertions = true
-        testLogging.showStandardStreams = true
         outputs.upToDateWhen { false } // Always run tests when called
         include("org/jetbrains/kotlinx/trace_debugger/integration/*")
-        configureJvmTestCommon()
-        forkEvery = 1
     }
 
     check {
