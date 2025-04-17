@@ -41,6 +41,7 @@ import java.lang.reflect.*
 import java.util.concurrent.TimeoutException
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.coroutines.Continuation
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 import kotlin.Result as KResult
 import org.objectweb.asm.commons.Method.getMethod as getAsmMethod
@@ -1099,7 +1100,7 @@ abstract class ManagedStrategy(
             return false
         }
         // Do not track accesses to untracked objects
-        if (!shouldTrackObjectAccess(obj)) {
+        if (!shouldTrackObjectAccess(obj) || isStackRecoveryFieldAccess(obj, fieldName)) {
             return false
         }
         val iThread = threadScheduler.getCurrentThreadId()
@@ -1167,7 +1168,7 @@ abstract class ManagedStrategy(
                                   isStatic: Boolean, isFinal: Boolean): Boolean = runInsideIgnoredSection {
         updateSnapshotOnFieldAccess(obj, className, fieldName)
         objectTracker?.registerObjectLink(fromObject = obj ?: StaticObject, toObject = value)
-        if (!shouldTrackObjectAccess(obj)) {
+        if (!shouldTrackObjectAccess(obj) || isStackRecoveryFieldAccess(obj, fieldName)) {
             return false
         }
         // Optimization: do not track final field writes
@@ -1199,6 +1200,7 @@ abstract class ManagedStrategy(
     override fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int): Boolean = runInsideIgnoredSection {
         updateSnapshotOnArrayElementAccess(array, index)
         objectTracker?.registerObjectLink(fromObject = array, toObject = value)
+        
         if (!shouldTrackObjectAccess(array)) {
             return false
         }
@@ -1295,6 +1297,9 @@ abstract class ManagedStrategy(
         if (objectTracker == null) return true
         return objectTracker!!.shouldTrackObjectAccess(obj ?: StaticObject)
     }
+    
+    private fun isStackRecoveryFieldAccess(obj: Any?, fieldName: String): Boolean =
+        obj is Continuation<*> && (fieldName == "label" || fieldName.startsWith("L$"))
 
     override fun getThreadLocalRandom(): InjectedRandom = runInsideIgnoredSection {
         return randoms[threadScheduler.getCurrentThreadId()]!!
@@ -1780,18 +1785,13 @@ abstract class ManagedStrategy(
             return
         }
         val callId = callStackTraceElementId++
-        val params = if (isSuspendFunction(className, methodName, methodParams)) {
-            methodParams.dropLast(1).toTypedArray()
-        } else {
-            methodParams
-        }
         // The code location of the new method call is currently the last one
         val tracePoint = createBeforeMethodCallTracePoint(
             iThread = threadId,
             owner = owner,
             className = className,
             methodName = methodName,
-            params = params,
+            params = methodParams,
             codeLocation = codeLocation,
             atomicMethodDescriptor = atomicMethodDescriptor,
             callType = callType,
@@ -1799,7 +1799,7 @@ abstract class ManagedStrategy(
         // Method invocation id used to calculate spin cycle start label call depth.
         // Two calls are considered equals if two same methods were called with the same parameters.
         val methodInvocationId = Objects.hash(methodId,
-            params.map { primitiveOrIdentityHashCode(it) }.toTypedArray().contentHashCode()
+            methodParams.map { primitiveOrIdentityHashCode(it) }.toTypedArray().contentHashCode()
         )
         val stackTraceElement = CallStackTraceElement(
             id = callId,

@@ -14,6 +14,7 @@ import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import org.jetbrains.kotlinx.lincheck.strategy.managed.LincheckAnalysisAbortedError
 import org.jetbrains.kotlinx.lincheck.strategy.BlockingReason
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory
 import org.jetbrains.kotlinx.lincheck.util.ThreadId
 import kotlin.collections.map
 import org.jetbrains.kotlinx.lincheck.transformation.CodeLocations
@@ -239,6 +240,10 @@ internal class MethodCallTracePoint(
     var thrownException: Throwable? = null
     var parameters: List<String>? = null
     var parameterTypes: List<String>? = null
+    
+    var isSuspendMethodCall = false 
+        private set
+    
     private var ownerName: String? = null
     
     val isRootCall get() = callType != CallType.NORMAL
@@ -270,7 +275,6 @@ internal class MethodCallTracePoint(
     }
     
     private fun StringBuilder.appendActor() {
-//        append(methodName)
         append("$methodName(${ parameters?.joinToString(", ") ?: "" })")
         if (returnedValue is ReturnedValueResult.ActorResult && (returnedValue as ReturnedValueResult.ActorResult).showAtBeginningOfActor) {
             append(": ${(returnedValue as ReturnedValueResult.ActorResult).resultRepresentation}")
@@ -323,8 +327,14 @@ internal class MethodCallTracePoint(
     }
 
     fun initializeParameters(parameters: List<String>, parameterTypes: List<String>) {
-        this.parameters = parameters
-        this.parameterTypes = parameterTypes
+        if (parameters.lastOrNull() == ObjectLabelFactory.CONTINUATION_REPRESENTATION) {
+            this.parameters = parameters.dropLast(1)
+            this.parameterTypes = parameterTypes.dropLast(1)
+            this.isSuspendMethodCall = true
+        } else {
+            this.parameters = parameters
+            this.parameterTypes = parameterTypes
+        }
     }
 
     fun initializeOwnerName(ownerName: String) {

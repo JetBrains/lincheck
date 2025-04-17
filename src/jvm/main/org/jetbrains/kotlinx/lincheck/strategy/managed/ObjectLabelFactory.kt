@@ -40,7 +40,7 @@ object ObjectLabelFactory {
         // simplified representation for Continuations
         // (we usually do not really care about details).
         if (any is Continuation<*>)
-            return "<cont>"
+            return CONTINUATION_REPRESENTATION
         // Instead of java.util.HashMap$Node@3e2a56 show Node@1.
         // It is better not to use `toString` in general since
         // we usually care about references to certain objects,
@@ -108,4 +108,5 @@ object ObjectLabelFactory {
         }
     }
 
+    const val CONTINUATION_REPRESENTATION = "<cont>"
 }
