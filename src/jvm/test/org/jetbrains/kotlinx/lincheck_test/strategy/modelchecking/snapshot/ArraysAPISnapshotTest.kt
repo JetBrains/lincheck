@@ -52,7 +52,7 @@ abstract class BaseArraysAPISnapshotTest : AbstractSnapshotTest() {
         actorsBefore(0)
         actorsAfter(0)
         actorsPerThread(10)
-        iterations(200)
+        iterations(1000)
         invocationsPerIteration(1)
         threads(1)
     }
@@ -162,7 +162,6 @@ class ArraysAPISnapshotTest : BaseArraysAPISnapshotTest() {
     @Operation
     fun arraysSetAll() = arraysSetAllImpl()
 
-    // @Operation // TODO: execution has hung error
     fun arraysParallelSetAll() = arraysParallelSetAllImpl()
 
     @Operation
@@ -240,7 +239,7 @@ class IsolatedArraysSetAllTest : BaseIsolatedArraysAPISnapshotTest() {
     fun arraysSetAll() = arraysSetAllImpl()
 }
 
-@Ignore("Execution has hung error")
+@Ignore("Execution has hung error: because global threadpools are not supported in lincheck")
 class IsolatedArraysParallelSetAllTest : BaseIsolatedArraysAPISnapshotTest() {
     @Operation
     fun arraysParallelSetAll() = arraysParallelSetAllImpl()
