@@ -239,7 +239,7 @@ class IsolatedArraysSetAllTest : BaseIsolatedArraysAPISnapshotTest() {
     fun arraysSetAll() = arraysSetAllImpl()
 }
 
-@Ignore("Execution has hung error: because global threadpools are not supported in lincheck")
+@Ignore("Execution has hung error")
 class IsolatedArraysParallelSetAllTest : BaseIsolatedArraysAPISnapshotTest() {
     @Operation
     fun arraysParallelSetAll() = arraysParallelSetAllImpl()
