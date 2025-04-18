@@ -863,7 +863,7 @@ abstract class ManagedStrategy(
             className = actor.method.declaringClass.name,
             methodName = actor.method.name,
             codeLocation = UNKNOWN_CODE_LOCATION,
-            methodId = MethodIds.getMethodId(actor.method.declaringClass.name, actor.method.name, methodDescriptor),
+            methodId = MethodIds.getMethodId(actor.method.declaringClass.name.toCanonicalClassName(), actor.method.name, methodDescriptor),
             threadId = iThread,
             methodParams = actor.arguments.toTypedArray(),
             atomicMethodDescriptor = null,

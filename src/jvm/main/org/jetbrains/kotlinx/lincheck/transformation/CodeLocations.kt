@@ -72,6 +72,9 @@ internal object MethodIds {
     private val descriptorToId: MutableMap<MethodDescriptor, Int> = hashMapOf()
     private val intrinsicMethods: MutableMap<Int, MethodDescriptor> = hashMapOf()
 
+    /**
+     * *Note*: this method expects [owner] name to be canonical.
+     */
     @Synchronized
     fun getMethodId(owner: String, name: String, desc: String): Int {
         val methodDescriptor = MethodDescriptor(owner, name, desc)
