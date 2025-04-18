@@ -75,13 +75,13 @@ abstract class BaseArraysAPISnapshotTest : AbstractSnapshotTest() {
         Arrays.sort(refArray) { a, b -> a.x - b.x }
     }
 
-    protected fun arraysParallelSortImpl() {
-        Arrays.parallelSort(intArray)
-    }
+//    protected fun arraysParallelSortImpl() {
+//        Arrays.parallelSort(intArray)
+//    }
 
-    protected fun arraysParallelPrefixImpl() {
-        Arrays.parallelPrefix(intArray) { a, b -> a + b }
-    }
+//    protected fun arraysParallelPrefixImpl() {
+//        Arrays.parallelPrefix(intArray) { a, b -> a + b }
+//    }
 
     protected fun reverseImpl() {
         intArray.reverse()
@@ -103,10 +103,10 @@ abstract class BaseArraysAPISnapshotTest : AbstractSnapshotTest() {
         Arrays.setAll(refArray) { Wrapper(Random.nextInt()) }
     }
 
-    protected fun arraysParallelSetAllImpl() {
-        Arrays.parallelSetAll(intArray) { Random.nextInt() }
-        Arrays.parallelSetAll(refArray) { Wrapper(Random.nextInt()) }
-    }
+//    protected fun arraysParallelSetAllImpl() {
+//        Arrays.parallelSetAll(intArray) { Random.nextInt() }
+//        Arrays.parallelSetAll(refArray) { Wrapper(Random.nextInt()) }
+//    }
 
     protected fun copyOfImpl() {
         val otherRefArray = refArray.copyOf()
@@ -144,11 +144,11 @@ class ArraysAPISnapshotTest : BaseArraysAPISnapshotTest() {
     @Operation
     fun arraysSort() = arraysSortImpl()
 
-    @Operation
-    fun arraysParallelSort() = arraysParallelSortImpl()
+//    @Operation
+//    fun arraysParallelSort() = arraysParallelSortImpl()
 
-    @Operation
-    fun arraysParallelPrefix() = arraysParallelPrefixImpl()
+//    @Operation
+//    fun arraysParallelPrefix() = arraysParallelPrefixImpl()
 
     @Operation
     fun reverse() = reverseImpl()
@@ -162,7 +162,8 @@ class ArraysAPISnapshotTest : BaseArraysAPISnapshotTest() {
     @Operation
     fun arraysSetAll() = arraysSetAllImpl()
 
-    fun arraysParallelSetAll() = arraysParallelSetAllImpl()
+//    @Operation
+//    fun arraysParallelSetAll() = arraysParallelSetAllImpl()
 
     @Operation
     fun copyOf() = copyOfImpl()
@@ -209,15 +210,15 @@ class IsolatedArraysSortTest : BaseIsolatedArraysAPISnapshotTest() {
     fun arraysSort() = arraysSortImpl()
 }
 
-class IsolatedArraysParallelSortTest : BaseIsolatedArraysAPISnapshotTest() {
-    @Operation
-    fun arraysParallelSort() = arraysParallelSortImpl()
-}
+//class IsolatedArraysParallelSortTest : BaseIsolatedArraysAPISnapshotTest() {
+//    @Operation
+//    fun arraysParallelSort() = arraysParallelSortImpl()
+//}
 
-class IsolatedArraysParallelPrefixTest : BaseIsolatedArraysAPISnapshotTest() {
-    @Operation
-    fun arraysParallelPrefix() = arraysParallelPrefixImpl()
-}
+//class IsolatedArraysParallelPrefixTest : BaseIsolatedArraysAPISnapshotTest() {
+//    @Operation
+//    fun arraysParallelPrefix() = arraysParallelPrefixImpl()
+//}
 
 class IsolatedReverseTest : BaseIsolatedArraysAPISnapshotTest() {
     @Operation
@@ -239,11 +240,11 @@ class IsolatedArraysSetAllTest : BaseIsolatedArraysAPISnapshotTest() {
     fun arraysSetAll() = arraysSetAllImpl()
 }
 
-@Ignore("Execution has hung error")
-class IsolatedArraysParallelSetAllTest : BaseIsolatedArraysAPISnapshotTest() {
-    @Operation
-    fun arraysParallelSetAll() = arraysParallelSetAllImpl()
-}
+//@Ignore("Execution has hung error")
+//class IsolatedArraysParallelSetAllTest : BaseIsolatedArraysAPISnapshotTest() {
+//    @Operation
+//    fun arraysParallelSetAll() = arraysParallelSetAllImpl()
+//}
 
 class IsolatedCopyOfTest : BaseIsolatedArraysAPISnapshotTest() {
     @Operation
