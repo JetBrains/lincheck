@@ -196,8 +196,8 @@ class SnapshotTracker {
     private fun shouldTrackEagerly(obj: Any?): Boolean {
         if (obj == null) return false
         return (
-            // obj.javaClass.name.startsWith("java.util.concurrent.") && obj.javaClass.name.contains("Atomic")
-            obj.javaClass.name.startsWith("java.util.")
+            obj.javaClass.name.startsWith("java.util.concurrent.") && obj.javaClass.name.contains("Atomic")
+            //obj.javaClass.name.startsWith("java.util.")
         )
     }
 
