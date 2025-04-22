@@ -245,7 +245,7 @@ internal fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Ar
                             TracePointType.REGULAR
                     }
                     val relatedTypes = getRelatedTypeList(event)
-                    "${type.ordinal};${node.iThread};${node.callDepth};${preExpandedNodeSet.contains(node)};${eventId};${representation}${location};${locationId};[${relatedTypes.joinToString(",")}];false"
+                    "${type.ordinal};${node.iThread};${node.callDepth};${preExpandedNodeSet.contains(node)};${eventId};${representation};${location};${locationId};[${relatedTypes.joinToString(",")}];false"
                 }
 
                 is CallNode -> if(node.tracePoint.isRootCall) {
