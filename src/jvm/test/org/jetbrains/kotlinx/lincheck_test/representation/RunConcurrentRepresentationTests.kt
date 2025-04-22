@@ -346,7 +346,6 @@ class LivelockRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationT
 }
 
 // TODO investigate difference for trace debugger (Evgeniy Moiseenko)
-@Ignore("Fails")
 class IncorrectConcurrentLinkedDequeRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>("run_concurrent_test/deque") {
     override fun block() {
         val deque = ConcurrentLinkedDeque<Int>()
