@@ -12,12 +12,10 @@ package org.jetbrains.kotlinx.lincheck_test.gpmc;
 
 import java.util.concurrent.ConcurrentLinkedDeque;
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError;
-import org.junit.Ignore;
 import org.junit.Test;
 import static org.junit.Assert.assertFalse;
 import static org.jetbrains.kotlinx.lincheck.Lincheck.runConcurrentTest;
 
-@Ignore("Fails")
 public class JavaAPITest {
 
     @Test(expected = LincheckAssertionError.class)

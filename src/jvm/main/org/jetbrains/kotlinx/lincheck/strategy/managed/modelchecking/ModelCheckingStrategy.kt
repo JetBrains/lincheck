@@ -311,7 +311,7 @@ internal class ModelCheckingStrategy(
 
         fun chooseThread(iThread: Int): Int =
             if (nextThreadToSwitch.hasNext()) {
-                check(executionPosition == -1 || executionPosition in switchPositions) {
+                check(executionPosition == -1 || executionPosition in switchPositions || (loopDetector.replayModeEnabled && executionPosition == 0)) {
                     """
                         Attempt to switch thread on execution position which does not correspond to any saved switch position.
                         Execution position: $executionPosition, switch positions: $switchPositions.
