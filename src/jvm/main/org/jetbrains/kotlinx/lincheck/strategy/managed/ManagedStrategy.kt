@@ -436,30 +436,30 @@ abstract class ManagedStrategy(
 
     /**
      * Create a new switch point, where a thread context switch can occur.
-     * @param iThread the current thread
+     * @param threadId the current thread
      * @param codeLocation the byte-code location identifier of the point in code.
      */
-    private fun newSwitchPoint(iThread: Int, codeLocation: Int, tracePoint: TracePoint?) {
+    private fun newSwitchPoint(threadId: Int, codeLocation: Int, tracePoint: TracePoint?) {
         // re-throw abort error if the thread was aborted
-        if (threadScheduler.isAborted(iThread)) {
+        if (threadScheduler.isAborted(threadId)) {
             threadScheduler.abortCurrentThread()
         }
         // check we are in the right thread
-        check(iThread == threadScheduler.scheduledThreadId)
+        check(threadId == threadScheduler.scheduledThreadId)
         // check if we need to switch
         val shouldSwitch = when {
             loopDetector.replayModeEnabled -> loopDetector.shouldSwitchInReplayMode()
-            else -> shouldSwitch(iThread)
+            else -> shouldSwitch(threadId)
         }
         // check if live-lock is detected
-        val decision = loopDetector.visitCodeLocation(iThread, codeLocation)
+        val decision = loopDetector.visitCodeLocation(threadId, codeLocation)
         if (decision != LoopDetector.Decision.Idle) {
-            processLoopDetectorDecision(iThread, codeLocation, tracePoint, decision)
+            processLoopDetectorDecision(threadId, codeLocation, tracePoint, decision)
             return
         }
         // if strategy requested thread switch, then do it
         if (shouldSwitch) {
-            val switchHappened = switchCurrentThread(iThread, tracePoint = tracePoint)
+            val switchHappened = switchCurrentThread(threadId, tracePoint = tracePoint)
             if (switchHappened) {
                 loopDetector.initializeFirstCodeLocationAfterSwitch(codeLocation)
             }

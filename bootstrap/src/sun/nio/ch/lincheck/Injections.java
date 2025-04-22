@@ -167,19 +167,14 @@ public class Injections {
     /**
      * Current thread reports that it started the `forkedThread`
      * (meaning that the invocation of `forkedThread.start()` is finished).
-     *
-     * @return whether the trace point was created.
      */
-    public static boolean afterThreadFork(Thread forkedThread) {
+    public static void afterThreadFork(Thread forkedThread) {
         // TestThread does not require to be tracked via `afterThreadFork`
-        if (forkedThread instanceof TestThread) return false;
+        if (forkedThread instanceof TestThread) return;
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
-        if (descriptor == null) {
-            return false;
-        }
+        if (descriptor == null) return;
         EventTracker tracker = descriptor.getEventTracker();
         tracker.afterThreadFork();
-        return true;
     }
 
     /**

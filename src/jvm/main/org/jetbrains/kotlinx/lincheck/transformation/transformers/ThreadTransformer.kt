@@ -121,12 +121,8 @@ internal class ThreadTransformer(
             adapter.visitMethodInsn(opcode, owner, name, desc, itf)
             // STACK: forkedThread
             invokeStatic(Injections::afterThreadFork)
-            // STACK: isTracePoint
-            ifStatement(
-                condition = {},
-                thenClause = { invokeBeforeEventIfPluginEnabled("after thread fork") },
-                elseClause = {},
-            )
+            // STACK: <empty>
+            invokeBeforeEventIfPluginEnabled("after thread fork")
             return
         }
         // In some newer versions of JDK, some of the java library classes
