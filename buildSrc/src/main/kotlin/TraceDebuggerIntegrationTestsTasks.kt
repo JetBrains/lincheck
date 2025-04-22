@@ -22,29 +22,38 @@ private val projectsToTest = listOf(
     GithubProjectSnapshot(
         repositoryName = "kotlinx.collections.immutable",
         commitHash = "592f05fce02a1ad9e26cc6f3fdb55cdd97910599"
+    ),
+    GithubProjectSnapshot(
+        organization = "ivandev0",
+        repositoryName = "TraceDebuggerExamples",
+        commitHash = "e3f39b1cb9dd8b3b4942015d57ef5ce0f5f37c6b"
     )
 )
 
 lateinit var traceDebuggerIntegrationTestsPrerequisites: TaskProvider<Task>
 
 fun Project.registerIntegrationTestsPrerequisites() {
+    val unzippedTestProjectsDir = layout.buildDirectory.dir("integrationTestProjects")
     val prerequisite = projectsToTest.map { projectToTest ->
         val projectName = projectToTest.repositoryName
         val hash = projectToTest.commitHash
 
         val downloadIntegrationTestsDependency = tasks.register<Download>("download_${projectName}_ForTest") {
             src("https://github.com/${projectToTest.organization}/$projectName/archive/$hash.zip")
-            dest(layout.buildDirectory.dir("integrationTestProjects").get().file("$projectName-$hash.zip"))
+            dest(unzippedTestProjectsDir.get().file("$projectName-$hash.zip"))
             overwrite(false)
         }
 
         tasks.register<Copy>("${projectName}_unzip") {
             dependsOn(downloadIntegrationTestsDependency)
             from(zipTree(downloadIntegrationTestsDependency.get().dest))
-            into(layout.buildDirectory.dir("integrationTestProjects"))
+            // We set a unique destination folder for the unzip task.
+            // Otherwise, Gradle thinks that we are trying to use the output of one unzip task as input for another.
+            // Also, this helps to drop the commit hash from project folder.
+            into(unzippedTestProjectsDir.get().dir(projectName))
 
             eachFile {
-                val correctPath = listOf(projectName) + relativePath.segments.drop(1)
+                val correctPath = relativePath.segments.drop(1)
                 relativePath = RelativePath(file.isFile, *correctPath.toTypedArray())
             }
             includeEmptyDirs = false

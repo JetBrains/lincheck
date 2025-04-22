@@ -10,20 +10,14 @@
 
 package org.jetbrains.kotlinx.trace_debugger.integration
 
+import org.gradle.tooling.GradleConnector
 import org.jetbrains.kotlinx.lincheck_test.util.OVERWRITE_REPRESENTATION_TESTS_OUTPUT
 import org.junit.Assert
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.util.*
 
 abstract class AbstractTraceDebuggerIntegrationTest {
-    companion object {
-        private val OS: String = System.getProperty("os.name").lowercase(Locale.getDefault())
-
-        private fun isWindows(): Boolean = OS.contains("win")
-    }
-
     abstract val projectPath: String
 
     private fun buildGradleInitScriptToDumpTrace(
@@ -41,6 +35,9 @@ abstract class AbstractTraceDebuggerIntegrationTest {
                         val jvmArgs = options.jvmArgs?.toMutableList() ?: mutableListOf()
                         jvmArgs.add("-Dlincheck.traceDebuggerMode=true")
                         jvmArgs.add("-javaagent:${pathToFatJar.absolutePath}=$testClassName,$testMethodName,${fileToDump.absolutePath}")
+                        
+                        jvmArgs.add("-XX:+UnlockExperimentalVMOptions") // Enables -XX:hashCode
+                        jvmArgs.add("-XX:hashCode=2") // Use constant 1 for hash code
                         options.jvmArgs = jvmArgs
                     }
                 }
@@ -48,9 +45,9 @@ abstract class AbstractTraceDebuggerIntegrationTest {
         """.trimIndent()
     }
 
-    private fun getGolderDataPathFor(testClassName: String, testMethodName: String): String {
+    private fun getGolderDataFileFor(testClassName: String, testMethodName: String): File {
         val projectName = File(projectPath).name
-        return File("").absolutePath + "/src/jvm/integrationTestData/$projectName/${testClassName}_$testMethodName.txt"
+        return File("src/jvm/test-trace-debugger-integration/resources/integrationTestData/$projectName/${testClassName}_$testMethodName.txt")
     }
 
     private fun createInitScriptAsTempFile(content: String): File {
@@ -65,24 +62,22 @@ abstract class AbstractTraceDebuggerIntegrationTest {
         gradleCommands: List<String>,
     ) {
         val tmpFile = File.createTempFile(testClassName + "_" + testMethodName, "")
-        val processBuilder = ProcessBuilder(
-            if (isWindows()) "gradlew.bat" else "./gradlew",
-            *gradleCommands.toTypedArray(),
-            "--tests",
-            "$testClassName.$testMethodName",
-            "--init-script",
-            createInitScriptAsTempFile(buildGradleInitScriptToDumpTrace(testClassName, testMethodName, tmpFile)).absolutePath,
-        )
-        processBuilder.directory(File(projectPath))
 
-        val process = processBuilder.start()
-        process.errorStream.copyTo(System.err)
-        process.waitFor().let {
-            if (it != 0) error("Gradle tests failed with exit code $it")
+        GradleConnector.newConnector().forProjectDirectory(File(projectPath)).connect().use { connection ->
+            connection
+                .newBuild()
+                .addArguments(
+                    "--init-script",
+                    createInitScriptAsTempFile(buildGradleInitScriptToDumpTrace(testClassName, testMethodName, tmpFile)).absolutePath,
+                ).forTasks(
+                    *gradleCommands.toTypedArray(),
+                    "--tests",
+                    "$testClassName.$testMethodName",
+                ).run()
         }
 
         // TODO decide how to test: with gold data or run twice?
-        val expectedOutput = File(getGolderDataPathFor(testClassName, testMethodName))
+        val expectedOutput = getGolderDataFileFor(testClassName, testMethodName)
         if (expectedOutput.exists()) {
             Assert.assertEquals(expectedOutput.readText(), tmpFile.readText())
         } else {

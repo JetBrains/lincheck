@@ -26,11 +26,13 @@ plugins {
 
 repositories {
     mavenCentral()
+    maven { url = uri("https://repo.gradle.org/gradle/libs-releases/") }
 }
 
 fun SourceDirectorySet.configureTestSources() {
     srcDir("src/jvm/test")
-    
+    srcDir("src/jvm/test-trace-debugger-integration")
+
     val jdkToolchainVersion: String by project
     if (jdkToolchainVersion.toInt() >= 11) {
         srcDir("src/jvm/test-jdk11")
@@ -82,6 +84,19 @@ kotlin {
                 implementation("io.mockk:mockk:${mockkVersion}")
             }
         }
+
+        create("traceDebuggerTest") {
+            kotlin.configureTestSources()
+        }
+
+        dependencies {
+            sourceSets.named("traceDebuggerTest") {
+                val gradleToolingApiVersion: String by project
+
+                implementation("org.gradle:gradle-tooling-api:${gradleToolingApiVersion}")
+                runtimeOnly("org.slf4j:slf4j-simple:1.7.10")
+            }
+        }
     }
 }
 
@@ -113,6 +128,7 @@ sourceSets.test {
     java.configureTestSources()
     resources {
         srcDir("src/jvm/test/resources")
+        srcDir("src/jvm/test-trace-debugger-integration/resources")
     }
 }
 
@@ -196,8 +212,9 @@ tasks {
         if (!ideaActive) {
             // We need to be able to run these tests in IntelliJ IDEA.
             // Unfortunately, the current Gradle support doesn't detect
-            // the `jvmTestIsolated` task.
+            // the `jvmTestIsolated` and `traceDebuggerIntegrationTest` tasks.
             exclude("**/*IsolatedTest*")
+            exclude("org/jetbrains/kotlinx/trace_debugger/integration/*")
         }
         // Do not run JdkUnsafeTraceRepresentationTest on Java 12 or earlier,
         // as this test relies on specific ConcurrentHashMap implementation.
@@ -232,6 +249,12 @@ tasks {
         include("**/*IsolatedTest*")
         configureJvmTestCommon()
         forkEvery = 1
+    }
+
+    val traceDebuggerIntegrationTest = register<Test>("traceDebuggerIntegrationTest") {
+        dependsOn(traceDebuggerIntegrationTestsPrerequisites)
+        outputs.upToDateWhen { false } // Always run tests when called
+        include("org/jetbrains/kotlinx/trace_debugger/integration/*")
     }
 
     check {
