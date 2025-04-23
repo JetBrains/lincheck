@@ -409,13 +409,14 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
 
         // the following code is required for local variables access tracking
         val classNode = ClassNode()
-        reader.accept(classNode, 0)
+        reader.accept(classNode, ClassReader.EXPAND_FRAMES)
+
         val methods = mapMethodsToLabels(classNode)
 
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
         val visitor = LincheckClassVisitor(writer, instrumentationMode, methods)
         try {
-            reader.accept(visitor, ClassReader.EXPAND_FRAMES)
+            classNode.accept(visitor)
             writer.toByteArray().also {
                 if (dumpTransformedSources) {
                     val cr = ClassReader(it)
