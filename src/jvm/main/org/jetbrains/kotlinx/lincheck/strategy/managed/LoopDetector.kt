@@ -233,7 +233,9 @@ internal class LoopDetector(
         // Increment the number of times the specified code location is visited.
         val count = currentThreadCodeLocationVisitCountMap.getOrDefault(codeLocation, 0) + 1
         currentThreadCodeLocationVisitCountMap[codeLocation] = count
-        currentThreadCodeLocationsHistory += CodeIdentity.RegularCodeLocationIdentity(codeLocation)
+        if (mode != Mode.DEFAULT) {
+            currentThreadCodeLocationsHistory += CodeIdentity.RegularCodeLocationIdentity(codeLocation)
+        }
         val detectedFirstTime = count > hangingDetectionThreshold
         val detectedEarly = loopTrackingCursor.isInCycle
         // DetectedFirstTime and detectedEarly can both sometimes be true
@@ -241,9 +243,9 @@ internal class LoopDetector(
         // Check whether the count exceeds the maximum number of repetitions for loop/hang detection.
         if (isInTraceDebuggerMode) {
             return when {
-                count > hangingDetectionThreshold -> Decision.LivelockThreadSwitch(hangingDetectionThreshold)
+                count > hangingDetectionThreshold -> Decision.LivelockThreadSwitch(hangingDetectionThreshold) // spin-loop
                 totalExecutionsCount > ManagedCTestConfiguration.LIVELOCK_EVENTS_THRESHOLD ->
-                    Decision.EventsThresholdReached
+                    Decision.EventsThresholdReached // live-lock detected, fail
                 else -> Decision.Idle
             }
         }
@@ -296,7 +298,9 @@ internal class LoopDetector(
             it.onNextExecution()
             return
         }
-        currentThreadCodeLocationsHistory += CodeIdentity.RegularCodeLocationIdentity(codeLocation)
+        if (mode != Mode.DEFAULT) {
+            currentThreadCodeLocationsHistory += CodeIdentity.RegularCodeLocationIdentity(codeLocation)
+        }
         passParameters(params)
         val lastInterleavingHistoryNode = currentInterleavingHistory.last()
         if (lastInterleavingHistoryNode.cycleOccurred) {
@@ -315,7 +319,9 @@ internal class LoopDetector(
             return
         }
         val methodExitLocationIdentity = RegularCodeLocationIdentity(0)
-        currentThreadCodeLocationsHistory += methodExitLocationIdentity
+        if (mode != Mode.DEFAULT) {
+            currentThreadCodeLocationsHistory += methodExitLocationIdentity
+        }
         val lastInterleavingHistoryNode = currentInterleavingHistory.last()
         if (lastInterleavingHistoryNode.cycleOccurred) {
             return /* If we already ran into cycle and haven't switched than no need to track executions */
@@ -429,7 +435,9 @@ internal class LoopDetector(
         // Increment the number of times the specified code location is visited.
         val count = currentThreadCodeLocationVisitCountMap.getOrDefault(codeLocation, 0) + 1
         currentThreadCodeLocationVisitCountMap[codeLocation] = count
-        currentThreadCodeLocationsHistory += CodeIdentity.RegularCodeLocationIdentity(codeLocation)
+        if (mode != Mode.DEFAULT) {
+            currentThreadCodeLocationsHistory += CodeIdentity.RegularCodeLocationIdentity(codeLocation)
+        }
     }
 
     /**
