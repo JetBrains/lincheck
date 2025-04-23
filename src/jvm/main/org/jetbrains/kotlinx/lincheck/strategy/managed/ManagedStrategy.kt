@@ -534,25 +534,34 @@ abstract class ManagedStrategy(
         blockingReason: BlockingReason? = null,
         tracePoint: TracePoint? = null
     ): Boolean {
-        // before blocking the thread, interrupt it if the interruption flag is set
-        if (blockingReason != null) {
-            if (blockingReason.throwsInterruptedException()) {
-                throwIfInterrupted()
-            }
-            // TODO: coroutine suspensions are currently handled separately from `ThreadScheduler`
-            if (blockingReason !is BlockingReason.Suspended) {
-                blockThread(iThread, blockingReason)
-            }
+        // block live-locked thread in order to check if it is possible
+        // to abort the whole execution in `chooseThreadSwitch` method
+        if (blockingReason is BlockingReason.LiveLocked) {
+            blockThread(iThread, blockingReason)
         }
         val switchReason = blockingReason.toSwitchReason(::iThreadToDisplayNumber)
         val mustSwitch = (blockingReason != null) && (blockingReason !is BlockingReason.LiveLocked)
         val nextThread = chooseThreadSwitch(iThread, mustSwitch)
         val switchHappened = (iThread != nextThread)
         if (switchHappened) {
+            // before blocking the thread, interrupt it if the interruption flag is set
+            if (blockingReason != null) {
+                if (blockingReason.throwsInterruptedException()) {
+                    throwIfInterrupted()
+                }
+                // TODO: coroutine suspensions are currently handled separately from `ThreadScheduler`
+                if (blockingReason !is BlockingReason.Suspended) {
+                    blockThread(iThread, blockingReason)
+                }
+            }
             traceCollector?.newSwitch(iThread, switchReason,
                 beforeMethodCallSwitch = (tracePoint != null && tracePoint is MethodCallTracePoint)
             )
             setCurrentThread(nextThread)
+        }
+        else if (!threadScheduler.areAllThreadsFinishedOrAborted()) {
+            // unblock live-locked thread if switch or abortion did not occur
+            threadScheduler.unblockThread(iThread)
         }
         threadScheduler.awaitTurn(iThread)
         return switchHappened

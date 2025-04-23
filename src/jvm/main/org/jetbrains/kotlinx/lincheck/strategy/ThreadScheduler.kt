@@ -228,6 +228,9 @@ open class ThreadScheduler {
     fun areAllThreadsFinished() =
         threads.values.all { it.state == ThreadState.FINISHED }
 
+    fun areAllThreadsFinishedOrAborted() =
+        threads.values.all { it.state in listOf(ThreadState.FINISHED, ThreadState.ABORTED) }
+
     /**
      * Registers a new thread in the scheduler and assigns it a unique identifier.
      * The new thread initially is in [ThreadState.INITIALIZED] state.
