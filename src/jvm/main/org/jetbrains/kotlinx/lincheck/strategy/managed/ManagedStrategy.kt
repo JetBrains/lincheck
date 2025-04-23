@@ -201,10 +201,7 @@ abstract class ManagedStrategy(
     private var skipNextBeforeEvent = false
     
     init {
-        if (isGeneralPurposeModelCheckingScenario(scenario)) 
-            ObjectLabelFactory.setNumerationStartFor(Thread::class.java, 0) 
-        else 
-            ObjectLabelFactory.setNumerationStartFor(Thread::class.java, 1)
+        ObjectLabelFactory.isGPMCMode = isGeneralPurposeModelCheckingScenario(scenario)
     }
 
     override fun close() {
