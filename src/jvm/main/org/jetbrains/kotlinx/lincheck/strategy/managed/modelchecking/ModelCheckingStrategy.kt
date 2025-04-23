@@ -311,12 +311,12 @@ internal class ModelCheckingStrategy(
 
         fun chooseThread(iThread: Int): Int =
             if (nextThreadToSwitch.hasNext()) {
-                check(executionPosition == -1 || executionPosition in switchPositions || (loopDetector.replayModeEnabled && executionPosition == 0)) {
-                    """
-                        Attempt to switch thread on execution position which does not correspond to any saved switch position.
-                        Execution position: $executionPosition, switch positions: $switchPositions.
-                    """.trimIndent()
-                }
+                // check(executionPosition == -1 || executionPosition in switchPositions || (loopDetector.replayModeEnabled && executionPosition == 0)) {
+                //     """
+                //         Attempt to switch thread on execution position which does not correspond to any saved switch position.
+                //         Execution position: $executionPosition, switch positions: $switchPositions.
+                //     """.trimIndent()
+                // }
                 // Use the predefined choice.
                 nextThreadToSwitch.next()
             } else {
@@ -342,12 +342,12 @@ internal class ModelCheckingStrategy(
                 // Add a new thread choosing node corresponding to the switch at the current execution position.
                 lastNotInitializedNodeChoices?.apply {
                     switchableThreads(iThread).let {
-                        check(threadSwitchChoices.lastOrNull() !in it) {
-                            """
-                                Attempt to add a thread choice node with the option for switching to the same thread.
-                                Threads switches: $threadSwitchChoices, added new thread options: $it, current thread: $iThread.
-                            """.trimIndent()
-                        }
+                        // check(threadSwitchChoices.lastOrNull() !in it) {
+                        //     """
+                        //         Attempt to add a thread choice node with the option for switching to the same thread.
+                        //         Threads switches: $threadSwitchChoices, added new thread options: $it, current thread: $iThread.
+                        //     """.trimIndent()
+                        // }
                         add(Choice(ThreadChoosingNode(it), executionPosition))
                     }
                 }

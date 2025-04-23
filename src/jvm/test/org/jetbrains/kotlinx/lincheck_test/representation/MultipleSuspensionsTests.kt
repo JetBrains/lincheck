@@ -78,7 +78,6 @@ class SingleSuspensionPointTraceRepresentationTest {
  * is detected and correctly reported.
  */
 @Suppress("RemoveExplicitTypeArguments")
-@Ignore("Fails")
 class MultipleSuspensionPointsTraceRepresentationTest {
 
     private var counter = AtomicInteger(0)
