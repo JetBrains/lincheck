@@ -10,25 +10,90 @@
 
 package org.jetbrains.kotlinx.lincheck.trace
 
-    
-/**
- * Remove `access$get` and `access$set`, which is used when a lambda argument accesses a private field for example.
- * This is different from `fun$access`, which is addressed in [compressCallStackTrace].
- */
-internal fun Trace.removeSyntheticFieldAccessTracePoints(): Trace = apply {
-    trace
-        .filter { it is ReadTracePoint || it is WriteTracePoint }
-        .forEach { point ->
-            val lastCall = point.callStackTrace.lastOrNull() ?: return@forEach
-            if (isSyntheticFieldAccess(lastCall.tracePoint.methodName)) {
-                if (point is ReadTracePoint) point.codeLocation = lastCall.tracePoint.codeLocation
-                if (point is WriteTracePoint) point.codeLocation = lastCall.tracePoint.codeLocation
-                point.callStackTrace = point.callStackTrace.dropLast(1)
-            }
+
+internal fun SingleThreadedTable<TraceNode>.compressTrace() = this
+    .compressSyntheticFieldAccess()
+    .compressSuspendImpl()
+    .compressDefaultAndAccessPairs()
+    .compressUserThreadRun()
+    .compressThreadStart()
+
+private fun SingleThreadedTable<TraceNode>.compressSuspendImpl() = compressNodes { node ->
+    val singleChild = if (node.children.size == 1) node.children[0] else return@compressNodes node
+    if (node !is CallNode || singleChild !is CallNode) return@compressNodes node
+    if ("${node.tracePoint.methodName}\$suspendImpl" != singleChild.tracePoint.methodName) return@compressNodes node
+
+    val newNode = node.copy()
+    // trace grandchildren to children, inherit correct stackTraceElement, decrement depth
+    singleChild.children.forEach {
+        if (it.tracePoint is CodeLocationTracePoint) {
+            (it.tracePoint as CodeLocationTracePoint).codeLocation = singleChild.tracePoint.codeLocation
         }
+        it.decrementCallDepthOfTree()
+        newNode.addChild(it)
+    }
+    newNode
 }
 
+/**
+ * Compresses trace node for `default` and `access` functions.
+ * For more details check [isDefaultPair] and [isAccessPair].
+ */
+private fun SingleThreadedTable<TraceNode>.compressDefaultAndAccessPairs() = compressNodes { node ->
+    val singleChild = if (node.children.size == 1) node.children[0] else return@compressNodes node
+    if (node !is CallNode || singleChild !is CallNode) return@compressNodes node
+    if (!isDefaultOrAccessPair(node.tracePoint.methodName, singleChild.tracePoint.methodName)) return@compressNodes node
 
+    // Combine fields of next and current, and store in current
+    node.tracePoint.methodName = singleChild.tracePoint.methodName
+    node.tracePoint.parameters = singleChild.tracePoint.parameters
+
+    check(node.tracePoint.returnedValue == singleChild.tracePoint.returnedValue)
+    check(node.tracePoint.thrownException == singleChild.tracePoint.thrownException)
+
+    val newNode = node.copy()
+    singleChild.decrementCallDepthOfTree()
+    singleChild.children.forEach { newNode.addChild(it) }
+    newNode
+}
+
+/**
+ * Remove `access$get` and `access$set`, which is used when a lambda argument accesses a private field for example.
+ * This is different from `fun$access`, which is addressed in [compressDefaultAndAccessPairs].
+ */
+private fun SingleThreadedTable<TraceNode>.compressSyntheticFieldAccess() = compressNodes { node ->
+    val singleChild = if (node.children.size == 1) node.children[0] else return@compressNodes node
+    if (node !is CallNode || singleChild !is EventNode) return@compressNodes node
+    if (!isSyntheticFieldAccess(node.tracePoint.methodName)) return@compressNodes node
+
+    val point = singleChild.tracePoint
+    if (point is ReadTracePoint) point.codeLocation = node.tracePoint.codeLocation
+    if (point is WriteTracePoint) point.codeLocation = node.tracePoint.codeLocation
+
+    singleChild.decrementCallDepthOfTree()
+    singleChild
+}
+
+/**
+ * Removes the two `invoke()` lines at the beginning of a user-defined thread trace.
+ */
+private fun SingleThreadedTable<TraceNode>.compressUserThreadRun() = compressNodes { node ->
+    if (node !is CallNode || !node.tracePoint.isThreadStart ) return@compressNodes node
+    val firstChild = if (node.children.size == 1) node.children[0] else return@compressNodes node
+    val secondChild = if (firstChild.children.size == 1) firstChild.children[0] else return@compressNodes node
+
+    // Test if we are dealing with a custom thread start
+    if (firstChild !is CallNode || secondChild !is CallNode) return@compressNodes node
+    if (!isUserThreadStart(firstChild.tracePoint, secondChild.tracePoint)) return@compressNodes node
+
+    val newNode = node.copy()
+    node.children.getOrNull(0)?.children?.getOrNull(0)?.children?.forEach {
+        it.decrementCallDepthOfTree()
+        it.decrementCallDepthOfTree()
+        newNode.addChild(it)
+    }
+    newNode
+}
 
 /**
  * When `thread() { ... }` is called it is represented as
@@ -39,94 +104,30 @@ internal fun Trace.removeSyntheticFieldAccessTracePoints(): Trace = apply {
  * this function gets rid of the second line.
  * But only if it has been created with `thread(start = true)`
  */
-internal fun Trace.removeNestedThreadStartPoints(): Trace = apply { 
-    trace
-        .filter { it is ThreadStartTracePoint }
-        .forEach { tracePoint ->
-            val threadCreationCall = tracePoint.callStackTrace.dropLast(1).lastOrNull()
-            if(threadCreationCall?.tracePoint?.isThreadCreation() == true) {
-                tracePoint.callStackTrace = tracePoint.callStackTrace.dropLast(1)
-            }
-        }
+private fun SingleThreadedTable<TraceNode>.compressThreadStart() = compressNodes { node ->
+    if (node !is CallNode || !node.tracePoint.isThreadCreation() ) return@compressNodes node
+    val firstChild = if (node.children.size == 1) node.children[0] else return@compressNodes node
+    val secondChild = if (firstChild.children.size == 1) firstChild.children[0] else return@compressNodes node
+    if (secondChild !is EventNode || secondChild.tracePoint !is ThreadStartTracePoint) return@compressNodes node
+
+    val newNode = node.copy()
+    newNode.addChild(secondChild)
+    newNode
 }
 
-internal fun Trace.compressTrace(): Trace = apply {
-    HashSet<Int>().let { removed ->
-        trace.apply { forEach { it.callStackTrace = compressCallStackTrace(it.callStackTrace, removed) } }
-    }
+
+private fun SingleThreadedTable<TraceNode>.compressNodes(compressionRule: (TraceNode) -> TraceNode) = map {
+    it.map { it.compress(compressionRule) }
 }
 
-/**
- * Merges two consecutive calls in the stack trace into one call if they form a compressible pair,
- * see [isCompressiblePair] for details.
- *
- * Since each tracePoint itself contains a [callStackTrace] of its own,
- * we need to recursively traverse each point.
- * 
- * (This can probably be done simpler..)
- */
-private fun compressCallStackTrace(
-    callStackTrace: List<CallStackTraceElement>,
-    removed: HashSet<Int>,
-    seen: HashSet<Int> = HashSet(),
-): List<CallStackTraceElement> {
-    val oldStacktrace = callStackTrace.toMutableList()
-    val compressedStackTrace = mutableListOf<CallStackTraceElement>()
-    while (oldStacktrace.isNotEmpty()) {
-        val currentElement = oldStacktrace.removeFirst()
-
-        // if element was removed (or seen) by previous iteration continue
-        if (removed.contains(currentElement.id)) continue
-        if (seen.contains(currentElement.id)) {
-            compressedStackTrace.add(currentElement)
-            continue
-        }
-        seen.add(currentElement.id)
-
-        // if next element is null, we reached end of list
-        val nextElement = oldStacktrace.firstOrNull()
-        if (nextElement == null) {
-            currentElement.tracePoint.callStackTrace =
-                compressCallStackTrace(currentElement.tracePoint.callStackTrace, removed, seen)
-            compressedStackTrace.add(currentElement)
-            break
-        }
-
-        // Check if current and next are custom thread start
-        if (isUserThreadStart(currentElement, nextElement)) {
-            // we do not mark currentElement as removed, since that is a unique call from Thread.kt
-            // marking it prevents starts of other threads from being detected.
-            removed.add(nextElement.id)
-            continue
-        }
-
-        // Check if current and next are compressible
-        if (isCompressiblePair(currentElement.tracePoint.methodName, nextElement.tracePoint.methodName)) {
-            // Combine fields of next and current, and store in current
-            currentElement.tracePoint.methodName = nextElement.tracePoint.methodName
-            currentElement.tracePoint.parameters = nextElement.tracePoint.parameters
-            currentElement.tracePoint.callStackTrace =
-                compressCallStackTrace(currentElement.tracePoint.callStackTrace, removed, seen)
-
-            check(currentElement.tracePoint.returnedValue == nextElement.tracePoint.returnedValue)
-            check(currentElement.tracePoint.thrownException == nextElement.tracePoint.thrownException)
-
-            // Mark next as removed
-            removed.add(nextElement.id)
-            compressedStackTrace.add(currentElement)
-            continue
-        }
-        currentElement.tracePoint.callStackTrace =
-            compressCallStackTrace(currentElement.tracePoint.callStackTrace, removed, seen)
-        compressedStackTrace.add(currentElement)
-    }
-    return compressedStackTrace
+private fun TraceNode.compress(compressionRule: (TraceNode) -> TraceNode): TraceNode {
+    val compressedNode = compressionRule(this)
+    val newNode = compressedNode.copy()
+    compressedNode.children.forEach { newNode.addChild(it.compress(compressionRule)) }
+    return newNode
 }
 
-private fun isSyntheticFieldAccess(methodName: String): Boolean =
-    methodName.contains("access\$get") || methodName.contains("access\$set")
-
-private fun isCompressiblePair(currentName: String, nextName: String): Boolean =
+private fun isDefaultOrAccessPair(currentName: String, nextName: String): Boolean =
     isDefaultPair(currentName, nextName) || isAccessPair(currentName, nextName)
 
 /**
@@ -174,12 +175,15 @@ private fun isDefaultPair(currentName: String, nextName: String): Boolean =
 private fun isAccessPair(currentName: String, nextName: String): Boolean =
     currentName == "access$${nextName}"
 
+private fun isSyntheticFieldAccess(methodName: String): Boolean =
+    methodName.contains("access\$get") || methodName.contains("access\$set")
+
 /**
- * Used by [compressCallStackTrace] to remove the two `invoke()` lines at the beginning of
+ * Used to remove the two `invoke()` lines at the beginning of
  * a user-defined thread trace.
  */
-private fun isUserThreadStart(currentElement: CallStackTraceElement, nextElement: CallStackTraceElement): Boolean =
-    currentElement.tracePoint.stackTraceElement.methodName == "run"
-            && currentElement.tracePoint.stackTraceElement.fileName == "Thread.kt"
-            && currentElement.tracePoint.methodName == "invoke"
-            && nextElement.tracePoint.methodName == "invoke"
+private fun isUserThreadStart(currentTracePoint: MethodCallTracePoint, nextTracePoint: MethodCallTracePoint): Boolean =
+    currentTracePoint.stackTraceElement.methodName == "run"
+            && currentTracePoint.stackTraceElement.fileName == "Thread.kt"
+            && currentTracePoint.methodName == "invoke"
+            && nextTracePoint.methodName == "invoke"

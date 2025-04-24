@@ -54,17 +54,14 @@ internal class TraceReporter(
             .removeValidationIfNeeded()
             .addResultsToActors()
 
-        // Optimizes trace by combining trace points for synthetic field accesses etc..
-        val optimizedTrace = fixedTrace.deepCopy()
-            .removeSyntheticFieldAccessTracePoints()
-            .compressTrace()
-            .removeNestedThreadStartPoints()
 
         // Turn trace into graph which is List of sections. Where a section is a list of rootNodes (actors).
-        val traceGraph = traceToGraph(optimizedTrace)
-            .compressSuspendImpl()
+        val traceGraph = traceToGraph(fixedTrace).compressTrace()
+
+        // Optimizes trace by combining trace points for synthetic field accesses etc..
+        val compressedTraceGraph = traceGraph.compressTrace()
         
-        graph = if (isGeneralPurposeModelCheckingScenario(failure.scenario)) removeGPMCLambda(traceGraph) else traceGraph
+        graph = if (isGeneralPurposeModelCheckingScenario(failure.scenario)) removeGPMCLambda(compressedTraceGraph) else compressedTraceGraph
     }
     
     fun appendTrace(stringBuilder: StringBuilder) = with(stringBuilder) {
