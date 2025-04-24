@@ -2261,13 +2261,16 @@ abstract class ManagedStrategy(
             spinCycleMethodCallsStackTraces.clear()
         }
 
-        fun passCodeLocation(tracePoint: TracePoint?) {
-            if (tracePoint !is SectionDelimiterTracePoint && tracePoint?.isActorMethodCallTracePoint() == false){
+        fun passCodeLocation(tracePoint: TracePoint?, isSilentTracePoint: Boolean = false) {
+            if (tracePoint !is SectionDelimiterTracePoint && tracePoint?.isActorMethodCallTracePoint() == false) {
                 checkActiveLockDetected()
             }
             // tracePoint can be null here if trace is not available, e.g. in case of suspension
             if (tracePoint != null) {
-                _trace += tracePoint
+                // do not add the trace point to the trace if inside the silent section
+                if (!isSilentTracePoint) {
+                    _trace += tracePoint
+                }
                 if (!tracePoint.isActorMethodCallTracePoint()) {
                     setBeforeEventId(tracePoint)
                 }
