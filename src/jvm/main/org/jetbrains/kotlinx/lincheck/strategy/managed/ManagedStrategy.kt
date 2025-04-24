@@ -980,11 +980,14 @@ abstract class ManagedStrategy(
         // emulating spurious wake-ups.
         newSwitchPoint(iThread, codeLocation)
         traceCollector?.passCodeLocation(tracePoint)
+        // Do not park and exit immediately if the thread's interrupted flag set.
+        if (Thread.currentThread().isInterrupted) return
+        // Park otherwise.
         parkingTracker.park(iThread)
-        // forbid spurious wake-ups if inside silent sections
+        // Forbid spurious wake-ups if inside silent sections.
         val allowSpuriousWakeUp = shouldAllowSpuriousUnpark(iThread, codeLocation)
         while (parkingTracker.waitUnpark(iThread, allowSpuriousWakeUp)) {
-            // switch to another thread and wait till an unpark event happens
+            // Switch to another thread and wait till an unpark event happens.
             switchCurrentThread(iThread, BlockingReason.Parked)
         }
     }
