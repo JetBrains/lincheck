@@ -50,7 +50,7 @@ internal class ConstructorArgumentsSnapshotTrackerTransformer(
                     if (
                         !isArray(type) &&
                         !isPrimitive(type) &&
-                        isInstanceOf(type.className.replace('.', '/'), owner)
+                        isInstanceOf(type.className.toInternalClassName(), owner)
                     ) index else null
                 }
 
