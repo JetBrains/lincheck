@@ -963,13 +963,13 @@ abstract class ManagedStrategy(
         }
     }
 
-    override fun park(codeLocation: Int): Unit = runInsideIgnoredSection {
-        val iThread = threadScheduler.getCurrentThreadId()
+    override fun beforePark(codeLocation: Int): Unit = runInsideIgnoredSection {
+        val threadId = threadScheduler.getCurrentThreadId()
         val tracePoint = if (collectTrace) {
             ParkTracePoint(
-                iThread = iThread,
-                actorId = currentActorId[iThread]!!,
-                callStackTrace = callStackTrace[iThread]!!,
+                iThread = threadId,
+                actorId = currentActorId[threadId]!!,
+                callStackTrace = callStackTrace[threadId]!!,
                 codeLocation = codeLocation
             )
         } else {
@@ -978,17 +978,21 @@ abstract class ManagedStrategy(
         // Instead of fairly supporting the park/unpark semantics,
         // we simply add a new switch point here, thus, also
         // emulating spurious wake-ups.
-        newSwitchPoint(iThread, codeLocation)
+        newSwitchPoint(threadId, codeLocation)
         traceCollector?.passCodeLocation(tracePoint)
+    }
+
+    override fun park(codeLocation: Int): Unit = runInsideIgnoredSection {
+        val threadId = threadScheduler.getCurrentThreadId()
         // Do not park and exit immediately if the thread's interrupted flag set.
         if (Thread.currentThread().isInterrupted) return
         // Park otherwise.
-        parkingTracker.park(iThread)
+        parkingTracker.park(threadId)
         // Forbid spurious wake-ups if inside silent sections.
-        val allowSpuriousWakeUp = shouldAllowSpuriousUnpark(iThread, codeLocation)
-        while (parkingTracker.waitUnpark(iThread, allowSpuriousWakeUp)) {
+        val allowSpuriousWakeUp = shouldAllowSpuriousUnpark(threadId, codeLocation)
+        while (parkingTracker.waitUnpark(threadId, allowSpuriousWakeUp)) {
             // Switch to another thread and wait till an unpark event happens.
-            switchCurrentThread(iThread, BlockingReason.Parked)
+            switchCurrentThread(threadId, BlockingReason.Parked)
         }
     }
 

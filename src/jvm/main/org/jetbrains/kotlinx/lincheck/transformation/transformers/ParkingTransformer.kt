@@ -38,8 +38,10 @@ internal class ParkingTransformer(
                         pop() // isAbsolute
                         pop() // Unsafe
                         loadNewCodeLocationId()
-                        invokeStatic(Injections::park)
+                        dup()
+                        invokeStatic(Injections::beforePark)
                         invokeBeforeEventIfPluginEnabled("park")
+                        invokeStatic(Injections::park)
                     }
                 )
             }

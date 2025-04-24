@@ -244,6 +244,16 @@ public class Injections {
     }
 
     /**
+     * See [org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy.park] for the explanation
+     * why we have beforePark method.
+     *
+     * Creates a trace point which is used in the subsequent [beforeEvent] method call.
+     */
+    public static void beforePark(int codeLocation) {
+        getEventTracker().beforePark(codeLocation);
+    }
+
+    /**
      * Called from the instrumented code instead of `Unsafe.park`.
      */
     public static void park(int codeLocation) {

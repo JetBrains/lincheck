@@ -28,6 +28,7 @@ public interface EventTracker {
     void lock(Object monitor);
     void unlock(Object monitor, int codeLocation);
 
+    void beforePark(int codeLocation);
     void park(int codeLocation);
     void unpark(Thread thread, int codeLocation);
 
