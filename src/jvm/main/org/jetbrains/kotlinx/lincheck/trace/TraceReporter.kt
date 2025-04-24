@@ -62,6 +62,8 @@ internal class TraceReporter(
 
         // Turn trace into graph which is List of sections. Where a section is a list of rootNodes (actors).
         val traceGraph = traceToGraph(optimizedTrace)
+            .compressSuspendImpl()
+        
         graph = if (isGeneralPurposeModelCheckingScenario(failure.scenario)) removeGPMCLambda(traceGraph) else traceGraph
     }
     

@@ -307,6 +307,7 @@ internal class MethodCallTracePoint(
                 it.parameters = parameters
                 it.ownerName = ownerName
                 it.parameterTypes = parameterTypes
+                it.isSuspendMethodCall = isSuspendMethodCall
             }
     }
 
