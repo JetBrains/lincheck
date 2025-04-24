@@ -923,13 +923,17 @@ abstract class ManagedStrategy(
     }
 
     /*
-   TODO: Here Lincheck performs in-optimal switching.
-   Firstly an optional switch point is added before lock, and then adds force switches in case execution cannot continue in this thread.
-   More effective way would be to do force switch in case the thread is blocked (smart order of thread switching is needed),
-   or create a switch point if the switch is really optional.
-
-   Because of this additional switching we had to split this method into two, as the beforeEvent method must be called after the switch point.
-    */
+     * TODO: Here Lincheck performs in-optimal switching.
+     *
+     * Firstly an optional switch point is added before lock,
+     * and then adds force switches in case execution cannot continue in this thread.
+     * More effective way would be to do force switch in case the thread is blocked
+     * (smart order of thread switching is needed),
+     * or create a switch point if the switch is really optional.
+     *
+     * Because of this additional switching we had to split this method into two,
+     * as the `beforeEvent` method must be called right after the switch point is created.
+     */
     override fun lock(monitor: Any): Unit = runInsideIgnoredSection {
         val iThread = threadScheduler.getCurrentThreadId()
         // Try to acquire the monitor
@@ -982,6 +986,18 @@ abstract class ManagedStrategy(
         traceCollector?.passCodeLocation(tracePoint)
     }
 
+    /*
+     * TODO: Here Lincheck performs in-optimal switching.
+     *
+     * Firstly an optional switch point is added before park,
+     * and then adds force switches in case execution cannot continue in this thread.
+     * More effective way would be to do force switch in case the thread is blocked
+     * (smart order of thread switching is needed),
+     * or create a switch point if the switch is really optional.
+     *
+     * Because of this additional switching we had to split this method into two,
+     * as the `beforeEvent` method must be called right after the switch point is created.
+     */
     override fun park(codeLocation: Int): Unit = runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
         // Do not park and exit immediately if the thread's interrupted flag set.
@@ -1045,12 +1061,16 @@ abstract class ManagedStrategy(
     }
 
     /*
-    TODO: Here Lincheck performs in-optimal switching.
-    Firstly an optional switch point is added before wait, and then adds force switches in case execution cannot continue in this thread.
-    More effective way would be to do force switch in case the thread is blocked (smart order of thread switching is needed),
-    or create a switch point if the switch is really optional.
-
-    Because of this additional switching we had to split this method into two, as the beforeEvent method must be called after the switch point.
+     * TODO: Here Lincheck performs in-optimal switching.
+     *
+     * Firstly an optional switch point is added before wait,
+     * and then adds force switches in case execution cannot continue in this thread.
+     * More effective way would be to do force switch in case the thread is blocked
+     * (smart order of thread switching is needed),
+     * or create a switch point if the switch is really optional.
+     *
+     * Because of this additional switching we had to split this method into two,
+     * as the `beforeEvent` method must be called right after the switch point is created.
      */
     override fun wait(monitor: Any, withTimeout: Boolean): Unit = runInsideIgnoredSection {
         if (withTimeout) return // timeouts occur instantly
