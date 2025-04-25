@@ -12,9 +12,13 @@ The following interleaving leads to the error:
 |       ConditionObject#1.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:420)                                                            |
 |         enableWait(ConditionNode#1): 1 at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1611)                   |
 |         LockSupport.setCurrentBlocker(ConditionObject#1) at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1612) |
+|         canReacquire(ConditionNode#1): false at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1614)             |
+|         node.status ➜ 3 at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1618)                                  |
 |         ForkJoinPool.managedBlock(ConditionNode#1) at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1623)       |
 |           ForkJoinPool.unmanagedBlock(ConditionNode#1) at ForkJoinPool.managedBlock(ForkJoinPool.java:3436)                                        |
+|             blocker.isReleasable(): false at ForkJoinPool.unmanagedBlock(ForkJoinPool.java:3465)                                                   |
 |             blocker.block() at ForkJoinPool.unmanagedBlock(ForkJoinPool.java:3465)                                                                 |
+|               isReleasable(): false at AbstractQueuedSynchronizer$ConditionNode.block(AbstractQueuedSynchronizer.java:506)                         |
 |               LockSupport.park() at AbstractQueuedSynchronizer$ConditionNode.block(AbstractQueuedSynchronizer.java:506)                            |
 |                 PARK at LockSupport.park(LockSupport.java:341)                                                                                     |
 | -------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -40,6 +44,12 @@ Detailed trace:
 |           NonfairSync#1.isHeldExclusively(): true at AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1502)             |
 |             getExclusiveOwnerThread(): Thread#1 at ReentrantLock$Sync.isHeldExclusively(ReentrantLock.java:186)                                              |
 |               exclusiveOwnerThread ➜ Thread#1 at AbstractOwnableSynchronizer.getExclusiveOwnerThread(AbstractOwnableSynchronizer.java:84)                    |
+|           node.waiter = Thread#1 at AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1503)                              |
+|           node.setStatusRelaxed(3) at AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1504)                            |
+|             Unsafe#1.putInt(ConditionNode#1, 12, 3) at AbstractQueuedSynchronizer$Node.setStatusRelaxed(AbstractQueuedSynchronizer.java:474)                 |
+|           lastWaiter ➜ null at AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1505)                                   |
+|           firstWaiter = ConditionNode#1 at AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1507)                       |
+|           lastWaiter = ConditionNode#1 at AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1510)                        |
 |           NonfairSync#1.getState(): 1 at AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1511)                         |
 |             state ➜ 1 at AbstractQueuedSynchronizer.getState(AbstractQueuedSynchronizer.java:532)                                                            |
 |           NonfairSync#1.release(1): true at AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1512)                      |
@@ -55,9 +65,16 @@ Detailed trace:
 |             head ➜ null at AbstractQueuedSynchronizer.release(AbstractQueuedSynchronizer.java:1008)                                                          |
 |         LockSupport.setCurrentBlocker(ConditionObject#1) at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1612)           |
 |           Unsafe#1.putReferenceOpaque(Thread#1, 76, ConditionObject#1) at LockSupport.setCurrentBlocker(LockSupport.java:161)                                |
+|         canReacquire(ConditionNode#1): false at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1614)                       |
+|           node.prev ➜ null at AbstractQueuedSynchronizer$ConditionObject.canReacquire(AbstractQueuedSynchronizer.java:1527)                                  |
+|         node.status ➜ 3 at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1618)                                            |
 |         ForkJoinPool.managedBlock(ConditionNode#1) at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1623)                 |
 |           ForkJoinPool.unmanagedBlock(ConditionNode#1) at ForkJoinPool.managedBlock(ForkJoinPool.java:3436)                                                  |
+|             blocker.isReleasable(): false at ForkJoinPool.unmanagedBlock(ForkJoinPool.java:3465)                                                             |
+|               status ➜ 3 at AbstractQueuedSynchronizer$ConditionNode.isReleasable(AbstractQueuedSynchronizer.java:502)                                       |
 |             blocker.block() at ForkJoinPool.unmanagedBlock(ForkJoinPool.java:3465)                                                                           |
+|               isReleasable(): false at AbstractQueuedSynchronizer$ConditionNode.block(AbstractQueuedSynchronizer.java:506)                                   |
+|                 status ➜ 3 at AbstractQueuedSynchronizer$ConditionNode.isReleasable(AbstractQueuedSynchronizer.java:502)                                     |
 |               LockSupport.park() at AbstractQueuedSynchronizer$ConditionNode.block(AbstractQueuedSynchronizer.java:506)                                      |
 |                 PARK at LockSupport.park(LockSupport.java:341)                                                                                               |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |

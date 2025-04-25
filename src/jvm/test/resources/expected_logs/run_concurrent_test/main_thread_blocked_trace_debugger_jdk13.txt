@@ -42,6 +42,9 @@ Detailed trace:
 |           NonfairSync#1.isHeldExclusively(): true at AbstractQueuedSynchronizer$ConditionObject.addConditionWaiter(AbstractQueuedSynchronizer.java:1887) |
 |             getExclusiveOwnerThread(): Thread#1 at ReentrantLock$Sync.isHeldExclusively(ReentrantLock.java:162)                                          |
 |               exclusiveOwnerThread ➜ Thread#1 at AbstractOwnableSynchronizer.getExclusiveOwnerThread(AbstractOwnableSynchronizer.java:84)                |
+|           lastWaiter ➜ null at AbstractQueuedSynchronizer$ConditionObject.addConditionWaiter(AbstractQueuedSynchronizer.java:1889)                       |
+|           firstWaiter = Node#1 at AbstractQueuedSynchronizer$ConditionObject.addConditionWaiter(AbstractQueuedSynchronizer.java:1899)                    |
+|           lastWaiter = Node#1 at AbstractQueuedSynchronizer$ConditionObject.addConditionWaiter(AbstractQueuedSynchronizer.java:1902)                     |
 |         NonfairSync#1.fullyRelease(Node#1): 1 at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2078)                  |
 |           getState(): 1 at AbstractQueuedSynchronizer.fullyRelease(AbstractQueuedSynchronizer.java:1764)                                                 |
 |             state ➜ 1 at AbstractQueuedSynchronizer.getState(AbstractQueuedSynchronizer.java:588)                                                        |
