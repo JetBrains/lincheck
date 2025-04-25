@@ -241,8 +241,9 @@ internal class MethodCallTracePoint(
     var parameters: List<String>? = null
     var parameterTypes: List<String>? = null
     
-    var isSuspendMethodCall = false 
-        private set
+    var continuation: String? = null
+        private set 
+    val isSuspendMethodCall get() = continuation != null
     
     private var ownerName: String? = null
     
@@ -285,6 +286,7 @@ internal class MethodCallTracePoint(
     private fun StringBuilder.appendDefaultMethodCall() {
         if (ownerName != null) append("$ownerName.")
         append("$methodName(${ parameters?.joinToString(", ") ?: "" })")
+        if (isSuspendMethodCall) append(" (suspendable with $continuation)")
     }
     
     private fun StringBuilder.appendReturnedValue() {
@@ -307,7 +309,7 @@ internal class MethodCallTracePoint(
                 it.parameters = parameters
                 it.ownerName = ownerName
                 it.parameterTypes = parameterTypes
-                it.isSuspendMethodCall = isSuspendMethodCall
+                it.continuation = continuation
             }
     }
 
@@ -328,10 +330,10 @@ internal class MethodCallTracePoint(
     }
 
     fun initializeParameters(parameters: List<String>, parameterTypes: List<String>) {
-        if (parameters.lastOrNull() == ObjectLabelFactory.CONTINUATION_REPRESENTATION) {
+        if (parameters.lastOrNull()?.startsWith(ObjectLabelFactory.CONTINUATION_REPRESENTATION) == true) {
             this.parameters = parameters.dropLast(1)
             this.parameterTypes = parameterTypes.dropLast(1)
-            this.isSuspendMethodCall = true
+            this.continuation = parameters.last()
         } else {
             this.parameters = parameters
             this.parameterTypes = parameterTypes
