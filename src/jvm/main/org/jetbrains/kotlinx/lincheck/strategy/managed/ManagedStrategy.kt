@@ -1100,7 +1100,7 @@ abstract class ManagedStrategy(
             return false
         }
         // Do not track accesses to untracked objects
-        if (!shouldTrackObjectAccess(obj) || isStackRecoveryFieldAccess(obj, fieldName)) {
+        if (!shouldTrackFieldAccess(obj, fieldName)) {
             return false
         }
         val iThread = threadScheduler.getCurrentThreadId()
@@ -1129,7 +1129,7 @@ abstract class ManagedStrategy(
     /** Returns <code>true</code> if a switch point is created. */
     override fun beforeReadArrayElement(array: Any, index: Int, codeLocation: Int): Boolean = runInsideIgnoredSection {
         updateSnapshotOnArrayElementAccess(array, index)
-        if (!shouldTrackObjectAccess(array)) {
+        if (!shouldTrackFieldAccess(array, null)) {
             return false
         }
         val iThread = threadScheduler.getCurrentThreadId()
@@ -1168,7 +1168,7 @@ abstract class ManagedStrategy(
                                   isStatic: Boolean, isFinal: Boolean): Boolean = runInsideIgnoredSection {
         updateSnapshotOnFieldAccess(obj, className, fieldName)
         objectTracker?.registerObjectLink(fromObject = obj ?: StaticObject, toObject = value)
-        if (!shouldTrackObjectAccess(obj) || isStackRecoveryFieldAccess(obj, fieldName)) {
+        if (!shouldTrackFieldAccess(obj, fieldName)) {
             return false
         }
         // Optimization: do not track final field writes
@@ -1201,7 +1201,7 @@ abstract class ManagedStrategy(
         updateSnapshotOnArrayElementAccess(array, index)
         objectTracker?.registerObjectLink(fromObject = array, toObject = value)
         
-        if (!shouldTrackObjectAccess(array)) {
+        if (!shouldTrackFieldAccess(array, null)) {
             return false
         }
         val iThread = threadScheduler.getCurrentThreadId()
@@ -1292,14 +1292,17 @@ abstract class ManagedStrategy(
         }
     }
 
+    private fun shouldTrackFieldAccess(obj: Any?, fieldName: String?): Boolean =
+      shouldTrackObjectAccess(obj) && !isStackRecoveryFieldAccess(obj, fieldName)
+    
     private fun shouldTrackObjectAccess(obj: Any?): Boolean {
         // by default, we track accesses to all objects
         if (objectTracker == null) return true
         return objectTracker!!.shouldTrackObjectAccess(obj ?: StaticObject)
     }
     
-    private fun isStackRecoveryFieldAccess(obj: Any?, fieldName: String): Boolean =
-        obj is Continuation<*> && (fieldName == "label" || fieldName.startsWith("L$"))
+    private fun isStackRecoveryFieldAccess(obj: Any?, fieldName: String?): Boolean =
+        obj is Continuation<*> && (fieldName == "label" || fieldName?.startsWith("L$") == true)
 
     override fun getThreadLocalRandom(): InjectedRandom = runInsideIgnoredSection {
         return randoms[threadScheduler.getCurrentThreadId()]!!
