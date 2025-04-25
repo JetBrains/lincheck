@@ -109,7 +109,6 @@ internal abstract class CodeLocationTracePoint(
     codeLocation: Int
 ) : TracePoint(iThread, actorId, callStackTrace) {
     var stackTraceElement = CodeLocations.stackTrace(codeLocation)
-        private set
 
     var codeLocation = 0
         set(value) {

@@ -18,6 +18,7 @@ internal fun SingleThreadedTable<TraceNode>.compressTrace() = this
     .compressAccessPairs()
     .compressUserThreadRun()
     .compressThreadStart()
+    .removeCoroutinesCoreSuffix()
 
 /**
  * Compresses `receive$suspendImpl` calls.
@@ -127,6 +128,25 @@ private fun SingleThreadedTable<TraceNode>.compressSyntheticFieldAccess() = comp
 
     singleChild.decrementCallDepthOfTree()
     singleChild
+}
+
+private fun SingleThreadedTable<TraceNode>.removeCoroutinesCoreSuffix() = compressNodes { node ->
+    if (node is CallNode && node.tracePoint.methodName.endsWith("\$kotlinx_coroutines_core")) {
+        node.tracePoint.methodName = node.tracePoint.methodName.removeSuffix("\$kotlinx_coroutines_core")
+    }
+    
+    if (node.tracePoint is CodeLocationTracePoint && (node.tracePoint as CodeLocationTracePoint).stackTraceElement.methodName.endsWith("\$kotlinx_coroutines_core")) {
+        val oldStackTraceElement = (node.tracePoint as CodeLocationTracePoint).stackTraceElement
+        val newStackTraceElement = StackTraceElement(
+            oldStackTraceElement.className,
+            oldStackTraceElement.methodName.removeSuffix("\$kotlinx_coroutines_core"),
+            oldStackTraceElement.fileName,
+            oldStackTraceElement.lineNumber,
+        )
+        (node.tracePoint as CodeLocationTracePoint).stackTraceElement = newStackTraceElement
+    }
+    
+    node
 }
 
 /**
