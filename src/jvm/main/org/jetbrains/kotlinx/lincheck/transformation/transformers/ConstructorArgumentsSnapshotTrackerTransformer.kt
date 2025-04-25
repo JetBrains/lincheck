@@ -39,27 +39,20 @@ internal class ConstructorArgumentsSnapshotTrackerTransformer(
      * - a non-static object is accessed which was passed to constructor arguments
      * - a non-static object is accessed which was created locally in constructor
      *
-     * We only case about the 1nd case, because for the 3nd case when dealing with
+     * We only case about the 1nd case, because for the 2nd case when dealing with
      * a locally constructed object it can't be reached from static memory, so no need to track its fields.
      * The 2nd case where such object is passed via constructor argument is handled here.
      */
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
         if (name == "<init>") {
-            val matchedArguments = getArgumentTypes(desc).toList()
-                .mapIndexed { index, type ->
+            val matchedArguments: Set<Int> = getArgumentTypes(desc)
+                .mapIndexedNotNullTo(mutableSetOf()) { index, type ->
                     if (
                         !isArray(type) &&
                         !isPrimitive(type) &&
-                        isInstanceOf(type.className.replace('.', '/'), owner)
-                    ) {
-                        index
-                    }
-                    else {
-                        null
-                    }
+                        isInstanceOf(type.className.toInternalClassName(), owner)
+                    ) index else null
                 }
-                .filterNotNull()
-                .toIntArray()
 
             if (matchedArguments.isEmpty()) {
                 visitMethodInsn(opcode, owner, name, desc, itf)
