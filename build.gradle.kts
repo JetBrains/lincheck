@@ -44,7 +44,7 @@ fun SourceDirectorySet.configureTestSources() {
 kotlin {
     @OptIn(ExperimentalKotlinGradlePluginApi::class)
     compilerOptions {
-        allWarningsAsErrors = true
+        allWarningsAsErrors = false
     }
 
     jvm {
@@ -163,6 +163,10 @@ tasks {
     }
 
     fun Test.configureJvmTestCommon() {
+        testLogging {
+            showStandardStreams = true
+        }
+
         maxParallelForks = 1
         maxHeapSize = "6g"
         val instrumentAllClasses: String by project

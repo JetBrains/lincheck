@@ -20,6 +20,12 @@ import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
 class KotlinStdlibTransformationTest : AbstractLincheckTest() {
     var hashCode = 0
 
+    // TODO: this test causes TL on the CI with the implementation of https://github.com/JetBrains/lincheck/pull/469
+    //       on java 20 & 21, thus, for these versions this test was disabled. However, this should be fixed later
+    //       see issue https://github.com/JetBrains/lincheck/issues/508
+//    @Before
+//    fun setUp() = assumeFalse(jdkVersion == 20 || jdkVersion == 21)
+
     @Operation
     fun operation() {
         val intArray = IntArray(2)
