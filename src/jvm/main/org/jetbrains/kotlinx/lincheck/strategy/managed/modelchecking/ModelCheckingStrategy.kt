@@ -286,14 +286,14 @@ internal class ModelCheckingStrategy(
     ) {
         private var lastNotInitializedNode: SwitchChoosingNode? = initialLastNotInitializedNode
         private lateinit var interleavingFinishingRandom: Random
-        private lateinit var nextThreadToSwitch: Iterator<Int>
+        private var currentInterleavingPosition = 0
         private var lastNotInitializedNodeChoices: MutableList<Choice>? = null
         private var executionPosition: Int = 0
 
         fun initialize() {
             executionPosition = -1 // the first execution position will be zero
             interleavingFinishingRandom = Random(2) // random with a constant seed
-            nextThreadToSwitch = threadSwitchChoices.iterator()
+            currentInterleavingPosition = 0
             lastNotInitializedNodeChoices = null
             lastNotInitializedNode?.let {
                 // Create a mutable list for the initialization of the not initialized node choices.
@@ -310,15 +310,15 @@ internal class ModelCheckingStrategy(
         }
 
         fun chooseThread(iThread: Int): Int =
-            if (nextThreadToSwitch.hasNext()) {
-                // check(executionPosition == -1 || executionPosition in switchPositions || (loopDetector.replayModeEnabled && executionPosition == 0)) {
-                //     """
-                //         Attempt to switch thread on execution position which does not correspond to any saved switch position.
-                //         Execution position: $executionPosition, switch positions: $switchPositions.
-                //     """.trimIndent()
-                // }
+            if (currentInterleavingPosition < threadSwitchChoices.size) {
+                check(executionPosition == -1 || (executionPosition == 0 && loopDetector.replayModeEnabled) || executionPosition == switchPositions[currentInterleavingPosition - 1]) {
+                    """
+                        Attempt to switch thread on execution position which does not correspond to any saved switch position.
+                        Execution position: $executionPosition, switch positions: $switchPositions.
+                    """.trimIndent()
+                }
                 // Use the predefined choice.
-                nextThreadToSwitch.next()
+                threadSwitchChoices[currentInterleavingPosition++]
             } else {
                 // There is no predefined choice.
                 // This can happen if there were forced thread switches after the last predefined one
@@ -340,17 +340,15 @@ internal class ModelCheckingStrategy(
             executionPosition++
             if (executionPosition > (switchPositions.lastOrNull() ?: -1)) {
                 // Add a new thread choosing node corresponding to the switch at the current execution position.
-                lastNotInitializedNodeChoices?.apply {
-                    switchableThreads(iThread).let {
-                        // check(threadSwitchChoices.lastOrNull() !in it) {
-                        //     """
-                        //         Attempt to add a thread choice node with the option for switching to the same thread.
-                        //         Threads switches: $threadSwitchChoices, added new thread options: $it, current thread: $iThread.
-                        //     """.trimIndent()
-                        // }
-                        add(Choice(ThreadChoosingNode(it), executionPosition))
-                    }
+                if (lastNotInitializedNodeChoices == null) return
+                val availableThreads = switchableThreads(iThread)
+                check(threadSwitchChoices.lastOrNull() !in availableThreads) {
+                    """
+                        Attempt to add a thread choice node with the option for switching to the same thread.
+                        Threads switches: $threadSwitchChoices, added new thread options: $availableThreads, current thread: $iThread.
+                    """.trimIndent()
                 }
+                lastNotInitializedNodeChoices!!.add(Choice(ThreadChoosingNode(availableThreads), executionPosition))
             }
         }
 
