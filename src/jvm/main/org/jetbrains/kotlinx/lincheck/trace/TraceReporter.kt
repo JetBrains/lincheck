@@ -56,7 +56,7 @@ internal class TraceReporter(
 
 
         // Turn trace into graph which is List of sections. Where a section is a list of rootNodes (actors).
-        val traceGraph = traceToGraph(fixedTrace).compressTrace()
+        val traceGraph = traceToGraph(fixedTrace)
 
         // Optimizes trace by combining trace points for synthetic field accesses etc..
         val compressedTraceGraph = traceGraph.compressTrace()
