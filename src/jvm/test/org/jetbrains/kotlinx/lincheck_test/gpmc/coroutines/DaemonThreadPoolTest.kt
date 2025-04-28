@@ -62,11 +62,9 @@ class DaemonThreadPoolTest {
             thread {
                 while (true) atomic.incrementAndGet()
             }
-            val t2 = thread(start = false) {
+            thread(isDaemon = true) {
                 while (true) atomic.decrementAndGet()
             }
-            t2.isDaemon = true
-            t2.start()
         }
     }
 
@@ -92,11 +90,13 @@ class DaemonThreadPoolTest {
     @Test(expected = LincheckAssertionError::class)
     fun testBackgroundThreadsDeadlock() {
         runConcurrentTest(1000) {
+            var int = 0
             val sync1 = Any()
             val sync2 = Any()
             thread(start = false) {
                 synchronized(sync1) {
                     synchronized(sync2) {
+                        int++
                     }
                 }
             }.start()
@@ -104,15 +104,17 @@ class DaemonThreadPoolTest {
             thread(start = false) {
                 synchronized(sync2) {
                     synchronized(sync1) {
+                        int++
                     }
                 }
             }.start()
+            check(int == 2)
         }
     }
 
     @Test(expected = LincheckAssertionError::class)
     fun testBackgroundCoroutinesDeadlock() {
-        runConcurrentTest(1000) {
+        runConcurrentTest(10000) {
             Executors.newFixedThreadPool(2).asCoroutineDispatcher().use { pool ->
                 val m = Mutex()
                 runBlocking(pool) {
@@ -130,10 +132,11 @@ class DaemonThreadPoolTest {
     @Test
     fun testJavaThreadPoolFutures() {
         runConcurrentTest(1000) {
+            val a = AtomicInteger(0)
             val pool = Executors.newFixedThreadPool(3)
-            val f1 = pool.submit {}
-            val f2 = pool.submit {}
-            val f3 = pool.submit {}
+            val f1 = pool.submit { a.incrementAndGet() }
+            val f2 = pool.submit { a.incrementAndGet() }
+            val f3 = pool.submit { a.incrementAndGet() }
 
             f1.get()
             f2.get()
@@ -145,11 +148,12 @@ class DaemonThreadPoolTest {
     @Test
     fun testJavaThreadPoolAsyncTasks() {
         runConcurrentTest(1000) {
+            val a = AtomicInteger(0)
             val pool = Executors.newFixedThreadPool(3)
             // fire and forget
-            pool.execute {}
-            pool.execute {}
-            pool.execute {}
+            pool.execute { a.incrementAndGet() }
+            pool.execute { a.incrementAndGet() }
+            pool.execute { a.incrementAndGet() }
             // no explicit shutdown
         }
     }

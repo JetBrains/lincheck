@@ -558,8 +558,7 @@ abstract class ManagedStrategy(
                 beforeMethodCallSwitch = (tracePoint != null && tracePoint is MethodCallTracePoint)
             )
             setCurrentThread(nextThread)
-        }
-        else if (!threadScheduler.areAllThreadsFinishedOrAborted()) {
+        } else if (!threadScheduler.areAllThreadsFinishedOrAborted()) {
             // unblock live-locked thread if switch or abortion did not occur
             threadScheduler.unblockThread(iThread)
         }
@@ -2178,7 +2177,7 @@ abstract class ManagedStrategy(
      */
     private fun tryAbortingUserLiveLockedThreads(): Boolean {
         if (
-            (0..<scenario.nThreads).all(threadScheduler::isFinished) && // all `TestThread`s are finished (including main: with id of zero)
+            (0 ..< scenario.nThreads).all(threadScheduler::isFinished) && // all `TestThread`s are finished (including main: with id of zero)
             runner.collectExecutionResults().let {
                 // Check that main thread has completed all execution parts.
                 // Additional check is required, because main thread will be marked as finished
