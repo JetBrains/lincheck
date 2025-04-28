@@ -64,7 +64,7 @@ class ManagedStrategyGuarantee private constructor(
          * interesting code locations inside, and no switch point will be added due to the
          * specified method calls.
          */
-        fun ignore() = ManagedStrategyGuarantee(classPredicate, methodPredicate, AnalysisSectionType.IGNORE)
+        fun ignore() = ManagedStrategyGuarantee(classPredicate, methodPredicate, AnalysisSectionType.IGNORED)
 
         /**
          * The methods will be treated by model checking strategy as an atomic operation, so that

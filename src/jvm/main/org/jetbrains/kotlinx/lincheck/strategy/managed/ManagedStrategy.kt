@@ -1708,11 +1708,11 @@ abstract class ManagedStrategy(
         }
         // TODO: decide if we need to introduce special `DETERMINISTIC` guarantee?
         if (deterministicMethodDescriptor != null) {
-            return AnalysisSectionType.IGNORE
+            return AnalysisSectionType.IGNORED
         }
         // Ignore methods called on standard I/O streams
         when (owner) {
-            System.`in`, System.out, System.err -> return AnalysisSectionType.IGNORE
+            System.`in`, System.out, System.err -> return AnalysisSectionType.IGNORED
         }
         val silentSection = getDefaultSilentSectionType(ownerName, methodName)
             ?.ensure { it.isSilent() }
@@ -1735,7 +1735,7 @@ abstract class ManagedStrategy(
         } else {
             analysisSectionStack.add(section)
         }
-        if (section == AnalysisSectionType.IGNORE ||
+        if (section == AnalysisSectionType.IGNORED ||
             // TODO: atomic should have different semantics compared to ignored
             section == AnalysisSectionType.ATOMIC
         ) {
@@ -1744,7 +1744,7 @@ abstract class ManagedStrategy(
     }
 
     private fun leaveAnalysisSection(threadId: ThreadId, section: AnalysisSectionType) {
-        if (section == AnalysisSectionType.IGNORE ||
+        if (section == AnalysisSectionType.IGNORED ||
             // TODO: atomic should have different semantics compared to ignored
             section == AnalysisSectionType.ATOMIC
         ) {

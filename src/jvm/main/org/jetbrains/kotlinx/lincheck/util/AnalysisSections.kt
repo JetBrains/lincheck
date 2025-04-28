@@ -19,7 +19,7 @@ import sun.nio.ch.lincheck.Injections
  * These sections provide various analysis guarantees and characteristics.
 
  * The sections are ordered by the strength of the provided guarantees, from weakest to strongest:
- *   [NORMAL], [SILENT], [SILENT_PROPAGATING], [ATOMIC], [IGNORE].
+ *   [NORMAL], [SILENT], [SILENT_PROPAGATING], [ATOMIC], [IGNORED].
  * Guarantees of each particular section are documented separately.
  *
  * Section types can be split into two categories: local and propagating (see [isCallStackPropagating]).
@@ -33,21 +33,15 @@ import sun.nio.ch.lincheck.Injections
  *     Other methods down the call stack can only reside in the same analysis section, or a stronger one.
  *
  * Local sections are required to support methods like `ConcurrentHashMap.computeIfAbsent(key, lambda)`.
- * The method `computeIfAbsent` itself can be trusted and
- * not analyzed by the framework in the user code by default.
+ * The method `computeIfAbsent` itself can be trusted and not analyzed by the framework in the user code by default.
  * However, the user-provided lambda is not trusted and needs to be analyzed.
  *
  * Thus, `computeIfAbsent` can be put into a (local, non-propagating) silent section.
  * As such, code inside `computeIfAbsent` will be muted,
  * but if this method calls the provided lambda, it still will be analyzed fully.
  *
- * Local sections:
- *   - [NORMAL]
- *   - [SILENT]
- * Propagating sections:
- *   - [SILENT_PROPAGATING]
- *   - [ATOMIC]
- *   - [IGNORE]
+ * Local sections: [NORMAL], [SILENT].
+ * Propagating sections: [SILENT_PROPAGATING], [ATOMIC], [IGNORED].
  */
 internal enum class AnalysisSectionType {
 
@@ -72,6 +66,16 @@ internal enum class AnalysisSectionType {
 
     /**
      * Same as the silent section, but propagates down the call stack.
+     *
+     * As an example of the difference between regular and propagating silent sections, consider:
+     *
+     *   - If `ConcurrentHashMap.computeIfAbsent(key, lambda)` is put into [SILENT] section,
+     *     the analyses of code from `computeIfAbsent` itself will be muted,
+     *     but analyses of code from `lambda` (called from `computeIfAbsent`) will not be muted.
+     *
+     *   - If `ConcurrentHashMap.computeIfAbsent(key, lambda)` is put into [SILENT_PROPAGATING] section,
+     *     the analyses of code from `computeIfAbsent` and all other functions called from it
+     *     (including code of `lambda`) will be muted.
      */
     SILENT_PROPAGATING,
 
@@ -87,7 +91,7 @@ internal enum class AnalysisSectionType {
      * Code inside ignored sections is completely ignored by the framework.
      * No analysis is performed and no events are tracked inside an ignored section.
      */
-    IGNORE,
+    IGNORED,
 }
 
 internal fun AnalysisSectionType.isCallStackPropagating() =
