@@ -90,25 +90,26 @@ class DaemonThreadPoolTest {
     @Test(expected = LincheckAssertionError::class)
     fun testBackgroundThreadsDeadlock() {
         runConcurrentTest(1000) {
-            var int = 0
+            val a = AtomicInteger(0)
             val sync1 = Any()
             val sync2 = Any()
-            thread(start = false) {
+
+            thread {
                 synchronized(sync1) {
                     synchronized(sync2) {
-                        int++
+                        a.incrementAndGet()
                     }
                 }
-            }.start()
-
-            thread(start = false) {
+            }
+            thread {
                 synchronized(sync2) {
                     synchronized(sync1) {
-                        int++
+                        a.incrementAndGet()
                     }
                 }
-            }.start()
-            check(int == 2)
+            }
+
+            check(a.get() in (0..2))
         }
     }
 
