@@ -588,15 +588,37 @@ internal class ModelCheckingMonitorTracker : MonitorTracker {
 
 class ModelCheckingParkingTracker(val allowSpuriousWakeUps: Boolean = false) : ParkingTracker {
 
-    private object PERMIT
-
+    /**
+     * Enum representing the possible states of a thread in the parking tracker:
+     *
+     *   - [State.UNPARKED] --- thread is not parked;
+     *   - [State.PARKED] --- thread is parked and waiting;
+     *   - [State.PERMITTED] --- thread has a permit to unpark;
+     *   - [State.INTERRUPTED] --- thread was interrupted.
+     *
+     *     +----------+                     +--------+
+     *     | UNPARKED | --- [ park() ] ---> | PARKED |
+     *     +----------+                     +--------+
+     *     /\      |                          |
+     *     |       |--------------------------|
+     *     |                            |
+     *     |                            | [ unpark() | interrupt() ]
+     *     |                            |
+     *     |                            v
+     *     |                      +-------------------------+
+     *     |--[ waitUnpark() ]--  | PERMITTED / INTERRUPTED |
+     *                            +-------------------------+
+     *
+     */
     private enum class State {
-        UNPARKED, PARKED, INTERRUPTED,
+        UNPARKED,
+        PARKED,
+        PERMITTED,
+        INTERRUPTED,
     }
 
     private class Handle {
         var state: State = State.UNPARKED
-        var permit: PERMIT? = null
     }
 
     private val handle = mutableMapOf<ThreadId, Handle>()
@@ -607,20 +629,21 @@ class ModelCheckingParkingTracker(val allowSpuriousWakeUps: Boolean = false) : P
 
     override fun park(threadId: Int) {
         val handle = this.handle[threadId]!!
-        handle.state = State.PARKED
+        if (handle.state == State.UNPARKED) {
+            handle.state = State.PARKED
+        }
     }
 
     override fun waitUnpark(threadId: Int, allowSpuriousWakeUp: Boolean): Boolean {
         if (isParked(threadId, allowSpuriousWakeUp)) return true
         val handle = this.handle[threadId]!!
         handle.state = State.UNPARKED
-        handle.permit = null
         return false
     }
 
     override fun unpark(threadId: Int, unparkedThreadId: Int) {
         val handle = this.handle[unparkedThreadId]!!
-        handle.permit = PERMIT
+        handle.state = State.PERMITTED
     }
 
     override fun interruptPark(threadId: Int) {
@@ -636,7 +659,7 @@ class ModelCheckingParkingTracker(val allowSpuriousWakeUps: Boolean = false) : P
             return false
         }
         val handle = this.handle[threadId]!!
-        return (handle.state == State.PARKED) && (handle.permit == null)
+        return handle.state == State.PARKED
     }
 
     override fun reset() {

@@ -17,7 +17,7 @@ import org.junit.Test
 
 class ParkingTest {
 
-    fun operation(): Int {
+    fun parkUnpark(): Int {
         val counter = AtomicInteger(0)
         val mainThread = Thread.currentThread()
         val t1 = thread {
@@ -31,11 +31,25 @@ class ParkingTest {
     }
 
     @Test(timeout = TIMEOUT)
-    fun test() = modelCheckerTest(
+    fun parkUnparkTest() = modelCheckerTest(
         testClass = this::class,
-        testOperation = this::operation,
+        testOperation = this::parkUnpark,
         // can be both because of the spurious wake-ups
         expectedOutcomes = setOf(0, 1)
+    )
+
+    fun preemptiveUnpark(): Int {
+        val mainThread = Thread.currentThread()
+        LockSupport.unpark(mainThread)
+        LockSupport.park()
+        return 0
+    }
+
+    @Test(timeout = TIMEOUT)
+    fun preemptiveUnparkTest() = modelCheckerTest(
+        testClass = this::class,
+        testOperation = this::preemptiveUnpark,
+        expectedOutcomes = setOf(0)
     )
 
 }
