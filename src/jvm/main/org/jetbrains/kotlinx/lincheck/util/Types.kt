@@ -36,17 +36,23 @@ internal fun MethodDescriptor.isArraysCopyOfIntrinsic(): Boolean {
     return (
         className == "java.util.Arrays" &&
         methodName == "copyOf" &&
-        returnType == ARRAY_OF_OBJECTS_TYPE &&
-        argumentTypes == listOf(ARRAY_OF_OBJECTS_TYPE, INT_TYPE, CLASS_TYPE)
+        (
+            returnType == ARRAY_OF_OBJECTS_TYPE && argumentTypes == listOf(ARRAY_OF_OBJECTS_TYPE, INT_TYPE) ||
+            returnType == ARRAY_OF_OBJECTS_TYPE && argumentTypes == listOf(ARRAY_OF_OBJECTS_TYPE, INT_TYPE, CLASS_TYPE) ||
+            ARRAY_OF_PRIMITIVE_TYPES.any { returnType == it && argumentTypes == listOf(it, INT_TYPE) }
+        )
     )
 }
 
 internal fun MethodDescriptor.isArraysCopyOfRangeIntrinsic(): Boolean {
     return (
         className == "java.util.Arrays" &&
-        methodName == "copyOfRange" &&
-        returnType == ARRAY_OF_OBJECTS_TYPE &&
-        argumentTypes == listOf(ARRAY_OF_OBJECTS_TYPE, INT_TYPE, INT_TYPE, CLASS_TYPE)
+        methodName.contains("copyOfRange") &&
+        (
+            returnType == ARRAY_OF_OBJECTS_TYPE && argumentTypes == listOf(ARRAY_OF_OBJECTS_TYPE, INT_TYPE, INT_TYPE) ||
+            returnType == ARRAY_OF_OBJECTS_TYPE && argumentTypes == listOf(ARRAY_OF_OBJECTS_TYPE, INT_TYPE, INT_TYPE, CLASS_TYPE) ||
+            ARRAY_OF_PRIMITIVE_TYPES.any { returnType == it && argumentTypes == listOf(it, INT_TYPE, INT_TYPE) }
+        )
     )
 }
 
@@ -54,7 +60,20 @@ internal fun MethodDescriptor.isArraysCopyOfRangeIntrinsic(): Boolean {
 //  add all tracked intrinsics here
 internal fun MethodDescriptor.isTrackedIntrinsic(): Boolean =
     isArraysCopyOfIntrinsic() ||
-    isArraysCopyOfIntrinsic()
+    isArraysCopyOfRangeIntrinsic()
 
 private val ARRAY_OF_OBJECTS_TYPE = ArrayType(ObjectType("java.lang.Object"))
+private val ARRAY_OF_INT_TYPE = ArrayType(INT_TYPE)
+private val ARRAY_OF_LONG_TYPE = ArrayType(LONG_TYPE)
+private val ARRAY_OF_DOUBLE_TYPE = ArrayType(DOUBLE_TYPE)
+private val ARRAY_OF_FLOAT_TYPE = ArrayType(FLOAT_TYPE)
+private val ARRAY_OF_BOOLEAN_TYPE = ArrayType(BOOLEAN_TYPE)
+private val ARRAY_OF_BYTE_TYPE = ArrayType(BYTE_TYPE)
+private val ARRAY_OF_SHORT_TYPE = ArrayType(SHORT_TYPE)
+private val ARRAY_OF_CHAR_TYPE = ArrayType(CHAR_TYPE)
+private val ARRAY_OF_PRIMITIVE_TYPES = listOf(
+    ARRAY_OF_INT_TYPE, ARRAY_OF_LONG_TYPE, ARRAY_OF_DOUBLE_TYPE,
+    ARRAY_OF_FLOAT_TYPE, ARRAY_OF_BOOLEAN_TYPE, ARRAY_OF_BYTE_TYPE,
+    ARRAY_OF_SHORT_TYPE, ARRAY_OF_CHAR_TYPE
+)
 private val CLASS_TYPE = ObjectType("java.lang.Class")

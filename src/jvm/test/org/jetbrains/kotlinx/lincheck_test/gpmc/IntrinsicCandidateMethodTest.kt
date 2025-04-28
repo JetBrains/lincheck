@@ -10,11 +10,14 @@
 
 package org.jetbrains.kotlinx.lincheck_test.gpmc
 
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.jetbrains.kotlinx.lincheck.ExperimentalModelCheckingAPI
 import org.jetbrains.kotlinx.lincheck.runConcurrentTest
 import org.junit.Test
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.Executors
 import kotlin.concurrent.thread
 
 /**
@@ -28,8 +31,8 @@ import kotlin.concurrent.thread
 class IntrinsicCandidateMethodTest {
 
     @Test
-    fun testArraysCopyOf() {
-        runConcurrentTest(1000) {
+    fun testArraysCopyOfCall() {
+        runConcurrentTest(2000) {
             val threads = mutableListOf<Thread>()
             val l = CountDownLatch(1)
 
@@ -52,5 +55,42 @@ class IntrinsicCandidateMethodTest {
                 t.join()
             }
         }
+    }
+
+    @Test
+    fun testListOfCall() {
+        runConcurrentTest(2000) {
+            // at least 3 threads required to trigger a bug
+            Executors.newFixedThreadPool(3).asCoroutineDispatcher().use { dispatcher ->
+                runBlocking(dispatcher) {
+                    // second `launch` is required to trigger a bug
+                    launch(dispatcher) {}
+                    launch(dispatcher) {
+                        listOf(1, 2) // at least 2 elements required, otherwise method with no var-args will be called internally
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun testVarArgsSpread() {
+        runConcurrentTest(2000) {
+            // at least 3 threads required to trigger a bug
+            Executors.newFixedThreadPool(3).asCoroutineDispatcher().use { dispatcher ->
+                runBlocking(dispatcher) {
+                    // second `launch` is required to trigger a bug
+                    launch(dispatcher) {}
+                    launch(dispatcher) {
+                        acceptVarArgs(1, 2, 3)
+                    }
+                }
+            }
+        }
+    }
+
+    @Suppress("SameParameterValue")
+    private fun acceptVarArgs(vararg args: Any): Array<Any> {
+        return arrayOf(*args)
     }
 }

@@ -49,6 +49,13 @@ kotlin {
 
     jvm {
         withJava()
+
+        val integrationTest by compilations.creating {
+            defaultSourceSet {
+                associateWith(compilations["main"])
+                associateWith(compilations["test"])
+            }
+        }
     }
 
     sourceSets {
@@ -85,6 +92,16 @@ kotlin {
             }
         }
 
+        val jvmIntegrationTest by getting {
+            kotlin.srcDir("src/jvm/test-integration")
+
+            val junitVersion: String by project
+            dependencies {
+                implementation(rootProject)
+                implementation("junit:junit:$junitVersion")
+            }
+        }
+
         create("traceDebuggerTest") {
             kotlin.configureTestSources()
         }
@@ -106,18 +123,32 @@ java {
     }
 }
 
-tasks {
+fun JavaCompile.setupJavaToolchain() {
     val jdkToolchainVersion: String by project
-    compileTestJava {
-        javaToolchains {
-            javaCompiler = compilerFor { languageVersion.set(JavaLanguageVersion.of(jdkToolchainVersion)) }
-        }
+    javaToolchains {
+        javaCompiler = compilerFor { languageVersion.set(JavaLanguageVersion.of(jdkToolchainVersion)) }
     }
 }
 
-tasks.named<KotlinCompile>("compileTestKotlinJvm") {
+fun KotlinCompile.setupKotlinToolchain() {
     val jdkToolchainVersion: String by project
     kotlinJavaToolchain.toolchain.use(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(jdkToolchainVersion)) })
+}
+
+tasks {
+    named<JavaCompile>("compileTestJava") {
+        setupJavaToolchain()
+    }
+    named<JavaCompile>("compileIntegrationTestJava") {
+        setupJavaToolchain()
+    }
+
+    named<KotlinCompile>("compileTestKotlinJvm") {
+        setupKotlinToolchain()
+    }
+    named<KotlinCompile>("compileIntegrationTestKotlinJvm") {
+        setupKotlinToolchain()
+    }
 }
 
 sourceSets.main {
@@ -130,6 +161,10 @@ sourceSets.test {
         srcDir("src/jvm/test/resources")
         srcDir("src/jvm/test-trace-debugger-integration/resources")
     }
+}
+
+sourceSets.named("integrationTest") {
+    java.srcDirs("src/jvm/test-integration")
 }
 
 val bootstrapJar = tasks.register<Copy>("bootstrapJar") {
@@ -200,7 +235,6 @@ tasks {
         extraArgs.add("-Dlincheck.version=$version")
         findProperty("lincheck.logFile")?.let { extraArgs.add("-Dlincheck.logFile=${it as String}") }
         findProperty("lincheck.logLevel")?.let { extraArgs.add("-Dlincheck.logLevel=${it as String}") }
-        findProperty("lincheck.dumpTransformedSources")?.let { extraArgs.add("-Dlincheck.dumpTransformedSources=${it as String}") }
         jvmArgs(extraArgs)
     }
 
@@ -240,7 +274,7 @@ tasks {
     }
 
     val jvmTestIsolated = register<Test>("jvmTestIsolated") {
-        group = jvmTest.get().group
+        group = "verification"
         testClassesDirs = jvmTest.get().testClassesDirs
         classpath = jvmTest.get().classpath
         enableAssertions = true
@@ -251,6 +285,17 @@ tasks {
         forkEvery = 1
     }
 
+    val jvmIntegrationTest = register<Test>("jvmIntegrationTest") {
+        val compilation = kotlin.targets["jvm"].compilations["integrationTest"]
+        group = "verification"
+        testClassesDirs = compilation.output.classesDirs
+        classpath = compilation.runtimeDependencyFiles!! + compilation.output.allOutputs
+        enableAssertions = true
+        testLogging.showStandardStreams = true
+        outputs.upToDateWhen { false } // Always run tests when called
+        configureJvmTestCommon()
+    }
+
     val traceDebuggerIntegrationTest = register<Test>("traceDebuggerIntegrationTest") {
         dependsOn(traceDebuggerIntegrationTestsPrerequisites)
         outputs.upToDateWhen { false } // Always run tests when called
@@ -258,7 +303,8 @@ tasks {
     }
 
     check {
-        dependsOn(jvmTestIsolated)
+        dependsOn += jvmTestIsolated
+        setDependsOn(dependsOn.filter { it != jvmIntegrationTest })
     }
 
     withType<Jar> {

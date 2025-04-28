@@ -79,7 +79,7 @@ internal class MethodCallTransformer(
             (opcode != INVOKESTATIC) -> newLocal(receiverType).also { storeLocal(it) }
             else -> null
         }
-        val methodId = MethodIds.getMethodId(owner, name, desc)
+        val methodId = MethodIds.getMethodId(owner.toCanonicalClassName(), name, desc)
         // STACK: <empty>
         processMethodCallEnter(owner, name, desc, methodId, receiverLocal, argumentsArrayLocal)
         // STACK: deterministicCallDescriptor
