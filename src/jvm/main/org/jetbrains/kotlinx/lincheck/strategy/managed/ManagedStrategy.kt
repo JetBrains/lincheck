@@ -675,36 +675,37 @@ abstract class ManagedStrategy(
 
     // == LISTENING METHODS ==
 
-    override fun beforeThreadFork(thread: Thread, descriptor: ThreadDescriptor) = runInsideIgnoredSection {
+    override fun beforeThreadFork(thread: Thread, descriptor: ThreadDescriptor): Unit = runInsideIgnoredSection {
         val currentThreadId = threadScheduler.getCurrentThreadId()
         // do not track threads forked from unregistered threads
         if (currentThreadId < 0) return
         // scenario threads are handled separately by the runner itself
         if (thread is TestThread) return
-        val forkedThreadId = registerThread(thread, descriptor)
-        if (collectTrace) {
-            val tracePoint = ThreadStartTracePoint(
-                iThread = currentThreadId,
-                actorId = currentActorId[currentThreadId]!!,
-                startedThreadDisplayNumber = iThreadToDisplayNumber(forkedThreadId),
-                callStackTrace = callStackTrace[currentThreadId]!!,
-            )
-            traceCollector!!.passCodeLocation(tracePoint)
-        }
+        registerThread(thread, descriptor)
+//        if (collectTrace) {
+//            val tracePoint = ThreadStartTracePoint(
+//                iThread = currentThreadId,
+//                actorId = currentActorId[currentThreadId]!!,
+//                startedThreadDisplayNumber = iThreadToDisplayNumber(forkedThreadId),
+//                callStackTrace = callStackTrace[currentThreadId]!!,
+//            )
+//            traceCollector!!.passCodeLocation(tracePoint)
+//        }
     }
 
     /**
      * [afterThreadFork] is invoked after each `thread.start()` method call and is required to insert
      * a switch point in the current thread to trigger context switch to forked thread.
      */
-    override fun afterThreadFork() = runInsideIgnoredSection {
+    override fun afterThreadFork(forkedThread: Thread) = runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
+        val forkedThreadId = threadScheduler.getThreadId(forkedThread)
         val tracePoint = if (collectTrace) {
-            AfterThreadForkTracePoint(
+            ThreadStartTracePoint(
                 iThread = threadId,
                 actorId = currentActorId[threadId]!!,
-                // dropping the call to `thread.start()`, so it does not appear in the output trace
-                callStackTrace = callStackTrace[threadId]!!.dropLast(1)
+                startedThreadDisplayNumber = iThreadToDisplayNumber(forkedThreadId),
+                callStackTrace = callStackTrace[threadId]!!
             )
         } else {
             null

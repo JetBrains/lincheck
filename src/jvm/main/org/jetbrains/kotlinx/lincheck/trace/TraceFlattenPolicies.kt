@@ -19,11 +19,6 @@ package org.jetbrains.kotlinx.lincheck.trace
  * - Adjusting final result (for current node) according to [beforeReturn].
  */
 internal interface TraceFlattenPolicy {
-    /**
-     * Returns `true` if trace point which corresponds to the [currentNode] is **not** virtual.
-     */
-    fun isVisibleNode(currentNode: TraceNode): Boolean =
-        !currentNode.tracePoint.isVirtual
 
     /**
      * Should return true if [traceNode] should be included in the trace according to [TraceFlattenPolicy].
@@ -49,7 +44,7 @@ internal interface TraceFlattenPolicy {
 internal class VerboseTraceFlattenPolicy : TraceFlattenPolicy {
 
     override fun shouldIncludeThisNode(currentNode: TraceNode): Boolean = when (currentNode) {
-        is EventNode -> isVisibleNode(currentNode)
+        is EventNode -> !currentNode.tracePoint.isVirtual
         else -> true
     }
 
@@ -85,7 +80,7 @@ internal class VerboseTraceFlattenPolicy : TraceFlattenPolicy {
 internal class ShortTraceFlattenPolicy : TraceFlattenPolicy {
     override fun shouldIncludeThisNode(currentNode: TraceNode): Boolean = when (currentNode) {
         is EventNode -> with(currentNode) {
-            isVisibleNode(currentNode) && (
+            !tracePoint.isVirtual && (
                     isLast && tracePoint.isBlocking
                             || tracePoint is SwitchEventTracePoint
                             || tracePoint is ObstructionFreedomViolationExecutionAbortTracePoint
@@ -156,7 +151,7 @@ internal fun TraceNode.flattenNodes(policy: TraceFlattenPolicy): List<TraceNode>
     // Alter children list according to policy
     val changedDescendantsOfChildren = policy.beforeFlattenChildren(this, descendantsOfChildren)
 
-    val descendants = changedDescendantsOfChildren.flatten().filter(policy::isVisibleNode)
+    val descendants = changedDescendantsOfChildren.flatten()
 
     val flattened = if (policy.shouldIncludeThisNode(this) || descendants.isNotEmpty()) listOf(this) + descendants else descendants
 
@@ -172,9 +167,7 @@ internal fun SingleThreadedTable<TraceNode>.extractPreExpandedNodes(flattenPolic
 
 // virtual trace points are not displayed in the trace
 private val TracePoint.isVirtual: Boolean get() = when (this) {
-    is ThreadStartTracePoint,
-    is ThreadJoinTracePoint,
-    is AfterThreadForkTracePoint -> true
+    is ThreadStartTracePoint, is ThreadJoinTracePoint -> true
     else -> false
 }
 

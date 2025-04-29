@@ -174,7 +174,7 @@ public class Injections {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) return;
         EventTracker tracker = descriptor.getEventTracker();
-        tracker.afterThreadFork();
+        tracker.afterThreadFork(forkedThread);
     }
 
     /**
