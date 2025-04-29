@@ -486,13 +486,17 @@ abstract class ManagedStrategy(
         // if any kind of live-lock was detected, check for obstruction-freedom violation
         if (decision.isLivelockDetected) {
             failIfObstructionFreedomIsRequired {
-                traceCollector?.passObstructionFreedomViolationTracePoint(iThread, beforeMethodCall = beforeMethodCallSwitch)
+                traceCollector?.passObstructionFreedomViolationTracePoint(iThread,
+                    beforeMethodCall = beforeMethodCallSwitch
+                )
                 OBSTRUCTION_FREEDOM_SPINLOCK_VIOLATION_MESSAGE
             }
         }
         // if live-lock failure was detected, then fail immediately
         if (decision is LoopDetector.Decision.LivelockFailureDetected) {
-            traceCollector?.newSwitch(iThread, SwitchReason.ActiveLock, beforeMethodCallSwitch = beforeMethodCallSwitch)
+            traceCollector?.newSwitch(iThread, SwitchReason.ActiveLock,
+                beforeMethodCallSwitch = beforeMethodCallSwitch
+            )
             failDueToDeadlock()
         }
         // if live-lock was detected, and replay was requested,
@@ -502,7 +506,9 @@ abstract class ManagedStrategy(
         }
         // if the current thread in a live-lock, then try to switch to another thread
         if (decision is LoopDetector.Decision.LivelockThreadSwitch) {
-            val switchHappened = switchCurrentThread(iThread, BlockingReason.LiveLocked, beforeMethodCallSwitch)
+            val switchHappened = switchCurrentThread(iThread, BlockingReason.LiveLocked,
+                beforeMethodCallSwitch = beforeMethodCallSwitch
+            )
             if (switchHappened) {
                 loopDetector.initializeFirstCodeLocationAfterSwitch(codeLocation)
             }
