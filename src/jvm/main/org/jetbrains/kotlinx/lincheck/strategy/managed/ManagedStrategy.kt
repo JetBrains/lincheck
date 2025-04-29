@@ -21,6 +21,7 @@ import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.kotlinx.lincheck.util.runInsideIgnoredSection
 import sun.nio.ch.lincheck.*
 import kotlinx.coroutines.*
+import org.jetbrains.kotlinx.lincheck.strategy.ThreadScheduler.RegisteredThread
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicFieldUpdaterNames.getAtomicFieldUpdaterDescriptor
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceMethodType.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.FieldSearchHelper.findFinalFieldWithOwner
@@ -372,9 +373,8 @@ abstract class ManagedStrategy(
         // Therefore, if the runner detects deadlock, we don't even try to collect trace.
         if (loggedResults is RunnerTimeoutInvocationResult) return null
 
-        val registeredThreads = getRegisteredThreads()
-        val threadNames = MutableList<String>(registeredThreads.size) { "" }
-        getRegisteredThreads().forEach { threadId, thread ->
+        val threadNames = MutableList<String>(threadScheduler.nThreads) { "" }
+        getRegisteredThreads().forEach { (threadId, thread) ->
             val threadNumber = ObjectLabelFactory.getObjectNumber(Thread::class.java, thread)
             when (threadNumber) {
                 0 -> threadNames[threadId] = "Main Thread"
@@ -837,7 +837,7 @@ abstract class ManagedStrategy(
         return elapsedTime
     }
 
-    fun getRegisteredThreads(): ThreadMap<Thread> =
+    fun getRegisteredThreads(): Sequence<RegisteredThread> =
         threadScheduler.getRegisteredThreads()
 
     protected fun isRegisteredThread(): Boolean {
@@ -860,7 +860,8 @@ abstract class ManagedStrategy(
             // If all user threads (those that are not `TestThread` instances) are not blocked, then abort
             // the running user threads. Essentially treating them as "daemons", which completion we do not wait for.
             // Thus, abort all of them and allow `runner` to process the invocation result accordingly.
-            val allUserThreadsAreLiveLocked = getRegisteredThreads().keys
+            val allUserThreadsAreLiveLocked = getRegisteredThreads()
+                .map { it.threadId }
                 .filterNot { isTestThread(it) || it == threadId /* we check invoking thread separately */ }
                 .all(threadScheduler::isLiveLocked)
                 .and(isTestThread(threadId) || blockingReason is BlockingReason.LiveLocked) // if invoking thread is UserThread, then it must be LiveLocked
@@ -1910,7 +1911,9 @@ abstract class ManagedStrategy(
 
     private fun objectFqTypeName(obj: Any?): String {
         val enumPrefix = if (obj?.javaClass?.isEnum == true) "Enum:" else ""
-        return "$enumPrefix${obj?.javaClass?.name ?: "null"}"
+        val typeName = obj?.javaClass?.name ?: "null"
+        return if (enumPrefix.isEmpty()) typeName
+               else "$enumPrefix$typeName"
     }
 
     private fun initializeUnsafeMethodCallTracePoint(

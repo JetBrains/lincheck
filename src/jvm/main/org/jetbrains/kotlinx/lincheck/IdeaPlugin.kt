@@ -383,7 +383,7 @@ private fun visualize(strategy: ManagedStrategy) = runCatching {
     if (strategy.executionMode == GENERAL_PURPOSE_MODEL_CHECKER) return@runCatching
 
     val runner = strategy.runner as ParallelThreadsRunner
-    val allThreads = strategy.getRegisteredThreads()
+    val allThreads = strategy.getRegisteredThreads().toThreadMap()
     val lincheckThreads = runner.executor.threads
     val testObject = runner.testInstance.takeIf {
         // in general-purpose model checking mode `testObject` is null
