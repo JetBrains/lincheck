@@ -11,8 +11,12 @@
 package org.jetbrains.kotlinx.lincheck_test.trace_debugger
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 
-abstract class CurrentTimeTest : AbstractDeterministicTest()
+abstract class CurrentTimeTest : AbstractDeterministicTest() {
+    override fun ModelCheckingOptions.customize(): ModelCheckingOptions = this
+        .invocationTimeout(30_000) // 30 sec
+}
 
 class ActualTimeMillisTest : CurrentTimeTest() {
     @Operation
