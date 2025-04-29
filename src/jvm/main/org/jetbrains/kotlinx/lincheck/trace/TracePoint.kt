@@ -458,25 +458,24 @@ internal class UnparkTracePoint(
 
 internal class ThreadStartTracePoint(
     iThread: Int, actorId: Int,
-    val startedThreadId: Int,
+    val startedThreadDisplayNumber: Int,
     callStackTrace: CallStackTrace,
 ) : TracePoint(iThread, actorId, callStackTrace) {
-    override fun toStringImpl(withLocation: Boolean): String = "start Thread ${startedThreadId + 1}"
+    override fun toStringImpl(withLocation: Boolean): String = "start Thread $startedThreadDisplayNumber"
     override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
-        ThreadStartTracePoint(iThread, actorId, startedThreadId, callStackTrace.deepCopy(copiedObjects))
+        ThreadStartTracePoint(iThread, actorId, startedThreadDisplayNumber, callStackTrace.deepCopy(copiedObjects))
             .also { it.eventId = eventId }
     }
 }
 
-internal class ThreadJoinTracePoint(
+internal class ThreadJoinTracePoint( 
     iThread: Int, actorId: Int,
-    val joinedThreadId: Int,
+    val joinedThreadDisplayNumber: Int,
     callStackTrace: CallStackTrace,
 ) : TracePoint(iThread, actorId, callStackTrace) {
-
-    override fun toStringImpl(withLocation: Boolean): String = "join Thread ${joinedThreadId + 1}"
+    override fun toStringImpl(withLocation: Boolean): String = "join Thread $joinedThreadDisplayNumber"
     override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
-        ThreadJoinTracePoint(iThread, actorId, joinedThreadId, callStackTrace.deepCopy(copiedObjects))
+        ThreadJoinTracePoint(iThread, actorId, joinedThreadDisplayNumber, callStackTrace.deepCopy(copiedObjects))
             .also { it.eventId = eventId }
     }
 }
@@ -556,20 +555,20 @@ internal sealed class SwitchReason(private val reason: String) {
     object ParkWait     : SwitchReason("thread is parked")
     object ActiveLock   : SwitchReason("active lock detected")
     object Suspended    : SwitchReason("coroutine is suspended")
-    class  ThreadJoinWait(val threadId: ThreadId)
-                        : SwitchReason("waiting for Thread ${threadId + 1} to finish")
+    class  ThreadJoinWait(threadDisplayNumber: ThreadId)
+                        : SwitchReason("waiting for Thread $threadDisplayNumber to finish")
 
     // display switch reason
     override fun toString() = reason
 }
 
-internal fun BlockingReason?.toSwitchReason(): SwitchReason = when (this) {
+internal fun BlockingReason?.toSwitchReason(iThreadToDisplayNumber: (Int) -> Int): SwitchReason = when (this) {
     is BlockingReason.Locked        -> SwitchReason.LockWait
     is BlockingReason.LiveLocked    -> SwitchReason.ActiveLock
     is BlockingReason.Waiting       -> SwitchReason.MonitorWait
     is BlockingReason.Parked        -> SwitchReason.ParkWait
     is BlockingReason.Suspended     -> SwitchReason.Suspended
-    is BlockingReason.ThreadJoin    -> SwitchReason.ThreadJoinWait(joinedThreadId)
+    is BlockingReason.ThreadJoin    -> SwitchReason.ThreadJoinWait(iThreadToDisplayNumber(joinedThreadId))
     else                            -> SwitchReason.StrategySwitch
 }
 

@@ -19,6 +19,7 @@ import java.util.*
  */
 object ObjectLabelFactory {
 
+    var isGPMCMode = true
     internal val objectNumeration = Collections.synchronizedMap(WeakHashMap<Class<*>, MutableMap<Any, Int>>())
 
     internal fun adornedStringRepresentation(any: Any?): String {
@@ -47,9 +48,12 @@ object ObjectLabelFactory {
         return getObjectName(any)
     }
 
-    internal fun getObjectNumber(clazz: Class<*>, obj: Any): Int = objectNumeration
-        .computeIfAbsent(clazz) { IdentityHashMap() }
-        .computeIfAbsent(obj) { 1 + objectNumeration[clazz]!!.size }
+    internal fun getObjectNumber(clazz: Class<*>, obj: Any): Int {
+        val offset = if (clazz == Thread::class.java && isGPMCMode) -1 else 0
+        return objectNumeration
+            .computeIfAbsent(clazz) { IdentityHashMap() }
+            .computeIfAbsent(obj) { 1 + objectNumeration[clazz]!!.size + offset }
+    }
 
     internal fun cleanObjectNumeration() {
         objectNumeration.clear()

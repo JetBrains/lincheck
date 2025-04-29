@@ -8,7 +8,7 @@ java.lang.IllegalStateException: Check failed.
 
 The following interleaving leads to the error:
 | ---------------------------------- |
-|              Thread 1              |
+|            Main Thread             |
 | ---------------------------------- |
 |   result: IllegalStateException #1 |
 | ---------------------------------- |
