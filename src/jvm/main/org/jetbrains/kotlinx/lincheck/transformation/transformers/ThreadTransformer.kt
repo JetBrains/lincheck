@@ -109,12 +109,6 @@ internal class ThreadTransformer(
             dup()
             // STACK: forkedThread, forkedThread
             invokeStatic(Injections::beforeThreadFork)
-            // STACK: forkedThread, isTracePoint
-            ifStatement(
-                condition = {},
-                thenClause = { invokeBeforeEventIfPluginEnabled("before thread fork") },
-                elseClause = {},
-            )
             // STACK: forkedThread
             dup()
             // STACK: forkedThread, forkedThread
@@ -139,12 +133,6 @@ internal class ThreadTransformer(
             storeLocal(threadLocal)
             // STACK: owner, thread, thread
             invokeStatic(Injections::beforeThreadFork)
-            // STACK: owner, thread, isTracePoint
-            ifStatement(
-                condition = {},
-                thenClause = { invokeBeforeEventIfPluginEnabled("before thread fork") },
-                elseClause = {},
-            )
             // STACK: owner, thread
             loadLocal(threadContainerLocal)
             // STACK: owner, thread, threadContainer
@@ -154,6 +142,7 @@ internal class ThreadTransformer(
             // STACK: thread
             invokeStatic(Injections::afterThreadFork)
             // STACK: <empty>
+            invokeBeforeEventIfPluginEnabled("after thread fork")
             return
         }
         adapter.visitMethodInsn(opcode, owner, name, desc, itf)
