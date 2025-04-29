@@ -285,7 +285,7 @@ internal class MethodCallTracePoint(
     private fun StringBuilder.appendDefaultMethodCall() {
         if (ownerName != null) append("$ownerName.")
         append("$methodName(${ parameters?.joinToString(", ") ?: "" })")
-        if (isSuspendMethodCall) append(" (suspendable with $continuation)")
+        if (isSuspendMethodCall) append(" [suspendable: $continuation]")
     }
     
     private fun StringBuilder.appendReturnedValue() {

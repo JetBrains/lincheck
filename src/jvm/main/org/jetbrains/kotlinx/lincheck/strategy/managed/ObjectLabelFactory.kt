@@ -107,5 +107,5 @@ object ObjectLabelFactory {
         }
     }
 
-    const val CONTINUATION_REPRESENTATION = "<continuation>"
+    const val CONTINUATION_REPRESENTATION = "Continuation"
 }
