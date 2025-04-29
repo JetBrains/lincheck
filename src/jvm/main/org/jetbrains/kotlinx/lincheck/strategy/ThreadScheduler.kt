@@ -172,6 +172,9 @@ open class ThreadScheduler {
     fun getBlockingReason(threadId: ThreadId): BlockingReason? =
         threads[threadId]?.blockingReason
 
+    fun isLiveLocked(threadId: ThreadId): Boolean =
+        isBlocked(threadId) && getBlockingReason(threadId)!! is BlockingReason.LiveLocked
+
     /**
      * Checks if the thread is currently enabled.
      *

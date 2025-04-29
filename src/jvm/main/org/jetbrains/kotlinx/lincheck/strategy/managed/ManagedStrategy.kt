@@ -199,7 +199,7 @@ abstract class ManagedStrategy(
      *   to communicate coroutine resumption event to the plugin.
      */
     private var skipNextBeforeEvent = false
-    
+
     init {
         ObjectLabelFactory.isGPMCMode = isGeneralPurposeModelCheckingScenario(scenario)
     }
@@ -368,7 +368,7 @@ abstract class ManagedStrategy(
 
         val registeredThreads = getRegisteredThreads()
         val threadNames = MutableList<String>(registeredThreads.size) { "" }
-        threadScheduler.getRegisteredThreads().forEach { threadId, thread ->
+        getRegisteredThreads().forEach { threadId, thread ->
             val threadNumber = ObjectLabelFactory.getObjectNumber(Thread::class.java, thread)
             when (threadNumber) {
                 0 -> threadNames[threadId] = "Main Thread"
@@ -534,31 +534,32 @@ abstract class ManagedStrategy(
         blockingReason: BlockingReason? = null,
         tracePoint: TracePoint? = null
     ): Boolean {
-        // block live-locked thread in order to check if it is possible
-        // to abort the whole execution in `chooseThreadSwitch` method
-        if (blockingReason is BlockingReason.LiveLocked) {
-            blockThread(iThread, blockingReason)
+        // before blocking the thread, interrupt it if the interruption flag is set
+        if (blockingReason != null && blockingReason.throwsInterruptedException()) {
+            throwIfInterrupted()
         }
+        if (tryAbortingUserLiveLockedThreads(iThread, blockingReason)) {
+            threadScheduler.abortAllThreads()
+            return false
+        }
+
         val switchReason = blockingReason.toSwitchReason(::iThreadToDisplayNumber)
         val mustSwitch = (blockingReason != null) && (blockingReason !is BlockingReason.LiveLocked)
         val nextThread = chooseThreadSwitch(iThread, mustSwitch)
         val switchHappened = (iThread != nextThread)
         if (switchHappened) {
-            // before blocking the thread, interrupt it if the interruption flag is set
-            if (blockingReason != null) {
-                if (blockingReason.throwsInterruptedException()) {
-                    throwIfInterrupted()
-                }
-                // TODO: coroutine suspensions are currently handled separately from `ThreadScheduler`
-                if (blockingReason !is BlockingReason.Suspended) {
-                    blockThread(iThread, blockingReason)
-                }
+            // TODO: coroutine suspensions are currently handled separately from `ThreadScheduler`
+            if (blockingReason != null && blockingReason !is BlockingReason.Suspended) {
+                blockThread(iThread, blockingReason)
             }
             traceCollector?.newSwitch(iThread, switchReason,
                 beforeMethodCallSwitch = (tracePoint != null && tracePoint is MethodCallTracePoint)
             )
             setCurrentThread(nextThread)
-        } else if (!threadScheduler.areAllThreadsFinishedOrAborted()) {
+        } else if (
+            !threadScheduler.areAllThreadsFinishedOrAborted() &&
+            threadScheduler.isLiveLocked(iThread)
+        ) {
             // unblock live-locked thread if switch or abortion did not occur
             threadScheduler.unblockThread(iThread)
         }
@@ -568,10 +569,6 @@ abstract class ManagedStrategy(
 
     private fun chooseThreadSwitch(iThread: Int, mustSwitch: Boolean = false): Int {
         // if all user threads locked in active lock, we do not insert switch point, just abort
-        if (tryAbortingUserLiveLockedThreads()) {
-            threadScheduler.abortAllThreads()
-            return iThread
-        }
         onNewSwitch(iThread, mustSwitch)
         // unblock interrupted threads
         unblockInterruptedThreads()
@@ -626,7 +623,7 @@ abstract class ManagedStrategy(
      * Also, notifies the respective tracker about interruption.
      */
     private fun unblockInterruptedThreads() {
-        for ((threadId, thread) in threadScheduler.getRegisteredThreads()) {
+        for ((threadId, thread) in getRegisteredThreads()) {
             if (threadScheduler.isBlocked(threadId) && thread.isInterrupted) {
                 val blockingReason = threadScheduler.getBlockingReason(threadId)
                 if (blockingReason != null && blockingReason.isInterruptible()) {
@@ -667,7 +664,7 @@ abstract class ManagedStrategy(
         } else {
             emptyList()
         }
-    
+
     /**
      * Converts lincheck threadId to displayable thread number for the trace.
      * In case of GPMC the numbers shift -1.
@@ -848,6 +845,29 @@ abstract class ManagedStrategy(
     }
 
     /**
+     * Aborts all threads in case if all `TestThread`s are in state `FINISHED`
+     * and all running user threads are `LiveLocked`.
+     *
+     * @param threadId id of thread that invoked this method.
+     * @param blockingReason blocking reason of invoking thread, determined by strategy, if exists.
+     */
+    private fun tryAbortingUserLiveLockedThreads(threadId: Int, blockingReason: BlockingReason?): Boolean {
+        // all `TestThread`s are finished (including main: with id of zero)
+        if ((0 ..< scenario.nThreads).all(threadScheduler::isFinished)) {
+            // The main thread finished its execution (actually all `TestThread`s did): successfully or not, we don't care.
+            // If all user threads (those that are not `TestThread` instances) are not blocked, then abort
+            // the running user threads. Essentially treating them as "daemons", which completion we do not wait for.
+            // Thus, abort all of them and allow `runner` to process the invocation result accordingly.
+            val allUserThreadsAreLiveLocked = getRegisteredThreads().keys
+                .filterNot { isTestThread(it) || it == threadId /* we check invoking thread separately */ }
+                .all(threadScheduler::isLiveLocked)
+                .and(isTestThread(threadId) || blockingReason is BlockingReason.LiveLocked) // if invoking thread is UserThread, then it must be LiveLocked
+            return allUserThreadsAreLiveLocked
+        }
+        return false
+    }
+
+    /**
      * This method is executed as the first thread action.
      *
      * @param threadId the thread id of the started thread.
@@ -868,7 +888,12 @@ abstract class ManagedStrategy(
         loopDetector.onThreadFinish(threadId)
         traceCollector?.onThreadFinish()
         unblockJoiningThreads(threadId)
-        val nextThread = chooseThreadSwitch(threadId, true)
+        val nextThread = if (tryAbortingUserLiveLockedThreads(threadId, null)) {
+            threadScheduler.abortAllThreads()
+            threadId
+        } else {
+            chooseThreadSwitch(threadId, true)
+        }
         setCurrentThread(nextThread)
     }
 
@@ -2169,33 +2194,6 @@ abstract class ManagedStrategy(
      */
     private fun isTestThread(threadId: Int): Boolean {
         return threadId in (0 ..< nThreads)
-    }
-
-    /**
-     * Aborts all threads in case if all `TestThread`s are in state `FINISHED`
-     * and all running user threads are `LiveLocked`.
-     */
-    private fun tryAbortingUserLiveLockedThreads(): Boolean {
-        if (
-            (0 ..< scenario.nThreads).all(threadScheduler::isFinished) && // all `TestThread`s are finished (including main: with id of zero)
-            runner.collectExecutionResults().let {
-                // Check that main thread has completed all execution parts.
-                // Additional check is required, because main thread will be marked as finished
-                // even if it hasn't completed its `postExecution` actors yet.
-                it.threadsResults[0].size == scenario.initExecution.size + scenario.parallelExecution.size + scenario.postExecution.size
-            }
-        ) {
-            // The main thread finished its execution (actually all `TestThread`s did): successfully or not, we don't care.
-            // If all user threads (those that are not `TestThread` instances) are not blocked, then abort
-            // the running user threads. Essentially treating them as "daemons", which completion we do not wait for.
-            // Thus, abort all of them and allow `runner` to process the invocation result accordingly.
-            val allUserThreadsAreLiveLocked = threadScheduler.getRegisteredThreads()
-                .map { it.key }
-                .filterNot { isTestThread(it) }
-                .all { threadScheduler.isBlocked(it) && threadScheduler.getBlockingReason(it)!! is BlockingReason.LiveLocked }
-            return allUserThreadsAreLiveLocked
-        }
-        return false
     }
 
     /**

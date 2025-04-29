@@ -450,19 +450,21 @@ class CoroutinesRunConcurrentRepresentationTest : BaseRunConcurrentRepresentatio
         private val channel2 = Channel<Int>(capacity = 1)
     }
 
-    override fun block() = runBlocking {
+    override fun block() {
         Executors.newFixedThreadPool(2).asCoroutineDispatcher().use { dispatcher ->
-            val job1 = launch(dispatcher) {
-                channel1.send(sharedCounter++)
-                r1 = channel2.receive()
+            runBlocking(dispatcher) {
+                val job1 = launch(dispatcher) {
+                    channel1.send(sharedCounter++)
+                    r1 = channel2.receive()
+                }
+                val job2 = launch(dispatcher) {
+                    channel2.send(sharedCounter++)
+                    r2 = channel1.receive()
+                }
+                job1.join()
+                job2.join()
+                check(r1 == 1 || r2 == 1)
             }
-            val job2 = launch(dispatcher) {
-                channel2.send(sharedCounter++)
-                r2 = channel1.receive()
-            }
-            job1.join()
-            job2.join()
-            check(r1 == 1 || r2 == 1)
         }
     }
 }

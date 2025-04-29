@@ -128,33 +128,42 @@ internal class ThreadTransformer(
         // In some newer versions of JDK, some of the java library classes
         // use internal API `JavaLangAccess.start` to start threads;
         // so we instrument calls to this method to detect thread starts.
-        if (isJavaLangAccessThreadStartMethod(owner, name)) {
-            // STACK: thread, threadContainer
+        if (isJavaLangAccessThreadStartCall(owner, name)) {
+            // STACK: owner, thread, threadContainer
             val threadContainerLocal = newLocal(OBJECT_TYPE)
+            val threadLocal = newLocal(OBJECT_TYPE)
             storeLocal(threadContainerLocal)
             dup()
-            // STACK: thread, thread
+            dup()
+            // STACK: owner, thread, thread, thread
+            storeLocal(threadLocal)
+            // STACK: owner, thread, thread
             invokeStatic(Injections::beforeThreadFork)
-            // STACK: thread, isTracePoint
+            // STACK: owner, thread, isTracePoint
             ifStatement(
                 condition = {},
                 thenClause = { invokeBeforeEventIfPluginEnabled("before thread fork") },
                 elseClause = {},
             )
-            // STACK: thread
+            // STACK: owner, thread
             loadLocal(threadContainerLocal)
-            // STACK: thread, threadContainer
-            // No need to invoke `Injections::afterThreadFork` here, because it
-            // will be handled in the `Thread::start` condition. Otherwise, we fork thread twice
+            // STACK: owner, thread, threadContainer
+            adapter.visitMethodInsn(opcode, owner, name, desc, itf)
+            // STACK: <empty>
+            loadLocal(threadLocal)
+            // STACK: thread
+            invokeStatic(Injections::afterThreadFork)
+            // STACK: <empty>
+            return
         }
         adapter.visitMethodInsn(opcode, owner, name, desc, itf)
     }
 
-    private fun isJavaLangAccessThreadStartMethod(className: String, methodName: String): Boolean =
-        methodName == "start" && isJavaLangAccessClass(className.toCanonicalClassName())
-
     private fun isThreadRunMethod(methodName: String, desc: String): Boolean =
         methodName == "run" && desc == VOID_METHOD_DESCRIPTOR && isThreadSubClass(className.toCanonicalClassName())
+
+    private fun isJavaLangAccessThreadStartCall(className: String, methodName: String): Boolean =
+        methodName == "start" && isJavaLangAccessClass(className.toCanonicalClassName())
 
     private fun isThreadStartCall(className: String, methodName: String, desc: String): Boolean =
         methodName == "start" && desc == VOID_METHOD_DESCRIPTOR && isThreadSubClass(className.toCanonicalClassName())
