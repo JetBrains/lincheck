@@ -148,6 +148,11 @@ abstract class ManagedStrategy(
     // Random instances with fixed seeds to replace random calls in instrumented code.
     private var randoms = mutableThreadMapOf<InjectedRandom>()
 
+    // Random number generator for picking live-locked thread to resume.
+    // It is recreated on each invocation with the same seed in order to allow
+    // loop detector to replay execution where live-lock is detected.
+    private var managedRandom = kotlin.random.Random(0)
+
     // User-specified guarantees on specific function, which can be considered as atomic or ignored.
     private val userDefinedGuarantees: List<ManagedStrategyGuarantee>? = testCfg.guarantees.ifEmpty { null }
 
@@ -263,6 +268,7 @@ abstract class ManagedStrategy(
         objectTracker?.reset()
         monitorTracker.reset()
         parkingTracker.reset()
+        managedRandom = kotlin.random.Random(0)
         resetThreads()
     }
 
@@ -556,12 +562,6 @@ abstract class ManagedStrategy(
                 beforeMethodCallSwitch = (tracePoint != null && tracePoint is MethodCallTracePoint)
             )
             setCurrentThread(nextThread)
-        } else if (
-            !threadScheduler.areAllThreadsFinishedOrAborted() &&
-            threadScheduler.isLiveLocked(iThread)
-        ) {
-            // unblock live-locked thread if switch or abortion did not occur
-            threadScheduler.unblockThread(iThread)
         }
         threadScheduler.awaitTurn(iThread)
         return switchHappened
@@ -583,11 +583,17 @@ abstract class ManagedStrategy(
                     """.trimIndent()
                 }
             }
-            // We allow to schedule LiveLocked threads, but we manually unblock them
-            if (threadScheduler.getBlockingReason(nextThread) is BlockingReason.LiveLocked) {
-                threadScheduler.unblockThread(nextThread)
-            }
             return nextThread
+        }
+        // we allow live locked thread to be scheduled, this must be done before the
+        // check for optional switch (see below), because 'mustSwitch == false' for live-locked threads
+        val liveLockedThread = (0 until threadScheduler.nThreads)
+            .filter { threadScheduler.isLiveLocked(it) && it != iThread }
+            .randomOrNull(managedRandom) // we cannot pick `.firstOrNull()`, because there might be case when we only unblock threads 0 and 1
+                                         // without giving other potentially live-locked threads to work and allow global progress
+        if (liveLockedThread != null) {
+            threadScheduler.unblockThread(liveLockedThread)
+            return liveLockedThread
         }
         // otherwise exit if the thread switch is optional, or all threads are finished
         if (!mustSwitch || threadScheduler.areAllThreadsFinished()) {
@@ -654,12 +660,7 @@ abstract class ManagedStrategy(
     protected fun switchableThreads(iThread: Int) =
         if (runner.currentExecutionPart == PARALLEL) {
             (0 until threadScheduler.nThreads).filter {
-                it != iThread &&
-                (
-                    isActive(it) ||
-                    // we allow live-locked threads to be scheduled
-                    threadScheduler.getBlockingReason(it) is BlockingReason.LiveLocked
-                )
+                it != iThread && isActive(it)
             }
         } else {
             emptyList()
