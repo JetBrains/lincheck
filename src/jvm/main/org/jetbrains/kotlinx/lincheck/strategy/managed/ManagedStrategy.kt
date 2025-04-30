@@ -1129,7 +1129,7 @@ abstract class ManagedStrategy(
     /** Returns <code>true</code> if a switch point is created. */
     override fun beforeReadArrayElement(array: Any, index: Int, codeLocation: Int): Boolean = runInsideIgnoredSection {
         updateSnapshotOnArrayElementAccess(array, index)
-        if (!shouldTrackFieldAccess(array, null)) {
+        if (!shouldTrackArrayAccess(array)) {
             return false
         }
         val iThread = threadScheduler.getCurrentThreadId()
@@ -1201,7 +1201,7 @@ abstract class ManagedStrategy(
         updateSnapshotOnArrayElementAccess(array, index)
         objectTracker?.registerObjectLink(fromObject = array, toObject = value)
         
-        if (!shouldTrackFieldAccess(array, null)) {
+        if (!shouldTrackArrayAccess(array)) {
             return false
         }
         val iThread = threadScheduler.getCurrentThreadId()
@@ -1291,8 +1291,10 @@ abstract class ManagedStrategy(
             objectTracker?.registerNewObject(obj)
         }
     }
+    
+    private fun shouldTrackArrayAccess(obj: Any?): Boolean = shouldTrackObjectAccess(obj)
 
-    private fun shouldTrackFieldAccess(obj: Any?, fieldName: String?): Boolean =
+    private fun shouldTrackFieldAccess(obj: Any?, fieldName: String): Boolean =
       shouldTrackObjectAccess(obj) && !isStackRecoveryFieldAccess(obj, fieldName)
     
     private fun shouldTrackObjectAccess(obj: Any?): Boolean {
