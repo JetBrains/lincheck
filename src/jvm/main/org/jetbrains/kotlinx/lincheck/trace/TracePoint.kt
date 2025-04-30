@@ -14,7 +14,6 @@ import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import org.jetbrains.kotlinx.lincheck.strategy.managed.LincheckAnalysisAbortedError
 import org.jetbrains.kotlinx.lincheck.strategy.BlockingReason
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory
 import org.jetbrains.kotlinx.lincheck.util.ThreadId
 import kotlin.collections.map
 import org.jetbrains.kotlinx.lincheck.transformation.CodeLocations
@@ -233,17 +232,13 @@ internal class MethodCallTracePoint(
     callStackTrace: CallStackTrace,
     codeLocation: Int,
     val isStatic: Boolean,
-    val callType: CallType = CallType.NORMAL
+    val callType: CallType = CallType.NORMAL,
+    val isSuspend: Boolean
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, codeLocation) {
     var returnedValue: ReturnedValueResult = ReturnedValueResult.NoValue
     var thrownException: Throwable? = null
     var parameters: List<String>? = null
     var parameterTypes: List<String>? = null
-    
-    var continuation: String? = null
-        private set 
-    val isSuspendMethodCall get() = continuation != null
-    
     private var ownerName: String? = null
     
     val isRootCall get() = callType != CallType.NORMAL
@@ -284,8 +279,12 @@ internal class MethodCallTracePoint(
     
     private fun StringBuilder.appendDefaultMethodCall() {
         if (ownerName != null) append("$ownerName.")
-        append("$methodName(${ parameters?.joinToString(", ") ?: "" })")
-        if (isSuspendMethodCall) append(" [suspendable: $continuation]")
+        if (isSuspend) {
+            append("$methodName(${ parameters?.dropLast(1)?.joinToString(", ") ?: "" })")
+            append(" [suspendable: ${parameters?.last()}]")
+        } else {
+            append("$methodName(${ parameters?.joinToString(", ") ?: "" })")
+        }
     }
     
     private fun StringBuilder.appendReturnedValue() {
@@ -300,7 +299,7 @@ internal class MethodCallTracePoint(
     }
 
     override fun deepCopy(copiedObjects: HashMap<Any, Any>): MethodCallTracePoint = copiedObjects.mapAndCast(this) {
-        MethodCallTracePoint(iThread, actorId, className, methodName, callStackTrace.deepCopy(copiedObjects), codeLocation, isStatic, callType)
+        MethodCallTracePoint(iThread, actorId, className, methodName, callStackTrace.deepCopy(copiedObjects), codeLocation, isStatic, callType, isSuspend)
             .also {
                 it.eventId = eventId
                 it.returnedValue = returnedValue
@@ -308,7 +307,6 @@ internal class MethodCallTracePoint(
                 it.parameters = parameters
                 it.ownerName = ownerName
                 it.parameterTypes = parameterTypes
-                it.continuation = continuation
             }
     }
 
@@ -329,14 +327,8 @@ internal class MethodCallTracePoint(
     }
 
     fun initializeParameters(parameters: List<String>, parameterTypes: List<String>) {
-        if (parameters.lastOrNull()?.startsWith(ObjectLabelFactory.CONTINUATION_REPRESENTATION) == true) {
-            this.parameters = parameters.dropLast(1)
-            this.parameterTypes = parameterTypes.dropLast(1)
-            this.continuation = parameters.last()
-        } else {
-            this.parameters = parameters
-            this.parameterTypes = parameterTypes
-        }
+        this.parameters = parameters
+        this.parameterTypes = parameterTypes
     }
 
     fun initializeOwnerName(ownerName: String) {

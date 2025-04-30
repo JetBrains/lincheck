@@ -1834,6 +1834,7 @@ abstract class ManagedStrategy(
             codeLocation = codeLocation,
             isStatic = (owner == null),
             callType = callType,
+            isSuspend = isSuspendFunction(className, methodName, params)
         )
         // handle non-atomic methods
         if (atomicMethodDescriptor == null) {
