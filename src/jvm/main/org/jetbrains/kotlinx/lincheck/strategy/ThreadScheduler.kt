@@ -407,5 +407,5 @@ open class ThreadScheduler {
 
 }
 
-fun Sequence<RegisteredThread>.toThreadMap(): ThreadMap<Thread> =
+internal fun Sequence<RegisteredThread>.toThreadMap(): ThreadMap<Thread> =
     associate { it.threadId to it.thread }

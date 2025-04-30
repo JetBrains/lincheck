@@ -14,7 +14,10 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import org.jetbrains.kotlinx.lincheck.ExperimentalModelCheckingAPI
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
+import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.runConcurrentTest
+import org.junit.Assume.assumeFalse
+import org.junit.Before
 import org.junit.Test
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
@@ -23,6 +26,9 @@ import kotlin.concurrent.thread
 
 @OptIn(ExperimentalModelCheckingAPI::class)
 class DaemonThreadPoolTest {
+
+    @Before // spin-loop detection is unsupported in trace debugger mode
+    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     @Test
     fun testUselessThreadPool() {
