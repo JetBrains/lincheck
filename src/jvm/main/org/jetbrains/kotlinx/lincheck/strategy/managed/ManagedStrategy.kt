@@ -2446,19 +2446,6 @@ abstract class ManagedStrategy(
         )
     }
 
-    /**
-     * Logs thread events such as thread switches and passed code locations.
-     */
-    private class TraceCollector {
-        private val _trace = mutableListOf<TracePoint>()
-        val trace: List<TracePoint> = _trace
-
-        fun passCodeLocationInternal(tracePoint: TracePoint) {
-            _trace += tracePoint
-        }
-    }
-
-
 
     /**
      * Utility class to set trace point ids for the Lincheck Plugin.
