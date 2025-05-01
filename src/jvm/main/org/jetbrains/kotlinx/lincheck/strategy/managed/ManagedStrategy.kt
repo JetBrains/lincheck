@@ -203,6 +203,11 @@ abstract class ManagedStrategy(
      */
     private var skipNextBeforeEvent = false
 
+    // Symbolizes that the `SpinCycleStartTracePoint` was added into the trace.
+    private var spinCycleStartAdded = false
+    // Stores the accumulated call stack after the start of spin cycle
+    private val spinCycleMethodCallsStackTraces: MutableList<List<CallStackTraceElement>> = mutableListOf()
+
     init {
         ObjectLabelFactory.isGPMCMode = isGeneralPurposeModelCheckingScenario(scenario)
     }
@@ -497,9 +502,6 @@ abstract class ManagedStrategy(
         if (decision.isLivelockDetected) {
             failIfObstructionFreedomIsRequired {
                 traceCollector?.passObstructionFreedomViolationTracePoint(
-                    iThread,
-                    currentActorId[iThread]!!,
-                    callStackTrace[iThread]!!,
                     beforeMethodCall = beforeMethodCallSwitch
                 )
                 OBSTRUCTION_FREEDOM_SPINLOCK_VIOLATION_MESSAGE
@@ -508,10 +510,6 @@ abstract class ManagedStrategy(
         // if live-lock failure was detected, then fail immediately
         if (decision is LoopDetector.Decision.LivelockFailureDetected) {
             traceCollector?.newSwitch(
-                iThread,
-                currentActorId[iThread]!!,
-                callStackTrace[iThread]!!,
-                suspendedFunctionsStack[iThread]!!,
                 SwitchReason.ActiveLock,
                 beforeMethodCallSwitch = beforeMethodCallSwitch
             )
@@ -578,10 +576,6 @@ abstract class ManagedStrategy(
                 blockThread(iThread, blockingReason)
             }
             traceCollector?.newSwitch(
-                iThread,
-                currentActorId[iThread]!!,
-                callStackTrace[iThread]!!,
-                suspendedFunctionsStack[iThread]!!,
                 switchReason,
                 beforeMethodCallSwitch
             )
@@ -1377,13 +1371,7 @@ abstract class ManagedStrategy(
     override fun afterWrite() {
         if (collectTrace) {
             runInsideIgnoredSection {
-                val currentThreadId = threadScheduler.getCurrentThreadId()
-                traceCollector?.addStateRepresentation(
-                    currentThreadId,
-                    currentActorId[currentThreadId]!!,
-                    callStackTrace[currentThreadId]!!,
-                    runner.constructStateRepresentation()
-                )
+                traceCollector?.addStateRepresentation()
             }
         }
     }
@@ -1650,12 +1638,7 @@ abstract class ManagedStrategy(
         }
         // check for livelock and create the method call trace point
         if (collectTrace) {
-            traceCollector!!.checkActiveLockDetected(
-                threadId,
-                currentActorId[threadId]!!,
-                callStackTrace[threadId]!!,
-                loopDetector.replayModeCurrentlyInSpinCycle
-            )
+            traceCollector.checkActiveLockDetected()
             addBeforeMethodCallTracePoint(threadId, receiver, codeLocation, methodId, className, methodName, params,
                 atomicMethodDescriptor, MethodCallTracePoint.CallType.NORMAL
             )
@@ -1731,12 +1714,7 @@ abstract class ManagedStrategy(
                     else -> tracePoint.initializeReturnedValue(adornedStringRepresentation(result), objectFqTypeName(result))
                 }
                 afterMethodCall(threadId, tracePoint)
-                traceCollector!!.addStateRepresentation(
-                    threadId,
-                    currentActorId[threadId]!!,
-                    callStackTrace[threadId]!!,
-                    runner.constructStateRepresentation()
-                )
+                traceCollector.addStateRepresentation()
             }
         }
         // if the method has certain guarantees, leave the corresponding section
@@ -1780,12 +1758,7 @@ abstract class ManagedStrategy(
             val tracePoint = callStackTrace[threadId]!!.last().tracePoint
             if (!tracePoint.isActor) tracePoint.initializeThrownException(throwable)
             afterMethodCall(threadId, tracePoint)
-            traceCollector!!.addStateRepresentation(
-                threadId,
-                currentActorId[threadId]!!,
-                callStackTrace[threadId]!!,
-                runner.constructStateRepresentation(),
-            )
+            traceCollector?.addStateRepresentation()
         }
         // if the method has certain guarantees, leave the corresponding section
         leaveAnalysisSection(threadId, methodSection)
@@ -2369,15 +2342,10 @@ abstract class ManagedStrategy(
         return threadId in (0 ..< nThreads)
     }
 
+    // == TRACE COLLECTOR EXTENSION METHODS ==
     private fun TraceCollector.passCodeLocation(tracePoint: TracePoint?) {
-        val currentThreadId = threadScheduler.getCurrentThreadId()
         if (tracePoint !is SectionDelimiterTracePoint && tracePoint?.isActorMethodCallTracePoint() == false) {
-            checkActiveLockDetected(
-                currentThreadId,
-                currentActorId[currentThreadId]!!,
-                callStackTrace[currentThreadId]!!,
-                loopDetector.replayModeCurrentlyInSpinCycle,
-            )
+            checkActiveLockDetected()
         }
 
         if (tracePoint != null) {
@@ -2390,116 +2358,103 @@ abstract class ManagedStrategy(
         }
     }
 
+    private fun TraceCollector?.newSwitch(reason: SwitchReason, beforeMethodCallSwitch: Boolean) {
+        if (this == null) return
+
+        val threadId = threadScheduler.getCurrentThreadId()
+        if (reason == SwitchReason.ActiveLock) {
+            afterSpinCycleTraceCollected(
+                trace = trace,
+                callStackTrace = callStackTrace[threadId]!!,
+                spinCycleMethodCallsStackTraces = spinCycleMethodCallsStackTraces,
+                iThread = threadId,
+                beforeMethodCallSwitch = beforeMethodCallSwitch
+            )
+        }
+        passCodeLocationInternal(
+            SwitchEventTracePoint(
+                iThread = threadId,
+                actorId = currentActorId[threadId]!!,
+                reason = reason,
+                callStackTrace = when (reason) {
+                    SwitchReason.Suspended -> suspendedFunctionsStack[threadId]!!.reversed()
+                    else -> callStackTrace[threadId]!!
+                },
+            )
+        )
+        spinCycleStartAdded = false
+    }
+
+    private fun TraceCollector?.onThreadFinish() {
+        if (this == null) return
+        spinCycleStartAdded = false
+    }
+
+    private fun TraceCollector?.checkActiveLockDetected() {
+        if (this == null || !loopDetector.replayModeCurrentlyInSpinCycle) return
+
+        val threadId = threadScheduler.getCurrentThreadId()
+        if (spinCycleStartAdded) {
+            spinCycleMethodCallsStackTraces += callStackTrace[threadId]!!.toList()
+        } else {
+            passCodeLocationInternal(
+                SpinCycleStartTracePoint(
+                    iThread = threadId,
+                    actorId = currentActorId[threadId]!!,
+                    callStackTrace = callStackTrace[threadId]!!,
+                )
+            )
+            spinCycleStartAdded = true
+            spinCycleMethodCallsStackTraces.clear()
+        }
+    }
+
+    private fun TraceCollector?.addStateRepresentation() {
+        if (this == null) return
+
+        val stateRepresentation = runner.constructStateRepresentation() ?: return
+
+        val threadId = threadScheduler.getCurrentThreadId()
+        // use call stack trace of the previous trace point
+        traceCollector?.passCodeLocationInternal(
+            StateRepresentationTracePoint(
+                iThread = threadId,
+                actorId = currentActorId[threadId]!!,
+                stateRepresentation = stateRepresentation,
+                callStackTrace = callStackTrace[threadId]!!,
+            )
+        )
+    }
+
+    private fun TraceCollector?.passObstructionFreedomViolationTracePoint(beforeMethodCall: Boolean) {
+        if (this == null) return
+
+        val threadId = threadScheduler.getCurrentThreadId()
+        afterSpinCycleTraceCollected(
+            trace = trace,
+            callStackTrace = callStackTrace[threadId]!!,
+            spinCycleMethodCallsStackTraces = spinCycleMethodCallsStackTraces,
+            iThread = threadId,
+            beforeMethodCallSwitch = beforeMethodCall
+        )
+        passCodeLocationInternal(
+            ObstructionFreedomViolationExecutionAbortTracePoint(
+                iThread = threadId,
+                actorId = currentActorId[threadId]!!,
+                callStackTrace = trace.last().callStackTrace
+            )
+        )
+    }
+
     /**
      * Logs thread events such as thread switches and passed code locations.
      */
     private class TraceCollector {
         private val _trace = mutableListOf<TracePoint>()
         val trace: List<TracePoint> = _trace
-        private var spinCycleStartAdded = false
-
-        private val spinCycleMethodCallsStackTraces: MutableList<List<CallStackTraceElement>> = mutableListOf()
-
-        fun newSwitch(
-            iThread: Int,
-            actorId: Int,
-            callStackTrace: List<CallStackTraceElement>,
-            suspendedFunctionsStack: List<CallStackTraceElement>,
-            reason: SwitchReason,
-            beforeMethodCallSwitch: Boolean
-        ) {
-            if (reason == SwitchReason.ActiveLock) {
-                afterSpinCycleTraceCollected(
-                    trace = trace,
-                    callStackTrace = callStackTrace,
-                    spinCycleMethodCallsStackTraces = spinCycleMethodCallsStackTraces,
-                    iThread = iThread,
-                    beforeMethodCallSwitch = beforeMethodCallSwitch
-                )
-            }
-            passCodeLocationInternal(
-                SwitchEventTracePoint(
-                    iThread = iThread,
-                    actorId = actorId,
-                    reason = reason,
-                    callStackTrace = when (reason) {
-                        SwitchReason.Suspended -> suspendedFunctionsStack.reversed()
-                        else -> callStackTrace
-                    },
-                )
-            )
-            spinCycleStartAdded = false
-        }
-
-        fun onThreadFinish() {
-            spinCycleStartAdded = false
-        }
-
-        fun checkActiveLockDetected(
-            iThread: Int,
-            actorId: Int,
-            callStackTrace: List<CallStackTraceElement>,
-            replayModeCurrentlyInSpinCycle: Boolean,
-        ) {
-            if (!replayModeCurrentlyInSpinCycle) return
-            if (spinCycleStartAdded) {
-                spinCycleMethodCallsStackTraces += callStackTrace.toList()
-                return
-            }
-            passCodeLocationInternal(
-                SpinCycleStartTracePoint(
-                    iThread = iThread,
-                    actorId = actorId,
-                    callStackTrace = callStackTrace,
-                )
-            )
-            spinCycleStartAdded = true
-            spinCycleMethodCallsStackTraces.clear()
-        }
 
         fun passCodeLocationInternal(tracePoint: TracePoint) {
             _trace += tracePoint
-        }
-
-        fun addStateRepresentation(
-            iThread: Int,
-            actorId: Int,
-            callStackTrace: List<CallStackTraceElement>,
-            stateRepresentation: String?
-        ) {
-            if (stateRepresentation == null) return
-            // use call stack trace of the previous trace point
-            passCodeLocationInternal(
-                StateRepresentationTracePoint(
-                    iThread = iThread,
-                    actorId = actorId,
-                    stateRepresentation = stateRepresentation,
-                    callStackTrace = callStackTrace,
-                )
-            )
-
-        }
-
-        fun passObstructionFreedomViolationTracePoint(
-            iThread: Int,
-            actorId: Int,
-            callStackTrace: List<CallStackTraceElement>,
-            beforeMethodCall: Boolean
-        ) {
-            afterSpinCycleTraceCollected(
-                trace = trace,
-                callStackTrace = callStackTrace,
-                spinCycleMethodCallsStackTraces = spinCycleMethodCallsStackTraces,
-                iThread = iThread,
-                beforeMethodCallSwitch = beforeMethodCall
-            )
-            passCodeLocationInternal(
-                ObstructionFreedomViolationExecutionAbortTracePoint(
-                    iThread = iThread,
-                    actorId = actorId,
-                    callStackTrace = trace.last().callStackTrace
-                )
-            )
         }
     }
 
