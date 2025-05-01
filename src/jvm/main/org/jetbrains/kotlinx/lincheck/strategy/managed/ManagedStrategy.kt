@@ -2418,14 +2418,16 @@ abstract class ManagedStrategy(
                     beforeMethodCallSwitch = beforeMethodCallSwitch
                 )
             }
-            _trace += SwitchEventTracePoint(
-                iThread = iThread,
-                actorId = actorId,
-                reason = reason,
-                callStackTrace = when (reason) {
-                    SwitchReason.Suspended -> suspendedFunctionsStack.reversed()
-                    else -> callStackTrace
-                },
+            passCodeLocationInternal(
+                SwitchEventTracePoint(
+                    iThread = iThread,
+                    actorId = actorId,
+                    reason = reason,
+                    callStackTrace = when (reason) {
+                        SwitchReason.Suspended -> suspendedFunctionsStack.reversed()
+                        else -> callStackTrace
+                    },
+                )
             )
             spinCycleStartAdded = false
         }
@@ -2445,12 +2447,13 @@ abstract class ManagedStrategy(
                 spinCycleMethodCallsStackTraces += callStackTrace.toList()
                 return
             }
-            val spinCycleStartTracePoint = SpinCycleStartTracePoint(
-                iThread = iThread,
-                actorId = actorId,
-                callStackTrace = callStackTrace,
+            passCodeLocationInternal(
+                SpinCycleStartTracePoint(
+                    iThread = iThread,
+                    actorId = actorId,
+                    callStackTrace = callStackTrace,
+                )
             )
-            _trace.add(spinCycleStartTracePoint)
             spinCycleStartAdded = true
             spinCycleMethodCallsStackTraces.clear()
         }
@@ -2467,12 +2470,15 @@ abstract class ManagedStrategy(
         ) {
             if (stateRepresentation == null) return
             // use call stack trace of the previous trace point
-            _trace += StateRepresentationTracePoint(
-                iThread = iThread,
-                actorId = actorId,
-                stateRepresentation = stateRepresentation,
-                callStackTrace = callStackTrace,
+            passCodeLocationInternal(
+                StateRepresentationTracePoint(
+                    iThread = iThread,
+                    actorId = actorId,
+                    stateRepresentation = stateRepresentation,
+                    callStackTrace = callStackTrace,
+                )
             )
+
         }
 
         fun passObstructionFreedomViolationTracePoint(
@@ -2489,10 +2495,12 @@ abstract class ManagedStrategy(
                 currentActorId = actorId,
                 beforeMethodCallSwitch = beforeMethodCall
             )
-            _trace += ObstructionFreedomViolationExecutionAbortTracePoint(
-                iThread = iThread,
-                actorId = actorId,
-                callStackTrace = _trace.last().callStackTrace
+            passCodeLocationInternal(
+                ObstructionFreedomViolationExecutionAbortTracePoint(
+                    iThread = iThread,
+                    actorId = actorId,
+                    callStackTrace = _trace.last().callStackTrace
+                )
             )
         }
     }
