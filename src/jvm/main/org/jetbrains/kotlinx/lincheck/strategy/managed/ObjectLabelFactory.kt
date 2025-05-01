@@ -71,7 +71,7 @@ object ObjectLabelFactory {
             return "Thread#${getObjectNumber(Thread::class.java, obj)}"
         }
         if (obj is Continuation<*>) {
-            return "$CONTINUATION_REPRESENTATION#${getObjectNumber(Continuation::class.java, obj)}"
+            return "Continuation#${getObjectNumber(Continuation::class.java, obj)}"
         }
         runCatching {
             if (obj.javaClass.isAnonymousClass) {
@@ -106,6 +106,4 @@ object ObjectLabelFactory {
             else -> obj.javaClass.simpleName
         }
     }
-
-    const val CONTINUATION_REPRESENTATION = "Continuation"
 }
