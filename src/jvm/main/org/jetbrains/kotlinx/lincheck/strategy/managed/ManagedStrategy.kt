@@ -2371,15 +2371,22 @@ abstract class ManagedStrategy(
 
     private fun TraceCollector.passCodeLocation(tracePoint: TracePoint?) {
         val currentThreadId = threadScheduler.getCurrentThreadId()
-        passCodeLocation(
-            currentThreadId,
-            currentActorId[currentThreadId]!!,
-            callStackTrace[currentThreadId]!!,
-            loopDetector.replayModeCurrentlyInSpinCycle,
-            tracePoint,
-        )
-        if (tracePoint != null && !tracePoint.isActorMethodCallTracePoint()) {
-            setBeforeEventId(tracePoint)
+        if (tracePoint !is SectionDelimiterTracePoint && tracePoint?.isActorMethodCallTracePoint() == false) {
+            checkActiveLockDetected(
+                currentThreadId,
+                currentActorId[currentThreadId]!!,
+                callStackTrace[currentThreadId]!!,
+                loopDetector.replayModeCurrentlyInSpinCycle,
+            )
+        }
+
+        if (tracePoint != null) {
+            // tracePoint can be null here if trace is not available, e.g. in case of suspension
+            passCodeLocationInternal(tracePoint)
+
+            if (!tracePoint.isActorMethodCallTracePoint()) {
+                setBeforeEventId(tracePoint)
+            }
         }
     }
 
@@ -2448,25 +2455,8 @@ abstract class ManagedStrategy(
             spinCycleMethodCallsStackTraces.clear()
         }
 
-        fun passCodeLocation(
-            iThread: Int,
-            actorId: Int,
-            callStackTrace: List<CallStackTraceElement>,
-            replayModeCurrentlyInSpinCycle: Boolean,
-            tracePoint: TracePoint?
-        ) {
-            if (tracePoint !is SectionDelimiterTracePoint && tracePoint?.isActorMethodCallTracePoint() == false) {
-                checkActiveLockDetected(
-                    iThread,
-                    actorId,
-                    callStackTrace,
-                    replayModeCurrentlyInSpinCycle,
-                )
-            }
-            // tracePoint can be null here if trace is not available, e.g., in case of suspension
-            if (tracePoint != null) {
-                _trace += tracePoint
-            }
+        fun passCodeLocationInternal(tracePoint: TracePoint) {
+            _trace += tracePoint
         }
 
         fun addStateRepresentation(
