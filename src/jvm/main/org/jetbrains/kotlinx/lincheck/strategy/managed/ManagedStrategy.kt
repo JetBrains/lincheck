@@ -2410,11 +2410,10 @@ abstract class ManagedStrategy(
         ) {
             if (reason == SwitchReason.ActiveLock) {
                 afterSpinCycleTraceCollected(
-                    trace = _trace,
+                    trace = trace,
                     callStackTrace = callStackTrace,
                     spinCycleMethodCallsStackTraces = spinCycleMethodCallsStackTraces,
                     iThread = iThread,
-                    currentActorId = actorId,
                     beforeMethodCallSwitch = beforeMethodCallSwitch
                 )
             }
@@ -2488,18 +2487,17 @@ abstract class ManagedStrategy(
             beforeMethodCall: Boolean
         ) {
             afterSpinCycleTraceCollected(
-                trace = _trace,
+                trace = trace,
                 callStackTrace = callStackTrace,
                 spinCycleMethodCallsStackTraces = spinCycleMethodCallsStackTraces,
                 iThread = iThread,
-                currentActorId = actorId,
                 beforeMethodCallSwitch = beforeMethodCall
             )
             passCodeLocationInternal(
                 ObstructionFreedomViolationExecutionAbortTracePoint(
                     iThread = iThread,
                     actorId = actorId,
-                    callStackTrace = _trace.last().callStackTrace
+                    callStackTrace = trace.last().callStackTrace
                 )
             )
         }
