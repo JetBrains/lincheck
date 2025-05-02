@@ -11,17 +11,29 @@
 package org.jetbrains.kotlinx.lincheck_test.representation
 
 class InlineMethodRepresentationTest: BaseTraceRepresentationTest("inline_method") {
+    private val isc = InlineSetterClass()
+
     var escape: Any? = null
 
-    inline fun callSetter(value: String, setter: (String) -> Unit) {
-        setter(value)
+    private inline fun thisClassInlineFunc(value: String, setter: (String) -> Unit) {
+        outsideInlineFunc(value, setter)
     }
 
     override fun operation() {
         escape = "START"
-        callSetter("INLINE") {
+        isc.otherClassInlineFunc("INLINE") {
             escape = it
         }
         escape = "END"
     }
+}
+
+private class InlineSetterClass {
+    inline fun otherClassInlineFunc(value: String, setter: (String) -> Unit) {
+        outsideInlineFunc(value, setter)
+    }
+}
+
+internal inline fun outsideInlineFunc(value: String, setter: (String) -> Unit) {
+    setter(value)
 }

@@ -13,13 +13,14 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| ---------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                 Thread 1                                                                 |
-| ---------------------------------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                                              |
-|   escape = "START" at InlineMethodRepresentationTest.operation(InlineMethodRepresentationTest.kt:21)                                     |
-|   <inline>.callSetter() at InlineMethodRepresentationTest.operation(InlineMethodRepresentationTest.kt:22)                                |
-|     InlineMethodRepresentationTest#1.escape = "INLINE" at InlineMethodRepresentationTest.operation(InlineMethodRepresentationTest.kt:23) |
-|   escape = "END" at InlineMethodRepresentationTest.operation(InlineMethodRepresentationTest.kt:25)                                       |
-|   result: void                                                                                                                           |
-| ---------------------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------------------------------------------------------------------------------------------------------------------ |
+|                                                                  Thread 1                                                                  |
+| ------------------------------------------------------------------------------------------------------------------------------------------ |
+| operation()                                                                                                                                |
+|   escape = "START" at InlineMethodRepresentationTest.operation(InlineMethodRepresentationTest.kt:21)                                       |
+|   callSetter() at InlineMethodRepresentationTest.operation(InlineMethodRepresentationTest.kt:22)                                           |
+|     outsideInlineFunc() at InlineMethodRepresentationTest.operation(InlineMethodRepresentationTest.kt:34)                                  |
+|       InlineMethodRepresentationTest#1.escape = "INLINE" at InlineMethodRepresentationTest.operation(InlineMethodRepresentationTest.kt:23) |
+|   escape = "END" at InlineMethodRepresentationTest.operation(InlineMethodRepresentationTest.kt:25)                                         |
+|   result: void                                                                                                                             |
+| ------------------------------------------------------------------------------------------------------------------------------------------ |

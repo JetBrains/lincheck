@@ -1791,9 +1791,11 @@ abstract class ManagedStrategy(
     }
 
     override fun onInlineMethodCall(
+        className: String,
         methodName: String,
         methodId: Int,
         codeLocation: Int,
+        owner: Any?,
     ) = runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
         if (threadScheduler.isAborted(threadId)) {
@@ -1803,10 +1805,10 @@ abstract class ManagedStrategy(
             traceCollector!!.checkActiveLockDetected()
             addBeforeMethodCallTracePoint(
                 threadId = threadId,
-                owner = null,
+                owner = owner,
                 codeLocation = codeLocation,
                 methodId = methodId,
-                className = "<inline>",
+                className = className,
                 methodName = methodName,
                 methodParams = emptyArray(),
                 atomicMethodDescriptor = null,
@@ -2084,7 +2086,7 @@ abstract class ManagedStrategy(
         // handle non-atomic methods
         if (atomicMethodDescriptor == null) {
             val ownerName = if (owner != null) findOwnerName(owner) else className.toSimpleClassName()
-            if (ownerName != null) {
+            if (ownerName != null && !ownerName.isEmpty()) {
                 tracePoint.initializeOwnerName(ownerName)
             }
             tracePoint.initializeParameters(params.toList())

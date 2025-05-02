@@ -11,6 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.jetbrains.kotlinx.lincheck.util.isPrimitive
 import org.objectweb.asm.Label
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type.*
@@ -31,21 +32,28 @@ internal class InlineMethodCallTransformer(
     val inlineStack = ArrayList<LocalVariableInfo>()
 
     override fun visitLabel(label: Label?)  = adapter.run {
+        locals.visitLabel(label)
         if (label == null || !locals.hasInlines) {
             super.visitLabel(label)
             return
         }
         // TODO Find a way to sort multiple marker variables with same start by end label
-        var lvar = locals.inlineStartMarkers[label]?.first()
+        var lvar = locals.inlinesStartAt(label).firstOrNull()
         if (lvar != null) {
             // Start a new inline call: We cannot start a true call as we don't have a lot of necessary
             // information, such as method descriptor, variables' types, etc.
             inlineStack.add(lvar)
+            // Try to find active "this_$iv[$iv...]" variable to extract class name
+            val suffix = "\$iv".repeat(inlineStack.size)
+            val this_ = locals.activeVariables().firstOrNull({ it.name == "this_$suffix" })
+            val clazz = this_?.type
+            val className = if (clazz != null && clazz.sort == OBJECT) clazz.className else ""
+            val thisLocal = if (clazz != null && clazz.sort == OBJECT) this_.index else null
             visitLabel(label)
             invokeIfInAnalyzedCode(
                 original = {},
                 instrumented = {
-                    processInlineMethodCall(lvar!!.inlineMethodName, label)
+                    processInlineMethodCall(className, lvar!!.inlineMethodName, thisLocal, label)
                 }
             )
             return
@@ -68,18 +76,23 @@ internal class InlineMethodCallTransformer(
         super.visitLabel(label)
     }
 
-    @Suppress("UNUSED_PARAMETER")
-    private fun processInlineMethodCall(inlineMethodName: String, startLabel: Label) = adapter.run {
+    private fun processInlineMethodCall(className: String, inlineMethodName: String, owner: Int?, startLabel: Label) = adapter.run {
         // Create a fake method descriptor
         val methodId = getPseudoMethodId(startLabel, inlineMethodName)
+        push(className)
         push(inlineMethodName)
         push(methodId)
         loadNewCodeLocationId()
+        if (owner == null) {
+            pushNull()
+        }
+        else {
+            loadLocal(owner)
+        }
         invokeStatic(Injections::onInlineMethodCall)
         invokeBeforeEventIfPluginEnabled("inline method call $inlineMethodName in $methodName", setMethodEventId = true)
     }
 
-    @Suppress("UNUSED_PARAMETER")
     private fun processInlineMethodCallReturn(inlineMethodName: String, startLabel: Label) = adapter.run {
         // Create a fake method descriptor
         val methodId = getPseudoMethodId(startLabel, inlineMethodName)

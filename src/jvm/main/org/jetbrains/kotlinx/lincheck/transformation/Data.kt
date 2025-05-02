@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.transformation
 
 import org.objectweb.asm.Label
 import org.objectweb.asm.Type
+import java.util.Collections.unmodifiableSet
 
 internal fun List<LocalVariableInfo>.isUniqueVariable(): Boolean {
     val name = first().name
@@ -19,20 +20,33 @@ internal fun List<LocalVariableInfo>.isUniqueVariable(): Boolean {
     return all { it.name == name && it.type == type }
 }
 
-internal data class LocalVariableInfo(val name: String, val labelIndexRange: Pair<Label, Label>, val type: Type) {
+internal data class LocalVariableInfo(val name: String, val index: Int, val labelIndexRange: Pair<Label, Label>, val type: Type) {
     val isInlineCallMarker = name.startsWith("\$i\$f\$")
     val inlineMethodName = if (isInlineCallMarker) name.substring(5) else name
 }
 
-internal data class MethodVariables(
-    val variables: Map<Int, List<LocalVariableInfo>>,
-    val inlineStartMarkers: Map<Label, List<LocalVariableInfo>>,
-    val inlineEndMarkers: Map<Label, List<LocalVariableInfo>>
-) {
-    constructor(variables: Map<Int, List<LocalVariableInfo>>) : this(variables, groupMarkersByStart(variables), groupMarkersByEnd(variables))
-    constructor() : this(emptyMap(), emptyMap(), emptyMap())
+internal data class MethodVariables(val variables: Map<Int, List<LocalVariableInfo>>) {
+    constructor() : this(emptyMap())
 
-    val hasInlines = inlineStartMarkers.isNotEmpty() && inlineEndMarkers.isNotEmpty()
+    private val varsByStartLabel = variables.values.flatten().groupBy { it.labelIndexRange.first }
+    private val varsByEndLabel = variables.values.flatten().groupBy { it.labelIndexRange.second }
+    private val activeVars: MutableSet<LocalVariableInfo> = mutableSetOf()
+
+    val hasInlines = variables.values.flatten().any { it.isInlineCallMarker }
+
+    fun visitLabel(label: Label?) {
+        if (label != null) {
+            activeVars.removeAll(varsByEndLabel[label].orEmpty())
+            activeVars.addAll(varsByStartLabel[label].orEmpty())
+        }
+    }
+
+    fun activeVariables(): Set<LocalVariableInfo> = activeVars
+    fun variablesStartAt(label: Label): List<LocalVariableInfo> = varsByStartLabel[label].orEmpty()
+    fun variablesEndAt(label: Label): List<LocalVariableInfo> = varsByEndLabel[label].orEmpty()
+
+    fun inlinesStartAt(label: Label): List<LocalVariableInfo> = varsByStartLabel[label].orEmpty().filter { it.isInlineCallMarker }
+    fun inlinesEndAt(label: Label): List<LocalVariableInfo> = varsByEndLabel[label].orEmpty().filter { it.isInlineCallMarker }
 }
 
 private fun groupMarkersByStart(variables: Map<Int, List<LocalVariableInfo>>) = groupMarkersBy(variables) { it.labelIndexRange.first }

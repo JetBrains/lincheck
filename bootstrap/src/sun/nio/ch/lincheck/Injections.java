@@ -612,8 +612,8 @@ public class Injections {
     /**
      * Called from the instrumented code before any kotlin inlined method call.
      */
-    public static void onInlineMethodCall(String methodName, int methodId, int codeLocation) {
-        getEventTracker().onInlineMethodCall(methodName, methodId, codeLocation);
+    public static void onInlineMethodCall(String className, String methodName, int methodId, int codeLocation, Object owner) {
+        getEventTracker().onInlineMethodCall(className, methodName, methodId, codeLocation, owner);
     }
 
     /**

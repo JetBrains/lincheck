@@ -121,7 +121,7 @@ internal class LocalVariablesAccessTransformer(
 
     // TODO: does not work
     private fun findNameForLabelIndex(localList: List<LocalVariableInfo>) =
-        localList.find { (_, range, _) -> 
+        localList.find { (_, _, range, _) ->
             val (start, finish) = range
             start in visitedLabels && finish !in visitedLabels
         }
