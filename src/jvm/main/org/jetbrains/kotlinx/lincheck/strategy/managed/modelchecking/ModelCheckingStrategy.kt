@@ -311,20 +311,20 @@ internal class ModelCheckingStrategy(
 
         fun chooseThread(iThread: Int): Int =
             if (currentInterleavingPosition < threadSwitchChoices.size) {
-//                check(
-//                    // no thread switch happened yet, initial thread id will be returned
-//                    executionPosition == -1 ||
-//                    // loop detector fully controls 'switchPositions' by itself, thus, 'executionPosition' is always 0, but 'threadSwitchChoices' are still valid
-//                    (executionPosition == 0 && loopDetector.replayModeEnabled) ||
-//                    // 'threadSwitchChoices.size == switchPositions.size + 1', thus, we subtract 1 from 'currentInterleavingPosition'
-//                    // (indexing is correct, because if 'currentInterleavingPosition' is 0, then 'executionPosition == -1' would hold, and we would exit disjunction earlier)
-//                    executionPosition == switchPositions[currentInterleavingPosition - 1]
-//                ) {
-//                    """
-//                        Attempt to switch thread on execution position which does not correspond to any saved switch position.
-//                        Execution position: $executionPosition, switch positions: $switchPositions.
-//                    """.trimIndent()
-//                }
+                check(
+                    // no thread switch happened yet, initial thread id will be returned
+                    executionPosition == -1 ||
+                    // loop detector fully controls 'switchPositions' by itself, thus, 'executionPosition' is always 0, but 'threadSwitchChoices' are still valid
+                    (executionPosition == 0 && loopDetector.replayModeEnabled) ||
+                    // 'threadSwitchChoices.size == switchPositions.size + 1', thus, we subtract 1 from 'currentInterleavingPosition'
+                    // (indexing is correct, because if 'currentInterleavingPosition' is 0, then 'executionPosition == -1' would hold, and we would exit disjunction earlier)
+                    executionPosition == switchPositions[currentInterleavingPosition - 1]
+                ) {
+                    """
+                        Attempt to switch thread on execution position which does not correspond to any saved switch position.
+                        Execution position: $executionPosition, switch positions: $switchPositions.
+                    """.trimIndent()
+                }
                 // Use the predefined choice.
                 threadSwitchChoices[currentInterleavingPosition++]
             } else {
@@ -350,13 +350,13 @@ internal class ModelCheckingStrategy(
                 // Add a new thread choosing node corresponding to the switch at the current execution position.
                 if (lastNotInitializedNodeChoices == null) return
                 val availableThreads = switchableThreads(iThread)
-//                val lastThreadSwitchChoice = threadSwitchChoices.lastOrNull()
-//                check(lastThreadSwitchChoice !in availableThreads) {
-//                    """
-//                        Attempt to add a thread choice node with the option for switching to the same thread.
-//                        Threads switches: $threadSwitchChoices, added new thread options: $availableThreads, current thread: $iThread.
-//                    """.trimIndent()
-//                }
+                val lastThreadSwitchChoice = threadSwitchChoices.lastOrNull()
+                check(lastThreadSwitchChoice !in availableThreads) {
+                    """
+                        Attempt to add a thread choice node with the option for switching to the same thread.
+                        Threads switches: $threadSwitchChoices, added new thread options: $availableThreads, current thread: $iThread.
+                    """.trimIndent()
+                }
                 lastNotInitializedNodeChoices!!.add(Choice(ThreadChoosingNode(availableThreads), executionPosition))
             }
         }
