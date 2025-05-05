@@ -245,16 +245,16 @@ internal fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Ar
                             TracePointType.REGULAR
                     }
                     val relatedTypes = getRelatedTypeList(event)
-                    "${type.ordinal};${node.iThread};${node.callDepth};${preExpandedNodeSet.contains(node)};${eventId};${representation}${location};${locationId};[${relatedTypes.joinToString(",")}];false"
+                    "${type.ordinal};${node.iThread};${node.callDepth};${preExpandedNodeSet.contains(node)};${eventId};${representation};${location};${locationId};[${relatedTypes.joinToString(",")}];false"
                 }
 
-                is CallNode -> if(node.tracePoint.isRootCall) {
-                    val beforeEventId = node.tracePoint.eventId
+                is CallNode -> if (node.tracePoint.isRootCall) {
+                    val beforeEventId = -1
                     val representation = node.tracePoint.toStringImpl(withLocation = false)
                     val type = TracePointType.ACTOR
                     "${type.ordinal};${node.iThread};${node.callDepth};${preExpandedNodeSet.contains(node)};${beforeEventId};${representation};null;-1;[];false"
                 } else {
-                    val beforeEventId = -1
+                    val beforeEventId = node.tracePoint.eventId
                     val representation = node.tracePoint.toStringImpl(withLocation = false) 
                     val ste = node.tracePoint.stackTraceElement
                     val location = "${ste.className}:${ste.methodName}:${ste.fileName}:${ste.lineNumber}"
