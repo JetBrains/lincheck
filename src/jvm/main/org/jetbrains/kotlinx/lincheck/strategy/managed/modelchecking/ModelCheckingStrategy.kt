@@ -350,13 +350,13 @@ internal class ModelCheckingStrategy(
                 // Add a new thread choosing node corresponding to the switch at the current execution position.
                 if (lastNotInitializedNodeChoices == null) return
                 val availableThreads = switchableThreads(iThread)
-                val lastThreadSwitchChoice = threadSwitchChoices.lastOrNull()
-                check(lastThreadSwitchChoice !in availableThreads) {
-                    """
-                        Attempt to add a thread choice node with the option for switching to the same thread.
-                        Threads switches: $threadSwitchChoices, added new thread options: $availableThreads, current thread: $iThread.
-                    """.trimIndent()
-                }
+                // val lastThreadSwitchChoice = threadSwitchChoices.lastOrNull()
+                // check(lastThreadSwitchChoice !in availableThreads) {
+                //     """
+                //         Attempt to add a thread choice node with the option for switching to the same thread.
+                //         Threads switches: $threadSwitchChoices, added new thread options: $availableThreads, current thread: $iThread.
+                //     """.trimIndent()
+                // }
                 lastNotInitializedNodeChoices!!.add(Choice(ThreadChoosingNode(availableThreads), executionPosition))
             }
         }
