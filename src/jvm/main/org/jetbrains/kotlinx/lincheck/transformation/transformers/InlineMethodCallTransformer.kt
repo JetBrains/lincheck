@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.objectweb.asm.Label
+import org.objectweb.asm.Type
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
 import sun.nio.ch.lincheck.*
@@ -24,17 +25,36 @@ internal class InlineMethodCallTransformer(
     fileName: String,
     className: String,
     methodName: String,
+    desc: String,
     adapter: GeneratorAdapter,
     val locals: MethodVariables
 ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
+    private companion object {
+        val objectType = getObjectType("java/lang/Object").className
+        val contType = getObjectType("kotlin/coroutines/Continuation").className
+    }
+
+    val methodType = getMethodType(desc)
+    val looksLikeSuspendMethod =
+        methodType.returnType.className == objectType &&
+        methodType.argumentTypes.size > 0 &&
+        methodType.argumentTypes[methodType.argumentTypes.size - 1].className == contType &&
+        (
+            locals.hasVarByName("\$completion") ||
+            locals.hasVarByName("\$continuation") ||
+            locals.hasVarByName("\$result")
+        )
+
     val inlineStack = ArrayList<LocalVariableInfo>()
+
 
     override fun visitLabel(label: Label?) = adapter.run {
         locals.visitLabel(label)
-        if (label == null || !locals.hasInlines) {
+        if (label == null || !locals.hasInlines || looksLikeSuspendMethod) {
             super.visitLabel(label)
             return
         }
+
         // TODO Find a way to sort multiple marker variables with same start by end label
         var lvar = locals.inlinesStartAt(label).firstOrNull()
         // Sometimes Kotlin compiler generate "inline marker" inside inline function itself, which

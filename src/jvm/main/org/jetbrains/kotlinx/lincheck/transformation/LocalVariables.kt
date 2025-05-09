@@ -32,6 +32,7 @@ data class MethodVariables(val variables: LocalVariablesMap) {
 
     private val varsByStartLabel = variables.values.flatten().groupBy { it.labelIndexRange.first }
     private val varsByEndLabel = variables.values.flatten().groupBy { it.labelIndexRange.second }
+    private val varsByName = variables.values.flatten().groupBy { it.name }
     private val activeVars: MutableSet<LocalVariableInfo> = mutableSetOf()
 
     val hasInlines = variables.values.flatten().any { it.isInlineCallMarker }
@@ -47,6 +48,12 @@ data class MethodVariables(val variables: LocalVariablesMap) {
     fun variablesStartAt(label: Label): List<LocalVariableInfo> = varsByStartLabel[label].orEmpty()
     fun variablesEndAt(label: Label): List<LocalVariableInfo> = varsByEndLabel[label].orEmpty()
 
-    fun inlinesStartAt(label: Label): List<LocalVariableInfo> = varsByStartLabel[label].orEmpty().filter { it.isInlineCallMarker }
-    fun inlinesEndAt(label: Label): List<LocalVariableInfo> = varsByEndLabel[label].orEmpty().filter { it.isInlineCallMarker }
+    fun inlinesStartAt(label: Label): List<LocalVariableInfo> =
+        varsByStartLabel[label].orEmpty().filter { it.isInlineCallMarker }
+
+    fun inlinesEndAt(label: Label): List<LocalVariableInfo> =
+        varsByEndLabel[label].orEmpty().filter { it.isInlineCallMarker }
+
+    fun getVarByName(name: String): Set<LocalVariableInfo> = varsByName.getOrElse(name, ::emptyList).toSet()
+    fun hasVarByName(name: String): Boolean = varsByName.containsKey(name)
 }
