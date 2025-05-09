@@ -482,13 +482,20 @@ internal fun isThreadContainerClass(className: String): Boolean =
  */
 internal fun isCoroutineInternalClass(className: String): Boolean =
     className == "kotlin.coroutines.intrinsics.IntrinsicsKt" ||
-    className == "kotlinx.coroutines.internal.StackTraceRecoveryKt"
+    className == "kotlinx.coroutines.internal.StackTraceRecoveryKt" ||
+    isCoroutineConcurrentKtInternalClass(className)
 
 /**
  * Tests if the provided [className] represents an internal coroutine dispatcher class.
  */
 internal fun isCoroutineDispatcherInternalClass(className: String): Boolean =
     className.startsWith("kotlinx.coroutines.internal") && className.contains("DispatchedContinuation")
+
+/**
+ * Tests if the provided [className] represents an internal coroutine `kotlinx.coroutines.internal.ConcurrentKt` class.
+ */
+internal fun isCoroutineConcurrentKtInternalClass(className: String): Boolean =
+    className == "kotlinx.coroutines.internal.ConcurrentKt"
 
 /**
  * Checks whether the given class name represents a coroutine state machine class.

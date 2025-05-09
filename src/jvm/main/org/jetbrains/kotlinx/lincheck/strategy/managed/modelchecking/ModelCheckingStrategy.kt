@@ -135,6 +135,22 @@ internal class ModelCheckingStrategy(
             protected set
         val isInitialized get() = ::choices.isInitialized
 
+        override fun toString(): String = getStringRepresentation()
+
+        protected abstract fun getStringRepresentation(indent: String = ""): String
+
+        protected fun StringBuilder.appendChoices(indent: String = ""): StringBuilder {
+            if (isInitialized) {
+                append("[" + choices.map { it.value }.joinToString(", ") + "]\n")
+                choices.forEach { choice ->
+                    append("${indent}\t${choice.value}: ${choice.node.getStringRepresentation("${indent}\t").trim()}\n")
+                }
+            } else {
+                append(" not initialized\n")
+            }
+            return this
+        }
+
         fun nextInterleaving(): Interleaving? {
             if (isFullyExplored) {
                 // Increase the maximum number of switches that can be used,
@@ -211,6 +227,11 @@ internal class ModelCheckingStrategy(
             updateExplorationStatistics()
             return interleaving
         }
+
+        override fun getStringRepresentation(indent: String): String = StringBuilder()
+            .append("${indent}ThreadChoosingNode: threads=")
+            .appendChoices(indent)
+            .toString()
     }
 
     /**
@@ -231,11 +252,16 @@ internal class ModelCheckingStrategy(
             updateExplorationStatistics()
             return interleaving
         }
+
+        override fun getStringRepresentation(indent: String): String = StringBuilder()
+            .append("${indent}SwitchChoosingNode: switch points=")
+            .appendChoices(indent)
+            .toString()
     }
 
     private inner class Choice(val node: InterleavingTreeNode, val value: Int) {
         override fun toString(): String {
-            return "Choice(node=$node, value=$value)"
+            return "Choice(node=${node.javaClass.simpleName}, value=$value)"
         }
     }
 
@@ -260,14 +286,14 @@ internal class ModelCheckingStrategy(
     ) {
         private var lastNotInitializedNode: SwitchChoosingNode? = initialLastNotInitializedNode
         private lateinit var interleavingFinishingRandom: Random
-        private lateinit var nextThreadToSwitch: Iterator<Int>
+        private var currentInterleavingPosition = 0 // specifies index of currently executing thread in 'threadSwitchChoices'
         private var lastNotInitializedNodeChoices: MutableList<Choice>? = null
         private var executionPosition: Int = 0
 
         fun initialize() {
             executionPosition = -1 // the first execution position will be zero
             interleavingFinishingRandom = Random(2) // random with a constant seed
-            nextThreadToSwitch = threadSwitchChoices.iterator()
+            currentInterleavingPosition = 0
             lastNotInitializedNodeChoices = null
             lastNotInitializedNode?.let {
                 // Create a mutable list for the initialization of the not initialized node choices.
@@ -284,9 +310,24 @@ internal class ModelCheckingStrategy(
         }
 
         fun chooseThread(iThread: Int): Int =
-            if (nextThreadToSwitch.hasNext()) {
+            if (currentInterleavingPosition < threadSwitchChoices.size) {
+                // TODO: causes TL on CI
+                // check(
+                //     // no thread switch happened yet, initial thread id will be returned
+                //     executionPosition == -1 ||
+                //     // loop detector fully controls 'switchPositions' by itself, thus, 'executionPosition' is always 0, but 'threadSwitchChoices' are still valid
+                //     (executionPosition == 0 && loopDetector.replayModeEnabled) ||
+                //     // 'threadSwitchChoices.size == switchPositions.size + 1', thus, we subtract 1 from 'currentInterleavingPosition'
+                //     // (indexing is correct, because if 'currentInterleavingPosition' is 0, then 'executionPosition == -1' would hold, and we would exit disjunction earlier)
+                //     executionPosition == switchPositions[currentInterleavingPosition - 1]
+                // ) {
+                //     """
+                //         Attempt to switch thread on execution position which does not correspond to any saved switch position.
+                //         Execution position: $executionPosition, switch positions: $switchPositions.
+                //     """.trimIndent()
+                // }
                 // Use the predefined choice.
-                nextThreadToSwitch.next()
+                threadSwitchChoices[currentInterleavingPosition++]
             } else {
                 // There is no predefined choice.
                 // This can happen if there were forced thread switches after the last predefined one
@@ -306,9 +347,19 @@ internal class ModelCheckingStrategy(
          */
         fun newExecutionPosition(iThread: Int) {
             executionPosition++
-            if (executionPosition > switchPositions.lastOrNull() ?: -1) {
+            if (executionPosition > (switchPositions.lastOrNull() ?: -1)) {
                 // Add a new thread choosing node corresponding to the switch at the current execution position.
-                lastNotInitializedNodeChoices?.add(Choice(ThreadChoosingNode(switchableThreads(iThread)), executionPosition))
+                if (lastNotInitializedNodeChoices == null) return
+                val availableThreads = switchableThreads(iThread)
+                // TODO: causes TL on CI
+                // val lastThreadSwitchChoice = threadSwitchChoices.lastOrNull()
+                // check(lastThreadSwitchChoice !in availableThreads) {
+                //     """
+                //         Attempt to add a thread choice node with the option for switching to the same thread.
+                //         Threads switches: $threadSwitchChoices, added new thread options: $availableThreads, current thread: $iThread.
+                //     """.trimIndent()
+                // }
+                lastNotInitializedNodeChoices!!.add(Choice(ThreadChoosingNode(availableThreads), executionPosition))
             }
         }
 

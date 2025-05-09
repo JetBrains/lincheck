@@ -537,5 +537,6 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         isThreadContainerClass(className) ||
         // TODO: instead of eagerly instrumenting `DispatchedContinuation`
         //  we should try to fix lazy class re-transformation logic
-        isCoroutineDispatcherInternalClass(className)
+        isCoroutineDispatcherInternalClass(className) ||
+        isCoroutineConcurrentKtInternalClass(className)
 }
