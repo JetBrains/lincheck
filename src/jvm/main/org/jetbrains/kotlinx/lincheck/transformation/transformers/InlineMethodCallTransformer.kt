@@ -37,7 +37,9 @@ internal class InlineMethodCallTransformer(
         }
         // TODO Find a way to sort multiple marker variables with same start by end label
         var lvar = locals.inlinesStartAt(label).firstOrNull()
-        if (lvar != null && isSupportedInline(lvar)) {
+        // Sometimes Kotlin compiler generate "inline marker" inside inline function itself, which
+        // covers whole function. Skip this, there is no "inlined call"
+        if (lvar != null && lvar.inlineMethodName != methodName && isSupportedInline(lvar)) {
             // Start a new inline call: We cannot start a true call as we don't have a lot of necessary
             // information, such as method descriptor, variables' types, etc.
             inlineStack.add(lvar)
