@@ -447,7 +447,7 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
                     m.localVariables?.forEach { local ->
                         val index = local.index
                         val type = Type.getType(local.desc)
-                        val info = LocalVariableInfo(local.name, local.index,local.start.label to local.end.label, type)
+                        val info = LocalVariableInfo(local.name, local.index, local.start.label to local.end.label, type)
                         map.getOrPut(index) { mutableListOf() }.add(info)
                     }
                 }

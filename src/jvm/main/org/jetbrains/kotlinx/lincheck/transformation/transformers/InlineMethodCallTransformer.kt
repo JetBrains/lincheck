@@ -31,7 +31,7 @@ internal class InlineMethodCallTransformer(
 ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
     val inlineStack = ArrayList<LocalVariableInfo>()
 
-    override fun visitLabel(label: Label?)  = adapter.run {
+    override fun visitLabel(label: Label?) = adapter.run {
         locals.visitLabel(label)
         if (label == null || !locals.hasInlines) {
             super.visitLabel(label)
@@ -50,10 +50,11 @@ internal class InlineMethodCallTransformer(
             val className = if (clazz != null && clazz.sort == OBJECT) clazz.className else ""
             val thisLocal = if (clazz != null && clazz.sort == OBJECT) this_.index else null
             visitLabel(label)
+            val inlineName = lvar.inlineMethodName!!
             invokeIfInAnalyzedCode(
                 original = {},
                 instrumented = {
-                    processInlineMethodCall(className, lvar!!.inlineMethodName, thisLocal, label)
+                    processInlineMethodCall(className, inlineName, thisLocal, label)
                 }
             )
             return
@@ -61,12 +62,12 @@ internal class InlineMethodCallTransformer(
         // TODO Find a way to sort multiple marker variables with same start by end label
         lvar = inlineStack.lastOrNull()
         if (lvar?.labelIndexRange?.second == label) {
-            // Check that the stack is nor broken against all possible labels in `locals`?
+            // Check that the stack is not broken against all possible labels in `locals`?
             inlineStack.removeLast()
             invokeIfInAnalyzedCode(
                 original = {},
                 instrumented = {
-                    processInlineMethodCallReturn(lvar.inlineMethodName, lvar.labelIndexRange.second)
+                    processInlineMethodCallReturn(lvar.inlineMethodName!!, lvar.labelIndexRange.second)
                 }
             )
             visitLabel(label)

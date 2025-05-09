@@ -12,7 +12,9 @@ package org.jetbrains.kotlinx.lincheck.transformation
 
 import org.objectweb.asm.Label
 import org.objectweb.asm.Type
-import java.util.Collections.unmodifiableSet
+
+typealias StackSlotIndex = Int
+typealias LocalVariablesMap = Map<StackSlotIndex, List<LocalVariableInfo>>
 
 internal fun List<LocalVariableInfo>.isUniqueVariable(): Boolean {
     val name = first().name
@@ -20,12 +22,12 @@ internal fun List<LocalVariableInfo>.isUniqueVariable(): Boolean {
     return all { it.name == name && it.type == type }
 }
 
-internal data class LocalVariableInfo(val name: String, val index: Int, val labelIndexRange: Pair<Label, Label>, val type: Type) {
+data class LocalVariableInfo(val name: String, val index: Int, val labelIndexRange: Pair<Label, Label>, val type: Type) {
     val isInlineCallMarker = name.startsWith("\$i\$f\$")
-    val inlineMethodName = if (isInlineCallMarker) name.substring(5) else name
+    val inlineMethodName = if (isInlineCallMarker) name.substring(5) else null
 }
 
-internal data class MethodVariables(val variables: Map<Int, List<LocalVariableInfo>>) {
+data class MethodVariables(val variables: LocalVariablesMap) {
     constructor() : this(emptyMap())
 
     private val varsByStartLabel = variables.values.flatten().groupBy { it.labelIndexRange.first }
@@ -47,19 +49,4 @@ internal data class MethodVariables(val variables: Map<Int, List<LocalVariableIn
 
     fun inlinesStartAt(label: Label): List<LocalVariableInfo> = varsByStartLabel[label].orEmpty().filter { it.isInlineCallMarker }
     fun inlinesEndAt(label: Label): List<LocalVariableInfo> = varsByEndLabel[label].orEmpty().filter { it.isInlineCallMarker }
-}
-
-private fun groupMarkersByStart(variables: Map<Int, List<LocalVariableInfo>>) = groupMarkersBy(variables) { it.labelIndexRange.first }
-
-private fun groupMarkersByEnd(variables: Map<Int, List<LocalVariableInfo>>) = groupMarkersBy(variables) { it.labelIndexRange.second }
-
-private fun groupMarkersBy(variables: Map<Int, List<LocalVariableInfo>>, key: (LocalVariableInfo) -> Label): Map<Label, List<LocalVariableInfo>> {
-    val rv = mutableMapOf<Label, MutableList<LocalVariableInfo>>()
-    variables.values
-        .flatten()
-        .filter { it.isInlineCallMarker }
-        .forEach {
-            rv.getOrPut(key(it)) { mutableListOf() }.add(it)
-        }
-    return rv
 }

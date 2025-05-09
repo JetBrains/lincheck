@@ -16,12 +16,12 @@ class InlineMethodRepresentationTest: BaseTraceRepresentationTest("inline_method
     var escape: Any? = null
 
     private inline fun thisClassInlineFunc(value: String, setter: (String) -> Unit) {
-        outsideInlineFunc(value, setter)
+        isc.otherClassInlineFunc(value, setter)
     }
 
     override fun operation() {
         escape = "START"
-        isc.otherClassInlineFunc("INLINE") {
+        thisClassInlineFunc("INLINE") {
             escape = it
         }
         escape = "END"
