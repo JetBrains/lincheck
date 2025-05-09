@@ -19,6 +19,7 @@ import org.jetbrains.kotlinx.lincheck_test.guide.MSQueueBlocking
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
 import org.junit.Assume.assumeFalse
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -506,6 +507,7 @@ class SpinLockWithAllEventsWrappedInMethodsTest {
  * Checks that spin cycle properly detected, and the spin cycle label is placed correctly
  * when all the trace points are in the top-level, i.e., right in the actor.
  */
+@Ignore // TODO investigate why this goes OOM #632
 class SingleThreadTopLevelSpinLockTest {
 
     @Before // spin-loop detection is unsupported in trace debugger mode

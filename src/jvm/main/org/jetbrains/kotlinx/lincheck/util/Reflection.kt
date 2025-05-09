@@ -48,7 +48,7 @@ internal fun isSuspendFunction(className: String, methodName: String, params: Ar
  *   with the runtime classes of the elements in this array.
  * @return The matching [Method] object if found, or `null` if no method matches.
  */
-internal fun getMethod(className: String, methodName: String, params: Array<Any?>): Method? {
+internal fun getMethod(className: String, methodName: String, params: Array<Any?>): Method? { 
     val possibleMethods = getCachedFilteredDeclaredMethods(className, methodName)
     // search through all possible methods, matching the arguments' types
     for (method in possibleMethods) {
@@ -75,7 +75,7 @@ private val filteredMethodsCache = hashMapOf<Pair<String, String>, List<Method>>
 private fun getCachedDeclaredMethods(className: String) =
     methodsCache.getOrPut(className) {
         val clazz = Class.forName(className)
-        clazz.declaredMethods
+        (clazz.methods + clazz.declaredMethods).distinct().toTypedArray()
     }
 
 private fun getCachedFilteredDeclaredMethods(className: String, methodName: String) =

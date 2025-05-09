@@ -108,7 +108,6 @@ internal abstract class CodeLocationTracePoint(
     codeLocation: Int
 ) : TracePoint(iThread, actorId, callStackTrace) {
     var stackTraceElement = CodeLocations.stackTrace(codeLocation)
-        private set
 
     var codeLocation = 0
         set(value) {
@@ -233,7 +232,8 @@ internal class MethodCallTracePoint(
     callStackTrace: CallStackTrace,
     codeLocation: Int,
     val isStatic: Boolean,
-    val callType: CallType = CallType.NORMAL
+    val callType: CallType = CallType.NORMAL,
+    val isSuspend: Boolean
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, codeLocation) {
     var returnedValue: ReturnedValueResult = ReturnedValueResult.NoValue
     var thrownException: Throwable? = null
@@ -270,7 +270,6 @@ internal class MethodCallTracePoint(
     }
     
     private fun StringBuilder.appendActor() {
-//        append(methodName)
         append("$methodName(${ parameters?.joinToString(", ") ?: "" })")
         if (returnedValue is ReturnedValueResult.ActorResult && (returnedValue as ReturnedValueResult.ActorResult).showAtBeginningOfActor) {
             append(": ${(returnedValue as ReturnedValueResult.ActorResult).resultRepresentation}")
@@ -280,7 +279,12 @@ internal class MethodCallTracePoint(
     
     private fun StringBuilder.appendDefaultMethodCall() {
         if (ownerName != null) append("$ownerName.")
-        append("$methodName(${ parameters?.joinToString(", ") ?: "" })")
+        if (isSuspend) {
+            append("$methodName(${ parameters?.dropLast(1)?.joinToString(", ") ?: "" })")
+            append(" [suspendable: ${parameters?.last()}]")
+        } else {
+            append("$methodName(${ parameters?.joinToString(", ") ?: "" })")
+        }
     }
     
     private fun StringBuilder.appendReturnedValue() {
@@ -295,7 +299,7 @@ internal class MethodCallTracePoint(
     }
 
     override fun deepCopy(copiedObjects: HashMap<Any, Any>): MethodCallTracePoint = copiedObjects.mapAndCast(this) {
-        MethodCallTracePoint(iThread, actorId, className, methodName, callStackTrace.deepCopy(copiedObjects), codeLocation, isStatic, callType)
+        MethodCallTracePoint(iThread, actorId, className, methodName, callStackTrace.deepCopy(copiedObjects), codeLocation, isStatic, callType, isSuspend)
             .also {
                 it.eventId = eventId
                 it.returnedValue = returnedValue

@@ -71,7 +71,12 @@ internal abstract class TraceNode(var callDepth: Int, val eventNumber: Int, open
         if (policy.shouldIncludeThisNode(this)) return preExpanded to true
         check(preExpanded.isEmpty()) { "Expected pre expanded set to be empty" }
         return preExpanded to false
-    } 
+    }
+
+    /**
+     * Shallow copy without children
+     */
+    abstract fun copy(): TraceNode 
 }
 
 internal class EventNode(
@@ -80,6 +85,7 @@ internal class EventNode(
     eventNumber: Int,
 ): TraceNode(callDepth, eventNumber, tracePoint) {
     override fun toString(): String = tracePoint.toString()
+    override fun copy(): TraceNode = EventNode(callDepth, tracePoint, eventNumber)
 }
 
 internal class CallNode(
@@ -91,6 +97,7 @@ internal class CallNode(
     val isRootCall get() = callDepth == 0
 
     override fun toString(): String = tracePoint.toString()
+    override fun copy(): TraceNode = CallNode(callDepth, tracePoint, eventNumber)
     
     internal fun createResultNodeForEmptyActor() =
         ResultNode(callDepth + 1, tracePoint.returnedValue as ReturnedValueResult.ActorResult, eventNumber, tracePoint)
@@ -100,6 +107,7 @@ internal class CallNode(
 internal class ResultNode(callDepth: Int, val actorResult: ReturnedValueResult.ActorResult, eventNumber: Int, tracePoint: TracePoint)
     : TraceNode(callDepth, eventNumber, tracePoint) {
     override fun toString(): String = "result: ${actorResult.resultRepresentation}"
+    override fun copy(): TraceNode = ResultNode(callDepth, actorResult, eventNumber, tracePoint)
 }
 
 // (stable) Sort on eventNumber
