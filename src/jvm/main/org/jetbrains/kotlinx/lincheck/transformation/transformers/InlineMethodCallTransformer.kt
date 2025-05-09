@@ -11,9 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.jetbrains.kotlinx.lincheck.transformation.*
-import org.jetbrains.kotlinx.lincheck.util.isPrimitive
 import org.objectweb.asm.Label
-import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
 import sun.nio.ch.lincheck.*
@@ -39,7 +37,7 @@ internal class InlineMethodCallTransformer(
         }
         // TODO Find a way to sort multiple marker variables with same start by end label
         var lvar = locals.inlinesStartAt(label).firstOrNull()
-        if (lvar != null) {
+        if (lvar != null && isSupportedInline(lvar)) {
             // Start a new inline call: We cannot start a true call as we don't have a lot of necessary
             // information, such as method descriptor, variables' types, etc.
             inlineStack.add(lvar)
@@ -54,7 +52,7 @@ internal class InlineMethodCallTransformer(
             invokeIfInAnalyzedCode(
                 original = {},
                 instrumented = {
-                    processInlineMethodCall(className, inlineName, thisLocal, label)
+                    processInlineMethodCall(className, inlineName, clazz, thisLocal, label)
                 }
             )
             return
@@ -77,18 +75,31 @@ internal class InlineMethodCallTransformer(
         super.visitLabel(label)
     }
 
-    private fun processInlineMethodCall(className: String, inlineMethodName: String, owner: Int?, startLabel: Label) = adapter.run {
+    @Suppress("UNUSED_PARAMETER")
+    private fun processInlineMethodCall(className: String, inlineMethodName: String, ownerType: org.objectweb.asm.Type?, owner: Int?, startLabel: Label) = adapter.run {
         // Create a fake method descriptor
         val methodId = getPseudoMethodId(startLabel, inlineMethodName)
         push(className)
         push(inlineMethodName)
         push(methodId)
         loadNewCodeLocationId()
-        if (owner == null) {
+        if (owner == null || getLocalType(owner) == null) {
             pushNull()
         }
         else {
-            loadLocal(owner)
+            val asmType = getLocalType(owner)
+            if (asmType == null) {
+                loadLocal(owner, ownerType)
+            }
+            else if (asmType.sort == ownerType?.sort) {
+                loadLocal(owner)
+            }
+            else {
+                // Sometimes ASM freaks out when a slot has completely different types in different frames.
+                // Like, two variables of types Int and Object share a slot, and ASM thinks about it as about Int,
+                // and we try to load it as an Object.
+                pushNull()
+            }
         }
         invokeStatic(Injections::onInlineMethodCall)
         invokeBeforeEventIfPluginEnabled("inline method call $inlineMethodName in $methodName", setMethodEventId = true)
@@ -104,4 +115,8 @@ internal class InlineMethodCallTransformer(
 
     private fun getPseudoMethodId(startLabel: Label, inlineMethodName: String): Int =
         MethodIds.getMethodId("$className\$$methodName\$$startLabel\$inlineCall", inlineMethodName, "()V")
+
+    // Don't support atomicfu for now, it is messed with stack
+    // Maybe we will need to expand it later
+    private fun isSupportedInline(lvar: LocalVariableInfo) = !lvar.name.endsWith("\$atomicfu")
 }
