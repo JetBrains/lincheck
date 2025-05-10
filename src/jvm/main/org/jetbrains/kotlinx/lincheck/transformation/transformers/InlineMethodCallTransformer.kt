@@ -37,8 +37,7 @@ internal class InlineMethodCallTransformer(
     val methodType = getMethodType(desc)
     val looksLikeSuspendMethod =
         methodType.returnType.className == objectType &&
-        methodType.argumentTypes.size > 0 &&
-        methodType.argumentTypes[methodType.argumentTypes.size - 1].className == contType &&
+        methodType.argumentTypes.lastOrNull()?.className == contType &&
         (
             locals.hasVarByName("\$completion") ||
             locals.hasVarByName("\$continuation") ||
@@ -48,9 +47,9 @@ internal class InlineMethodCallTransformer(
     val inlineStack = ArrayList<LocalVariableInfo>()
 
 
-    override fun visitLabel(label: Label?) = adapter.run {
+    override fun visitLabel(label: Label) = adapter.run {
         locals.visitLabel(label)
-        if (label == null || !locals.hasInlines || looksLikeSuspendMethod) {
+        if (!locals.hasInlines || looksLikeSuspendMethod) {
             super.visitLabel(label)
             return
         }
@@ -58,14 +57,14 @@ internal class InlineMethodCallTransformer(
         // TODO Find a way to sort multiple marker variables with same start by end label
         var lvar = locals.inlinesStartAt(label).firstOrNull()
         // Sometimes Kotlin compiler generate "inline marker" inside inline function itself, which
-        // covers whole function. Skip this, there is no "inlined call"
+        // covers the whole function. Skip this, there is no "inlined call"
         if (lvar != null && lvar.inlineMethodName != methodName && isSupportedInline(lvar)) {
             // Start a new inline call: We cannot start a true call as we don't have a lot of necessary
             // information, such as method descriptor, variables' types, etc.
             inlineStack.add(lvar)
             // Try to find active "this_$iv[$iv...]" variable to extract class name
             val suffix = "\$iv".repeat(inlineStack.size)
-            val this_ = locals.activeVariables().firstOrNull({ it.name == "this_$suffix" })
+            val this_ = locals.activeVariables.firstOrNull({ it.name == "this_$suffix" })
             val clazz = this_?.type
             val className = if (clazz != null && clazz.sort == OBJECT) clazz.className else ""
             val thisLocal = if (clazz != null && clazz.sort == OBJECT) this_.index else null

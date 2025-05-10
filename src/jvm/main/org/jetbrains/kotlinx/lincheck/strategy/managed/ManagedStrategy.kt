@@ -2086,7 +2086,7 @@ abstract class ManagedStrategy(
         // handle non-atomic methods
         if (atomicMethodDescriptor == null) {
             val ownerName = if (owner != null) findOwnerName(owner) else className.toSimpleClassName()
-            if (ownerName != null && !ownerName.isEmpty()) {
+            if (!ownerName.isNullOrEmpty()) {
                 tracePoint.initializeOwnerName(ownerName)
             }
             tracePoint.initializeParameters(params.toList())

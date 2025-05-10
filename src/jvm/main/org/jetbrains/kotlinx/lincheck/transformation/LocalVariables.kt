@@ -24,11 +24,10 @@ internal fun List<LocalVariableInfo>.isUniqueVariable(): Boolean {
 
 data class LocalVariableInfo(val name: String, val index: Int, val labelIndexRange: Pair<Label, Label>, val type: Type) {
     val isInlineCallMarker = name.startsWith("\$i\$f\$")
-    val inlineMethodName = if (isInlineCallMarker) name.substring(5) else null
+    val inlineMethodName = if (isInlineCallMarker) name.removePrefix("\$i\$f\$") else null
 }
 
-data class MethodVariables(val variables: LocalVariablesMap) {
-    constructor() : this(emptyMap())
+data class MethodVariables(val variables: LocalVariablesMap = emptyMap()) {
 
     private val varsByStartLabel = variables.values.flatten().groupBy { it.labelIndexRange.first }
     private val varsByEndLabel = variables.values.flatten().groupBy { it.labelIndexRange.second }
@@ -44,7 +43,7 @@ data class MethodVariables(val variables: LocalVariablesMap) {
         }
     }
 
-    fun activeVariables(): Set<LocalVariableInfo> = activeVars
+    val activeVariables: Set<LocalVariableInfo> = activeVars
     fun variablesStartAt(label: Label): List<LocalVariableInfo> = varsByStartLabel[label].orEmpty()
     fun variablesEndAt(label: Label): List<LocalVariableInfo> = varsByEndLabel[label].orEmpty()
 
