@@ -403,7 +403,7 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         internalClassName: String,
         classBytes: ByteArray
     ): ByteArray = transformedClassesCache.computeIfAbsent(internalClassName.toCanonicalClassName()) {
-        Logger.debug { "Transforming $internalClassName" }
+        //Logger.debug { "Transforming $internalClassName" }
 
         val reader = ClassReader(classBytes)
 

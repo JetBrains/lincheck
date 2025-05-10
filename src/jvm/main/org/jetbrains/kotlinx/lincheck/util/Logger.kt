@@ -63,7 +63,8 @@ internal object Logger {
 
     private fun write(logLevel: LoggingLevel, s: String, writer: Writer) {
         try {
-            writer.write("[${getCurrentTimeStamp()}] [${logLevel.name}] $s$LINE_SEPARATOR")
+            // [${getCurrentTimeStamp()}]
+            writer.write("[${logLevel.name}] $s$LINE_SEPARATOR")
             writer.flush()
         } catch (e: IOException) {
             e.printStackTrace()

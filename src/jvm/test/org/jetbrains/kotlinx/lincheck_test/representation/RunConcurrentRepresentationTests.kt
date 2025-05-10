@@ -51,6 +51,7 @@ abstract class BaseRunConcurrentRepresentationTest<R>(private val outputFileName
             "The test should fail, but it completed successfully"
         }
         val error = result.exceptionOrNull()!!
+        println(error)
         check(error is LincheckAssertionError) {
             """
             |The test should throw LincheckAssertionError, but instead it failed with:
@@ -436,6 +437,7 @@ class CoroutinesRunConcurrentRepresentationTest : BaseRunConcurrentRepresentatio
 
     @Before
     fun setUp() {
+        // TODO: fix this test
         assumeFalse(isInTraceDebuggerMode) // unstable hash-code
         assumeFalse(isJdk8) // TODO: investigate why test is unstable on JDK8
     }
@@ -450,19 +452,21 @@ class CoroutinesRunConcurrentRepresentationTest : BaseRunConcurrentRepresentatio
         private val channel2 = Channel<Int>(capacity = 1)
     }
 
-    override fun block() = runBlocking {
+    override fun block() {
         Executors.newFixedThreadPool(2).asCoroutineDispatcher().use { dispatcher ->
-            val job1 = launch(dispatcher) {
-                channel1.send(sharedCounter++)
-                r1 = channel2.receive()
+            runBlocking(dispatcher) {
+                val job1 = launch(dispatcher) {
+                    channel1.send(sharedCounter++)
+                    r1 = channel2.receive()
+                }
+                val job2 = launch(dispatcher) {
+                    channel2.send(sharedCounter++)
+                    r2 = channel1.receive()
+                }
+                job1.join()
+                job2.join()
+                check(r1 == 1 || r2 == 1)
             }
-            val job2 = launch(dispatcher) {
-                channel2.send(sharedCounter++)
-                r2 = channel1.receive()
-            }
-            job1.join()
-            job2.join()
-            check(r1 == 1 || r2 == 1)
         }
     }
 }

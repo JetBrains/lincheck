@@ -16,12 +16,57 @@ import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.addFinalField
 import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.addMutableField
 import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.collectFieldInformation
 import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.isFinalField
+import org.jetbrains.kotlinx.lincheck.util.Logger
 import org.jetbrains.kotlinx.lincheck.util.MethodDescriptor
 import org.objectweb.asm.*
 import sun.nio.ch.lincheck.Types.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
+
+object ExecutionEvents {
+    data class ExecutionPositionEvent(
+        val event: String,
+        val availableThreads: List<Int>,
+        val type: String = "?" // unspecified event type
+    ) {
+        override fun toString(): String = event + " (threads=[${availableThreads.joinToString(", ")}])"
+    }
+
+    // TODO: make a key here as a string (sequence of all switch positions comma-separated)
+    //  because same execution position might refer to different code locations
+    //  when it is from different interleaving
+    //  also thread interleavings could be encoded there
+    private val map: HashMap<String, ExecutionPositionEvent?> = hashMapOf()
+
+    @Synchronized
+    fun addExecutionEvent(key: String /* switchPos1, thread1, switchPos2, thread2, ... */, event: ExecutionPositionEvent?): Boolean {
+        var addedOrChanged = false
+
+        if (map.containsKey(key)) {
+            val prevEvent = map[key]
+            if (prevEvent != event) {
+                addedOrChanged = true
+                Logger.debug {
+                    "Overriding existing position (key='$key'): (new thread=[${event?.availableThreads?.joinToString(", ")}]) ${map[key]} -> $event"
+                }
+            }
+            else {
+                Logger.debug {
+                    "Existing execution position (key='$key'): (new thread=[${event?.availableThreads?.joinToString(", ")}]) $event"
+                }
+            }
+        }
+        else {
+            addedOrChanged = true
+            Logger.debug {
+                "Writing new execution position (key='$key'): (new thread=[${event?.availableThreads?.joinToString(", ")}]) $event"
+            }
+        }
+        map[key] = event
+        return addedOrChanged
+    }
+}
 
 /**
  * [CodeLocations] object is used to maintain the mapping between unique IDs and code locations.
@@ -83,6 +128,7 @@ internal object MethodIds {
 
     @Synchronized
     fun registerIntrinsicMethod(methodDescriptor: MethodDescriptor) {
+        //Logger.warn {  "Registering intrinsic method: $methodDescriptor" }
         val methodId = getMethodIdImpl(methodDescriptor)
         intrinsicMethods[methodId] = methodDescriptor
     }

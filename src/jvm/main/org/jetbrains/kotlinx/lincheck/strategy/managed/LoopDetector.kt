@@ -97,7 +97,7 @@ internal class LoopDetector(
      */
     private val loopTrackingCursor = interleavingsLeadToSpinLockSet.cursor
 
-    private var totalExecutionsCount = 0
+    var totalExecutionsCount = 0
 
     private val firstThreadSet: Boolean get() = lastExecutedThread != -1
 

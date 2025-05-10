@@ -72,9 +72,9 @@ fun BlockingReason.isInterruptible(): Boolean =
     this is BlockingReason.Waiting      ||
     this is BlockingReason.ThreadJoin
 
-fun BlockingReason.throwsInterruptedException(): Boolean =
-    this is BlockingReason.Waiting      ||
-    this is BlockingReason.ThreadJoin
+//fun BlockingReason.throwsInterruptedException(): Boolean =
+//    this is BlockingReason.Waiting      ||
+//    this is BlockingReason.ThreadJoin
 
 /**
  * [ThreadScheduler] is responsible for controlling the lifecycle of threads

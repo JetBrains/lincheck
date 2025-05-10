@@ -74,6 +74,7 @@ internal class ObjectCreationTransformer(
                     copyLocal(objectLocal)
                     visitMethodInsn(opcode, owner, name, desc, itf)
                     loadLocal(objectLocal)
+                    loadNewCodeLocationId()
                     invokeStatic(Injections::afterNewObjectCreation)
                 }
             )
@@ -98,6 +99,7 @@ internal class ObjectCreationTransformer(
                     visitMethodInsn(opcode, owner, name, desc, itf)
                     // call the injected method
                     loadLocal(objectLocal)
+                    loadNewCodeLocationId()
                     invokeStatic(Injections::afterNewObjectCreation)
                 }
             )
@@ -114,6 +116,7 @@ internal class ObjectCreationTransformer(
                 original = {},
                 instrumented = {
                     dup()
+                    loadNewCodeLocationId()
                     invokeStatic(Injections::afterNewObjectCreation)
                 }
             )
@@ -137,6 +140,7 @@ internal class ObjectCreationTransformer(
                 original = {},
                 instrumented = {
                     dup()
+                    loadNewCodeLocationId()
                     invokeStatic(Injections::afterNewObjectCreation)
                 }
             )
@@ -149,6 +153,7 @@ internal class ObjectCreationTransformer(
             original = {},
             instrumented = {
                 dup()
+                loadNewCodeLocationId()
                 invokeStatic(Injections::afterNewObjectCreation)
             }
         )

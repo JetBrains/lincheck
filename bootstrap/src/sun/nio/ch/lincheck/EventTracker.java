@@ -36,7 +36,7 @@ public interface EventTracker {
     void notify(Object monitor, int codeLocation, boolean notifyAll);
 
     void beforeNewObjectCreation(String className);
-    void afterNewObjectCreation(Object obj);
+    void afterNewObjectCreation(Object obj, int codeLocation);
 
     long getNextTraceDebuggerEventTrackerId(TraceDebuggerTracker tracker);
     void advanceCurrentTraceDebuggerEventTrackerId(TraceDebuggerTracker tracker, long oldId);
@@ -71,7 +71,7 @@ public interface EventTracker {
     void afterLocalWrite(int codeLocation, String name, Object value);
 
     Object onMethodCall(String className, String methodName, int codeLocation, int methodId, MethodSignature methodSignature, Object receiver, Object[] params);
-    void onMethodCallReturn(String className, String methodName, long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Object result);
+    void onMethodCallReturn(String className, String methodName, long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Object result, int codeLocation);
     void onMethodCallException(String className, String methodName, long descriptorId, Object descriptor, Object receiver, Object[] params, Throwable t);
 
     BootstrapResult<?> invokeDeterministicallyOrNull(long descriptorId, Object descriptor, Object receiver, Object[] params);

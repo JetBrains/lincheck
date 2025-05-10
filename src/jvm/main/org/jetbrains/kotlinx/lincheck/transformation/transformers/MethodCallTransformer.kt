@@ -243,7 +243,8 @@ internal class MethodCallTransformer(
             loadLocal(it)
             box(returnType)
         }
-        // STACK: className, methodName, deterministicCallId, deterministicMethodDescriptor, receiver, arguments, result?
+        loadNewCodeLocationId()
+        // STACK: className, methodName, deterministicCallId, deterministicMethodDescriptor, receiver, arguments, result?, codeLocation
         when {
             (returnType == VOID_TYPE) -> invokeStatic(Injections::onMethodCallReturnVoid)
             else                      -> invokeStatic(Injections::onMethodCallReturn)

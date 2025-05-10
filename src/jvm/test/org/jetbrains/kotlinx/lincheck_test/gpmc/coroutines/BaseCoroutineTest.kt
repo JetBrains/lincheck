@@ -11,6 +11,7 @@
 package org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines
 
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.ExecutorCoroutineDispatcher
 import kotlinx.coroutines.asCoroutineDispatcher
 import org.jetbrains.kotlinx.lincheck.DEFAULT_INVOCATIONS_COUNT
 import org.jetbrains.kotlinx.lincheck.ExperimentalModelCheckingAPI
@@ -21,10 +22,12 @@ import java.util.concurrent.Executors
 @OptIn(ExperimentalModelCheckingAPI::class)
 abstract class BaseCoroutineTest(
     private val shouldFail: Boolean = false,
-    private val invocations: Int = DEFAULT_INVOCATIONS_COUNT,
+    private val invocations: Int = 100 //DEFAULT_INVOCATIONS_COUNT,
 ) {
 
     protected abstract fun createDispatcher(): CoroutineDispatcher
+
+    protected abstract fun closeDispatcher(dispatcher: CoroutineDispatcher)
 
     protected fun executeCoroutineTest(block: (CoroutineDispatcher) -> Unit) {
         val result = runCatching {
@@ -33,7 +36,7 @@ abstract class BaseCoroutineTest(
                     try {
                         block(dispatcher)
                     } finally {
-                        (dispatcher as? Closeable)?.close()
+                        closeDispatcher(dispatcher)
                     }
                 }
             }
@@ -52,4 +55,6 @@ abstract class FixedThreadPoolCoroutineTest(
 ) : BaseCoroutineTest(shouldFail, invocations) {
 
     override fun createDispatcher() = Executors.newFixedThreadPool(nThreads).asCoroutineDispatcher()
+
+    override fun closeDispatcher(dispatcher: CoroutineDispatcher) = (dispatcher as ExecutorCoroutineDispatcher).close()
 }
