@@ -617,38 +617,30 @@ class ModelCheckingParkingTracker(val allowSpuriousWakeUps: Boolean = false) : P
         INTERRUPTED,
     }
 
-    private class Handle {
-        var state: State = State.UNPARKED
-    }
-
-    private val handle = mutableMapOf<ThreadId, Handle>()
+    private val threadStates = mutableMapOf<ThreadId, State>()
 
     override fun registerThread(threadId: Int) {
-        handle[threadId] = Handle()
+        threadStates[threadId] = State.UNPARKED
     }
 
     override fun park(threadId: Int) {
-        val handle = this.handle[threadId]!!
-        if (handle.state == State.UNPARKED) {
-            handle.state = State.PARKED
+        if (threadStates[threadId] == State.UNPARKED) {
+            threadStates[threadId] = State.PARKED
         }
     }
 
     override fun waitUnpark(threadId: Int, allowSpuriousWakeUp: Boolean): Boolean {
         if (isParked(threadId, allowSpuriousWakeUp)) return true
-        val handle = this.handle[threadId]!!
-        handle.state = State.UNPARKED
+        threadStates[threadId] = State.UNPARKED
         return false
     }
 
     override fun unpark(threadId: Int, unparkedThreadId: Int) {
-        val handle = this.handle[unparkedThreadId]!!
-        handle.state = State.PERMITTED
+        threadStates[unparkedThreadId] = State.PERMITTED
     }
 
     override fun interruptPark(threadId: Int) {
-        val handle = this.handle[threadId]!!
-        handle.state = State.INTERRUPTED
+        threadStates[threadId] = State.INTERRUPTED
     }
 
     override fun isParked(threadId: Int): Boolean =
@@ -658,12 +650,11 @@ class ModelCheckingParkingTracker(val allowSpuriousWakeUps: Boolean = false) : P
         if (this.allowSpuriousWakeUps && allowSpuriousWakeUp) {
             return false
         }
-        val handle = this.handle[threadId]!!
-        return handle.state == State.PARKED
+        return threadStates[threadId] == State.PARKED
     }
 
     override fun reset() {
-        handle.clear()
+        threadStates.clear()
     }
 
 }
