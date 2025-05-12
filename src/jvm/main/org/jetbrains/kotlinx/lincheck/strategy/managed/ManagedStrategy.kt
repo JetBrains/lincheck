@@ -237,37 +237,15 @@ abstract class ManagedStrategy(
     // == STRATEGY INTERFACE METHODS ==
 
     /**
-     * TODO
-     * Tell strategy that switch happened. Do we event need it?
-     * Does part of the code from `onNewSwitch` related to plugin
-     */
-    protected open fun onThreadSwitchForPlugin() {}
-
-    /**
-     * TODO
-     * must be pure (with no side-effects)
-     * checks for non-must context switch
-     */
-    protected abstract fun shouldSwitch(): Boolean
-
-    /**
-     * TODO
+     * This method is invoked before every thread context switch.
+     * @param iThread current thread that is about to be switched.
      */
     protected open fun onSwitchPoint(iThread: Int, event: ExecutionEvents.ExecutionPositionEvent) {}
 
-
     /**
-     * This method is invoked before every thread context switch.
-     * @param iThread current thread that is about to be switched
-     * @param mustSwitch whether the switch is not caused by strategy and is a must-do (e.g, because of monitor wait)
+     * Returns whether thread should switch at the switch point.
      */
-    protected open fun onNewSwitch(iThread: Int, mustSwitch: Boolean, event: ExecutionEvents.ExecutionPositionEvent) {}
-
-//    /**
-//     * Returns whether thread should switch at the switch point.
-//     * @param iThread the current thread
-//     */
-//    protected abstract fun shouldSwitch(iThread: Int, event: ExecutionEvents.ExecutionPositionEvent): Boolean
+    protected abstract fun shouldSwitch(): Boolean
 
     /**
      * Choose a thread to switch from thread [iThread].
@@ -350,10 +328,7 @@ abstract class ManagedStrategy(
         traceCollector?.passCodeLocation(SectionDelimiterTracePoint(part))
         val nextThread = when (part) {
             INIT        -> 0
-            PARALLEL    -> chooseThread(
-                0,
-                ExecutionEvents.ExecutionPositionEvent(event = "Start PARALLEL part", switchableThreads(0), "BEFORE_PART0")
-            )
+            PARALLEL    -> chooseThread(0, ExecutionEvents.ExecutionPositionEvent(event = "Start PARALLEL part", switchableThreads(0), "BEFORE_PART0"))
             POST        -> 0
             VALIDATION  -> 0
         }
@@ -476,21 +451,8 @@ abstract class ManagedStrategy(
         // check we are in the right thread
         check(threadId == threadScheduler.scheduledThreadId)
 
-        var shouldSwitch =
-            if (loopDetector.replayModeEnabled) loopDetector.shouldSwitchInReplayMode()
-            else false
+        var shouldSwitch = if (loopDetector.replayModeEnabled) loopDetector.shouldSwitchInReplayMode() else false
 
-//        // we can perform proper switching when no live-locks detected
-//        onSwitchPoint(threadId, event)
-//        // check if we need to switch
-//        val shouldSwitch = when {
-//            loopDetector.replayModeEnabled -> loopDetector.shouldSwitchInReplayMode()
-//            else -> {
-//                shouldSwitch()
-//            }
-//        }
-
-        // TODO: processLoopDetectorDecision was here initially
         // check if live-lock is detected
         val decision = loopDetector.visitCodeLocation(threadId, codeLocation)
         if (decision != LoopDetector.Decision.Idle) {
@@ -558,14 +520,10 @@ abstract class ManagedStrategy(
             // in order to properly calculate `switchableThreads(iThread)` when spin-cycle detected we need to make sure that
             // interrupted threads are unblocked before we calculate `switchableThreads` inside `onSwitchPoint` method,
             // thus, here we call it explicitly (this method is also called from `switchCurrentThread` but since we add
-            // spin cycle nodes to the interleaving tree, we need to insert such a hack here
+            // spin cycle nodes to the interleaving tree, we need to insert such a hack here).
             unblockInterruptedThreads()
-
             val event = ExecutionEvents.ExecutionPositionEvent("LiveLock detected on Thread-$iThread at: ${CodeLocations.stackTrace(codeLocation)}", switchableThreads(iThread), "L$iThread")
-            // TODO: treat livelock as actual switch point, in order to get rid of manual overriding in the `chooseThread` method
-            //  but duplicate of the livelock locations still exists there, because it is actually executed during runtime
-
-            // Adding switch point for the livelock to appear in the execution tree
+            // Adding switch point for the livelock to appear in the interleaving tree
             onSwitchPoint(iThread, event)
             val switchHappened = switchCurrentThread(iThread, BlockingReason.LiveLocked,
                 beforeMethodCallSwitch = beforeMethodCallSwitch,
@@ -617,17 +575,13 @@ abstract class ManagedStrategy(
         event: ExecutionEvents.ExecutionPositionEvent,
     ): Boolean {
         // before blocking the thread, interrupt it if the interruption flag is set
-//        if (blockingReason != null && blockingReason.throwsInterruptedException()) {
-//            throwIfInterrupted()
-//        }
         val switchReason = blockingReason.toSwitchReason(::iThreadToDisplayNumber)
         val mustSwitch = (blockingReason != null) && (blockingReason !is BlockingReason.LiveLocked)
         val nextThread = chooseThreadSwitch(iThread, mustSwitch, event)
         val switchHappened = (iThread != nextThread)
         if (switchHappened) {
-            if (blockingReason != null &&
-                // active live-lock currently does not block thread
-                //blockingReason !is BlockingReason.LiveLocked &&
+            if (
+                blockingReason != null &&
                 // TODO: coroutine suspensions are currently handled separately from `ThreadScheduler`
                 blockingReason !is BlockingReason.Suspended
             ) {
@@ -644,7 +598,7 @@ abstract class ManagedStrategy(
     protected open fun getCurrentKey(): String = ""
 
     private fun chooseThreadSwitch(iThread: Int, mustSwitch: Boolean = false, event: ExecutionEvents.ExecutionPositionEvent): Int {
-        // onNewSwitch(iThread, mustSwitch, event)
+        // inform plugin about thread switch
         if (inIdeaPluginReplayMode && collectTrace) {
             onThreadSwitchesOrActorFinishes()
         }
@@ -667,15 +621,10 @@ abstract class ManagedStrategy(
                 }
             }
 
-            // TODO: if resumable thread was picked, then check do we need to unblock it manually
-            // for now we only can resume livelocked threads, so check for that and unblock if required
+            // for now, we only can resume live-locked threads, so check for that and unblock if required
             if (threadScheduler.isLiveLocked(nextThread)) {
                 threadScheduler.unblockThread(nextThread)
             }
-//            else if (isSuspended[nextThread]!!) {
-//                ...
-//            }
-            // for suspended threads there is nothing additional that we need to do, so just add them to resumable and that is it
 
             return nextThread
         }
@@ -759,12 +708,7 @@ abstract class ManagedStrategy(
 
     protected fun resumableThreads(iThread: Int): List<Int> =
         if (runner.currentExecutionPart == PARALLEL) {
-            mutableListOf<Int>().apply {
-                addAll((0 until threadScheduler.nThreads).filter { it != iThread && threadScheduler.isLiveLocked(it) })
-//                val suspended = (0 until nThreads).filter { !threadScheduler.isFinished(it) && isSuspended[it]!! && !contains(it) }
-//                addAll(suspended)
-//                sort()
-            }
+            (0 until threadScheduler.nThreads).filter { it != iThread && threadScheduler.isLiveLocked(it) }
         }
         else {
             emptyList()
@@ -961,7 +905,6 @@ abstract class ManagedStrategy(
         val event = ExecutionEvents.ExecutionPositionEvent("Finish Thread-$threadId", switchableThreads(threadId), "F$threadId")
 
         onSwitchPoint(threadId, event)
-
         val nextThread = chooseThreadSwitch(threadId, true, event)
         setCurrentThread(nextThread)
     }
@@ -1586,7 +1529,6 @@ abstract class ManagedStrategy(
         codeLocation: Int
     ) {
         check(MethodIds.isIntrinsicMethod(methodId)) { "Processing intrinsic method effect of non-intrinsic call" }
-        //println("Do not process intrinsice method effect")
         val intrinsicDescriptor = MethodIds.getIntrinsicMethodDescriptor(methodId)
 
         if (

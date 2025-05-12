@@ -34,7 +34,7 @@ import kotlin.random.Random
  * as possible when the maximal number of interleavings to be studied is lower
  * than the number of all possible interleavings on the current depth level.
  */
-public class ModelCheckingStrategy(
+internal class ModelCheckingStrategy(
     testCfg: ModelCheckingCTestConfiguration,
     testClass: Class<*>,
     scenario: ExecutionScenario,
@@ -49,8 +49,8 @@ public class ModelCheckingStrategy(
     // This random is used for choosing the next unexplored interleaving node in the tree.
     private val generationRandom = Random(0)
     // The interleaving that will be studied on the next invocation.
-    lateinit var currentInterleaving: Interleaving
-    public var isReplayingSpinCycle = false
+    private lateinit var currentInterleaving: Interleaving
+    var isReplayingSpinCycle = false
 
     // Tracker of objects' allocations and object graph topology.
     override val objectTracker: ObjectTracker? = if (isInTraceDebuggerMode) null else LocalObjectManager()
@@ -108,22 +108,12 @@ public class ModelCheckingStrategy(
                 !shouldSkipNextBeforeEvent()
     }
 
-    // TODO: should this be as a 1st instructions in the onSwitchPoints, to mimic old behaviour?
-    //  but it was not called in the shouldSwitch, though
-//    override fun onThreadSwitchForPlugin() {
-//        if (inIdeaPluginReplayMode && collectTrace) {
-//            onThreadSwitchesOrActorFinishes()
-//        }
-//    }
-
-    override fun shouldSwitch(): Boolean {
-        return currentInterleaving.isSwitchPosition()
-    }
+    override fun shouldSwitch(): Boolean = currentInterleaving.isSwitchPosition()
 
     override fun onSwitchPoint(iThread: Int, event: ExecutionEvents.ExecutionPositionEvent) {
         check(iThread == threadScheduler.scheduledThreadId)
         if (runner.currentExecutionPart != PARALLEL) return
-        if (loopDetector.replayModeEnabled) return // TODO: this is done to mimic old behaviour, is it correct?
+        if (loopDetector.replayModeEnabled) return
         currentInterleaving.newExecutionPosition(iThread, event)
         //Logger.info { "onSwitchPoint(): executionPosition=${currentInterleaving.executionPosition}, event=$event" }
     }
@@ -300,15 +290,8 @@ public class ModelCheckingStrategy(
         private lateinit var interleavingFinishingRandom: Random
         private var currentInterleavingPosition = 0 // specifies index of currently executing thread in 'threadSwitchChoices'
         private var lastNotInitializedNodeChoices: MutableList<Choice>? = null
-        public var executionPosition: Int = 0
+        private var executionPosition: Int = 0
         var interleavingKey: String = ""
-        // T ->
-        //    S1
-        //    S2
-        //    S3 -> T' ->
-        //                F-T' -> [ ~T' ]
-        //                        T0  ->
-        //                        ...
 
         fun getInterleavingRepresentation(): String {
             var result = ""
@@ -384,51 +367,25 @@ public class ModelCheckingStrategy(
                     isResumed = true
                     availableThreads.addAll(resumableThreads(iThread))
                 }
-                // TODO: should be 1st from the available threads (.first), and it must be recognized by strategy as already visited
-                //  in order to achieve that live locks should block threads, so that there is no infinite cycle: T0, T1, T0, T1, ...
-                //  also with blocking live locks we would need to add resumable threads in the interleaving tree
+                // There is no predefined choice.
+                // This can happen if there were forced thread switches after the last predefined one
+                // (e.g., thread end, coroutine suspension, acquiring an already acquired lock or monitor.wait).
+                // We use a deterministic random here to choose the next thread.
                 val t = availableThreads.random(interleavingFinishingRandom)
                 //val t = availableThreads.first()
+
                 var resumed = if (isResumed) "_r" else ""
                 interleavingKey += "${event.type} (s$executionPosition),t$t$resumed,"
                 Logger.info { "Switch positions: $switchPositions, thread switches: $threadSwitchChoices, key: '$interleavingKey'" }
                 ExecutionEvents.addExecutionEvent(interleavingKey, event)
 
-                //var key = getCurrentKey()
-                //key += ",[${availableThreads.joinToString(",") { "t$it" }}]"
-                //ExecutionEvents.addExecutionEvent(key, event)
+                val nextSwitchNode = lastNotInitializedNodeChoices
+                    ?.find { it.value == executionPosition }?.node?.choices
+                    ?.find { it.value == t }?.node
 
-                // There is no predefined choice.
-                // This can happen if there were forced thread switches after the last predefined one
-                // (e.g., thread end, coroutine suspension, acquiring an already acquired lock or monitor.wait).
-                // We use a deterministic random here to choose the next thread.
-//                lastNotInitializedNodeChoices =
-//                    null // end of execution position choosing initialization because of new switch
-
-                // TODO: refactor it, so that when the live lock cycle length is added
-                //  we insert the new switch point via `onSwitchPoint` instead of modifying last event when the livelock
-                //  is determined to be actual livelock instead of real event that happened on that place
-                val nextThreadChooseChoice = lastNotInitializedNodeChoices?.find { it.value == executionPosition }
-//                if (nextThreadChooseChoice != null) {
-//                    if (nextThreadChooseChoice.event != event) {
-//                        Logger.info { "Rewriting event type of the `nextThreadChooseChoice`: prev=${nextThreadChooseChoice.event}, new=$event" }
-//                        nextThreadChooseChoice.event = event
-//                    }
-//                    // TODO: this is still required, because I have a bug, I am calling `onSwitchPoint()` to add the live lock event in the tree
-//                    //  before I am unblocking the interrupted threads: `unblockInterruptedThreads()`, that is why this condition might be triggered. Fix that
-//                    if (nextThreadChooseChoice.node.choices.map { it.value } != availableThreads) {
-//                        Logger.info { "Rewriting threads of the `nextThreadChooseChoice`: prev=${nextThreadChooseChoice.node.choices.map { it.value }}, new=$availableThreads" }
-//                        nextThreadChooseChoice.node = ThreadChoosingNode(availableThreads)
-//                    }
-//                }
-                val nextThreadChooseNode = nextThreadChooseChoice?.node
-                val nextSwitchNodeChoice = nextThreadChooseNode?.choices?.find { it.value == t }
-                val nextSwitchNode = nextSwitchNodeChoice?.node
-
-                // TODO: what if `nextSwitchNode`.choices is already initialized, we don't want to reappend threads there for the 2nd time
                 if (nextSwitchNode != null) {
-                    if (nextSwitchNode.isInitialized) {
-                        println("Found initialized switch node: $nextSwitchNode: key=${getCurrentKey()}")
+                    check (!nextSwitchNode.isInitialized) {
+                        "Reinitialization of the switch points for node (key=$interleavingKey): $nextSwitchNode"
                     }
                     lastNotInitializedNodeChoices = mutableListOf<Choice>().also { choices ->
                         nextSwitchNode.choices = choices
@@ -457,34 +414,15 @@ public class ModelCheckingStrategy(
                     isResumableThreadsOnly = true
                     availableThreads.addAll(resumableThreads(iThread))
                 }
-//                val lastThreadSwitchChoice = threadSwitchChoices.lastOrNull()
-//                check(lastThreadSwitchChoice !in availableThreads) {
-//                    """
-//                        Attempt to add a thread choice node with the option for switching to the same thread.
-//                        Threads switches: $threadSwitchChoices, added new thread options: $availableThreads, current thread: $iThread.
-//                    """.trimIndent()
-//                }
                 lastNotInitializedNodeChoices!!.add(Choice(ThreadChoosingNode(availableThreads, isResumableThreadsOnly), executionPosition, event))
             }
-        }
-
-        fun getCurrentKey(): String {
-//            var key = ""
-//            threadSwitchChoices.forEachIndexed { index, t ->
-//                key += "t$t"
-//                if (index < switchPositions.size) {
-//                    key += ",s${switchPositions[index]},"
-//                }
-//            }
-//            return key
-            return interleavingKey
         }
 
         fun copy() = Interleaving(switchPositions, threadSwitchChoices, lastNotInitializedNode)
     }
 
     override fun getCurrentKey(): String {
-        return currentInterleaving.getCurrentKey()
+        return currentInterleaving.interleavingKey
     }
 
     inner class InterleavingBuilder {
