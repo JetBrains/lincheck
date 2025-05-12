@@ -108,11 +108,13 @@ public class ModelCheckingStrategy(
                 !shouldSkipNextBeforeEvent()
     }
 
-    override fun onThreadSwitchForPlugin() {
-        if (inIdeaPluginReplayMode && collectTrace) {
-            onThreadSwitchesOrActorFinishes()
-        }
-    }
+    // TODO: should this be as a 1st instructions in the onSwitchPoints, to mimic old behaviour?
+    //  but it was not called in the shouldSwitch, though
+//    override fun onThreadSwitchForPlugin() {
+//        if (inIdeaPluginReplayMode && collectTrace) {
+//            onThreadSwitchesOrActorFinishes()
+//        }
+//    }
 
     override fun shouldSwitch(): Boolean {
         return currentInterleaving.isSwitchPosition()
@@ -123,7 +125,7 @@ public class ModelCheckingStrategy(
         if (runner.currentExecutionPart != PARALLEL) return
         if (loopDetector.replayModeEnabled) return // TODO: this is done to mimic old behaviour, is it correct?
         currentInterleaving.newExecutionPosition(iThread, event)
-        Logger.info { "onSwitchPoint(): executionPosition=${currentInterleaving.executionPosition}, event=$event" }
+        //Logger.info { "onSwitchPoint(): executionPosition=${currentInterleaving.executionPosition}, event=$event" }
     }
 
     override fun chooseThread(iThread: Int, event: ExecutionEvents.ExecutionPositionEvent): Int =
@@ -225,7 +227,7 @@ public class ModelCheckingStrategy(
     /**
      * Represents a choice of a thread that should be next in the execution.
      */
-    inner class ThreadChoosingNode(switchableThreads: List<Int>) : InterleavingTreeNode() {
+    inner class ThreadChoosingNode(switchableThreads: List<Int>, val isResumableOnly: Boolean = false) : InterleavingTreeNode() {
         init {
             choices = switchableThreads.map { Choice(SwitchChoosingNode(), it) }
         }
@@ -239,7 +241,7 @@ public class ModelCheckingStrategy(
         }
 
         override fun getStringRepresentation(indent: String): String = StringBuilder()
-            .append("${indent}ThreadChoosingNode: threads=")
+            .append("${indent}ThreadChoosingNode: threads${if (isResumableOnly) " (resumable)" else ""}=")
             .appendChoices(indent)
             .toString()
     }
@@ -363,12 +365,12 @@ public class ModelCheckingStrategy(
                 if (executionPosition != -1 && executionPosition == switchPositions[currentInterleavingPosition - 1]) {
                     val event = if (event.type != "BEFORE_PART0") event.type else ""
 
-                    interleavingKey += "s$executionPosition($event),"
+                    interleavingKey += "s$executionPosition ($event),"
                     interleavingKey += "t$t,"
                 }
                 else {
                     interleavingKey += "t$t,"
-                    interleavingKey += if (event.type != "BEFORE_PART0") "${event.type}," else ""
+                    interleavingKey += if (event.type != "BEFORE_PART0") "${event.type} (s$executionPosition)," else ""
                 }
                 Logger.info { "Switch positions: $switchPositions, thread switches: $threadSwitchChoices, key: '$interleavingKey'" }
                 ExecutionEvents.addExecutionEvent(interleavingKey, event)
@@ -376,13 +378,19 @@ public class ModelCheckingStrategy(
                 currentInterleavingPosition++
                 t
             } else {
-                val availableThreads = switchableThreads(iThread)
+                val availableThreads = switchableThreads(iThread).toMutableList()
+                var isResumed = false
+                if (availableThreads.isEmpty()) {
+                    isResumed = true
+                    availableThreads.addAll(resumableThreads(iThread))
+                }
                 // TODO: should be 1st from the available threads (.first), and it must be recognized by strategy as already visited
                 //  in order to achieve that live locks should block threads, so that there is no infinite cycle: T0, T1, T0, T1, ...
                 //  also with blocking live locks we would need to add resumable threads in the interleaving tree
                 val t = availableThreads.random(interleavingFinishingRandom)
                 //val t = availableThreads.first()
-                interleavingKey += "${event.type},t$t,"
+                var resumed = if (isResumed) "_r" else ""
+                interleavingKey += "${event.type} (s$executionPosition),t$t$resumed,"
                 Logger.info { "Switch positions: $switchPositions, thread switches: $threadSwitchChoices, key: '$interleavingKey'" }
                 ExecutionEvents.addExecutionEvent(interleavingKey, event)
 
@@ -417,7 +425,11 @@ public class ModelCheckingStrategy(
                 val nextSwitchNodeChoice = nextThreadChooseNode?.choices?.find { it.value == t }
                 val nextSwitchNode = nextSwitchNodeChoice?.node
 
+                // TODO: what if `nextSwitchNode`.choices is already initialized, we don't want to reappend threads there for the 2nd time
                 if (nextSwitchNode != null) {
+                    if (nextSwitchNode.isInitialized) {
+                        println("Found initialized switch node: $nextSwitchNode: key=${getCurrentKey()}")
+                    }
                     lastNotInitializedNodeChoices = mutableListOf<Choice>().also { choices ->
                         nextSwitchNode.choices = choices
                     }
@@ -439,7 +451,12 @@ public class ModelCheckingStrategy(
             if (executionPosition > (switchPositions.lastOrNull() ?: -1)) {
                 // Add a new thread choosing node corresponding to the switch at the current execution position.
                 if (lastNotInitializedNodeChoices == null) return
-                val availableThreads = switchableThreads(iThread)
+                val availableThreads = switchableThreads(iThread).toMutableList()
+                var isResumableThreadsOnly = false
+                if (availableThreads.isEmpty()) {
+                    isResumableThreadsOnly = true
+                    availableThreads.addAll(resumableThreads(iThread))
+                }
 //                val lastThreadSwitchChoice = threadSwitchChoices.lastOrNull()
 //                check(lastThreadSwitchChoice !in availableThreads) {
 //                    """
@@ -447,7 +464,7 @@ public class ModelCheckingStrategy(
 //                        Threads switches: $threadSwitchChoices, added new thread options: $availableThreads, current thread: $iThread.
 //                    """.trimIndent()
 //                }
-                lastNotInitializedNodeChoices!!.add(Choice(ThreadChoosingNode(availableThreads), executionPosition, event))
+                lastNotInitializedNodeChoices!!.add(Choice(ThreadChoosingNode(availableThreads, isResumableThreadsOnly), executionPosition, event))
             }
         }
 

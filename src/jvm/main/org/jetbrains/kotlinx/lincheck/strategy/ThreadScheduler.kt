@@ -194,6 +194,14 @@ open class ThreadScheduler {
     }
 
     /**
+     * Checks if thread `threadId` is live-locked.
+     */
+    fun isLiveLocked(threadId: ThreadId): Boolean {
+        val reason = getBlockingReason(threadId)
+        return reason is BlockingReason.LiveLocked
+    }
+
+    /**
      * Checks if the thread is currently blocked.
      *
      * @param threadId The identifier of the thread to check.
