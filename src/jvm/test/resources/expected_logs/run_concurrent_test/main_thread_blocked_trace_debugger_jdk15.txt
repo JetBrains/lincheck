@@ -2,7 +2,7 @@
 
 The following interleaving leads to the error:
 | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                      Thread 1                                                                      |
+|                                                                    Main Thread                                                                     |
 | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | $this_runCatching.block() at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:47) |
 |   block() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:96)                                        |
@@ -25,7 +25,7 @@ All unfinished threads are in deadlock
 
 Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-|                                                                           Thread 1                                                                           |
+|                                                                         Main Thread                                                                          |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | $this_runCatching.block() at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:47)           |
 |   block() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:96)                                                  |
@@ -35,15 +35,15 @@ Detailed trace:
 |           initialTryLock(): true at ReentrantLock$Sync.lockInterruptibly(ReentrantLock.java:160)                                                             |
 |             compareAndSetState(0, 1): true at ReentrantLock$NonfairSync.initialTryLock(ReentrantLock.java:225)                                               |
 |               Unsafe#1.compareAndSetInt(NonfairSync#1, 16, 0, 1): true at AbstractQueuedSynchronizer.compareAndSetState(AbstractQueuedSynchronizer.java:555) |
-|             setExclusiveOwnerThread(Thread#1) at ReentrantLock$NonfairSync.initialTryLock(ReentrantLock.java:226)                                            |
-|               exclusiveOwnerThread = Thread#1 at AbstractOwnableSynchronizer.setExclusiveOwnerThread(AbstractOwnableSynchronizer.java:74)                    |
+|             setExclusiveOwnerThread(Thread#0) at ReentrantLock$NonfairSync.initialTryLock(ReentrantLock.java:226)                                            |
+|               exclusiveOwnerThread = Thread#0 at AbstractOwnableSynchronizer.setExclusiveOwnerThread(AbstractOwnableSynchronizer.java:74)                    |
 |       count ➜ 0 at ArrayBlockingQueue.take(ArrayBlockingQueue.java:419)                                                                                      |
 |       ConditionObject#1.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:420)                                                                      |
 |         enableWait(ConditionNode#1): 1 at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1605)                             |
 |           NonfairSync#1.isHeldExclusively(): true at AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1501)             |
-|             getExclusiveOwnerThread(): Thread#1 at ReentrantLock$Sync.isHeldExclusively(ReentrantLock.java:186)                                              |
-|               exclusiveOwnerThread ➜ Thread#1 at AbstractOwnableSynchronizer.getExclusiveOwnerThread(AbstractOwnableSynchronizer.java:84)                    |
-|           node.waiter = Thread#1 at AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1502)                              |
+|             getExclusiveOwnerThread(): Thread#0 at ReentrantLock$Sync.isHeldExclusively(ReentrantLock.java:186)                                              |
+|               exclusiveOwnerThread ➜ Thread#0 at AbstractOwnableSynchronizer.getExclusiveOwnerThread(AbstractOwnableSynchronizer.java:84)                    |
+|           node.waiter = Thread#0 at AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1502)                              |
 |           node.setStatusRelaxed(3) at AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1503)                            |
 |             Unsafe#1.putInt(ConditionNode#1, 12, 3) at AbstractQueuedSynchronizer$Node.setStatusRelaxed(AbstractQueuedSynchronizer.java:473)                 |
 |           lastWaiter ➜ null at AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1504)                                   |
@@ -55,15 +55,15 @@ Detailed trace:
 |             tryRelease(1): true at AbstractQueuedSynchronizer.release(AbstractQueuedSynchronizer.java:1006)                                                  |
 |               getState(): 1 at ReentrantLock$Sync.tryRelease(ReentrantLock.java:173)                                                                         |
 |                 state ➜ 1 at AbstractQueuedSynchronizer.getState(AbstractQueuedSynchronizer.java:531)                                                        |
-|               getExclusiveOwnerThread(): Thread#1 at ReentrantLock$Sync.tryRelease(ReentrantLock.java:174)                                                   |
-|                 exclusiveOwnerThread ➜ Thread#1 at AbstractOwnableSynchronizer.getExclusiveOwnerThread(AbstractOwnableSynchronizer.java:84)                  |
+|               getExclusiveOwnerThread(): Thread#0 at ReentrantLock$Sync.tryRelease(ReentrantLock.java:174)                                                   |
+|                 exclusiveOwnerThread ➜ Thread#0 at AbstractOwnableSynchronizer.getExclusiveOwnerThread(AbstractOwnableSynchronizer.java:84)                  |
 |               setExclusiveOwnerThread(null) at ReentrantLock$Sync.tryRelease(ReentrantLock.java:178)                                                         |
 |                 exclusiveOwnerThread = null at AbstractOwnableSynchronizer.setExclusiveOwnerThread(AbstractOwnableSynchronizer.java:74)                      |
 |               setState(0) at ReentrantLock$Sync.tryRelease(ReentrantLock.java:179)                                                                           |
 |                 state = 0 at AbstractQueuedSynchronizer.setState(AbstractQueuedSynchronizer.java:540)                                                        |
 |             head ➜ null at AbstractQueuedSynchronizer.release(AbstractQueuedSynchronizer.java:1007)                                                          |
 |         LockSupport.setCurrentBlocker(ConditionObject#1) at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1606)           |
-|           Unsafe#1.putReferenceOpaque(Thread#1, 76, ConditionObject#1) at LockSupport.setCurrentBlocker(LockSupport.java:161)                                |
+|           Unsafe#1.putReferenceOpaque(Thread#0, 76, ConditionObject#1) at LockSupport.setCurrentBlocker(LockSupport.java:161)                                |
 |         canReacquire(ConditionNode#1): false at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1608)                       |
 |           node.prev ➜ null at AbstractQueuedSynchronizer$ConditionObject.canReacquire(AbstractQueuedSynchronizer.java:1526)                                  |
 |         node.status ➜ 3 at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1612)                                            |
