@@ -325,7 +325,7 @@ internal class ModelCheckingStrategy(
             interleavingKey = ""
         }
 
-        fun chooseThread(iThread: Int, event: ExecutionEvents.ExecutionPositionEvent): Int =
+        fun chooseThread(iThread: Int, event: ExecutionEvents.ExecutionPositionEvent): Int {
             if (currentInterleavingPosition < threadSwitchChoices.size) {
                 check(
                     // no thread switch happened yet, initial thread id will be returned
@@ -344,14 +344,20 @@ internal class ModelCheckingStrategy(
 
                 // Use the predefined choice.
                 val t = threadSwitchChoices[currentInterleavingPosition]
+                val threads = switchableThreads(iThread) + resumableThreads(iThread)
+                check(currentInterleavingPosition == 0 || t in threads) {
+                    """
+                        Trying to switch the execution to thread $t,
+                        but only the following threads are eligible to switch: $threads
+                    """.trimIndent()
+                }
 
                 if (executionPosition != -1 && executionPosition == switchPositions[currentInterleavingPosition - 1]) {
                     val event = if (event.type != "BEFORE_PART0") event.type else ""
 
                     interleavingKey += "s$executionPosition ($event),"
                     interleavingKey += "t$t,"
-                }
-                else {
+                } else {
                     interleavingKey += "t$t,"
                     interleavingKey += if (event.type != "BEFORE_PART0") "${event.type} (s$executionPosition)," else ""
                 }
@@ -359,7 +365,7 @@ internal class ModelCheckingStrategy(
                 ExecutionEvents.addExecutionEvent(interleavingKey, event)
 
                 currentInterleavingPosition++
-                t
+                return t
             } else {
                 val availableThreads = switchableThreads(iThread).toMutableList()
                 var isResumed = false
@@ -367,6 +373,7 @@ internal class ModelCheckingStrategy(
                     isResumed = true
                     availableThreads.addAll(resumableThreads(iThread))
                 }
+                if (availableThreads.isEmpty()) return -1
                 // There is no predefined choice.
                 // This can happen if there were forced thread switches after the last predefined one
                 // (e.g., thread end, coroutine suspension, acquiring an already acquired lock or monitor.wait).
@@ -384,7 +391,7 @@ internal class ModelCheckingStrategy(
                     ?.find { it.value == t }?.node
 
                 if (nextSwitchNode != null) {
-                    check (!nextSwitchNode.isInitialized) {
+                    check(!nextSwitchNode.isInitialized) {
                         "Reinitialization of the switch points for node (key=$interleavingKey): $nextSwitchNode"
                     }
                     lastNotInitializedNodeChoices = mutableListOf<Choice>().also { choices ->
@@ -392,8 +399,9 @@ internal class ModelCheckingStrategy(
                     }
                 }
 
-                t
+                return t
             }
+        }
 
 
         fun isSwitchPosition() = executionPosition in switchPositions

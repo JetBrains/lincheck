@@ -602,25 +602,11 @@ abstract class ManagedStrategy(
         if (inIdeaPluginReplayMode && collectTrace) {
             onThreadSwitchesOrActorFinishes()
         }
-
         // unblock interrupted threads
         unblockInterruptedThreads()
         // do the switch if there is an available thread
-        // TODO: unite the whole code below into `chooseThread(...)`
-
-        val threads = switchableThreads(iThread).toMutableList()
-        if (threads.isEmpty()) threads.addAll(resumableThreads(iThread))
-
-        if (threads.isNotEmpty()) {
-            val nextThread = chooseThread(iThread, event).also {
-                check(it in threads) {
-                    """
-                        Trying to switch the execution to thread $it,
-                        but only the following threads are eligible to switch: $threads
-                    """.trimIndent()
-                }
-            }
-
+        val nextThread = chooseThread(iThread, event)
+        if (nextThread != -1) {
             // for now, we only can resume live-locked threads, so check for that and unblock if required
             if (threadScheduler.isLiveLocked(nextThread)) {
                 threadScheduler.unblockThread(nextThread)
@@ -632,7 +618,6 @@ abstract class ManagedStrategy(
         if (!mustSwitch || threadScheduler.areAllThreadsFinished()) {
            return iThread
         }
-
         // try to resume some suspended thread
         // TODO:
         //  - this is hard to remove, because if I add suspended threads to resumable, then they will appear in the interleavings and the behaviour will differ from old one,
@@ -646,7 +631,6 @@ abstract class ManagedStrategy(
         if (suspendedThread != null) {
            return suspendedThread
         }
-
         // any other situation is considered to be a deadlock
         printThreadStates("chooseThreadSwitch")
         failDueToDeadlock()
