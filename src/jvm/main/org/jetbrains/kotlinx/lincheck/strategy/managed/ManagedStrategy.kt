@@ -576,8 +576,7 @@ abstract class ManagedStrategy(
     ): Boolean {
         // before blocking the thread, interrupt it if the interruption flag is set
         val switchReason = blockingReason.toSwitchReason(::iThreadToDisplayNumber)
-        val mustSwitch = (blockingReason != null) && (blockingReason !is BlockingReason.LiveLocked)
-        val nextThread = chooseThreadSwitch(iThread, mustSwitch, event)
+        val nextThread = chooseThreadSwitch(iThread, mustSwitch = (blockingReason != null), event)
         val switchHappened = (iThread != nextThread)
         if (switchHappened) {
             if (
@@ -1603,16 +1602,20 @@ abstract class ManagedStrategy(
         // in case of an atomic method, we create a switch point before the method call;
         // note that in case we resume atomic method there is no need to create the switch point,
         // since there is already a switch point between the suspension point and resumption
-        if (guarantee == ManagedGuaranteeType.ATOMIC &&
+        if (guarantee == ManagedGuaranteeType.ATOMIC
             // do not create a trace point on resumption
-            !(isTestThread(threadId) && isResumptionMethodCall(threadId, className, methodName, params, atomicMethodDescriptor))
+            //&& !(isTestThread(threadId) && isResumptionMethodCall(threadId, className, methodName, params, atomicMethodDescriptor))
         ) {
-            // re-use last call trace point
-            val methodCallTracePoint = callStackTrace[threadId]!!.lastOrNull()?.tracePoint
             val event = ExecutionEvents.ExecutionPositionEvent("onMethodCall $className::$methodName by Thread-$threadId at ${CodeLocations.stackTrace(codeLocation)}", switchableThreads(threadId), "MC$threadId")
             newSwitchPoint(threadId, codeLocation, beforeMethodCallSwitch = true, event = event)
-            traceCollector?.passCodeLocation(methodCallTracePoint)
             loopDetector.passParameters(params)
+
+            // do not create a trace point on resumption
+            if (!(isTestThread(threadId) && isResumptionMethodCall(threadId, className, methodName, params, atomicMethodDescriptor))) {
+                // re-use last call trace point
+                val methodCallTracePoint = callStackTrace[threadId]!!.lastOrNull()?.tracePoint
+                traceCollector?.passCodeLocation(methodCallTracePoint)
+            }
         }
         // notify loop detector about the method call
         if (guarantee == null) {
