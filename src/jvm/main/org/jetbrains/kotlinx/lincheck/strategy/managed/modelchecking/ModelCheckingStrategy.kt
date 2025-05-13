@@ -299,7 +299,6 @@ internal class ModelCheckingStrategy(
                 // Create a mutable list for the initialization of the not initialized node choices.
                 lastNotInitializedNodeChoices = mutableListOf<Choice>()
                 leafNode!!.choices = lastNotInitializedNodeChoices!!
-                leafNode = null
             }
         }
 
