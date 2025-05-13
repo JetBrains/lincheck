@@ -49,6 +49,7 @@ internal class ModelCheckingStrategy(
     private val generationRandom = Random(0)
     // The interleaving that will be studied on the next invocation.
     private lateinit var currentInterleaving: Interleaving
+
     private var isReplayingSpinCycle = false
 
     // Tracker of objects' allocations and object graph topology.
@@ -78,26 +79,15 @@ internal class ModelCheckingStrategy(
         replayNumber++
     }
 
-    override fun enableSpinCycleReplay() {
-        super.enableSpinCycleReplay()
-        currentInterleaving.rollbackAfterSpinCycleFound()
-        isReplayingSpinCycle = true
-    }
-
     override fun initializeReplay() {
         super.initializeReplay()
         currentInterleaving = currentInterleaving.copy()
     }
 
-    override fun shouldInvokeBeforeEvent(): Boolean {
-        // We do not check `inIgnoredSection` here because this method is called from instrumented code
-        // that should be invoked only outside the ignored section.
-        // However, we cannot add `!inIgnoredSection` check here
-        // as the instrumented code might call `enterIgnoredSection` just before this call.
-        return inIdeaPluginReplayMode && collectTrace &&
-                suddenInvocationResult == null &&
-                isRegisteredThread() &&
-                !shouldSkipNextBeforeEvent()
+    override fun enableSpinCycleReplay() {
+        super.enableSpinCycleReplay()
+        currentInterleaving.rollbackAfterSpinCycleFound()
+        isReplayingSpinCycle = true
     }
 
     override fun onNewSwitch(iThread: Int, mustSwitch: Boolean) {

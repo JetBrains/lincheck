@@ -2211,12 +2211,23 @@ abstract class ManagedStrategy(
         }
     }
 
+    override fun shouldInvokeBeforeEvent(): Boolean {
+        // We do not check `inIgnoredSection` here because this method is called from instrumented code
+        // that should be invoked only outside the ignored section.
+        // However, we cannot add `!inIgnoredSection` check here
+        // as the instrumented code might call `enterIgnoredSection` just before this call.
+        return inIdeaPluginReplayMode && collectTrace &&
+                suddenInvocationResult == null &&
+                isRegisteredThread() &&
+                !shouldSkipNextBeforeEvent()
+    }
+
     /**
      * Indicates if the next [beforeEvent] method call should be skipped.
      *
      * @see skipNextBeforeEvent
      */
-    protected fun shouldSkipNextBeforeEvent(): Boolean {
+    private fun shouldSkipNextBeforeEvent(): Boolean {
         val skipBeforeEvent = skipNextBeforeEvent
         if (skipNextBeforeEvent) {
             skipNextBeforeEvent = false
