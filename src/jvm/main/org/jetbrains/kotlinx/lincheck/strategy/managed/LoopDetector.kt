@@ -722,12 +722,28 @@ private class ReplayModeLoopDetectorHelper(
      * @return true if the switch is required, false otherwise.
      */
     fun shouldSwitch(): Boolean {
+        return isCurrentHistoryNodeCompleted()
+    }
+
+    /**
+     * Checks if the current history node is completed.
+     * A history node is considered completed if the number of executions performed
+     * in the current thread exceeds the sum of the spin cycle period and the executions
+     * specified in the current history node.
+     *
+     * @return true if the current history node is completed, false otherwise.
+     */
+    private fun isCurrentHistoryNodeCompleted(): Boolean {
         val historyNode = currentHistoryNode ?: return false
         return (executionsPerformedInCurrentThread > historyNode.spinCyclePeriod + historyNode.executions)
     }
 
     fun detectLivelock(): LoopDetector.Decision {
         val cyclePeriod = currentCyclePeriod
+        if (!isCurrentHistoryNodeCompleted()) {
+            // do not switch until the current node is completed
+            return LoopDetector.Decision.Idle
+        }
         if (currentInterleavingNodeIndex == interleavingHistory.lastIndex && failDueToDeadlockInTheEnd) {
             // Fail if we ran into cycle,
             // this cycle node is the last node in the replayed interleaving,
@@ -735,10 +751,10 @@ private class ReplayModeLoopDetectorHelper(
             // traceCollector.newActiveLockDetected(currentThread, cyclePeriod)
             return LoopDetector.Decision.LivelockFailureDetected(cyclePeriod)
         }
-        return if (cyclePeriod != 0)
-            LoopDetector.Decision.LivelockThreadSwitch(cyclePeriod)
-        else
-            LoopDetector.Decision.Idle
+        if (cyclePeriod != 0) {
+            return LoopDetector.Decision.LivelockThreadSwitch(cyclePeriod)
+        }
+        return LoopDetector.Decision.Idle
     }
 }
 
