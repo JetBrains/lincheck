@@ -403,8 +403,8 @@ public class Injections {
      * @param descriptorId Deterministic call descriptor id when applicable, or any other value otherwise.
      * @param result The call result.
      */
-    public static void onMethodCallReturn(String className, String methodName, long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Object result, int codeLocation) {
-        getEventTracker().onMethodCallReturn(className, methodName, descriptorId, descriptor, methodId, receiver, params, result, codeLocation);
+    public static void onMethodCallReturn(String className, String methodName, long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Object result) {
+        getEventTracker().onMethodCallReturn(className, methodName, descriptorId, descriptor, methodId, receiver, params, result);
     }
 
     /**
@@ -413,8 +413,8 @@ public class Injections {
      * @param descriptor Deterministic call descriptor or null.
      * @param descriptorId Deterministic call descriptor id when applicable, or any other value otherwise.
      */
-    public static void onMethodCallReturnVoid(String className, String methodName, long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, int codeLocation) {
-        getEventTracker().onMethodCallReturn(className, methodName, descriptorId, descriptor, methodId, receiver, params, VOID_RESULT, codeLocation);
+    public static void onMethodCallReturnVoid(String className, String methodName, long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params) {
+        getEventTracker().onMethodCallReturn(className, methodName, descriptorId, descriptor, methodId, receiver, params, VOID_RESULT);
     }
 
     /**
@@ -464,8 +464,8 @@ public class Injections {
     /**
      * Called from the instrumented code after any object is created
      */
-    public static void afterNewObjectCreation(Object obj, int codeLocation) {
-        getEventTracker().afterNewObjectCreation(obj, codeLocation);
+    public static void afterNewObjectCreation(Object obj) {
+        getEventTracker().afterNewObjectCreation(obj);
     }
 
     /**

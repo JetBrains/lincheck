@@ -1354,7 +1354,7 @@ abstract class ManagedStrategy(
         LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
     }
 
-    override fun afterNewObjectCreation(obj: Any, codeLocation: Int) {
+    override fun afterNewObjectCreation(obj: Any) {
         if (obj.isImmutable) return
         runInsideIgnoredSection {
             identityHashCodeTracker.afterNewTrackedObjectCreation(obj)
@@ -1508,8 +1508,7 @@ abstract class ManagedStrategy(
      */
     private fun processIntrinsicMethodEffects(
         methodId: Int,
-        result: Any?,
-        codeLocation: Int
+        result: Any?
     ) {
         check(MethodIds.isIntrinsicMethod(methodId)) { "Processing intrinsic method effect of non-intrinsic call" }
         val intrinsicDescriptor = MethodIds.getIntrinsicMethodDescriptor(methodId)
@@ -1518,7 +1517,7 @@ abstract class ManagedStrategy(
             intrinsicDescriptor.isArraysCopyOfIntrinsic() ||
             intrinsicDescriptor.isArraysCopyOfRangeIntrinsic()
         ) {
-            result?.let { afterNewObjectCreation(it, codeLocation) }
+            result?.let { afterNewObjectCreation(it) }
         }
     }
 
@@ -1602,10 +1601,7 @@ abstract class ManagedStrategy(
         // in case of an atomic method, we create a switch point before the method call;
         // note that in case we resume atomic method there is no need to create the switch point,
         // since there is already a switch point between the suspension point and resumption
-        if (guarantee == ManagedGuaranteeType.ATOMIC
-            // do not create a trace point on resumption
-            //&& !(isTestThread(threadId) && isResumptionMethodCall(threadId, className, methodName, params, atomicMethodDescriptor))
-        ) {
+        if (guarantee == ManagedGuaranteeType.ATOMIC) {
             val event = ExecutionEvents.ExecutionPositionEvent("onMethodCall $className::$methodName by Thread-$threadId at ${CodeLocations.stackTrace(codeLocation)}", switchableThreads(threadId), "MC$threadId")
             newSwitchPoint(threadId, codeLocation, beforeMethodCallSwitch = true, event = event)
             loopDetector.passParameters(params)
@@ -1637,8 +1633,7 @@ abstract class ManagedStrategy(
         methodId: Int,
         receiver: Any?,
         params: Array<Any?>,
-        result: Any?,
-        codeLocation: Int
+        result: Any?
     ) = runInsideIgnoredSection {
         if (deterministicMethodDescriptor != null) {
             Logger.debug { "On method return with descriptor $deterministicMethodDescriptor: $result" }
@@ -1647,7 +1642,7 @@ abstract class ManagedStrategy(
         require(deterministicMethodDescriptor is DeterministicMethodDescriptor<*, *>?)
         // process intrinsic candidate methods
         if (MethodIds.isIntrinsicMethod(methodId)) {
-            processIntrinsicMethodEffects(methodId, result, codeLocation)
+            processIntrinsicMethodEffects(methodId, result)
         }
 
         if (isInTraceDebuggerMode && isFirstReplay && deterministicMethodDescriptor != null) {
