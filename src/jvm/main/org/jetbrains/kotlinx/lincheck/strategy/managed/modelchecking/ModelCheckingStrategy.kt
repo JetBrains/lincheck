@@ -275,34 +275,36 @@ internal class ModelCheckingStrategy(
          */
         private val threadSwitchChoices: List<Int>,
         /**
-         * The next not initialized switch node. It's stored as a field because sometimes execution may be replayed
-         * due to spin cycles, and we have to drop information about odd executions, that was performed during
+         * Initial leaf switch position node in the tree.
+         *
+         * It's stored as a field because sometimes execution may be replayed
+         * due to spin cycles, and we have to drop information about odd executions that were performed during
          * unnecessary spin cycle iterations.
          */
-        private val initialLastNotInitializedNode: SwitchChoosingNode?
+        private val initialLeafNode: SwitchChoosingNode?
     ) {
-        private var lastNotInitializedNode: SwitchChoosingNode? = initialLastNotInitializedNode
-        private lateinit var interleavingFinishingRandom: Random
+        private var leafNode: SwitchChoosingNode? = initialLeafNode
         private var currentInterleavingPosition = 0 // specifies index of currently executing thread in 'threadSwitchChoices'
         private var lastNotInitializedNodeChoices: MutableList<Choice>? = null
         private var executionPosition: Int = 0
+
+        private lateinit var interleavingFinishingRandom: Random
 
         fun initialize() {
             executionPosition = -1 // the first execution position will be zero
             interleavingFinishingRandom = Random(2) // random with a constant seed
             currentInterleavingPosition = 0
             lastNotInitializedNodeChoices = null
-            lastNotInitializedNode?.let {
+            if (leafNode != null) {
                 // Create a mutable list for the initialization of the not initialized node choices.
-                lastNotInitializedNodeChoices = mutableListOf<Choice>().also { choices ->
-                    it.choices = choices
-                }
-                lastNotInitializedNode = null
+                lastNotInitializedNodeChoices = mutableListOf<Choice>()
+                leafNode!!.choices = lastNotInitializedNodeChoices!!
+                leafNode = null
             }
         }
 
         fun rollbackAfterSpinCycleFound() {
-            lastNotInitializedNode = initialLastNotInitializedNode
+            leafNode = initialLeafNode
             lastNotInitializedNodeChoices?.clear()
         }
 
@@ -360,7 +362,7 @@ internal class ModelCheckingStrategy(
             }
         }
 
-        fun copy() = Interleaving(switchPositions, threadSwitchChoices, lastNotInitializedNode)
+        fun copy() = Interleaving(switchPositions, threadSwitchChoices, leafNode)
 
     }
 
