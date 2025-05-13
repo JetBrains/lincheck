@@ -28,7 +28,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.adorne
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.cleanObjectNumeration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.native_calls.DeterministicMethodDescriptor
 import org.jetbrains.kotlinx.lincheck.strategy.native_calls.MethodCallInfo
 import org.jetbrains.kotlinx.lincheck.strategy.native_calls.getDeterministicMethodDescriptorOrNull
@@ -485,7 +484,6 @@ abstract class ManagedStrategy(
         check(decision != LoopDetector.Decision.Idle)
         // if we reached maximum number of events threshold, then fail immediately
         if (decision == LoopDetector.Decision.EventsThresholdReached) {
-            printThreadStates("EventsThresholdReached")
             failDueToDeadlock()
         }
         // if any kind of live-lock was detected, check for obstruction-freedom violation
@@ -502,7 +500,6 @@ abstract class ManagedStrategy(
             traceCollector?.newSwitch(iThread, SwitchReason.ActiveLock,
                 beforeMethodCallSwitch = beforeMethodCallSwitch
             )
-            printThreadStates("LivelockFailureDetected")
             failDueToDeadlock()
         }
         // if live-lock was detected, and replay was requested,
@@ -548,16 +545,6 @@ abstract class ManagedStrategy(
     private fun isActive(iThread: Int): Boolean =
         threadScheduler.isSchedulable(iThread) && !isTestThreadCoroutineSuspended(iThread)
 
-    fun printThreadStates(msg: String = "") {
-        if (msg.isNotBlank()) Logger.info { msg }
-        (0 until threadScheduler.nThreads).forEach { iThread ->
-            var add = ""
-            if (threadScheduler.scheduledThreadId == iThread) add = "(current)"
-            Logger.info { "Thread-$iThread:${threadScheduler.getThreadState(iThread)}:${threadScheduler.getBlockingReason(iThread)} $add" }
-        }
-        Logger.info { "========" }
-    }
-
     /**
      * A regular thread switch to another thread.
      *
@@ -580,7 +567,6 @@ abstract class ManagedStrategy(
                 blockingReason !is BlockingReason.Suspended
             ) {
                 blockThread(iThread, blockingReason)
-                printThreadStates("Blocked thread $iThread (next thread: $nextThread) due to $blockingReason")
             }
             traceCollector?.newSwitch(iThread, switchReason, beforeMethodCallSwitch)
             setCurrentThread(nextThread)
@@ -612,13 +598,12 @@ abstract class ManagedStrategy(
         if (!mustSwitch || threadScheduler.areAllThreadsFinished()) {
            return iThread
         }
-        // try to resume some suspended thread
-        // TODO:
-        //  - this is hard to remove, because if I add suspended threads to resumable, then they will appear in the interleavings and the behaviour will differ from old one,
-        //  where I would 1st check `if (!mustSwitch || threadScheduler.areAllThreadsFinished()) ...` and if that fails I will resume some thread, now I can switch to suspended (resumable) thread
-        //  as part of the regular switch points (for which there will be no blocking reason and `mustSwitch` would be `false` where in old behaviour we would not switch threads. I would prefer not to switch now, then
+        // TODO: this is hard to remove, because if I add suspended threads to resumable threads, then they will appear in the interleavings and the behaviour will differ from old one,
+        //  where we would first check `if (!mustSwitch || threadScheduler.areAllThreadsFinished()) ...` and if that fails then some thread will be resumed. But now I can switch to suspended (resumable) thread
+        //  as part of the regular switch points (for which there will be no blocking reason and `mustSwitch` would be `false` where in old behaviour we would not switch threads). I would prefer not to switch now, then
         //  it would violate the interleaving tree, for which I did not make the switch even though `chooseThread` updated inner tree structure.
         //  - for livelocks everything is okey, because for them I 1st need to check if I can resume the livelock and then do the checks for `not performing any switching`.
+        // try to resume some suspended thread
         val suspendedThread = (0 until nThreads).firstOrNull {
            !threadScheduler.isFinished(it) && isSuspended[it]!!
         }
@@ -626,7 +611,6 @@ abstract class ManagedStrategy(
            return suspendedThread
         }
         // any other situation is considered to be a deadlock
-        printThreadStates("chooseThreadSwitch")
         failDueToDeadlock()
     }
 
@@ -684,6 +668,11 @@ abstract class ManagedStrategy(
             emptyList()
         }
 
+    /**
+     * Threads which can be resumed when no `switchableThread` left.
+     *
+     * Right now only live-locked threads are considered to be resumable.
+     */
     protected fun resumableThreads(iThread: Int): List<Int> =
         if (runner.currentExecutionPart == PARALLEL) {
             (0 until threadScheduler.nThreads).filter { it != iThread && threadScheduler.isLiveLocked(it) }
@@ -721,7 +710,6 @@ abstract class ManagedStrategy(
 
     override fun beforeThreadStart() = runInsideIgnoredSection {
         val currentThreadId = threadScheduler.getCurrentThreadId()
-        Logger.debug { "Thread $currentThreadId started" }
         // do not track unregistered threads
         if (currentThreadId < 0) return
         // scenario threads are handled separately

@@ -50,7 +50,7 @@ internal class ModelCheckingStrategy(
     private val generationRandom = Random(0)
     // The interleaving that will be studied on the next invocation.
     private lateinit var currentInterleaving: Interleaving
-    var isReplayingSpinCycle = false
+    private var isReplayingSpinCycle = false
 
     // Tracker of objects' allocations and object graph topology.
     override val objectTracker: ObjectTracker? = if (isInTraceDebuggerMode) null else LocalObjectManager()
@@ -63,19 +63,12 @@ internal class ModelCheckingStrategy(
         // if we are in spin-cycle replay mode, then next invocation always exist,
         // since we just repeat the previous one.
         if (isReplayingSpinCycle) {
-            Logger.info{"Replaying spin cycle: ${currentInterleaving.getInterleavingRepresentation()}"}
             return true
         }
         replayNumber = 0
         currentInterleaving = root.nextInterleaving()
-            ?: return let {
-                //println("Final tree $root")
-                Logger.info{"No more interleavings"}
-                false
-            }
-        //println("Interleaving: $root")
+            ?: return false
         resetTraceDebuggerTrackerIds()
-        Logger.info { "Next interleaving: ${currentInterleaving.getInterleavingRepresentation()}" }
         return true
     }
 
@@ -108,13 +101,14 @@ internal class ModelCheckingStrategy(
                 !shouldSkipNextBeforeEvent()
     }
 
-    override fun shouldSwitch(): Boolean = currentInterleaving.isSwitchPosition()
+    override fun shouldSwitch(): Boolean =
+        currentInterleaving.isSwitchPosition()
 
     override fun onSwitchPoint(iThread: Int, event: ExecutionEvents.Event) {
         check(iThread == threadScheduler.scheduledThreadId)
         if (runner.currentExecutionPart != PARALLEL) return
         currentInterleaving.newExecutionPosition(iThread, event)
-        Logger.info { "onSwitchPoint(): executionPosition=${currentInterleaving.executionPosition}, event=$event" }
+        Logger.debug { "onSwitchPoint(): executionPosition=${currentInterleaving.executionPosition}, event=$event" }
     }
 
     override fun chooseThread(iThread: Int, event: ExecutionEvents.Event): Int =
