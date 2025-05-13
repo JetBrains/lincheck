@@ -43,8 +43,9 @@ internal class ModelCheckingStrategy(
     // The maximum number of thread switch choices that strategy should perform
     // (increases when all the interleavings with the current depth are studied).
     private var maxNumberOfSwitches = 0
-    // The root of the interleaving tree that chooses the starting thread.
-    private var root: InterleavingTreeNode = ThreadChoosingNode((0 until nThreads).toList())
+    // The root of the interleaving tree.
+    // Artificial switch point is inserted before execution starts.
+    private var root: InterleavingTreeNode = SwitchChoosingNode()
     // This random is used for choosing the next unexplored interleaving node in the tree.
     private val generationRandom = Random(0)
     // The interleaving that will be studied on the next invocation.

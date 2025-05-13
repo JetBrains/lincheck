@@ -326,7 +326,11 @@ abstract class ManagedStrategy(
         traceCollector?.passCodeLocation(SectionDelimiterTracePoint(part))
         val nextThread = when (part) {
             INIT        -> 0
-            PARALLEL    -> chooseThread(0)
+            PARALLEL    -> {
+                // initialize artificial switch point to choose among available threads
+                onNewSwitch(iThread = -1, mustSwitch = true)
+                chooseThread(iThread = -1)
+            }
             POST        -> 0
             VALIDATION  -> 0
         }
