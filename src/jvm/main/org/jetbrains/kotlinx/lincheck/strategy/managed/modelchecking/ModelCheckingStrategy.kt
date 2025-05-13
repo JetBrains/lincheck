@@ -300,19 +300,23 @@ internal class ModelCheckingStrategy(
          */
         private val initialLeafNode: SwitchChoosingNode?
     ) {
-        private var leafNode: SwitchChoosingNode? = initialLeafNode
-        private var currentInterleavingPosition = 0 // specifies index of currently executing thread in 'threadSwitchChoices'
+        // number of the current execution position
         private var executionPosition: Int = 0
+
+        // specifies the index of currently executing thread in 'threadSwitchChoices'
+        private var currentInterleavingPosition = 0
+
+        private var leafNode: SwitchChoosingNode? = initialLeafNode
 
         private lateinit var interleavingFinishingRandom: Random
 
         fun initialize() {
             executionPosition = -1 // the first execution position will be zero
-            interleavingFinishingRandom = Random(2) // random with a constant seed
             currentInterleavingPosition = 0
             if (leafNode != null) {
                 leafNode!!.initialize()
             }
+            interleavingFinishingRandom = Random(2) // random with a constant seed
         }
 
         fun rollbackAfterSpinCycleFound() {
