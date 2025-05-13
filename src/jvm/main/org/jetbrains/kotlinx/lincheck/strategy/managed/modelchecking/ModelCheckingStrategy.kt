@@ -298,7 +298,6 @@ internal class ModelCheckingStrategy(
         private var lastNotInitializedNodeChoices: MutableList<Choice>? = null
         private var lastLeafNode: SwitchChoosingNode = initialLastLeafNode
         internal var executionPosition: Int = -1
-        var interleavingKey: String = ""
 
         fun getInterleavingRepresentation(): String {
             var result = ""
@@ -312,7 +311,6 @@ internal class ModelCheckingStrategy(
         }
 
         fun initialize() {
-            interleavingKey = ""
             executionPosition = -1 // the first execution position will be zero
             interleavingFinishingRandom = Random(2) // random with a constant seed
             currentInterleavingPosition = 0
@@ -334,7 +332,6 @@ internal class ModelCheckingStrategy(
 
             lastNotInitializedNode = initialLastNotInitializedNode
             lastNotInitializedNodeChoices?.clear()
-            interleavingKey = ""
         }
 
         fun chooseThread(iThread: Int): Int {
@@ -363,14 +360,7 @@ internal class ModelCheckingStrategy(
                 // Use the predefined choice.
                 val nextThread = threadSwitchChoices[currentInterleavingPosition]
 
-                if (executionPosition != -1 && executionPosition == switchPositions[currentInterleavingPosition - 1]) {
-                    interleavingKey += "s$executionPosition,"
-                    interleavingKey += "t$nextThread,"
-                } else {
-                    interleavingKey += "t$nextThread,"
-                    // check(event is ExecutionEvents.Event.StartParallelPart) { "Should be the first thread to start, but executionPosition=$executionPosition, event=$event" }
-                }
-                Logger.info { "Switch positions: $switchPositions, thread switches: $threadSwitchChoices, key: '$interleavingKey'" }
+                Logger.info { "Switch positions: $switchPositions, thread switches: $threadSwitchChoices" }
 
                 currentInterleavingPosition++
                 nextThread
@@ -388,7 +378,7 @@ internal class ModelCheckingStrategy(
 //            }
             else {
                 val nextThreadChoices = lastLeafNode.choices.find { it.value == executionPosition }?.node?.choices
-                check(nextThreadChoices != null) { "No thread choices for execution position (key=$interleavingKey): $executionPosition" }
+                check(nextThreadChoices != null) { "No thread choices for execution position: $executionPosition" }
                 if (nextThreadChoices.isEmpty()) return -1
 
                 // There is no predefined choice.
@@ -416,9 +406,7 @@ internal class ModelCheckingStrategy(
                 // because we append switch nodes before choosing the next thread
                 lastLeafNode = nextThreadChoices.find { it.value == nextThread }!!.node as SwitchChoosingNode
 
-                var resumed = if (nextThread in resumableThreads(iThread)) "_r" else ""
-                interleavingKey += "(s$executionPosition),t$nextThread$resumed,"
-                Logger.info { "Switch positions: $switchPositions, thread switches: $threadSwitchChoices, key: '$interleavingKey'" }
+                Logger.info { "Switch positions: $switchPositions, thread switches: $threadSwitchChoices" }
 
                 // TODO:
                 //  1. refactor so there is not lateinit var for `isInitialized`
@@ -429,7 +417,7 @@ internal class ModelCheckingStrategy(
                     ?.find { it.value == nextThread }?.node
                 if (nextSwitchNode != null) {
                     check(!nextSwitchNode.isInitialized) {
-                        "Reinitialization of the switch points for node (key=$interleavingKey): $nextSwitchNode"
+                        "Reinitialization of the switch points for node: $nextSwitchNode"
                     }
                     lastNotInitializedNodeChoices = mutableListOf<Choice>().also { choices ->
                         nextSwitchNode.choices = choices
@@ -477,10 +465,6 @@ internal class ModelCheckingStrategy(
         }
 
         fun copy() = Interleaving(switchPositions, threadSwitchChoices, lastNotInitializedNode, lastLeafNode)
-    }
-
-    override fun getCurrentKey(): String {
-        return currentInterleaving.interleavingKey
     }
 
     inner class InterleavingBuilder {

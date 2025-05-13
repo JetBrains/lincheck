@@ -572,8 +572,6 @@ abstract class ManagedStrategy(
         return switchHappened
     }
 
-    protected open fun getCurrentKey(): String = ""
-
     private fun chooseThreadSwitch(iThread: Int, mustSwitch: Boolean = false): Int {
         // inform plugin about thread switch
         if (inIdeaPluginReplayMode && collectTrace) {
