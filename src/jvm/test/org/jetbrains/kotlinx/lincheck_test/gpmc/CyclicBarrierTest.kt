@@ -21,7 +21,7 @@ class CyclicBarrierTest {
 
     @Test
     fun testBarrier() {
-        runConcurrentTest(100) {
+        runConcurrentTest(10000) {
             val barrier = CyclicBarrier(2)
 
             val t1 = thread {

@@ -149,7 +149,6 @@ internal object MethodIds {
 
     @Synchronized
     fun registerIntrinsicMethod(methodDescriptor: MethodDescriptor) {
-        //Logger.warn {  "Registering intrinsic method: $methodDescriptor" }
         val methodId = getMethodIdImpl(methodDescriptor)
         intrinsicMethods[methodId] = methodDescriptor
     }

@@ -71,7 +71,7 @@ internal class LincheckClassVisitor(
     ): MethodVisitor {
         var mv = super.visitMethod(access, methodName, desc, signature, exceptions)
         if (access and ACC_NATIVE != 0) {
-            //Logger.debug { "Skipping transformation of the native method $className.$methodName" }
+            Logger.debug { "Skipping transformation of the native method $className.$methodName" }
             return mv
         }
         if (instrumentationMode == STRESS) {

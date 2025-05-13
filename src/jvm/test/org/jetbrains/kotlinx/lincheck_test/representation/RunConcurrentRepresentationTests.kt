@@ -51,7 +51,6 @@ abstract class BaseRunConcurrentRepresentationTest<R>(private val outputFileName
             "The test should fail, but it completed successfully"
         }
         val error = result.exceptionOrNull()!!
-        println(error)
         check(error is LincheckAssertionError) {
             """
             |The test should throw LincheckAssertionError, but instead it failed with:
@@ -437,7 +436,6 @@ class CoroutinesRunConcurrentRepresentationTest : BaseRunConcurrentRepresentatio
 
     @Before
     fun setUp() {
-        // TODO: fix this test
         assumeFalse(isInTraceDebuggerMode) // unstable hash-code
         assumeFalse(isJdk8) // TODO: investigate why test is unstable on JDK8
     }
