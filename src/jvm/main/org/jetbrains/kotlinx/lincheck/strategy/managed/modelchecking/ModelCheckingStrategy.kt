@@ -43,11 +43,16 @@ internal class ModelCheckingStrategy(
     // The maximum number of thread switch choices that strategy should perform
     // (increases when all the interleavings with the current depth are studied).
     private var maxNumberOfSwitches = 0
+
     // The root of the interleaving tree.
     // Artificial switch point is inserted before execution starts.
-    private var root: InterleavingTreeNode = SwitchChoosingNode().apply { initialize() /* root is always initialized */ }
+    private var root = SwitchChoosingNode()
+        // root is always initialized
+        .apply { initialize() }
+
     // This random is used for choosing the next unexplored interleaving node in the tree.
     private val generationRandom = Random(0)
+
     // The interleaving that will be studied on the next invocation.
     private lateinit var currentInterleaving: Interleaving
 
@@ -174,8 +179,12 @@ internal class ModelCheckingStrategy(
         }
 
         protected fun updateExplorationStatistics() {
-            check(isInitialized) { "An interleaving tree node was not initialized properly. " +
-                    "Probably caused by non-deterministic behaviour (WeakHashMap, Object.hashCode, etc)" }
+            check(isInitialized) {
+                """
+                    An interleaving tree node was not initialized properly.
+                    Probably caused by non-deterministic behaviour (WeakHashMap, Object.hashCode, etc)
+                """.trimIndent()
+            }
             if (choices.isEmpty()) {
                 finishExploration()
                 return
@@ -232,23 +241,20 @@ internal class ModelCheckingStrategy(
      */
     private inner class SwitchChoosingNode : InterleavingTreeNode() {
 
-        // tracks whether there was an attempt
-        private var _isInitialized: Boolean = false
-
         private var _choices: MutableList<Choice> = mutableListOf()
 
         override val choices: List<Choice>
             get() = _choices
 
-        override val isInitialized: Boolean
-            get() = _isInitialized
+        override var isInitialized: Boolean = false
+            private set
 
         fun addChoice(choice: Choice) {
             _choices.add(choice)
         }
 
         fun initialize() {
-            _isInitialized = true
+            isInitialized = true
         }
 
         fun reset() {
@@ -281,16 +287,14 @@ internal class ModelCheckingStrategy(
     }
 
     /**
-     * This class specifies an interleaving that is re-producible.
+     * This class specifies an interleaving that is reproducible.
+     *
+     * @property switchPositions Numbers of execution positions [executionPosition]
+     *   where thread switch must be performed.
+     * @param threadSwitchChoices Numbers of the threads where to switch if the [switchPositions].
      */
     private inner class Interleaving(
-        /**
-         * Numbers of execution positions [executionPosition] where thread switch must be performed.
-         */
         private val switchPositions: List<Int>,
-        /**
-         * Numbers of the threads where to switch if the [switchPositions].
-         */
         private val threadSwitchChoices: List<Int>
     ) {
         // number of the current execution position
@@ -299,7 +303,7 @@ internal class ModelCheckingStrategy(
         // specifies the index of currently executing thread in 'threadSwitchChoices'
         private var currentInterleavingPosition = 0
 
-        // traverses `SwitchChoosingNode` nodes of interleaving tree
+        // traverses `SwitchChoosingNode` nodes of an interleaving tree
         private lateinit var currentInterleavingNode: SwitchChoosingNode
 
         // tells the strategy is it allowed to insert new switch points to the `currentInterleavingNode`
@@ -310,7 +314,7 @@ internal class ModelCheckingStrategy(
         fun initialize() {
             executionPosition = -1 // the first execution position will be zero
             currentInterleavingPosition = 0
-            currentInterleavingNode = root as SwitchChoosingNode
+            currentInterleavingNode = root
             interleavingFinishingRandom = Random(2) // random with a constant seed
         }
 
@@ -318,12 +322,13 @@ internal class ModelCheckingStrategy(
             // execution will be replayed due to spin cycles, so we have to drop information about
             // odd executions that were performed during unnecessary spin cycle iterations
             currentInterleavingNode.reset()
-            // we will replay this interleaving and since we clear out the switch points in the `currentInterleavingNode`
+            // we will replay this interleaving,
+            // and since we clear out the switch points in the `currentInterleavingNode`
             // we need to insert them once again, thus, we tell strategy to append switch points
             shouldAddNewSwitchPoints = true
         }
 
-        fun chooseThread(iThread: Int): Int =
+        fun chooseThread(iThread: Int): Int {
             if (currentInterleavingPosition < threadSwitchChoices.size) {
                 // TODO: causes TL on CI
                 // check(
@@ -340,9 +345,10 @@ internal class ModelCheckingStrategy(
                 //         Execution position: $executionPosition, switch positions: $switchPositions.
                 //     """.trimIndent()
                 // }
+
                 // Use the predefined choice.
                 val nextThread = threadSwitchChoices[currentInterleavingPosition++]
-
+                // Update current node.
                 if (!loopDetector.replayModeEnabled) {
                     currentInterleavingNode = currentInterleavingNode.choices
                         .find { it.value == executionPosition }!!.node.choices
@@ -350,16 +356,18 @@ internal class ModelCheckingStrategy(
                     // we reached next `SwitchChoosingNode` node, so mark it as initialized
                     currentInterleavingNode.initialize()
                 }
-
-                nextThread
+                return nextThread
             } else {
                 // There is no predefined choice.
                 // This can happen if there were forced thread switches after the last predefined one
                 // (e.g., thread end, coroutine suspension, acquiring an already acquired lock or monitor.wait).
                 // We use a deterministic random here to choose the next thread.
-                shouldAddNewSwitchPoints = false // end of tracked execution positions, so tell strategy not to generate switch points any further
-                switchableThreads(iThread).random(interleavingFinishingRandom)
+
+                // end of tracked execution positions, so tell strategy not to generate switch points any further
+                shouldAddNewSwitchPoints = false
+                return switchableThreads(iThread).random(interleavingFinishingRandom)
             }
+        }
 
         fun isSwitchPosition() = executionPosition in switchPositions
 
@@ -370,7 +378,6 @@ internal class ModelCheckingStrategy(
          */
         fun newExecutionPosition(iThread: Int) {
             executionPosition++
-
             if (shouldAddNewSwitchPoints && executionPosition > (switchPositions.lastOrNull() ?: -1)) {
                 // Add a new thread choosing node corresponding to the switch at the current execution position.
                 val availableThreads = switchableThreads(iThread)
