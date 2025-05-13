@@ -106,7 +106,7 @@ internal class ModelCheckingStrategy(
     override fun onSwitchPoint(iThread: Int) {
         check(iThread == threadScheduler.scheduledThreadId)
         if (runner.currentExecutionPart != PARALLEL) return
-        currentInterleaving.newExecutionPosition(iThread)
+        currentInterleaving.onSwitchPoint(iThread)
         Logger.debug { "onSwitchPoint(): executionPosition=${currentInterleaving.executionPosition}" }
     }
 
@@ -296,7 +296,9 @@ internal class ModelCheckingStrategy(
         private lateinit var interleavingFinishingRandom: Random
         private var currentInterleavingPosition = 0 // specifies index of currently executing thread in 'threadSwitchChoices'
         private var lastNotInitializedNodeChoices: MutableList<Choice>? = null
+
         private var lastLeafNode: SwitchChoosingNode = initialLastLeafNode
+
         internal var executionPosition: Int = -1
 
         fun getInterleavingRepresentation(): String {
@@ -430,7 +432,7 @@ internal class ModelCheckingStrategy(
          * Unlike switch points, the execution position is just a gradually increasing counter
          * which helps to distinguish different switch points.
          */
-        fun newExecutionPosition(iThread: Int) {
+        fun onSwitchPoint(iThread: Int) {
             executionPosition++
 
             if (executionPosition > (switchPositions.lastOrNull() ?: -1) && !loopDetector.replayModeEnabled) {
