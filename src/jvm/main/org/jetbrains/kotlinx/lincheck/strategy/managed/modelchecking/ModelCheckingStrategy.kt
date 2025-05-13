@@ -373,9 +373,9 @@ internal class ModelCheckingStrategy(
                 val nextThread = threadSwitchChoices[currentInterleavingPosition]
 
                 if (executionPosition != -1 && executionPosition == switchPositions[currentInterleavingPosition - 1]) {
-                    val event = if (event.type != "BEFORE_PART0") event.type else ""
+                    val executionEvent = if (event.type != "BEFORE_PART0") event.type else ""
 
-                    interleavingKey += "s$executionPosition ($event),"
+                    interleavingKey += "s$executionPosition ($executionEvent),"
                     interleavingKey += "t$nextThread,"
                 } else {
                     interleavingKey += "t$nextThread,"

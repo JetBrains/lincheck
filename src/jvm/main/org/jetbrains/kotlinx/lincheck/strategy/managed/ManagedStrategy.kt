@@ -1034,10 +1034,10 @@ abstract class ManagedStrategy(
         parkingTracker.park(iThread)
         var iteration = 0
         while (parkingTracker.waitUnpark(iThread)) {
-            val event = ExecutionEvents.ExecutionPositionEvent("Loop park Thread-$iThread at: ${CodeLocations.stackTrace(codeLocation)}", switchableThreads(iThread), "LP$iThread (iter=$iteration)")
-            onSwitchPoint(iThread, event)
+            val executionEvent = ExecutionEvents.ExecutionPositionEvent("Loop park Thread-$iThread at: ${CodeLocations.stackTrace(codeLocation)}", switchableThreads(iThread), "LP$iThread (iter=$iteration)")
+            onSwitchPoint(iThread, executionEvent)
             // switch to another thread and wait till an unpark event happens
-            switchCurrentThread(iThread, BlockingReason.Parked, event = event)
+            switchCurrentThread(iThread, BlockingReason.Parked, event = executionEvent)
             iteration++
         }
     }
