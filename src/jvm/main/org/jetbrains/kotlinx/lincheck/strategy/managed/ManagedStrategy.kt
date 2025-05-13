@@ -449,17 +449,17 @@ abstract class ManagedStrategy(
         }
         // check we are in the right thread
         check(threadId == threadScheduler.scheduledThreadId)
-        // check if we need to switch
-        val shouldSwitch = when {
-            // check if a switch is required in replay mode
-            loopDetector.replayModeEnabled -> loopDetector.shouldSwitchInReplayMode()
-            // do not make thread switches inside a silent section
-            inSilentSection(threadId) -> false
-            // otherwise, as strategy if thread switch is needed
-            else -> shouldSwitch(threadId)
-        }
         // check if live-lock is detected
         val decision = loopDetector.visitCodeLocation(threadId, codeLocation)
+        // check if we need to switch
+        val shouldSwitch = when {
+            // check if a switch is required by the loop detector replay mode
+            loopDetector.replayModeEnabled -> loopDetector.shouldSwitch()
+            // do not make thread switches inside a silent section
+            inSilentSection(threadId) -> false
+            // otherwise, follow the strategy decision
+            else -> shouldSwitch(threadId)
+        }
         if (decision != LoopDetector.Decision.Idle) {
             processLoopDetectorDecision(threadId, codeLocation, decision, beforeMethodCallSwitch = beforeMethodCallSwitch)
             return
