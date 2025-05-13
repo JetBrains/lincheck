@@ -210,6 +210,8 @@ internal class ModelCheckingStrategy(
             // In case of errors because of floating point numbers choose the last unexplored choice.
             return choices.last { !it.node.isFullyExplored }
         }
+
+        abstract fun getChildNode(choiceValue: Int): InterleavingTreeNode?
     }
 
     /**
@@ -228,6 +230,10 @@ internal class ModelCheckingStrategy(
             val interleaving = child.node.nextInterleaving(interleavingBuilder)
             updateExplorationStatistics()
             return interleaving
+        }
+
+        override fun getChildNode(choiceValue: Int): InterleavingTreeNode? {
+            return choices.find { it.value == choiceValue }?.node
         }
 
         override fun getStringRepresentation(indent: String): String = StringBuilder()
@@ -249,16 +255,28 @@ internal class ModelCheckingStrategy(
         override var isInitialized: Boolean = false
             private set
 
-        fun addChoice(choice: Choice) {
-            _choices.add(choice)
-        }
-
         fun initialize() {
             isInitialized = true
         }
 
         fun reset() {
             _choices.clear()
+        }
+
+        fun addChoice(choice: Choice) {
+            check(isInitialized) {
+                "Node should be initialized."
+            }
+            check(choices.isEmpty() || choices.last().value < choice.value) {
+                "Switch positions should be sorted in ascending order."
+            }
+            _choices.add(choice)
+        }
+
+        override fun getChildNode(choiceValue: Int): InterleavingTreeNode? {
+            val index = choices.binarySearch { it.value - choiceValue }
+            if (index < 0) return null
+            return choices[index].node
         }
 
         override fun nextInterleaving(interleavingBuilder: InterleavingBuilder): Interleaving {
@@ -350,10 +368,11 @@ internal class ModelCheckingStrategy(
                 val nextThread = threadSwitchChoices[currentInterleavingPosition++]
                 // Update current node.
                 if (!loopDetector.replayModeEnabled) {
-                    currentInterleavingNode = currentInterleavingNode.choices
-                        .find { it.value == executionPosition }!!.node.choices
-                        .find { it.value == nextThread }!!.node as SwitchChoosingNode
-                    // we reached next `SwitchChoosingNode` node, so mark it as initialized
+                    currentInterleavingNode = currentInterleavingNode
+                        .getChildNode(executionPosition)!!
+                        .getChildNode(nextThread)!!
+                        as SwitchChoosingNode
+                    // we reached the next `SwitchChoosingNode` node, so mark it as initialized
                     currentInterleavingNode.initialize()
                 }
                 return nextThread
