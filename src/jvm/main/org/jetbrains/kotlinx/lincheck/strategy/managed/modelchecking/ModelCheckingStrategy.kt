@@ -335,13 +335,15 @@ internal class ModelCheckingStrategy(
         }
 
         fun chooseThread(iThread: Int): Int {
-            val threads =
-                switchableThreads(iThread) +
-                resumableThreads(iThread) +
+            val switchableThreads = switchableThreads(iThread)
+            val resumableThreads = resumableThreads(iThread)
+            val availableThreads =
+                switchableThreads +
+                resumableThreads +
                 /* 1st thread to execute */
                 if (currentInterleavingPosition == 0) listOf(iThread) else emptyList()
 
-            val t = if (currentInterleavingPosition < threadSwitchChoices.size) {
+            val nextThreadId = if (currentInterleavingPosition < threadSwitchChoices.size) {
                 check(
                     // no thread switch happened yet, initial thread id will be returned
                     executionPosition == -1 ||
@@ -387,14 +389,15 @@ internal class ModelCheckingStrategy(
                 // We use a deterministic random here to choose the next thread.
                 // TODO: instead of mapping and then finding, I could randomly select index and then move the
                 //  `lastLeafNode` in O(1) time.
+                @Suppress("NAME_SHADOWING")
                 val availableThreads = nextThreadChoices.map { it.value }
 
-                switchableThreads(iThread).let {
+                switchableThreads.let {
                     if (it.isNotEmpty()) check(it == availableThreads) {
                         "Switchable threads and saved leaf threads do not match: switchable=$it, saved=$availableThreads"
                     }
                     else {
-                        val resumable = resumableThreads(iThread)
+                        val resumable = resumableThreads
                         check(resumable == availableThreads) {
                             "Resumable threads and saved leaf threads do not match: resumable=$resumable, saved=$availableThreads"
                         }
@@ -425,15 +428,14 @@ internal class ModelCheckingStrategy(
                 }
                 nextThread
             }
-
-            check(t in threads) {
+            check(nextThreadId in availableThreads) {
                 """
-                    Trying to switch the execution to thread $t,
-                    but only the following threads are eligible to switch: $threads
+                    Trying to switch the execution to thread $nextThreadId,
+                    but only the following threads are eligible to switch: $availableThreads
                 """.trimIndent()
             }
 
-            return t
+            return nextThreadId
         }
 
 
