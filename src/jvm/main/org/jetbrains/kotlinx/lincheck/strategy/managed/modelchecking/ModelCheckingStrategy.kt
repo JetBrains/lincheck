@@ -101,9 +101,6 @@ internal class ModelCheckingStrategy(
     }
 
     override fun onNewSwitch(iThread: Int, mustSwitch: Boolean) {
-        if (inIdeaPluginReplayMode && collectTrace) {
-            onThreadSwitchesOrActorFinishes()
-        }
         if (mustSwitch) {
             // Create new execution position if this is a forced switch.
             // All other execution positions are covered by `shouldSwitch` method,

@@ -573,6 +573,9 @@ abstract class ManagedStrategy(
     }
 
     private fun chooseThreadSwitch(iThread: Int, mustSwitch: Boolean = false): Int {
+        if (inIdeaPluginReplayMode && collectTrace) {
+            onThreadSwitchesOrActorFinishes()
+        }
         onNewSwitch(iThread, mustSwitch)
         // unblock interrupted threads
         unblockInterruptedThreads()
