@@ -19,52 +19,73 @@ import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.isFinalField
 import org.jetbrains.kotlinx.lincheck.util.Logger
 import org.jetbrains.kotlinx.lincheck.util.MethodDescriptor
 import org.objectweb.asm.*
-import sun.nio.ch.lincheck.Types.*
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 
 object ExecutionEvents {
-    data class ExecutionPositionEvent(
-        val event: String,
-        val availableThreads: List<Int>,
-        val type: String = "?" // unspecified event type
-    ) {
-        override fun toString(): String = event + " (threads=[${availableThreads.joinToString(", ")}])"
-    }
+    sealed class Event {
+        abstract val shortName: String
 
-    // TODO: make a key here as a string (sequence of all switch positions comma-separated)
-    //  because same execution position might refer to different code locations
-    //  when it is from different interleaving
-    //  also thread interleavings could be encoded there
-    private val map: HashMap<String, ExecutionPositionEvent?> = hashMapOf()
-
-    @Synchronized
-    fun addExecutionEvent(key: String /* switchPos1, thread1, switchPos2, thread2, ... */, event: ExecutionPositionEvent?): Boolean {
-        var addedOrChanged = false
-
-        if (map.containsKey(key)) {
-            val prevEvent = map[key]
-            if (prevEvent != event) {
-                addedOrChanged = true
-                Logger.debug {
-                    "Overriding existing position (key='$key'): (new thread=[${event?.availableThreads?.joinToString(", ")}]) ${map[key]} -> $event"
-                }
-            }
-            else {
-                Logger.debug {
-                    "Existing execution position (key='$key'): (new thread=[${event?.availableThreads?.joinToString(", ")}]) $event"
-                }
-            }
+        class StartParallelPart : Event() {
+            override fun toString(): String = ""
+            override val shortName = ""
         }
-        else {
-            addedOrChanged = true
-            Logger.debug {
-                "Writing new execution position (key='$key'): (new thread=[${event?.availableThreads?.joinToString(", ")}]) $event"
-            }
+        class ThreadFinish(val threadId: Int) : Event() {
+            override fun toString(): String = "Finish Thread-$threadId"
+            override val shortName = "F$threadId"
         }
-        map[key] = event
-        return addedOrChanged
+        class ThreadJoin(val currentThreadId: Int, val joiningThreadId: Int, val attempt: Int /* since joining happens in cycle */) : Event() {
+            override fun toString(): String = "Thread-$currentThreadId joins Thread-$joiningThreadId"
+            override val shortName = "J$currentThreadId-$joiningThreadId (attempt=$attempt)"
+        }
+        class LiveLock(val threadId: Int, val codeLocation: Int) : Event() {
+            override fun toString(): String = "LiveLock detected on Thread-$threadId at: ${CodeLocations.stackTrace(codeLocation)}"
+            override val shortName = "L$threadId"
+        }
+        class BeforeMonitorLock(val threadId: Int, val codeLocation: Int) : Event() {
+            override fun toString(): String = "Before monitor lock by Thread-$threadId at: ${CodeLocations.stackTrace(codeLocation)}"
+            override val shortName = "BML$threadId"
+        }
+        class MonitorLock(val threadId: Int, val attempt: Int /* since locking happens in cycle */) : Event() {
+            override fun toString(): String = "Lock monitor in Thread-$threadId"
+            override val shortName = "LM$threadId (attempt=$attempt)"
+        }
+        class ThreadPark(val threadId: Int, val codeLocation: Int, val attempt: Int /* since parking happens in cycle */) : Event() {
+            override fun toString(): String = "Park Thread-$threadId at ${CodeLocations.stackTrace(codeLocation)}"
+            override val shortName = "P$threadId (attempt=$attempt)"
+        }
+        class BeforeWait(val threadId: Int, val codeLocation: Int) : Event() {
+            override fun toString(): String = "Before wait by Thread-$threadId at ${CodeLocations.stackTrace(codeLocation)}"
+            override val shortName = "BW$threadId"
+        }
+        class ThreadWait(val threadId: Int, val attempt: Int /* since waiting happens in cycle */) : Event() {
+            override fun toString(): String = "Thread-$threadId waits on monitor"
+            override val shortName = "W$threadId (attempt=$attempt)"
+        }
+        class BeforeRead(val threadId: Int, val codeLocation: Int, val className: String, val fieldName: String) : Event() {
+            override fun toString(): String = "Before read field (field=$className::$fieldName) by Thread-$threadId at ${CodeLocations.stackTrace(codeLocation)}"
+            override val shortName = "Re$threadId"
+        }
+        class BeforeReadArrayElement(val threadId: Int, val codeLocation: Int, val array: Any, val index: Int) : Event() {
+            override fun toString(): String = "Before read array element (arr=${array.javaClass.simpleName}, index=$index) by Thread-$threadId at ${CodeLocations.stackTrace(codeLocation)}"
+            override val shortName = "ReA$threadId"
+        }
+        class BeforeWrite(val threadId: Int, val codeLocation: Int, val className: String, val fieldName: String) : Event() {
+            override fun toString(): String = "Before write field (field=$className::$fieldName) by Thread-$threadId at ${CodeLocations.stackTrace(codeLocation)}"
+            override val shortName = "Wr$threadId"
+        }
+        class BeforeWriteArrayElement(val threadId: Int, val codeLocation: Int, val array: Any, val index: Int) : Event() {
+            override fun toString(): String = "Before write array element (arr=${array.javaClass.simpleName}, index=$index) by Thread-$threadId at ${CodeLocations.stackTrace(codeLocation)}"
+            override val shortName = "WrA$threadId"
+        }
+        class BeforeMethodCall(val threadId: Int, val codeLocation: Int, val className: String, val methodName: String) : Event() {
+            override fun toString(): String = "Before method call $className::$methodName by Thread-$threadId at ${CodeLocations.stackTrace(codeLocation)}"
+            override val shortName = "MC$threadId"
+        }
+        class AfterCoroutineSuspended(val threadId: Int) : Event() {
+            override fun toString(): String = "After coroutine suspended in Thread-$threadId"
+            override val shortName = "CS$threadId"
+        }
     }
 }
 

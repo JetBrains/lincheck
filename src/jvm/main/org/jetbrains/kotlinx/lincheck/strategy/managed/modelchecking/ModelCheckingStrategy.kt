@@ -110,16 +110,14 @@ internal class ModelCheckingStrategy(
 
     override fun shouldSwitch(): Boolean = currentInterleaving.isSwitchPosition()
 
-    override fun onSwitchPoint(iThread: Int, event: ExecutionEvents.ExecutionPositionEvent) {
+    override fun onSwitchPoint(iThread: Int, event: ExecutionEvents.Event) {
         check(iThread == threadScheduler.scheduledThreadId)
         if (runner.currentExecutionPart != PARALLEL) return
-        // TODO: why do I need it? it complicates stuff
-//        if (loopDetector.replayModeEnabled) return
         currentInterleaving.newExecutionPosition(iThread, event)
         Logger.info { "onSwitchPoint(): executionPosition=${currentInterleaving.executionPosition}, event=$event" }
     }
 
-    override fun chooseThread(iThread: Int, event: ExecutionEvents.ExecutionPositionEvent): Int =
+    override fun chooseThread(iThread: Int, event: ExecutionEvents.Event): Int =
         currentInterleaving.chooseThread(iThread, event)
 
     /**
@@ -263,7 +261,7 @@ internal class ModelCheckingStrategy(
             .toString()
     }
 
-    inner class Choice(var node: InterleavingTreeNode, val value: Int, var event: ExecutionEvents.ExecutionPositionEvent? = null) {
+    inner class Choice(var node: InterleavingTreeNode, val value: Int, var event: ExecutionEvents.Event? = null) {
         override fun toString(): String {
             return "Choice(node=${node.javaClass.simpleName}, value=$value, event=$event)"
         }
@@ -346,7 +344,7 @@ internal class ModelCheckingStrategy(
             interleavingKey = ""
         }
 
-        fun chooseThread(iThread: Int, event: ExecutionEvents.ExecutionPositionEvent): Int {
+        fun chooseThread(iThread: Int, event: ExecutionEvents.Event): Int {
             val threads =
                 switchableThreads(iThread) +
                 resumableThreads(iThread) +
@@ -373,17 +371,13 @@ internal class ModelCheckingStrategy(
                 val nextThread = threadSwitchChoices[currentInterleavingPosition]
 
                 if (executionPosition != -1 && executionPosition == switchPositions[currentInterleavingPosition - 1]) {
-                    val executionEvent = if (event.type != "BEFORE_PART0") event.type else ""
-
-                    interleavingKey += "s$executionPosition ($executionEvent),"
+                    interleavingKey += "s$executionPosition (${event.shortName}),"
                     interleavingKey += "t$nextThread,"
                 } else {
                     interleavingKey += "t$nextThread,"
-                    check(event.type == "BEFORE_PART0") { "Should be the first thread to start, but executionPosition=$executionPosition, event=$event" }
-                    //interleavingKey += if (event.type != "BEFORE_PART0") "${event.type} (s$executionPosition)," else ""
+                    check(event is ExecutionEvents.Event.StartParallelPart) { "Should be the first thread to start, but executionPosition=$executionPosition, event=$event" }
                 }
                 Logger.info { "Switch positions: $switchPositions, thread switches: $threadSwitchChoices, key: '$interleavingKey'" }
-                ExecutionEvents.addExecutionEvent(interleavingKey, event)
 
                 currentInterleavingPosition++
                 nextThread
@@ -430,9 +424,8 @@ internal class ModelCheckingStrategy(
                 lastLeafNode = nextThreadChoices.find { it.value == nextThread }!!.node as SwitchChoosingNode
 
                 var resumed = if (nextThread in resumableThreads(iThread)) "_r" else ""
-                interleavingKey += "${event.type} (s$executionPosition),t$nextThread$resumed,"
+                interleavingKey += "${event.shortName} (s$executionPosition),t$nextThread$resumed,"
                 Logger.info { "Switch positions: $switchPositions, thread switches: $threadSwitchChoices, key: '$interleavingKey'" }
-                ExecutionEvents.addExecutionEvent(interleavingKey, event)
 
                 // TODO:
                 //  1. refactor so there is not lateinit var for `isInitialized`
@@ -470,10 +463,9 @@ internal class ModelCheckingStrategy(
          * Unlike switch points, the execution position is just a gradually increasing counter
          * which helps to distinguish different switch points.
          */
-        fun newExecutionPosition(iThread: Int, event: ExecutionEvents.ExecutionPositionEvent) {
+        fun newExecutionPosition(iThread: Int, event: ExecutionEvents.Event) {
             executionPosition++
 
-            // TODO: maybe add something here, like if (loopDetector.inReplayMode) then do not update tree, but still increase the executionPosition?
             if (executionPosition > (switchPositions.lastOrNull() ?: -1) && !loopDetector.replayModeEnabled) {
                 // Add a new thread choosing node corresponding to the switch at the current execution position.
                 //if (lastNotInitializedNodeChoices == null) return
