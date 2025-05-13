@@ -159,11 +159,8 @@ internal class LoopDetector(
      * In the considered example, we will retain that we will switch soon after
      * the spin cycle in thread 1, so no bug will appear.
      */
-    fun shouldSwitchInReplayMode(): Boolean {
-        return replayModeLoopDetectorHelper!!.run {
-            onNextExecution()
-            shouldSwitch()
-        }
+    fun shouldSwitch(): Boolean {
+        return replayModeLoopDetectorHelper?.shouldSwitch() ?: false
     }
 
     /**
@@ -222,7 +219,8 @@ internal class LoopDetector(
      */
     fun visitCodeLocation(iThread: Int, codeLocation: Int): Decision {
         replayModeLoopDetectorHelper?.let {
-            return if (it.shouldSwitch()) it.detectLivelock() else Decision.Idle
+            it.onNextExecution()
+            return it.detectLivelock()
         }
         // Increase the total number of happened operations for live-lock detection
         totalExecutionsCount++
