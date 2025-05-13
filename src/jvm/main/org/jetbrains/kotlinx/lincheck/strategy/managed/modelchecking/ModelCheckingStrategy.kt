@@ -13,7 +13,6 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
-import org.jetbrains.kotlinx.lincheck.transformation.ExecutionEvents
 import org.jetbrains.kotlinx.lincheck.util.*
 import java.lang.reflect.*
 import java.util.*
@@ -104,15 +103,15 @@ internal class ModelCheckingStrategy(
     override fun shouldSwitch(): Boolean =
         currentInterleaving.isSwitchPosition()
 
-    override fun onSwitchPoint(iThread: Int, event: ExecutionEvents.Event) {
+    override fun onSwitchPoint(iThread: Int) {
         check(iThread == threadScheduler.scheduledThreadId)
         if (runner.currentExecutionPart != PARALLEL) return
-        currentInterleaving.newExecutionPosition(iThread, event)
-        Logger.debug { "onSwitchPoint(): executionPosition=${currentInterleaving.executionPosition}, event=$event" }
+        currentInterleaving.newExecutionPosition(iThread)
+        Logger.debug { "onSwitchPoint(): executionPosition=${currentInterleaving.executionPosition}" }
     }
 
-    override fun chooseThread(iThread: Int, event: ExecutionEvents.Event): Int =
-        currentInterleaving.chooseThread(iThread, event)
+    override fun chooseThread(iThread: Int): Int =
+        currentInterleaving.chooseThread(iThread)
 
     /**
      * An abstract node with an execution choice in the interleaving tree.
@@ -133,7 +132,7 @@ internal class ModelCheckingStrategy(
                 append("[" + choices.map { it.value }.joinToString(", ") + "]\n")
                 choices.forEach { choice ->
                     if (this@InterleavingTreeNode is SwitchChoosingNode) {
-                        append("${indent}\t${choice.value}, event=${choice.event}:\n")
+                        append("${indent}\t${choice.value}:\n")
                         append("${indent}\t\t${choice.node.getStringRepresentation("${indent}\t").trim()}\n")
                     }
                     else {
@@ -255,9 +254,9 @@ internal class ModelCheckingStrategy(
             .toString()
     }
 
-    inner class Choice(var node: InterleavingTreeNode, val value: Int, var event: ExecutionEvents.Event? = null) {
+    inner class Choice(var node: InterleavingTreeNode, val value: Int) {
         override fun toString(): String {
-            return "Choice(node=${node.javaClass.simpleName}, value=$value, event=$event)"
+            return "Choice(node=${node.javaClass.simpleName}, value=$value)"
         }
     }
 
@@ -338,7 +337,7 @@ internal class ModelCheckingStrategy(
             interleavingKey = ""
         }
 
-        fun chooseThread(iThread: Int, event: ExecutionEvents.Event): Int {
+        fun chooseThread(iThread: Int): Int {
             val threads =
                 switchableThreads(iThread) +
                 resumableThreads(iThread) +
@@ -365,11 +364,11 @@ internal class ModelCheckingStrategy(
                 val nextThread = threadSwitchChoices[currentInterleavingPosition]
 
                 if (executionPosition != -1 && executionPosition == switchPositions[currentInterleavingPosition - 1]) {
-                    interleavingKey += "s$executionPosition (${event.shortName}),"
+                    interleavingKey += "s$executionPosition,"
                     interleavingKey += "t$nextThread,"
                 } else {
                     interleavingKey += "t$nextThread,"
-                    check(event is ExecutionEvents.Event.StartParallelPart) { "Should be the first thread to start, but executionPosition=$executionPosition, event=$event" }
+                    // check(event is ExecutionEvents.Event.StartParallelPart) { "Should be the first thread to start, but executionPosition=$executionPosition, event=$event" }
                 }
                 Logger.info { "Switch positions: $switchPositions, thread switches: $threadSwitchChoices, key: '$interleavingKey'" }
 
@@ -418,7 +417,7 @@ internal class ModelCheckingStrategy(
                 lastLeafNode = nextThreadChoices.find { it.value == nextThread }!!.node as SwitchChoosingNode
 
                 var resumed = if (nextThread in resumableThreads(iThread)) "_r" else ""
-                interleavingKey += "${event.shortName} (s$executionPosition),t$nextThread$resumed,"
+                interleavingKey += "(s$executionPosition),t$nextThread$resumed,"
                 Logger.info { "Switch positions: $switchPositions, thread switches: $threadSwitchChoices, key: '$interleavingKey'" }
 
                 // TODO:
@@ -457,7 +456,7 @@ internal class ModelCheckingStrategy(
          * Unlike switch points, the execution position is just a gradually increasing counter
          * which helps to distinguish different switch points.
          */
-        fun newExecutionPosition(iThread: Int, event: ExecutionEvents.Event) {
+        fun newExecutionPosition(iThread: Int) {
             executionPosition++
 
             if (executionPosition > (switchPositions.lastOrNull() ?: -1) && !loopDetector.replayModeEnabled) {
@@ -472,7 +471,7 @@ internal class ModelCheckingStrategy(
                 //lastNotInitializedNodeChoices!!.add(Choice(ThreadChoosingNode(availableThreads, isResumableThreadsOnly), executionPosition, event))
                 if (!lastLeafNode.isInitialized) lastLeafNode.choices = mutableListOf()
                 if (executionPosition > (lastLeafNode.choices.lastOrNull()?.value ?: -1)) {
-                    lastLeafNode.choices.add(Choice(ThreadChoosingNode(availableThreads, isResumableThreadsOnly), executionPosition, event))
+                    lastLeafNode.choices.add(Choice(ThreadChoosingNode(availableThreads, isResumableThreadsOnly), executionPosition))
                 }
             }
         }

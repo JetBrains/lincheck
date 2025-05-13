@@ -239,7 +239,7 @@ abstract class ManagedStrategy(
      * This method is invoked before every thread context switch.
      * @param iThread current thread that is about to be switched.
      */
-    protected open fun onSwitchPoint(iThread: Int, event: ExecutionEvents.Event) {}
+    protected open fun onSwitchPoint(iThread: Int) {}
 
     /**
      * Returns whether thread should switch at the switch point.
@@ -250,7 +250,7 @@ abstract class ManagedStrategy(
      * Choose a thread to switch from thread [iThread].
      * @return id the chosen thread
      */
-    protected abstract fun chooseThread(iThread: Int, event: ExecutionEvents.Event): Int
+    protected abstract fun chooseThread(iThread: Int): Int
 
     /**
      * Resets all internal data to the initial state and initializes current invocation to be run.
@@ -322,7 +322,7 @@ abstract class ManagedStrategy(
         traceCollector?.passCodeLocation(SectionDelimiterTracePoint(part))
         val nextThread = when (part) {
             INIT        -> 0
-            PARALLEL    -> chooseThread(0, ExecutionEvents.Event.StartParallelPart())
+            PARALLEL    -> chooseThread(0)
             POST        -> 0
             VALIDATION  -> 0
         }
@@ -437,7 +437,7 @@ abstract class ManagedStrategy(
      * @param threadId the current thread
      * @param codeLocation the byte-code location identifier of the point in code.
      */
-    private fun newSwitchPoint(threadId: Int, codeLocation: Int, beforeMethodCallSwitch: Boolean = false, event: ExecutionEvents.Event) {
+    private fun newSwitchPoint(threadId: Int, codeLocation: Int, beforeMethodCallSwitch: Boolean = false) {
         // re-throw abort error if the thread was aborted
         if (threadScheduler.isAborted(threadId)) {
             threadScheduler.abortCurrentThread()
@@ -455,7 +455,7 @@ abstract class ManagedStrategy(
         }
 
         // we can perform proper switching when no live-locks detected
-        onSwitchPoint(threadId, event)
+        onSwitchPoint(threadId)
         // check if we need to switch
         if (!loopDetector.replayModeEnabled) {
             shouldSwitch = shouldSwitch()
@@ -464,7 +464,7 @@ abstract class ManagedStrategy(
 
         // if strategy requested thread switch, then do it
         if (shouldSwitch) {
-            val switchHappened = switchCurrentThread(threadId, beforeMethodCallSwitch = beforeMethodCallSwitch, event = event)
+            val switchHappened = switchCurrentThread(threadId, beforeMethodCallSwitch = beforeMethodCallSwitch)
             if (switchHappened) {
                 loopDetector.initializeFirstCodeLocationAfterSwitch(codeLocation)
             }
@@ -514,12 +514,10 @@ abstract class ManagedStrategy(
             // thus, here we call it explicitly (this method is also called from `switchCurrentThread` but since we add
             // spin cycle nodes to the interleaving tree, we need to insert such a hack here).
             unblockInterruptedThreads()
-            val event = ExecutionEvents.Event.LiveLock(iThread, codeLocation)
             // Adding switch point for the livelock to appear in the interleaving tree
-            onSwitchPoint(iThread, event)
+            onSwitchPoint(iThread)
             val switchHappened = switchCurrentThread(iThread, BlockingReason.LiveLocked,
                 beforeMethodCallSwitch = beforeMethodCallSwitch,
-                event = event
             )
             if (switchHappened) {
                 loopDetector.initializeFirstCodeLocationAfterSwitch(codeLocation)
@@ -554,11 +552,10 @@ abstract class ManagedStrategy(
         iThread: Int,
         blockingReason: BlockingReason? = null,
         beforeMethodCallSwitch: Boolean = false,
-        event: ExecutionEvents.Event,
     ): Boolean {
         // before blocking the thread, interrupt it if the interruption flag is set
         val switchReason = blockingReason.toSwitchReason(::iThreadToDisplayNumber)
-        val nextThread = chooseThreadSwitch(iThread, mustSwitch = (blockingReason != null), event)
+        val nextThread = chooseThreadSwitch(iThread, mustSwitch = (blockingReason != null))
         val switchHappened = (iThread != nextThread)
         if (switchHappened) {
             if (
@@ -577,7 +574,7 @@ abstract class ManagedStrategy(
 
     protected open fun getCurrentKey(): String = ""
 
-    private fun chooseThreadSwitch(iThread: Int, mustSwitch: Boolean = false, event: ExecutionEvents.Event): Int {
+    private fun chooseThreadSwitch(iThread: Int, mustSwitch: Boolean = false): Int {
         // inform plugin about thread switch
         if (inIdeaPluginReplayMode && collectTrace) {
             onThreadSwitchesOrActorFinishes()
@@ -585,7 +582,7 @@ abstract class ManagedStrategy(
         // unblock interrupted threads
         unblockInterruptedThreads()
         // do the switch if there is an available thread
-        val nextThread = chooseThread(iThread, event)
+        val nextThread = chooseThread(iThread)
         if (nextThread != -1) {
             // for now, we only can resume live-locked threads, so check for that and unblock if required
             if (threadScheduler.isLiveLocked(nextThread)) {
@@ -773,15 +770,12 @@ abstract class ManagedStrategy(
         if (withTimeout) return // timeouts occur instantly
         val currentThreadId = threadScheduler.getCurrentThreadId()
         val joinThreadId = threadScheduler.getThreadId(thread!!)
-        var attempt = 0
         while (threadScheduler.getThreadState(joinThreadId) != ThreadState.FINISHED) {
             throwIfInterrupted()
-
-            val event = ExecutionEvents.Event.ThreadJoin(currentThreadId, joinThreadId, attempt++)
             // TODO: should wait on thread-join be considered an obstruction-freedom violation?
-            onSwitchPoint(currentThreadId, event)
+            onSwitchPoint(currentThreadId)
             // Switch to another thread and wait for a moment when the thread is finished
-            switchCurrentThread(currentThreadId, BlockingReason.ThreadJoin(joinThreadId), event = event)
+            switchCurrentThread(currentThreadId, BlockingReason.ThreadJoin(joinThreadId))
         }
         if (collectTrace) {
             val tracePoint = ThreadJoinTracePoint(
@@ -867,9 +861,8 @@ abstract class ManagedStrategy(
         loopDetector.onThreadFinish(threadId)
         traceCollector?.onThreadFinish()
         unblockJoiningThreads(threadId)
-        val event = ExecutionEvents.Event.ThreadFinish(threadId)
-        onSwitchPoint(threadId, event)
-        val nextThread = chooseThreadSwitch(threadId, true, event)
+        onSwitchPoint(threadId)
+        val nextThread = chooseThreadSwitch(threadId, true)
         setCurrentThread(nextThread)
     }
 
@@ -945,7 +938,7 @@ abstract class ManagedStrategy(
         } else {
             null
         }
-        newSwitchPoint(iThread, codeLocation, event = ExecutionEvents.Event.BeforeMonitorLock(iThread, codeLocation))
+        newSwitchPoint(iThread, codeLocation)
         traceCollector?.passCodeLocation(tracePoint)
     }
 
@@ -960,12 +953,10 @@ abstract class ManagedStrategy(
     override fun lock(monitor: Any): Unit = runInsideIgnoredSection {
         val iThread = threadScheduler.getCurrentThreadId()
         // Try to acquire the monitor
-        var attempt = 0
         while (!monitorTracker.acquireMonitor(iThread, monitor)) {
-            val event = ExecutionEvents.Event.MonitorLock(iThread, attempt++)
-            onSwitchPoint(iThread, event)
+            onSwitchPoint(iThread)
             // Switch to another thread and wait for a moment when the monitor can be acquired
-            switchCurrentThread(iThread, BlockingReason.Locked, event = event)
+            switchCurrentThread(iThread, BlockingReason.Locked)
         }
     }
 
@@ -1008,15 +999,13 @@ abstract class ManagedStrategy(
         // Instead of fairly supporting the park/unpark semantics,
         // we simply add a new switch point here, thus, also
         // emulating spurious wake-ups.
-        var attempt = 0
-        newSwitchPoint(iThread, codeLocation, event = ExecutionEvents.Event.ThreadPark(iThread, codeLocation, attempt++))
+        newSwitchPoint(iThread, codeLocation)
         traceCollector?.passCodeLocation(tracePoint)
         parkingTracker.park(iThread)
         while (parkingTracker.waitUnpark(iThread)) {
-            val event = ExecutionEvents.Event.ThreadPark(iThread, codeLocation, attempt++)
-            onSwitchPoint(iThread, event)
+            onSwitchPoint(iThread)
             // switch to another thread and wait till an unpark event happens
-            switchCurrentThread(iThread, BlockingReason.Parked, event = event)
+            switchCurrentThread(iThread, BlockingReason.Parked)
         }
     }
 
@@ -1048,8 +1037,7 @@ abstract class ManagedStrategy(
         } else {
             null
         }
-        val event = ExecutionEvents.Event.BeforeWait(iThread, codeLocation)
-        newSwitchPoint(iThread, codeLocation, event = event)
+        newSwitchPoint(iThread, codeLocation)
         traceCollector?.passCodeLocation(tracePoint)
     }
 
@@ -1067,12 +1055,10 @@ abstract class ManagedStrategy(
         // to ensure the monitor is acquired when `InterruptionException` is thrown
         throwIfInterrupted()
         val iThread = threadScheduler.getCurrentThreadId()
-        var attempt = 0
         while (monitorTracker.waitOnMonitor(iThread, monitor)) {
-            val event = ExecutionEvents.Event.ThreadWait(iThread, attempt++)
             unblockAcquiringThreads(iThread, monitor)
-            onSwitchPoint(iThread, event)
-            switchCurrentThread(iThread, BlockingReason.Waiting, event = event)
+            onSwitchPoint(iThread)
+            switchCurrentThread(iThread, BlockingReason.Waiting)
         }
         throwIfInterrupted()
     }
@@ -1163,7 +1149,7 @@ abstract class ManagedStrategy(
         if (tracePoint != null) {
             lastReadTracePoint[iThread] = tracePoint
         }
-        newSwitchPoint(iThread, codeLocation, event = ExecutionEvents.Event.BeforeRead(iThread, codeLocation, className, fieldName))
+        newSwitchPoint(iThread, codeLocation)
         traceCollector?.passCodeLocation(tracePoint)
         loopDetector.beforeReadField(obj)
         return true
@@ -1192,7 +1178,7 @@ abstract class ManagedStrategy(
         if (tracePoint != null) {
             lastReadTracePoint[iThread] = tracePoint
         }
-        newSwitchPoint(iThread, codeLocation, event = ExecutionEvents.Event.BeforeReadArrayElement(iThread, codeLocation, array, index))
+        newSwitchPoint(iThread, codeLocation)
         traceCollector?.passCodeLocation(tracePoint)
         loopDetector.beforeReadArrayElement(array, index)
         return true
@@ -1234,7 +1220,7 @@ abstract class ManagedStrategy(
         } else {
             null
         }
-        newSwitchPoint(iThread, codeLocation, event = ExecutionEvents.Event.BeforeWrite(iThread, codeLocation, className, fieldName))
+        newSwitchPoint(iThread, codeLocation)
         traceCollector?.passCodeLocation(tracePoint)
         loopDetector.beforeWriteField(obj, value)
         return true
@@ -1263,7 +1249,7 @@ abstract class ManagedStrategy(
         } else {
             null
         }
-        newSwitchPoint(iThread, codeLocation, event = ExecutionEvents.Event.BeforeWriteArrayElement(iThread, codeLocation, array, index))
+        newSwitchPoint(iThread, codeLocation)
         traceCollector?.passCodeLocation(tracePoint)
         loopDetector.beforeWriteArrayElement(array, index, value)
         true
@@ -1575,7 +1561,7 @@ abstract class ManagedStrategy(
         // note that in case we resume atomic method there is no need to create the switch point,
         // since there is already a switch point between the suspension point and resumption
         if (guarantee == ManagedGuaranteeType.ATOMIC) {
-            newSwitchPoint(threadId, codeLocation, beforeMethodCallSwitch = true, event = ExecutionEvents.Event.BeforeMethodCall(threadId, codeLocation, className, methodName))
+            newSwitchPoint(threadId, codeLocation, beforeMethodCallSwitch = true)
             loopDetector.passParameters(params)
 
             // do not create a trace point on resumption
@@ -1751,14 +1737,13 @@ abstract class ManagedStrategy(
             "Special coroutines handling methods should only be called from test threads"
         }
         isSuspended[iThread] = true
-        val event = ExecutionEvents.Event.AfterCoroutineSuspended(iThread)
         if (runner.isCoroutineResumed(iThread, currentActorId[iThread]!!)) {
             // `UNKNOWN_CODE_LOCATION`, because we do not know the actual code location
-            newSwitchPoint(iThread, UNKNOWN_CODE_LOCATION, event = event)
+            newSwitchPoint(iThread, UNKNOWN_CODE_LOCATION)
         } else {
-            onSwitchPoint(iThread, event)
+            onSwitchPoint(iThread)
             // coroutine suspension does not violate obstruction-freedom
-            switchCurrentThread(iThread, BlockingReason.Suspended, event = event)
+            switchCurrentThread(iThread, BlockingReason.Suspended)
         }
     }
 
