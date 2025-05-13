@@ -505,6 +505,8 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         if (className == "kotlinx.coroutines.DebugKt") return false
         // We should never transform the coverage-related classes.
         if (className.startsWith("com.intellij.rt.coverage.")) return false
+        // We should skip intellij debugger agent classes.
+        if (className.startsWith("com.intellij.rt.debugger.agent.")) return false
         // We can also safely do not instrument some libraries for performance reasons.
         if (className.startsWith("com.esotericsoftware.kryo.")) return false
         if (className.startsWith("net.bytebuddy.")) return false

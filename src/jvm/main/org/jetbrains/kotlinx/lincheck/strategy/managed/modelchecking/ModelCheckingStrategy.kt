@@ -588,33 +588,73 @@ internal class ModelCheckingMonitorTracker : MonitorTracker {
 
 class ModelCheckingParkingTracker(val allowSpuriousWakeUps: Boolean = false) : ParkingTracker {
 
-    private val parked = mutableThreadMapOf<Boolean>()
+    /**
+     * Enum representing the possible states of a thread in the parking tracker:
+     *
+     *   - [State.UNPARKED] --- thread is not parked;
+     *   - [State.PARKED] --- thread is parked and waiting;
+     *   - [State.PERMITTED] --- thread has a permit to unpark;
+     *   - [State.INTERRUPTED] --- thread was interrupted.
+     *
+     *     +----------+                     +--------+
+     *     | UNPARKED | --- [ park() ] ---> | PARKED |
+     *     +----------+                     +--------+
+     *     /\      |                          |
+     *     |       |--------------------------|
+     *     |                            |
+     *     |                            | [ unpark() | interrupt() ]
+     *     |                            |
+     *     |                            v
+     *     |                      +-------------------------+
+     *     |--[ waitUnpark() ]--  | PERMITTED / INTERRUPTED |
+     *                            +-------------------------+
+     *
+     */
+    private enum class State {
+        UNPARKED,
+        PARKED,
+        PERMITTED,
+        INTERRUPTED,
+    }
+
+    private val threadStates = mutableMapOf<ThreadId, State>()
 
     override fun registerThread(threadId: Int) {
-        parked[threadId] = false
+        threadStates[threadId] = State.UNPARKED
     }
 
     override fun park(threadId: Int) {
-        parked[threadId] = true
+        if (threadStates[threadId] == State.UNPARKED) {
+            threadStates[threadId] = State.PARKED
+        }
     }
 
-    override fun waitUnpark(threadId: Int): Boolean {
-        return isParked(threadId)
+    override fun waitUnpark(threadId: Int, allowSpuriousWakeUp: Boolean): Boolean {
+        if (isParked(threadId, allowSpuriousWakeUp)) return true
+        threadStates[threadId] = State.UNPARKED
+        return false
     }
 
     override fun unpark(threadId: Int, unparkedThreadId: Int) {
-        parked[unparkedThreadId] = false
+        threadStates[unparkedThreadId] = State.PERMITTED
     }
 
     override fun interruptPark(threadId: Int) {
-        parked[threadId] = false
+        threadStates[threadId] = State.INTERRUPTED
     }
 
     override fun isParked(threadId: Int): Boolean =
-        !allowSpuriousWakeUps && parked[threadId]!!
+        isParked(threadId, allowSpuriousWakeUp = false)
+
+    private fun isParked(threadId: Int, allowSpuriousWakeUp: Boolean): Boolean {
+        if (this.allowSpuriousWakeUps && allowSpuriousWakeUp) {
+            return false
+        }
+        return threadStates[threadId] == State.PARKED
+    }
 
     override fun reset() {
-        parked.clear()
+        threadStates.clear()
     }
 
 }

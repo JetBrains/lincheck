@@ -9,18 +9,13 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import sun.nio.ch.lincheck.*
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.beforeEvent as ideaPluginBeforeEvent
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
-import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.transformation.*
-import org.jetbrains.kotlinx.lincheck.util.*
-import org.jetbrains.kotlinx.lincheck.util.runInsideIgnoredSection
-import sun.nio.ch.lincheck.*
-import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicFieldUpdaterNames.getAtomicFieldUpdaterDescriptor
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceMethodType.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.FieldSearchHelper.findFinalFieldWithOwner
@@ -28,20 +23,20 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.adorne
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.cleanObjectNumeration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
-import org.jetbrains.kotlinx.lincheck.strategy.native_calls.DeterministicMethodDescriptor
-import org.jetbrains.kotlinx.lincheck.strategy.native_calls.MethodCallInfo
-import org.jetbrains.kotlinx.lincheck.strategy.native_calls.getDeterministicMethodDescriptorOrNull
-import org.jetbrains.kotlinx.lincheck.strategy.native_calls.runFromStateWithCast
-import org.jetbrains.kotlinx.lincheck.strategy.native_calls.saveFirstResultWithCast
+import org.jetbrains.kotlinx.lincheck.strategy.native_calls.*
+import org.jetbrains.kotlinx.lincheck.beforeEvent as ideaPluginBeforeEvent
+import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.trace.*
+import org.jetbrains.kotlinx.lincheck.util.*
 import org.objectweb.asm.ConstantDynamic
 import org.objectweb.asm.Handle
 import java.lang.invoke.CallSite
 import java.lang.reflect.*
-import java.util.concurrent.TimeoutException
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.Continuation
+import java.util.concurrent.TimeoutException
+import kotlinx.coroutines.CancellableContinuation
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 import kotlin.Result as KResult
 import org.objectweb.asm.commons.Method.getMethod as getAsmMethod
@@ -165,7 +160,14 @@ abstract class ManagedStrategy(
     // TODO: unify with `callStackTrace`
     // TODO: handle coroutine resumptions (i.e., unify with `suspendedFunctionsStack`)
     // TODO: extract into separate class
-    private var shadowStack = mutableThreadMapOf<ArrayList<ShadowStackFrame>>()
+    private val shadowStack = mutableThreadMapOf<ArrayList<ShadowStackFrame>>()
+
+    /**
+     * For each thread, stores a stack of entered analysis sections.
+     */
+    // TODO: unify with `shadowStack`
+    // TODO: handle coroutine resumptions (i.e., unify with `suspendedFunctionsStack`)
+    private val analysisSectionStack = mutableThreadMapOf<MutableList<AnalysisSectionType>>()
 
     /**
      * In case when the plugin is enabled, we also enable [eventIdStrictOrderingCheck] property and check
@@ -200,7 +202,7 @@ abstract class ManagedStrategy(
      *   to communicate coroutine resumption event to the plugin.
      */
     private var skipNextBeforeEvent = false
-    
+
     init {
         ObjectLabelFactory.isGPMCMode = isGeneralPurposeModelCheckingScenario(scenario)
     }
@@ -301,8 +303,6 @@ abstract class ManagedStrategy(
             //  see https://github.com/JetBrains/lincheck/issues/590
             return suddenResult
         }
-        // Unexpected `ThreadAbortedError` should be thrown.
-        check(result is UnexpectedExceptionInvocationResult)
         // Otherwise return the sudden result
         return suddenResult
     }
@@ -439,30 +439,34 @@ abstract class ManagedStrategy(
 
     /**
      * Create a new switch point, where a thread context switch can occur.
-     * @param iThread the current thread
+     * @param threadId the current thread id.
      * @param codeLocation the byte-code location identifier of the point in code.
      */
-    private fun newSwitchPoint(iThread: Int, codeLocation: Int, beforeMethodCallSwitch: Boolean = false) {
+    private fun newSwitchPoint(threadId: Int, codeLocation: Int, beforeMethodCallSwitch: Boolean = false) {
         // re-throw abort error if the thread was aborted
-        if (threadScheduler.isAborted(iThread)) {
+        if (threadScheduler.isAborted(threadId)) {
             threadScheduler.abortCurrentThread()
         }
         // check we are in the right thread
-        check(iThread == threadScheduler.scheduledThreadId)
+        check(threadId == threadScheduler.scheduledThreadId)
         // check if we need to switch
         val shouldSwitch = when {
+            // check if a switch is required in replay mode
             loopDetector.replayModeEnabled -> loopDetector.shouldSwitchInReplayMode()
-            else -> shouldSwitch(iThread)
+            // do not make thread switches inside a silent section
+            inSilentSection(threadId) -> false
+            // otherwise, as strategy if thread switch is needed
+            else -> shouldSwitch(threadId)
         }
         // check if live-lock is detected
-        val decision = loopDetector.visitCodeLocation(iThread, codeLocation)
+        val decision = loopDetector.visitCodeLocation(threadId, codeLocation)
         if (decision != LoopDetector.Decision.Idle) {
-            processLoopDetectorDecision(iThread, codeLocation, decision, beforeMethodCallSwitch = beforeMethodCallSwitch)
+            processLoopDetectorDecision(threadId, codeLocation, decision, beforeMethodCallSwitch = beforeMethodCallSwitch)
             return
         }
         // if strategy requested thread switch, then do it
         if (shouldSwitch) {
-            val switchHappened = switchCurrentThread(iThread, beforeMethodCallSwitch = beforeMethodCallSwitch)
+            val switchHappened = switchCurrentThread(threadId, beforeMethodCallSwitch = beforeMethodCallSwitch)
             if (switchHappened) {
                 loopDetector.initializeFirstCodeLocationAfterSwitch(codeLocation)
             }
@@ -654,7 +658,7 @@ abstract class ManagedStrategy(
         } else {
             emptyList()
         }
-    
+
     /**
      * Converts lincheck threadId to displayable thread number for the trace.
      * In case of GPMC the numbers shift -1.
@@ -736,7 +740,8 @@ abstract class ManagedStrategy(
             disableAnalysis()
             Logger.info { "Exception was thrown in user thread \"Thread-$currentThreadId\":" }
             Logger.info(exception)
-            // current thread will not be put in the ABORTED state, like in `onInternalException` case,
+            // the current thread will not be put in the ABORTED state,
+            // like in the ` onInternalException ` case,
             // thus, it is still executed in isolation, and we can finish it properly
             onThreadFinish(currentThreadId)
             throw exception
@@ -770,6 +775,7 @@ abstract class ManagedStrategy(
         callStackTrace[threadId] = mutableListOf()
         suspendedFunctionsStack[threadId] = mutableListOf()
         shadowStack[threadId] = arrayListOf(ShadowStackFrame(runner.testInstance))
+        analysisSectionStack[threadId] = arrayListOf()
         lastReadTracePoint[threadId] = null
         randoms[threadId] = InjectedRandom(threadId + 239L)
         objectTracker?.registerThread(threadId, thread)
@@ -787,6 +793,7 @@ abstract class ManagedStrategy(
         callStackTrace.clear()
         suspendedFunctionsStack.clear()
         shadowStack.clear()
+        analysisSectionStack.clear()
         randoms.clear()
     }
 
@@ -870,11 +877,11 @@ abstract class ManagedStrategy(
         callStackTrace[iThread]!!.clear()
         suspendedFunctionsStack[iThread]!!.clear()
         loopDetector.onActorStart(iThread)
-        
-        val actor = if (actorId < scenario.threads[iThread].size) scenario.threads[iThread][actorId] 
+
+        val actor = if (actorId < scenario.threads[iThread].size) scenario.threads[iThread][actorId]
         else validationFunction
         check(actor != null) { "Could not find current actor" }
-        
+
         val methodDescriptor = getAsmMethod(actor.method).descriptor
         addBeforeMethodCallTracePoint(
             owner = runner.testInstance,
@@ -917,13 +924,17 @@ abstract class ManagedStrategy(
     }
 
     /*
-   TODO: Here Lincheck performs in-optimal switching.
-   Firstly an optional switch point is added before lock, and then adds force switches in case execution cannot continue in this thread.
-   More effective way would be to do force switch in case the thread is blocked (smart order of thread switching is needed),
-   or create a switch point if the switch is really optional.
-
-   Because of this additional switching we had to split this method into two, as the beforeEvent method must be called after the switch point.
-    */
+     * TODO: Here Lincheck performs in-optimal switching.
+     *
+     * Firstly an optional switch point is added before lock,
+     * and then adds force switches in case execution cannot continue in this thread.
+     * More effective way would be to do force switch in case the thread is blocked
+     * (smart order of thread switching is needed),
+     * or create a switch point if the switch is really optional.
+     *
+     * Because of this additional switching we had to split this method into two,
+     * as the `beforeEvent` method must be called right after the switch point is created.
+     */
     override fun lock(monitor: Any): Unit = runInsideIgnoredSection {
         val iThread = threadScheduler.getCurrentThreadId()
         // Try to acquire the monitor
@@ -957,13 +968,13 @@ abstract class ManagedStrategy(
         }
     }
 
-    override fun park(codeLocation: Int): Unit = runInsideIgnoredSection {
-        val iThread = threadScheduler.getCurrentThreadId()
+    override fun beforePark(codeLocation: Int): Unit = runInsideIgnoredSection {
+        val threadId = threadScheduler.getCurrentThreadId()
         val tracePoint = if (collectTrace) {
             ParkTracePoint(
-                iThread = iThread,
-                actorId = currentActorId[iThread]!!,
-                callStackTrace = callStackTrace[iThread]!!,
+                iThread = threadId,
+                actorId = currentActorId[threadId]!!,
+                callStackTrace = callStackTrace[threadId]!!,
                 codeLocation = codeLocation
             )
         } else {
@@ -972,13 +983,50 @@ abstract class ManagedStrategy(
         // Instead of fairly supporting the park/unpark semantics,
         // we simply add a new switch point here, thus, also
         // emulating spurious wake-ups.
-        newSwitchPoint(iThread, codeLocation)
+        newSwitchPoint(threadId, codeLocation)
         traceCollector?.passCodeLocation(tracePoint)
-        parkingTracker.park(iThread)
-        while (parkingTracker.waitUnpark(iThread)) {
-            // switch to another thread and wait till an unpark event happens
-            switchCurrentThread(iThread, BlockingReason.Parked)
+    }
+
+    /*
+     * TODO: Here Lincheck performs in-optimal switching.
+     *
+     * Firstly an optional switch point is added before park,
+     * and then adds force switches in case execution cannot continue in this thread.
+     * More effective way would be to do force switch in case the thread is blocked
+     * (smart order of thread switching is needed),
+     * or create a switch point if the switch is really optional.
+     *
+     * Because of this additional switching we had to split this method into two,
+     * as the `beforeEvent` method must be called right after the switch point is created.
+     */
+    override fun park(codeLocation: Int): Unit = runInsideIgnoredSection {
+        val threadId = threadScheduler.getCurrentThreadId()
+        // Do not park and exit immediately if the thread's interrupted flag set.
+        if (Thread.currentThread().isInterrupted) return
+        // Park otherwise.
+        parkingTracker.park(threadId)
+        // Forbid spurious wake-ups if inside silent sections.
+        val allowSpuriousWakeUp = shouldAllowSpuriousUnpark(threadId, codeLocation)
+        while (parkingTracker.waitUnpark(threadId, allowSpuriousWakeUp)) {
+            // Switch to another thread and wait till an unpark event happens.
+            switchCurrentThread(threadId, BlockingReason.Parked)
         }
+    }
+
+    private fun shouldAllowSpuriousUnpark(threadId: ThreadId, codeLocation: Int): Boolean {
+        val stackTraceElement = CodeLocations.stackTrace(codeLocation)
+        val analysisSectionStack = this.analysisSectionStack[threadId]!!
+        // TODO: refactor, track LockSupport.park directly instead
+        val section = if (
+            stackTraceElement.className == "java/util/concurrent/locks/LockSupport" &&
+            stackTraceElement.methodName == "park"
+        ) {
+            analysisSectionStack.getOrNull(analysisSectionStack.size - 2)
+        } else {
+            analysisSectionStack.lastOrNull()
+        }
+        // allow spurious wake-up, unless inside a silent section
+        return !(section != null && section.isSilent())
     }
 
     override fun unpark(thread: Thread, codeLocation: Int): Unit = runInsideIgnoredSection {
@@ -1014,12 +1062,16 @@ abstract class ManagedStrategy(
     }
 
     /*
-    TODO: Here Lincheck performs in-optimal switching.
-    Firstly an optional switch point is added before wait, and then adds force switches in case execution cannot continue in this thread.
-    More effective way would be to do force switch in case the thread is blocked (smart order of thread switching is needed),
-    or create a switch point if the switch is really optional.
-
-    Because of this additional switching we had to split this method into two, as the beforeEvent method must be called after the switch point.
+     * TODO: Here Lincheck performs in-optimal switching.
+     *
+     * Firstly an optional switch point is added before wait,
+     * and then adds force switches in case execution cannot continue in this thread.
+     * More effective way would be to do force switch in case the thread is blocked
+     * (smart order of thread switching is needed),
+     * or create a switch point if the switch is really optional.
+     *
+     * Because of this additional switching we had to split this method into two,
+     * as the `beforeEvent` method must be called right after the switch point is created.
      */
     override fun wait(monitor: Any, withTimeout: Boolean): Unit = runInsideIgnoredSection {
         if (withTimeout) return // timeouts occur instantly
@@ -1200,7 +1252,7 @@ abstract class ManagedStrategy(
     override fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int): Boolean = runInsideIgnoredSection {
         updateSnapshotOnArrayElementAccess(array, index)
         objectTracker?.registerObjectLink(fromObject = array, toObject = value)
-        
+
         if (!shouldTrackArrayAccess(array)) {
             return false
         }
@@ -1291,18 +1343,18 @@ abstract class ManagedStrategy(
             objectTracker?.registerNewObject(obj)
         }
     }
-    
+
     private fun shouldTrackArrayAccess(obj: Any?): Boolean = shouldTrackObjectAccess(obj)
 
     private fun shouldTrackFieldAccess(obj: Any?, fieldName: String): Boolean =
       shouldTrackObjectAccess(obj) && !isStackRecoveryFieldAccess(obj, fieldName)
-    
+
     private fun shouldTrackObjectAccess(obj: Any?): Boolean {
         // by default, we track accesses to all objects
         if (objectTracker == null) return true
         return objectTracker!!.shouldTrackObjectAccess(obj ?: StaticObject)
     }
-    
+
     private fun isStackRecoveryFieldAccess(obj: Any?, fieldName: String?): Boolean =
         obj is Continuation<*> && (fieldName == "label" || fieldName?.startsWith("L$") == true)
 
@@ -1451,33 +1503,6 @@ abstract class ManagedStrategy(
         }
     }
 
-    private fun methodGuaranteeType(
-        owner: Any?,
-        className: String,
-        methodName: String,
-        atomicMethodDescriptor: AtomicMethodDescriptor?,
-        deterministicMethodDescriptor: DeterministicMethodDescriptor<*, *>?,
-    ): ManagedGuaranteeType? {
-        if (atomicMethodDescriptor != null) {
-            return ManagedGuaranteeType.ATOMIC
-        }
-        // TODO: decide if we need to introduce special `DETERMINISTIC` guarantee?
-        if (deterministicMethodDescriptor != null) {
-            return ManagedGuaranteeType.IGNORE
-        }
-        userDefinedGuarantees?.forEach { guarantee ->
-            val ownerName = owner?.javaClass?.canonicalName ?: className
-            if (guarantee.classPredicate(ownerName) && guarantee.methodPredicate(methodName)) {
-                return guarantee.type
-            }
-        }
-        // Ignore methods called on standard I/O streams
-        when (owner) {
-            System.`in`, System.out, System.err -> return ManagedGuaranteeType.IGNORE
-        }
-        return null
-    }
-
     override fun onMethodCall(
         className: String,
         methodName: String,
@@ -1505,13 +1530,13 @@ abstract class ManagedStrategy(
             methodId = methodId,
         )
         val deterministicMethodDescriptor = getDeterministicMethodDescriptorOrNull(methodCallInfo)
-        // get method's concurrency guarantee
-        val guarantee = methodGuaranteeType(receiver, className, methodName,
+        // get method's analysis section type
+        val methodSection = methodAnalysisSectionType(receiver, className, methodName,
             atomicMethodDescriptor,
             deterministicMethodDescriptor,
         )
         // in case if a static method is called, ensure its class is instrumented
-        if (receiver == null && atomicMethodDescriptor == null && guarantee == null) { // static method
+        if (receiver == null && methodSection < AnalysisSectionType.ATOMIC) {
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
         }
         // in case of atomics API setter method call, notify the object tracker about a new link between objects
@@ -1531,7 +1556,7 @@ abstract class ManagedStrategy(
         // in case of an atomic method, we create a switch point before the method call;
         // note that in case we resume atomic method there is no need to create the switch point,
         // since there is already a switch point between the suspension point and resumption
-        if (guarantee == ManagedGuaranteeType.ATOMIC &&
+        if (methodSection == AnalysisSectionType.ATOMIC &&
             // do not create a trace point on resumption
             !(isTestThread(threadId) && isResumptionMethodCall(threadId, className, methodName, params, atomicMethodDescriptor))
         ) {
@@ -1542,14 +1567,11 @@ abstract class ManagedStrategy(
             loopDetector.passParameters(params)
         }
         // notify loop detector about the method call
-        if (guarantee == null) {
+        if (methodSection == AnalysisSectionType.NORMAL) {
             loopDetector.beforeMethodCall(codeLocation, params)
         }
-        // if the method is atomic or should be ignored, then we enter an ignored section
-        if (guarantee == ManagedGuaranteeType.IGNORE ||
-            guarantee == ManagedGuaranteeType.ATOMIC) {
-            enterIgnoredSection()
-        }
+        // if the method has certain guarantees, enter the corresponding section
+        enterAnalysisSection(threadId, methodSection)
         return deterministicMethodDescriptor
     }
 
@@ -1566,7 +1588,7 @@ abstract class ManagedStrategy(
         if (deterministicMethodDescriptor != null) {
             Logger.debug { "On method return with descriptor $deterministicMethodDescriptor: $result" }
         }
-        
+
         require(deterministicMethodDescriptor is DeterministicMethodDescriptor<*, *>?)
         // process intrinsic candidate methods
         if (MethodIds.isIntrinsicMethod(methodId)) {
@@ -1583,8 +1605,8 @@ abstract class ManagedStrategy(
         // check if the called method is an atomics API method
         // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
         val atomicMethodDescriptor = getAtomicMethodDescriptor(receiver, methodName)
-        // get method's concurrency guarantee
-        val guarantee = methodGuaranteeType(receiver, className, methodName,
+        // get method's analysis section type
+        val methodSection = methodAnalysisSectionType(receiver, className, methodName,
             atomicMethodDescriptor,
             deterministicMethodDescriptor,
         )
@@ -1605,11 +1627,8 @@ abstract class ManagedStrategy(
                 traceCollector!!.addStateRepresentation()
             }
         }
-        // if the method is atomic or ignored, then we leave an ignored section
-        if (guarantee == ManagedGuaranteeType.IGNORE ||
-            guarantee == ManagedGuaranteeType.ATOMIC) {
-            leaveIgnoredSection()
-        }
+        // if the method has certain guarantees, leave the corresponding section
+        leaveAnalysisSection(threadId, methodSection)
     }
 
     override fun onMethodCallException(
@@ -1635,8 +1654,8 @@ abstract class ManagedStrategy(
         // check if the called method is an atomics API method
         // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
         val atomicMethodDescriptor = getAtomicMethodDescriptor(receiver, methodName)
-        // get method's concurrency guarantee
-        val guarantee = methodGuaranteeType(receiver, className, methodName,
+        // get method's analysis section type
+        val methodSection = methodAnalysisSectionType(receiver, className, methodName,
             atomicMethodDescriptor,
             deterministicMethodDescriptor,
         )
@@ -1651,11 +1670,8 @@ abstract class ManagedStrategy(
             afterMethodCall(threadId, tracePoint)
             traceCollector!!.addStateRepresentation()
         }
-        // if the method is atomic or ignored, then we leave an ignored section
-        if (guarantee == ManagedGuaranteeType.IGNORE ||
-            guarantee == ManagedGuaranteeType.ATOMIC) {
-            leaveIgnoredSection()
-        }
+        // if the method has certain guarantees, leave the corresponding section
+        leaveAnalysisSection(threadId, methodSection)
     }
 
     private fun <T> KResult<T>.toBootstrapResult() =
@@ -1677,6 +1693,71 @@ abstract class ManagedStrategy(
                 descriptor.runFromStateWithCast(receiver, params, state).toBootstrapResult()
             }
         }
+    }
+
+    private fun methodAnalysisSectionType(
+        owner: Any?,
+        className: String,
+        methodName: String,
+        atomicMethodDescriptor: AtomicMethodDescriptor?,
+        deterministicMethodDescriptor: DeterministicMethodDescriptor<*, *>?,
+    ): AnalysisSectionType {
+        val ownerName = owner?.javaClass?.canonicalName ?: className
+        if (atomicMethodDescriptor != null) {
+            return AnalysisSectionType.ATOMIC
+        }
+        // TODO: decide if we need to introduce special `DETERMINISTIC` guarantee?
+        if (deterministicMethodDescriptor != null) {
+            return AnalysisSectionType.IGNORED
+        }
+        // Ignore methods called on standard I/O streams
+        when (owner) {
+            System.`in`, System.out, System.err -> return AnalysisSectionType.IGNORED
+        }
+        val silentSection = getDefaultSilentSectionType(ownerName, methodName)
+            ?.ensure { it.isSilent() }
+        if (silentSection != null) {
+            return silentSection
+        }
+        userDefinedGuarantees?.forEach { guarantee ->
+            if (guarantee.classPredicate(ownerName) && guarantee.methodPredicate(methodName)) {
+                return guarantee.type
+            }
+        }
+        return AnalysisSectionType.NORMAL
+    }
+
+    private fun enterAnalysisSection(threadId: ThreadId, section: AnalysisSectionType) {
+        val analysisSectionStack = this.analysisSectionStack[threadId]!!
+        val currentSection = analysisSectionStack.lastOrNull()
+        if (currentSection != null && currentSection.isCallStackPropagating() && section < currentSection) {
+            analysisSectionStack.add(currentSection)
+        } else {
+            analysisSectionStack.add(section)
+        }
+        if (section == AnalysisSectionType.IGNORED ||
+            // TODO: atomic should have different semantics compared to ignored
+            section == AnalysisSectionType.ATOMIC
+        ) {
+            enterIgnoredSection()
+        }
+    }
+
+    private fun leaveAnalysisSection(threadId: ThreadId, section: AnalysisSectionType) {
+        if (section == AnalysisSectionType.IGNORED ||
+            // TODO: atomic should have different semantics compared to ignored
+            section == AnalysisSectionType.ATOMIC
+        ) {
+            leaveIgnoredSection()
+        }
+        val analysisSectionStack = this.analysisSectionStack[threadId]!!
+        analysisSectionStack.removeLast().ensure { currentSection ->
+            currentSection == section || (currentSection.isCallStackPropagating() && section < currentSection)
+        }
+    }
+
+    protected fun inSilentSection(threadId: ThreadId): Boolean {
+        return (analysisSectionStack[threadId]!!.lastOrNull()?.isSilent() ?: false)
     }
 
     private fun isResumptionMethodCall(
@@ -2052,7 +2133,7 @@ abstract class ManagedStrategy(
             suspendedFunctionsStack[iThread]!!.add(callStackTrace.last())
             popShadowStackFrame()
             callStackTrace.removeLast()
-            
+
             // Hack to include actor
             if (callStackTrace.size == 1 && callStackTrace.first().tracePoint.isRootCall) {
                 suspendedFunctionsStack[iThread]!!.add(callStackTrace.first())
@@ -2209,7 +2290,7 @@ abstract class ManagedStrategy(
             if (tracePoint !is SectionDelimiterTracePoint && tracePoint?.isActorMethodCallTracePoint() == false) {
                 checkActiveLockDetected()
             }
-            // tracePoint can be null here if trace is not available, e.g. in case of suspension
+            // tracePoint can be null here if trace is not available, e.g., in case of suspension
             if (tracePoint != null) {
                 _trace += tracePoint
                 if (!tracePoint.isActorMethodCallTracePoint()) {

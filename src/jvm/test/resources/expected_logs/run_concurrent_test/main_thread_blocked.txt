@@ -17,10 +17,9 @@ The following interleaving leads to the error:
 |           ForkJoinPool.unmanagedBlock(ConditionNode#1) at ForkJoinPool.managedBlock(ForkJoinPool.java:3436)                                        |
 |             blocker.isReleasable(): false at ForkJoinPool.unmanagedBlock(ForkJoinPool.java:3465)                                                   |
 |             blocker.block() at ForkJoinPool.unmanagedBlock(ForkJoinPool.java:3465)                                                                 |
-|               /* The following events repeat infinitely: */                                                                                        |
-|           ┌╶> isReleasable(): false at AbstractQueuedSynchronizer$ConditionNode.block(AbstractQueuedSynchronizer.java:506)                         |
-|           |   LockSupport.park() at AbstractQueuedSynchronizer$ConditionNode.block(AbstractQueuedSynchronizer.java:506)                            |
-|           └╶╶ switch (reason: active lock detected)                                                                                                |
+|               isReleasable(): false at AbstractQueuedSynchronizer$ConditionNode.block(AbstractQueuedSynchronizer.java:506)                         |
+|               LockSupport.park() at AbstractQueuedSynchronizer$ConditionNode.block(AbstractQueuedSynchronizer.java:506)                            |
+|                 PARK at LockSupport.park(LockSupport.java:341)                                                                                     |
 | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 All unfinished threads are in deadlock
 
@@ -50,11 +49,9 @@ Detailed trace:
 |             blocker.isReleasable(): false at ForkJoinPool.unmanagedBlock(ForkJoinPool.java:3465)                                                             |
 |               status ➜ 3 at AbstractQueuedSynchronizer$ConditionNode.isReleasable(AbstractQueuedSynchronizer.java:502)                                       |
 |             blocker.block() at ForkJoinPool.unmanagedBlock(ForkJoinPool.java:3465)                                                                           |
-|               /* The following events repeat infinitely: */                                                                                                  |
-|           ┌╶> isReleasable(): false at AbstractQueuedSynchronizer$ConditionNode.block(AbstractQueuedSynchronizer.java:506)                                   |
-|           |     status ➜ 3 at AbstractQueuedSynchronizer$ConditionNode.isReleasable(AbstractQueuedSynchronizer.java:502)                                     |
-|           |   LockSupport.park() at AbstractQueuedSynchronizer$ConditionNode.block(AbstractQueuedSynchronizer.java:506)                                      |
-|           |     PARK at LockSupport.park(LockSupport.java:341)                                                                                               |
-|           └╶╶ switch (reason: active lock detected)                                                                                                          |
+|               isReleasable(): false at AbstractQueuedSynchronizer$ConditionNode.block(AbstractQueuedSynchronizer.java:506)                                   |
+|                 status ➜ 3 at AbstractQueuedSynchronizer$ConditionNode.isReleasable(AbstractQueuedSynchronizer.java:502)                                     |
+|               LockSupport.park() at AbstractQueuedSynchronizer$ConditionNode.block(AbstractQueuedSynchronizer.java:506)                                      |
+|                 PARK at LockSupport.park(LockSupport.java:341)                                                                                               |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 All unfinished threads are in deadlock

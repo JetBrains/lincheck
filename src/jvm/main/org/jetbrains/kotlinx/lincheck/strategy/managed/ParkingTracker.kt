@@ -36,7 +36,7 @@ interface ParkingTracker {
      * @return true if the thread should continue waiting,
      *   false if it was already unparked.
      */
-    fun waitUnpark(threadId: Int): Boolean
+    fun waitUnpark(threadId: Int, allowSpuriousWakeUp: Boolean): Boolean
 
     /**
      * Unparks a thread, allowing it to continue execution.

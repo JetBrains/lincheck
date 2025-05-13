@@ -119,7 +119,6 @@ fun Strategy.runIteration(invocations: Int, verifier: Verifier): LincheckFailure
     for (invocation in 0 until invocations) {
         if (!nextInvocation()) return null
         val result = runInvocation()
-
         val failure = try {
             verify(result, verifier)
         } finally {

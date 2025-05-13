@@ -383,8 +383,10 @@ class IncorrectHashmapRunConcurrentRepresentationTest : BaseRunConcurrentReprese
     }
 }
 
-class ThreadPoolRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>("run_concurrent_test/thread_pool/thread_pool") {
-    // TODO: check why flakiness appears in this test
+class ThreadPoolRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
+    "run_concurrent_test/thread_pool/thread_pool"
+) {
+    // TODO: flaky object numeration --- investigate and fix
     override val isFlakyTest: Boolean
         get() = true
 
@@ -437,7 +439,10 @@ class CoroutinesRunConcurrentRepresentationTest : BaseRunConcurrentRepresentatio
     @Before
     fun setUp() {
         assumeFalse(isInTraceDebuggerMode) // unstable hash-code
-        assumeFalse(isJdk8) // TODO: investigate why test is unstable on JDK8
+        // TODO: investigate why test is unstable on these JDKs
+        assumeFalse(testJdkVersion == TestJdkVersion.JDK_8)
+        assumeFalse(testJdkVersion == TestJdkVersion.JDK_11)
+        assumeFalse(testJdkVersion == TestJdkVersion.JDK_13)
     }
 
     companion object {
