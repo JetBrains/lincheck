@@ -344,11 +344,11 @@ internal class ModelCheckingStrategy(
                 if (currentInterleavingPosition == 0) listOf(iThread) else emptyList()
 
             val nextThreadId = if (currentInterleavingPosition < threadSwitchChoices.size) {
+                // In this case, the interleaving is pre-defined, and we need to replay it;
+                // select the thread id from the recorded interleaving.
                 check(
-                    // no thread switch happened yet, initial thread id will be returned
+                    // no thread switch happened yet, the initial thread id will be returned
                     executionPosition == -1 ||
-                    // loop detector fully controls 'switchPositions' by itself, thus, 'executionPosition' is always 0, but 'threadSwitchChoices' are still valid
-//                    (executionPosition == 0 && loopDetector.replayModeEnabled) ||
                     // 'threadSwitchChoices.size == switchPositions.size + 1', thus, we subtract 1 from 'currentInterleavingPosition'
                     // (indexing is correct, because if 'currentInterleavingPosition' is 0, then 'executionPosition == -1' would hold, and we would exit disjunction earlier)
                     executionPosition == switchPositions[currentInterleavingPosition - 1]
@@ -358,28 +358,12 @@ internal class ModelCheckingStrategy(
                         Execution position: $executionPosition, switch positions: $switchPositions.
                     """.trimIndent()
                 }
-
                 // Use the predefined choice.
-                val nextThread = threadSwitchChoices[currentInterleavingPosition]
-
-                Logger.info { "Switch positions: $switchPositions, thread switches: $threadSwitchChoices" }
-
-                currentInterleavingPosition++
-                nextThread
-            }
-            // TODO: fails for MultipleSuspensionPointsTraceRepresentationTest, maybe because of the non determinism, or because of how suspended functions are implemented
-            //  investigate it more
-//            else if (loopDetector.replayModeEnabled) {
-//                check(executionPosition == -1) { "Execution position must be -1 when loopDetector.replayMode is enabled, but found $executionPosition" }
-//                val availableThreads = switchableThreads(iThread).let {
-//                    if (it.isNotEmpty()) return@let it
-//                    return@let resumableThreads(iThread)
-//                }
-//                if (availableThreads.isEmpty()) return -1
-//                availableThreads.random(interleavingFinishingRandom)
-//            }
-            else {
+                threadSwitchChoices[currentInterleavingPosition++]
+            } else {
+                // TODO: optimize linear search
                 val nextThreadChoices = lastLeafNode.choices.find { it.value == executionPosition }?.node?.choices
+
                 check(nextThreadChoices != null) { "No thread choices for execution position: $executionPosition" }
                 if (nextThreadChoices.isEmpty()) return -1
 
