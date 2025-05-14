@@ -555,13 +555,13 @@ abstract class ManagedStrategy(
     ): Boolean {
         // before blocking the thread, interrupt it if the interruption flag is set
         val switchReason = blockingReason.toSwitchReason(::iThreadToDisplayNumber)
+        // we create switch point on detected live-locks,
+        // but that switch is not mandatory in case if there are no available threads
         val mustSwitch = (blockingReason != null) && (blockingReason !is BlockingReason.LiveLocked)
         val nextThread = chooseThreadSwitch(iThread, mustSwitch)
         val switchHappened = (iThread != nextThread)
         if (switchHappened) {
             if (blockingReason != null &&
-                // active live-lock currently does not block thread
-                blockingReason !is BlockingReason.LiveLocked &&
                 // TODO: coroutine suspensions are currently handled separately from `ThreadScheduler`
                 blockingReason !is BlockingReason.Suspended
             ) {
@@ -578,18 +578,12 @@ abstract class ManagedStrategy(
         if (inIdeaPluginReplayMode && collectTrace) {
             onThreadSwitchesOrActorFinishes()
         }
-        // unblock interrupted threads
-        unblockInterruptedThreads()
         // do the switch if there is an available thread
-        val threads = switchableThreads(iThread)
-        if (threads.isNotEmpty()) {
-            val nextThread = chooseThread(iThread).also {
-                check(it in threads) {
-                    """
-                        Trying to switch the execution to thread $it,
-                        but only the following threads are eligible to switch: $threads
-                    """.trimIndent()
-                }
+        val nextThread = chooseThread(iThread)
+        if (nextThread != -1) {
+            // in case we resume live-locked thread, we need to unblock it manually
+            if (threadScheduler.isLiveLocked(nextThread)) {
+                threadScheduler.unblockThread(nextThread)
             }
             return nextThread
         }
@@ -626,7 +620,7 @@ abstract class ManagedStrategy(
      * its blocking reason is interruptible.
      * Also, notifies the respective tracker about interruption.
      */
-    private fun unblockInterruptedThreads() {
+    protected fun unblockInterruptedThreads() {
         for ((threadId, thread) in getRegisteredThreads()) {
             if (threadScheduler.isBlocked(threadId) && thread.isInterrupted) {
                 val blockingReason = threadScheduler.getBlockingReason(threadId)
@@ -655,12 +649,38 @@ abstract class ManagedStrategy(
     /**
      * Threads to which an execution can be switched from thread [iThread].
      */
-    protected fun switchableThreads(iThread: Int) =
+    private fun switchableThreads(iThread: Int) =
         if (runner.currentExecutionPart == PARALLEL) {
             (0 until threadScheduler.nThreads).filter { it != iThread && isActive(it) }
         } else {
             emptyList()
         }
+
+    /**
+     * Threads which can be resumed when no `switchableThread` left.
+     *
+     * Right now only live-locked threads are considered to be resumable.
+     *
+     * TODO: somehow refactor suspended TestThread and add them here as well.
+     */
+    private fun resumableThreads(iThread: Int): List<Int> =
+        if (runner.currentExecutionPart == PARALLEL) {
+            (0 until threadScheduler.nThreads).filter { it != iThread && threadScheduler.isLiveLocked(it) }
+        }
+        else {
+            emptyList()
+        }
+
+    /**
+     * Returns threads that could be switched to directly from thread [iThread]
+     * or those that could be resumed in case there are no direct options.
+     */
+    protected fun availableThreads(iThread: Int): List<Int> =
+        switchableThreads(iThread).let {
+            if (it.isEmpty()) resumableThreads(iThread)
+            else it
+        }
+
 
     /**
      * Converts lincheck threadId to displayable thread number for the trace.

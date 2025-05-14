@@ -203,6 +203,15 @@ open class ThreadScheduler {
         getThreadState(threadId) == ThreadState.BLOCKED
 
     /**
+     * Checks if the thread is currently live-locked.
+     *
+     * @param threadId The identifier of the thread to check.
+     * @return `true` if the thread is blocked, `false` otherwise.
+     */
+    fun isLiveLocked(threadId: ThreadId) =
+        getBlockingReason(threadId) is BlockingReason.LiveLocked
+
+    /**
      * Checks if the thread was aborted.
      *
      * @param threadId The identifier of the thread to check.
