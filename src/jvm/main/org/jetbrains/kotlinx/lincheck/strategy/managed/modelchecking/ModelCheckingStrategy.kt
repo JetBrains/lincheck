@@ -262,6 +262,9 @@ internal class ModelCheckingStrategy(
         }
 
         override fun getChildNode(choiceValue: Int): InterleavingTreeNode? {
+            // Here we rely on fact, then switch points are stored sequentially in switch choosing node
+            // e.g. [N, N+1, N+2, ..., N+K]. So we calculate the index of switch point `N+M` as difference between
+            // `N+M` and the first switch point number in current switch choosing node
             if (choices.isEmpty()) return null
             val index = choiceValue - choices.first().value
             if (index < 0 || index >= choices.size) return null
