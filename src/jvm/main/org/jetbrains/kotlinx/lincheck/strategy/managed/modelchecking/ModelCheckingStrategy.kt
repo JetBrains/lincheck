@@ -96,24 +96,15 @@ internal class ModelCheckingStrategy(
         isReplayingSpinCycle = true
     }
 
-    override fun onNewSwitch(iThread: Int, mustSwitch: Boolean) {
-        if (mustSwitch) {
-            // Create new execution position if this is a forced switch.
-            // All other execution positions are covered by `shouldSwitch` method,
-            // but forced switches do not ask `shouldSwitch`, because they are forced.
-            // a choice of this execution position will mean that the next switch is the forced one.
-            currentInterleaving.newExecutionPosition(iThread)
-        }
+    override fun onSwitchPoint(iThread: Int) {
+        check(iThread == -1 /* initial thread choice */ || iThread == threadScheduler.scheduledThreadId)
+        if (runner.currentExecutionPart != PARALLEL) return
+        if (loopDetector.replayModeEnabled) return
+        currentInterleaving.onSwitchPoint(iThread)
     }
 
-    override fun shouldSwitch(iThread: Int): Boolean {
-        // Crete a new current position in the same place as where the check is,
-        // because the position check and the position increment are dual operations.
-        check(iThread == threadScheduler.scheduledThreadId)
-        if (runner.currentExecutionPart != PARALLEL) return false
-        currentInterleaving.newExecutionPosition(iThread)
-        return currentInterleaving.isSwitchPosition()
-    }
+    override fun shouldSwitch(): Boolean =
+        currentInterleaving.isSwitchPosition()
 
     override fun chooseThread(iThread: Int): Int =
         currentInterleaving.chooseThread(iThread)
@@ -366,6 +357,9 @@ internal class ModelCheckingStrategy(
 
                 // Use the predefined choice.
                 val nextThread = threadSwitchChoices[currentInterleavingPosition++]
+
+                // TODO: to get rid of this check I need to allow increasing execution position
+                //  when replay mode is enabled, but I still should not append any switches
                 // Update current node.
                 if (!loopDetector.replayModeEnabled) {
                     currentInterleavingNode = currentInterleavingNode
@@ -395,7 +389,7 @@ internal class ModelCheckingStrategy(
          * Unlike switch points, the execution position is just a gradually increasing counter
          * which helps to distinguish different switch points.
          */
-        fun newExecutionPosition(iThread: Int) {
+        fun onSwitchPoint(iThread: Int) {
             executionPosition++
             if (shouldAddNewSwitchPoints && executionPosition > (switchPositions.lastOrNull() ?: -1)) {
                 // Add a new thread choosing node corresponding to the switch at the current execution position.
