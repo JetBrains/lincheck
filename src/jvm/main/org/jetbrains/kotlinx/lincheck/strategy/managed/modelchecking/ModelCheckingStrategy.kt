@@ -265,8 +265,9 @@ internal class ModelCheckingStrategy(
         }
 
         override fun getChildNode(choiceValue: Int): InterleavingTreeNode? {
-            val index = choices.binarySearch { it.value - choiceValue }
-            if (index < 0) return null
+            if (choices.isEmpty()) return null
+            val index = choiceValue - choices.first().value
+            if (index < 0 || index >= choices.size) return null
             return choices[index].node
         }
 
@@ -342,28 +343,9 @@ internal class ModelCheckingStrategy(
         }
 
         fun chooseThread(iThread: Int): Int {
-            if (currentInterleavingPosition < threadSwitchChoices.size) {
-                // TODO: causes TL on CI
-                // check(
-                //     // no thread switch happened yet, initial thread id will be returned
-                //     executionPosition == -1 ||
-                //     // loop detector fully controls 'switchPositions' by itself, thus, 'executionPosition' is always 0, but 'threadSwitchChoices' are still valid
-                //     (executionPosition == 0 && loopDetector.replayModeEnabled) ||
-                //     // 'threadSwitchChoices.size == switchPositions.size + 1', thus, we subtract 1 from 'currentInterleavingPosition'
-                //     // (indexing is correct, because if 'currentInterleavingPosition' is 0, then 'executionPosition == -1' would hold, and we would exit disjunction earlier)
-                //     executionPosition == switchPositions[currentInterleavingPosition - 1]
-                // ) {
-                //     """
-                //         Attempt to switch thread on execution position which does not correspond to any saved switch position.
-                //         Execution position: $executionPosition, switch positions: $switchPositions.
-                //     """.trimIndent()
-                // }
-
+            val nextThread = if (currentInterleavingPosition < threadSwitchChoices.size) {
                 // Use the predefined choice.
                 val nextThread = threadSwitchChoices[currentInterleavingPosition++]
-
-                // TODO: to get rid of this check I need to allow increasing execution position
-                //  when replay mode is enabled, but I still should not append any switches
                 // Update current node.
                 if (shouldMoveCurrentNode && !loopDetector.replayModeEnabled) {
                     currentInterleavingNode = currentInterleavingNode
@@ -373,18 +355,20 @@ internal class ModelCheckingStrategy(
                     // we reached the next `SwitchChoosingNode` node, so mark it as initialized
                     currentInterleavingNode.initialize()
                 }
-                return nextThread
+                nextThread
             } else {
                 // There is no predefined choice.
                 // This can happen if there were forced thread switches after the last predefined one
                 // (e.g., thread end, coroutine suspension, acquiring an already acquired lock or monitor.wait).
                 // We use a deterministic random here to choose the next thread.
-
                 // end of tracked execution positions, so tell strategy not to generate switch points any further
                 shouldAddNewSwitchPoints = false
-                shouldMoveCurrentNode = false
-                return switchableThreads(iThread).random(interleavingFinishingRandom)
+                switchableThreads(iThread).random(interleavingFinishingRandom)
             }
+            if (currentInterleavingPosition == threadSwitchChoices.size) {
+                shouldMoveCurrentNode = false
+            }
+            return nextThread
         }
 
         fun isSwitchPosition() = executionPosition in switchPositions
@@ -399,14 +383,6 @@ internal class ModelCheckingStrategy(
             if (shouldAddNewSwitchPoints && executionPosition > (switchPositions.lastOrNull() ?: -1)) {
                 // Add a new thread choosing node corresponding to the switch at the current execution position.
                 val availableThreads = switchableThreads(iThread)
-                // TODO: causes TL on CI
-                // val lastThreadSwitchChoice = threadSwitchChoices.lastOrNull()
-                // check(lastThreadSwitchChoice !in availableThreads) {
-                //     """
-                //         Attempt to add a thread choice node with the option for switching to the same thread.
-                //         Threads switches: $threadSwitchChoices, added new thread options: $availableThreads, current thread: $iThread.
-                //     """.trimIndent()
-                // }
                 val choice = Choice(ThreadChoosingNode(availableThreads), executionPosition)
                 currentInterleavingNode.addChoice(choice)
             }
