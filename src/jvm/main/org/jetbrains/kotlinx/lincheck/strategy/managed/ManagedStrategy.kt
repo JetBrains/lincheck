@@ -240,15 +240,13 @@ abstract class ManagedStrategy(
     /**
      * This method is invoked before every thread context switch.
      * @param iThread current thread that is about to be switched
-     * @param mustSwitch whether the switch is not caused by strategy and is a must-do (e.g, because of monitor wait)
      */
-    protected open fun onNewSwitch(iThread: Int, mustSwitch: Boolean) {}
+    protected open fun onSwitchPoint(iThread: Int) {}
 
     /**
      * Returns whether thread should switch at the switch point.
-     * @param iThread the current thread
      */
-    protected abstract fun shouldSwitch(iThread: Int): Boolean
+    protected abstract fun shouldSwitch(): Boolean
 
     /**
      * Choose a thread to switch from thread [iThread].
@@ -326,7 +324,11 @@ abstract class ManagedStrategy(
         traceCollector?.passCodeLocation(SectionDelimiterTracePoint(part))
         val nextThread = when (part) {
             INIT        -> 0
-            PARALLEL    -> chooseThread(0)
+            PARALLEL    -> {
+                // initialize artificial switch point to choose among available threads
+                onSwitchPoint(iThread = -1)
+                chooseThread(iThread = -1)
+            }
             POST        -> 0
             VALIDATION  -> 0
         }
@@ -369,9 +371,8 @@ abstract class ManagedStrategy(
         // Therefore, if the runner detects deadlock, we don't even try to collect trace.
         if (loggedResults is RunnerTimeoutInvocationResult) return null
 
-        val registeredThreads = getRegisteredThreads()
-        val threadNames = MutableList<String>(registeredThreads.size) { "" }
-        threadScheduler.getRegisteredThreads().forEach { threadId, thread ->
+        val threadNames = MutableList<String>(threadScheduler.nThreads) { "" }
+        getRegisteredThreads().forEach { threadId, thread ->
             val threadNumber = ObjectLabelFactory.getObjectNumber(Thread::class.java, thread)
             when (threadNumber) {
                 0 -> threadNames[threadId] = "Main Thread"
@@ -458,7 +459,11 @@ abstract class ManagedStrategy(
             // do not make thread switches inside a silent section
             inSilentSection(threadId) -> false
             // otherwise, follow the strategy decision
-            else -> shouldSwitch(threadId)
+            else -> {
+                // inform strategy that we reached new execution position
+                onSwitchPoint(threadId)
+                shouldSwitch()
+            }
         }
         if (decision != LoopDetector.Decision.Idle) {
             processLoopDetectorDecision(threadId, codeLocation, decision, beforeMethodCallSwitch = beforeMethodCallSwitch)
@@ -549,9 +554,6 @@ abstract class ManagedStrategy(
         beforeMethodCallSwitch: Boolean = false,
     ): Boolean {
         // before blocking the thread, interrupt it if the interruption flag is set
-        if (blockingReason != null && blockingReason.throwsInterruptedException()) {
-            throwIfInterrupted()
-        }
         val switchReason = blockingReason.toSwitchReason(::iThreadToDisplayNumber)
         val mustSwitch = (blockingReason != null) && (blockingReason !is BlockingReason.LiveLocked)
         val nextThread = chooseThreadSwitch(iThread, mustSwitch)
@@ -573,7 +575,9 @@ abstract class ManagedStrategy(
     }
 
     private fun chooseThreadSwitch(iThread: Int, mustSwitch: Boolean = false): Int {
-        onNewSwitch(iThread, mustSwitch)
+        if (inIdeaPluginReplayMode && collectTrace) {
+            onThreadSwitchesOrActorFinishes()
+        }
         // unblock interrupted threads
         unblockInterruptedThreads()
         // do the switch if there is an available thread
@@ -601,8 +605,7 @@ abstract class ManagedStrategy(
            return suspendedThread
         }
         // any other situation is considered to be a deadlock
-        val result = ManagedDeadlockInvocationResult(runner.collectExecutionResults())
-        abortWithSuddenInvocationResult(result)
+        failDueToDeadlock()
     }
 
     @JvmName("setNextThread")
@@ -624,7 +627,7 @@ abstract class ManagedStrategy(
      * Also, notifies the respective tracker about interruption.
      */
     private fun unblockInterruptedThreads() {
-        for ((threadId, thread) in threadScheduler.getRegisteredThreads()) {
+        for ((threadId, thread) in getRegisteredThreads()) {
             if (threadScheduler.isBlocked(threadId) && thread.isInterrupted) {
                 val blockingReason = threadScheduler.getBlockingReason(threadId)
                 if (blockingReason != null && blockingReason.isInterruptible()) {
@@ -753,7 +756,9 @@ abstract class ManagedStrategy(
         val currentThreadId = threadScheduler.getCurrentThreadId()
         val joinThreadId = threadScheduler.getThreadId(thread!!)
         while (threadScheduler.getThreadState(joinThreadId) != ThreadState.FINISHED) {
+            throwIfInterrupted()
             // TODO: should wait on thread-join be considered an obstruction-freedom violation?
+            onSwitchPoint(currentThreadId)
             // Switch to another thread and wait for a moment when the thread is finished
             switchCurrentThread(currentThreadId, BlockingReason.ThreadJoin(joinThreadId))
         }
@@ -843,6 +848,7 @@ abstract class ManagedStrategy(
         loopDetector.onThreadFinish(threadId)
         traceCollector?.onThreadFinish()
         unblockJoiningThreads(threadId)
+        onSwitchPoint(threadId)
         val nextThread = chooseThreadSwitch(threadId, true)
         setCurrentThread(nextThread)
     }
@@ -939,6 +945,7 @@ abstract class ManagedStrategy(
         val iThread = threadScheduler.getCurrentThreadId()
         // Try to acquire the monitor
         while (!monitorTracker.acquireMonitor(iThread, monitor)) {
+            onSwitchPoint(iThread)
             // Switch to another thread and wait for a moment when the monitor can be acquired
             switchCurrentThread(iThread, BlockingReason.Locked)
         }
@@ -1008,6 +1015,7 @@ abstract class ManagedStrategy(
         // Forbid spurious wake-ups if inside silent sections.
         val allowSpuriousWakeUp = shouldAllowSpuriousUnpark(threadId, codeLocation)
         while (parkingTracker.waitUnpark(threadId, allowSpuriousWakeUp)) {
+            onSwitchPoint(threadId)
             // Switch to another thread and wait till an unpark event happens.
             switchCurrentThread(threadId, BlockingReason.Parked)
         }
@@ -1081,6 +1089,7 @@ abstract class ManagedStrategy(
         val iThread = threadScheduler.getCurrentThreadId()
         while (monitorTracker.waitOnMonitor(iThread, monitor)) {
             unblockAcquiringThreads(iThread, monitor)
+            onSwitchPoint(iThread)
             switchCurrentThread(iThread, BlockingReason.Waiting)
         }
         throwIfInterrupted()
@@ -1792,6 +1801,7 @@ abstract class ManagedStrategy(
             // `UNKNOWN_CODE_LOCATION`, because we do not know the actual code location
             newSwitchPoint(iThread, UNKNOWN_CODE_LOCATION)
         } else {
+            onSwitchPoint(iThread)
             // coroutine suspension does not violate obstruction-freedom
             switchCurrentThread(iThread, BlockingReason.Suspended)
         }
@@ -2208,12 +2218,23 @@ abstract class ManagedStrategy(
         }
     }
 
+    override fun shouldInvokeBeforeEvent(): Boolean {
+        // We do not check `inIgnoredSection` here because this method is called from instrumented code
+        // that should be invoked only outside the ignored section.
+        // However, we cannot add `!inIgnoredSection` check here
+        // as the instrumented code might call `enterIgnoredSection` just before this call.
+        return inIdeaPluginReplayMode && collectTrace &&
+                suddenInvocationResult == null &&
+                isRegisteredThread() &&
+                !shouldSkipNextBeforeEvent()
+    }
+
     /**
      * Indicates if the next [beforeEvent] method call should be skipped.
      *
      * @see skipNextBeforeEvent
      */
-    protected fun shouldSkipNextBeforeEvent(): Boolean {
+    private fun shouldSkipNextBeforeEvent(): Boolean {
         val skipBeforeEvent = skipNextBeforeEvent
         if (skipNextBeforeEvent) {
             skipNextBeforeEvent = false
@@ -2227,6 +2248,9 @@ abstract class ManagedStrategy(
 
     // == UTILITY METHODS ==
 
+    /**
+     * Checks if [threadId] is a `TestThread` instance (threads created and managed by lincheck itself).
+     */
     private fun isTestThread(threadId: Int): Boolean {
         return threadId in (0 ..< nThreads)
     }
