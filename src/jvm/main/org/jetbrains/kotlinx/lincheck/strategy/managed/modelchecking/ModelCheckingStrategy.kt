@@ -313,17 +313,20 @@ internal class ModelCheckingStrategy(
         private var currentInterleavingPosition = 0
 
         // traverses `SwitchChoosingNode` nodes of an interleaving tree
-        private lateinit var currentInterleavingNode: SwitchChoosingNode
+        private var currentInterleavingNode: SwitchChoosingNode = root
 
         // tells the strategy is it allowed to insert new switch points to the `currentInterleavingNode`
         private var shouldAddNewSwitchPoints: Boolean = true
+
+        // allows for optimization in which for every interleaving we only push
+        // `currentInterleavingNode` deeper in the tree only once
+        private var shouldMoveCurrentNode: Boolean = true
 
         private lateinit var interleavingFinishingRandom: Random
 
         fun initialize() {
             executionPosition = -1 // the first execution position will be zero
             currentInterleavingPosition = 0
-            currentInterleavingNode = root
             interleavingFinishingRandom = Random(2) // random with a constant seed
         }
 
@@ -335,6 +338,7 @@ internal class ModelCheckingStrategy(
             // and since we clear out the switch points in the `currentInterleavingNode`
             // we need to insert them once again, thus, we tell strategy to append switch points
             shouldAddNewSwitchPoints = true
+            shouldMoveCurrentNode = false
         }
 
         fun chooseThread(iThread: Int): Int {
@@ -361,7 +365,7 @@ internal class ModelCheckingStrategy(
                 // TODO: to get rid of this check I need to allow increasing execution position
                 //  when replay mode is enabled, but I still should not append any switches
                 // Update current node.
-                if (!loopDetector.replayModeEnabled) {
+                if (shouldMoveCurrentNode && !loopDetector.replayModeEnabled) {
                     currentInterleavingNode = currentInterleavingNode
                         .getChildNode(executionPosition)!!
                         .getChildNode(nextThread)!!
@@ -378,6 +382,7 @@ internal class ModelCheckingStrategy(
 
                 // end of tracked execution positions, so tell strategy not to generate switch points any further
                 shouldAddNewSwitchPoints = false
+                shouldMoveCurrentNode = false
                 return switchableThreads(iThread).random(interleavingFinishingRandom)
             }
         }
