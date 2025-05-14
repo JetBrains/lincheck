@@ -258,9 +258,6 @@ internal class ModelCheckingStrategy(
             check(isInitialized) {
                 "Node should be initialized."
             }
-            check(choices.isEmpty() || choices.last().value < choice.value) {
-                "Switch positions should be sorted in ascending order."
-            }
             _choices.add(choice)
         }
 
