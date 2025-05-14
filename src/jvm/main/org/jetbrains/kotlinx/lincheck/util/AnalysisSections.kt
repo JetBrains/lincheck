@@ -11,6 +11,8 @@
 package org.jetbrains.kotlinx.lincheck.util
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.isEagerlyInstrumentedClass
+import org.jetbrains.kotlinx.lincheck.transformation.isThreadContainerClass
 import sun.nio.ch.lincheck.ThreadDescriptor
 import sun.nio.ch.lincheck.Injections
 
@@ -182,23 +184,146 @@ internal inline fun <R> runOutsideIgnoredSection(block: () -> R): R {
     }
 }
 
-internal fun getDefaultSilentSectionType(className: String, methodName: String): AnalysisSectionType? {
-    if (className.startsWith("java.util.concurrent.")) {
-        if (isJavaExecutorService(className)) {
-            if (methodName == "submit") {
-                return AnalysisSectionType.SILENT_PROPAGATING
-            }
-            return AnalysisSectionType.SILENT
-        }
-        if (className.startsWith("java.util.concurrent.locks.AbstractQueuedSynchronizer"))
-            return AnalysisSectionType.SILENT
-        if (className == "java.util.concurrent.FutureTask")
-            return AnalysisSectionType.SILENT
-    }
-    return null
+/**
+ * Determines the analysis section type for a given class. And optionally function.
+ *
+ * @param className The name of the class to analyze.
+ * @param methodName The name of the method to analyze.
+ * @return AnalysisSectionType.NORMAL if the class should be transformed, AnalysisSectionType.IGNORED otherwise.
+ */
+internal fun getAnalysisSectionFor(className: String, methodName: String = ""): AnalysisSectionType = when {
+    isJavaExecutorService(className) && methodName == "submit" -> AnalysisSectionType.SILENT_PROPAGATING
+    isJavaExecutorService(className) -> AnalysisSectionType.SILENT
+    className.startsWith("java.util.concurrent.locks.AbstractQueuedSynchronizer") -> AnalysisSectionType.SILENT
+    className == "java.util.concurrent.FutureTask" -> AnalysisSectionType.SILENT
+    
+    // We should transform all eagerly instrumented classes.
+    isEagerlyInstrumentedClass(className) -> AnalysisSectionType.NORMAL
+    
+    isConcurrentCollectionsLibrary(className) -> AnalysisSectionType.SILENT
+
+    // Specific class handling for java.lang.Thread
+    className == "java.lang.Thread" -> AnalysisSectionType.NORMAL
+
+    // Specific handling for ThreadContainer classes
+    isThreadContainerClass(className) -> AnalysisSectionType.NORMAL
+
+    // Specific Kotlin classes that need to be transformed
+    className.startsWith("kotlin.concurrent.ThreadsKt") -> AnalysisSectionType.NORMAL
+    className.startsWith("kotlin.collections.") -> AnalysisSectionType.NORMAL
+    className.startsWith("kotlin.jvm.internal.Array") && className.contains("Iterator") -> AnalysisSectionType.NORMAL
+    className.startsWith("kotlin.ranges.") -> AnalysisSectionType.NORMAL
+    className.startsWith("kotlin.random.") -> AnalysisSectionType.NORMAL
+    className.startsWith("kotlin.coroutines.jvm.internal.") -> AnalysisSectionType.IGNORED
+    className.startsWith("kotlin.coroutines.") -> AnalysisSectionType.NORMAL
+
+    // Java util classes except atomic ones
+    className.startsWith("java.util.concurrent.") && className.contains("Atomic") -> AnalysisSectionType.IGNORED
+    className.startsWith("java.util.") -> AnalysisSectionType.NORMAL
+
+    // AtomicFU non-atomic classes
+    className.startsWith("kotlinx.atomicfu.") && !className.contains("Atomic") -> AnalysisSectionType.NORMAL
+    className.startsWith("kotlinx.atomicfu.") -> AnalysisSectionType.IGNORED
+
+
+    // Specific classes and packages that should be ignored
+    className.startsWith("kotlinx.coroutines.debug.") -> AnalysisSectionType.IGNORED
+    className == "kotlinx.coroutines.DebugKt" -> AnalysisSectionType.IGNORED
+    className.startsWith("com.intellij.rt.coverage.") -> AnalysisSectionType.IGNORED
+    className.startsWith("com.intellij.rt.debugger.agent.") -> AnalysisSectionType.IGNORED
+    className.startsWith("com.esotericsoftware.kryo.") -> AnalysisSectionType.IGNORED
+    className.startsWith("net.bytebuddy.") -> AnalysisSectionType.IGNORED
+    className.startsWith("net.rubygrapefruit.platform.") -> AnalysisSectionType.IGNORED
+    className.startsWith("io.mockk.") -> AnalysisSectionType.IGNORED
+    className.startsWith("it.unimi.dsi.fastutil.") -> AnalysisSectionType.IGNORED
+    className.startsWith("worker.org.gradle.") -> AnalysisSectionType.IGNORED
+    className.startsWith("org.objectweb.asm.") -> AnalysisSectionType.IGNORED
+    className.startsWith("org.gradle.") -> AnalysisSectionType.IGNORED
+    className.startsWith("org.slf4j.") -> AnalysisSectionType.IGNORED
+    className.startsWith("org.apache.commons.lang.") -> AnalysisSectionType.IGNORED
+    className.startsWith("org.junit.") -> AnalysisSectionType.IGNORED
+    className.startsWith("junit.framework.") -> AnalysisSectionType.IGNORED
+
+    // Lincheck classes should never be transformed
+    className.startsWith("org.jetbrains.kotlinx.lincheck.") -> AnalysisSectionType.IGNORED
+    className.startsWith("sun.nio.ch.lincheck.") -> AnalysisSectionType.IGNORED
+    
+    // More general patterns for classes that should be ignored
+    className.startsWith("java.") -> AnalysisSectionType.IGNORED
+    className.startsWith("com.sun.") -> AnalysisSectionType.IGNORED
+    className.startsWith("sun.") -> AnalysisSectionType.IGNORED
+    className.startsWith("javax.") -> AnalysisSectionType.IGNORED
+    className.startsWith("jdk.") -> AnalysisSectionType.IGNORED
+    className.startsWith("kotlin.") -> AnalysisSectionType.IGNORED
+
+    // All other classes should be transformed
+    else -> AnalysisSectionType.NORMAL
 }
 
+internal fun isCollectionsLibrary(className: String) = className in setOf(
+    // Interfaces
+    "java.lang.Iterable",
+    "java.util.Collection",
+    "java.util.List",
+    "java.util.Set",
+    "java.util.Queue",
+    "java.util.Deque",
+    "java.util.NavigableSet",
+    "java.util.SortedSet",
+
+    // Abstract implementations
+    "java.util.AbstractCollection",
+    "java.util.AbstractList",
+    "java.util.AbstractQueue",
+    "java.util.AbstractSequentialList",
+    "java.util.AbstractSet",
+
+    // Concrete implementations
+    "java.util.ArrayDeque",
+    "java.util.ArrayList",
+    "java.util.AttributeList",
+    "java.util.EnumSet",
+    "java.util.HashSet",
+    "java.util.LinkedHashSet",
+    "java.util.LinkedList",
+    "java.util.PriorityQueue",
+    "java.util.Stack",
+    "java.util.TreeSet",
+    "java.util.Vector"
+)
+
+internal fun isConcurrentCollectionsLibrary(className: String) = className in setOf(
+    // Interfaces
+    "java.util.concurrent.BlockingDeque",
+    "java.util.concurrent.BlockingQueue",
+    "java.util.concurrent.TransferQueue",
+
+    // Concrete implementations
+    // Concurrent collections
+    "java.util.concurrent.ConcurrentHashMap",
+    "java.util.concurrent.ConcurrentLinkedDeque",
+    "java.util.concurrent.ConcurrentLinkedQueue",
+    "java.util.concurrent.ConcurrentSkipListMap",
+    "java.util.concurrent.ConcurrentSkipListSet",
+
+    // Blocking queues
+    "java.util.concurrent.ArrayBlockingQueue",
+    "java.util.concurrent.LinkedBlockingDeque",
+    "java.util.concurrent.LinkedBlockingQueue",
+    "java.util.concurrent.DelayQueue",
+    "java.util.concurrent.PriorityBlockingQueue",
+    "java.util.concurrent.SynchronousQueue",
+    "java.util.concurrent.LinkedTransferQueue",
+
+    // Copy-on-write collections
+    "java.util.concurrent.CopyOnWriteArrayList",
+    "java.util.concurrent.CopyOnWriteArraySet",
+
+    // Inner class view
+    "java.util.concurrent.ConcurrentHashMap\$KeySetView"
+)
+
 private fun isJavaExecutorService(className: String) =
-    className.startsWith("java.util.concurrent.AbstractExecutorService") ||
-    className.startsWith("java.util.concurrent.ThreadPoolExecutor") ||
-    className.startsWith("java.util.concurrent.ForkJoinPool")
+    className.startsWith("java.util.concurrent.AbstractExecutorService") 
+        || className.startsWith("java.util.concurrent.ThreadPoolExecutor") 
+        || className.startsWith("java.util.concurrent.ForkJoinPool")

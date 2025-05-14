@@ -1,0 +1,65 @@
+= Invalid execution results =
+| -------------------------------------------------------- |
+|   Thread 1   |                 Thread 2                  |
+| -------------------------------------------------------- |
+| add1(): true | add2(): ArrayIndexOutOfBoundsException #1 |
+| -------------------------------------------------------- |
+
+---
+The number next to an exception name helps you find its stack trace provided after the interleaving section
+---
+
+The following interleaving leads to the error:
+| ------------------------------------------------------------------------------------------------------------------------------------------- |
+|   Thread 1   |                                                           Thread 2                                                           |
+| ------------------------------------------------------------------------------------------------------------------------------------------- |
+|              | add2(): ArrayIndexOutOfBoundsException #1                                                                                    |
+|              |   list.add(2): threw ArrayIndexOutOfBoundsException at UnsafeCollectionSwitchPointTest.add2(StdLibRepresentationTests.kt:54) |
+|              |     modCount ➜ 0 at ArrayList.add(ArrayList.java:466)                                                                        |
+|              |     modCount = 1 at ArrayList.add(ArrayList.java:466)                                                                        |
+|              |     elementData ➜ Array<Object>#1 at ArrayList.add(ArrayList.java:467)                                                       |
+|              |     switch                                                                                                                   |
+| add1(): true |                                                                                                                              |
+|              |     size ➜ 1 at ArrayList.add(ArrayList.java:467)                                                                            |
+|              |     add(2, Array<Object>#1, 1): threw ArrayIndexOutOfBoundsException at ArrayList.add(ArrayList.java:467)                    |
+|              |   result: ArrayIndexOutOfBoundsException #1                                                                                  |
+| ------------------------------------------------------------------------------------------------------------------------------------------- |
+
+Exception stack traces:
+#1: java.lang.ArrayIndexOutOfBoundsException: Index 1 out of bounds for length 0
+	at java.base/java.util.ArrayList.add(ArrayList.java:455)
+	at java.base/java.util.ArrayList.add(ArrayList.java:467)
+	at org.jetbrains.kotlinx.lincheck_test.representation.UnsafeCollectionSwitchPointTest.add2(StdLibRepresentationTests.kt:54)
+	at java.base/java.lang.Thread.run(Thread.java:840)
+
+Detailed trace:
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                           Thread 1                                           |                                                           Thread 2                                                           |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                              | add2(): ArrayIndexOutOfBoundsException #1                                                                                    |
+|                                                                                              |   list.add(2): threw ArrayIndexOutOfBoundsException at UnsafeCollectionSwitchPointTest.add2(StdLibRepresentationTests.kt:54) |
+|                                                                                              |     modCount ➜ 0 at ArrayList.add(ArrayList.java:466)                                                                        |
+|                                                                                              |     modCount = 1 at ArrayList.add(ArrayList.java:466)                                                                        |
+|                                                                                              |     elementData ➜ Array<Object>#1 at ArrayList.add(ArrayList.java:467)                                                       |
+|                                                                                              |     switch                                                                                                                   |
+| add1(): true                                                                                 |                                                                                                                              |
+|   list.add(1): true at UnsafeCollectionSwitchPointTest.add1(StdLibRepresentationTests.kt:51) |                                                                                                                              |
+|     modCount ➜ 1 at ArrayList.add(ArrayList.java:466)                                        |                                                                                                                              |
+|     modCount = 2 at ArrayList.add(ArrayList.java:466)                                        |                                                                                                                              |
+|     elementData ➜ Array<Object>#1 at ArrayList.add(ArrayList.java:467)                       |                                                                                                                              |
+|     size ➜ 0 at ArrayList.add(ArrayList.java:467)                                            |                                                                                                                              |
+|     add(1, Array<Object>#1, 0) at ArrayList.add(ArrayList.java:467)                          |                                                                                                                              |
+|       grow(): Array<Object>#2 at ArrayList.add(ArrayList.java:454)                           |                                                                                                                              |
+|         size ➜ 0 at ArrayList.grow(ArrayList.java:244)                                       |                                                                                                                              |
+|         grow(1): Array<Object>#2 at ArrayList.grow(ArrayList.java:244)                       |                                                                                                                              |
+|           elementData ➜ Array<Object>#1 at ArrayList.grow(ArrayList.java:232)                |                                                                                                                              |
+|           elementData ➜ Array<Object>#1 at ArrayList.grow(ArrayList.java:233)                |                                                                                                                              |
+|           elementData = Array<Object>#2 at ArrayList.grow(ArrayList.java:239)                |                                                                                                                              |
+|       Array<Object>#2[0] = 1 at ArrayList.add(ArrayList.java:455)                            |                                                                                                                              |
+|       size = 1 at ArrayList.add(ArrayList.java:456)                                          |                                                                                                                              |
+|   result: true                                                                               |                                                                                                                              |
+|                                                                                              |     size ➜ 1 at ArrayList.add(ArrayList.java:467)                                                                            |
+|                                                                                              |     add(2, Array<Object>#1, 1): threw ArrayIndexOutOfBoundsException at ArrayList.add(ArrayList.java:467)                    |
+|                                                                                              |       Array<Object>#1[1] = 2 at ArrayList.add(ArrayList.java:455)                                                            |
+|                                                                                              |   result: ArrayIndexOutOfBoundsException #1                                                                                  |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

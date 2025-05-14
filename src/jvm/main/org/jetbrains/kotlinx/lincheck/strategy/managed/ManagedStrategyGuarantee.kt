@@ -75,5 +75,10 @@ class ManagedStrategyGuarantee private constructor(
          * specified method calls.
          */
         fun treatAsAtomic() = ManagedStrategyGuarantee(classPredicate, methodPredicate, AnalysisSectionType.ATOMIC)
+
+        /**
+         * The methods will be treated as SILENT, so that no switch points will be placed unless forced.
+         */
+        internal fun mute() = ManagedStrategyGuarantee(classPredicate, methodPredicate, AnalysisSectionType.SILENT)
     }
 }

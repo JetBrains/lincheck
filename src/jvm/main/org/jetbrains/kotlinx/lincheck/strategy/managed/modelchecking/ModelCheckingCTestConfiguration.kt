@@ -26,7 +26,7 @@ class ModelCheckingCTestConfiguration(testClass: Class<*>, iterations: Int, thre
                                       checkObstructionFreedom: Boolean, hangingDetectionThreshold: Int,
                                       invocationsPerIteration: Int, guarantees: List<ManagedStrategyGuarantee>,
                                       minimizeFailedScenario: Boolean, sequentialSpecification: Class<*>, timeoutMs: Long,
-                                      customScenarios: List<ExecutionScenario>
+                                      customScenarios: List<ExecutionScenario>, val stdLibAnalysisEnabled: Boolean,
 ) : ManagedCTestConfiguration(
     testClass = testClass,
     iterations = iterations,

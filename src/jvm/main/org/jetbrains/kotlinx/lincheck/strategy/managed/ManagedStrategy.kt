@@ -1876,17 +1876,17 @@ abstract class ManagedStrategy(
         when (owner) {
             System.`in`, System.out, System.err -> return AnalysisSectionType.IGNORED
         }
-        val silentSection = getDefaultSilentSectionType(ownerName, methodName)
-            ?.ensure { it.isSilent() }
-        if (silentSection != null) {
-            return silentSection
-        }
+        val section = getAnalysisSectionFor(ownerName, methodName)
+//            .ensure( { it.isSilent() || it.isNormal() }) { "Expected SILENT or NORMAL but got $it for  $ownerName, $methodName" }
+//        if (silentSection != AnalysisSectionType.NORMAL) {
+//            return silentSection
+//        }
         userDefinedGuarantees?.forEach { guarantee ->
             if (guarantee.classPredicate(ownerName) && guarantee.methodPredicate(methodName)) {
                 return guarantee.type
             }
         }
-        return AnalysisSectionType.NORMAL
+        return section
     }
 
     private fun enterAnalysisSection(threadId: ThreadId, section: AnalysisSectionType) {

@@ -74,6 +74,12 @@ internal abstract class TraceNode(var callDepth: Int, val eventNumber: Int, open
     }
 
     /**
+     * Checks if the [predicate] holds for any of this [TraceNode] descendants including this [TraceNode].
+     */
+    fun containsDescendant(predicate: (TraceNode) -> Boolean): Boolean =
+        predicate(this) || children.any { it.containsDescendant(predicate) }
+
+    /**
      * Shallow copy without children
      */
     abstract fun copy(): TraceNode 

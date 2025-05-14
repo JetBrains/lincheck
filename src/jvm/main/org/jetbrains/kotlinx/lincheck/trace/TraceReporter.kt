@@ -14,6 +14,7 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
 import kotlin.math.max
 
 internal typealias SingleThreadedTable<T> = List<SingleThreadedSection<T>>
@@ -59,7 +60,9 @@ internal class TraceReporter(
         val traceGraph = traceToGraph(fixedTrace)
 
         // Optimizes trace by combining trace points for synthetic field accesses etc..
-        val compressedTraceGraph = traceGraph.compressTrace()
+        val compressedTraceGraph = traceGraph
+            .compressTrace()
+            .let { if (failure.testConfig is ModelCheckingCTestConfiguration && !failure.testConfig.stdLibAnalysisEnabled) it.collapseLibraries() else it }
         
         graph = if (isGeneralPurposeModelCheckingScenario(failure.scenario)) removeGPMCLambda(compressedTraceGraph) else compressedTraceGraph
     }

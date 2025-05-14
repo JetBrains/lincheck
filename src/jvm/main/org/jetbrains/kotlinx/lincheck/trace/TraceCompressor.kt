@@ -10,6 +10,9 @@
 
 package org.jetbrains.kotlinx.lincheck.trace
 
+import org.jetbrains.kotlinx.lincheck.util.isCollectionsLibrary
+import org.jetbrains.kotlinx.lincheck.util.isConcurrentCollectionsLibrary
+
 
 internal fun SingleThreadedTable<TraceNode>.compressTrace() = this
     .compressSyntheticFieldAccess()
@@ -187,6 +190,16 @@ private fun SingleThreadedTable<TraceNode>.compressThreadStart() = compressNodes
     newNode
 }
 
+internal fun SingleThreadedTable<TraceNode>.collapseLibraries() = compressNodes { node -> 
+    // if should not be hidden
+    if (node !is CallNode || !shouldBeHidden(node)) return@compressNodes node
+    
+    // if cannot be hidden (due to switch point)
+    if (node.containsDescendant { it is EventNode && it.tracePoint is SwitchEventTracePoint }) 
+        return@compressNodes node
+    
+    return@compressNodes node.copy()
+}
 
 private fun SingleThreadedTable<TraceNode>.compressNodes(compressionRule: (TraceNode) -> TraceNode) = map {
     it.map { it.compress(compressionRule) }
@@ -228,3 +241,7 @@ private fun isUserThreadStart(currentTracePoint: MethodCallTracePoint, nextTrace
     currentTracePoint.isThreadStart
             && nextTracePoint.className == "kotlin.jvm.functions.Function0"
             && nextTracePoint.methodName == "invoke"
+
+private fun shouldBeHidden(callNode: CallNode): Boolean =
+    isConcurrentCollectionsLibrary(callNode.tracePoint.className)
+        || isCollectionsLibrary(callNode.tracePoint.className)
