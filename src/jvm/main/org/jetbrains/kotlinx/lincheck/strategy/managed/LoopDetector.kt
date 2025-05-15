@@ -250,9 +250,8 @@ internal class LoopDetector(
         totalExecutionsCount++
         // Ignore unknown code locations.
         if (codeLocation == UNKNOWN_CODE_LOCATION) return Decision.Idle
-        // Increment the number of times the specified code location is visited.
-        val count = currentThreadCodeLocationVisitCountMap.getOrDefault(codeLocation, 0) + 1
-        currentThreadCodeLocationVisitCountMap[codeLocation] = count
+        // Update code location visit counter
+        val count = updateCodeLocationVisitCounter(codeLocation)
         // In trace debugger mode, check whether the count exceeds
         // the maximum number of repetitions for spin-loop detection.
         // Check whether the count exceeds the maximum number of repetitions for loop/hang detection.
@@ -268,9 +267,6 @@ internal class LoopDetector(
                 else ->
                     Decision.Idle
             }
-        }
-        if (mode != Mode.DEFAULT) {
-            currentThreadCodeLocationsHistory += CodeIdentity.RegularCodeLocationIdentity(codeLocation)
         }
         val detectedFirstTime = count > hangingDetectionThreshold
         val detectedEarly = loopTrackingCursor.isInCycle
@@ -314,6 +310,25 @@ internal class LoopDetector(
             return Decision.LivelockThreadSwitch(cyclePeriod)
         }
         return Decision.Idle
+    }
+
+    /**
+     * Updates the internal hit counters for a given code location during the execution process.
+     * This method tracks the number of visits to a specific code location and appends it to the
+     * current thread's code location history.
+     *
+     * @param codeLocation unique identifier of a code location being visited.
+     * @return the updated number of times the specified code location has been visited by the current thread,
+     *         or -1 if the `codeLocation` is unknown
+     */
+    private fun updateCodeLocationVisitCounter(codeLocation: Int): Int {
+        require(codeLocation != UNKNOWN_CODE_LOCATION)
+        val count = currentThreadCodeLocationVisitCountMap.getOrDefault(codeLocation, 0) + 1
+        currentThreadCodeLocationVisitCountMap[codeLocation] = count
+        if (mode != Mode.DEFAULT) {
+            currentThreadCodeLocationsHistory += CodeIdentity.RegularCodeLocationIdentity(codeLocation)
+        }
+        return count
     }
 
     /**
@@ -455,15 +470,9 @@ internal class LoopDetector(
             helper.onNextExecution()
             return
         }
+        if (codeLocation == UNKNOWN_CODE_LOCATION) return
         onNextExecutionPoint(codeLocation)
-        // Increase the total number of happened operations for live-lock detection
-        totalExecutionsCount++
-        // Increment the number of times the specified code location is visited.
-        val count = currentThreadCodeLocationVisitCountMap.getOrDefault(codeLocation, 0) + 1
-        currentThreadCodeLocationVisitCountMap[codeLocation] = count
-        if (mode != Mode.DEFAULT) {
-            currentThreadCodeLocationsHistory += CodeIdentity.RegularCodeLocationIdentity(codeLocation)
-        }
+        updateCodeLocationVisitCounter(codeLocation)
     }
 
     /**
