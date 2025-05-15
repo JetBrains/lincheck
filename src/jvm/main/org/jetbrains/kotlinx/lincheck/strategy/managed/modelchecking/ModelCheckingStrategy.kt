@@ -99,6 +99,11 @@ internal class ModelCheckingStrategy(
     override fun onSwitchPoint(iThread: Int) {
         check(iThread == -1 /* initial thread choice */ || iThread == threadScheduler.scheduledThreadId)
         if (runner.currentExecutionPart != PARALLEL) return
+        // in case if `tryAbortingUserThreads` succeeded in aborting execution,
+        // we should not insert switch points after it
+        if (threadScheduler.areAllThreadsFinishedOrAborted()) return
+        // unblock interrupted threads
+        unblockInterruptedThreads()
         if (loopDetector.replayModeEnabled) return
         currentInterleaving.onSwitchPoint(iThread)
     }
@@ -343,6 +348,7 @@ internal class ModelCheckingStrategy(
         }
 
         fun chooseThread(iThread: Int): Int {
+            val availableThreads = availableThreads(iThread)
             val nextThread = if (currentInterleavingPosition < threadSwitchChoices.size) {
                 // Use the predefined choice.
                 val nextThread = threadSwitchChoices[currentInterleavingPosition++]
@@ -355,6 +361,12 @@ internal class ModelCheckingStrategy(
                     // we reached the next `SwitchChoosingNode` node, so mark it as initialized
                     currentInterleavingNode.initialize()
                 }
+                check(nextThread in availableThreads) {
+                    """
+                        Trying to switch the execution to thread $nextThread,
+                        but only the following threads are eligible to switch: $availableThreads
+                    """.trimIndent()
+                }
                 nextThread
             } else {
                 // There is no predefined choice.
@@ -363,7 +375,11 @@ internal class ModelCheckingStrategy(
                 // We use a deterministic random here to choose the next thread.
                 // end of tracked execution positions, so tell strategy not to generate switch points any further
                 shouldAddNewSwitchPoints = false
-                switchableThreads(iThread).random(interleavingFinishingRandom)
+                // in case no switchable thread available we return -1, this way
+                // the strategy will either report an error or stay on the calling
+                // thread if the switch was not mandatory
+                if (availableThreads.isEmpty()) -1
+                else availableThreads.random(interleavingFinishingRandom)
             }
             if (currentInterleavingPosition == threadSwitchChoices.size) {
                 shouldMoveCurrentNode = false
@@ -382,8 +398,7 @@ internal class ModelCheckingStrategy(
             executionPosition++
             if (shouldAddNewSwitchPoints && executionPosition > (switchPositions.lastOrNull() ?: -1)) {
                 // Add a new thread choosing node corresponding to the switch at the current execution position.
-                val availableThreads = switchableThreads(iThread)
-                val choice = Choice(ThreadChoosingNode(availableThreads), executionPosition)
+                val choice = Choice(ThreadChoosingNode(availableThreads(iThread)), executionPosition)
                 currentInterleavingNode.addChoice(choice)
             }
         }

@@ -203,6 +203,24 @@ open class ThreadScheduler {
         getThreadState(threadId) == ThreadState.BLOCKED
 
     /**
+     * Checks if the thread is currently live-locked.
+     *
+     * @param threadId The identifier of the thread to check.
+     * @return `true` if the thread is live-locked, `false` otherwise.
+     */
+    fun isLiveLocked(threadId: ThreadId) =
+        getBlockingReason(threadId) is BlockingReason.LiveLocked
+
+    /**
+     * Checks if the thread is currently parked.
+     *
+     * @param threadId The identifier of the thread to check.
+     * @return `true` if the thread is parked, `false` otherwise.
+     */
+    fun isParked(threadId: ThreadId) =
+        getBlockingReason(threadId) is BlockingReason.Parked
+
+    /**
      * Checks if the thread was aborted.
      *
      * @param threadId The identifier of the thread to check.
@@ -227,6 +245,16 @@ open class ThreadScheduler {
      */
     fun areAllThreadsFinished() =
         threads.values.all { it.state == ThreadState.FINISHED }
+
+    /**
+     * Checks if all threads managed by the scheduler have finished or aborted.
+     * @return `true` if all threads are finished or aborted, otherwise `false`.
+     */
+    fun areAllThreadsFinishedOrAborted() =
+        threads.values.all {
+            it.state == ThreadState.FINISHED ||
+            it.state == ThreadState.ABORTED
+        }
 
     /**
      * Registers a new thread in the scheduler and assigns it a unique identifier.
