@@ -10,7 +10,6 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy
 
-import org.jetbrains.kotlinx.lincheck.strategy.ThreadScheduler.RegisteredThread
 import sun.nio.ch.lincheck.TestThread
 import sun.nio.ch.lincheck.ThreadDescriptor
 import org.jetbrains.kotlinx.lincheck.util.*
@@ -92,8 +91,6 @@ open class ThreadScheduler {
 
     private val threads_ = mutableThreadMapOf<ThreadData>()
     protected val threads: ThreadMap<ThreadData> get() = threads_
-
-    data class RegisteredThread(val threadId: ThreadId, val thread: Thread)
 
     /**
      * Number of threads currently managed by the scheduler.
