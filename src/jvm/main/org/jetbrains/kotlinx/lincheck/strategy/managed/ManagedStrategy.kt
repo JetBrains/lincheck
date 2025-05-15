@@ -673,8 +673,7 @@ abstract class ManagedStrategy(
     private fun resumableThreads(iThread: Int): List<Int> =
         if (runner.currentExecutionPart == PARALLEL) {
             (0 until threadScheduler.nThreads).filter { it != iThread && threadScheduler.isLiveLocked(it) }
-        }
-        else {
+        } else {
             emptyList()
         }
 
@@ -682,11 +681,11 @@ abstract class ManagedStrategy(
      * Returns threads that could be switched to directly from thread [iThread]
      * or those that could be resumed in case there are no direct options.
      */
-    protected fun availableThreads(iThread: Int): List<Int> =
-        switchableThreads(iThread).let {
-            if (it.isEmpty()) resumableThreads(iThread)
-            else it
-        }
+    protected fun availableThreads(iThread: Int): List<Int> {
+        val threads = switchableThreads(iThread)
+        return if (threads.isEmpty()) resumableThreads(iThread)
+               else threads
+    }
 
 
     /**
@@ -848,6 +847,8 @@ abstract class ManagedStrategy(
     fun getRegisteredThreads(): Sequence<ThreadScheduler.RegisteredThread> =
         threadScheduler.getRegisteredThreads()
 
+    fun getUserThreads() = getRegisteredThreads().filterNot { isTestThread(it.threadId) }
+
     protected fun isRegisteredThread(): Boolean {
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor()
             ?: return false
@@ -865,7 +866,7 @@ abstract class ManagedStrategy(
      * user-threads and `Finished` test threads, then invocations of this method are
      * only meaningful near the corresponding strategy hooks
      * ([ManagedStrategy.processLoopDetectorDecision], [ManagedStrategy.park],
-     * and [ManagedStrategy.onThreadFinish] where otentially test thread could finish).
+     * and [ManagedStrategy.onThreadFinish] where potentially test thread could finish).
      *
      * @param threadId id of thread that invoked this method.
      * @param blockingReason blocking reason of invoking thread (determined by strategy) if exists.
@@ -878,10 +879,12 @@ abstract class ManagedStrategy(
             // If all user threads (those that are not `TestThread` instances) are not blocked, then abort
             // the running user threads. Essentially treating them as "daemons", which completion we do not wait for.
             // Thus, abort all of them and allow `runner` to process the invocation result accordingly.
-            getRegisteredThreads()
-                .map { it.threadId }
-                .filterNot { isTestThread(it) || it == threadId /* we check invoking thread separately */ }
-                .all{ threadScheduler.isLiveLocked(it) || threadScheduler.isParked(it) }
+            getUserThreads().mapNotNull {
+                    /* we check invoking thread separately */
+                    if (it.threadId == threadId) null
+                    else it.threadId
+                }
+                .all { threadScheduler.isLiveLocked(it) || threadScheduler.isParked(it) }
                 .and(
                     threadScheduler.isFinished(threadId) ||
                     // if invoking thread is not finished, then it must execute strategy hook,
@@ -916,7 +919,7 @@ abstract class ManagedStrategy(
         loopDetector.onThreadFinish(threadId)
         traceCollector?.onThreadFinish()
         unblockJoiningThreads(threadId)
-        tryAbortingUserThreads(threadId, null)
+        tryAbortingUserThreads(threadId, blockingReason = null)
         onSwitchPoint(threadId)
         val nextThread = chooseThreadSwitch(threadId, true)
         setCurrentThread(nextThread)

@@ -31,6 +31,7 @@ class DaemonThreadPoolTest {
     @Before // spin-loop detection is unsupported in trace debugger mode
     fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
+    // Test should complete with no errors, even though we don't close threadpool explicitly
     @Test
     fun testUselessThreadPool() {
         runConcurrentTest(1000) {
@@ -41,27 +42,33 @@ class DaemonThreadPoolTest {
         }
     }
 
+    // Test should complete with no errors, when all coroutines are finished
+    // even though threadpool is not close explicitly
     @Test
-    fun testUselessThreadPoolWithMultipleCoroutines() {
+    fun testNonClosedThreadPoolCoroutineDispatcher() {
         runConcurrentTest(1000) {
             val pool = Executors.newFixedThreadPool(5).asCoroutineDispatcher()
+            val a = AtomicInteger(0)
             runBlocking(pool) {
-                val c1 = launch(pool) {}
-                val c2 = launch(pool) {}
-                val c3 = launch(pool) {}
-                val c4 = launch(pool) {}
-                val c5 = launch(pool) {}
+                val c1 = launch(pool) { a.incrementAndGet() }
+                val c2 = launch(pool) { a.incrementAndGet() }
+                val c3 = launch(pool) { a.incrementAndGet() }
+                val c4 = launch(pool) { a.incrementAndGet() }
+                val c5 = launch(pool) { a.incrementAndGet() }
 
                 c1.join()
                 c2.join()
                 c3.join()
                 c4.join()
                 c5.join()
+                check(a.get() == 5)
             }
             // pool.close() -- no manual closing
         }
     }
 
+    // Test should complete normally because background thread will be eventually live-locked
+    // and main thread will finish
     @Test
     fun testInfiniteBackgroundThreads() {
         runConcurrentTest(1000) {
@@ -75,6 +82,7 @@ class DaemonThreadPoolTest {
         }
     }
 
+    // Test should complete because all background threads will be eventually live-locked
     @Test
     fun testManyInfiniteBackgroundThreads() {
         runConcurrentTest(1000) {
@@ -94,6 +102,8 @@ class DaemonThreadPoolTest {
         }
     }
 
+    // Lincheck should investigate interleaving of non-joined threads as well,
+    // so here we should find a deadlock on two background threads
     @Test(expected = LincheckAssertionError::class)
     fun testBackgroundThreadsDeadlock() {
         runConcurrentTest(1000) {
@@ -120,6 +130,7 @@ class DaemonThreadPoolTest {
         }
     }
 
+    // Mutex locking should put coroutines in a deadlock
     @Test(expected = LincheckAssertionError::class)
     fun testBackgroundCoroutinesDeadlock() {
         runConcurrentTest(10000) {
@@ -137,6 +148,7 @@ class DaemonThreadPoolTest {
         }
     }
 
+    // Test should complete normally even though we do not shut down threadpool explicitly
     @Test
     fun testJavaThreadPoolFutures() {
         runConcurrentTest(1000) {
@@ -153,6 +165,7 @@ class DaemonThreadPoolTest {
         }
     }
 
+    // Test should complete normally even though we do not shut down threadpool explicitly
     @Test
     fun testJavaThreadPoolAsyncTasks() {
         runConcurrentTest(1000) {
