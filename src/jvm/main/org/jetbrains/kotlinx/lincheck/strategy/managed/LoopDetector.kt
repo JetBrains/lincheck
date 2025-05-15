@@ -136,6 +136,18 @@ internal class LoopDetector(
     private val replayModeCurrentCyclePeriod: Int
         get() = replayModeLoopDetectorHelper?.currentCyclePeriod ?: 0
 
+    /**
+     * Is called before each interleaving processing
+     */
+    fun initialize() {
+        currentThreadId = -1
+        totalExecutionsCount = 0
+        currentThreadCodeLocationVisitCountMap.clear()
+        currentThreadCodeLocationsHistory.clear()
+        currentInterleavingHistory.clear()
+        replayModeLoopDetectorHelper?.initialize()
+    }
+
     fun enableReplayMode(failDueToDeadlockInTheEnd: Boolean) {
         if (isInTraceDebuggerMode) return
 
@@ -591,23 +603,10 @@ internal class LoopDetector(
         }
     }
 
-    /**
-     * Is called before each interleaving processing
-     */
-    fun initialize() {
-        currentThreadId = -1
-    }
-
     private fun setFirstThread(iThread: Int) {
-        currentThreadId = iThread // certain last thread
-        currentThreadCodeLocationVisitCountMap.clear()
-        currentThreadCodeLocationsHistory.clear()
-        totalExecutionsCount = 0
-
+        currentThreadId = iThread
         loopTrackingCursor.reset(iThread)
-        currentInterleavingHistory.clear()
         currentInterleavingHistory.add(InterleavingHistoryNode(threadId = iThread))
-        replayModeLoopDetectorHelper?.initialize()
     }
 
     /**
