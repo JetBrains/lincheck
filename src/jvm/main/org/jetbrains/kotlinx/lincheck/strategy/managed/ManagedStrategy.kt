@@ -2175,10 +2175,6 @@ abstract class ManagedStrategy(
     /**
      * Returns beautiful string representation of the [owner].
      * If the [owner] is `this` of the current method, then returns `null`.
-     * Otherwise, we try to find if this [owner] is stored in only one field in the testObject
-     * and this field is final. If such field is found we construct beautiful representation for
-     * this field owner (if it's not a current `this`, again) and the field name.
-     * Otherwise, return beautiful representation for the provided [owner].
      */
     private fun findOwnerName(owner: Any): String? {
         val threadId = threadScheduler.getCurrentThreadId()
