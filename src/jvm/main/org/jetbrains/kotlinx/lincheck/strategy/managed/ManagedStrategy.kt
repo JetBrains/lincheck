@@ -488,7 +488,7 @@ abstract class ManagedStrategy(
         if (shouldSwitch) {
             val switchHappened = switchCurrentThread(threadId, beforeMethodCallSwitch = beforeMethodCallSwitch)
             if (switchHappened) {
-                loopDetector.initializeFirstCodeLocationAfterSwitch(codeLocation)
+                loopDetector.afterThreadSwitch(codeLocation)
             }
             return
         }
@@ -539,7 +539,7 @@ abstract class ManagedStrategy(
                 beforeMethodCallSwitch = beforeMethodCallSwitch
             )
             if (switchHappened) {
-                loopDetector.initializeFirstCodeLocationAfterSwitch(codeLocation)
+                loopDetector.afterThreadSwitch(codeLocation)
             }
         }
     }
