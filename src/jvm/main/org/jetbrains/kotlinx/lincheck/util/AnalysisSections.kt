@@ -244,6 +244,9 @@ internal fun getAnalysisSectionFor(className: String, methodName: String = ""): 
     className.startsWith("org.junit.") -> AnalysisSectionType.IGNORED
     className.startsWith("junit.framework.") -> AnalysisSectionType.IGNORED
 
+    // TODO THIS HERE IS THE PROBLEM
+//    className == "org.jetbrains.kotlinx.lincheck.GeneralPurposeModelCheckingWrapper" -> AnalysisSectionType.NORMAL
+//    className.startsWith("org.jetbrains.kotlinx.lincheck_test.") -> AnalysisSectionType.NORMAL
     // Lincheck classes should never be transformed
     className.startsWith("org.jetbrains.kotlinx.lincheck.") -> AnalysisSectionType.IGNORED
     className.startsWith("sun.nio.ch.lincheck.") -> AnalysisSectionType.IGNORED
