@@ -15,7 +15,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck_test.guide.MSQueueBlocking
+import org.jetbrains.kotlinx.lincheck_test.datastructures.MSQueueBlocking
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
 import org.junit.Assume.assumeFalse
 import org.junit.Before
@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReferenceArray
 import kotlin.reflect.jvm.*
+
 
 /**
  * Checks that spin-cycle repeated events are cut in case of obstruction freedom violation
@@ -47,7 +48,6 @@ class ObstructionFreedomViolationEventsCutTest {
         .checkObstructionFreedom(true)
         .checkImpl(this::class.java)
         .checkLincheckOutput("obstruction_freedom_violation_events_cut")
-
 }
 
 /**
