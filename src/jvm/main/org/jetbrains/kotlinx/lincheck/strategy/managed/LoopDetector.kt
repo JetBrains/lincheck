@@ -683,24 +683,6 @@ private class ReplayModeLoopDetectorHelper(
         currentHistoryNode?.spinCyclePeriod ?: 0
 
     /**
-     * A set of thread, executed at least once during this interleaving.
-     *
-     * We have to maintain this set to determine how to initialize
-     * [executionsPerformedInCurrentThread] after thread switch.
-     * When a thread is executed for the first time, [newSwitchPoint]
-     * strategy method is called before the first switch point,
-     * so number of executions in this thread should start with zero,
-     * and it will be incremented after [onNextExecution] call.
-     *
-     * But when we return to a thread which has already executed its operations, [newSwitchPoint]
-     * strategy method won't be called,
-     * as we already considered this switch point before we switched from this thread earlier,
-     * [onNextExecution] won't be called before the first execution,
-     * so we have to start [executionsPerformedInCurrentThread] from 1.
-     */
-    private val threadsRan = hashSetOf<Int>()
-
-    /**
      * Returns if we ran in the spin cycle and now are performing executions inside it.
      */
     val currentlyInSpinCycle: Boolean get() =
@@ -709,7 +691,6 @@ private class ReplayModeLoopDetectorHelper(
     fun initialize() {
         currentInterleavingNodeIndex = 0
         executionsPerformedInCurrentThread = 0
-        threadsRan.clear()
     }
 
     /**
