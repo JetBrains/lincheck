@@ -110,8 +110,6 @@ internal class LoopDetector(
      */
     private val loopTrackingCursor = interleavingsLeadToSpinLockSet.cursor
 
-    private val firstThreadSet: Boolean get() = currentThreadId != -1
-
     /**
      * Delegate helper, active in replay (trace collection) mode.
      * It just tracks executions and switches and helps to halt execution or switch in case of spin-lock early.
@@ -410,6 +408,23 @@ internal class LoopDetector(
         currentThreadCodeLocationVisitCountMap.clear()
     }
 
+    /**
+     * Is called before each interleaving part processing
+     */
+    fun beforePart(nextThread: Int) {
+        if (currentThreadId == -1) {
+            setFirstThread(nextThread)
+        } else if (currentThreadId != nextThread) {
+            onThreadSwitch(nextThread)
+        }
+    }
+
+    private fun setFirstThread(iThread: Int) {
+        currentThreadId = iThread
+        loopTrackingCursor.reset(iThread)
+        currentInterleavingHistory.add(InterleavingHistoryNode(threadId = iThread))
+    }
+
     fun onThreadFinish(iThread: Int) {
         check(iThread == currentThreadId)
         onNextExecutionPoint(executionIdentity = -iThread)
@@ -590,23 +605,6 @@ internal class LoopDetector(
         }
 
         return CycleInfo(operationsBefore, cyclePeriod) to historyWithoutParams
-    }
-
-    /**
-     * Is called before each interleaving part processing
-     */
-    fun beforePart(nextThread: Int) {
-        if (!firstThreadSet) {
-            setFirstThread(nextThread)
-        } else if (currentThreadId != nextThread) {
-            onThreadSwitch(nextThread)
-        }
-    }
-
-    private fun setFirstThread(iThread: Int) {
-        currentThreadId = iThread
-        loopTrackingCursor.reset(iThread)
-        currentInterleavingHistory.add(InterleavingHistoryNode(threadId = iThread))
     }
 
     /**
