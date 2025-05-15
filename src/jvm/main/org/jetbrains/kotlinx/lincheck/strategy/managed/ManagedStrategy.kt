@@ -2028,10 +2028,14 @@ abstract class ManagedStrategy(
     }
 
     private fun objectFqTypeName(obj: Any?): String {
-        val enumPrefix = if (obj?.javaClass?.isEnum == true) "Enum:" else ""
         val typeName = obj?.javaClass?.name ?: "null"
-        return if (enumPrefix.isEmpty()) typeName
-        else "$enumPrefix$typeName"
+        // Note: `if` here is important for performance reasons.
+        // In common case we want to return just `typeName` without using string templates
+        // to avoid redundant string allocation.
+        if (obj?.javaClass?.isEnum == true) {
+            return "Enum:$typeName"
+        }
+        return typeName
     }
 
     private fun initializeUnsafeMethodCallTracePoint(
