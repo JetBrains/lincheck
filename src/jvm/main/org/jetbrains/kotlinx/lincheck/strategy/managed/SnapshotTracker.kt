@@ -122,7 +122,6 @@ class SnapshotTracker {
         field: Field,
         fieldValue: Any?
     ): Boolean {
-        if (shouldIgnoreClass(clazz.name)) return false
         val nodesList =
             if (obj != null) trackedObjects[obj]
             else trackedObjects.getOrPut(clazz) { mutableListOf<MemoryNode>() }
@@ -253,9 +252,6 @@ class SnapshotTracker {
             !value.isPrimitive
         )
     }
-
-    private fun shouldIgnoreClass(owner: String) =
-        owner.startsWith("com.intellij.rt.debugger")
 
     private fun getDeclaringClass(obj: Any?, className: String, fieldName: String): Class<*> {
         val clazz = classCache.getOrPut(className) { Class.forName(className) }
