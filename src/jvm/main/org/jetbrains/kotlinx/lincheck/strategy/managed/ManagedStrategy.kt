@@ -1709,7 +1709,6 @@ abstract class ManagedStrategy(
                 nativeMethodCallStatesTracker.setState(descriptorId, deterministicMethodDescriptor.methodCallInfo, it)
             }
         }
-        loopDetector.afterMethodCall()
         val threadId = threadScheduler.getCurrentThreadId()
         // check if the called method is an atomics API method
         // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
@@ -1758,7 +1757,6 @@ abstract class ManagedStrategy(
                 nativeMethodCallStatesTracker.setState(descriptorId, deterministicMethodDescriptor.methodCallInfo, it)
             }
         }
-        loopDetector.afterMethodCall()
         val threadId = threadScheduler.getCurrentThreadId()
         // check if the called method is an atomics API method
         // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)

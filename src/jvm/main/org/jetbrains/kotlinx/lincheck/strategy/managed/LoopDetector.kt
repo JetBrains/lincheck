@@ -330,26 +330,6 @@ internal class LoopDetector(
     }
 
     /**
-     * Called after any method calls.
-     */
-    fun afterMethodCall() {
-        replayModeLoopDetectorHelper?.let {
-            it.onNextExecution()
-            return
-        }
-        val methodExitLocationIdentity = RegularCodeLocationIdentity(0)
-        if (mode != Mode.DEFAULT) {
-            currentThreadCodeLocationsHistory += methodExitLocationIdentity
-        }
-        val lastInterleavingHistoryNode = currentInterleavingHistory.last()
-        if (lastInterleavingHistoryNode.cycleOccurred) {
-            return /* If we already ran into cycle and haven't switched than no need to track executions */
-        }
-        lastInterleavingHistoryNode.addExecution(methodExitLocationIdentity.location)
-        loopTrackingCursor.onNextExecutionPoint()
-    }
-
-    /**
      * Called when we pass some parameters before method call in the instrumented call.
      * Used only if LoopDetector is in the cycle calculation mode.
      * Otherwise, does nothing.
