@@ -452,6 +452,10 @@ abstract class ManagedStrategy(
         check(threadId == threadScheduler.scheduledThreadId)
         // check if live-lock is detected
         val decision = loopDetector.visitCodeLocation(threadId, codeLocation)
+        // in case of live-lock, try to abort execution
+        if (decision is LoopDetector.Decision.LivelockThreadSwitch) {
+            tryAbortingUserThreads(threadId, BlockingReason.LiveLocked)
+        }
         // check if we need to switch
         val shouldSwitch = when {
             // check if a switch is required by the loop detector replay mode
@@ -553,7 +557,6 @@ abstract class ManagedStrategy(
         blockingReason: BlockingReason? = null,
         beforeMethodCallSwitch: Boolean = false,
     ): Boolean {
-        // before blocking the thread, interrupt it if the interruption flag is set
         val switchReason = blockingReason.toSwitchReason(::iThreadToDisplayNumber)
         // we create switch point on detected live-locks,
         // but that switch is not mandatory in case if there are no available threads
@@ -575,6 +578,10 @@ abstract class ManagedStrategy(
     }
 
     private fun chooseThreadSwitch(iThread: Int, mustSwitch: Boolean = false): Int {
+        // in case threads were aborted via `tryAbortingUserThreads`, no switching required
+        if (threadScheduler.areAllThreadsFinishedOrAborted()) {
+            return iThread
+        }
         if (inIdeaPluginReplayMode && collectTrace) {
             onThreadSwitchesOrActorFinishes()
         }
@@ -848,6 +855,47 @@ abstract class ManagedStrategy(
     }
 
     /**
+     * Aborts all threads in case if all `TestThread`s are in state `FINISHED`
+     * and all running user threads are `LiveLocked` or `Parked`.
+     *
+     * This method is expected to be called before [onSwitchPoint] method in
+     * order to abort execution and not to create unnecessary switch points.
+     *
+     * Since this method only can abort executions with `LiveLocked` or `Parked`
+     * user-threads and `Finished` test threads, then invocations of this method are
+     * only meaningful near the corresponding strategy hooks
+     * ([ManagedStrategy.processLoopDetectorDecision], [ManagedStrategy.park],
+     * and [ManagedStrategy.onThreadFinish] where otentially test thread could finish).
+     *
+     * @param threadId id of thread that invoked this method.
+     * @param blockingReason blocking reason of invoking thread (determined by strategy) if exists.
+     */
+    private fun tryAbortingUserThreads(threadId: Int, blockingReason: BlockingReason?) {
+        val userThreadsAbortionPossible =
+            // all `TestThread`s are finished (including main: with id of zero)
+            (0 ..< scenario.nThreads).all(threadScheduler::isFinished) &&
+            // The main thread finished its execution (actually all `TestThread`s did): successfully or not, we don't care.
+            // If all user threads (those that are not `TestThread` instances) are not blocked, then abort
+            // the running user threads. Essentially treating them as "daemons", which completion we do not wait for.
+            // Thus, abort all of them and allow `runner` to process the invocation result accordingly.
+            getRegisteredThreads()
+                .map { it.key }
+                .filterNot { isTestThread(it) || it == threadId /* we check invoking thread separately */ }
+                .all{ threadScheduler.isLiveLocked(it) || threadScheduler.isParked(it) }
+                .and(
+                    threadScheduler.isFinished(threadId) ||
+                    // if invoking thread is not finished, then it must execute strategy hook,
+                    // in which it will become LiveLocked or Parked
+                    blockingReason is BlockingReason.LiveLocked ||
+                    blockingReason is BlockingReason.Parked
+                )
+
+        if (userThreadsAbortionPossible) {
+            threadScheduler.abortAllThreads()
+        }
+    }
+
+    /**
      * This method is executed as the first thread action.
      *
      * @param threadId the thread id of the started thread.
@@ -868,6 +916,7 @@ abstract class ManagedStrategy(
         loopDetector.onThreadFinish(threadId)
         traceCollector?.onThreadFinish()
         unblockJoiningThreads(threadId)
+        tryAbortingUserThreads(threadId, null)
         onSwitchPoint(threadId)
         val nextThread = chooseThreadSwitch(threadId, true)
         setCurrentThread(nextThread)
@@ -1034,7 +1083,8 @@ abstract class ManagedStrategy(
         parkingTracker.park(threadId)
         // Forbid spurious wake-ups if inside silent sections.
         val allowSpuriousWakeUp = shouldAllowSpuriousUnpark(threadId, codeLocation)
-        while (parkingTracker.waitUnpark(threadId, allowSpuriousWakeUp)) {
+        while (parkingTracker.waitUnpark(threadId, allowSpuriousWakeUp) && !threadScheduler.areAllThreadsFinishedOrAborted()) {
+            tryAbortingUserThreads(threadId, BlockingReason.Parked)
             onSwitchPoint(threadId)
             // Switch to another thread and wait till an unpark event happens.
             switchCurrentThread(threadId, BlockingReason.Parked)
