@@ -110,6 +110,11 @@ abstract class ManagedStrategy(
     // Snapshot of the memory, reachable from static fields
     protected val staticMemorySnapshot = SnapshotTracker()
 
+    // Tracks content of static final fields (i.e., constants).
+    // Stores a map `object -> fieldName`,
+    // mapping an object to a constant name referencing this object.
+    private val constants = IdentityHashMap<Any, String>()
+
     // InvocationResult that was observed by the strategy during the execution (e.g., a deadlock).
     @Volatile
     protected var suddenInvocationResult: InvocationResult? = null
@@ -2192,17 +2197,6 @@ abstract class ManagedStrategy(
         return adornedStringRepresentation(owner)
     }
 
-    private val constants = IdentityHashMap<Any, String>() // object -> fieldName
-
-    /**
-     * Checks if [owner] is the `this` object (i.e., receiver) of the currently executed method call.
-     */
-    private fun isCurrentStackFrameReceiver(owner: Any): Boolean {
-        val currentThreadId = threadScheduler.getCurrentThreadId()
-        val stackTraceElement = shadowStack[currentThreadId]!!.last()
-        return (owner === stackTraceElement.instance)
-    }
-
     private fun findFieldName(instance: Any): String? {
         val currentThreadId = threadScheduler.getCurrentThreadId()
         val stackTraceElement = shadowStack[currentThreadId]!!.last()
@@ -2213,6 +2207,15 @@ abstract class ManagedStrategy(
             }
         }
         return null
+    }
+
+    /**
+     * Checks if [owner] is the `this` object (i.e., receiver) of the currently executed method call.
+     */
+    private fun isCurrentStackFrameReceiver(owner: Any): Boolean {
+        val currentThreadId = threadScheduler.getCurrentThreadId()
+        val stackTraceElement = shadowStack[currentThreadId]!!.last()
+        return (owner === stackTraceElement.instance)
     }
 
     /* Methods to control the current call context. */
