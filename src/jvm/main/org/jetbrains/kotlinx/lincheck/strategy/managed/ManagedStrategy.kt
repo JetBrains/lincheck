@@ -452,9 +452,9 @@ abstract class ManagedStrategy(
         check(threadId == threadScheduler.scheduledThreadId)
         // check if live-lock is detected
         val decision = loopDetector.visitCodeLocation(threadId, codeLocation)
-        // in case of live-lock, try to abort execution
-        if (decision is LoopDetector.Decision.LivelockThreadSwitch) {
-            tryAbortingUserThreads(threadId, BlockingReason.LiveLocked)
+        if (decision != LoopDetector.Decision.Idle) {
+            processLoopDetectorDecision(threadId, codeLocation, decision, beforeMethodCallSwitch = beforeMethodCallSwitch)
+            return
         }
         // check if we need to switch
         val shouldSwitch = when {
@@ -468,10 +468,6 @@ abstract class ManagedStrategy(
                 onSwitchPoint(threadId)
                 shouldSwitch()
             }
-        }
-        if (decision != LoopDetector.Decision.Idle) {
-            processLoopDetectorDecision(threadId, codeLocation, decision, beforeMethodCallSwitch = beforeMethodCallSwitch)
-            return
         }
         // if strategy requested thread switch, then do it
         if (shouldSwitch) {
@@ -520,6 +516,9 @@ abstract class ManagedStrategy(
         }
         // if the current thread in a live-lock, then try to switch to another thread
         if (decision is LoopDetector.Decision.LivelockThreadSwitch) {
+            // in case of live-lock, try to abort execution
+            tryAbortingUserThreads(iThread, BlockingReason.LiveLocked)
+            onSwitchPoint(iThread)
             val switchHappened = switchCurrentThread(iThread, BlockingReason.LiveLocked,
                 beforeMethodCallSwitch = beforeMethodCallSwitch
             )
