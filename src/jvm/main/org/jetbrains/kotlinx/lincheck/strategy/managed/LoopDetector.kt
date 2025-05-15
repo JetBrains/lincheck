@@ -239,36 +239,43 @@ internal class LoopDetector(
      * @see LoopDetector.Decision
      */
     fun visitCodeLocation(iThread: Int, codeLocation: Int): Decision {
+        check(currentThreadId == iThread) {
+            "The current thread id $currentThreadId is not equal to the one provided $iThread."
+        }
         replayModeLoopDetectorHelper?.let {
             it.onNextExecution()
             return it.detectLivelock()
         }
         // Increase the total number of happened operations for live-lock detection
         totalExecutionsCount++
-        // Has the thread changed? Reset the counters in this case.
-        check(currentThreadId == iThread) { "reset expected!" }
         // Ignore unknown code locations.
         if (codeLocation == UNKNOWN_CODE_LOCATION) return Decision.Idle
         // Increment the number of times the specified code location is visited.
         val count = currentThreadCodeLocationVisitCountMap.getOrDefault(codeLocation, 0) + 1
         currentThreadCodeLocationVisitCountMap[codeLocation] = count
+        // In trace debugger mode, check whether the count exceeds
+        // the maximum number of repetitions for spin-loop detection.
+        // Check whether the count exceeds the maximum number of repetitions for loop/hang detection.
+        if (isInTraceDebuggerMode) {
+            return when {
+                // spin-loop detected - switch
+                count > hangingDetectionThreshold ->
+                    Decision.LivelockThreadSwitch(hangingDetectionThreshold)
+                // live-lock detected - fail
+                totalExecutionsCount > ManagedCTestConfiguration.LIVELOCK_EVENTS_THRESHOLD ->
+                    Decision.EventsThresholdReached
+                // else - continue
+                else ->
+                    Decision.Idle
+            }
+        }
         if (mode != Mode.DEFAULT) {
             currentThreadCodeLocationsHistory += CodeIdentity.RegularCodeLocationIdentity(codeLocation)
         }
         val detectedFirstTime = count > hangingDetectionThreshold
         val detectedEarly = loopTrackingCursor.isInCycle
-        // DetectedFirstTime and detectedEarly can both sometimes be true
+        // detectedFirstTime and detectedEarly can both sometimes be true
         // when we can't find a cycle period and can't switch to another thread.
-        // Check whether the count exceeds the maximum number of repetitions for loop/hang detection.
-        if (isInTraceDebuggerMode) {
-            return when {
-                count > hangingDetectionThreshold -> Decision.LivelockThreadSwitch(hangingDetectionThreshold) // spin-loop
-                totalExecutionsCount > ManagedCTestConfiguration.LIVELOCK_EVENTS_THRESHOLD ->
-                    Decision.EventsThresholdReached // live-lock detected, fail
-                else -> Decision.Idle
-            }
-        }
-        
         if (detectedFirstTime && !detectedEarly) {
             if (mode == Mode.DEFAULT) {
                 // Turn on parameters and read/write values and receivers tracking and request one more replay.
@@ -302,11 +309,11 @@ internal class LoopDetector(
                 return Decision.EventsThresholdReached
             }
         }
-        val cyclePeriod = replayModeCurrentCyclePeriod
-        return if (detectedFirstTime || detectedEarly)
-            Decision.LivelockThreadSwitch(cyclePeriod)
-        else
-            Decision.Idle
+        if (detectedFirstTime || detectedEarly) {
+            val cyclePeriod = replayModeCurrentCyclePeriod
+            return Decision.LivelockThreadSwitch(cyclePeriod)
+        }
+        return Decision.Idle
     }
 
     /**
