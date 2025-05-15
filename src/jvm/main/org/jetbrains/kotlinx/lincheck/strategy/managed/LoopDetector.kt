@@ -70,20 +70,33 @@ import java.util.ArrayList
 internal class LoopDetector(
     private val hangingDetectionThreshold: Int
 ) {
-    private var lastExecutedThread = -1 // no last thread
+    /**
+     * Current mode.
+     */
+    private var mode: Mode = Mode.DEFAULT
 
     /**
-     * Map, which helps us to determine how many times current thread visits some code location.
+     * Thread id of the current thread.
+     */
+    private var currentThreadId = -1
+
+    /**
+     * Tracks the count of total thread execution points handled by the loop detector.
+     */
+    private var totalExecutionsCount = 0
+
+    /**
+     * Map, which helps us to determine how many times the current thread visits some code location.
      */
     private val currentThreadCodeLocationVisitCountMap = mutableMapOf<Int, Int>()
 
     /**
-     * Is used to find a cycle period inside exact thread execution if it has hung
+     * Is used to find a cycle period inside the exact thread execution if it has hung.
      */
     private val currentThreadCodeLocationsHistory = mutableListOf<CodeIdentity>()
 
     /**
-     *  Threads switches and executions history to store sequences lead to loops
+     * Threads switches and executions history to store sequences lead to loops.
      */
     private val currentInterleavingHistory = ArrayList<InterleavingHistoryNode>()
 
@@ -93,13 +106,11 @@ internal class LoopDetector(
     private val interleavingsLeadToSpinLockSet = InterleavingSequenceTrackableSet()
 
     /**
-     * Helps to determine does current interleaving equal to some saved interleaving leading to spin cycle or not
+     * Helps to determine does current interleaving equal to some saved interleaving leading to spin cycle or not.
      */
     private val loopTrackingCursor = interleavingsLeadToSpinLockSet.cursor
 
-    private var totalExecutionsCount = 0
-
-    private val firstThreadSet: Boolean get() = lastExecutedThread != -1
+    private val firstThreadSet: Boolean get() = currentThreadId != -1
 
     /**
      * Delegate helper, active in replay (trace collection) mode.
@@ -107,32 +118,32 @@ internal class LoopDetector(
      */
     private var replayModeLoopDetectorHelper: ReplayModeLoopDetectorHelper? = null
 
-    private val replayModeCurrentCyclePeriod: Int
-        get() = replayModeLoopDetectorHelper?.currentCyclePeriod ?: 0
-
+    /**
+     * Indicates whether replay mode is currently enabled in the `LoopDetector`.
+     */
     val replayModeEnabled: Boolean
         get() = replayModeLoopDetectorHelper != null
 
     /**
-     * Indicates if we analyze method parameters to calculate the spin-cycle period.
-     */
-    private var mode: Mode = Mode.DEFAULT
-
-    /**
      * Indicates that we are in a spin cycle iteration now.
-     * Should be called only in replay mode.
      */
     val replayModeCurrentlyInSpinCycle: Boolean get() =
         replayModeLoopDetectorHelper?.currentlyInSpinCycle ?: false
 
+    /**
+     * In replay mode, represents the period of spin-cycle if spin-cycle was entered.
+     */
+    private val replayModeCurrentCyclePeriod: Int
+        get() = replayModeLoopDetectorHelper?.currentCyclePeriod ?: 0
+
     fun enableReplayMode(failDueToDeadlockInTheEnd: Boolean) {
         if (isInTraceDebuggerMode) return
 
-        val contextSwitchesBeforeHalt =
-            findMaxPrefixLengthWithNoCycleOnSuffix(currentInterleavingHistory)?.let { it.executionsBeforeCycle + it.cyclePeriod }
-                ?: currentInterleavingHistory.size
+        val contextSwitchesBeforeHalt = findMaxPrefixLengthWithNoCycleOnSuffix(currentInterleavingHistory)
+            ?.let { it.executionsBeforeCycle + it.cyclePeriod }
+            ?: currentInterleavingHistory.size
         val spinCycleInterleavingHistory = currentInterleavingHistory.take(contextSwitchesBeforeHalt)
-        // Remove references to interleaving tree
+        // Remove references to the interleaving tree
         interleavingsLeadToSpinLockSet.clear()
         loopTrackingCursor.clear()
 
@@ -225,7 +236,7 @@ internal class LoopDetector(
         // Increase the total number of happened operations for live-lock detection
         totalExecutionsCount++
         // Has the thread changed? Reset the counters in this case.
-        check(lastExecutedThread == iThread) { "reset expected!" }
+        check(currentThreadId == iThread) { "reset expected!" }
         // Ignore unknown code locations.
         if (codeLocation == UNKNOWN_CODE_LOCATION) return Decision.Idle
         // Increment the number of times the specified code location is visited.
@@ -343,12 +354,16 @@ internal class LoopDetector(
     /**
      * Should be called before each read non-local mutable field read.
      */
-    fun beforeReadField(receiver: Any?) = passValue(receiver)
+    fun beforeReadField(receiver: Any?) {
+        passValue(receiver)
+    }
 
     /**
      * Should be called after each read non-local mutable field read.
      */
-    fun afterRead(value: Any?) = passValue(value)
+    fun afterRead(value: Any?) {
+        passValue(value)
+    }
 
     /**
      * Should be called before each non-local array element read.
@@ -376,30 +391,29 @@ internal class LoopDetector(
     }
 
     fun onActorStart(iThread: Int) {
-        check(iThread == lastExecutedThread)
+        check(iThread == currentThreadId)
         // if a thread has reached a new actor, then it means it has made some progress;
         // therefore, we reset the code location counters,
         // so that code location hits from a previous actor do not affect subsequent actors
         currentThreadCodeLocationVisitCountMap.clear()
     }
 
+    fun onThreadFinish(iThread: Int) {
+        check(iThread == currentThreadId)
+        onNextExecutionPoint(executionIdentity = -iThread)
+    }
+
     fun onThreadSwitch(iThread: Int) {
-        lastExecutedThread = iThread
+        currentThreadId = iThread
         currentThreadCodeLocationVisitCountMap.clear()
         currentThreadCodeLocationsHistory.clear()
         onNextThreadSwitchPoint(iThread)
     }
 
-    fun onThreadFinish(iThread: Int) {
-        check(iThread == lastExecutedThread)
-        onNextExecutionPoint(executionIdentity = -iThread)
-    }
-
     private fun onNextThreadSwitchPoint(nextThread: Int) {
-        /*
-            When we're back to some thread, newSwitchPoint won't be called before the fist
-            in current thread part as it was called before switch.
-            So, we're tracking that to maintain the number of performed operations correctly.
+        /* When we're back to some thread, `newSwitchPoint` won't be called before
+         * the switch point in the current thread, as it was called before switch.
+         * So, we're tracking that to maintain the number of performed operations correctly.
          */
         if (currentInterleavingHistory.isNotEmpty() && currentInterleavingHistory.last().threadId == nextThread) {
             return
@@ -572,7 +586,7 @@ internal class LoopDetector(
     fun beforePart(nextThread: Int) {
         if (!firstThreadSet) {
             setFirstThread(nextThread)
-        } else if (lastExecutedThread != nextThread) {
+        } else if (currentThreadId != nextThread) {
             onThreadSwitch(nextThread)
         }
     }
@@ -581,11 +595,11 @@ internal class LoopDetector(
      * Is called before each interleaving processing
      */
     fun initialize() {
-        lastExecutedThread = -1
+        currentThreadId = -1
     }
 
     private fun setFirstThread(iThread: Int) {
-        lastExecutedThread = iThread // certain last thread
+        currentThreadId = iThread // certain last thread
         currentThreadCodeLocationVisitCountMap.clear()
         currentThreadCodeLocationsHistory.clear()
         totalExecutionsCount = 0
