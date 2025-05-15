@@ -18,7 +18,6 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicFieldUpdaterNames.getAtomicFieldUpdaterDescriptor
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceMethodType.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.FieldSearchHelper.findFinalFieldWithOwner
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.adornedStringRepresentation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.cleanObjectNumeration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
@@ -110,7 +109,7 @@ abstract class ManagedStrategy(
     // Snapshot of the memory, reachable from static fields
     protected val staticMemorySnapshot = SnapshotTracker()
 
-    // Tracks content of static final fields (i.e., constants).
+    // Tracks content of constants (i.e., static final fields).
     // Stores a map `object -> fieldName`,
     // mapping an object to a constant name referencing this object.
     private val constants = IdentityHashMap<Any, String>()
@@ -142,9 +141,14 @@ abstract class ManagedStrategy(
     private val suspendedFunctionsStack = mutableThreadMapOf<MutableList<CallStackTraceElement>>()
 
     // Last read trace point, occurred in the current thread.
-    // We store it as we initialize read value after the point is created so we have to store
-    // the trace point somewhere to obtain it later.
+    // We store it as we initialize read value after the point is created,
+    // so we have to store the trace point somewhere to obtain it later.
     private var lastReadTracePoint = mutableThreadMapOf<ReadTracePoint?>()
+
+    // Last read constant name (i.e., static final field).
+    // We store it as we initialize read value after the trace point is created,
+    // so we have to store the trace point somewhere to obtain it later.
+    private var lastReadConstantName: String? = null
 
     // Random instances with fixed seeds to replace random calls in instrumented code.
     private var randoms = mutableThreadMapOf<InjectedRandom>()
@@ -1232,8 +1236,6 @@ abstract class ManagedStrategy(
         }
     }
 
-    private var lastReadFieldName: String? = null
-
     /**
      * Returns `true` if a switch point is created.
      */
@@ -1245,8 +1247,8 @@ abstract class ManagedStrategy(
         if (isStatic) {
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
         }
-        if (isStatic && isFinal && collectTrace) {
-            lastReadFieldName = fieldName
+        if (collectTrace && isStatic && isFinal) {
+            lastReadConstantName = fieldName
         }
         // Optimization: do not track final field reads
         if (isFinal) {
@@ -1310,15 +1312,15 @@ abstract class ManagedStrategy(
 
     override fun afterRead(value: Any?) = runInsideIgnoredSection {
         if (collectTrace) {
-            if (lastReadFieldName != null) {
-                if (value != null) {
-                    constants[value] = lastReadFieldName
-                }
-                lastReadFieldName = null
-            }
             val iThread = threadScheduler.getCurrentThreadId()
-            lastReadTracePoint[iThread]?.initializeReadValue(adornedStringRepresentation(value), objectFqTypeName(value))
+            if (lastReadConstantName != null && value != null) {
+                constants[value] = lastReadConstantName
+            }
+            val valueRepresentation = adornedStringRepresentation(value)
+            val typeRepresentation = objectFqTypeName(value)
+            lastReadTracePoint[iThread]?.initializeReadValue(valueRepresentation, typeRepresentation)
             lastReadTracePoint[iThread] = null
+            lastReadConstantName = null
         }
         loopDetector.afterRead(value)
     }
