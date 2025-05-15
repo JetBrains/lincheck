@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy
 
+import org.jetbrains.kotlinx.lincheck.strategy.ThreadScheduler.RegisteredThread
 import sun.nio.ch.lincheck.TestThread
 import sun.nio.ch.lincheck.ThreadDescriptor
 import org.jetbrains.kotlinx.lincheck.util.*
@@ -92,6 +93,8 @@ open class ThreadScheduler {
     private val threads_ = mutableThreadMapOf<ThreadData>()
     protected val threads: ThreadMap<ThreadData> get() = threads_
 
+    data class RegisteredThread(val threadId: ThreadId, val thread: Thread)
+
     /**
      * Number of threads currently managed by the scheduler.
      */
@@ -119,12 +122,11 @@ open class ThreadScheduler {
      *
      * @return a map from thread ids to thread instances that are currently registered.
      */
-    fun getRegisteredThreads() : ThreadMap<Thread> = mutableThreadMapOf<Thread>().apply {
-        for ((threadId, threadData) in threads) {
+    fun getRegisteredThreads() : Sequence<RegisteredThread> {
+        return threads.entries.asSequence().mapNotNull { (threadId, threadData) ->
             val thread = threadData.descriptor.thread
-            if (thread != null) {
-                put(threadId, thread)
-            }
+            if (thread != null) RegisteredThread(threadId, thread)
+            else null
         }
     }
 
@@ -426,3 +428,6 @@ open class ThreadScheduler {
     }
 
 }
+
+internal fun Sequence<RegisteredThread>.toThreadMap(): ThreadMap<Thread> =
+    associate { it.threadId to it.thread }

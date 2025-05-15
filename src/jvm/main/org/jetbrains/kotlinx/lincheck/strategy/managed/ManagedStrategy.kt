@@ -372,7 +372,7 @@ abstract class ManagedStrategy(
         if (loggedResults is RunnerTimeoutInvocationResult) return null
 
         val threadNames = MutableList<String>(threadScheduler.nThreads) { "" }
-        getRegisteredThreads().forEach { threadId, thread ->
+        getRegisteredThreads().forEach { (threadId, thread) ->
             val threadNumber = ObjectLabelFactory.getObjectNumber(Thread::class.java, thread)
             when (threadNumber) {
                 0 -> threadNames[threadId] = "Main Thread"
@@ -845,7 +845,7 @@ abstract class ManagedStrategy(
         return elapsedTime
     }
 
-    fun getRegisteredThreads(): ThreadMap<Thread> =
+    fun getRegisteredThreads(): Sequence<ThreadScheduler.RegisteredThread> =
         threadScheduler.getRegisteredThreads()
 
     protected fun isRegisteredThread(): Boolean {
@@ -879,7 +879,7 @@ abstract class ManagedStrategy(
             // the running user threads. Essentially treating them as "daemons", which completion we do not wait for.
             // Thus, abort all of them and allow `runner` to process the invocation result accordingly.
             getRegisteredThreads()
-                .map { it.key }
+                .map { it.threadId }
                 .filterNot { isTestThread(it) || it == threadId /* we check invoking thread separately */ }
                 .all{ threadScheduler.isLiveLocked(it) || threadScheduler.isParked(it) }
                 .and(
@@ -2026,7 +2026,9 @@ abstract class ManagedStrategy(
 
     private fun objectFqTypeName(obj: Any?): String {
         val enumPrefix = if (obj?.javaClass?.isEnum == true) "Enum:" else ""
-        return "$enumPrefix${obj?.javaClass?.name ?: "null"}"
+        val typeName = obj?.javaClass?.name ?: "null"
+        return if (enumPrefix.isEmpty()) typeName
+        else "$enumPrefix$typeName"
     }
 
     private fun initializeUnsafeMethodCallTracePoint(
