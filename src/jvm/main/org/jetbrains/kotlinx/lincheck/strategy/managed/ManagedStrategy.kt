@@ -843,10 +843,13 @@ abstract class ManagedStrategy(
         return elapsedTime
     }
 
-    fun getRegisteredThreads(): Sequence<ThreadScheduler.RegisteredThread> =
+    fun getRegisteredThreads(): ThreadMap<Thread> =
         threadScheduler.getRegisteredThreads()
 
-    fun getUserThreads() = getRegisteredThreads().filterNot { isTestThread(it.threadId) }
+    fun getUserThreadIds() = getRegisteredThreads().mapNotNull {
+        if (isTestThread(it.key)) null
+        else it.key
+    }
 
     protected fun isRegisteredThread(): Boolean {
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor()
@@ -878,11 +881,8 @@ abstract class ManagedStrategy(
             // If all user threads (those that are not `TestThread` instances) are not blocked, then abort
             // the running user threads. Essentially treating them as "daemons", which completion we do not wait for.
             // Thus, abort all of them and allow `runner` to process the invocation result accordingly.
-            getUserThreads().mapNotNull {
-                    /* we check invoking thread separately */
-                    if (it.threadId == threadId) null
-                    else it.threadId
-                }
+            getUserThreadIds()
+                .filter { it != threadId } // we check invoking thread separately
                 .all { threadScheduler.isLiveLocked(it) || threadScheduler.isParked(it) }
                 .and(
                     threadScheduler.isFinished(threadId) ||

@@ -122,11 +122,12 @@ open class ThreadScheduler {
      *
      * @return a map from thread ids to thread instances that are currently registered.
      */
-    fun getRegisteredThreads() : Sequence<RegisteredThread> {
-        return threads.entries.asSequence().mapNotNull { (threadId, threadData) ->
+    fun getRegisteredThreads() : ThreadMap<Thread> = mutableThreadMapOf<Thread>().apply {
+        for ((threadId, threadData) in threads) {
             val thread = threadData.descriptor.thread
-            if (thread != null) RegisteredThread(threadId, thread)
-            else null
+            if (thread != null) {
+                put(threadId, thread)
+            }
         }
     }
 
@@ -428,6 +429,3 @@ open class ThreadScheduler {
     }
 
 }
-
-internal fun Sequence<RegisteredThread>.toThreadMap(): ThreadMap<Thread> =
-    associate { it.threadId to it.thread }
