@@ -8,40 +8,9 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck_test.representation
+package org.jetbrains.kotlinx.lincheck_test.datastructures
 
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.checkImpl
-import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
-import org.junit.Assume.assumeFalse
-import org.junit.Before
-import org.junit.Test
 import java.util.concurrent.atomic.AtomicReference
-
-/**
- * Checks that spin-cycle repeated events are cut in case of obstruction freedom violation
- */
-class ObstructionFreedomViolationEventsCutTest {
-
-    @Before // spin-loop detection is unsupported in trace debugger mode
-    fun setUp() = assumeFalse(isInTraceDebuggerMode)
-
-    private val q = MSQueueBlocking()
-
-    @Operation
-    fun enqueue(x: Int) = q.enqueue(x)
-
-    @Operation
-    fun dequeue(): Int? = q.dequeue()
-
-    @Test
-    fun runModelCheckingTest() = ModelCheckingOptions()
-        .checkObstructionFreedom(true)
-        .checkImpl(this::class.java)
-        .checkLincheckOutput("obstruction_freedom_violation_events_cut")
-}
 
 class MSQueueBlocking {
     private val DUMMY_NODE = Node(0)
@@ -78,4 +47,3 @@ class MSQueueBlocking {
         val next: AtomicReference<Node?> = AtomicReference(null)
     )
 }
-
