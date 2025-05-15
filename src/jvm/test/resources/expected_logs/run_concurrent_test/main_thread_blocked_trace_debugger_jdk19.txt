@@ -9,7 +9,7 @@ The following interleaving leads to the error:
 |     q.take() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:101)                                    |
 |       lock.lockInterruptibly() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:417)                                                             |
 |       count ➜ 0 at ArrayBlockingQueue.take(ArrayBlockingQueue.java:419)                                                                            |
-|       ConditionObject#1.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:420)                                                            |
+|       notEmpty.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:420)                                                                     |
 |         enableWait(ConditionNode#1): 1 at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1613)                   |
 |         LockSupport.setCurrentBlocker(ConditionObject#1) at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1614) |
 |         canReacquire(ConditionNode#1): false at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1616)             |
@@ -32,16 +32,16 @@ Detailed trace:
 |   block() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:96)                                                  |
 |     q.take() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:101)                                              |
 |       lock.lockInterruptibly() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:417)                                                                       |
-|         NonfairSync#1.lockInterruptibly() at ReentrantLock.lockInterruptibly(ReentrantLock.java:372)                                                         |
+|         sync.lockInterruptibly() at ReentrantLock.lockInterruptibly(ReentrantLock.java:372)                                                                  |
 |           initialTryLock(): true at ReentrantLock$Sync.lockInterruptibly(ReentrantLock.java:160)                                                             |
 |             compareAndSetState(0, 1): true at ReentrantLock$NonfairSync.initialTryLock(ReentrantLock.java:225)                                               |
 |               Unsafe#1.compareAndSetInt(NonfairSync#1, 16, 0, 1): true at AbstractQueuedSynchronizer.compareAndSetState(AbstractQueuedSynchronizer.java:556) |
 |             setExclusiveOwnerThread(Thread#0) at ReentrantLock$NonfairSync.initialTryLock(ReentrantLock.java:226)                                            |
 |               exclusiveOwnerThread = Thread#0 at AbstractOwnableSynchronizer.setExclusiveOwnerThread(AbstractOwnableSynchronizer.java:74)                    |
 |       count ➜ 0 at ArrayBlockingQueue.take(ArrayBlockingQueue.java:419)                                                                                      |
-|       ConditionObject#1.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:420)                                                                      |
+|       notEmpty.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:420)                                                                               |
 |         enableWait(ConditionNode#1): 1 at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1613)                             |
-|           NonfairSync#1.isHeldExclusively(): true at AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1502)             |
+|           this$0.isHeldExclusively(): true at AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1502)                    |
 |             getExclusiveOwnerThread(): Thread#0 at ReentrantLock$Sync.isHeldExclusively(ReentrantLock.java:186)                                              |
 |               exclusiveOwnerThread ➜ Thread#0 at AbstractOwnableSynchronizer.getExclusiveOwnerThread(AbstractOwnableSynchronizer.java:84)                    |
 |           node.waiter = Thread#0 at AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1503)                              |
@@ -50,9 +50,9 @@ Detailed trace:
 |           lastWaiter ➜ null at AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1505)                                   |
 |           firstWaiter = ConditionNode#1 at AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1507)                       |
 |           lastWaiter = ConditionNode#1 at AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1510)                        |
-|           NonfairSync#1.getState(): 1 at AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1511)                         |
+|           this$0.getState(): 1 at AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1511)                                |
 |             state ➜ 1 at AbstractQueuedSynchronizer.getState(AbstractQueuedSynchronizer.java:532)                                                            |
-|           NonfairSync#1.release(1): true at AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1512)                      |
+|           this$0.release(1): true at AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1512)                             |
 |             tryRelease(1): true at AbstractQueuedSynchronizer.release(AbstractQueuedSynchronizer.java:1007)                                                  |
 |               getState(): 1 at ReentrantLock$Sync.tryRelease(ReentrantLock.java:173)                                                                         |
 |                 state ➜ 1 at AbstractQueuedSynchronizer.getState(AbstractQueuedSynchronizer.java:532)                                                        |

@@ -21,7 +21,7 @@ Detailed trace:
 |   block(): threw IllegalStateException at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:235)                                         |
 |     AnonymousObjectRunConcurrentRepresentationTest.runnable = test$1 at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:254)           |
 |     AnonymousObjectRunConcurrentRepresentationTest.runnable ➜ test$1 at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:255)           |
-|     test$1.run() at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:255)                                                               |
+|     runnable.run() at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:255)                                                             |
 |       AnonymousObjectRunConcurrentRepresentationTest.x ➜ 0 at AnonymousObjectRunConcurrentRepresentationTest$I$test$1.run(RunConcurrentRepresentationTests.kt:247)              |
 |       AnonymousObjectRunConcurrentRepresentationTest.x = 1 at AnonymousObjectRunConcurrentRepresentationTest$I$test$1.run(RunConcurrentRepresentationTests.kt:247)              |
 |   result: IllegalStateException #1                                                                                                                                              |
