@@ -326,7 +326,7 @@ abstract class ManagedStrategy(
     // == BASIC STRATEGY METHODS ==
 
     override fun beforePart(part: ExecutionPart) = runInsideIgnoredSection {
-        traceCollector?.addTracePoint(SectionDelimiterTracePoint(part))
+        traceCollector?.addTracePointInternal(SectionDelimiterTracePoint(part))
         val nextThread = when (part) {
             INIT        -> 0
             PARALLEL    -> {
@@ -719,7 +719,7 @@ abstract class ManagedStrategy(
                 startedThreadDisplayNumber = iThreadToDisplayNumber(forkedThreadId),
                 callStackTrace = callStackTrace[currentThreadId]!!,
             )
-            traceCollector!!.addTracePoint(tracePoint)
+            traceCollector!!.addTracePointInternal(tracePoint)
         }
     }
 
@@ -803,7 +803,7 @@ abstract class ManagedStrategy(
                 joinedThreadDisplayNumber = iThreadToDisplayNumber(joinThreadId),
                 callStackTrace = callStackTrace[currentThreadId]!!,
             )
-            traceCollector!!.addTracePoint(tracePoint)
+            traceCollector!!.addTracePointInternal(tracePoint)
         }
     }
 
@@ -981,7 +981,7 @@ abstract class ManagedStrategy(
             atomicMethodDescriptor = null,
             callType = MethodCallTracePoint.CallType.ACTOR,
         )
-        traceCollector?.addTracePoint(callStackTrace[iThread]!!.first().tracePoint)
+        traceCollector?.addTracePointInternal(callStackTrace[iThread]!!.first().tracePoint)
         enableAnalysis()
     }
 
@@ -1051,7 +1051,7 @@ abstract class ManagedStrategy(
                 callStackTrace = callStackTrace[iThread]!!,
                 codeLocation = codeLocation
             )
-            traceCollector!!.addTracePoint(tracePoint)
+            traceCollector!!.addTracePointInternal(tracePoint)
         }
     }
 
@@ -1130,7 +1130,7 @@ abstract class ManagedStrategy(
                 callStackTrace = callStackTrace[currentThreadId]!!,
                 codeLocation = codeLocation
             )
-            traceCollector?.addTracePoint(tracePoint)
+            traceCollector?.addTracePointInternal(tracePoint)
         }
     }
 
@@ -1186,7 +1186,7 @@ abstract class ManagedStrategy(
                 callStackTrace = callStackTrace[iThread]!!,
                 codeLocation = codeLocation
             )
-            traceCollector?.addTracePoint(tracePoint)
+            traceCollector?.addTracePointInternal(tracePoint)
         }
     }
 
@@ -2253,7 +2253,7 @@ abstract class ManagedStrategy(
     internal fun createAndLogCancellationTracePoint(): CoroutineCancellationTracePoint? {
         if (collectTrace) {
             val cancellationTracePoint = doCreateTracePoint(::CoroutineCancellationTracePoint)
-            traceCollector?.addTracePoint(cancellationTracePoint)
+            traceCollector?.addTracePointInternal(cancellationTracePoint)
             return cancellationTracePoint
         }
         return null
