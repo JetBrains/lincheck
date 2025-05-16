@@ -938,11 +938,10 @@ private class ReplayModeLoopDetectorHelper(
  * before the corresponding method is called.
  */
 internal fun afterSpinCycleTraceCollected(
-    trace: MutableList<TracePoint>,
+    trace: List<TracePoint>,
     callStackTrace: List<CallStackTraceElement>,
     spinCycleMethodCallsStackTraces: List<List<CallStackTraceElement>>,
     iThread: Int,
-    currentActorId: Int,
     beforeMethodCallSwitch: Boolean
 ) {
     // Obtaining spin cycle trace points.
@@ -988,8 +987,7 @@ internal fun afterSpinCycleTraceCollected(
         getCommonMinStackTrace(spinLockTracePoints, spinCycleMethodCallsStackTraces)
             .dropLast(currentCallStackTrace.size - spinCycleFirstTracePointCallStackTrace.size)
     }
-    trace[cycleStartTracePointIndex] =
-        SpinCycleStartTracePoint(iThread, currentActorId, spinCycleStartStackTrace)
+    (trace[cycleStartTracePointIndex] as SpinCycleStartTracePoint).callStackTrace = spinCycleStartStackTrace
 }
 
 /**
