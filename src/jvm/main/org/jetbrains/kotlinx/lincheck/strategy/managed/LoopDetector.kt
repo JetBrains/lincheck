@@ -332,6 +332,34 @@ internal class LoopDetector(
     }
 
     /**
+     * Called when we:
+     * - Read/write some value.
+     * - Use some object as a receiver (receiver is passed as a parameter [obj]).
+     * - Use an index to access an array cell (index is passed as a parameter [obj]).
+     *
+     * Used only if LoopDetector is in the cycle calculation mode.
+     * Otherwise, does nothing.
+     */
+    private fun passValue(obj: Any?) {
+        if (mode == Mode.DEFAULT) return
+        val hash = primitiveOrIdentityHashCode(obj)
+        currentThreadCodeLocationsHistory += CodeIdentity.ValueRepresentationIdentity(hash)
+    }
+
+    /**
+     * Called when we pass some parameters before method call in the instrumented call.
+     * Used only if LoopDetector is in the cycle calculation mode.
+     * Otherwise, does nothing.
+     */
+    fun passParameters(params: Array<Any?>) {
+        if (mode == Mode.DEFAULT) return
+        params.forEach { param ->
+            val hash = primitiveOrIdentityHashCode(param)
+            currentThreadCodeLocationsHistory += CodeIdentity.ValueRepresentationIdentity(hash)
+        }
+    }
+
+    /**
      * Called before regular method calls.
      */
     fun beforeMethodCall(codeLocation: Int, params: Array<Any?>) {
@@ -349,18 +377,6 @@ internal class LoopDetector(
         }
         lastInterleavingHistoryNode.addExecution(codeLocation)
         loopTrackingCursor.onNextExecutionPoint()
-    }
-
-    /**
-     * Called when we pass some parameters before method call in the instrumented call.
-     * Used only if LoopDetector is in the cycle calculation mode.
-     * Otherwise, does nothing.
-     */
-    fun passParameters(params: Array<Any?>) {
-        if (mode == Mode.DEFAULT) return
-        params.forEach { param ->
-            currentThreadCodeLocationsHistory += CodeIdentity.ValueRepresentationIdentity(primitiveOrIdentityHashCode(param))
-        }
     }
 
     /**
@@ -478,20 +494,6 @@ internal class LoopDetector(
         }
         lastInterleavingHistoryNode.addExecution(codeLocation)
         loopTrackingCursor.onNextExecutionPoint()
-    }
-
-    /**
-     * Called when we:
-     * - Read/write some value.
-     * - Use some object as a receiver (receiver is passed as a parameter [obj]).
-     * - Use an index to access an array cell (index is passed as a parameter [obj]).
-     *
-     * Used only if LoopDetector is in the cycle calculation mode.
-     * Otherwise, does nothing.
-     */
-    private fun passValue(obj: Any?) {
-        if (mode == Mode.DEFAULT) return
-        currentThreadCodeLocationsHistory += CodeIdentity.ValueRepresentationIdentity(primitiveOrIdentityHashCode(obj))
     }
 
     private fun registerCycle() {
