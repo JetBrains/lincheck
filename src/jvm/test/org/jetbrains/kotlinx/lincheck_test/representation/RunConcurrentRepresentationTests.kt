@@ -42,7 +42,7 @@ abstract class BaseRunConcurrentRepresentationTest<R>(private val outputFileName
     @Test
     fun testRunWithModelChecker() {
         val result = runCatching {
-            runConcurrentTest {
+            runConcurrentTest(analyzeStdLib = analyzeStdLib) {
                 block()
             }
         }
@@ -61,6 +61,8 @@ abstract class BaseRunConcurrentRepresentationTest<R>(private val outputFileName
             error.failure.checkLincheckOutput(outputFileName)
         }
     }
+
+    open val analyzeStdLib = false
 }
 
 class NoEventsRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
@@ -363,6 +365,8 @@ class IncorrectConcurrentLinkedDequeRunConcurrentRepresentationTest : BaseRunCon
         threads.forEach { it.join() }
         check(!(r1 == 1 && r2 == 1))
     }
+
+    override val analyzeStdLib: Boolean = true
 }
 
 class IncorrectHashmapRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>("run_concurrent_test/hashmap") {

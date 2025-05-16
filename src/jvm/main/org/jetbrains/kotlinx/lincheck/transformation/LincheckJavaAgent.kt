@@ -477,7 +477,7 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
             if (className.startsWith("java.") || className.startsWith("kotlin.")) return false
         }
 
-        return getAnalysisSectionFor(className) != AnalysisSectionType.IGNORED
+        return getSectionDefinitionFor(className) != AnalysisSectionType.IGNORED
     }
 
 

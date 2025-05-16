@@ -55,6 +55,7 @@ class ConcurrentLinkedDequeTest {
                 }
             }
         }
+        .analyzeStdLib(true)
         .iterations(0)
         .checkImpl(this::class.java) { failure ->
             failure.checkLincheckOutput("concurrent_linked_deque")

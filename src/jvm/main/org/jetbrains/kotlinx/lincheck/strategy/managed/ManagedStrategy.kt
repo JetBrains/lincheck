@@ -36,6 +36,7 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.Continuation
 import java.util.concurrent.TimeoutException
 import kotlinx.coroutines.CancellableContinuation
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 import kotlin.Result as KResult
 import org.objectweb.asm.commons.Method.getMethod as getAsmMethod
@@ -53,7 +54,7 @@ abstract class ManagedStrategy(
     scenario: ExecutionScenario,
     private val validationFunction: Actor?,
     private val stateRepresentationFunction: Method?,
-    private val testCfg: ManagedCTestConfiguration,
+    internal val testCfg: ManagedCTestConfiguration,
 ) : Strategy(scenario), EventTracker {
 
     val executionMode: ExecutionMode =
@@ -406,9 +407,9 @@ abstract class ManagedStrategy(
             StringBuilder().apply {
                 appendLine("Non-determinism found. Probably caused by non-deterministic code (WeakHashMap, Object.hashCode, etc).")
                 appendLine("== Reporting the first execution without execution trace ==")
-                appendLine(result.toLincheckFailure(scenario, null))
+                appendLine(result.toLincheckFailure(scenario, null, testCfg))
                 appendLine("== Reporting the second execution ==")
-                appendLine(loggedResults.toLincheckFailure(scenario, trace).toString())
+                appendLine(loggedResults.toLincheckFailure(scenario, trace, testCfg).toString())
             }.toString()
         }
 
@@ -1877,16 +1878,19 @@ abstract class ManagedStrategy(
             System.`in`, System.out, System.err -> return AnalysisSectionType.IGNORED
         }
         val section = getAnalysisSectionFor(ownerName, methodName)
-//            .ensure( { it.isSilent() || it.isNormal() }) { "Expected SILENT or NORMAL but got $it for  $ownerName, $methodName" }
-//        if (silentSection != AnalysisSectionType.NORMAL) {
-//            return silentSection
-//        }
         userDefinedGuarantees?.forEach { guarantee ->
             if (guarantee.classPredicate(ownerName) && guarantee.methodPredicate(methodName)) {
                 return guarantee.type
             }
         }
         return section
+    }
+    
+    private fun getAnalysisSectionFor(className: String, methodName: String): AnalysisSectionType {
+        if (testCfg is ModelCheckingCTestConfiguration && testCfg.stdLibAnalysisEnabled && isConcurrentCollectionsLibrary(className)) {
+            return AnalysisSectionType.NORMAL
+        }
+        return getSectionDefinitionFor(className, methodName)
     }
 
     private fun enterAnalysisSection(threadId: ThreadId, section: AnalysisSectionType) {

@@ -32,8 +32,9 @@ object Lincheck {
     @JvmStatic
     fun runConcurrentTest(
         invocations: Int = DEFAULT_INVOCATIONS_COUNT,
-        block: Runnable
-    ) {
+        analyzeStdLib: Boolean = false,
+    block: Runnable
+) {
         val scenario = ExecutionScenario(
             initExecution = emptyList(),
             parallelExecution = listOf(
@@ -49,7 +50,8 @@ object Lincheck {
             .iterations(0)
             .addCustomScenario(scenario)
             .invocationsPerIteration(invocations)
-            .verifier(NoExceptionVerifier::class.java)
+            .analyzeStdLib(analyzeStdLib)
+        .verifier(NoExceptionVerifier::class.java)
 
         val testCfg = options.createTestConfigurations(GeneralPurposeModelCheckingWrapper::class.java)
         withLincheckJavaAgent(testCfg.instrumentationMode) {

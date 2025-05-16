@@ -191,7 +191,7 @@ internal inline fun <R> runOutsideIgnoredSection(block: () -> R): R {
  * @param methodName The name of the method to analyze.
  * @return AnalysisSectionType.NORMAL if the class should be transformed, AnalysisSectionType.IGNORED otherwise.
  */
-internal fun getAnalysisSectionFor(className: String, methodName: String = ""): AnalysisSectionType = when {
+internal fun getSectionDefinitionFor(className: String, methodName: String = ""): AnalysisSectionType = when {
     isJavaExecutorService(className) && methodName == "submit" -> AnalysisSectionType.SILENT_PROPAGATING
     isJavaExecutorService(className) -> AnalysisSectionType.SILENT
     className.startsWith("java.util.concurrent.locks.AbstractQueuedSynchronizer") -> AnalysisSectionType.SILENT
@@ -207,6 +207,10 @@ internal fun getAnalysisSectionFor(className: String, methodName: String = ""): 
 
     // Specific handling for ThreadContainer classes
     isThreadContainerClass(className) -> AnalysisSectionType.NORMAL
+    
+    // These cannot be ignored by managed strategy
+    className == "kotlin.jvm.functions.Function0" -> AnalysisSectionType.NORMAL 
+    className == "java.lang.Runnable" -> AnalysisSectionType.NORMAL
 
     // Specific Kotlin classes that need to be transformed
     className.startsWith("kotlin.concurrent.ThreadsKt") -> AnalysisSectionType.NORMAL
@@ -244,9 +248,6 @@ internal fun getAnalysisSectionFor(className: String, methodName: String = ""): 
     className.startsWith("org.junit.") -> AnalysisSectionType.IGNORED
     className.startsWith("junit.framework.") -> AnalysisSectionType.IGNORED
 
-    // TODO THIS HERE IS THE PROBLEM
-//    className == "org.jetbrains.kotlinx.lincheck.GeneralPurposeModelCheckingWrapper" -> AnalysisSectionType.NORMAL
-//    className.startsWith("org.jetbrains.kotlinx.lincheck_test.") -> AnalysisSectionType.NORMAL
     // Lincheck classes should never be transformed
     className.startsWith("org.jetbrains.kotlinx.lincheck.") -> AnalysisSectionType.IGNORED
     className.startsWith("sun.nio.ch.lincheck.") -> AnalysisSectionType.IGNORED
