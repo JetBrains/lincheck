@@ -469,6 +469,7 @@ abstract class ManagedStrategy(
         val decision = loopDetector.visitCodeLocation(threadId, codeLocation)
         if (decision != LoopDetector.Decision.Idle) {
             processLoopDetectorDecision(threadId, codeLocation, decision, beforeMethodCallSwitch = beforeMethodCallSwitch)
+            loopDetector.afterCodeLocation(codeLocation)
             return
         }
         // check if we need to switch
@@ -537,7 +538,6 @@ abstract class ManagedStrategy(
             )
             if (switchHappened) {
                 loopDetector.afterThreadSwitch(codeLocation)
-                loopDetector.afterCodeLocation(codeLocation)
             }
         }
     }
