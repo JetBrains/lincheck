@@ -331,6 +331,15 @@ internal class LoopDetector(
         return count
     }
 
+    private fun updateInterleavingHistory(codeLocation: Int) {
+        val lastInterleavingHistoryNode = currentInterleavingHistory.last()
+        if (lastInterleavingHistoryNode.cycleOccurred) {
+            return /* If we already ran into cycle and haven't switched than no need to track executions */
+        }
+        lastInterleavingHistoryNode.addExecution(codeLocation)
+        loopTrackingCursor.onNextExecutionPoint()
+    }
+
     /**
      * Called when we:
      * - Read/write some value.
@@ -371,12 +380,7 @@ internal class LoopDetector(
             currentThreadCodeLocationsHistory += CodeIdentity.RegularCodeLocationIdentity(codeLocation)
         }
         passParameters(params)
-        val lastInterleavingHistoryNode = currentInterleavingHistory.last()
-        if (lastInterleavingHistoryNode.cycleOccurred) {
-            return /* If we already ran into cycle and haven't switched than no need to track executions */
-        }
-        lastInterleavingHistoryNode.addExecution(codeLocation)
-        loopTrackingCursor.onNextExecutionPoint()
+        updateInterleavingHistory(codeLocation)
     }
 
     /**
@@ -485,12 +489,7 @@ internal class LoopDetector(
     fun onNextExecutionPoint(codeLocation: Int) {
         if (replayModeEnabled) return
         if (codeLocation == UNKNOWN_CODE_LOCATION) return
-        val lastInterleavingHistoryNode = currentInterleavingHistory.last()
-        if (lastInterleavingHistoryNode.cycleOccurred) {
-            return /* If we already ran into cycle and haven't switched than no need to track executions */
-        }
-        lastInterleavingHistoryNode.addExecution(codeLocation)
-        loopTrackingCursor.onNextExecutionPoint()
+        updateInterleavingHistory(codeLocation)
     }
 
     private fun registerCycle() {
