@@ -494,7 +494,7 @@ internal class LoopDetector(
     }
 
     private fun registerCycle() {
-        val (cycleInfo, switchPointsCodeLocationsHistory) = tryFindCycleWithParamsOrWithout()
+        val (cycleInfo, switchPointsCodeLocationsHistory) = tryFindCycle()
 
         if (cycleInfo == null) {
             val lastNode = currentInterleavingHistory.last()
@@ -509,27 +509,9 @@ internal class LoopDetector(
             return
         }
         /*
-        For nodes, correspond to cycles we re-calculate hash using only code locations related to the cycle,
-        because if we run into a DeadLock,
-        it's enough to show events before the cycle and first cycle iteration in the current thread.
-        For example,
-        [threadId = 0, executions = 10],
-        [threadId = 1, executions = 5], // 2 executions before cycle and then cycle of 3 executions begins
-        [threadId = 0, executions = 3],
-        [threadId = 1, executions = 3],
-        [threadId = 0, executions = 3],
-        ...
-        [threadId = 1, executions = 3],
-        [threadId = 0, executions = 3]
-
-        In this situation, we have a spin cycle:[threadId = 1, executions = 3], [threadId = 0, executions = 3].
-        We want to cut off events suffix to get:
-        [threadId = 0, executions = 10],
-        [threadId = 1, executions = 5], // 2 executions before cycle, and then cycle begins
-        [threadId = 0, executions = 3],
-
-        So we need to [threadId = 1, executions = 5] execution part to have a hash equals to next cycle nodes,
-        because we will take only thread executions before cycle and the first cycle iteration.
+         * For nodes, correspond to cycles we re-calculate hash using only code locations related to the cycle,
+         * because if we run into a deadlock, it's enough to show events before the cycle
+         * and first cycle iteration in the current thread.
          */
         var cycleExecutionLocationsHash = switchPointsCodeLocationsHistory[cycleInfo.executionsBeforeCycle]
         for (i in cycleInfo.executionsBeforeCycle + 1 until cycleInfo.executionsBeforeCycle + cycleInfo.cyclePeriod) {
@@ -537,9 +519,9 @@ internal class LoopDetector(
         }
 
         val cycleStateLastNode = currentInterleavingHistory.last().asNodeCorrespondingToCycle(
-            executionsBeforeCycle = cycleInfo.executionsBeforeCycle,
             cyclePeriod = cycleInfo.cyclePeriod,
-            cycleExecutionsHash = cycleExecutionLocationsHash // corresponds to a cycle
+            cycleExecutionsHash = cycleExecutionLocationsHash, // corresponds to a cycle
+            executionsBeforeCycle = cycleInfo.executionsBeforeCycle,
         )
 
         currentInterleavingHistory[currentInterleavingHistory.lastIndex] = cycleStateLastNode
@@ -554,41 +536,40 @@ internal class LoopDetector(
      * **without** parameters and values, (i.e. considering only code locations) and a list of visited code
      * locations **without** parameters and values, only potential switch points.
      */
-    private fun tryFindCycleWithParamsOrWithout(): Pair<CycleInfo?, List<Int>> {
+    private fun tryFindCycle(): Pair<CycleInfo?, List<Int>> {
         // Get the code locations history of potential switch points, without parameters and values.
-        val historyWithoutParams = currentThreadCodeLocationsHistory.mapNotNull { (it as? CodeIdentity.RegularCodeLocationIdentity)?.location }
+        val historyWithoutParams = currentThreadCodeLocationsHistory.mapNotNull {
+            (it as? RegularCodeLocationIdentity)?.location
+        }
         // Trying to find a cycle with them.
         val cycleInfo = findMaxPrefixLengthWithNoCycleOnSuffix(currentThreadCodeLocationsHistory)
-            // If it's not possible - searching for the cycle in the filtered history list - without params and values.
-            ?: return findMaxPrefixLengthWithNoCycleOnSuffix(historyWithoutParams) to historyWithoutParams
+        // If it's not possible - searching for the cycle in the filtered history list - without params and values.
+        if (cycleInfo == null) {
+            return findMaxPrefixLengthWithNoCycleOnSuffix(historyWithoutParams) to historyWithoutParams
+        }
 
         // If we found a spin cycle in the code locations history with parameters and values -
-        // than we need to calculate how many executions,
+        // then we need to calculate how many executions,
         // that are potential switch points, before and during the cycle happened.
         // We need it because in normal mode LoopDetector only uses potential switch points code locations
-        // to detect spin locks, so we have to count code locations, that don't represent parameters or values.
-        var operationsBefore = 0
+        // to detect spin locks, so we have to count code locations that don't represent parameters or values.
         var cyclePeriod = 0
-
-        var operationsBeforeWithParams = 0
-        var cyclePeriodWithParams = 0
+        var operationsBefore = 0
 
         var i = 0
         // Count how many potential switch point executions happened before the spin cycle.
-        while (operationsBeforeWithParams < cycleInfo.executionsBeforeCycle) {
+        repeat(cycleInfo.executionsBeforeCycle) {
             // Potential switch point code locations are only RegularCodeLocationIdentity
-            if (currentThreadCodeLocationsHistory[i] is CodeIdentity.RegularCodeLocationIdentity) {
+            if (currentThreadCodeLocationsHistory[i] is RegularCodeLocationIdentity) {
                 operationsBefore++
             }
-            operationsBeforeWithParams++
             i++
         }
-        while (cyclePeriodWithParams < cycleInfo.cyclePeriod) {
+        repeat(cycleInfo.cyclePeriod) {
             // Potential switch point code locations are only RegularCodeLocationIdentity
-            if (currentThreadCodeLocationsHistory[i] is CodeIdentity.RegularCodeLocationIdentity) {
+            if (currentThreadCodeLocationsHistory[i] is RegularCodeLocationIdentity) {
                 cyclePeriod++
             }
-            cyclePeriodWithParams++
             i++
         }
 
