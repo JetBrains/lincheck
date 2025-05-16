@@ -250,7 +250,7 @@ internal class LoopDetector(
             return Decision.Idle
         }
         replayModeLoopDetectorHelper?.let {
-            it.onNextExecution()
+            it.visitCodeLocation(codeLocation)
             return it.detectLivelock()
         }
         // Update code location visit counter
@@ -383,7 +383,7 @@ internal class LoopDetector(
         }
         passParameters(params)
         replayModeLoopDetectorHelper?.let {
-            it.onNextExecution()
+            it.visitCodeLocation(codeLocation)
             return
         }
         if (mode != Mode.DEFAULT) {
@@ -483,8 +483,8 @@ internal class LoopDetector(
      */
     fun afterThreadSwitch(codeLocation: Int) {
         if (codeLocation == UNKNOWN_CODE_LOCATION) return
-        replayModeLoopDetectorHelper?.let { helper ->
-            helper.onNextExecution()
+        replayModeLoopDetectorHelper?.let {
+            it.visitCodeLocation(codeLocation)
             return
         }
         // After we switch back to the thread, no `visitCodeLocations` will be called
@@ -495,7 +495,7 @@ internal class LoopDetector(
         updateCodeLocationVisitCounter(codeLocation)
     }
 
-    fun onNextExecutionPoint(codeLocation: Int) {
+    fun afterCodeLocation(codeLocation: Int) {
         if (replayModeEnabled) return
         if (codeLocation == UNKNOWN_CODE_LOCATION) return
         updateInterleavingHistory(codeLocation)
@@ -670,7 +670,8 @@ private class ReplayModeLoopDetectorHelper(
     /**
      * Called before next execution in current thread.
      */
-    fun onNextExecution() {
+    @Suppress("UNUSED_PARAMETER")
+    fun visitCodeLocation(codeLocation: Int) {
         executionsPerformedInCurrentThread++
     }
 
