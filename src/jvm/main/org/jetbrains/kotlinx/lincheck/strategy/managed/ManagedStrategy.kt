@@ -925,7 +925,7 @@ abstract class ManagedStrategy(
         threadScheduler.awaitTurn(threadId)
         threadScheduler.finishThread(threadId)
         loopDetector.onThreadFinish(threadId)
-        traceCollector?.onThreadFinish()
+        onThreadFinishForTraceCollector()
         unblockJoiningThreads(threadId)
         tryAbortingUserThreads(threadId, blockingReason = null)
         onSwitchPoint(threadId)
@@ -1638,7 +1638,7 @@ abstract class ManagedStrategy(
         }
         // check for livelock and create the method call trace point
         if (collectTrace) {
-            traceCollector.checkActiveLockDetected()
+            traceCollector?.checkActiveLockDetected()
             addBeforeMethodCallTracePoint(threadId, receiver, codeLocation, methodId, className, methodName, params,
                 atomicMethodDescriptor, MethodCallTracePoint.CallType.NORMAL
             )
@@ -2357,9 +2357,7 @@ abstract class ManagedStrategy(
         }
     }
 
-    private fun TraceCollector?.newSwitch(reason: SwitchReason, beforeMethodCallSwitch: Boolean) {
-        if (this == null) return
-
+    private fun TraceCollector.newSwitch(reason: SwitchReason, beforeMethodCallSwitch: Boolean) {
         val threadId = threadScheduler.getCurrentThreadId()
         if (reason == SwitchReason.ActiveLock) {
             afterSpinCycleTraceCollected(
@@ -2384,13 +2382,12 @@ abstract class ManagedStrategy(
         spinCycleStartAdded = false
     }
 
-    private fun TraceCollector?.onThreadFinish() {
-        if (this == null) return
+    private fun onThreadFinishForTraceCollector() {
         spinCycleStartAdded = false
     }
 
-    private fun TraceCollector?.checkActiveLockDetected() {
-        if (this == null || !loopDetector.replayModeCurrentlyInSpinCycle) return
+    private fun TraceCollector.checkActiveLockDetected() {
+        if (!loopDetector.replayModeCurrentlyInSpinCycle) return
 
         val threadId = threadScheduler.getCurrentThreadId()
         if (spinCycleStartAdded) {
