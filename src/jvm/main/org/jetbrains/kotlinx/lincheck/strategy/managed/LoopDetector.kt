@@ -379,11 +379,11 @@ internal class LoopDetector(
             passParameters(params)
             return
         }
+        passParameters(params)
         replayModeLoopDetectorHelper?.let {
             it.onNextExecution()
             return
         }
-        passParameters(params)
         if (mode != Mode.DEFAULT) {
             currentThreadCodeLocationsHistory += RegularCodeLocationIdentity(codeLocation)
         }
