@@ -19,6 +19,7 @@ import org.jetbrains.kotlinx.lincheck.trace.SwitchEventTracePoint
 import org.jetbrains.kotlinx.lincheck.trace.TracePoint
 import org.jetbrains.kotlinx.lincheck.transformation.MethodIds
 import org.jetbrains.kotlinx.lincheck.transformation.CodeLocations
+import org.jetbrains.kotlinx.lincheck.util.AnalysisSectionType
 import java.util.ArrayList
 
 /**
@@ -360,7 +361,7 @@ internal class LoopDetector(
      * Used only if LoopDetector is in the cycle calculation mode.
      * Otherwise, does nothing.
      */
-    fun passParameters(params: Array<Any?>) {
+    private fun passParameters(params: Array<Any?>) {
         if (mode == Mode.DEFAULT) return
         params.forEach { param ->
             val hash = primitiveOrIdentityHashCode(param)
@@ -371,14 +372,20 @@ internal class LoopDetector(
     /**
      * Called before regular method calls.
      */
-    fun beforeMethodCall(codeLocation: Int, params: Array<Any?>) {
+    fun beforeMethodCall(codeLocation: Int, params: Array<Any?>, methodSectionType: AnalysisSectionType) {
+        if (methodSectionType == AnalysisSectionType.ATOMIC) {
+            // atomic methods are handled via `visitCodeLocation`,
+            // so we only need to pass method parameters
+            passParameters(params)
+            return
+        }
         replayModeLoopDetectorHelper?.let {
             it.onNextExecution()
             return
         }
         passParameters(params)
         if (mode != Mode.DEFAULT) {
-            currentThreadCodeLocationsHistory += CodeIdentity.RegularCodeLocationIdentity(codeLocation)
+            currentThreadCodeLocationsHistory += RegularCodeLocationIdentity(codeLocation)
         }
         updateInterleavingHistory(codeLocation)
     }
