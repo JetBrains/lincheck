@@ -326,7 +326,7 @@ abstract class ManagedStrategy(
     // == BASIC STRATEGY METHODS ==
 
     override fun beforePart(part: ExecutionPart) = runInsideIgnoredSection {
-        traceCollector?.passCodeLocation(SectionDelimiterTracePoint(part))
+        traceCollector?.addTracePoint(SectionDelimiterTracePoint(part))
         val nextThread = when (part) {
             INIT        -> 0
             PARALLEL    -> {
@@ -719,7 +719,7 @@ abstract class ManagedStrategy(
                 startedThreadDisplayNumber = iThreadToDisplayNumber(forkedThreadId),
                 callStackTrace = callStackTrace[currentThreadId]!!,
             )
-            traceCollector!!.passCodeLocation(tracePoint)
+            traceCollector!!.addTracePoint(tracePoint)
         }
     }
 
@@ -803,7 +803,7 @@ abstract class ManagedStrategy(
                 joinedThreadDisplayNumber = iThreadToDisplayNumber(joinThreadId),
                 callStackTrace = callStackTrace[currentThreadId]!!,
             )
-            traceCollector!!.passCodeLocation(tracePoint)
+            traceCollector!!.addTracePoint(tracePoint)
         }
     }
 
@@ -981,7 +981,7 @@ abstract class ManagedStrategy(
             atomicMethodDescriptor = null,
             callType = MethodCallTracePoint.CallType.ACTOR,
         )
-        traceCollector?.passCodeLocation(callStackTrace[iThread]!!.first().tracePoint)
+        traceCollector?.addTracePoint(callStackTrace[iThread]!!.first().tracePoint)
         enableAnalysis()
     }
 
@@ -1006,7 +1006,7 @@ abstract class ManagedStrategy(
             null
         }
         newSwitchPoint(iThread, codeLocation)
-        traceCollector?.passCodeLocation(tracePoint)
+        traceCollector?.addTracePointInternal(tracePoint)
     }
 
     /*
@@ -1051,7 +1051,7 @@ abstract class ManagedStrategy(
                 callStackTrace = callStackTrace[iThread]!!,
                 codeLocation = codeLocation
             )
-            traceCollector!!.passCodeLocation(tracePoint)
+            traceCollector!!.addTracePoint(tracePoint)
         }
     }
 
@@ -1071,7 +1071,7 @@ abstract class ManagedStrategy(
         // we simply add a new switch point here, thus, also
         // emulating spurious wake-ups.
         newSwitchPoint(threadId, codeLocation)
-        traceCollector?.passCodeLocation(tracePoint)
+        traceCollector?.addTracePointInternal(tracePoint)
     }
 
     /*
@@ -1130,7 +1130,7 @@ abstract class ManagedStrategy(
                 callStackTrace = callStackTrace[currentThreadId]!!,
                 codeLocation = codeLocation
             )
-            traceCollector?.passCodeLocation(tracePoint)
+            traceCollector?.addTracePoint(tracePoint)
         }
     }
 
@@ -1147,7 +1147,7 @@ abstract class ManagedStrategy(
             null
         }
         newSwitchPoint(iThread, codeLocation)
-        traceCollector?.passCodeLocation(tracePoint)
+        traceCollector?.addTracePointInternal(tracePoint)
     }
 
     /*
@@ -1186,7 +1186,7 @@ abstract class ManagedStrategy(
                 callStackTrace = callStackTrace[iThread]!!,
                 codeLocation = codeLocation
             )
-            traceCollector?.passCodeLocation(tracePoint)
+            traceCollector?.addTracePoint(tracePoint)
         }
     }
 
@@ -1263,7 +1263,7 @@ abstract class ManagedStrategy(
             lastReadTracePoint[iThread] = tracePoint
         }
         newSwitchPoint(iThread, codeLocation)
-        traceCollector?.passCodeLocation(tracePoint)
+        traceCollector?.addTracePointInternal(tracePoint)
         loopDetector.beforeReadField(obj)
         return true
     }
@@ -1292,7 +1292,7 @@ abstract class ManagedStrategy(
             lastReadTracePoint[iThread] = tracePoint
         }
         newSwitchPoint(iThread, codeLocation)
-        traceCollector?.passCodeLocation(tracePoint)
+        traceCollector?.addTracePointInternal(tracePoint)
         loopDetector.beforeReadArrayElement(array, index)
         return true
     }
@@ -1334,7 +1334,7 @@ abstract class ManagedStrategy(
             null
         }
         newSwitchPoint(iThread, codeLocation)
-        traceCollector?.passCodeLocation(tracePoint)
+        traceCollector?.addTracePointInternal(tracePoint)
         loopDetector.beforeWriteField(obj, value)
         return true
     }
@@ -1363,7 +1363,7 @@ abstract class ManagedStrategy(
             null
         }
         newSwitchPoint(iThread, codeLocation)
-        traceCollector?.passCodeLocation(tracePoint)
+        traceCollector?.addTracePointInternal(tracePoint)
         loopDetector.beforeWriteArrayElement(array, index, value)
         true
     }
@@ -1653,7 +1653,7 @@ abstract class ManagedStrategy(
             // re-use last call trace point
             val methodCallTracePoint = callStackTrace[threadId]!!.lastOrNull()?.tracePoint
             newSwitchPoint(threadId, codeLocation, beforeMethodCallSwitch = true)
-            traceCollector?.passCodeLocation(methodCallTracePoint)
+            traceCollector?.addTracePointInternal(methodCallTracePoint)
             loopDetector.passParameters(params)
         }
         // notify loop detector about the method call
@@ -2253,7 +2253,7 @@ abstract class ManagedStrategy(
     internal fun createAndLogCancellationTracePoint(): CoroutineCancellationTracePoint? {
         if (collectTrace) {
             val cancellationTracePoint = doCreateTracePoint(::CoroutineCancellationTracePoint)
-            traceCollector?.passCodeLocation(cancellationTracePoint)
+            traceCollector?.addTracePoint(cancellationTracePoint)
             return cancellationTracePoint
         }
         return null
@@ -2343,18 +2343,17 @@ abstract class ManagedStrategy(
     }
 
     // == TRACE COLLECTOR EXTENSION METHODS ==
-    private fun TraceCollector.passCodeLocation(tracePoint: TracePoint?) {
-        if (tracePoint !is SectionDelimiterTracePoint && tracePoint?.isActorMethodCallTracePoint() == false) {
+    private fun TraceCollector.addTracePointInternal(tracePoint: TracePoint?) {
+        if (tracePoint == null) return
+        if (tracePoint !is SectionDelimiterTracePoint && !tracePoint.isActorMethodCallTracePoint()) {
             checkActiveLockDetected()
         }
 
-        if (tracePoint != null) {
-            // tracePoint can be null here if trace is not available, e.g. in case of suspension
-            passCodeLocationInternal(tracePoint)
+        // tracePoint can be null here if trace is not available, e.g. in case of suspension
+        addTracePoint(tracePoint)
 
-            if (!tracePoint.isActorMethodCallTracePoint()) {
-                setBeforeEventId(tracePoint)
-            }
+        if (!tracePoint.isActorMethodCallTracePoint()) {
+            setBeforeEventId(tracePoint)
         }
     }
 
@@ -2371,7 +2370,7 @@ abstract class ManagedStrategy(
                 beforeMethodCallSwitch = beforeMethodCallSwitch
             )
         }
-        passCodeLocationInternal(
+        addTracePoint(
             SwitchEventTracePoint(
                 iThread = threadId,
                 actorId = currentActorId[threadId]!!,
@@ -2397,7 +2396,7 @@ abstract class ManagedStrategy(
         if (spinCycleStartAdded) {
             spinCycleMethodCallsStackTraces += callStackTrace[threadId]!!.toList()
         } else {
-            passCodeLocationInternal(
+            addTracePoint(
                 SpinCycleStartTracePoint(
                     iThread = threadId,
                     actorId = currentActorId[threadId]!!,
@@ -2416,7 +2415,7 @@ abstract class ManagedStrategy(
 
         val threadId = threadScheduler.getCurrentThreadId()
         // use call stack trace of the previous trace point
-        traceCollector?.passCodeLocationInternal(
+        traceCollector?.addTracePoint(
             StateRepresentationTracePoint(
                 iThread = threadId,
                 actorId = currentActorId[threadId]!!,
@@ -2437,7 +2436,7 @@ abstract class ManagedStrategy(
             iThread = threadId,
             beforeMethodCallSwitch = beforeMethodCall
         )
-        passCodeLocationInternal(
+        addTracePoint(
             ObstructionFreedomViolationExecutionAbortTracePoint(
                 iThread = threadId,
                 actorId = currentActorId[threadId]!!,

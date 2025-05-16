@@ -17,7 +17,7 @@ internal class TraceCollector {
     private val _trace = mutableListOf<TracePoint>()
     val trace: List<TracePoint> = _trace
 
-    fun passCodeLocationInternal(tracePoint: TracePoint) {
+    fun addTracePoint(tracePoint: TracePoint) {
         _trace += tracePoint
     }
 }
