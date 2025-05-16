@@ -427,11 +427,6 @@ internal class LoopDetector(
         currentInterleavingHistory.add(InterleavingHistoryNode(threadId = iThread))
     }
 
-    fun onThreadFinish(iThread: Int) {
-        check(iThread == currentThreadId)
-        onNextExecutionPoint(executionIdentity = -iThread)
-    }
-
     fun onThreadSwitch(iThread: Int) {
         currentThreadId = iThread
         currentThreadCodeLocationVisitCountMap.clear()
