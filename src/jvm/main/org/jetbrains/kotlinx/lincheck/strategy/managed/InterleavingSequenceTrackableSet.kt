@@ -446,10 +446,8 @@ internal class InterleavingSequenceTrackableSet {
         /**
          * Check if a current sequence corresponds to any cycle is present inside the set or not.
          */
-        val isInCycle: Boolean
-            get() = currentNode?.let {
-                it.cycleOccurred && executionsCount == it.executions
-            } ?: false
+        val isInCycle: Boolean get() =
+            currentNode?.let { it.cycleOccurred && executionsCount >= it.executions } == true
 
         /**
          * Resets cursor to the leaf of the new added cycle
