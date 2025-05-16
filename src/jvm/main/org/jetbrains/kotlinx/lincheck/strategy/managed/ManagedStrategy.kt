@@ -2344,12 +2344,13 @@ abstract class ManagedStrategy(
 
     // == TRACE COLLECTOR EXTENSION METHODS ==
     private fun TraceCollector.addTracePointInternal(tracePoint: TracePoint?) {
+        // tracePoint can be null here if trace is not available, e.g. in case of suspension
         if (tracePoint == null) return
+
         if (tracePoint !is SectionDelimiterTracePoint && !tracePoint.isActorMethodCallTracePoint()) {
             checkActiveLockDetected()
         }
 
-        // tracePoint can be null here if trace is not available, e.g. in case of suspension
         addTracePoint(tracePoint)
 
         if (!tracePoint.isActorMethodCallTracePoint()) {
