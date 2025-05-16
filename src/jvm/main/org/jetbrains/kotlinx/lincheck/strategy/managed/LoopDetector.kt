@@ -249,12 +249,13 @@ internal class LoopDetector(
         if (codeLocation == UNKNOWN_CODE_LOCATION) {
             return Decision.Idle
         }
+        // Update code location visit counter
+        updateCodeLocationVisitCounter(codeLocation)
+        val count = currentThreadCodeLocationVisitCountMap.getOrDefault(codeLocation, 0)
+        // If we are in replay mode, check if the replay has lead to a deadlock
         replayModeLoopDetectorHelper?.let {
-            it.visitCodeLocation(codeLocation)
             return it.detectLivelock()
         }
-        // Update code location visit counter
-        val count = updateCodeLocationVisitCounter(codeLocation)
         // In trace debugger mode, check whether the count exceeds
         // the maximum number of repetitions for spin-loop detection.
         // Check whether the count exceeds the maximum number of repetitions for loop/hang detection.
@@ -324,14 +325,17 @@ internal class LoopDetector(
      * @return the updated number of times the specified code location has been visited by the current thread,
      *         or -1 if the `codeLocation` is unknown
      */
-    private fun updateCodeLocationVisitCounter(codeLocation: Int): Int {
+    private fun updateCodeLocationVisitCounter(codeLocation: Int) {
         require(codeLocation != UNKNOWN_CODE_LOCATION)
-        val count = currentThreadCodeLocationVisitCountMap.getOrDefault(codeLocation, 0) + 1
-        currentThreadCodeLocationVisitCountMap[codeLocation] = count
+        replayModeLoopDetectorHelper?.let {
+            it.visitCodeLocation(codeLocation)
+            return
+        }
+        val count = currentThreadCodeLocationVisitCountMap.getOrDefault(codeLocation, 0)
+        currentThreadCodeLocationVisitCountMap[codeLocation] = count + 1
         if (mode != Mode.DEFAULT) {
             currentThreadCodeLocationsHistory += RegularCodeLocationIdentity(codeLocation)
         }
-        return count
     }
 
     private fun updateInterleavingHistory(codeLocation: Int) {
@@ -382,13 +386,7 @@ internal class LoopDetector(
             return
         }
         passParameters(params)
-        replayModeLoopDetectorHelper?.let {
-            it.visitCodeLocation(codeLocation)
-            return
-        }
-        if (mode != Mode.DEFAULT) {
-            currentThreadCodeLocationsHistory += RegularCodeLocationIdentity(codeLocation)
-        }
+        updateCodeLocationVisitCounter(codeLocation)
         updateInterleavingHistory(codeLocation)
     }
 
@@ -483,10 +481,6 @@ internal class LoopDetector(
      */
     fun afterThreadSwitch(codeLocation: Int) {
         if (codeLocation == UNKNOWN_CODE_LOCATION) return
-        replayModeLoopDetectorHelper?.let {
-            it.visitCodeLocation(codeLocation)
-            return
-        }
         // After we switch back to the thread, no `visitCodeLocations` will be called
         // before the next switch point as it was called earlier.
         // But we need to track that this point is going to be executed after the switch,
