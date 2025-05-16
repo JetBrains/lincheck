@@ -466,7 +466,6 @@ internal class LoopDetector(
         // But we need to track that this point is going to be executed after the switch,
         // so we pass it after the switch back,
         // but before the instruction is actually executed.
-        onNextExecutionPoint(codeLocation)
         updateCodeLocationVisitCounter(codeLocation)
     }
 
