@@ -376,10 +376,10 @@ internal class LoopDetector(
             it.onNextExecution()
             return
         }
+        passParameters(params)
         if (mode != Mode.DEFAULT) {
             currentThreadCodeLocationsHistory += CodeIdentity.RegularCodeLocationIdentity(codeLocation)
         }
-        passParameters(params)
         updateInterleavingHistory(codeLocation)
     }
 
