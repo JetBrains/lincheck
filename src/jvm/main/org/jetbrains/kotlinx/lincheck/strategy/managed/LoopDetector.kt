@@ -327,7 +327,7 @@ internal class LoopDetector(
         val count = currentThreadCodeLocationVisitCountMap.getOrDefault(codeLocation, 0) + 1
         currentThreadCodeLocationVisitCountMap[codeLocation] = count
         if (mode != Mode.DEFAULT) {
-            currentThreadCodeLocationsHistory += CodeIdentity.RegularCodeLocationIdentity(codeLocation)
+            currentThreadCodeLocationsHistory += RegularCodeLocationIdentity(codeLocation)
         }
         return count
     }
