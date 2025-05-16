@@ -243,14 +243,16 @@ internal class LoopDetector(
         check(currentThreadId == iThread) {
             "The current thread id $currentThreadId is not equal to the one provided $iThread."
         }
+        // Increase the total number of happened operations for live-lock detection
+        totalExecutionsCount++
+        // Ignore unknown code locations.
+        if (codeLocation == UNKNOWN_CODE_LOCATION) {
+            return Decision.Idle
+        }
         replayModeLoopDetectorHelper?.let {
             it.onNextExecution()
             return it.detectLivelock()
         }
-        // Increase the total number of happened operations for live-lock detection
-        totalExecutionsCount++
-        // Ignore unknown code locations.
-        if (codeLocation == UNKNOWN_CODE_LOCATION) return Decision.Idle
         // Update code location visit counter
         val count = updateCodeLocationVisitCounter(codeLocation)
         // In trace debugger mode, check whether the count exceeds
@@ -480,11 +482,11 @@ internal class LoopDetector(
      * Is called after a thread switch back to a thread.
      */
     fun afterThreadSwitch(codeLocation: Int) {
+        if (codeLocation == UNKNOWN_CODE_LOCATION) return
         replayModeLoopDetectorHelper?.let { helper ->
             helper.onNextExecution()
             return
         }
-        if (codeLocation == UNKNOWN_CODE_LOCATION) return
         // After we switch back to the thread, no `visitCodeLocations` will be called
         // before the next switch point as it was called earlier.
         // But we need to track that this point is going to be executed after the switch,
