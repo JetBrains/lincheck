@@ -1652,6 +1652,13 @@ abstract class ManagedStrategy(
                 toObject = atomicMethodDescriptor.getSetValue(receiver, params)
             )
         }
+        // check for livelock and create the method call trace point
+        if (collectTrace) {
+            traceCollector?.checkActiveLockDetected()
+            addBeforeMethodCallTracePoint(threadId, receiver, codeLocation, methodId, className, methodName, params,
+                atomicMethodDescriptor, MethodCallTracePoint.CallType.NORMAL
+            )
+        }
         // in case of an atomic method, we create a switch point before the method call;
         // note that in case we resume atomic method there is no need to create the switch point,
         // since there is already a switch point between the suspension point and resumption
@@ -1667,13 +1674,6 @@ abstract class ManagedStrategy(
         // notify loop detector about the method call
         if (methodSection < AnalysisSectionType.IGNORED) {
             loopDetector.beforeMethodCall(codeLocation, params, methodSection)
-        }
-        // check for livelock and create the method call trace point
-        if (collectTrace) {
-            traceCollector?.checkActiveLockDetected()
-            addBeforeMethodCallTracePoint(threadId, receiver, codeLocation, methodId, className, methodName, params,
-                atomicMethodDescriptor, MethodCallTracePoint.CallType.NORMAL
-            )
         }
         // if the method has certain guarantees, enter the corresponding section
         enterAnalysisSection(threadId, methodSection)
