@@ -433,7 +433,7 @@ internal class LoopDetector(
         if (currentThreadId == -1) {
             setFirstThread(nextThread)
         } else if (currentThreadId != nextThread) {
-            onThreadSwitch(nextThread)
+            beforeThreadSwitch(nextThread)
         }
     }
 
@@ -443,33 +443,30 @@ internal class LoopDetector(
         currentInterleavingHistory.add(InterleavingHistoryNode(threadId = iThread))
     }
 
-    fun onThreadSwitch(iThread: Int) {
-        currentThreadId = iThread
+    /**
+     * Called before a thread switch to another thread.
+     */
+    fun beforeThreadSwitch(nextThreadId: Int) {
+        currentThreadId = nextThreadId
         currentThreadCodeLocationVisitCountMap.clear()
         currentThreadCodeLocationsHistory.clear()
-        onNextThreadSwitchPoint(iThread)
-    }
 
-    private fun onNextThreadSwitchPoint(nextThread: Int) {
-        /* When we're back to some thread, `newSwitchPoint` won't be called before
-         * the switch point in the current thread, as it was called before switch.
-         * So, we're tracking that to maintain the number of performed operations correctly.
-         */
-        if (currentInterleavingHistory.isNotEmpty() && currentInterleavingHistory.last().threadId == nextThread) {
+        if (currentInterleavingHistory.isNotEmpty() &&
+            currentInterleavingHistory.last().threadId == nextThreadId) {
             return
         }
         currentInterleavingHistory.add(
             InterleavingHistoryNode(
-                threadId = nextThread,
+                threadId = nextThreadId,
                 executions = 0,
             )
         )
-        loopTrackingCursor.onNextSwitchPoint(nextThread)
+        loopTrackingCursor.onNextSwitchPoint(nextThreadId)
         replayModeLoopDetectorHelper?.onNextSwitch()
     }
 
     /**
-     * Is called after switch back to a thread.
+     * Is called after a thread switch back to a thread.
      */
     fun afterThreadSwitch(codeLocation: Int) {
         replayModeLoopDetectorHelper?.let { helper ->
