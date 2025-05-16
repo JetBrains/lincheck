@@ -492,9 +492,7 @@ abstract class ManagedStrategy(
             }
             return
         }
-        if (!loopDetector.replayModeEnabled) {
-            loopDetector.onNextExecutionPoint(codeLocation)
-        }
+        loopDetector.onNextExecutionPoint(codeLocation)
     }
 
     private fun processLoopDetectorDecision(

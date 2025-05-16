@@ -475,15 +475,14 @@ internal class LoopDetector(
         updateCodeLocationVisitCounter(codeLocation)
     }
 
-    /**
-     * Called only when replay mode is disabled.
-     */
-    fun onNextExecutionPoint(executionIdentity: Int) {
+    fun onNextExecutionPoint(codeLocation: Int) {
+        if (replayModeEnabled) return
+        if (codeLocation == UNKNOWN_CODE_LOCATION) return
         val lastInterleavingHistoryNode = currentInterleavingHistory.last()
         if (lastInterleavingHistoryNode.cycleOccurred) {
             return /* If we already ran into cycle and haven't switched than no need to track executions */
         }
-        lastInterleavingHistoryNode.addExecution(executionIdentity)
+        lastInterleavingHistoryNode.addExecution(codeLocation)
         loopTrackingCursor.onNextExecutionPoint()
     }
 
