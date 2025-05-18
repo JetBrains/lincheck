@@ -73,16 +73,14 @@ private fun MethodSignature.isSecureRandomMethodToSkip() = when (name) {
 private fun ObjectType.isSecureRandom() = className == "java.security.SecureRandom"
 
 private val byteArrayMethodType = Types.MethodType(
-    listOf(ArrayType(Types.BYTE_TYPE)),
     Types.VOID_TYPE,
+    ArrayType(Types.BYTE_TYPE),
 )
 
 private val secureByteArrayMethodType = Types.MethodType(
-    listOf(
-        ArrayType(Types.BYTE_TYPE),
-        ObjectType("java.security.SecureRandomParameters")
-    ),
     Types.VOID_TYPE,
+    ArrayType(Types.BYTE_TYPE),
+    ObjectType("java.security.SecureRandomParameters"),
 )
 
 private val classMethodsImpl: MutableMap<Class<*>, Set<MethodSignature>> = ConcurrentHashMap()
@@ -112,12 +110,13 @@ private data class RandomBytesDeterministicMethodDescriptor(
         params: Array<Any?>,
         result: Result<Any>,
         saveState: (Result<ByteArray>) -> Unit
-    ) {
+    ): Result<Any> {
         val state = result.map {
             val argument = params[0] as ByteArray
             argument.copyOf()
         }
         saveState(state)
+        return result
     }
 }
 

@@ -37,13 +37,16 @@ internal data class PureDeterministicMethodDescriptor<T>(
         params: Array<Any?>,
         result: Result<T>,
         saveState: (Result<T>) -> Unit
-    ) {
+    ): Result<T> {
         saveState(result.map(::postProcess))
+        return result
     }
     
     @Suppress("UNCHECKED_CAST")
-    private fun postProcess(x: T): T = when (x) {
+    private fun <T> postProcess(x: T): T = when (x) {
         is ByteArray -> x.copyOf() as T
+        is Array<*> -> x.map(::postProcess).toTypedArray() as T
+        is ArrayList<*> -> x.map(::postProcess) as T
         else -> x
     }
 }

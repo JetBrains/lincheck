@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.util.Logger
 import org.jetbrains.kotlinx.lincheck.strategy.native_calls.MethodCallInfo
+import org.jetbrains.kotlinx.lincheck.strategy.native_calls.ReplayableMutableInstance
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
@@ -34,6 +35,7 @@ internal class NativeMethodCallStatesTracker : AbstractTraceDebuggerEventTracker
     private var currentId = AtomicLong(0)
     private val callData = ConcurrentHashMap<TraceDebuggerEventId, DeterministicMethodCallInstantiationData>()
     private val idAdvances = ConcurrentHashMap<TraceDebuggerEventId, TraceDebuggerEventId>()
+    private var isReplaying = false
 
     /**
      * Retrieves the state associated with the given identifier or throws an error if no state is found.
@@ -69,6 +71,15 @@ internal class NativeMethodCallStatesTracker : AbstractTraceDebuggerEventTracker
 
     override fun resetIds() {
         currentId.set(0)
+        if (!isReplaying) {
+            for (callData in callData.values) {
+                when (val state = callData.invocationData) {
+                    is ReplayableMutableInstance -> state.setToReplayMode()
+                    is Result<*> -> (state.getOrNull() as? ReplayableMutableInstance)?.setToReplayMode()
+                }
+            }
+            isReplaying = true
+        }
     }
 
     override fun getNextId(): TraceDebuggerEventId {
