@@ -378,16 +378,20 @@ internal class LoopDetector(
     /**
      * Called before regular method calls.
      */
-    fun beforeMethodCall(codeLocation: Int, params: Array<Any?>, methodSectionType: AnalysisSectionType) {
-        if (methodSectionType == AnalysisSectionType.ATOMIC) {
-            // atomic methods are handled via `visitCodeLocation`,
-            // so we only need to pass method parameters
-            passParameters(params)
-            return
-        }
+    fun beforeMethodCall(codeLocation: Int, params: Array<Any?>) {
         passParameters(params)
         updateCodeLocationVisitCounter(codeLocation)
         updateInterleavingHistory(codeLocation)
+    }
+
+    /**
+     * Called before atomic method calls.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    fun beforeAtomicMethodCall(codeLocation: Int, params: Array<Any?>) {
+        // atomic methods are handled via `visitCodeLocation`,
+        // so we only need to pass method parameters
+        passParameters(params)
     }
 
     /**

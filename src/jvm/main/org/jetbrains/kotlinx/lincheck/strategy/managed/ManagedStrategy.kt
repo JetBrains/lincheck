@@ -1668,12 +1668,13 @@ abstract class ManagedStrategy(
         ) {
             // re-use last call trace point
             val methodCallTracePoint = callStackTrace[threadId]!!.lastOrNull()?.tracePoint
+            loopDetector.beforeAtomicMethodCall(codeLocation, params)
             newSwitchPoint(threadId, codeLocation, beforeMethodCallSwitch = true)
             traceCollector?.addTracePointInternal(methodCallTracePoint)
         }
         // notify loop detector about the method call
-        if (methodSection < AnalysisSectionType.IGNORED) {
-            loopDetector.beforeMethodCall(codeLocation, params, methodSection)
+        if (methodSection < AnalysisSectionType.ATOMIC) {
+            loopDetector.beforeMethodCall(codeLocation, params)
         }
         // if the method has certain guarantees, enter the corresponding section
         enterAnalysisSection(threadId, methodSection)
