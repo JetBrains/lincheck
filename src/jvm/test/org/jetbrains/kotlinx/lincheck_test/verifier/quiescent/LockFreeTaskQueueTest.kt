@@ -10,14 +10,14 @@
 
 package org.jetbrains.kotlinx.lincheck_test.verifier.quiescent
 
-import kotlinx.coroutines.internal.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck_test.*
 import org.jetbrains.kotlinx.lincheck.verifier.quiescent.*
+import org.jetbrains.kotlinx.lincheck_test.datastructures.LockFreeTaskQueue
 
-@Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER", "SubscriberImplementation")
+
 @Param(name = "value", gen = IntGen::class, conf = "1:3")
 class LockFreeTaskQueueTest : AbstractLincheckTest() {
     private val q = LockFreeTaskQueue<Int>(true)

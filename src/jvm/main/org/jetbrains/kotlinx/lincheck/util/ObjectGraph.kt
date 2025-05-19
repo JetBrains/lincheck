@@ -15,6 +15,7 @@ import java.lang.reflect.*
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.util.*
+import kotlin.reflect.jvm.jvmName
 
 
 private typealias FieldCallback = (obj: Any, field: Field, value: Any?) -> Any?
@@ -201,9 +202,8 @@ internal val Any?.isPrimitive get() = when (this) {
 /**
  * Extension property to determine if the given object is a [kotlinx.coroutines] symbol.
  */
-@Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
 private val Any?.isCoroutinesSymbol get() =
-    this is kotlinx.coroutines.internal.Symbol
+    this != null && this::class.jvmName == "kotlinx.coroutines.internal.Symbol"
 
 /**
  * Returns all found fields in the hierarchy.
