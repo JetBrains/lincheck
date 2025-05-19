@@ -2178,7 +2178,7 @@ abstract class ManagedStrategy(
      */
     private fun findOwnerName(owner: Any): String? {
         val threadId = threadScheduler.getCurrentThreadId()
-        // if the current owner is `this` - no owner needed.
+        // if the current owner is `this` - no owner needed
         if (isCurrentStackFrameReceiver(owner)) return null
         // do not prettify thread names
         if (owner is Thread) {
@@ -2187,24 +2187,12 @@ abstract class ManagedStrategy(
         // lookup for the object in local variables and use the local variable name if found
         val shadowStackFrame = shadowStack[threadId]!!.last()
         shadowStackFrame.getLastAccessVariable(owner)?.let { return it }
-        // lookup for a field name.
-        findFieldName(owner)?.let { return it }
-        // lookup for the final field uniquely owning the object
+        // lookup for a field name
+        shadowStackFrame.findInstanceFieldNameReferringTo(owner)?.let { return it }
+        // lookup for the constant referencing the object
         constants[owner]?.let { return it }
-        // if no such field found return object's string representation
+        // otherwise return object's string representation
         return adornedStringRepresentation(owner)
-    }
-
-    private fun findFieldName(instance: Any): String? {
-        val currentThreadId = threadScheduler.getCurrentThreadId()
-        val stackTraceElement = shadowStack[currentThreadId]!!.last()
-        val currentThis = stackTraceElement.instance
-        currentThis?.javaClass?.allDeclaredFieldWithSuperclasses?.forEach { field ->
-            if (readFieldSafely(currentThis, field).getOrNull() === instance) {
-                return field.name
-            }
-        }
-        return null
     }
 
     /**
