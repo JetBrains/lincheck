@@ -14,9 +14,8 @@ import kotlinx.atomicfu.*
 import kotlinx.coroutines.*
 import kotlin.jvm.*
 
-// Implementation take from https://github.com/Kotlin/kotlinx.coroutines/blob/1.7.3/kotlinx-coroutines-core/common/src/internal/LockFreeTaskQueue.kt
-private typealias Core<E> = LockFreeTaskQueueCore<E>
-
+// Implementation is taken from
+//  https://github.com/Kotlin/kotlinx.coroutines/blob/1.7.3/kotlinx-coroutines-core/common/src/internal/LockFreeTaskQueue.kt
 /**
  * Lock-free Multiply-Producer xxx-Consumer Queue for task scheduling purposes.
  *
@@ -316,6 +315,8 @@ private class LockFreeTaskQueueCore<E : Any>(
         fun Long.addFailReason(): Int = if (this and CLOSED_MASK != 0L) ADD_CLOSED else ADD_FROZEN
     }
 }
+
+private typealias Core<E> = LockFreeTaskQueueCore<E>
 
 private inline fun assert(value: () -> Boolean) {
     if (!value()) throw AssertionError()
