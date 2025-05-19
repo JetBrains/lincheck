@@ -34,6 +34,12 @@ internal object AtomicReferenceNames {
         atomicReference: Any,
         parameters: Array<Any?>
     ): AtomicReferenceMethodType {
+        shadowStackFrame.getLocalVariables().forEach { (localVariableName, value) ->
+            value?.findInstanceFieldNameReferringTo(atomicReference)?.let { fieldName ->
+                return AtomicReferenceInLocalVariable(localVariableName, fieldName)
+            }
+        }
+
         val instance = shadowStackFrame.instance
         val fieldName = shadowStackFrame.findInstanceFieldNameReferringTo(atomicReference)
         // val receiverAndName = FieldSearchHelper.findFinalFieldWithOwner(testObject, atomicReference)
@@ -94,11 +100,6 @@ internal sealed interface AtomicReferenceMethodType {
         AtomicReferenceMethodType
 
     /**
-     * AtomicReference method call. Returned if we cannot find the owner of this atomic reference.
-     */
-    data object TreatAsDefaultMethod : AtomicReferenceMethodType
-
-    /**
      * Instance AtomicReference method call. Returned if we found the [owner] and the [fieldName], containing this AtomicArray
      */
     data class AtomicReferenceInstanceMethod(val owner: Any, val fieldName: String) : AtomicReferenceMethodType
@@ -107,4 +108,15 @@ internal sealed interface AtomicReferenceMethodType {
      *  Static AtomicReference method call. Returned if we found the [ownerClass] and the [fieldName], containing this AtomicArray
      */
     data class AtomicReferenceStaticMethod(val ownerClass: Class<*>, val fieldName: String) : AtomicReferenceMethodType
+
+    /**
+     * Represents an atomic reference in a local variable within the method execution flow.
+     * Returned if we found the [localVariable] holding the atomic reference.
+     */
+    data class AtomicReferenceInLocalVariable(val localVariable: String, val fieldName: String) : AtomicReferenceMethodType
+
+    /**
+     * AtomicReference method call. Returned if we cannot find the owner of this atomic reference.
+     */
+    data object TreatAsDefaultMethod : AtomicReferenceMethodType
 }

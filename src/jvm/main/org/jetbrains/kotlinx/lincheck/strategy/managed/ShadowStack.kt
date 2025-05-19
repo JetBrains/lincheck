@@ -28,6 +28,9 @@ internal class ShadowStackFrame(val instance: Any?) {
         val accessCounter: Int,
     )
 
+    fun getLocalVariables(): List<Pair<String, Any?>> =
+        localVariables.map { (name, state) -> name to state.value }
+
     fun getLocalVariable(name: String): Any? {
         return localVariables[name]
     }
@@ -59,4 +62,20 @@ internal class ShadowStackFrame(val instance: Any?) {
         }
         return null
     }
+}
+
+/**
+ * Finds the field name of the instance object (current `this`)
+ * in the current stack frame that directly references the given object.
+ *
+ * @param obj the target object to search for in instance fields of the current stack frame.
+ * @return the name of the field that references the given object, or null if no such field is found.
+ */
+fun Any.findInstanceFieldNameReferringTo(obj: Any): String? {
+    this.javaClass.allDeclaredFieldWithSuperclasses.forEach { field ->
+        if (readFieldSafely(this, field).getOrNull() === obj) {
+            return field.name
+        }
+    }
+    return null
 }

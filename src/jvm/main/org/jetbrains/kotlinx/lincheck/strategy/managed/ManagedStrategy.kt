@@ -2104,15 +2104,6 @@ abstract class ManagedStrategy(
         val shadowStackFrame = shadowStack[threadId]!!.last()
         val atomicReferenceInfo = AtomicReferenceNames.getMethodCallType(shadowStackFrame, receiver, params)
         when (atomicReferenceInfo) {
-            is AtomicArrayMethod -> {
-                tracePoint.initializeOwnerName("${adornedStringRepresentation(atomicReferenceInfo.atomicArray)}[${atomicReferenceInfo.index}]")
-                tracePoint.initializeParameters(params.drop(1))
-            }
-            is InstanceFieldAtomicArrayMethod -> {
-                val receiverName = findOwnerName(atomicReferenceInfo.owner)
-                tracePoint.initializeOwnerName((receiverName?.let { "$it." } ?: "") + "${atomicReferenceInfo.fieldName}[${atomicReferenceInfo.index}]")
-                tracePoint.initializeParameters(params.drop(1))
-            }
             is AtomicReferenceInstanceMethod -> {
                 val receiverName = findOwnerName(atomicReferenceInfo.owner)
                 tracePoint.initializeOwnerName(receiverName?.let { "$it.${atomicReferenceInfo.fieldName}" } ?: atomicReferenceInfo.fieldName)
@@ -2121,6 +2112,19 @@ abstract class ManagedStrategy(
             is AtomicReferenceStaticMethod ->  {
                 tracePoint.initializeOwnerName("${atomicReferenceInfo.ownerClass.simpleName}.${atomicReferenceInfo.fieldName}")
                 tracePoint.initializeParameters(params.toList())
+            }
+            is AtomicReferenceInLocalVariable -> {
+                tracePoint.initializeOwnerName("${atomicReferenceInfo.localVariable}.${atomicReferenceInfo.fieldName}")
+                tracePoint.initializeParameters(params.toList())
+            }
+            is AtomicArrayMethod -> {
+                tracePoint.initializeOwnerName("${adornedStringRepresentation(atomicReferenceInfo.atomicArray)}[${atomicReferenceInfo.index}]")
+                tracePoint.initializeParameters(params.drop(1))
+            }
+            is InstanceFieldAtomicArrayMethod -> {
+                val receiverName = findOwnerName(atomicReferenceInfo.owner)
+                tracePoint.initializeOwnerName((receiverName?.let { "$it." } ?: "") + "${atomicReferenceInfo.fieldName}[${atomicReferenceInfo.index}]")
+                tracePoint.initializeParameters(params.drop(1))
             }
             is StaticFieldAtomicArrayMethod -> {
                 tracePoint.initializeOwnerName("${atomicReferenceInfo.ownerClass.simpleName}.${atomicReferenceInfo.fieldName}[${atomicReferenceInfo.index}]")
