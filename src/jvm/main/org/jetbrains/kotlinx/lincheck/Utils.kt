@@ -148,7 +148,6 @@ internal class StoreExceptionHandler :
     }
 }
 
-@Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
 internal fun <T> CancellableContinuation<T>.cancelByLincheck(promptCancellation: Boolean): CancellationResult {
     val exceptionHandler = context[CoroutineExceptionHandler] as StoreExceptionHandler
     exceptionHandler.exception = null
