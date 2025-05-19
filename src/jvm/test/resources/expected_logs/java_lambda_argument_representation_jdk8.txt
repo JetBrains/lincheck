@@ -1,0 +1,43 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| ----------------------------------------------------------------------------------------------------------------- |
+|                                                     Thread 1                                                      |
+| ----------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                       |
+|   hm.computeIfAbsent(1, Lambda#1): 1 at LambdaRepresentation.operation(LambdaRepresentation.kt:17)                |
+|     size ➜ 0 at HashMap.computeIfAbsent(HashMap.java:1105)                                                        |
+|     threshold ➜ 0 at HashMap.computeIfAbsent(HashMap.java:1105)                                                   |
+|     table ➜ null at HashMap.computeIfAbsent(HashMap.java:1105)                                                    |
+|     resize(): Array<Node>#1 at HashMap.computeIfAbsent(HashMap.java:1107)                                         |
+|       table ➜ null at HashMap.resize(HashMap.java:679)                                                            |
+|       threshold ➜ 0 at HashMap.resize(HashMap.java:681)                                                           |
+|       threshold = 12 at HashMap.resize(HashMap.java:703)                                                          |
+|       table = Array<Node>#1 at HashMap.resize(HashMap.java:706)                                                   |
+|     Array<Node>#1[1] ➜ null at HashMap.computeIfAbsent(HashMap.java:1108)                                         |
+|     Lambda#1.apply(1): 1 at HashMap.computeIfAbsent(HashMap.java:1128)                                            |
+|       $tmp0.invoke(1): 1 at LambdaRepresentation.operation$lambda$0(LambdaRepresentation.kt:17)                   |
+|         invoke(1): 1 at LambdaRepresentation$operation$1.invoke(LambdaRepresentation.kt:17)                       |
+|           LambdaRepresentation#1.getA(): 1 at LambdaRepresentation$operation$1.invoke(LambdaRepresentation.kt:17) |
+|             a ➜ 1 at LambdaRepresentation.getA(LambdaRepresentation.kt:14)                                        |
+|           LambdaRepresentation#1.setA(2) at LambdaRepresentation$operation$1.invoke(LambdaRepresentation.kt:17)   |
+|             a = 2 at LambdaRepresentation.setA(LambdaRepresentation.kt:14)                                        |
+|     Array<Node>#1[1] = Node#1 at HashMap.computeIfAbsent(HashMap.java:1139)                                       |
+|     modCount ➜ 0 at HashMap.computeIfAbsent(HashMap.java:1143)                                                    |
+|     modCount = 1 at HashMap.computeIfAbsent(HashMap.java:1143)                                                    |
+|     size ➜ 0 at HashMap.computeIfAbsent(HashMap.java:1144)                                                        |
+|     size = 1 at HashMap.computeIfAbsent(HashMap.java:1144)                                                        |
+|   result: void                                                                                                    |
+| ----------------------------------------------------------------------------------------------------------------- |

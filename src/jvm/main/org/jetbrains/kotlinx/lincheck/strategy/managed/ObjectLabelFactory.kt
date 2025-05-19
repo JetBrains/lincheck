@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import org.jetbrains.kotlinx.lincheck.transformation.isJavaLambdaClass
 import org.jetbrains.kotlinx.lincheck.util.*
 import kotlin.coroutines.Continuation
 import java.util.*
@@ -73,6 +74,9 @@ object ObjectLabelFactory {
         if (obj is Continuation<*>) {
             return "Continuation#${getObjectNumber(Continuation::class.java, obj)}"
         }
+        if (isJavaLambdaClass(obj.javaClass.simpleName)) {
+            return "Lambda#${getObjectNumber(Lambda::class.java, obj)}"
+        }
         runCatching {
             if (obj.javaClass.isAnonymousClass) {
                 return obj.javaClass.simpleNameForAnonymous
@@ -107,3 +111,5 @@ object ObjectLabelFactory {
         }
     }
 }
+
+private class Lambda
