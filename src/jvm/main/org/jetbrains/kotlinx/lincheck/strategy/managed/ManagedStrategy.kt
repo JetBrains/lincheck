@@ -1652,13 +1652,6 @@ abstract class ManagedStrategy(
                 toObject = atomicMethodDescriptor.getSetValue(receiver, params)
             )
         }
-        // check for livelock and create the method call trace point
-        if (collectTrace) {
-            traceCollector?.checkActiveLockDetected()
-            addBeforeMethodCallTracePoint(threadId, receiver, codeLocation, methodId, className, methodName, params,
-                atomicMethodDescriptor, MethodCallTracePoint.CallType.NORMAL
-            )
-        }
         // in case of an atomic method, we create a switch point before the method call;
         // note that in case we resume atomic method there is no need to create the switch point,
         // since there is already a switch point between the suspension point and resumption
@@ -1666,15 +1659,31 @@ abstract class ManagedStrategy(
             // do not create a trace point on resumption
             !(isTestThread(threadId) && isResumptionMethodCall(threadId, className, methodName, params, atomicMethodDescriptor))
         ) {
+            if (collectTrace) {
+                addBeforeMethodCallTracePoint(threadId, receiver, codeLocation, methodId, className, methodName, params,
+                    atomicMethodDescriptor,
+                    MethodCallTracePoint.CallType.NORMAL,
+                )
+            }
             // re-use last call trace point
             val methodCallTracePoint = callStackTrace[threadId]!!.lastOrNull()?.tracePoint
             loopDetector.beforeAtomicMethodCall(codeLocation, params)
             newSwitchPoint(threadId, codeLocation, beforeMethodCallSwitch = true)
             traceCollector?.addTracePointInternal(methodCallTracePoint)
-        }
-        // notify loop detector about the method call
-        if (methodSection < AnalysisSectionType.ATOMIC) {
-            loopDetector.beforeMethodCall(codeLocation, params)
+        } else {
+            // handle non-atomic methods
+            if (collectTrace) {
+                // check for livelock and create the method call trace point
+                traceCollector?.checkActiveLockDetected()
+                addBeforeMethodCallTracePoint(threadId, receiver, codeLocation, methodId, className, methodName, params,
+                    atomicMethodDescriptor,
+                    MethodCallTracePoint.CallType.NORMAL,
+                )
+            }
+            // notify loop detector about the method call
+            if (methodSection < AnalysisSectionType.ATOMIC) {
+                loopDetector.beforeMethodCall(codeLocation, params)
+            }
         }
         // if the method has certain guarantees, enter the corresponding section
         enterAnalysisSection(threadId, methodSection)
