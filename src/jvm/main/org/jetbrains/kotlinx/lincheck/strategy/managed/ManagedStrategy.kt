@@ -1261,7 +1261,7 @@ abstract class ManagedStrategy(
         val iThread = threadScheduler.getCurrentThreadId()
         val tracePoint = if (collectTrace) {
             ReadTracePoint(
-                ownerRepresentation = if (isStatic) className.toSimpleClassName() else findOwnerName(obj!!),
+                ownerRepresentation = getFieldOwnerName(obj, className, fieldName, isStatic),
                 iThread = iThread,
                 actorId = currentActorId[iThread]!!,
                 callStackTrace = callStackTrace[iThread]!!,
@@ -1339,7 +1339,7 @@ abstract class ManagedStrategy(
         val iThread = threadScheduler.getCurrentThreadId()
         val tracePoint = if (collectTrace) {
             WriteTracePoint(
-                ownerRepresentation = if (isStatic) className.toSimpleClassName() else findOwnerName(obj!!),
+                ownerRepresentation = getFieldOwnerName(obj, className, fieldName, isStatic),
                 iThread = iThread,
                 actorId = currentActorId[iThread]!!,
                 callStackTrace = callStackTrace[iThread]!!,
@@ -2178,6 +2178,23 @@ abstract class ManagedStrategy(
 
     private fun MethodCallTracePoint.initializeParameters(parameters: List<Any?>) =
         initializeParameters(parameters.map { adornedStringRepresentation(it) }, parameters.map { objectFqTypeName(it) })
+
+
+    /**
+     * Returns string representation of the field owner based on the provided parameters.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    private fun getFieldOwnerName(obj: Any?, className: String, fieldName: String, isStatic: Boolean): String? {
+        if (isStatic) {
+            // val threadId = threadScheduler.getCurrentThreadId()
+            // val stackTraceElement = shadowStack[threadId]!!.last()
+            // if (stackTraceElement.instance?.javaClass?.name == className) {
+            //     return ""
+            // }
+            return className.toSimpleClassName()
+        }
+        return findOwnerName(obj!!)
+    }
 
     /**
      * Returns beautiful string representation of the [owner].

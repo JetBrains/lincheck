@@ -40,17 +40,17 @@ internal object AtomicReferenceNames {
         }
 
         val instance = shadowStackFrame.instance
-        val fieldName = shadowStackFrame.findInstanceFieldNameReferringTo(atomicReference)
+        val fieldName = instance?.findInstanceFieldNameReferringTo(atomicReference)
         // val receiverAndName = FieldSearchHelper.findFinalFieldWithOwner(testObject, atomicReference)
         if (fieldName != null) {
             return if (isAtomicArrayIndexMethodCall(atomicReference, parameters)) {
-                InstanceFieldAtomicArrayMethod(instance!!, fieldName, parameters[0] as Int)
+                InstanceFieldAtomicArrayMethod(instance, fieldName, parameters[0] as Int)
                 // when (receiverAndName) {
                 //     is InstanceOwnerWithName -> InstanceFieldAtomicArrayMethod(receiverAndName.owner, receiverAndName.fieldName, parameters[0] as Int)
                 //     is StaticOwnerWithName -> StaticFieldAtomicArrayMethod(receiverAndName.clazz, receiverAndName.fieldName, parameters[0] as Int)
                 // }
             } else {
-                AtomicReferenceInstanceMethod(instance!!, fieldName)
+                AtomicReferenceInstanceMethod(instance, fieldName)
                 // when (receiverAndName) {
                 //     is InstanceOwnerWithName -> AtomicReferenceInstanceMethod(receiverAndName.owner, receiverAndName.fieldName)
                 //     is StaticOwnerWithName -> AtomicReferenceStaticMethod(receiverAndName.clazz, receiverAndName.fieldName)
