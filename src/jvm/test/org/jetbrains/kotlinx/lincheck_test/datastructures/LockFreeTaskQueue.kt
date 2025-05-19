@@ -15,7 +15,7 @@ import kotlinx.coroutines.*
 import kotlin.jvm.*
 
 // Implementation is taken from
-//  https://github.com/Kotlin/kotlinx.coroutines/blob/1.7.3/kotlinx-coroutines-core/common/src/internal/LockFreeTaskQueue.kt
+// https://github.com/Kotlin/kotlinx.coroutines/blob/1.7.3/kotlinx-coroutines-core/common/src/internal/LockFreeTaskQueue.kt
 /**
  * Lock-free Multiply-Producer xxx-Consumer Queue for task scheduling purposes.
  *
