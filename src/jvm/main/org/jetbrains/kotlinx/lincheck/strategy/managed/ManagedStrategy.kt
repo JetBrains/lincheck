@@ -1659,15 +1659,18 @@ abstract class ManagedStrategy(
             // do not create a trace point on resumption
             !isResumptionMethodCall(threadId, className, methodName, params, atomicMethodDescriptor)
         ) {
+            // create a trace point
             val tracePoint = if (collectTrace)
                 addBeforeMethodCallTracePoint(threadId, receiver, codeLocation, methodId, className, methodName, params,
                     atomicMethodDescriptor,
                     MethodCallTracePoint.CallType.NORMAL,
                 )
             else null
-            // re-use last call trace point
+            // create a switch point
             newSwitchPoint(threadId, codeLocation, beforeMethodCallSwitch = true)
+            // notify loop detector
             loopDetector.beforeAtomicMethodCall(codeLocation, params)
+            // add trace point to the trace
             traceCollector?.addTracePointInternal(tracePoint)
         } else {
             // handle non-atomic methods
