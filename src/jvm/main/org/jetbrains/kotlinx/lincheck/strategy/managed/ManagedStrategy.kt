@@ -2040,7 +2040,7 @@ abstract class ManagedStrategy(
         }
         // handle atomic methods
         if (isVarHandle(owner)) {
-            return initializeVarHandleMethodCallTracePoint(tracePoint, owner, params)
+            return initializeVarHandleMethodCallTracePoint(iThread, tracePoint, owner, params)
         }
         if (isAtomicFieldUpdater(owner)) {
             return initializeAtomicUpdaterMethodCallTracePoint(tracePoint, owner!!, params)
@@ -2149,18 +2149,17 @@ abstract class ManagedStrategy(
     }
 
     private fun initializeVarHandleMethodCallTracePoint(
+        threadId: Int,
         tracePoint: MethodCallTracePoint,
         varHandle: Any, // for Java 8, the VarHandle class does not exist
         parameters: Array<Any?>,
     ): MethodCallTracePoint {
-        when (val varHandleMethodType = VarHandleNames.varHandleMethodType(varHandle, parameters)) {
+        val shadowStackFrame = shadowStack[threadId]!!.last()
+        val varHandleMethodType = VarHandleNames.varHandleMethodType(varHandle, parameters)
+        when (varHandleMethodType) {
             is ArrayVarHandleMethod -> {
                 tracePoint.initializeOwnerName("${adornedStringRepresentation(varHandleMethodType.array)}[${varHandleMethodType.index}]")
                 tracePoint.initializeParameters(varHandleMethodType.parameters)
-            }
-            VarHandleMethodType.TreatAsDefaultMethod -> {
-                tracePoint.initializeOwnerName(adornedStringRepresentation(varHandle))
-                tracePoint.initializeParameters(parameters.toList())
             }
             is InstanceVarHandleMethod -> {
                 val receiverName = findOwnerName(varHandleMethodType.owner)
@@ -2168,8 +2167,15 @@ abstract class ManagedStrategy(
                 tracePoint.initializeParameters(varHandleMethodType.parameters)
             }
             is StaticVarHandleMethod -> {
-                tracePoint.initializeOwnerName("${varHandleMethodType.ownerClass.simpleName}.${varHandleMethodType.fieldName}")
+                val clazz = varHandleMethodType.ownerClass
+                val thisClassName = shadowStackFrame.instance?.javaClass?.name
+                val ownerName = if (thisClassName == clazz.name) "" else "${clazz.simpleName}."
+                tracePoint.initializeOwnerName("${ownerName}${varHandleMethodType.fieldName}")
                 tracePoint.initializeParameters(varHandleMethodType.parameters)
+            }
+            VarHandleMethodType.TreatAsDefaultMethod -> {
+                tracePoint.initializeOwnerName(adornedStringRepresentation(varHandle))
+                tracePoint.initializeParameters(parameters.toList())
             }
         }
 
