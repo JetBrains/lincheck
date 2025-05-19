@@ -74,7 +74,7 @@ object ObjectLabelFactory {
         if (obj is Continuation<*>) {
             return "Continuation#${getObjectNumber(Continuation::class.java, obj)}"
         }
-        if (isJavaLambdaClass(obj.javaClass.simpleName)) {
+        if (isJavaLambdaClass(obj.javaClass.name)) {
             return "Lambda#${getObjectNumber(Lambda::class.java, obj)}"
         }
         runCatching {
