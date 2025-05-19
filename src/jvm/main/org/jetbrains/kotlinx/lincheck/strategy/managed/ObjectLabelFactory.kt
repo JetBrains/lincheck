@@ -112,4 +112,7 @@ object ObjectLabelFactory {
     }
 }
 
+/**
+ * Since lambdas do not have a specific type, this class is used as key for [ObjectLabelFactory.getObjectNumber].
+ */
 private class Lambda

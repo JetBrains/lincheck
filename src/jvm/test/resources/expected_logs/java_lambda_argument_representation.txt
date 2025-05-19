@@ -13,32 +13,29 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| ----------------------------------------------------------------------------------------------------------------- |
-|                                                     Thread 1                                                      |
-| ----------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                       |
-|   hm.computeIfAbsent(1, Lambda#1): 1 at LambdaRepresentation.operation(LambdaRepresentation.kt:17)                |
-|     size ➜ 0 at HashMap.computeIfAbsent(HashMap.java:1196)                                                        |
-|     threshold ➜ 0 at HashMap.computeIfAbsent(HashMap.java:1196)                                                   |
-|     table ➜ null at HashMap.computeIfAbsent(HashMap.java:1196)                                                    |
-|     resize(): Array<Node>#1 at HashMap.computeIfAbsent(HashMap.java:1198)                                         |
-|       table ➜ null at HashMap.resize(HashMap.java:676)                                                            |
-|       threshold ➜ 0 at HashMap.resize(HashMap.java:678)                                                           |
-|       threshold = 12 at HashMap.resize(HashMap.java:700)                                                          |
-|       table = Array<Node>#1 at HashMap.resize(HashMap.java:703)                                                   |
-|     Array<Node>#1[1] ➜ null at HashMap.computeIfAbsent(HashMap.java:1199)                                         |
-|     modCount ➜ 0 at HashMap.computeIfAbsent(HashMap.java:1219)                                                    |
-|     mappingFunction.apply(1): 1 at HashMap.computeIfAbsent(HashMap.java:1220)                                     |
-|       $tmp0.invoke(1): 1 at LambdaRepresentation.operation$lambda$0(LambdaRepresentation.kt:17)                   |
-|         invoke(1): 1 at LambdaRepresentation$operation$1.invoke(LambdaRepresentation.kt:17)                       |
-|           LambdaRepresentation#1.getA(): 1 at LambdaRepresentation$operation$1.invoke(LambdaRepresentation.kt:17) |
-|             a ➜ 1 at LambdaRepresentation.getA(LambdaRepresentation.kt:14)                                        |
-|           LambdaRepresentation#1.setA(2) at LambdaRepresentation$operation$1.invoke(LambdaRepresentation.kt:17)   |
-|             a = 2 at LambdaRepresentation.setA(LambdaRepresentation.kt:14)                                        |
-|     modCount ➜ 0 at HashMap.computeIfAbsent(HashMap.java:1221)                                                    |
-|     Array<Node>#1[1] = Node#1 at HashMap.computeIfAbsent(HashMap.java:1232)                                       |
-|     modCount = 1 at HashMap.computeIfAbsent(HashMap.java:1236)                                                    |
-|     size ➜ 0 at HashMap.computeIfAbsent(HashMap.java:1237)                                                        |
-|     size = 1 at HashMap.computeIfAbsent(HashMap.java:1237)                                                        |
-|   result: void                                                                                                    |
-| ----------------------------------------------------------------------------------------------------------------- |
+| ----------------------------------------------------------------------------------------------------------------------------------- |
+|                                                              Thread 1                                                               |
+| ----------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                         |
+|   hm ➜ HashMap#1 at JavaLambdaRepresentationTest.operation(JavaLambdaRepresentationTest.java:25)                                    |
+|   HashMap#1.computeIfAbsent(1, Lambda#1): 1 at JavaLambdaRepresentationTest.operation(JavaLambdaRepresentationTest.java:25)         |
+|     size ➜ 0 at HashMap.computeIfAbsent(HashMap.java:1196)                                                                          |
+|     threshold ➜ 0 at HashMap.computeIfAbsent(HashMap.java:1196)                                                                     |
+|     table ➜ null at HashMap.computeIfAbsent(HashMap.java:1196)                                                                      |
+|     resize(): Array<Node>#1 at HashMap.computeIfAbsent(HashMap.java:1198)                                                           |
+|       table ➜ null at HashMap.resize(HashMap.java:676)                                                                              |
+|       threshold ➜ 0 at HashMap.resize(HashMap.java:678)                                                                             |
+|       threshold = 12 at HashMap.resize(HashMap.java:700)                                                                            |
+|       table = Array<Node>#1 at HashMap.resize(HashMap.java:703)                                                                     |
+|     Array<Node>#1[1] ➜ null at HashMap.computeIfAbsent(HashMap.java:1199)                                                           |
+|     modCount ➜ 0 at HashMap.computeIfAbsent(HashMap.java:1219)                                                                      |
+|     mappingFunction.apply(1): 1 at HashMap.computeIfAbsent(HashMap.java:1220)                                                       |
+|       JavaLambdaRepresentationTest#1.a ➜ 1 at JavaLambdaRepresentationTest.lambda$operation$0(JavaLambdaRepresentationTest.java:25) |
+|       JavaLambdaRepresentationTest#1.a = 2 at JavaLambdaRepresentationTest.lambda$operation$0(JavaLambdaRepresentationTest.java:25) |
+|     modCount ➜ 0 at HashMap.computeIfAbsent(HashMap.java:1221)                                                                      |
+|     Array<Node>#1[1] = Node#1 at HashMap.computeIfAbsent(HashMap.java:1232)                                                         |
+|     modCount = 1 at HashMap.computeIfAbsent(HashMap.java:1236)                                                                      |
+|     size ➜ 0 at HashMap.computeIfAbsent(HashMap.java:1237)                                                                          |
+|     size = 1 at HashMap.computeIfAbsent(HashMap.java:1237)                                                                          |
+|   result: void                                                                                                                      |
+| ----------------------------------------------------------------------------------------------------------------------------------- |
