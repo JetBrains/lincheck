@@ -2194,8 +2194,10 @@ abstract class ManagedStrategy(
         // lookup for the object in local variables and use the local variable name if found
         val shadowStackFrame = shadowStack[threadId]!!.last()
         shadowStackFrame.getLastAccessVariable(owner)?.let { return it }
-        // lookup for a field name
-        shadowStackFrame.findInstanceFieldNameReferringTo(owner)?.let { return it }
+        // lookup for a field name in the current stack frame `this`
+        shadowStackFrame.instance
+            ?.findInstanceFieldNameReferringTo(owner)
+            ?.let { return it }
         // lookup for the constant referencing the object
         constants[owner]?.let { return it }
         // otherwise return object's string representation

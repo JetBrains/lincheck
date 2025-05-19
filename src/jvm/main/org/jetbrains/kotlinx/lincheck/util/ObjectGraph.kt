@@ -206,6 +206,22 @@ private val Any?.isCoroutinesSymbol get() =
     this != null && this::class.jvmName == "kotlinx.coroutines.internal.Symbol"
 
 /**
+ * Finds the field name of [this] object that directly references the given object [obj].
+ *
+ * @param this the object which fields are look-up.
+ * @param obj the target object to search for in instance fields of [this].
+ * @return the name of the field that references the given object, or null if no such field is found.
+ */
+fun Any.findInstanceFieldNameReferringTo(obj: Any): String? {
+    this.javaClass.allDeclaredFieldWithSuperclasses.forEach { field ->
+        if (readFieldSafely(this, field).getOrNull() === obj) {
+            return field.name
+        }
+    }
+    return null
+}
+
+/**
  * Returns all found fields in the hierarchy.
  * Multiple fields with the same name and the same type may be returned
  * if they appear in the subclass and a parent class.

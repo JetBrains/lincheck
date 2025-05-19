@@ -10,9 +10,6 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import org.jetbrains.kotlinx.lincheck.util.allDeclaredFieldWithSuperclasses
-import org.jetbrains.kotlinx.lincheck.util.readFieldSafely
-
 /**
  * Represents a shadow stack frame used to reflect the program's stack in [ManagedStrategy].
  *
@@ -45,37 +42,4 @@ internal class ShadowStackFrame(val instance: Any?) {
             .maxByOrNull { (_, state) -> state.accessCounter }
             ?.key
     }
-
-    /**
-     * Finds the field name of the instance object (current `this`)
-     * in the current stack frame that directly references the given object.
-     *
-     * @param obj the target object to search for in instance fields of the current stack frame.
-     * @return the name of the field that references the given object, or null if no such field is found.
-     */
-    fun findInstanceFieldNameReferringTo(obj: Any): String? {
-        val currentThis = this.instance
-        currentThis?.javaClass?.allDeclaredFieldWithSuperclasses?.forEach { field ->
-            if (readFieldSafely(currentThis, field).getOrNull() === obj) {
-                return field.name
-            }
-        }
-        return null
-    }
-}
-
-/**
- * Finds the field name of the instance object (current `this`)
- * in the current stack frame that directly references the given object.
- *
- * @param obj the target object to search for in instance fields of the current stack frame.
- * @return the name of the field that references the given object, or null if no such field is found.
- */
-fun Any.findInstanceFieldNameReferringTo(obj: Any): String? {
-    this.javaClass.allDeclaredFieldWithSuperclasses.forEach { field ->
-        if (readFieldSafely(this, field).getOrNull() === obj) {
-            return field.name
-        }
-    }
-    return null
 }

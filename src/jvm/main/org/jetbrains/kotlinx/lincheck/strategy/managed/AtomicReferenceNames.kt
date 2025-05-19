@@ -14,8 +14,7 @@ import kotlinx.atomicfu.AtomicArray
 import kotlinx.atomicfu.AtomicBooleanArray
 import kotlinx.atomicfu.AtomicIntArray
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceMethodType.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.OwnerWithName.*
-import java.util.*
+import org.jetbrains.kotlinx.lincheck.util.findInstanceFieldNameReferringTo
 import java.util.concurrent.atomic.AtomicIntegerArray
 import java.util.concurrent.atomic.AtomicLongArray
 import java.util.concurrent.atomic.AtomicReferenceArray
