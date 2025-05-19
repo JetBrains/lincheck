@@ -29,6 +29,22 @@ class ThreadSafeCollectionMutedRepresentationTest: BaseTraceRepresentationTest("
     }
 }
 
+class ThreadSafeCollectionMutedLambdaRepresentationTest: BaseTraceRepresentationTest("thread_safe_collection_muted_lambda") {
+
+    private val concurrentMap = ConcurrentHashMap<Int, Int>()
+    private val innerConcurrentMap = ConcurrentHashMap<Int, Int>()
+    private var a = 1
+
+    override fun operation() {
+        concurrentMap.computeIfAbsent(1) { 
+            a = 5
+            innerConcurrentMap.computeIfAbsent(1) { ++a }
+            ++a 
+        }
+        a++
+    }
+}
+
 class ThreadSafeCollectionUnmutedRepresentationTest: BaseTraceRepresentationTest("thread_safe_collection_unmuted") {
     private val concurrentMap = ConcurrentHashMap<Int, Int>()
     private var a = 1

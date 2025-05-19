@@ -198,7 +198,19 @@ internal fun SingleThreadedTable<TraceNode>.collapseLibraries() = compressNodes 
     if (node.containsDescendant { it is EventNode && it.tracePoint is SwitchEventTracePoint }) 
         return@compressNodes node
     
-    return@compressNodes node.copy()
+    val newNode = node.copy()
+    findNonLibrarySubTrees(node).forEach {  newNode.addChild(it) }
+    return@compressNodes newNode
+}
+
+/**
+ * Finds descendants that should not be hidden.
+ * But not descendants of descendants, aka the root of the subtree that should not be hidden.
+ */
+private fun findNonLibrarySubTrees(node: TraceNode): List<TraceNode> {
+    if (node !is CallNode) return emptyList()
+    if (!shouldBeHidden(node)) return listOf(node)
+    return node.children.map { findNonLibrarySubTrees(it) }.flatten()
 }
 
 private fun SingleThreadedTable<TraceNode>.compressNodes(compressionRule: (TraceNode) -> TraceNode) = map {

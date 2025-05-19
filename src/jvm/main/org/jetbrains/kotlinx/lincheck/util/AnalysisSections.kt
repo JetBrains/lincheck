@@ -209,7 +209,8 @@ internal fun getSectionDefinitionFor(className: String, methodName: String = "")
     isThreadContainerClass(className) -> AnalysisSectionType.NORMAL
     
     // These cannot be ignored by managed strategy
-    className == "kotlin.jvm.functions.Function0" -> AnalysisSectionType.NORMAL 
+    className.startsWith("kotlin.jvm.functions.") -> AnalysisSectionType.NORMAL
+    className.startsWith("java.util.function.") -> AnalysisSectionType.NORMAL
     className == "java.lang.Runnable" -> AnalysisSectionType.NORMAL
 
     // Specific Kotlin classes that need to be transformed
@@ -274,6 +275,7 @@ internal fun isCollectionsLibrary(className: String) = className in setOf(
     "java.util.Deque",
     "java.util.NavigableSet",
     "java.util.SortedSet",
+    "java.util.Map",
 
     // Abstract implementations
     "java.util.AbstractCollection",
