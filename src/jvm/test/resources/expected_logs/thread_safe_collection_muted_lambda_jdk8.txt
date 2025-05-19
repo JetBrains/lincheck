@@ -1,0 +1,38 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                                         Thread 1                                                                                                          |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                                                                                               |
+|   concurrentMap.computeIfAbsent(1, Lambda#1): 7 at ThreadSafeCollectionMutedLambdaRepresentationTest.operation(StdLibRepresentationTests.kt:39)                                                                           |
+|     Lambda#1.apply(1): 7 at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1660)                                                                                                                                |
+|       $tmp0.invoke(1): 7 at ThreadSafeCollectionMutedLambdaRepresentationTest.operation$lambda$0(StdLibRepresentationTests.kt:39)                                                                                         |
+|         invoke(1): 7 at ThreadSafeCollectionMutedLambdaRepresentationTest$operation$1.invoke(StdLibRepresentationTests.kt:39)                                                                                             |
+|           $this.a = 5 at ThreadSafeCollectionMutedLambdaRepresentationTest$operation$1.invoke(StdLibRepresentationTests.kt:40)                                                                                            |
+|           ThreadSafeCollectionMutedLambdaRepresentationTest#1.innerConcurrentMap.computeIfAbsent(1, Lambda#2): 6 at ThreadSafeCollectionMutedLambdaRepresentationTest$operation$1.invoke(StdLibRepresentationTests.kt:41) |
+|             Lambda#2.apply(1): 6 at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1660)                                                                                                                        |
+|               $tmp0.invoke(1): 6 at ThreadSafeCollectionMutedLambdaRepresentationTest$operation$1.invoke$lambda$0(StdLibRepresentationTests.kt:41)                                                                        |
+|                 invoke(1): 6 at ThreadSafeCollectionMutedLambdaRepresentationTest$operation$1$1.invoke(StdLibRepresentationTests.kt:41)                                                                                   |
+|                   $this.a ➜ 5 at ThreadSafeCollectionMutedLambdaRepresentationTest$operation$1$1.invoke(StdLibRepresentationTests.kt:41)                                                                                  |
+|                   $this.a = 6 at ThreadSafeCollectionMutedLambdaRepresentationTest$operation$1$1.invoke(StdLibRepresentationTests.kt:41)                                                                                  |
+|                   $this.a ➜ 6 at ThreadSafeCollectionMutedLambdaRepresentationTest$operation$1$1.invoke(StdLibRepresentationTests.kt:41)                                                                                  |
+|           $this.a ➜ 6 at ThreadSafeCollectionMutedLambdaRepresentationTest$operation$1.invoke(StdLibRepresentationTests.kt:42)                                                                                            |
+|           $this.a = 7 at ThreadSafeCollectionMutedLambdaRepresentationTest$operation$1.invoke(StdLibRepresentationTests.kt:42)                                                                                            |
+|           $this.a ➜ 7 at ThreadSafeCollectionMutedLambdaRepresentationTest$operation$1.invoke(StdLibRepresentationTests.kt:42)                                                                                            |
+|   a ➜ 7 at ThreadSafeCollectionMutedLambdaRepresentationTest.operation(StdLibRepresentationTests.kt:44)                                                                                                                   |
+|   a = 8 at ThreadSafeCollectionMutedLambdaRepresentationTest.operation(StdLibRepresentationTests.kt:44)                                                                                                                   |
+|   result: void                                                                                                                                                                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
