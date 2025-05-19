@@ -1668,10 +1668,10 @@ abstract class ManagedStrategy(
             else null
             // create a switch point
             newSwitchPoint(threadId, codeLocation, beforeMethodCallSwitch = true)
-            // notify loop detector
-            loopDetector.beforeAtomicMethodCall(codeLocation, params)
             // add trace point to the trace
             traceCollector?.addTracePointInternal(tracePoint)
+            // notify loop detector
+            loopDetector.beforeAtomicMethodCall(codeLocation, params)
         } else {
             // handle non-atomic methods
             if (collectTrace) {
