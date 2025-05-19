@@ -35,8 +35,8 @@ internal object AtomicReferenceNames {
         parameters: Array<Any?>
     ): AtomicReferenceMethodType {
         val receiverAndName = FieldSearchHelper.findFinalFieldWithOwner(testObject, atomicReference)
-        return if (receiverAndName != null) {
-            if (isAtomicArrayIndexMethodCall(atomicReference, parameters)) {
+        if (receiverAndName != null) {
+            return if (isAtomicArrayIndexMethodCall(atomicReference, parameters)) {
                 when (receiverAndName) {
                     is InstanceOwnerWithName -> InstanceFieldAtomicArrayMethod(receiverAndName.owner, receiverAndName.fieldName, parameters[0] as Int)
                     is StaticOwnerWithName -> StaticFieldAtomicArrayMethod(receiverAndName.clazz, receiverAndName.fieldName, parameters[0] as Int)
@@ -47,12 +47,11 @@ internal object AtomicReferenceNames {
                     is StaticOwnerWithName -> AtomicReferenceStaticMethod(receiverAndName.clazz, receiverAndName.fieldName)
                 }
             }
+        }
+        return if (isAtomicArrayIndexMethodCall(atomicReference, parameters)) {
+            AtomicArrayMethod(atomicReference, parameters[0] as Int)
         } else {
-            if (isAtomicArrayIndexMethodCall(atomicReference, parameters)) {
-                AtomicArrayMethod(atomicReference, parameters[0] as Int)
-            } else {
-                TreatAsDefaultMethod
-            }
+            TreatAsDefaultMethod
         }
     }
 

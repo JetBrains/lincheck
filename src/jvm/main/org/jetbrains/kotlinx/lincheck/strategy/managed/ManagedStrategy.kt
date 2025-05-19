@@ -2100,7 +2100,8 @@ abstract class ManagedStrategy(
         receiver: Any,
         params: Array<Any?>
     ): MethodCallTracePoint {
-        when (val atomicReferenceInfo = AtomicReferenceNames.getMethodCallType(runner.testInstance, receiver, params)) {
+        val atomicReferenceInfo = AtomicReferenceNames.getMethodCallType(runner.testInstance, receiver, params)
+        when (atomicReferenceInfo) {
             is AtomicArrayMethod -> {
                 tracePoint.initializeOwnerName("${adornedStringRepresentation(atomicReferenceInfo.atomicArray)}[${atomicReferenceInfo.index}]")
                 tracePoint.initializeParameters(params.drop(1))
@@ -2123,7 +2124,7 @@ abstract class ManagedStrategy(
                 tracePoint.initializeOwnerName("${atomicReferenceInfo.ownerClass.simpleName}.${atomicReferenceInfo.fieldName}[${atomicReferenceInfo.index}]")
                 tracePoint.initializeParameters(params.drop(1))
             }
-            AtomicReferenceMethodType.TreatAsDefaultMethod -> {
+            is AtomicReferenceMethodType.TreatAsDefaultMethod -> {
                 tracePoint.initializeOwnerName(adornedStringRepresentation(receiver))
                 tracePoint.initializeParameters(params.toList())
             }
