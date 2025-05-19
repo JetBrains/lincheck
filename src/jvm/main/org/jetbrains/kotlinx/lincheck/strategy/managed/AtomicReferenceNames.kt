@@ -30,22 +30,26 @@ import java.util.concurrent.atomic.AtomicReferenceArray
 internal object AtomicReferenceNames {
 
     internal fun getMethodCallType(
-        testObject: Any,
+        shadowStackFrame: ShadowStackFrame,
         atomicReference: Any,
         parameters: Array<Any?>
     ): AtomicReferenceMethodType {
-        val receiverAndName = FieldSearchHelper.findFinalFieldWithOwner(testObject, atomicReference)
-        if (receiverAndName != null) {
+        val instance = shadowStackFrame.instance
+        val fieldName = shadowStackFrame.findInstanceFieldNameReferringTo(atomicReference)
+        // val receiverAndName = FieldSearchHelper.findFinalFieldWithOwner(testObject, atomicReference)
+        if (fieldName != null) {
             return if (isAtomicArrayIndexMethodCall(atomicReference, parameters)) {
-                when (receiverAndName) {
-                    is InstanceOwnerWithName -> InstanceFieldAtomicArrayMethod(receiverAndName.owner, receiverAndName.fieldName, parameters[0] as Int)
-                    is StaticOwnerWithName -> StaticFieldAtomicArrayMethod(receiverAndName.clazz, receiverAndName.fieldName, parameters[0] as Int)
-                }
+                InstanceFieldAtomicArrayMethod(instance!!, fieldName, parameters[0] as Int)
+                // when (receiverAndName) {
+                //     is InstanceOwnerWithName -> InstanceFieldAtomicArrayMethod(receiverAndName.owner, receiverAndName.fieldName, parameters[0] as Int)
+                //     is StaticOwnerWithName -> StaticFieldAtomicArrayMethod(receiverAndName.clazz, receiverAndName.fieldName, parameters[0] as Int)
+                // }
             } else {
-                when (receiverAndName) {
-                    is InstanceOwnerWithName -> AtomicReferenceInstanceMethod(receiverAndName.owner, receiverAndName.fieldName)
-                    is StaticOwnerWithName -> AtomicReferenceStaticMethod(receiverAndName.clazz, receiverAndName.fieldName)
-                }
+                AtomicReferenceInstanceMethod(instance!!, fieldName)
+                // when (receiverAndName) {
+                //     is InstanceOwnerWithName -> AtomicReferenceInstanceMethod(receiverAndName.owner, receiverAndName.fieldName)
+                //     is StaticOwnerWithName -> AtomicReferenceStaticMethod(receiverAndName.clazz, receiverAndName.fieldName)
+                // }
             }
         }
         return if (isAtomicArrayIndexMethodCall(atomicReference, parameters)) {

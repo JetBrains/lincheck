@@ -2046,7 +2046,7 @@ abstract class ManagedStrategy(
             return initializeAtomicUpdaterMethodCallTracePoint(tracePoint, owner!!, params)
         }
         if (isAtomic(owner) || isAtomicArray(owner)) {
-            return initializeAtomicReferenceMethodCallTracePoint(tracePoint, owner!!, params)
+            return initializeAtomicReferenceMethodCallTracePoint(iThread, tracePoint, owner!!, params)
         }
         if (isUnsafe(owner)) {
             return initializeUnsafeMethodCallTracePoint(tracePoint, owner!!, params)
@@ -2096,11 +2096,13 @@ abstract class ManagedStrategy(
     }
 
     private fun initializeAtomicReferenceMethodCallTracePoint(
+        threadId: ThreadId,
         tracePoint: MethodCallTracePoint,
         receiver: Any,
         params: Array<Any?>
     ): MethodCallTracePoint {
-        val atomicReferenceInfo = AtomicReferenceNames.getMethodCallType(runner.testInstance, receiver, params)
+        val shadowStackFrame = shadowStack[threadId]!!.last()
+        val atomicReferenceInfo = AtomicReferenceNames.getMethodCallType(shadowStackFrame, receiver, params)
         when (atomicReferenceInfo) {
             is AtomicArrayMethod -> {
                 tracePoint.initializeOwnerName("${adornedStringRepresentation(atomicReferenceInfo.atomicArray)}[${atomicReferenceInfo.index}]")
