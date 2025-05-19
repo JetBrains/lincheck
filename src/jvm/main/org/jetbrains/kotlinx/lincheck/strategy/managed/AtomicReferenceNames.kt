@@ -14,7 +14,8 @@ import kotlinx.atomicfu.AtomicArray
 import kotlinx.atomicfu.AtomicBooleanArray
 import kotlinx.atomicfu.AtomicIntArray
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceMethodType.*
-import org.jetbrains.kotlinx.lincheck.util.findInstanceFieldNameReferringTo
+import org.jetbrains.kotlinx.lincheck.util.findInstanceFieldReferringTo
+import java.lang.reflect.Modifier
 import java.util.concurrent.atomic.AtomicIntegerArray
 import java.util.concurrent.atomic.AtomicLongArray
 import java.util.concurrent.atomic.AtomicReferenceArray
@@ -33,31 +34,34 @@ internal object AtomicReferenceNames {
         atomicReference: Any,
         parameters: Array<Any?>
     ): AtomicReferenceMethodType {
+        val isArray = isAtomicArrayIndexMethodCall(atomicReference, parameters)
+
         shadowStackFrame.getLocalVariables().forEach { (localVariableName, value) ->
-            value?.findInstanceFieldNameReferringTo(atomicReference)?.let { fieldName ->
-                return AtomicReferenceInLocalVariable(localVariableName, fieldName)
+            value?.findInstanceFieldReferringTo(atomicReference)?.let { field ->
+                return if (isArray) {
+                    AtomicArrayInLocalVariable(localVariableName, field.name, parameters[0] as Int)
+                } else {
+                    AtomicReferenceInLocalVariable(localVariableName, field.name)
+                }
             }
         }
 
         val instance = shadowStackFrame.instance
-        val fieldName = instance?.findInstanceFieldNameReferringTo(atomicReference)
-        // val receiverAndName = FieldSearchHelper.findFinalFieldWithOwner(testObject, atomicReference)
-        if (fieldName != null) {
-            return if (isAtomicArrayIndexMethodCall(atomicReference, parameters)) {
-                InstanceFieldAtomicArrayMethod(instance, fieldName, parameters[0] as Int)
-                // when (receiverAndName) {
-                //     is InstanceOwnerWithName -> InstanceFieldAtomicArrayMethod(receiverAndName.owner, receiverAndName.fieldName, parameters[0] as Int)
-                //     is StaticOwnerWithName -> StaticFieldAtomicArrayMethod(receiverAndName.clazz, receiverAndName.fieldName, parameters[0] as Int)
-                // }
-            } else {
-                AtomicReferenceInstanceMethod(instance, fieldName)
-                // when (receiverAndName) {
-                //     is InstanceOwnerWithName -> AtomicReferenceInstanceMethod(receiverAndName.owner, receiverAndName.fieldName)
-                //     is StaticOwnerWithName -> AtomicReferenceStaticMethod(receiverAndName.clazz, receiverAndName.fieldName)
-                // }
+        val field = instance?.findInstanceFieldReferringTo(atomicReference)
+        if (field != null) {
+            val isStatic = Modifier.isStatic(field.modifiers)
+            return when {
+                isArray && isStatic ->
+                    StaticFieldAtomicArrayMethod(field.declaringClass, field.name, parameters[0] as Int)
+                isStatic ->
+                    AtomicReferenceStaticMethod(field.declaringClass, field.name)
+                isArray ->
+                    InstanceFieldAtomicArrayMethod(instance, field.name, parameters[0] as Int)
+                else ->
+                    AtomicReferenceInstanceMethod(instance, field.name)
             }
         }
-        return if (isAtomicArrayIndexMethodCall(atomicReference, parameters)) {
+        return if (isArray) {
             AtomicArrayMethod(atomicReference, parameters[0] as Int)
         } else {
             TreatAsDefaultMethod
@@ -113,6 +117,12 @@ internal sealed interface AtomicReferenceMethodType {
      * Returned if we found the [localVariable] holding the atomic reference.
      */
     data class AtomicReferenceInLocalVariable(val localVariable: String, val fieldName: String) : AtomicReferenceMethodType
+
+    /**
+     * Represents an atomic reference in a local variable within the method execution flow.
+     * Returned if we found the [localVariable] holding the atomic reference.
+     */
+    data class AtomicArrayInLocalVariable(val localVariable: String, val fieldName: String, val index: Int) : AtomicReferenceMethodType
 
     /**
      * AtomicReference method call. Returned if we cannot find the owner of this atomic reference.

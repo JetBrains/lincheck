@@ -212,10 +212,10 @@ private val Any?.isCoroutinesSymbol get() =
  * @param obj the target object to search for in instance fields of [this].
  * @return the name of the field that references the given object, or null if no such field is found.
  */
-fun Any.findInstanceFieldNameReferringTo(obj: Any): String? {
+fun Any.findInstanceFieldReferringTo(obj: Any): Field? {
     this.javaClass.allDeclaredFieldWithSuperclasses.forEach { field ->
         if (readFieldSafely(this, field).getOrNull() === obj) {
-            return field.name
+            return field
         }
     }
     return null
