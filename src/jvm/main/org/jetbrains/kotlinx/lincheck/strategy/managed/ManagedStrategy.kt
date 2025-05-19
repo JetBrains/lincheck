@@ -1657,7 +1657,7 @@ abstract class ManagedStrategy(
         // since there is already a switch point between the suspension point and resumption
         if (methodSection == AnalysisSectionType.ATOMIC &&
             // do not create a trace point on resumption
-            !(isTestThread(threadId) && isResumptionMethodCall(threadId, className, methodName, params, atomicMethodDescriptor))
+            !isResumptionMethodCall(threadId, className, methodName, params, atomicMethodDescriptor)
         ) {
             if (collectTrace) {
                 addBeforeMethodCallTracePoint(threadId, receiver, codeLocation, methodId, className, methodName, params,
@@ -1880,9 +1880,8 @@ abstract class ManagedStrategy(
         methodParams: Array<Any?>,
         atomicMethodDescriptor: AtomicMethodDescriptor?,
     ): Boolean {
-        check(isTestThread(threadId)) {
-            "Special coroutines handling methods should only be called from test threads"
-        }
+        // special coroutines handling methods can only be called from test threads
+        if (!isTestThread(threadId)) return false
         // optimization - first quickly check if the method is atomics API method,
         // in which case it cannot be suspended/resumed method
         if (atomicMethodDescriptor != null) return false
