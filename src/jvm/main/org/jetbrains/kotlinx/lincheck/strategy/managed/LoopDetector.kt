@@ -457,6 +457,11 @@ internal class LoopDetector(
         currentInterleavingHistory.add(InterleavingHistoryNode(threadId = iThread))
     }
 
+    fun onThreadFinish(iThread: Int) {
+        check(iThread == currentThreadId)
+        afterCodeLocation(codeLocation = UNKNOWN_CODE_LOCATION)
+    }
+
     /**
      * Called before a thread switch to another thread.
      */
@@ -494,7 +499,6 @@ internal class LoopDetector(
 
     fun afterCodeLocation(codeLocation: Int) {
         if (replayModeEnabled) return
-        if (codeLocation == UNKNOWN_CODE_LOCATION) return
         updateInterleavingHistory(codeLocation)
     }
 

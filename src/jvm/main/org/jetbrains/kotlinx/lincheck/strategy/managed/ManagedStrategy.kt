@@ -932,6 +932,7 @@ abstract class ManagedStrategy(
     open fun onThreadFinish(threadId: ThreadId) {
         threadScheduler.awaitTurn(threadId)
         threadScheduler.finishThread(threadId)
+        loopDetector.onThreadFinish(threadId)
         onThreadFinishForTraceCollector()
         unblockJoiningThreads(threadId)
         tryAbortingUserThreads(threadId, blockingReason = null)
