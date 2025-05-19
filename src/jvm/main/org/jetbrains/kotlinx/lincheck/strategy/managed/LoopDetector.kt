@@ -19,7 +19,6 @@ import org.jetbrains.kotlinx.lincheck.trace.SwitchEventTracePoint
 import org.jetbrains.kotlinx.lincheck.trace.TracePoint
 import org.jetbrains.kotlinx.lincheck.transformation.MethodIds
 import org.jetbrains.kotlinx.lincheck.transformation.CodeLocations
-import org.jetbrains.kotlinx.lincheck.util.AnalysisSectionType
 import java.util.ArrayList
 
 /**
