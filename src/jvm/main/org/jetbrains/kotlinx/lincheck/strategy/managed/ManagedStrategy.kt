@@ -2196,11 +2196,11 @@ abstract class ManagedStrategy(
     @Suppress("UNUSED_PARAMETER")
     private fun getFieldOwnerName(obj: Any?, className: String, fieldName: String, isStatic: Boolean): String? {
         if (isStatic) {
-            // val threadId = threadScheduler.getCurrentThreadId()
-            // val stackTraceElement = shadowStack[threadId]!!.last()
-            // if (stackTraceElement.instance?.javaClass?.name == className) {
-            //     return ""
-            // }
+            val threadId = threadScheduler.getCurrentThreadId()
+            val stackTraceElement = shadowStack[threadId]!!.last()
+            if (stackTraceElement.instance?.javaClass?.name == className) {
+                return null
+            }
             return className.toSimpleClassName()
         }
         return findOwnerName(obj!!)
