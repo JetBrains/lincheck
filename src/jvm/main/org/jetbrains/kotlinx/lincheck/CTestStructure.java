@@ -300,7 +300,7 @@ public class CTestStructure {
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
-    private static EnumGen<?> createEnumGenerator(String configuration, RandomProvider randomProvider, Class<? extends Enum<?>> enumClass) {
+    static EnumGen<?> createEnumGenerator(String configuration, RandomProvider randomProvider, Class<? extends Enum<?>> enumClass) {
         return new EnumGen(enumClass, randomProvider, configuration);
     }
 
