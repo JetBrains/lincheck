@@ -13,6 +13,7 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.paramgen.*
 import org.jetbrains.kotlinx.lincheck.CTestStructure.OperationGroup
 import org.jetbrains.kotlinx.lincheck.strategy.runIteration
+import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.ensureObjectIsTransformed
@@ -87,27 +88,101 @@ object Lincheck {
         val testStructure = configuration.getCTestStructure()
         val options = configuration.getOptions()
         LinChecker(testClass, testStructure, options).check()
-        // val method = ConcurrentHashMap<Int, String>::contains.javaMethod!!
     }
 
     class DataStructureTestConfiguration<T> {
+        internal var constructor: Constructor<T>? = null
+            private set
+
         private val _operations: MutableList<Operation> = mutableListOf()
         internal val operations: List<Operation> get() = _operations
 
+        /**
+         * TODO
+         */
+        fun constructor(block: () -> T) {
+            constructor = block
+        }
+
+        /**
+         * TODO
+         */
         fun operation(function: KFunction<*>): Operation {
             val method = function.javaMethod ?: error("Cannot get Java method for $function")
-            return Operation(method)
+            return Operation(method).also { _operations.add(it) }
         }
 
+        /**
+         * TODO
+         */
         fun operation1(function: KFunction1<*, *>): Operation {
             val method = function.javaMethod ?: error("Cannot get Java method for $function")
-            return Operation(method)
+            return Operation(method).also { _operations.add(it) }
         }
 
+        /**
+         * TODO
+         */
         fun operation2(function: KFunction2<*, *, *>): Operation {
             val method = function.javaMethod ?: error("Cannot get Java method for $function")
-            return Operation(method)
+            return Operation(method).also { _operations.add(it) }
         }
+
+        internal var validation: Method? = null
+            private set
+
+        /**
+         * TODO
+         */
+        fun validation(function: KFunction<*>) {
+            val method = function.javaMethod ?: error("Cannot get Java method for $function")
+            validation = method
+        }
+
+        /**
+         * TODO
+         */
+        var mode: Mode = DEFAULT_LINCHECK_MODE
+
+        /**
+         * TODO
+         */
+        var iterations: Int = CTestConfiguration.DEFAULT_ITERATIONS
+
+        /**
+         * TODO
+         */
+        var invocationsPerIteration: Int = CTestConfiguration.DEFAULT_INVOCATIONS
+
+        /**
+         * TODO
+         */
+        var threads: Int = CTestConfiguration.DEFAULT_THREADS
+
+        /**
+         * TODO
+         */
+        var actorsPerThread: Int = CTestConfiguration.DEFAULT_ACTORS_PER_THREAD
+
+        /**
+         * TODO
+         */
+        var actorsBefore: Int = CTestConfiguration.DEFAULT_ACTORS_BEFORE
+
+        /**
+         * TODO
+         */
+        var actorsAfter: Int = CTestConfiguration.DEFAULT_ACTORS_AFTER
+
+        /**
+         * TODO
+         */
+        var minimizeFailedScenario: Boolean = CTestConfiguration.DEFAULT_MINIMIZE_ERROR
+
+        /**
+         * TODO
+         */
+        var sequentialSpecification: Class<*>? = null
 
     }
 
@@ -118,6 +193,8 @@ object Lincheck {
         var cancelOnSuspension: Boolean = false
         var promptCancellation: Boolean = false
     }
+
+    enum class Mode { STRESS, MODEL_CHECKING }
 }
 
 internal class GeneralPurposeModelCheckingWrapper {
@@ -136,11 +213,33 @@ private class NoExceptionVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecif
 }
 
 private fun Lincheck.DataStructureTestConfiguration<*>.getTestClass(): Class<*> {
-    TODO()
+    val instance = getInstance()!!
+    return instance::class.java
+}
+
+private fun<T> Lincheck.DataStructureTestConfiguration<T>.getInstance(): T {
+    return (constructor?.invoke() as T) ?: error("No constructor for data structure was provided")
 }
 
 private fun Lincheck.DataStructureTestConfiguration<*>.getOptions(): Options<*, *> {
-    TODO()
+    // create options according to the chosen strategy
+    val options = when (mode) {
+        Lincheck.Mode.STRESS -> StressOptions()
+        Lincheck.Mode.MODEL_CHECKING -> ModelCheckingOptions()
+    }
+
+    // fill common options
+    options.iterations(iterations)
+    options.invocationsPerIteration(invocationsPerIteration)
+    options.threads(threads)
+    options.actorsPerThread(actorsPerThread)
+    options.actorsBefore(actorsBefore)
+    options.actorsAfter(actorsAfter)
+    options.sequentialSpecification(sequentialSpecification)
+
+    // TODO: handle model checking specific options
+
+    return options
 }
 
 private fun Lincheck.DataStructureTestConfiguration<*>.getCTestStructure(): CTestStructure {
@@ -168,6 +267,7 @@ private fun Lincheck.DataStructureTestConfiguration<*>.getCTestStructure(): CTes
     val operationGroups: List<OperationGroup> = emptyList()
     // val validationFunction = TODO()
 
+    // TODO: pass constructor!
     return CTestStructure(actorsGenerators, parameterGenerators, operationGroups, null, null, randomProvider)
 }
 
@@ -193,4 +293,8 @@ private fun <T> Class<T>.getDefaultParameterGenerator(randomProvider: RandomProv
     }
 }
 
+private typealias Constructor<T> = () -> T
+
 internal const val DEFAULT_INVOCATIONS_COUNT = 50_000
+
+private val DEFAULT_LINCHECK_MODE = Lincheck.Mode.STRESS
