@@ -10,29 +10,25 @@
 
 package org.jetbrains.kotlinx.lincheck_test.gpmc
 
-import org.jetbrains.kotlinx.lincheck.ExperimentalModelCheckingAPI
-import org.jetbrains.kotlinx.lincheck.runConcurrentTest
+import org.jetbrains.kotlinx.lincheck.Lincheck.runConcurrentTest
 import org.junit.Test
 import java.util.concurrent.CyclicBarrier
 import kotlin.concurrent.thread
 
-@OptIn(ExperimentalModelCheckingAPI::class)
 class CyclicBarrierTest {
 
     @Test
-    fun testBarrier() {
-        runConcurrentTest(10000) {
-            val barrier = CyclicBarrier(2)
+    fun testBarrier() = runConcurrentTest(10000) {
+        val barrier = CyclicBarrier(2)
 
-            val t1 = thread {
-                barrier.await()
-            }
-            val t2 = thread {
-                barrier.await()
-            }
-
-            t1.join()
-            t2.join()
+        val t1 = thread {
+            barrier.await()
         }
+        val t2 = thread {
+            barrier.await()
+        }
+
+        t1.join()
+        t2.join()
     }
 }

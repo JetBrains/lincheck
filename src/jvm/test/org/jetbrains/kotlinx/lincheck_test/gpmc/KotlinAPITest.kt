@@ -10,16 +10,14 @@
 
 package org.jetbrains.kotlinx.lincheck_test.gpmc
 
-import org.jetbrains.kotlinx.lincheck.ExperimentalModelCheckingAPI
+import org.jetbrains.kotlinx.lincheck.Lincheck.runConcurrentTest
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
-import org.jetbrains.kotlinx.lincheck.runConcurrentTest
 import kotlin.concurrent.thread
 import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Assert
 import org.junit.Test
 
-@OptIn(ExperimentalModelCheckingAPI::class)
 class KotlinAPITest {
 
     @Test(expected = LincheckAssertionError::class)

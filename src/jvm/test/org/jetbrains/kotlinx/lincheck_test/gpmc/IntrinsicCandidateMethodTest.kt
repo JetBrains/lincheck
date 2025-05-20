@@ -13,8 +13,7 @@ package org.jetbrains.kotlinx.lincheck_test.gpmc
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import org.jetbrains.kotlinx.lincheck.ExperimentalModelCheckingAPI
-import org.jetbrains.kotlinx.lincheck.runConcurrentTest
+import org.jetbrains.kotlinx.lincheck.Lincheck
 import org.junit.Test
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -27,12 +26,11 @@ import kotlin.concurrent.thread
  *
  * See [Invalid thread switch attempt](https://github.com/JetBrains/lincheck/issues/576).
  */
-@OptIn(ExperimentalModelCheckingAPI::class)
 class IntrinsicCandidateMethodTest {
 
     @Test
     fun testArraysCopyOfCall() {
-        runConcurrentTest(2000) {
+        Lincheck.runConcurrentTest(2000) {
             val threads = mutableListOf<Thread>()
             val l = CountDownLatch(1)
 
@@ -59,7 +57,7 @@ class IntrinsicCandidateMethodTest {
 
     @Test
     fun testListOfCall() {
-        runConcurrentTest(2000) {
+        Lincheck.runConcurrentTest(2000) {
             // at least 3 threads required to trigger a bug
             Executors.newFixedThreadPool(3).asCoroutineDispatcher().use { dispatcher ->
                 runBlocking(dispatcher) {
@@ -75,7 +73,7 @@ class IntrinsicCandidateMethodTest {
 
     @Test
     fun testVarArgsSpread() {
-        runConcurrentTest(2000) {
+        Lincheck.runConcurrentTest(2000) {
             // at least 3 threads required to trigger a bug
             Executors.newFixedThreadPool(3).asCoroutineDispatcher().use { dispatcher ->
                 runBlocking(dispatcher) {

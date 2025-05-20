@@ -11,10 +11,13 @@
 package org.jetbrains.kotlinx.lincheck_test.gpmc;
 
 import java.util.concurrent.ConcurrentLinkedDeque;
+
+import org.jetbrains.kotlinx.lincheck.Lincheck;
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError;
 import org.junit.Test;
-import static org.junit.Assert.assertFalse;
+
 import static org.jetbrains.kotlinx.lincheck.Lincheck.runConcurrentTest;
+import static org.junit.Assert.assertFalse;
 
 public class JavaAPITest {
 
@@ -52,7 +55,7 @@ public class JavaAPITest {
 
     @Test(expected = LincheckAssertionError.class)
     public void testLambda() {
-        runConcurrentTest(() -> {
+        Lincheck.runConcurrentTest(() -> {
             int[] results = new int[2];
 
             ConcurrentLinkedDeque<Integer> deque = new ConcurrentLinkedDeque<>();
