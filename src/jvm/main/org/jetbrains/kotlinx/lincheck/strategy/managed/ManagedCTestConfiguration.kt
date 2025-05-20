@@ -55,19 +55,3 @@ abstract class ManagedCTestConfiguration(
         val DEFAULT_GUARANTEES = listOf<ManagedStrategyGuarantee>()
     }
 }
-
-/**
- * Some atomic primitives are common and can be analyzed from a higher level
- * of abstraction or can not be transformed (i.e, Unsafe or AFU).
- * Thus, we do not transform them and improve the trace representation.
- *
- * For example, in the execution trace where `AtomicLong.get()` happens,
- * we print the code location where this atomic method is called
- * instead of going deeper inside it.
- */
-private fun isTrustedPrimitive(className: String) =
-    className == "java.lang.invoke.VarHandle" ||
-    className == "sun.misc.Unsafe" ||
-    className == "jdk.internal.misc.Unsafe" ||
-    className.startsWith("java.util.concurrent.atomic.Atomic") || // AFUs and Atomic[Integer/Long/...]
-    className.startsWith("kotlinx.atomicfu.Atomic")
