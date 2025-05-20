@@ -20,10 +20,19 @@ import java.lang.reflect.*
  * Configuration for [stress][StressStrategy] strategy.
  */
 class StressCTestConfiguration(
-    testClass: Class<*>, iterations: Int, threads: Int, actorsPerThread: Int, actorsBefore: Int, actorsAfter: Int,
-    generatorClass: Class<out ExecutionGenerator>, verifierClass: Class<out Verifier>,
-    val invocationsPerIteration: Int, minimizeFailedScenario: Boolean,
-    sequentialSpecification: Class<*>, timeoutMs: Long, customScenarios: List<ExecutionScenario>
+    testClass: Class<*>,
+    iterations: Int,
+    threads: Int,
+    actorsPerThread: Int,
+    actorsBefore: Int,
+    actorsAfter: Int,
+    generatorClass: Class<out ExecutionGenerator>,
+    verifierClass: Class<out Verifier>,
+    val invocationsPerIteration: Int,
+    minimizeFailedScenario: Boolean,
+    sequentialSpecification: Class<*>,
+    timeoutMs: Long,
+    customScenarios: List<ExecutionScenario>
 ) : CTestConfiguration(
     testClass = testClass,
     iterations = iterations,
@@ -41,9 +50,12 @@ class StressCTestConfiguration(
 
     override val instrumentationMode: InstrumentationMode get() = STRESS
 
-    override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunction: Actor?,
-                                stateRepresentationMethod: Method?) =
-        StressStrategy(this, testClass, scenario, validationFunction, stateRepresentationMethod)
+    override fun createStrategy(
+        testClass: Class<*>,
+        scenario: ExecutionScenario,
+        validationFunction: Actor?,
+        stateRepresentationMethod: Method?
+    ) = StressStrategy(this, testClass, scenario, validationFunction, stateRepresentationMethod)
 
     companion object {
         const val DEFAULT_INVOCATIONS = 10000
