@@ -13,13 +13,15 @@ package org.jetbrains.kotlinx.lincheck.transformation.transformers
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import sun.nio.ch.lincheck.*
-import sun.misc.Unsafe
 import java.util.concurrent.locks.LockSupport
+import sun.misc.Unsafe
 
 /**
- * [ParkingTransformer] tracks [Unsafe.park], [Unsafe.unpark], [LockSupport.park], [LockSupport.park] with blocker,
- * [LockSupport.parkNanos], [LockSupport.parkNanos] with blocker, [LockSupport.parkUntil], [LockSupport.parkUntil] with blocker,
- * and [LockSupport.unpark] method calls, injecting invocations of [EventTracker.park] and [EventTracker.unpark] methods.
+ * The ParkingTransformer class is responsible for inserting bytecode instrumentation
+ * for methods related to thread parking and unparking APIs.
+ *
+ * It handles the instrumentation of both the [LockSupport] and [Unsafe] classes,
+ * which are commonly used for thread parking.
  */
 internal class ParkingTransformer(
     fileName: String,
