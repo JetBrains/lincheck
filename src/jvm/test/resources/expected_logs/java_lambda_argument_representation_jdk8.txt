@@ -1,0 +1,37 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| -------------------------------------------------------------------------------------------------------------------- |
+|                                                       Thread 1                                                       |
+| -------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                          |
+|   hm ➜ HashMap#1 at JavaLambdaRepresentationTest.operation(JavaLambdaRepresentationTest.java:24)                     |
+|   hm.computeIfAbsent(1, Lambda#1): 1 at JavaLambdaRepresentationTest.operation(JavaLambdaRepresentationTest.java:24) |
+|     size ➜ 0 at HashMap.computeIfAbsent(HashMap.java:1105)                                                           |
+|     threshold ➜ 0 at HashMap.computeIfAbsent(HashMap.java:1105)                                                      |
+|     table ➜ null at HashMap.computeIfAbsent(HashMap.java:1105)                                                       |
+|     resize(): Array<Node>#1 at HashMap.computeIfAbsent(HashMap.java:1107)                                            |
+|       table ➜ null at HashMap.resize(HashMap.java:679)                                                               |
+|       threshold ➜ 0 at HashMap.resize(HashMap.java:681)                                                              |
+|       threshold = 12 at HashMap.resize(HashMap.java:703)                                                             |
+|       table = Array<Node>#1 at HashMap.resize(HashMap.java:706)                                                      |
+|     Array<Node>#1[1] ➜ null at HashMap.computeIfAbsent(HashMap.java:1108)                                            |
+|     Array<Node>#1[1] = Node#1 at HashMap.computeIfAbsent(HashMap.java:1139)                                          |
+|     modCount ➜ 0 at HashMap.computeIfAbsent(HashMap.java:1143)                                                       |
+|     modCount = 1 at HashMap.computeIfAbsent(HashMap.java:1143)                                                       |
+|     size ➜ 0 at HashMap.computeIfAbsent(HashMap.java:1144)                                                           |
+|     size = 1 at HashMap.computeIfAbsent(HashMap.java:1144)                                                           |
+|   result: void                                                                                                       |
+| -------------------------------------------------------------------------------------------------------------------- |
