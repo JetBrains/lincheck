@@ -135,7 +135,6 @@ fun JavaCompile.setupJavaToolchain() {
 fun KotlinCompile.setupKotlinToolchain() {
     val jdkToolchainVersion: String by project
     kotlinJavaToolchain.toolchain.use(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(jdkToolchainVersion)) })
-//    compilerOptions.freeCompilerArgs.add("-Xlambdas=class")
 }
 
 tasks {
