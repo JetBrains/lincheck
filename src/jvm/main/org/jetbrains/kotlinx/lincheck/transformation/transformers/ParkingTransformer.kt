@@ -14,9 +14,11 @@ import org.objectweb.asm.commons.GeneratorAdapter
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import sun.nio.ch.lincheck.*
 import sun.misc.Unsafe
+import java.util.concurrent.locks.LockSupport
 
 /**
- * [ParkingTransformer] tracks [Unsafe.park] and [Unsafe.unpark] method calls,
+ * [ParkingTransformer] tracks [Unsafe.park], [Unsafe.unpark], [LockSupport.park], [LockSupport.park] with blocker,
+ * [LockSupport.parkNanos], [LockSupport.parkNanos] with blocker, and [LockSupport.unpark] method calls,
  * injecting invocations of [EventTracker.park] and [EventTracker.unpark] methods.
  */
 internal class ParkingTransformer(
@@ -50,6 +52,34 @@ internal class ParkingTransformer(
                 )
             }
 
+            isLockSupport(owner) && (name == "park" || name == "parkNanos") -> {
+                invokeIfInAnalyzedCode(
+                    original = {
+                        visitMethodInsn(opcode, owner, name, desc, itf)
+                    },
+                    instrumented = {
+                        val withNanos = name == "parkNanos"
+                        val withBlocker = if (withNanos) {
+                            desc == "(Ljava/lang/Object;J)V"
+                        } else {
+                            desc == "(Ljava/lang/Object;)V"
+                        }
+                        processLockSupportPark(withBlocker = withBlocker, withNanos = withNanos)
+                    }
+                )
+            }
+
+            isLockSupport(owner) && name == "unpark" && desc == "(Ljava/lang/Thread;)V" -> {
+                invokeIfInAnalyzedCode(
+                    original = {
+                        visitMethodInsn(opcode, owner, name, desc, itf)
+                    },
+                    instrumented = {
+                        processLockSupportUnpark()
+                    }
+                )
+            }
+
             else -> {
                 visitMethodInsn(opcode, owner, name, desc, itf)
             }
@@ -76,4 +106,24 @@ internal class ParkingTransformer(
 
     private fun isUnsafe(owner: String) =
         (owner == "sun/misc/Unsafe" || owner == "jdk/internal/misc/Unsafe")
+
+    private fun isLockSupport(owner: String) =
+        (owner == "java/util/concurrent/locks/LockSupport")
+
+    private fun GeneratorAdapter.processLockSupportPark(withBlocker: Boolean = false, withNanos: Boolean = false) {
+        if (withNanos) pop() // pop nanos
+        if (withBlocker) pop() // pop blocker
+        loadNewCodeLocationId()
+        dup()
+        invokeStatic(Injections::beforePark)
+        invokeBeforeEventIfPluginEnabled("park")
+        invokeStatic(Injections::park)
+    }
+
+    private fun GeneratorAdapter.processLockSupportUnpark() {
+        // Thread parameter is already on the stack
+        loadNewCodeLocationId()
+        invokeStatic(Injections::unpark)
+        invokeBeforeEventIfPluginEnabled("unpark")
+    }
 }
