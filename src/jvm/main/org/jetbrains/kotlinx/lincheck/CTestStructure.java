@@ -32,14 +32,23 @@ public class CTestStructure {
     public final List<ActorGenerator> actorGenerators;
     public final List<ParameterGenerator<?>> parameterGenerators;
     public final List<OperationGroup> operationGroups;
+
     @Nullable
     public final Actor validationFunction;
+
+    @Nullable
     public final Method stateRepresentation;
 
     public final RandomProvider randomProvider;
 
-    private CTestStructure(List<ActorGenerator> actorGenerators, List<ParameterGenerator<?>> parameterGenerators, List<OperationGroup> operationGroups,
-                           @Nullable Actor validationFunction, Method stateRepresentation, RandomProvider randomProvider) {
+    CTestStructure(
+            List<ActorGenerator> actorGenerators,
+            List<ParameterGenerator<?>> parameterGenerators,
+            List<OperationGroup> operationGroups,
+            @Nullable Actor validationFunction,
+            @Nullable Method stateRepresentation,
+            RandomProvider randomProvider
+    ) {
         this.actorGenerators = actorGenerators;
         this.parameterGenerators = parameterGenerators;
         this.operationGroups = operationGroups;
@@ -233,12 +242,14 @@ public class CTestStructure {
         return methods;
     }
 
-    private static ParameterGenerator<?> getOrCreateGenerator(Method m,
-                                                              Parameter p,
-                                                              String nameInOperation,
-                                                              Map<String, ParameterGenerator<?>> namedGens,
-                                                              Map<Class<?>, ParameterGenerator<?>> defaultGens,
-                                                              RandomProvider randomProvider) {
+    private static ParameterGenerator<?> getOrCreateGenerator(
+            Method m,
+            Parameter p,
+            String nameInOperation,
+            Map<String, ParameterGenerator<?>> namedGens,
+            Map<Class<?>, ParameterGenerator<?>> defaultGens,
+            RandomProvider randomProvider
+    ) {
         // Read @Param annotation on the parameter
         Param paramAnn = p.getAnnotation(Param.class);
         // If this annotation not presented use named generator based on name presented in @Operation or parameter name.
