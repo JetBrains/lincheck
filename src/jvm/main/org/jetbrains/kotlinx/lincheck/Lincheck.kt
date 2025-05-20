@@ -28,8 +28,8 @@ object Lincheck {
      * @param invocations number of different interleavings of code in the [block] that should be explored.
      * @param block lambda which body will be a target for the interleavings exploration.
      */
-    @JvmOverloads
     @JvmStatic
+    @JvmOverloads
     fun runConcurrentTest(
         invocations: Int = DEFAULT_INVOCATIONS_COUNT,
         block: Runnable
@@ -77,8 +77,6 @@ object Lincheck {
             }
         }
     }
-
-    internal const val DEFAULT_INVOCATIONS_COUNT = 50_000
 }
 
 internal class GeneralPurposeModelCheckingWrapper {
@@ -96,3 +94,4 @@ private class NoExceptionVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecif
         results.parallelResults[0][0] !is ExceptionResult
 }
 
+internal const val DEFAULT_INVOCATIONS_COUNT = 50_000
