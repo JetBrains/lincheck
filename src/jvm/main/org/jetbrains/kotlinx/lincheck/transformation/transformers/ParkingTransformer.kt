@@ -34,14 +34,7 @@ internal class ParkingTransformer(
                         visitMethodInsn(opcode, owner, name, desc, itf)
                     },
                     instrumented = {
-                        pop2() // time
-                        pop() // isAbsolute
-                        pop() // Unsafe
-                        loadNewCodeLocationId()
-                        dup()
-                        invokeStatic(Injections::beforePark)
-                        invokeBeforeEventIfPluginEnabled("park")
-                        invokeStatic(Injections::park)
+                        processUnsafePark()
                     }
                 )
             }
@@ -52,10 +45,7 @@ internal class ParkingTransformer(
                         visitMethodInsn(opcode, owner, name, desc, itf)
                     },
                     instrumented = {
-                        loadNewCodeLocationId()
-                        invokeStatic(Injections::unpark)
-                        pop() // pop Unsafe object
-                        invokeBeforeEventIfPluginEnabled("unpark")
+                        processUnsafeUnpark()
                     }
                 )
             }
@@ -64,6 +54,24 @@ internal class ParkingTransformer(
                 visitMethodInsn(opcode, owner, name, desc, itf)
             }
         }
+    }
+
+    private fun GeneratorAdapter.processUnsafePark() {
+        pop2()  // time
+        pop()   // isAbsolute
+        pop()   // Unsafe
+        loadNewCodeLocationId()
+        dup()
+        invokeStatic(Injections::beforePark)
+        invokeBeforeEventIfPluginEnabled("park")
+        invokeStatic(Injections::park)
+    }
+
+    private fun GeneratorAdapter.processUnsafeUnpark() {
+        loadNewCodeLocationId()
+        invokeStatic(Injections::unpark)
+        pop() // pop Unsafe object
+        invokeBeforeEventIfPluginEnabled("unpark")
     }
 
     private fun isUnsafe(owner: String) =
