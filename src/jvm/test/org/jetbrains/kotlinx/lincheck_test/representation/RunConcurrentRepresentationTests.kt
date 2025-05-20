@@ -8,12 +8,8 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-@file:OptIn(ExperimentalModelCheckingAPI::class)
-
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.ExperimentalModelCheckingAPI
-import org.jetbrains.kotlinx.lincheck.runConcurrentTest
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
@@ -23,6 +19,7 @@ import java.util.concurrent.*
 import java.util.concurrent.atomic.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
+import org.jetbrains.kotlinx.lincheck.Lincheck.runConcurrentTest
 import kotlin.concurrent.thread
 import org.junit.*
 import org.junit.Assume.assumeFalse

@@ -12,23 +12,20 @@ package org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines
 
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.asCoroutineDispatcher
-import org.jetbrains.kotlinx.lincheck.DEFAULT_INVOCATIONS_COUNT
-import org.jetbrains.kotlinx.lincheck.ExperimentalModelCheckingAPI
-import org.jetbrains.kotlinx.lincheck.runConcurrentTest
+import org.jetbrains.kotlinx.lincheck.Lincheck
 import java.io.Closeable
 import java.util.concurrent.Executors
 
-@OptIn(ExperimentalModelCheckingAPI::class)
 abstract class BaseCoroutineTest(
     private val shouldFail: Boolean = false,
-    private val invocations: Int = DEFAULT_INVOCATIONS_COUNT,
+    private val invocations: Int = Lincheck.DEFAULT_INVOCATIONS_COUNT,
 ) {
 
     protected abstract fun createDispatcher(): CoroutineDispatcher
 
     protected fun executeCoroutineTest(block: (CoroutineDispatcher) -> Unit) {
         val result = runCatching {
-            runConcurrentTest(invocations) {
+            Lincheck.runConcurrentTest(invocations) {
                 createDispatcher().let { dispatcher ->
                     try {
                         block(dispatcher)

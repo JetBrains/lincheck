@@ -10,34 +10,29 @@
 
 package org.jetbrains.kotlinx.lincheck_test.gpmc
 
-import org.jetbrains.kotlinx.lincheck.ExperimentalModelCheckingAPI
-import org.jetbrains.kotlinx.lincheck.runConcurrentTest
-import org.junit.Ignore
+import org.jetbrains.kotlinx.lincheck.Lincheck
 import org.junit.Test
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 
-@OptIn(ExperimentalModelCheckingAPI::class)
 class CountDownLatchTest {
 
     @Test
-    fun testLatchCountdown() {
-        runConcurrentTest(10000) {
-            val nThreads = 2
-            val threads = mutableListOf<Thread>()
-            val latch = CountDownLatch(1)
-            val counter = AtomicInteger(0)
+    fun testLatchCountdown() = Lincheck.runConcurrentTest(10000) {
+        val nThreads = 2
+        val threads = mutableListOf<Thread>()
+        val latch = CountDownLatch(1)
+        val counter = AtomicInteger(0)
 
-            for (i in 0 until nThreads)
-                threads += thread {
-                    latch.await()
-                    counter.incrementAndGet()
-                }
+        for (i in 0 until nThreads)
+            threads += thread {
+                latch.await()
+                counter.incrementAndGet()
+            }
 
-            latch.countDown()
-            threads.forEach { it.join() }
-            check(counter.get() == nThreads)
-        }
+        latch.countDown()
+        threads.forEach { it.join() }
+        check(counter.get() == nThreads)
     }
 }

@@ -15,18 +15,16 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import org.jetbrains.kotlinx.lincheck.ExperimentalModelCheckingAPI
-import org.jetbrains.kotlinx.lincheck.runConcurrentTest
+import org.jetbrains.kotlinx.lincheck.Lincheck
 import org.junit.Test
 import java.util.concurrent.Executors
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
-@OptIn(ExperimentalModelCheckingAPI::class)
 class CoroutinesDelayTest {
     @Test
     fun testDelay() {
-        runConcurrentTest(invocations = 1) {
+        Lincheck.runConcurrentTest(invocations = 1) {
             Executors.newFixedThreadPool(1).asCoroutineDispatcher().use { dispatcher ->
                 runBlocking(dispatcher) {
                     val nElements = 2

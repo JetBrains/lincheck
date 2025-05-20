@@ -7,87 +7,92 @@
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-
-@file:JvmName("Lincheck")
-
 package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.execution.parallelResults
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.runIteration
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.ensureObjectIsTransformed
 import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 
+object Lincheck {
 
-@RequiresOptIn(message = "The model checking API is experimental and will change in the future.")
-@Retention(AnnotationRetention.BINARY)
-@Target(AnnotationTarget.FUNCTION)
-annotation class ExperimentalModelCheckingAPI
+    /**
+     * This method will explore different interleavings of the [block] body and all the threads created within it,
+     * searching for the first raised exception.
+     *
+     * @param invocations number of different interleavings of code in the [block] that should be explored.
+     * @param block lambda which body will be a target for the interleavings exploration.
+     */
+    @JvmOverloads
+    @JvmStatic
+    fun runConcurrentTest(
+        invocations: Int = DEFAULT_INVOCATIONS_COUNT,
+        block: Runnable
+    ) {
+        val scenario = ExecutionScenario(
+            initExecution = emptyList(),
+            parallelExecution = listOf(
+                listOf( // Main thread
+                    Actor(method = runGPMCTestMethod, arguments = listOf(block))
+                )
+            ),
+            postExecution = emptyList(),
+            validationFunction = null
+        )
 
-/**
- * This method will explore different interleavings of the [block] body and all the threads created within it,
- * searching for the first raised exception.
- *
- * @param invocations number of different interleavings of code in the [block] that should be explored.
- * @param block lambda which body will be a target for the interleavings exploration.
- */
-@ExperimentalModelCheckingAPI
-@JvmOverloads
-fun runConcurrentTest(
-    invocations: Int = DEFAULT_INVOCATIONS_COUNT,
-    block: Runnable
-) {
-    // TODO: do not use DSL to avoid spending 300ms in Kotlin Reflection
-    val scenario = scenario {
-        parallel {
-            thread { actor(GeneralPurposeModelCheckingWrapper::runGPMCTest, block) }
-        }
-    }
+        val options = ModelCheckingOptions()
+            .iterations(0)
+            .addCustomScenario(scenario)
+            .invocationsPerIteration(invocations)
+            .verifier(NoExceptionVerifier::class.java)
 
-    val options = ModelCheckingOptions()
-        .iterations(0)
-        .addCustomScenario(scenario)
-        .invocationsPerIteration(invocations)
-        .verifier(NoExceptionVerifier::class.java)
-
-    val testCfg = options.createTestConfigurations(GeneralPurposeModelCheckingWrapper::class.java)
-    withLincheckJavaAgent(testCfg.instrumentationMode) {
-        ensureObjectIsTransformed(block)
-        val verifier = testCfg.createVerifier()
-        val wrapperClass = GeneralPurposeModelCheckingWrapper::class.java
-        testCfg.createStrategy(wrapperClass, scenario, null, null).use { strategy ->
-            val failure = strategy.runIteration(invocations, verifier)
-            if (failure != null) {
-                check(strategy is ModelCheckingStrategy)
-                if (ideaPluginEnabled) {
-                    runPluginReplay(
-                        testCfg = testCfg,
-                        testClass = wrapperClass,
-                        scenario = scenario,
-                        validationFunction = null,
-                        stateRepresentationMethod = null,
-                        invocations = invocations,
-                        verifier = verifier
-                    )
+        val testCfg = options.createTestConfigurations(GeneralPurposeModelCheckingWrapper::class.java)
+        withLincheckJavaAgent(testCfg.instrumentationMode) {
+            ensureObjectIsTransformed(block)
+            val verifier = testCfg.createVerifier()
+            val wrapperClass = GeneralPurposeModelCheckingWrapper::class.java
+            testCfg.createStrategy(wrapperClass, scenario, null, null).use { strategy ->
+                val failure = strategy.runIteration(invocations, verifier)
+                if (failure != null) {
+                    check(strategy is ModelCheckingStrategy)
+                    if (ideaPluginEnabled) {
+                        runPluginReplay(
+                            testCfg = testCfg,
+                            testClass = wrapperClass,
+                            scenario = scenario,
+                            validationFunction = null,
+                            stateRepresentationMethod = null,
+                            invocations = invocations,
+                            verifier = verifier
+                        )
+                        throw LincheckAssertionError(failure)
+                    }
                     throw LincheckAssertionError(failure)
                 }
-                throw LincheckAssertionError(failure)
             }
         }
     }
+
+    internal const val DEFAULT_INVOCATIONS_COUNT = 50_000
 }
 
 internal class GeneralPurposeModelCheckingWrapper {
     fun runGPMCTest(block: Runnable) = block.run()
 }
 
+private val runGPMCTestMethod =
+    GeneralPurposeModelCheckingWrapper::class.java.getDeclaredMethod("runGPMCTest", Runnable::class.java)
+
 /**
- * [NoExceptionVerifier] checks that the lambda passed into [runConcurrentTest] does not throw an exception.
+ * [NoExceptionVerifier] checks that the lambda passed into [Lincheck.runConcurrentTest] does not throw an exception.
  */
-internal class NoExceptionVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : Verifier {
+private class NoExceptionVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : Verifier {
     override fun verifyResults(scenario: ExecutionScenario, results: ExecutionResult): Boolean =
         results.parallelResults[0][0] !is ExceptionResult
 }
 
-internal const val DEFAULT_INVOCATIONS_COUNT = 50_000
