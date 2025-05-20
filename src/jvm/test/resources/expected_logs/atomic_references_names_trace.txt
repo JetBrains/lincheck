@@ -13,38 +13,33 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| --------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                   Thread 1                                                                    |
-| --------------------------------------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                                                   |
-|   atomicReference.get(): Node#1 at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:29)                                      |
-|   atomicReference.compareAndSet(Node#1, Node#2): true at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:29)                |
-|   atomicReference.set(Node#3) at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:30)                                        |
-|   atomicInteger.get(): 0 at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:32)                                             |
-|   atomicInteger.compareAndSet(0, 2): true at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:32)                            |
-|   atomicInteger.set(3) at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:33)                                               |
-|   atomicLong.get(): 0 at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:35)                                                |
-|   atomicLong.compareAndSet(0, 2): true at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:35)                               |
-|   atomicLong.set(3) at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:36)                                                  |
-|   atomicBoolean.get(): true at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:38)                                          |
-|   atomicBoolean.compareAndSet(true, true): true at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:38)                      |
-|   atomicBoolean.set(false) at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:39)                                           |
-|   atomicReferenceArray[0].get(): Node#4 at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:41)                              |
-|   atomicReferenceArray[0].compareAndSet(Node#4, Node#5): true at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:41)        |
-|   atomicReferenceArray[0].set(Node#6) at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:42)                                |
-|   atomicIntegerArray[0].get(): 0 at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:44)                                     |
-|   atomicIntegerArray[0].compareAndSet(0, 1): true at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:44)                    |
-|   atomicIntegerArray[0].set(2) at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:45)                                       |
-|   atomicLongArray[0].get(): 0 at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:47)                                        |
-|   atomicLongArray[0].compareAndSet(0, 1): true at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:47)                       |
-|   atomicLongArray[0].set(2) at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:48)                                          |
-|   wrapper.reference.set(Node#7) at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:50)                                      |
-|   wrapper.array[0].compareAndSet(1, 2): false at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:51)                        |
-|   AtomicReferencesNamesTest.staticValue.compareAndSet(0, 2): true at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:53)    |
-|   AtomicReferencesNamesTest.staticValue.set(0) at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:54)                       |
-|   AtomicReferenceWrapper.staticValue.compareAndSet(1, 2): true at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:56)       |
-|   AtomicReferenceWrapper.staticValue.set(3) at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:57)                          |
-|   AtomicReferencesNamesTest.staticArray[1].compareAndSet(0, 1): true at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:59) |
-|   AtomicReferenceWrapper.staticArray[1].compareAndSet(0, 1): true at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:60)    |
-|   result: void                                                                                                                                |
-| --------------------------------------------------------------------------------------------------------------------------------------------- |
+| -------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                Thread 1                                                                |
+| -------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                            |
+|   atomicReference.get(): Node#1 at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:27)                               |
+|   atomicReference.compareAndSet(Node#1, Node#2): true at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:27)         |
+|   atomicReference.set(Node#3) at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:28)                                 |
+|   atomicInteger.get(): 0 at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:30)                                      |
+|   atomicInteger.compareAndSet(0, 2): true at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:30)                     |
+|   atomicInteger.set(3) at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:31)                                        |
+|   atomicLong.get(): 0 at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:33)                                         |
+|   atomicLong.compareAndSet(0, 2): true at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:33)                        |
+|   atomicLong.set(3) at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:34)                                           |
+|   atomicBoolean.get(): true at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:36)                                   |
+|   atomicBoolean.compareAndSet(true, true): true at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:36)               |
+|   atomicBoolean.set(false) at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:37)                                    |
+|   atomicReferenceArray[0].get(): Node#4 at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:39)                       |
+|   atomicReferenceArray[0].compareAndSet(Node#4, Node#5): true at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:39) |
+|   atomicReferenceArray[0].set(Node#6) at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:40)                         |
+|   atomicIntegerArray[0].get(): 0 at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:42)                              |
+|   atomicIntegerArray[0].compareAndSet(0, 1): true at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:42)             |
+|   atomicIntegerArray[0].set(2) at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:43)                                |
+|   atomicLongArray[0].get(): 0 at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:45)                                 |
+|   atomicLongArray[0].compareAndSet(0, 1): true at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:45)                |
+|   atomicLongArray[0].set(2) at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:46)                                   |
+|   staticValue.compareAndSet(0, 2): true at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:48)                       |
+|   staticValue.set(0) at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:49)                                          |
+|   staticArray[1].compareAndSet(0, 1): true at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:51)                    |
+|   result: void                                                                                                                         |
+| -------------------------------------------------------------------------------------------------------------------------------------- |

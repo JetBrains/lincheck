@@ -8,7 +8,7 @@ The following interleaving leads to the error:
 |   block() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:96)                                        |
 |     q.take() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:101)                                    |
 |       lock.lockInterruptibly() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:417)                                                             |
-|       ConditionObject#1.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:420)                                                            |
+|       notEmpty.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:420)                                                                     |
 |         newConditionNode(): ConditionNode#1 at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1692)              |
 |         enableWait(ConditionNode#1): 1 at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1695)                   |
 |         LockSupport.setCurrentBlocker(ConditionObject#1) at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1696) |
@@ -32,13 +32,13 @@ Detailed trace:
 |   block() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:96)                                                                      |
 |     q.take() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:101)                                                                  |
 |       lock.lockInterruptibly() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:417)                                                                                           |
-|         NonfairSync#1.lockInterruptibly() at ReentrantLock.lockInterruptibly(ReentrantLock.java:372)                                                                             |
+|         sync.lockInterruptibly() at ReentrantLock.lockInterruptibly(ReentrantLock.java:372)                                                                                      |
 |           initialTryLock(): true at ReentrantLock$Sync.lockInterruptibly(ReentrantLock.java:160)                                                                                 |
 |             compareAndSetState(0, 1): true at ReentrantLock$NonfairSync.initialTryLock(ReentrantLock.java:225)                                                                   |
 |               Unsafe#1.compareAndSetInt(NonfairSync#1, 16, 0, 1): true at AbstractQueuedSynchronizer.compareAndSetState(AbstractQueuedSynchronizer.java:569)                     |
-|       ConditionObject#1.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:420)                                                                                          |
+|       notEmpty.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:420)                                                                                                   |
 |         newConditionNode(): ConditionNode#1 at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1692)                                            |
-|           NonfairSync#1.tryInitializeHead(): ExclusiveNode#1 at AbstractQueuedSynchronizer$ConditionObject.newConditionNode(AbstractQueuedSynchronizer.java:1620)                |
+|           this$0.tryInitializeHead(): ExclusiveNode#1 at AbstractQueuedSynchronizer$ConditionObject.newConditionNode(AbstractQueuedSynchronizer.java:1620)                       |
 |             Unsafe#1.compareAndSetReference(NonfairSync#1, 20, null, ExclusiveNode#1): true at AbstractQueuedSynchronizer.tryInitializeHead(AbstractQueuedSynchronizer.java:596) |
 |         enableWait(ConditionNode#1): 1 at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1695)                                                 |
 |           node.setStatusRelaxed(3) at AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1562)                                                |

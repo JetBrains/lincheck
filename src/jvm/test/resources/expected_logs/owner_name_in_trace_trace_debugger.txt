@@ -30,11 +30,11 @@ Detailed trace:
 |     Array<Integer>#2[0] ➜ 4 at OwnerNameInTraceRepresentationTest$StubClass.readWriteTestMethod(OwnerNameInTraceRepresentationTests.kt:51) |
 |   doReadWriteWithOtherObject(): 6 at OwnerNameInTraceRepresentationTest.operation(OwnerNameInTraceRepresentationTests.kt:27)               |
 |     stub ➜ StubClass#1 at OwnerNameInTraceRepresentationTest.doReadWriteWithOtherObject(OwnerNameInTraceRepresentationTests.kt:37)         |
-|     StubClass#1.value = 2 at OwnerNameInTraceRepresentationTest.doReadWriteWithOtherObject(OwnerNameInTraceRepresentationTests.kt:37)      |
+|     stub.value = 2 at OwnerNameInTraceRepresentationTest.doReadWriteWithOtherObject(OwnerNameInTraceRepresentationTests.kt:37)             |
 |     stub ➜ StubClass#1 at OwnerNameInTraceRepresentationTest.doReadWriteWithOtherObject(OwnerNameInTraceRepresentationTests.kt:38)         |
 |     Array<Integer>#2[0] = 4 at OwnerNameInTraceRepresentationTest.doReadWriteWithOtherObject(OwnerNameInTraceRepresentationTests.kt:38)    |
 |     stub ➜ StubClass#1 at OwnerNameInTraceRepresentationTest.doReadWriteWithOtherObject(OwnerNameInTraceRepresentationTests.kt:39)         |
-|     StubClass#1.value ➜ 2 at OwnerNameInTraceRepresentationTest.doReadWriteWithOtherObject(OwnerNameInTraceRepresentationTests.kt:39)      |
+|     stub.value ➜ 2 at OwnerNameInTraceRepresentationTest.doReadWriteWithOtherObject(OwnerNameInTraceRepresentationTests.kt:39)             |
 |     stub ➜ StubClass#1 at OwnerNameInTraceRepresentationTest.doReadWriteWithOtherObject(OwnerNameInTraceRepresentationTests.kt:39)         |
 |     Array<Integer>#2[0] ➜ 4 at OwnerNameInTraceRepresentationTest.doReadWriteWithOtherObject(OwnerNameInTraceRepresentationTests.kt:39)    |
 |   result: void                                                                                                                             |

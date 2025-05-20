@@ -20,7 +20,7 @@ Detailed trace:
 | $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:47) |
 |   block(): threw IllegalStateException at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:46)                                                        |
 |     doTest() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:55)                                                                                  |
-|       Companion#1.create(): CounterDerived#1 at MethodHandlesFindSpecialRepresentationTest.doTest(MethodHandlesLookupTests.kt:23)                                               |
+|       Companion.create(): CounterDerived#1 at MethodHandlesFindSpecialRepresentationTest.doTest(MethodHandlesLookupTests.kt:23)                                                 |
 |         Counter.shared = CounterDerived#1 at CounterDerived$Companion.create(MethodHandlesLookupTests.kt:184)                                                                   |
 |       counter.increment() at MethodHandlesFindSpecialRepresentationTest.doTest(MethodHandlesLookupTests.kt:30)                                                                  |
 |         value ➜ 0 at CounterDerived.increment(MethodHandlesLookupTests.kt:178)                                                                                                  |

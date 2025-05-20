@@ -8,7 +8,7 @@ The following interleaving leads to the error:
 |   block() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:96)                                        |
 |     q.take() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:101)                                    |
 |       lock.lockInterruptibly() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:417)                                                             |
-|       ConditionObject#1.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:420)                                                            |
+|       notEmpty.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:420)                                                                     |
 |         enableWait(ConditionNode#1): 1 at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1611)                   |
 |         LockSupport.setCurrentBlocker(ConditionObject#1) at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1612) |
 |         canReacquire(ConditionNode#1): false at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1614)             |
@@ -31,11 +31,11 @@ Detailed trace:
 |   block() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:96)                                                  |
 |     q.take() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:101)                                              |
 |       lock.lockInterruptibly() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:417)                                                                       |
-|         NonfairSync#1.lockInterruptibly() at ReentrantLock.lockInterruptibly(ReentrantLock.java:372)                                                         |
+|         sync.lockInterruptibly() at ReentrantLock.lockInterruptibly(ReentrantLock.java:372)                                                                  |
 |           initialTryLock(): true at ReentrantLock$Sync.lockInterruptibly(ReentrantLock.java:160)                                                             |
 |             compareAndSetState(0, 1): true at ReentrantLock$NonfairSync.initialTryLock(ReentrantLock.java:225)                                               |
 |               Unsafe#1.compareAndSetInt(NonfairSync#1, 16, 0, 1): true at AbstractQueuedSynchronizer.compareAndSetState(AbstractQueuedSynchronizer.java:556) |
-|       ConditionObject#1.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:420)                                                                      |
+|       notEmpty.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:420)                                                                               |
 |         enableWait(ConditionNode#1): 1 at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1611)                             |
 |           node.setStatusRelaxed(3) at AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1504)                            |
 |             Unsafe#1.putInt(ConditionNode#1, 12, 3) at AbstractQueuedSynchronizer$Node.setStatusRelaxed(AbstractQueuedSynchronizer.java:474)                 |

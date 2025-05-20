@@ -23,7 +23,7 @@ Detailed trace:
 |       Array<A>#1[0] ➜ A#1 at ArraysKt___ArraysKt.toCollection(_Arrays.kt:9615)                                                    |
 |       destination.add(A#1): true at ArraysKt___ArraysKt.toCollection(_Arrays.kt:9616)                                             |
 |         map ➜ LinkedHashMap#1 at HashSet.add(HashSet.java:221)                                                                    |
-|         LinkedHashMap#1.put(A#1, Object#1): null at HashSet.add(HashSet.java:221)                                                 |
+|         map.put(A#1, Object#1): null at HashSet.add(HashSet.java:221)                                                             |
 |           putVal(1, A#1, Object#1, false, true): null at HashMap.put(HashMap.java:610)                                            |
 |             table ➜ null at HashMap.putVal(HashMap.java:626)                                                                      |
 |             resize(): Array<Node>#1 at HashMap.putVal(HashMap.java:627)                                                           |
@@ -47,7 +47,7 @@ Detailed trace:
 |               head ➜ Entry#1 at LinkedHashMap.afterNodeInsertion(LinkedHashMap.java:300)                                          |
 |   linkedHashSet.add(A#2): true at LinkedHashSetTest.putAnObjectWithoutDefinedHashCode(LinkedHashSetTest.kt:11)                    |
 |     map ➜ LinkedHashMap#1 at HashSet.add(HashSet.java:221)                                                                        |
-|     LinkedHashMap#1.put(A#2, Object#1): null at HashSet.add(HashSet.java:221)                                                     |
+|     map.put(A#2, Object#1): null at HashSet.add(HashSet.java:221)                                                                 |
 |       putVal(1, A#2, Object#1, false, true): null at HashMap.put(HashMap.java:610)                                                |
 |         table ➜ Array<Node>#1 at HashMap.putVal(HashMap.java:626)                                                                 |
 |         Array<Node>#1[1] ➜ Entry#1 at HashMap.putVal(HashMap.java:628)                                                            |
@@ -82,7 +82,7 @@ Detailed trace:
 |           head ➜ Entry#1 at LinkedHashMap.afterNodeInsertion(LinkedHashMap.java:300)                                              |
 |   linkedHashSet.size(): 2 at LinkedHashSetTest.putAnObjectWithoutDefinedHashCode(LinkedHashSetTest.kt:12)                         |
 |     map ➜ LinkedHashMap#1 at HashSet.size(HashSet.java:183)                                                                       |
-|     LinkedHashMap#1.size(): 2 at HashSet.size(HashSet.java:183)                                                                   |
+|     map.size(): 2 at HashSet.size(HashSet.java:183)                                                                               |
 |       size ➜ 2 at HashMap.size(HashMap.java:525)                                                                                  |
 |   result: void                                                                                                                    |
 | --------------------------------------------------------------------------------------------------------------------------------- |

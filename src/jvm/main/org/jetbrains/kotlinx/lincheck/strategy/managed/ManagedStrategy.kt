@@ -18,7 +18,6 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicFieldUpdaterNames.getAtomicFieldUpdaterDescriptor
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceMethodType.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.FieldSearchHelper.findFinalFieldWithOwner
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.adornedStringRepresentation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.cleanObjectNumeration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
@@ -110,6 +109,11 @@ abstract class ManagedStrategy(
     // Snapshot of the memory, reachable from static fields
     protected val staticMemorySnapshot = SnapshotTracker()
 
+    // Tracks content of constants (i.e., static final fields).
+    // Stores a map `object -> fieldName`,
+    // mapping an object to a constant name referencing this object.
+    private val constants = IdentityHashMap<Any, String>()
+
     // InvocationResult that was observed by the strategy during the execution (e.g., a deadlock).
     @Volatile
     protected var suddenInvocationResult: InvocationResult? = null
@@ -137,9 +141,14 @@ abstract class ManagedStrategy(
     private val suspendedFunctionsStack = mutableThreadMapOf<MutableList<CallStackTraceElement>>()
 
     // Last read trace point, occurred in the current thread.
-    // We store it as we initialize read value after the point is created so we have to store
-    // the trace point somewhere to obtain it later.
+    // We store it as we initialize read value after the point is created,
+    // so we have to store the trace point somewhere to obtain it later.
     private var lastReadTracePoint = mutableThreadMapOf<ReadTracePoint?>()
+
+    // Last read constant name (i.e., static final field).
+    // We store it as we initialize read value after the trace point is created,
+    // so we have to store the trace point somewhere to obtain it later.
+    private var lastReadConstantName: String? = null
 
     // Random instances with fixed seeds to replace random calls in instrumented code.
     private var randoms = mutableThreadMapOf<InjectedRandom>()
@@ -269,6 +278,7 @@ abstract class ManagedStrategy(
         objectTracker?.reset()
         monitorTracker.reset()
         parkingTracker.reset()
+        constants.clear()
         resetThreads()
     }
 
@@ -1237,6 +1247,9 @@ abstract class ManagedStrategy(
         if (isStatic) {
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
         }
+        if (collectTrace && isStatic && isFinal) {
+            lastReadConstantName = fieldName
+        }
         // Optimization: do not track final field reads
         if (isFinal) {
             return false
@@ -1248,7 +1261,7 @@ abstract class ManagedStrategy(
         val iThread = threadScheduler.getCurrentThreadId()
         val tracePoint = if (collectTrace) {
             ReadTracePoint(
-                ownerRepresentation = if (isStatic) className.toSimpleClassName() else findOwnerName(obj!!),
+                ownerRepresentation = getFieldOwnerName(obj, className, fieldName, isStatic),
                 iThread = iThread,
                 actorId = currentActorId[iThread]!!,
                 callStackTrace = callStackTrace[iThread]!!,
@@ -1300,8 +1313,14 @@ abstract class ManagedStrategy(
     override fun afterRead(value: Any?) = runInsideIgnoredSection {
         if (collectTrace) {
             val iThread = threadScheduler.getCurrentThreadId()
-            lastReadTracePoint[iThread]?.initializeReadValue(adornedStringRepresentation(value), objectFqTypeName(value))
+            if (lastReadConstantName != null && value != null) {
+                constants[value] = lastReadConstantName
+            }
+            val valueRepresentation = adornedStringRepresentation(value)
+            val typeRepresentation = objectFqTypeName(value)
+            lastReadTracePoint[iThread]?.initializeReadValue(valueRepresentation, typeRepresentation)
             lastReadTracePoint[iThread] = null
+            lastReadConstantName = null
         }
         loopDetector.afterRead(value)
     }
@@ -1320,7 +1339,7 @@ abstract class ManagedStrategy(
         val iThread = threadScheduler.getCurrentThreadId()
         val tracePoint = if (collectTrace) {
             WriteTracePoint(
-                ownerRepresentation = if (isStatic) className.toSimpleClassName() else findOwnerName(obj!!),
+                ownerRepresentation = getFieldOwnerName(obj, className, fieldName, isStatic),
                 iThread = iThread,
                 actorId = currentActorId[iThread]!!,
                 callStackTrace = callStackTrace[iThread]!!,
@@ -2021,13 +2040,13 @@ abstract class ManagedStrategy(
         }
         // handle atomic methods
         if (isVarHandle(owner)) {
-            return initializeVarHandleMethodCallTracePoint(tracePoint, owner, params)
+            return initializeVarHandleMethodCallTracePoint(iThread, tracePoint, owner, params)
         }
         if (isAtomicFieldUpdater(owner)) {
             return initializeAtomicUpdaterMethodCallTracePoint(tracePoint, owner!!, params)
         }
         if (isAtomic(owner) || isAtomicArray(owner)) {
-            return initializeAtomicReferenceMethodCallTracePoint(tracePoint, owner!!, params)
+            return initializeAtomicReferenceMethodCallTracePoint(iThread, tracePoint, owner!!, params)
         }
         if (isUnsafe(owner)) {
             return initializeUnsafeMethodCallTracePoint(tracePoint, owner!!, params)
@@ -2077,11 +2096,30 @@ abstract class ManagedStrategy(
     }
 
     private fun initializeAtomicReferenceMethodCallTracePoint(
+        threadId: ThreadId,
         tracePoint: MethodCallTracePoint,
         receiver: Any,
         params: Array<Any?>
     ): MethodCallTracePoint {
-        when (val atomicReferenceInfo = AtomicReferenceNames.getMethodCallType(runner.testInstance, receiver, params)) {
+        val shadowStackFrame = shadowStack[threadId]!!.last()
+        val atomicReferenceInfo = AtomicReferenceNames.getMethodCallType(shadowStackFrame, receiver, params)
+        when (atomicReferenceInfo) {
+            is AtomicReferenceInstanceMethod -> {
+                val receiverName = findOwnerName(atomicReferenceInfo.owner)
+                tracePoint.initializeOwnerName(receiverName?.let { "$it.${atomicReferenceInfo.fieldName}" } ?: atomicReferenceInfo.fieldName)
+                tracePoint.initializeParameters(params.toList())
+            }
+            is AtomicReferenceStaticMethod -> {
+                val clazz = atomicReferenceInfo.ownerClass
+                val thisClassName = shadowStackFrame.instance?.javaClass?.name
+                val ownerName = if (thisClassName == clazz.name) "" else "${clazz.simpleName}."
+                tracePoint.initializeOwnerName("${ownerName}${atomicReferenceInfo.fieldName}")
+                tracePoint.initializeParameters(params.toList())
+            }
+            is AtomicReferenceInLocalVariable -> {
+                tracePoint.initializeOwnerName("${atomicReferenceInfo.localVariable}.${atomicReferenceInfo.fieldName}")
+                tracePoint.initializeParameters(params.toList())
+            }
             is AtomicArrayMethod -> {
                 tracePoint.initializeOwnerName("${adornedStringRepresentation(atomicReferenceInfo.atomicArray)}[${atomicReferenceInfo.index}]")
                 tracePoint.initializeParameters(params.drop(1))
@@ -2091,20 +2129,18 @@ abstract class ManagedStrategy(
                 tracePoint.initializeOwnerName((receiverName?.let { "$it." } ?: "") + "${atomicReferenceInfo.fieldName}[${atomicReferenceInfo.index}]")
                 tracePoint.initializeParameters(params.drop(1))
             }
-            is AtomicReferenceInstanceMethod -> {
-                val receiverName = findOwnerName(atomicReferenceInfo.owner)
-                tracePoint.initializeOwnerName(receiverName?.let { "$it.${atomicReferenceInfo.fieldName}" } ?: atomicReferenceInfo.fieldName)
-                tracePoint.initializeParameters(params.toList())
-            }
-            is AtomicReferenceStaticMethod ->  {
-                tracePoint.initializeOwnerName("${atomicReferenceInfo.ownerClass.simpleName}.${atomicReferenceInfo.fieldName}")
-                tracePoint.initializeParameters(params.toList())
-            }
             is StaticFieldAtomicArrayMethod -> {
-                tracePoint.initializeOwnerName("${atomicReferenceInfo.ownerClass.simpleName}.${atomicReferenceInfo.fieldName}[${atomicReferenceInfo.index}]")
+                val clazz = atomicReferenceInfo.ownerClass
+                val thisClassName = shadowStackFrame.instance?.javaClass?.name
+                val ownerName = if (thisClassName == clazz.name) "" else "${clazz.simpleName}."
+                tracePoint.initializeOwnerName("${ownerName}${atomicReferenceInfo.fieldName}[${atomicReferenceInfo.index}]")
                 tracePoint.initializeParameters(params.drop(1))
             }
-            AtomicReferenceMethodType.TreatAsDefaultMethod -> {
+            is AtomicArrayInLocalVariable -> {
+                tracePoint.initializeOwnerName("${atomicReferenceInfo.localVariable}.${atomicReferenceInfo.fieldName}[${atomicReferenceInfo.index}]")
+                tracePoint.initializeParameters(params.drop(1))
+            }
+            is AtomicReferenceMethodType.TreatAsDefaultMethod -> {
                 tracePoint.initializeOwnerName(adornedStringRepresentation(receiver))
                 tracePoint.initializeParameters(params.toList())
             }
@@ -2113,18 +2149,17 @@ abstract class ManagedStrategy(
     }
 
     private fun initializeVarHandleMethodCallTracePoint(
+        threadId: Int,
         tracePoint: MethodCallTracePoint,
         varHandle: Any, // for Java 8, the VarHandle class does not exist
         parameters: Array<Any?>,
     ): MethodCallTracePoint {
-        when (val varHandleMethodType = VarHandleNames.varHandleMethodType(varHandle, parameters)) {
+        val shadowStackFrame = shadowStack[threadId]!!.last()
+        val varHandleMethodType = VarHandleNames.varHandleMethodType(varHandle, parameters)
+        when (varHandleMethodType) {
             is ArrayVarHandleMethod -> {
                 tracePoint.initializeOwnerName("${adornedStringRepresentation(varHandleMethodType.array)}[${varHandleMethodType.index}]")
                 tracePoint.initializeParameters(varHandleMethodType.parameters)
-            }
-            VarHandleMethodType.TreatAsDefaultMethod -> {
-                tracePoint.initializeOwnerName(adornedStringRepresentation(varHandle))
-                tracePoint.initializeParameters(parameters.toList())
             }
             is InstanceVarHandleMethod -> {
                 val receiverName = findOwnerName(varHandleMethodType.owner)
@@ -2132,8 +2167,15 @@ abstract class ManagedStrategy(
                 tracePoint.initializeParameters(varHandleMethodType.parameters)
             }
             is StaticVarHandleMethod -> {
-                tracePoint.initializeOwnerName("${varHandleMethodType.ownerClass.simpleName}.${varHandleMethodType.fieldName}")
+                val clazz = varHandleMethodType.ownerClass
+                val thisClassName = shadowStackFrame.instance?.javaClass?.name
+                val ownerName = if (thisClassName == clazz.name) "" else "${clazz.simpleName}."
+                tracePoint.initializeOwnerName("${ownerName}${varHandleMethodType.fieldName}")
                 tracePoint.initializeParameters(varHandleMethodType.parameters)
+            }
+            VarHandleMethodType.TreatAsDefaultMethod -> {
+                tracePoint.initializeOwnerName(adornedStringRepresentation(varHandle))
+                tracePoint.initializeParameters(parameters.toList())
             }
         }
 
@@ -2153,17 +2195,30 @@ abstract class ManagedStrategy(
     private fun MethodCallTracePoint.initializeParameters(parameters: List<Any?>) =
         initializeParameters(parameters.map { adornedStringRepresentation(it) }, parameters.map { objectFqTypeName(it) })
 
+
+    /**
+     * Returns string representation of the field owner based on the provided parameters.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    private fun getFieldOwnerName(obj: Any?, className: String, fieldName: String, isStatic: Boolean): String? {
+        if (isStatic) {
+            val threadId = threadScheduler.getCurrentThreadId()
+            val stackTraceElement = shadowStack[threadId]!!.last()
+            if (stackTraceElement.instance?.javaClass?.name == className) {
+                return null
+            }
+            return className.toSimpleClassName()
+        }
+        return findOwnerName(obj!!)
+    }
+
     /**
      * Returns beautiful string representation of the [owner].
      * If the [owner] is `this` of the current method, then returns `null`.
-     * Otherwise, we try to find if this [owner] is stored in only one field in the testObject
-     * and this field is final. If such field is found we construct beautiful representation for
-     * this field owner (if it's not a current `this`, again) and the field name.
-     * Otherwise, return beautiful representation for the provided [owner].
      */
     private fun findOwnerName(owner: Any): String? {
         val threadId = threadScheduler.getCurrentThreadId()
-        // if the current owner is `this` - no owner needed.
+        // if the current owner is `this` - no owner needed
         if (isCurrentStackFrameReceiver(owner)) return null
         // do not prettify thread names
         if (owner is Thread) {
@@ -2172,22 +2227,14 @@ abstract class ManagedStrategy(
         // lookup for the object in local variables and use the local variable name if found
         val shadowStackFrame = shadowStack[threadId]!!.last()
         shadowStackFrame.getLastAccessVariable(owner)?.let { return it }
-        // lookup for the final field uniquely owning the object
-        val finalFieldWithOwner = findFinalFieldWithOwner(runner.testInstance, owner)
-        // if no such field found return object's string representation
-        if (finalFieldWithOwner == null) {
-            return adornedStringRepresentation(owner)
-        }
-        if (finalFieldWithOwner !is OwnerWithName.InstanceOwnerWithName) {
-            return null
-        }
-        // if such a field is found - construct representation with its owner and name
-        val fieldOwner = finalFieldWithOwner.owner
-        val fieldName = finalFieldWithOwner.fieldName
-        if (isCurrentStackFrameReceiver(fieldOwner)) {
-            return fieldName
-        }
-        return "${adornedStringRepresentation(fieldOwner)}.$fieldName"
+        // lookup for a field name in the current stack frame `this`
+        shadowStackFrame.instance
+            ?.findInstanceFieldReferringTo(owner)
+            ?.let { return it.name }
+        // lookup for the constant referencing the object
+        constants[owner]?.let { return it }
+        // otherwise return object's string representation
+        return adornedStringRepresentation(owner)
     }
 
     /**
@@ -2505,37 +2552,6 @@ abstract class ManagedStrategy(
             }
             return id
         }
-    }
-}
-
-/**
- * Represents a shadow stack frame used to reflect the program's stack in [ManagedStrategy].
- *
- * @property instance the object on which the method was invoked, null in the case of a static method.
-  */
-private class ShadowStackFrame(val instance: Any?) {
-    private val localVariables: MutableMap<String, LocalVariableState> = mutableMapOf()
-
-    private var accessCounter: Int = 0
-
-    private data class LocalVariableState(
-        val value: Any?,
-        val accessCounter: Int,
-    )
-
-    fun getLocalVariable(name: String): Any? {
-        return localVariables[name]
-    }
-
-    fun setLocalVariable(name: String, value: Any?) {
-        localVariables[name] = LocalVariableState(value, accessCounter++)
-    }
-
-    fun getLastAccessVariable(value: Any?): String? {
-        return localVariables
-            .filter { (_, state) -> state.value === value }
-            .maxByOrNull { (_, state) -> state.accessCounter }
-            ?.key
     }
 }
 

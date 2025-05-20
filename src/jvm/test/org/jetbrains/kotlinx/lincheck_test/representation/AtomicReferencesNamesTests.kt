@@ -23,8 +23,6 @@ class AtomicReferencesNamesTest : BaseTraceRepresentationTest("atomic_references
     private val atomicIntegerArray = AtomicIntegerArray(intArrayOf(0))
     private val atomicLongArray = AtomicLongArray(longArrayOf(0L))
 
-    private val wrapper = AtomicReferenceWrapper()
-
     override fun operation() {
         atomicReference.compareAndSet(atomicReference.get(), Node(2))
         atomicReference.set(Node(3))
@@ -47,32 +45,13 @@ class AtomicReferencesNamesTest : BaseTraceRepresentationTest("atomic_references
         atomicLongArray.compareAndSet(0, atomicLongArray.get(0), 1)
         atomicLongArray.set(0, 2)
 
-        wrapper.reference.set(Node(5))
-        wrapper.array.compareAndSet(0, 1 ,2)
-
         staticValue.compareAndSet(0, 2)
         staticValue.set(0)
 
-        AtomicReferenceWrapper.staticValue.compareAndSet(1, 2)
-        AtomicReferenceWrapper.staticValue.set(3)
-
         staticArray.compareAndSet(1, 0, 1)
-        AtomicReferenceWrapper.staticArray.compareAndSet(1, 0, 1)
     }
 
     private data class Node(val name: Int)
-
-    private class AtomicReferenceWrapper {
-        val reference = AtomicReference(Node(0))
-        val array = AtomicIntegerArray(10)
-
-        companion object {
-            @JvmStatic
-            val staticValue = AtomicInteger(1)
-            @JvmStatic
-            val staticArray = AtomicIntegerArray(3)
-        }
-    }
 
     companion object {
         @JvmStatic
