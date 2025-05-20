@@ -26,13 +26,14 @@ internal fun modelCheckerTest(
     expectedExceptions: Set<KClass<out Throwable>> = setOf(),
     expectedFailure: KClass<out LincheckFailure>? = null,
     invocations: Int = DEFAULT_INVOCATIONS_COUNT,
+    stdLibAnalysis: Boolean = false,
 ) {
     val scenario = scenario {
         parallel { thread { actor(testOperation) } }
     }
     val verifier = CollectResultsVerifier()
     withLincheckJavaAgent(InstrumentationMode.MODEL_CHECKING) {
-        val strategy = createStrategy(testClass.java, scenario)
+        val strategy = createStrategy(testClass.java, scenario, stdLibAnalysis)
         val failure = strategy.runIteration(invocations, verifier)
         if (expectedFailure != null) {
             assert(expectedFailure.isInstance(failure))
@@ -65,20 +66,17 @@ internal fun modelCheckerTest(
     }
 }
 
-private fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario): ModelCheckingStrategy {
-    return createConfiguration(testClass)
+private fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, stdLibAnalysis: Boolean): ModelCheckingStrategy =
+    ModelCheckingOptions()
+        .invocationTimeout(30_000) // 30 sec
+        .analyzeStdLib(stdLibAnalysis)
+        .createTestConfigurations(testClass)
         .createStrategy(
             testClass = testClass,
             scenario = scenario,
             validationFunction = null,
             stateRepresentationMethod = null,
         ) as ModelCheckingStrategy
-}
-
-private fun createConfiguration(testClass: Class<*>) =
-    ModelCheckingOptions()
-        .invocationTimeout(30_000) // 30 sec
-        .createTestConfigurations(testClass)
 
 private class CollectResultsVerifier : Verifier {
     val values: MutableSet<Any?> = HashSet()

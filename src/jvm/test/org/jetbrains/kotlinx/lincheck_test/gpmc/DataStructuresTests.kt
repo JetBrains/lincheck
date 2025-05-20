@@ -43,6 +43,7 @@ class DataStructuresTests {
         testOperation = this::incorrectConcurrentLinkedDeque,
         expectedExceptions = setOf(IllegalStateException::class),
         invocations = 1_000,
+        stdLibAnalysis = true,
     )
 
     fun incorrectHashMap() {

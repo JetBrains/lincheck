@@ -16,14 +16,15 @@ import org.jetbrains.kotlinx.lincheck.Lincheck;
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError;
 import org.junit.Test;
 
-import static org.jetbrains.kotlinx.lincheck.Lincheck.runConcurrentTest;
+import static org.jetbrains.kotlinx.lincheck.Lincheck.DEFAULT_INVOCATIONS_COUNT;
 import static org.junit.Assert.assertFalse;
+import static org.jetbrains.kotlinx.lincheck.Lincheck.runConcurrentTest;
 
 public class JavaAPITest {
 
     @Test(expected = LincheckAssertionError.class)
     public void testMethodReference() {
-        runConcurrentTest(JavaAPITest::testImpl);
+        runConcurrentTest(DEFAULT_INVOCATIONS_COUNT, true ,JavaAPITest::testImpl);
     }
 
     public static void testImpl() {
@@ -55,7 +56,7 @@ public class JavaAPITest {
 
     @Test(expected = LincheckAssertionError.class)
     public void testLambda() {
-        Lincheck.runConcurrentTest(() -> {
+        Lincheck.runConcurrentTest(DEFAULT_INVOCATIONS_COUNT, true, () -> {
             int[] results = new int[2];
 
             ConcurrentLinkedDeque<Integer> deque = new ConcurrentLinkedDeque<>();

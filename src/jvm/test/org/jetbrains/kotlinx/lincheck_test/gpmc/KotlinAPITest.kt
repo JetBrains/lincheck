@@ -21,7 +21,7 @@ import org.junit.Test
 class KotlinAPITest {
 
     @Test(expected = LincheckAssertionError::class)
-    fun `test Kotlin thread`() = runConcurrentTest {
+    fun `test Kotlin thread`() = runConcurrentTest(analyzeStdLib = true) {
         var r1: Int = -1
         var r2: Int = -1
 
@@ -43,7 +43,7 @@ class KotlinAPITest {
     }
 
     @Test(expected = LincheckAssertionError::class)
-    fun `test Kotlin thread(start=false)`() = runConcurrentTest {
+    fun `test Kotlin thread(start=false)`() = runConcurrentTest(analyzeStdLib = true) {
         var r1: Int = -1
         var r2: Int = -1
 
@@ -67,7 +67,7 @@ class KotlinAPITest {
     }
 
     @Test(expected = LincheckAssertionError::class)
-    fun `test Java Thread`() = runConcurrentTest {
+    fun `test Java Thread`() = runConcurrentTest(analyzeStdLib = true) {
         var r1: Int = -1
         var r2: Int = -1
 
@@ -91,7 +91,7 @@ class KotlinAPITest {
     }
 
     @Test(expected = LincheckAssertionError::class)
-    fun `test Java Thread and AtomicInteger`() = runConcurrentTest {
+    fun `test Java Thread and AtomicInteger`() = runConcurrentTest(analyzeStdLib = true) {
         val r1 = AtomicInteger(-1)
         val r2 = AtomicInteger(-1)
 
@@ -115,7 +115,7 @@ class KotlinAPITest {
     }
 
     @Test(expected = LincheckAssertionError::class)
-    fun `test method reference`() = runConcurrentTest(block = ::testImpl)
+    fun `test method reference`() = runConcurrentTest(analyzeStdLib = true, block = ::testImpl)
 
     private fun testImpl() {
         var r1: Int = -1
@@ -139,7 +139,7 @@ class KotlinAPITest {
     }
 
     @Test(expected = LincheckAssertionError::class)
-    fun `test Kotlin check`() = runConcurrentTest {
+    fun `test Kotlin check`() = runConcurrentTest(analyzeStdLib = true) {
         var r1: Int = -1
         var r2: Int = -1
 
@@ -161,7 +161,7 @@ class KotlinAPITest {
     }
 
     @Test(expected = LincheckAssertionError::class)
-    fun `test JUnit assert`() = runConcurrentTest {
+    fun `test JUnit assert`() = runConcurrentTest(analyzeStdLib = true) {
         var r1: Int = -1
         var r2: Int = -1
 
@@ -183,7 +183,7 @@ class KotlinAPITest {
     }
 
     @Test
-    fun `test thread double start`() = runConcurrentTest {
+    fun `test thread double start`() = runConcurrentTest(analyzeStdLib = true) {
         var counter = AtomicInteger(0)
         val t1 = thread {
             counter.incrementAndGet()
