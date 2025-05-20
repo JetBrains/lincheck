@@ -16,15 +16,6 @@ import org.jetbrains.kotlinx.lincheck.chooseSequentialSpecification
  * Options for [stress][StressStrategy] strategy.
  */
 open class StressOptions : Options<StressOptions, StressCTestConfiguration>() {
-    private var invocationsPerIteration = StressCTestConfiguration.DEFAULT_INVOCATIONS
-
-    /**
-     * Run each test scenario the specified number of times.
-     */
-    fun invocationsPerIteration(invocations: Int): StressOptions = apply {
-        invocationsPerIteration = invocations
-    }
-
     override fun createTestConfigurations(testClass: Class<*>): StressCTestConfiguration {
         return StressCTestConfiguration(
             testClass = testClass,

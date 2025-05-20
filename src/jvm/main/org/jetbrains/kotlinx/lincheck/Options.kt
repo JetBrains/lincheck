@@ -11,6 +11,8 @@ package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.util.DEFAULT_LOG_LEVEL
 import org.jetbrains.kotlinx.lincheck.util.LoggingLevel
@@ -21,6 +23,7 @@ import org.jetbrains.kotlinx.lincheck.util.LoggingLevel
 abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     internal var logLevel = DEFAULT_LOG_LEVEL
     protected var iterations = CTestConfiguration.DEFAULT_ITERATIONS
+    protected var invocationsPerIteration = CTestConfiguration.DEFAULT_INVOCATIONS
     protected var threads = CTestConfiguration.DEFAULT_THREADS
     protected var actorsPerThread = CTestConfiguration.DEFAULT_ACTORS_PER_THREAD
     protected var actorsBefore = CTestConfiguration.DEFAULT_ACTORS_BEFORE
@@ -37,6 +40,14 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
      */
     fun iterations(iterations: Int): OPT = applyAndCast {
         this.iterations = iterations
+    }
+
+    /**
+     * Number of times each test scenario to be executed.
+     * Lincheck can use fewer invocations if it requires fewer ones to study all possible interleavings.
+     */
+    fun invocationsPerIteration(invocations: Int): OPT = applyAndCast {
+        this.invocationsPerIteration = invocations
     }
 
     /**

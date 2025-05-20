@@ -20,18 +20,9 @@ import java.util.*
  * Common options for all managed strategies.
  */
 abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> : Options<OPT, CTEST>() {
-    protected var invocationsPerIteration = DEFAULT_INVOCATIONS
     protected var checkObstructionFreedom = DEFAULT_CHECK_OBSTRUCTION_FREEDOM
     protected var hangingDetectionThreshold = DEFAULT_HANGING_DETECTION_THRESHOLD
     protected val guarantees: MutableList<ManagedStrategyGuarantee> = ArrayList(DEFAULT_GUARANTEES)
-
-    /**
-     * Use the specified number of scenario invocations to study interleavings in each iteration.
-     * Lincheck can use less invocations if it requires less ones to study all possible interleavings.
-     */
-    fun invocationsPerIteration(invocations: Int): OPT = applyAndCast {
-        invocationsPerIteration = invocations
-    }
 
     /**
      * Set to `true` to check the testing algorithm for obstruction-freedom.

@@ -27,7 +27,7 @@ abstract class ManagedCTestConfiguration(
     verifierClass: Class<out Verifier>,
     val checkObstructionFreedom: Boolean,
     val hangingDetectionThreshold: Int,
-    val invocationsPerIteration: Int,
+    invocationsPerIteration: Int,
     val guarantees: List<ManagedStrategyGuarantee>,
     minimizeFailedScenario: Boolean,
     sequentialSpecification: Class<*>,
@@ -36,6 +36,7 @@ abstract class ManagedCTestConfiguration(
 ) : CTestConfiguration(
     testClass = testClass,
     iterations = iterations,
+    invocationsPerIteration = invocationsPerIteration,
     threads = threads,
     actorsPerThread = actorsPerThread,
     actorsBefore = actorsBefore,
@@ -48,7 +49,6 @@ abstract class ManagedCTestConfiguration(
     customScenarios = customScenarios
 ) {
     companion object {
-        const val DEFAULT_INVOCATIONS = 10000
         const val DEFAULT_CHECK_OBSTRUCTION_FREEDOM = false
         const val DEFAULT_HANGING_DETECTION_THRESHOLD = 101
         const val LIVELOCK_EVENTS_THRESHOLD = 10001

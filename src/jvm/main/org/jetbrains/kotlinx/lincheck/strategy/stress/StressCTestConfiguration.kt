@@ -28,7 +28,7 @@ class StressCTestConfiguration(
     actorsAfter: Int,
     generatorClass: Class<out ExecutionGenerator>,
     verifierClass: Class<out Verifier>,
-    val invocationsPerIteration: Int,
+    invocationsPerIteration: Int,
     minimizeFailedScenario: Boolean,
     sequentialSpecification: Class<*>,
     timeoutMs: Long,
@@ -36,6 +36,7 @@ class StressCTestConfiguration(
 ) : CTestConfiguration(
     testClass = testClass,
     iterations = iterations,
+    invocationsPerIteration = invocationsPerIteration,
     threads = threads,
     actorsPerThread = actorsPerThread,
     actorsBefore = actorsBefore,
@@ -56,8 +57,4 @@ class StressCTestConfiguration(
         validationFunction: Actor?,
         stateRepresentationMethod: Method?
     ) = StressStrategy(this, testClass, scenario, validationFunction, stateRepresentationMethod)
-
-    companion object {
-        const val DEFAULT_INVOCATIONS = 10000
-    }
 }

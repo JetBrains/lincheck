@@ -26,6 +26,7 @@ import java.lang.reflect.*
 abstract class CTestConfiguration(
     val testClass: Class<*>,
     val iterations: Int,
+    val invocationsPerIteration: Int,
     val threads: Int,
     val actorsPerThread: Int,
     val actorsBefore: Int,
@@ -50,6 +51,7 @@ abstract class CTestConfiguration(
 
     companion object {
         const val DEFAULT_ITERATIONS = 100
+        const val DEFAULT_INVOCATIONS = 10_000
         const val DEFAULT_THREADS = 2
         const val DEFAULT_ACTORS_PER_THREAD = 5
         const val DEFAULT_ACTORS_BEFORE = 5
