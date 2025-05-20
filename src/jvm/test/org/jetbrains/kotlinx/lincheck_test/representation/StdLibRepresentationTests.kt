@@ -60,21 +60,20 @@ class ThreadSafeCollectionUnmutedRepresentationTest: BaseTraceRepresentationTest
 }
 
 class UnsafeCollectionSwitchPointTest {
-    private val list = mutableListOf<Int>()
-    
+    private val hm = HashMap<Int, Int>()
     
     @Operation
-    fun add1() = list.add(1)
+    fun put1() = hm.put(1, 1)
 
     @Operation
-    fun add2() = list.add(2)
+    fun put2() = hm.put(1, 2)
     
     @Test
     fun test() = ModelCheckingOptions()
         .addCustomScenario {
             parallel {
-                thread { actor(::add1) }
-                thread { actor(::add2) }
+                thread { actor(::put1) }
+                thread { actor(::put2) }
             }
         }
         .iterations(0)
@@ -85,24 +84,23 @@ class UnsafeCollectionSwitchPointTest {
 }
 
 class UnsafeCollectionNoSwitchPointTest {
-    private val list = mutableListOf<Int>()
-
-
-    @Operation
-    fun add1() = list.add(1)
+    private val hm = HashMap<Int, Int>()
 
     @Operation
-    fun add2() = list.add(2)
-    
+    fun put1() = hm.put(1, 1)
+
+    @Operation
+    fun put2() = hm.put(1, 2)
+
     @Test
     fun test() = ModelCheckingOptions()
         .addCustomScenario {
             parallel {
-                thread { actor(::add1) }
-                thread { actor(::add2) }
+                thread { actor(::put1) }
+                thread { actor(::put2) }
             }
         }
-        .addGuarantee(forClasses("java.util.List", "java.util.ArrayList").allMethods().mute())
+        .addGuarantee(forClasses("java.util.Map", "java.util.HashMap").allMethods().mute())
         .iterations(0)
         .checkImpl(this::class.java) { failure ->
             check(failure == null) { "Test should pass" }

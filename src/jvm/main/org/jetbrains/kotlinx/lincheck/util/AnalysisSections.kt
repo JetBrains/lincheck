@@ -276,6 +276,9 @@ internal fun isCollectionsLibrary(className: String) = className in setOf(
     "java.util.NavigableSet",
     "java.util.SortedSet",
     "java.util.Map",
+    "java.util.SortedMap",
+    "java.util.NavigableMap",
+    
 
     // Abstract implementations
     "java.util.AbstractCollection",
@@ -283,6 +286,7 @@ internal fun isCollectionsLibrary(className: String) = className in setOf(
     "java.util.AbstractQueue",
     "java.util.AbstractSequentialList",
     "java.util.AbstractSet",
+    "java.util.AbstractMap",
 
     // Concrete implementations
     "java.util.ArrayDeque",
@@ -295,7 +299,11 @@ internal fun isCollectionsLibrary(className: String) = className in setOf(
     "java.util.PriorityQueue",
     "java.util.Stack",
     "java.util.TreeSet",
-    "java.util.Vector"
+    "java.util.Vector",
+    "java.util.HashMap",
+    "java.util.LinkedHashMap",
+    "java.util.WeakHashMap",
+    "java.util.TreeMap",
 )
 
 internal fun isConcurrentCollectionsLibrary(className: String) = className in setOf(
@@ -303,6 +311,8 @@ internal fun isConcurrentCollectionsLibrary(className: String) = className in se
     "java.util.concurrent.BlockingDeque",
     "java.util.concurrent.BlockingQueue",
     "java.util.concurrent.TransferQueue",
+    "java.util.concurrent.ConcurrentMap",
+    "java.util.concurrent.ConcurrentNavigableMap",
 
     // Concrete implementations
     // Concurrent collections

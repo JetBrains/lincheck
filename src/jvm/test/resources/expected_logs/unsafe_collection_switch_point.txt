@@ -1,51 +1,50 @@
 = Invalid execution results =
-| -------------------------------------------------------- |
-|   Thread 1   |                 Thread 2                  |
-| -------------------------------------------------------- |
-| add1(): true | add2(): ArrayIndexOutOfBoundsException #1 |
-| -------------------------------------------------------- |
-
----
-The number next to an exception name helps you find its stack trace provided after the interleaving section
----
+| --------------------------- |
+|   Thread 1   |   Thread 2   |
+| --------------------------- |
+| put1(): null | put2(): null |
+| --------------------------- |
 
 The following interleaving leads to the error:
-| ------------------------------------------------------------------------------------------------------------------------------------------- |
-|   Thread 1   |                                                           Thread 2                                                           |
-| ------------------------------------------------------------------------------------------------------------------------------------------- |
-|              | add2(): ArrayIndexOutOfBoundsException #1                                                                                    |
-|              |   list.add(2): threw ArrayIndexOutOfBoundsException at UnsafeCollectionSwitchPointTest.add2(StdLibRepresentationTests.kt:70) |
-|              |     modCount ➜ 0 at ArrayList.add(ArrayList.java:466)                                                                        |
-|              |     modCount = 1 at ArrayList.add(ArrayList.java:466)                                                                        |
-|              |     elementData ➜ Array<Object>#1 at ArrayList.add(ArrayList.java:467)                                                       |
-|              |     switch                                                                                                                   |
-| add1(): true |                                                                                                                              |
-|              |     size ➜ 1 at ArrayList.add(ArrayList.java:467)                                                                            |
-|              |     add(2, Array<Object>#1, 1): threw ArrayIndexOutOfBoundsException at ArrayList.add(ArrayList.java:467)                    |
-|              |   result: ArrayIndexOutOfBoundsException #1                                                                                  |
-| ------------------------------------------------------------------------------------------------------------------------------------------- |
-
-Exception stack traces:
-#1: java.lang.ArrayIndexOutOfBoundsException: Index 1 out of bounds for length 0
-	at java.base/java.util.ArrayList.add(ArrayList.java:455)
-	at java.base/java.util.ArrayList.add(ArrayList.java:467)
-	at org.jetbrains.kotlinx.lincheck_test.representation.UnsafeCollectionSwitchPointTest.add2(StdLibRepresentationTests.kt:70)
-	at java.base/java.lang.Thread.run(Thread.java:840)
+| ------------------------------------------------------------------------------------------------------------ |
+|   Thread 1   |                                           Thread 2                                            |
+| ------------------------------------------------------------------------------------------------------------ |
+|              | put2(): null                                                                                  |
+|              |   hm.put(1, 2): null at UnsafeCollectionSwitchPointTest.put2(StdLibRepresentationTests.kt:69) |
+|              |     putVal(1, 1, 2, false, true): null at HashMap.put(HashMap.java:610)                       |
+|              |       table ➜ null at HashMap.putVal(HashMap.java:626)                                        |
+|              |       resize(): Array<Node>#1 at HashMap.putVal(HashMap.java:627)                             |
+|              |       Array<Node>#1[1] ➜ null at HashMap.putVal(HashMap.java:628)                             |
+|              |       switch                                                                                  |
+| put1(): null |                                                                                               |
+|              |       Array<Node>#1[1] = Node#1 at HashMap.putVal(HashMap.java:629)                           |
+|              |       modCount ➜ 1 at HashMap.putVal(HashMap.java:659)                                        |
+|              |       modCount = 2 at HashMap.putVal(HashMap.java:659)                                        |
+|              |       size ➜ 1 at HashMap.putVal(HashMap.java:660)                                            |
+|              |       size = 2 at HashMap.putVal(HashMap.java:660)                                            |
+|              |       threshold ➜ 12 at HashMap.putVal(HashMap.java:660)                                      |
+|              |   result: null                                                                                |
+| ------------------------------------------------------------------------------------------------------------ |
 
 Detailed trace:
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                           Thread 1                                           |                                                           Thread 2                                                           |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                              | add2(): ArrayIndexOutOfBoundsException #1                                                                                    |
-|                                                                                              |   list.add(2): threw ArrayIndexOutOfBoundsException at UnsafeCollectionSwitchPointTest.add2(StdLibRepresentationTests.kt:70) |
-|                                                                                              |     modCount ➜ 0 at ArrayList.add(ArrayList.java:466)                                                                        |
-|                                                                                              |     modCount = 1 at ArrayList.add(ArrayList.java:466)                                                                        |
-|                                                                                              |     elementData ➜ Array<Object>#1 at ArrayList.add(ArrayList.java:467)                                                       |
-|                                                                                              |     switch                                                                                                                   |
-| add1(): true                                                                                 |                                                                                                                              |
-|   list.add(1): true at UnsafeCollectionSwitchPointTest.add1(StdLibRepresentationTests.kt:67) |                                                                                                                              |
-|   result: true                                                                               |                                                                                                                              |
-|                                                                                              |     size ➜ 1 at ArrayList.add(ArrayList.java:467)                                                                            |
-|                                                                                              |     add(2, Array<Object>#1, 1): threw ArrayIndexOutOfBoundsException at ArrayList.add(ArrayList.java:467)                    |
-|                                                                                              |   result: ArrayIndexOutOfBoundsException #1                                                                                  |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                           Thread 1                                            |                                           Thread 2                                            |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                               | put2(): null                                                                                  |
+|                                                                                               |   hm.put(1, 2): null at UnsafeCollectionSwitchPointTest.put2(StdLibRepresentationTests.kt:69) |
+|                                                                                               |     putVal(1, 1, 2, false, true): null at HashMap.put(HashMap.java:610)                       |
+|                                                                                               |       table ➜ null at HashMap.putVal(HashMap.java:626)                                        |
+|                                                                                               |       resize(): Array<Node>#1 at HashMap.putVal(HashMap.java:627)                             |
+|                                                                                               |       Array<Node>#1[1] ➜ null at HashMap.putVal(HashMap.java:628)                             |
+|                                                                                               |       switch                                                                                  |
+| put1(): null                                                                                  |                                                                                               |
+|   hm.put(1, 1): null at UnsafeCollectionSwitchPointTest.put1(StdLibRepresentationTests.kt:66) |                                                                                               |
+|   result: null                                                                                |                                                                                               |
+|                                                                                               |       Array<Node>#1[1] = Node#1 at HashMap.putVal(HashMap.java:629)                           |
+|                                                                                               |       modCount ➜ 1 at HashMap.putVal(HashMap.java:659)                                        |
+|                                                                                               |       modCount = 2 at HashMap.putVal(HashMap.java:659)                                        |
+|                                                                                               |       size ➜ 1 at HashMap.putVal(HashMap.java:660)                                            |
+|                                                                                               |       size = 2 at HashMap.putVal(HashMap.java:660)                                            |
+|                                                                                               |       threshold ➜ 12 at HashMap.putVal(HashMap.java:660)                                      |
+|                                                                                               |   result: null                                                                                |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
