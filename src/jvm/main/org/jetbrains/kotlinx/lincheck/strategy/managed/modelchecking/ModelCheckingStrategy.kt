@@ -36,12 +36,12 @@ import kotlin.random.Random
  * than the number of all possible interleavings on the current depth level.
  */
 internal class ModelCheckingStrategy(
-    testCfg: ModelCheckingCTestConfiguration,
     testClass: Class<*>,
     scenario: ExecutionScenario,
     validationFunction: Actor?,
     stateRepresentation: Method?,
-) : ManagedStrategy(testClass, scenario, validationFunction, stateRepresentation, testCfg) {
+    settings: ManagedStrategySettings,
+) : ManagedStrategy(testClass, scenario, validationFunction, stateRepresentation, settings) {
     // The maximum number of thread switch choices that strategy should perform
     // (increases when all the interleavings with the current depth are studied).
     private var maxNumberOfSwitches = 0

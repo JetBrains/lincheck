@@ -39,7 +39,7 @@ public @interface ModelCheckingCTest {
      * Note, that the the actual number of threads can be less due to some restrictions
      * like {@link Operation#runOnce()}.
      *
-     * @see ExecutionScenario#parallelExecution
+     * @see ExecutionScenario#getParallelExecution
      */
     int threads() default CTestConfiguration.DEFAULT_THREADS;
 
@@ -49,7 +49,7 @@ public @interface ModelCheckingCTest {
      * Note, that the the actual number of operations can be less due to some restrictions
      * like {@link Operation#runOnce()}.
      *
-     * @see ExecutionScenario#parallelExecution
+     * @see ExecutionScenario#getParallelExecution
      */
     int actorsPerThread() default CTestConfiguration.DEFAULT_ACTORS_PER_THREAD;
 
@@ -59,7 +59,7 @@ public @interface ModelCheckingCTest {
      * Note, that the the actual number of operations can be less due to some restrictions
      * like {@link Operation#runOnce()}.
      *
-     * @see ExecutionScenario#initExecution
+     * @see ExecutionScenario#getInitExecution
      */
     int actorsBefore() default CTestConfiguration.DEFAULT_ACTORS_BEFORE;
 
@@ -69,7 +69,7 @@ public @interface ModelCheckingCTest {
      * Note, that the the actual number of operations can be less due to some restrictions
      * like {@link Operation#runOnce()}.
      *
-     * @see ExecutionScenario#postExecution
+     * @see ExecutionScenario#getPostExecution
      */
     int actorsAfter() default CTestConfiguration.DEFAULT_ACTORS_AFTER;
 

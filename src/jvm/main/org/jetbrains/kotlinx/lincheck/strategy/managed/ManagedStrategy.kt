@@ -59,12 +59,12 @@ import org.objectweb.asm.commons.Method.getMethod as getAsmMethod
  * It is worth noting that here we also solve all the transformation
  * and class loading problems.
  */
-abstract class ManagedStrategy(
+internal abstract class ManagedStrategy(
     private val testClass: Class<*>,
     scenario: ExecutionScenario,
     private val validationFunction: Actor?,
     private val stateRepresentationFunction: Method?,
-    internal val testCfg: ManagedCTestConfiguration,
+    internal val settings: ManagedStrategySettings,
 ) : Strategy(scenario), EventTracker {
 
     val executionMode: ExecutionMode =
@@ -96,7 +96,7 @@ abstract class ManagedStrategy(
     protected val currentActorId = mutableThreadMapOf<Int>()
 
     // Detector of loops or hangs (i.e. active locks).
-    internal val loopDetector: LoopDetector = LoopDetector(testCfg.hangingDetectionThreshold)
+    internal val loopDetector: LoopDetector = LoopDetector(settings.hangingDetectionThreshold)
 
     // Tracker of objects' allocations and object graph topology.
     protected abstract val objectTracker: ObjectTracker?
@@ -155,7 +155,7 @@ abstract class ManagedStrategy(
     private var randoms = mutableThreadMapOf<InjectedRandom>()
 
     // User-specified guarantees on specific function, which can be considered as atomic or ignored.
-    private val userDefinedGuarantees: List<ManagedStrategyGuarantee>? = testCfg.guarantees.ifEmpty { null }
+    private val userDefinedGuarantees: List<ManagedStrategyGuarantee>? = settings.guarantees
 
     // Utility class for the plugin integration to provide ids for each trace point
     private var eventIdProvider = EventIdProvider()
@@ -218,7 +218,9 @@ abstract class ManagedStrategy(
     // Stores the accumulated call stack after the start of spin cycle
     private val spinCycleMethodCallsStackTraces: MutableList<List<CallStackTraceElement>> = mutableListOf()
 
-    private val analysisProfile: AnalysisProfile = AnalysisProfile(testCfg)
+    internal val analysisProfile: AnalysisProfile = AnalysisProfile(
+        analyzeStdLib = settings.analyzeStdLib
+    )
 
     init {
         ObjectLabelFactory.isGPMCMode = isGeneralPurposeModelCheckingScenario(scenario)
@@ -248,7 +250,7 @@ abstract class ManagedStrategy(
             testClass = testClass,
             validationFunction = validationFunction,
             stateRepresentationMethod = stateRepresentationFunction,
-            timeoutMs = getTimeOutMs(this, testCfg.timeoutMs),
+            timeoutMs = getTimeOutMs(this, settings.timeoutMs),
             useClocks = UseClocks.ALWAYS
         )
 
@@ -429,7 +431,7 @@ abstract class ManagedStrategy(
     }
 
     private fun failIfObstructionFreedomIsRequired(lazyMessage: () -> String) {
-        if (testCfg.checkObstructionFreedom && !currentActorIsBlocking && !concurrentActorCausesBlocking) {
+        if (settings.checkObstructionFreedom && !currentActorIsBlocking && !concurrentActorCausesBlocking) {
             failDueToLivelock(lazyMessage)
         }
     }

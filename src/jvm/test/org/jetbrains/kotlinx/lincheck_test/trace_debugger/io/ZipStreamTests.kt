@@ -10,8 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck_test.trace_debugger.io
 
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
+import org.jetbrains.lincheck.datastructures.Operation
+import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.trace_debugger.AbstractDeterministicTest
 import java.io.*
 import java.util.zip.*

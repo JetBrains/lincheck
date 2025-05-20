@@ -10,10 +10,8 @@
 package org.jetbrains.kotlinx.lincheck_test;
 
 import org.jctools.queues.atomic.*;
-import org.jetbrains.annotations.*;
-import org.jetbrains.kotlinx.lincheck.annotations.*;
+import org.jetbrains.lincheck.datastructures.Operation;
 
-import java.util.*;
 
 public class NonParallelOpGroupTest extends AbstractLincheckTest {
     private final SpscLinkedAtomicQueue<Integer> queue = new SpscLinkedAtomicQueue<>();

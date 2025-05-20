@@ -28,9 +28,8 @@ Create a concurrent stress test for the `Counter`, following these steps:
 The resulting code will look like this:
 
 ```kotlin
-import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.check
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+import org.jetbrains.lincheck.*
+import org.jetbrains.lincheck.datastructures.*
 import org.junit.*
 
 class CounterTest {
@@ -73,9 +72,8 @@ To change the stress testing strategy to model checking, replace `StressOptions(
 test:
 
 ```kotlin
-import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.check
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.lincheck.*
+import org.jetbrains.lincheck.datastructures.*
 import org.junit.*
 
 class CounterTest {
@@ -129,9 +127,8 @@ To configure the testing strategy, set options in the `<TestingMode>Options` cla
 1. Set the options for scenario generation and execution for the `CounterTest`:
 
     ```kotlin
-    import org.jetbrains.kotlinx.lincheck.annotations.*
-    import org.jetbrains.kotlinx.lincheck.check
-    import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+    import org.jetbrains.lincheck.*
+    import org.jetbrains.lincheck.datastructures.*
     import org.junit.*
     
     class CounterTest {
@@ -210,9 +207,8 @@ The method should be thread-safe, non-blocking, and never modify the data struct
 states in the trace, add the `stateRepresentation()` function to the `CounterTest`:
 
     ```kotlin
-    import org.jetbrains.kotlinx.lincheck.annotations.*
-    import org.jetbrains.kotlinx.lincheck.check
-    import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+    import org.jetbrains.lincheck.*
+    import org.jetbrains.lincheck.datastructures.*
     import org.junit.Test
 
     class CounterTest {

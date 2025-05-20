@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation.trace_debugger
 
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck_test.representation.BaseTraceRepresentationTest
 import org.jetbrains.kotlinx.lincheck_test.trace_debugger.NotRandom

@@ -1,1 +1,1 @@
-At most one validation function is allowed, but several were detected: MoreThenOneValidationFunctionFailureTest.firstCheck, MoreThenOneValidationFunctionFailureTest.secondCheck
+At most one validation function is allowed, but several were detected: firstCheck, secondCheck

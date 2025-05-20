@@ -11,10 +11,11 @@
 package org.jetbrains.kotlinx.lincheck_test.strategy.modelchecking
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.junit.Test
+import org.jetbrains.lincheck.datastructures.Operation
+import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import java.util.concurrent.atomic.AtomicInteger
+import org.junit.Test
+
 
 class HangingDetectionThresholdTest {
     private var c = AtomicInteger(0)

@@ -10,10 +10,11 @@
 package org.jetbrains.kotlinx.lincheck_test.verifier.linearizability
 
 import org.jetbrains.kotlinx.lincheck.Options
-import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
+import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.*
+import org.jetbrains.lincheck.datastructures.Operation
+import org.jetbrains.lincheck.datastructures.Param
 import java.util.concurrent.*
 
 @Param(name = "value", gen = IntGen::class, conf = "1:5")

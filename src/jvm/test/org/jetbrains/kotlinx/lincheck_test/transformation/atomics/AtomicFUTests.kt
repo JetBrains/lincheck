@@ -20,8 +20,8 @@
 
 package org.jetbrains.kotlinx.lincheck_test.transformation.atomics
 
-import org.jetbrains.kotlinx.lincheck.annotations.Param
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.lincheck.datastructures.Param
+import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
 import org.jetbrains.kotlinx.lincheck_test.util.StringPoolGenerator
 import kotlinx.atomicfu.*

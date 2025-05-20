@@ -145,14 +145,14 @@ fun Strategy.runIteration(invocations: Int, verifier: Verifier): LincheckFailure
  * @return failure, if invocation results are incorrect, null otherwise.
  */
 fun Strategy.verify(result: InvocationResult, verifier: Verifier): LincheckFailure? {
-    val testCfg = if (this is ManagedStrategy) testCfg else null
+    val analysisProfile = if (this is ManagedStrategy) this.analysisProfile else AnalysisProfile.DEFAULT
     return when (result) {
         is SpinCycleFoundAndReplayRequired -> null
         is CompletedInvocationResult ->
             if (!verifier.verifyResults(scenario, result.results)) {
-                IncorrectResultsFailure(scenario, result.results, tryCollectTrace(result), AnalysisProfile(testCfg))
+                IncorrectResultsFailure(scenario, result.results, tryCollectTrace(result), analysisProfile)
             } else null
         else ->
-            result.toLincheckFailure(scenario, tryCollectTrace(result), AnalysisProfile(testCfg))
+            result.toLincheckFailure(scenario, tryCollectTrace(result), analysisProfile)
     }
 }

@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation;
 
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions;
+import org.jetbrains.lincheck.datastructures.ModelCheckingOptions;
 import java.util.HashMap;
 
 public class JavaLambdaRepresentationTest extends BaseTraceRepresentationTest {

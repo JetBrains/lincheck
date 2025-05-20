@@ -8,13 +8,13 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck_test.guide
+package org.jetbrains.lincheck_test.guide
 
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.junit.*
+import org.jetbrains.lincheck.*
+import org.jetbrains.lincheck.datastructures.*
 import java.util.concurrent.*
+import org.junit.*
+
 
 class ConcurrentLinkedDequeTest {
     private val deque = ConcurrentLinkedDeque<Int>()

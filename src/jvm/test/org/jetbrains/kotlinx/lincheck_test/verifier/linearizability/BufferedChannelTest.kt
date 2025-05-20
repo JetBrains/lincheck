@@ -12,9 +12,10 @@ package org.jetbrains.kotlinx.lincheck_test.verifier.linearizability
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck_test.*
+import org.jetbrains.lincheck.datastructures.Operation
+import org.jetbrains.lincheck.datastructures.Param
 
 @InternalCoroutinesApi
 @Param(name = "value", gen = IntGen::class, conf = "1:5")

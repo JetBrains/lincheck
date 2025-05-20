@@ -15,12 +15,12 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import java.lang.reflect.*
 
-class StressStrategy(
-    testCfg: StressCTestConfiguration,
+internal class StressStrategy(
     testClass: Class<*>,
     scenario: ExecutionScenario,
     validationFunction: Actor?,
     stateRepresentationFunction: Method?,
+    timeoutMs: Long,
 ) : Strategy(scenario) {
 
     override val runner : Runner = ParallelThreadsRunner(
@@ -28,8 +28,8 @@ class StressStrategy(
         testClass = testClass,
         validationFunction = validationFunction,
         stateRepresentationFunction = stateRepresentationFunction,
-        timeoutMs = testCfg.timeoutMs,
-        useClocks = UseClocks.RANDOM
+        timeoutMs = timeoutMs,
+        useClocks = UseClocks.RANDOM,
     )
 
     override fun runInvocation(): InvocationResult = runner.run()

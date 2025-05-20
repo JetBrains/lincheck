@@ -10,7 +10,7 @@
   package org.jetbrains.kotlinx.lincheck_test
 
 import kotlinx.atomicfu.*
-import org.jetbrains.kotlinx.lincheck.annotations.*
+import org.jetbrains.lincheck.datastructures.*
 import org.jetbrains.kotlinx.lincheck.paramgen.*
 
 class ThreadIdTest : AbstractLincheckTest() {

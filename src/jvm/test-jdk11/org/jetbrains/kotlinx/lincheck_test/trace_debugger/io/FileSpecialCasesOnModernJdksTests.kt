@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.trace_debugger.io
 
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.lincheck.datastructures.Operation
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileInputStream

@@ -11,7 +11,7 @@ package org.jetbrains.kotlinx.lincheck_test.strategy.modelchecking;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.kotlinx.lincheck.LinChecker;
-import org.jetbrains.kotlinx.lincheck.annotations.Operation;
+import org.jetbrains.lincheck.datastructures.Operation;
 import org.jetbrains.kotlinx.lincheck.execution.RandomExecutionGenerator;
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTest;
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState;

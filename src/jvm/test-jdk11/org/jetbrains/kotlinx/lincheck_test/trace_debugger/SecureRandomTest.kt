@@ -13,7 +13,7 @@ package org.jetbrains.kotlinx.lincheck_test.trace_debugger
 import java.security.SecureRandom
 import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
 
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.kotlinx.lincheck.util.JdkVersion
 import org.jetbrains.kotlinx.lincheck.util.jdkVersion
 import org.junit.Assume.assumeFalse

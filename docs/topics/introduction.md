@@ -54,9 +54,8 @@ When creating a project, use the Gradle build system.
    add the following code with a buggy concurrent counter and a Lincheck test for it:
 
    ```kotlin
-   import org.jetbrains.kotlinx.lincheck.annotations.*
-   import org.jetbrains.kotlinx.lincheck.*
-   import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+   import org.jetbrains.lincheck.*
+   import org.jetbrains.lincheck.datastructures.*
    import org.junit.*
 
    class Counter {
@@ -111,9 +110,8 @@ which examines numerous executions with a bounded number of context switches.
 The updated `BasicCounterTest` class will look like this:
 
    ```kotlin
-   import org.jetbrains.kotlinx.lincheck.annotations.*
-   import org.jetbrains.kotlinx.lincheck.check
-   import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+   import org.jetbrains.lincheck.*
+   import org.jetbrains.lincheck.datastructures.*
    import org.junit.*
    
    class Counter {
@@ -170,7 +168,7 @@ The updated `BasicCounterTest` class will look like this:
    * **T2**: The second thread resumes and increments the previously obtained counter value, incorrectly updating the
    counter to `1`.
 
-> [Get the full code](https://github.com/JetBrains/lincheck/blob/master/src/jvm/test-integration/org/jetbrains/kotlinx/lincheck_test/guide/BasicCounterTest.kt).
+> [Get the full code](https://github.com/JetBrains/lincheck/blob/master/src/jvm/test-integration/org/jetbrains/lincheck_test/guide/BasicCounterTest.kt).
 >
 {style="note"}
 
@@ -180,11 +178,10 @@ Let's now find a bug in the standard Java's `ConcurrentLinkedDeque` class.
 The Lincheck test below finds a race between removing and adding an element to the head of the deque:
 
 ```kotlin
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.junit.*
 import java.util.concurrent.*
+import org.jetbrains.lincheck.*
+import org.jetbrains.lincheck.datastructures.*
+import org.junit.*
 
 class ConcurrentDequeTest {
     private val deque = ConcurrentLinkedDeque<Int>()
@@ -252,7 +249,7 @@ The following interleaving leads to the error:
 | --------------------------------------------------------------------------------------------------------------------------------- |
 ```
 
-> [Get the full code](https://github.com/JetBrains/lincheck/blob/master/src/jvm/test-integration/org/jetbrains/kotlinx/lincheck_test/guide/ConcurrentLinkedDequeTest.kt).
+> [Get the full code](https://github.com/JetBrains/lincheck/blob/master/src/jvm/test-integration/org/jetbrains/lincheck_test/guide/ConcurrentLinkedDequeTest.kt).
 >
 {style="note"}
 

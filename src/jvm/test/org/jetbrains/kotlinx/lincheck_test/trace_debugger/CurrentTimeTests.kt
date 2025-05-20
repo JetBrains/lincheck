@@ -10,8 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck_test.trace_debugger
 
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
+import org.jetbrains.lincheck.datastructures.Operation
+import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 
 abstract class CurrentTimeTest : AbstractDeterministicTest() {
     override fun ModelCheckingOptions.customize(): ModelCheckingOptions = this

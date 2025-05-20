@@ -8,15 +8,15 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck_test.guide
+package org.jetbrains.lincheck_test.guide
 
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
-import org.junit.*
-import org.junit.Assume.assumeFalse
 import java.util.concurrent.*
+import org.jetbrains.lincheck.*
+import org.jetbrains.lincheck.datastructures.*
+import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
+import org.junit.Assume.assumeFalse
+import org.junit.*
+
 
 class ConcurrentHashMapTest {
     @Before

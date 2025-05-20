@@ -126,7 +126,7 @@ fun onThreadSwitchesOrActorFinishes() {}
 // ======================================================================================================== //
 
 internal fun runPluginReplay(
-    testCfg: ModelCheckingCTestConfiguration,
+    settings: ManagedStrategySettings,
     testClass: Class<*>,
     scenario: ExecutionScenario,
     validationFunction: Actor?,
@@ -134,14 +134,27 @@ internal fun runPluginReplay(
     invocations: Int,
     verifier: Verifier
 ) {
-    testCfg.createStrategy(testClass, scenario, validationFunction, stateRepresentationMethod).use { replayStrategy ->
-        check(replayStrategy is ModelCheckingStrategy)
+    createStrategy(settings, testClass, scenario, validationFunction, stateRepresentationMethod).use { replayStrategy ->
         replayStrategy.enableReplayModeForIdeaPlugin()
         val replayedFailure = replayStrategy.runIteration(invocations, verifier)
         check(replayedFailure != null)
         replayStrategy.runReplayIfPluginEnabled(replayedFailure)
     }
 }
+
+private fun createStrategy(
+    settings: ManagedStrategySettings,
+    testClass: Class<*>,
+    scenario: ExecutionScenario,
+    validationFunction: Actor?,
+    stateRepresentationMethod: Method?,
+) = ModelCheckingStrategy(
+        testClass,
+        scenario,
+        validationFunction,
+        stateRepresentationMethod,
+        settings
+    )
 
 /**
  * If the plugin enabled and the failure has a trace, passes information about

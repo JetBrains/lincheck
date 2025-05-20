@@ -1,35 +1,55 @@
 /*
  * Lincheck
  *
- * Copyright (C) 2019 - 2023 JetBrains s.r.o.
+ * Copyright (C) 2019 - 2025 JetBrains s.r.o.
  *
  * This Source Code Form is subject to the terms of the
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
 package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
-import org.jetbrains.kotlinx.lincheck.util.DEFAULT_LOG_LEVEL
+import org.jetbrains.kotlinx.lincheck.annotations.*
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.execution.RandomExecutionGenerator
+import org.jetbrains.kotlinx.lincheck.strategy.Strategy
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTest
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
+import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
 import org.jetbrains.kotlinx.lincheck.util.LoggingLevel
+import org.jetbrains.kotlinx.lincheck.util.DEFAULT_LOG_LEVEL
+import org.jetbrains.kotlinx.lincheck.verifier.Verifier
+import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier
+import java.lang.reflect.Method
 
 /**
  * Abstract class for test options.
  */
 abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     internal var logLevel = DEFAULT_LOG_LEVEL
+
     protected var iterations = CTestConfiguration.DEFAULT_ITERATIONS
+    protected var invocationsPerIteration = CTestConfiguration.DEFAULT_INVOCATIONS
+
     protected var threads = CTestConfiguration.DEFAULT_THREADS
     protected var actorsPerThread = CTestConfiguration.DEFAULT_ACTORS_PER_THREAD
     protected var actorsBefore = CTestConfiguration.DEFAULT_ACTORS_BEFORE
     protected var actorsAfter = CTestConfiguration.DEFAULT_ACTORS_AFTER
+
     protected var executionGenerator = CTestConfiguration.DEFAULT_EXECUTION_GENERATOR
-    protected var verifier = CTestConfiguration.DEFAULT_VERIFIER
-    protected var minimizeFailedScenario = CTestConfiguration.DEFAULT_MINIMIZE_ERROR
-    protected var sequentialSpecification: Class<*>? = null
+
     protected var timeoutMs: Long = CTestConfiguration.DEFAULT_TIMEOUT_MS
+
+    protected var verifier = CTestConfiguration.DEFAULT_VERIFIER
+    protected var sequentialSpecification: Class<*>? = null
+
+    protected var minimizeFailedScenario = CTestConfiguration.DEFAULT_MINIMIZE_ERROR
+
     protected var customScenarios: MutableList<ExecutionScenario> = mutableListOf()
 
     /**
@@ -37,6 +57,14 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
      */
     fun iterations(iterations: Int): OPT = applyAndCast {
         this.iterations = iterations
+    }
+
+    /**
+     * Number of times each test scenario to be executed.
+     * Lincheck can use fewer invocations if it requires fewer ones to study all possible interleavings.
+     */
+    fun invocationsPerIteration(invocations: Int): OPT = applyAndCast {
+        this.invocationsPerIteration = invocations
     }
 
     /**
@@ -170,4 +198,106 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
             block()
         } as OPT
     }
+}
+
+/**
+ * Abstract configuration for different lincheck modes.
+ */
+abstract class CTestConfiguration(
+    val testClass: Class<*>,
+    val iterations: Int,
+    val invocationsPerIteration: Int,
+    val threads: Int,
+    val actorsPerThread: Int,
+    val actorsBefore: Int,
+    val actorsAfter: Int,
+    val generatorClass: Class<out ExecutionGenerator>,
+    val verifierClass: Class<out Verifier>,
+    val minimizeFailedScenario: Boolean,
+    val sequentialSpecification: Class<*>,
+    val timeoutMs: Long,
+    val customScenarios: List<ExecutionScenario>
+) {
+
+    /**
+     * Specifies the transformation required for this strategy.
+     */
+    internal abstract val instrumentationMode: InstrumentationMode
+
+    abstract fun createStrategy(
+        testClass: Class<*>,
+        scenario: ExecutionScenario,
+        validationFunction: Actor?,
+        stateRepresentationMethod: Method?,
+    ): Strategy
+
+    companion object {
+        const val DEFAULT_ITERATIONS = 100
+        const val DEFAULT_INVOCATIONS = 10_000
+
+        const val DEFAULT_THREADS = 2
+        const val DEFAULT_ACTORS_PER_THREAD = 5
+        const val DEFAULT_ACTORS_BEFORE = 5
+        const val DEFAULT_ACTORS_AFTER = 5
+
+        const val DEFAULT_MINIMIZE_ERROR = true
+        const val DEFAULT_TIMEOUT_MS: Long = 30_000 // 30 sec
+
+        val DEFAULT_EXECUTION_GENERATOR: Class<out ExecutionGenerator?> = RandomExecutionGenerator::class.java
+        val DEFAULT_VERIFIER: Class<out Verifier> = LinearizabilityVerifier::class.java
+    }
+}
+
+internal fun CTestConfiguration.createVerifier() =
+    verifierClass.getConstructor(Class::class.java).newInstance(sequentialSpecification)
+
+internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConfiguration> {
+
+    val stressConfigurations: List<CTestConfiguration> = testClass.getAnnotationsByType(StressCTest::class.java)
+        .map { ann: StressCTest ->
+            StressCTestConfiguration(
+                testClass = testClass,
+                iterations = ann.iterations,
+                threads = ann.threads,
+                actorsPerThread = ann.actorsPerThread,
+                actorsBefore = ann.actorsBefore,
+                actorsAfter = ann.actorsAfter,
+                generatorClass = ann.generator.java,
+                verifierClass = ann.verifier.java,
+                invocationsPerIteration = ann.invocationsPerIteration,
+                minimizeFailedScenario = ann.minimizeFailedScenario,
+                sequentialSpecification = chooseSequentialSpecification(ann.sequentialSpecification.java, testClass),
+                timeoutMs = CTestConfiguration.DEFAULT_TIMEOUT_MS,
+                customScenarios = emptyList()
+            )
+        }
+
+    val modelCheckingConfigurations: List<CTestConfiguration> =
+        testClass.getAnnotationsByType(ModelCheckingCTest::class.java)
+            .map { ann: ModelCheckingCTest ->
+                ModelCheckingCTestConfiguration(
+                    testClass = testClass,
+                    iterations = ann.iterations,
+                    threads = ann.threads,
+                    actorsPerThread = ann.actorsPerThread,
+                    actorsBefore = ann.actorsBefore,
+                    actorsAfter = ann.actorsAfter,
+                    generatorClass = ann.generator.java,
+                    verifierClass = ann.verifier.java,
+                    checkObstructionFreedom = ann.checkObstructionFreedom,
+                    hangingDetectionThreshold = ann.hangingDetectionThreshold,
+                    invocationsPerIteration = ann.invocationsPerIteration,
+                    guarantees = ManagedCTestConfiguration.DEFAULT_GUARANTEES,
+                    minimizeFailedScenario = ann.minimizeFailedScenario,
+                    sequentialSpecification = chooseSequentialSpecification(
+                        ann.sequentialSpecification.java,
+                        testClass
+                    ),
+                    timeoutMs = CTestConfiguration.DEFAULT_TIMEOUT_MS,
+                    customScenarios = emptyList(),
+                    stdLibAnalysisEnabled = false,
+                )
+            }
+
+    return stressConfigurations + modelCheckingConfigurations
 }

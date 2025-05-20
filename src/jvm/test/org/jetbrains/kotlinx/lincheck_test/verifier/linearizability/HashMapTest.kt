@@ -9,10 +9,11 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.verifier.linearizability
 
-import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck_test.*
+import org.jetbrains.lincheck.datastructures.Operation
+import org.jetbrains.lincheck.datastructures.Param
 import java.util.*
 
 @Param(name = "key", gen = IntGen::class)

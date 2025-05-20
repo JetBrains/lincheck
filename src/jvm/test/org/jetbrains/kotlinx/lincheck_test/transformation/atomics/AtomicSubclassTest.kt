@@ -11,7 +11,7 @@
 package org.jetbrains.kotlinx.lincheck_test.transformation.atomics
 
 import org.jetbrains.kotlinx.lincheck.Options
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
 import java.util.concurrent.atomic.AtomicInteger

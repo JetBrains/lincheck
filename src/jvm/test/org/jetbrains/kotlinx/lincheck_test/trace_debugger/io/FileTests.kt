@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.trace_debugger.io
 
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.kotlinx.lincheck_test.trace_debugger.AbstractDeterministicTest
 import org.junit.Ignore
 import java.io.File

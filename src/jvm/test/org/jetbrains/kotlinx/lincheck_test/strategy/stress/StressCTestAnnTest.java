@@ -10,9 +10,9 @@
 
 package org.jetbrains.kotlinx.lincheck_test.strategy.stress;
 
-import org.jetbrains.annotations.*;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.kotlinx.lincheck.*;
-import org.jetbrains.kotlinx.lincheck.annotations.Operation;
+import org.jetbrains.lincheck.datastructures.Operation;
 import org.jetbrains.kotlinx.lincheck.execution.*;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*;
 import org.jetbrains.kotlinx.lincheck.verifier.*;
