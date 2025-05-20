@@ -30,6 +30,9 @@ internal class ParkingTransformer(
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
         when {
+
+            /* Instrument `LockSupport` parking API */
+
             isLockSupport(owner) && (name == "park" || name == "parkNanos") -> {
                 invokeIfInAnalyzedCode(
                     original = {
@@ -59,7 +62,12 @@ internal class ParkingTransformer(
                 )
             }
 
-            isUnsafe(owner) && (name == "park") -> {
+            /* Instrument `Unsafe` parking API. */
+
+            // Note that calls to `Unsafe` parking API from teh `LockSupport` class are not instrumented,
+            // because the calls to `LockSupport` itself are instrumented.
+
+            isUnsafe(owner) && (name == "park") && !isLockSupport(className) -> {
                 invokeIfInAnalyzedCode(
                     original = {
                         visitMethodInsn(opcode, owner, name, desc, itf)
@@ -70,7 +78,7 @@ internal class ParkingTransformer(
                 )
             }
 
-            isUnsafe(owner) && (name == "unpark") -> {
+            isUnsafe(owner) && (name == "unpark") && !isLockSupport(className) -> {
                 invokeIfInAnalyzedCode(
                     original = {
                         visitMethodInsn(opcode, owner, name, desc, itf)
@@ -80,6 +88,8 @@ internal class ParkingTransformer(
                     }
                 )
             }
+
+            /* Do not instrument other methods */
 
             else -> {
                 visitMethodInsn(opcode, owner, name, desc, itf)
