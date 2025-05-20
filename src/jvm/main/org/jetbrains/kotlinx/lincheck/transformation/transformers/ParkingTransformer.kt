@@ -30,35 +30,13 @@ internal class ParkingTransformer(
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
         when {
-            isUnsafe(owner) && name == "park" -> {
-                invokeIfInAnalyzedCode(
-                    original = {
-                        visitMethodInsn(opcode, owner, name, desc, itf)
-                    },
-                    instrumented = {
-                        processUnsafePark()
-                    }
-                )
-            }
-
-            isUnsafe(owner) && name == "unpark" -> {
-                invokeIfInAnalyzedCode(
-                    original = {
-                        visitMethodInsn(opcode, owner, name, desc, itf)
-                    },
-                    instrumented = {
-                        processUnsafeUnpark()
-                    }
-                )
-            }
-
             isLockSupport(owner) && (name == "park" || name == "parkNanos") -> {
                 invokeIfInAnalyzedCode(
                     original = {
                         visitMethodInsn(opcode, owner, name, desc, itf)
                     },
                     instrumented = {
-                        val withNanos = name == "parkNanos"
+                        val withNanos = (name == "parkNanos")
                         val withBlocker = if (withNanos) {
                             desc == "(Ljava/lang/Object;J)V"
                         } else {
@@ -69,7 +47,8 @@ internal class ParkingTransformer(
                 )
             }
 
-            isLockSupport(owner) && name == "unpark" && desc == "(Ljava/lang/Thread;)V" -> {
+            isLockSupport(owner) && (name == "unpark") -> {
+                check(desc == "(Ljava/lang/Thread;)V")
                 invokeIfInAnalyzedCode(
                     original = {
                         visitMethodInsn(opcode, owner, name, desc, itf)
@@ -80,10 +59,52 @@ internal class ParkingTransformer(
                 )
             }
 
+            isUnsafe(owner) && (name == "park") -> {
+                invokeIfInAnalyzedCode(
+                    original = {
+                        visitMethodInsn(opcode, owner, name, desc, itf)
+                    },
+                    instrumented = {
+                        processUnsafePark()
+                    }
+                )
+            }
+
+            isUnsafe(owner) && (name == "unpark") -> {
+                invokeIfInAnalyzedCode(
+                    original = {
+                        visitMethodInsn(opcode, owner, name, desc, itf)
+                    },
+                    instrumented = {
+                        processUnsafeUnpark()
+                    }
+                )
+            }
+
             else -> {
                 visitMethodInsn(opcode, owner, name, desc, itf)
             }
         }
+    }
+
+    private fun GeneratorAdapter.processLockSupportPark(
+        withBlocker: Boolean = false,
+        withNanos: Boolean = false
+    ) {
+        if (withNanos) pop2()   // pop nanos (long)
+        if (withBlocker) pop()  // pop blocker
+        loadNewCodeLocationId()
+        dup()
+        invokeStatic(Injections::beforePark)
+        invokeBeforeEventIfPluginEnabled("park")
+        invokeStatic(Injections::park)
+    }
+
+    private fun GeneratorAdapter.processLockSupportUnpark() {
+        // Thread parameter is already on the stack
+        loadNewCodeLocationId()
+        invokeStatic(Injections::unpark)
+        invokeBeforeEventIfPluginEnabled("unpark")
     }
 
     private fun GeneratorAdapter.processUnsafePark() {
@@ -109,21 +130,4 @@ internal class ParkingTransformer(
 
     private fun isLockSupport(owner: String) =
         (owner == "java/util/concurrent/locks/LockSupport")
-
-    private fun GeneratorAdapter.processLockSupportPark(withBlocker: Boolean = false, withNanos: Boolean = false) {
-        if (withNanos) pop() // pop nanos
-        if (withBlocker) pop() // pop blocker
-        loadNewCodeLocationId()
-        dup()
-        invokeStatic(Injections::beforePark)
-        invokeBeforeEventIfPluginEnabled("park")
-        invokeStatic(Injections::park)
-    }
-
-    private fun GeneratorAdapter.processLockSupportUnpark() {
-        // Thread parameter is already on the stack
-        loadNewCodeLocationId()
-        invokeStatic(Injections::unpark)
-        invokeBeforeEventIfPluginEnabled("unpark")
-    }
 }
