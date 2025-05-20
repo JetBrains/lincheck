@@ -52,4 +52,24 @@ class ParkingTest {
         expectedOutcomes = setOf(0)
     )
 
+    fun parkUntil(): Int {
+        val counter = AtomicInteger(0)
+        val mainThread = Thread.currentThread()
+        val t1 = thread {
+            counter.incrementAndGet()
+            LockSupport.unpark(mainThread)
+        }
+        LockSupport.parkUntil(System.currentTimeMillis() + 10_000 /* + 10 sec */)
+        return counter.get().also {
+            t1.join()
+        }
+    }
+
+    @Test(timeout = TIMEOUT)
+    fun parkUntilTest() = modelCheckerTest(
+        testClass = this::class,
+        testOperation = this::parkUntil,
+        // can be both because of the spurious wake-ups
+        expectedOutcomes = setOf(0, 1)
+    )
 }

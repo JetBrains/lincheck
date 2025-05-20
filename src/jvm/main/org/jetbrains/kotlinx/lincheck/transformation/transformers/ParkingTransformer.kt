@@ -18,8 +18,8 @@ import java.util.concurrent.locks.LockSupport
 
 /**
  * [ParkingTransformer] tracks [Unsafe.park], [Unsafe.unpark], [LockSupport.park], [LockSupport.park] with blocker,
- * [LockSupport.parkNanos], [LockSupport.parkNanos] with blocker, and [LockSupport.unpark] method calls,
- * injecting invocations of [EventTracker.park] and [EventTracker.unpark] methods.
+ * [LockSupport.parkNanos], [LockSupport.parkNanos] with blocker, [LockSupport.parkUntil], [LockSupport.parkUntil] with blocker,
+ * and [LockSupport.unpark] method calls, injecting invocations of [EventTracker.park] and [EventTracker.unpark] methods.
  */
 internal class ParkingTransformer(
     fileName: String,
@@ -46,6 +46,18 @@ internal class ParkingTransformer(
                             desc == "(Ljava/lang/Object;)V"
                         }
                         processPark(withBlocker = withBlocker, withNanos = withNanos)
+                    }
+                )
+            }
+
+            isLockSupport(owner) && (name == "parkUntil") -> {
+                invokeIfInAnalyzedCode(
+                    original = {
+                        visitMethodInsn(opcode, owner, name, desc, itf)
+                    },
+                    instrumented = {
+                        val withBlocker = desc == "(Ljava/lang/Object;J)V"
+                        processPark(withBlocker = withBlocker, withNanos = true, withIsAbsolute = true)
                     }
                 )
             }
@@ -103,10 +115,10 @@ internal class ParkingTransformer(
         withNanos: Boolean = false,
         withIsAbsolute: Boolean = false
     ) {
-        if (withNanos)      pop2()  // nanos: long
-        if (withIsAbsolute) pop()   // isAbsolute: boolean
-        if (withBlocker)    pop()   // blocker: Object
-        if (isUnsafe)       pop()   // this: Unsafe
+        if (withNanos)                  pop2()  // nanos: long
+        if (isUnsafe && withIsAbsolute) pop()   // isAbsolute: boolean
+        if (withBlocker)                pop()   // blocker: Object
+        if (isUnsafe)                   pop()   // this: Unsafe
         loadNewCodeLocationId()
         dup()
         invokeStatic(Injections::beforePark)
