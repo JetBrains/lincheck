@@ -10,18 +10,13 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation;
 
-import java.util.HashMap;
-
 public class JavaLambdaRepresentationTest extends BaseTraceRepresentationTest {
     public JavaLambdaRepresentationTest() {
         super("java_lambda_argument_representation");
     }
     
-    private int a = 1;
-    private final HashMap<Integer, Integer> hm = new HashMap<>(); 
-    
     @Override
     public void operation() {
-        hm.computeIfAbsent(1, key -> a++);
+        throw new IllegalStateException("Bla");
     }
 }
