@@ -45,7 +45,7 @@ internal class ParkingTransformer(
                         } else {
                             desc == "(Ljava/lang/Object;)V"
                         }
-                        processLockSupportPark(withBlocker = withBlocker, withNanos = withNanos)
+                        processPark(withBlocker = withBlocker, withNanos = withNanos)
                     }
                 )
             }
@@ -57,7 +57,7 @@ internal class ParkingTransformer(
                         visitMethodInsn(opcode, owner, name, desc, itf)
                     },
                     instrumented = {
-                        processLockSupportUnpark()
+                        processUnpark()
                     }
                 )
             }
@@ -73,7 +73,7 @@ internal class ParkingTransformer(
                         visitMethodInsn(opcode, owner, name, desc, itf)
                     },
                     instrumented = {
-                        processUnsafePark()
+                        processPark(isUnsafe = true, withIsAbsolute = true, withNanos = true)
                     }
                 )
             }
@@ -84,7 +84,7 @@ internal class ParkingTransformer(
                         visitMethodInsn(opcode, owner, name, desc, itf)
                     },
                     instrumented = {
-                        processUnsafeUnpark()
+                        processUnpark(isUnsafe = true)
                     }
                 )
             }
@@ -97,12 +97,16 @@ internal class ParkingTransformer(
         }
     }
 
-    private fun GeneratorAdapter.processLockSupportPark(
+    private fun GeneratorAdapter.processPark(
+        isUnsafe: Boolean = false,
         withBlocker: Boolean = false,
-        withNanos: Boolean = false
+        withNanos: Boolean = false,
+        withIsAbsolute: Boolean = false
     ) {
-        if (withNanos) pop2()   // pop nanos (long)
-        if (withBlocker) pop()  // pop blocker
+        if (withNanos)      pop2()  // nanos: long
+        if (withIsAbsolute) pop()   // isAbsolute: boolean
+        if (withBlocker)    pop()   // blocker: Object
+        if (isUnsafe)       pop()   // this: Unsafe
         loadNewCodeLocationId()
         dup()
         invokeStatic(Injections::beforePark)
@@ -110,28 +114,15 @@ internal class ParkingTransformer(
         invokeStatic(Injections::park)
     }
 
-    private fun GeneratorAdapter.processLockSupportUnpark() {
+    private fun GeneratorAdapter.processUnpark(
+        isUnsafe: Boolean = false
+    ) {
+        if (isUnsafe) {
+            pop() // this: Unsafe
+        }
         // Thread parameter is already on the stack
         loadNewCodeLocationId()
         invokeStatic(Injections::unpark)
-        invokeBeforeEventIfPluginEnabled("unpark")
-    }
-
-    private fun GeneratorAdapter.processUnsafePark() {
-        pop2()  // time
-        pop()   // isAbsolute
-        pop()   // Unsafe
-        loadNewCodeLocationId()
-        dup()
-        invokeStatic(Injections::beforePark)
-        invokeBeforeEventIfPluginEnabled("park")
-        invokeStatic(Injections::park)
-    }
-
-    private fun GeneratorAdapter.processUnsafeUnpark() {
-        loadNewCodeLocationId()
-        invokeStatic(Injections::unpark)
-        pop() // pop Unsafe object
         invokeBeforeEventIfPluginEnabled("unpark")
     }
 
