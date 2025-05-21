@@ -10,12 +10,20 @@
 
 package org.jetbrains.kotlinx.lincheck_test.gpmc
 
+import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.LockSupport
 import kotlin.concurrent.thread
 import org.junit.Test
+import org.junit.Before
+import org.junit.Assume.assumeFalse
 
 class ParkingTest {
+
+    @Before
+    fun setUp() {
+        assumeFalse(isInTraceDebuggerMode) // invocations must be 1 for the trace debugger
+    }
 
     fun parkUnpark(): Int {
         val counter = AtomicInteger(0)
