@@ -68,8 +68,8 @@ internal class InlineMethodCallTransformer(
             // which function should really work.
             // Prefer the second variant if possible.
             val this_ =
-                locals.activeVariables.firstOrNull({ it.name == "\$this$$inlineName$suffix" }) ?:
-                locals.activeVariables.firstOrNull({ it.name == "this_$suffix" })
+                locals.activeVariables.firstOrNull { it.name == "\$this$$inlineName$suffix" } ?:
+                locals.activeVariables.firstOrNull { it.name == "this_$suffix" }
             val clazz = this_?.type
             val className = if (clazz?.sort == OBJECT) clazz.className else ""
             val thisLocal = if (clazz?.sort == OBJECT) this_.index else null

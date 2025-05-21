@@ -16,6 +16,8 @@ import org.objectweb.asm.Type
 typealias StackSlotIndex = Int
 typealias LocalVariablesMap = Map<StackSlotIndex, List<LocalVariableInfo>>
 
+private const val INLINE_FUNC_PREFIX = "\$i\$f\$"
+
 internal fun List<LocalVariableInfo>.isUniqueVariable(): Boolean {
     val name = first().name
     val type = first().type
@@ -23,8 +25,8 @@ internal fun List<LocalVariableInfo>.isUniqueVariable(): Boolean {
 }
 
 data class LocalVariableInfo(val name: String, val index: Int, val labelIndexRange: Pair<Label, Label>, val type: Type) {
-    val isInlineCallMarker = name.startsWith("\$i\$f\$")
-    val inlineMethodName = if (isInlineCallMarker) name.removePrefix("\$i\$f\$") else null
+    val isInlineCallMarker = name.startsWith(INLINE_FUNC_PREFIX)
+    val inlineMethodName = if (isInlineCallMarker) name.removePrefix(INLINE_FUNC_PREFIX) else null
 }
 
 data class MethodVariables(val variables: LocalVariablesMap = emptyMap()) {
@@ -43,7 +45,7 @@ data class MethodVariables(val variables: LocalVariablesMap = emptyMap()) {
         }
     }
 
-    val activeVariables: Set<LocalVariableInfo> = activeVars
+    val activeVariables: Set<LocalVariableInfo> get() = activeVars
     fun variablesStartAt(label: Label): List<LocalVariableInfo> = varsByStartLabel[label].orEmpty()
     fun variablesEndAt(label: Label): List<LocalVariableInfo> = varsByEndLabel[label].orEmpty()
 
