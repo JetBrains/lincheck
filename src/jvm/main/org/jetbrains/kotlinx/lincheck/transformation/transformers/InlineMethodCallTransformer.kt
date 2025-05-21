@@ -12,7 +12,6 @@ package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.objectweb.asm.Label
-import org.objectweb.asm.Type
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
 import sun.nio.ch.lincheck.*
@@ -34,8 +33,8 @@ internal class InlineMethodCallTransformer(
         val contType = getObjectType("kotlin/coroutines/Continuation").className
     }
 
-    val methodType = getMethodType(desc)
-    val looksLikeSuspendMethod =
+    private val methodType = getMethodType(desc)
+    private val looksLikeSuspendMethod =
         methodType.returnType.className == objectType &&
         methodType.argumentTypes.lastOrNull()?.className == contType &&
         (
@@ -44,8 +43,7 @@ internal class InlineMethodCallTransformer(
             locals.hasVarByName("\$result")
         )
 
-    val inlineStack = ArrayList<LocalVariableInfo>()
-
+    private val inlineStack = ArrayList<LocalVariableInfo>()
 
     override fun visitLabel(label: Label) = adapter.run {
         locals.visitLabel(label)
@@ -62,20 +60,27 @@ internal class InlineMethodCallTransformer(
             // Start a new inline call: We cannot start a true call as we don't have a lot of necessary
             // information, such as method descriptor, variables' types, etc.
             inlineStack.add(lvar)
-            // Try to find active "this_$iv[$iv...]" variable to extract class name
             val suffix = "\$iv".repeat(inlineStack.size)
-            val this_ = locals.activeVariables.firstOrNull({ it.name == "this_$suffix" })
-            val clazz = this_?.type
-            val className = if (clazz != null && clazz.sort == OBJECT) clazz.className else ""
-            val thisLocal = if (clazz != null && clazz.sort == OBJECT) this_.index else null
-            visitLabel(label)
             val inlineName = lvar.inlineMethodName!!
+
+            // If an extension function was inlined, `this_$iv` will point to class where extension
+            // function was defined and `$this$<func-name>$iv` will show to virtual `this`, with
+            // which function should really work.
+            // Prefer the second variant if possible.
+            val this_ =
+                locals.activeVariables.firstOrNull({ it.name == "\$this$$inlineName$suffix" }) ?:
+                locals.activeVariables.firstOrNull({ it.name == "this_$suffix" })
+            val clazz = this_?.type
+            val className = if (clazz?.sort == OBJECT) clazz.className else ""
+            val thisLocal = if (clazz?.sort == OBJECT) this_.index else null
+
             invokeIfInAnalyzedCode(
                 original = {},
                 instrumented = {
                     processInlineMethodCall(className, inlineName, clazz, thisLocal, label)
                 }
             )
+            visitLabel(label)
             return
         }
         // TODO Find a way to sort multiple marker variables with same start by end label
@@ -139,5 +144,6 @@ internal class InlineMethodCallTransformer(
 
     // Don't support atomicfu for now, it is messed with stack
     // Maybe we will need to expand it later
+    // Check inlined method name by marker variable name
     private fun isSupportedInline(lvar: LocalVariableInfo) = !lvar.name.endsWith("\$atomicfu")
 }
