@@ -107,9 +107,9 @@ object Lincheck {
         /**
          * TODO
          */
-        fun operation(function: KFunction<*>): Operation {
+        fun operation(function: KFunction<*>, argumentTypes: List<KClass<*>>): Operation {
             val method = function.javaMethod ?: error("Cannot get Java method for $function")
-            return Operation(method).also { _operations.add(it) }
+            return Operation(method, argumentTypes).also { _operations.add(it) }
         }
 
         /**
@@ -186,7 +186,7 @@ object Lincheck {
 
     }
 
-    class Operation(val method: Method) {
+    class Operation(val method: Method, val argumentTypes: List<KClass<*>>? = null) {
         var runOnce: Boolean = false
         var blocking: Boolean = false
         var causesBlocking: Boolean = false
@@ -246,12 +246,19 @@ private fun Lincheck.DataStructureTestConfiguration<*>.getCTestStructure(): CTes
     val randomProvider = RandomProvider()
     val parameterGenerators = mutableListOf<ParameterGenerator<*>>()
     val actorsGenerators: List<ActorGenerator> = operations.map { operation ->
+        if (operation.argumentTypes != null) {
+            check(operation.argumentTypes.size == operation.method.parameterTypes.size) {
+                "Number of arguments does not match the number of parameters of the method."
+            }
+        }
+        val method = operation.method
+        val argumentTypes = operation.argumentTypes?.map { it.java } ?: method.parameterTypes.toList()
         ActorGenerator(
-            operation.method,
-            operation.method.parameterTypes.map { parameterClass ->
-                val parameterGenerator = parameterClass.getDefaultParameterGenerator(randomProvider)
+            method,
+            argumentTypes.map { parameterType ->
+                val parameterGenerator = parameterType.getDefaultParameterGenerator(randomProvider)
                 check(parameterGenerator != null) {
-                    "No default parameter generator found for ${parameterClass.name}"
+                    "No default parameter generator found for ${parameterType.name}"
                 }
                 parameterGenerator.also {
                     parameterGenerators.add(it)
