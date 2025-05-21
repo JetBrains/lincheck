@@ -267,8 +267,7 @@ internal class LoopDetector(
                 totalExecutionsCount > ManagedCTestConfiguration.LIVELOCK_EVENTS_THRESHOLD ->
                     Decision.EventsThresholdReached
                 // else - continue
-else -> Decision.Idle
-                    Decision.Idle
+                else -> Decision.Idle
             }
         }
         val detectedFirstTime = count > hangingDetectionThreshold
