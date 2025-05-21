@@ -201,8 +201,9 @@ internal class LincheckClassVisitor(
             aa
         }
         val locals: Map<Int, List<LocalVariableInfo>> = methods[methodName + desc]?.variables ?: emptyMap()
-        mv = LocalVariablesAccessTransformer(fileName, className, methodName, mv.newAdapter(), locals)
+        // Inline method call transformer can produce local variable access which must not be insturmented!
         mv = InlineMethodCallTransformer(fileName, className, methodName, desc, mv.newAdapter(), methods[methodName + desc] ?: MethodVariables())
+        mv = LocalVariablesAccessTransformer(fileName, className, methodName, mv.newAdapter(), locals)
         // Must appear in code after `SharedMemoryAccessTransformer` (to be able to skip this transformer).
         // It can appear earlier in code than `IntrinsicCandidateMethodFilter` because if kover instruments intrinsic methods
         // (which cannot disallow) then we don't need to hide coverage instrumentation from lincheck,
