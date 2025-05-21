@@ -1883,7 +1883,7 @@ abstract class ManagedStrategy(
                 return guarantee.type
             }
         }
-        return section
+        return if (section == AnalysisSectionType.IGNORED) AnalysisSectionType.SILENT else section
     }
     
     private fun getAnalysisSectionFor(className: String, methodName: String): AnalysisSectionType {
