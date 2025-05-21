@@ -16,10 +16,8 @@ import org.junit.Test
 class KotlinAPITest {
 
     @Test
-    fun hashMapTest() = Lincheck.runConcurrentDataStructureTest {
-        constructor { HashMap<String, String>() }
-
-        operation(HashMap<String, String>::get, argumentTypes = listOf(String::class))
-        operation(HashMap<String, String>::put, argumentTypes = listOf(String::class, String::class))
+    fun hashMapTest() = Lincheck.runConcurrentDataStructureTest({ HashMap<String, String>() }) {
+        operation(it::get, argumentTypes = listOf(String::class))
+        operation(it::put, argumentTypes = listOf(String::class, String::class))
     }
 }

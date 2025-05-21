@@ -82,27 +82,21 @@ object Lincheck {
         }
     }
 
-    fun <T> runConcurrentDataStructureTest(configure: DataStructureTestConfiguration<T>.() -> Unit) {
-        val configuration = DataStructureTestConfiguration<T>().apply(configure)
+    fun <T> runConcurrentDataStructureTest(
+        constructor: Constructor<T>,
+        configure: DataStructureTestConfiguration<T>.(T) -> Unit
+    ) {
+        val configuration = DataStructureTestConfiguration<T>(constructor)
+            .apply { configure(getInstance()) }
         val testClass = configuration.getTestClass()
         val testStructure = configuration.getCTestStructure()
         val options = configuration.getOptions()
         LinChecker(testClass, testStructure, options).check()
     }
 
-    class DataStructureTestConfiguration<T> {
-        internal var constructor: Constructor<T>? = null
-            private set
-
+    class DataStructureTestConfiguration<T>(internal val constructor: Constructor<T>) {
         private val _operations: MutableList<Operation> = mutableListOf()
         internal val operations: List<Operation> get() = _operations
-
-        /**
-         * TODO
-         */
-        fun constructor(block: () -> T) {
-            constructor = block
-        }
 
         /**
          * TODO
