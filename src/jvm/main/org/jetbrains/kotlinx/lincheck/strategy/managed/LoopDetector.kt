@@ -307,7 +307,9 @@ internal class LoopDetector(
                 return Decision.EventsThresholdReached
             }
         }
-if (detectedFirstTime || detectedEarly) return Decision.LivelockThreadSwitch(replayModeCurrentCyclePeriod)
+        if (detectedFirstTime || detectedEarly) {
+            return Decision.LivelockThreadSwitch(replayModeCurrentCyclePeriod)
+        }
         return Decision.Idle
     }
 
