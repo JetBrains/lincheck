@@ -267,7 +267,7 @@ internal class LoopDetector(
                 totalExecutionsCount > ManagedCTestConfiguration.LIVELOCK_EVENTS_THRESHOLD ->
                     Decision.EventsThresholdReached
                 // else - continue
-                else ->
+else -> Decision.Idle
                     Decision.Idle
             }
         }
@@ -308,10 +308,7 @@ internal class LoopDetector(
                 return Decision.EventsThresholdReached
             }
         }
-        if (detectedFirstTime || detectedEarly) {
-            val cyclePeriod = replayModeCurrentCyclePeriod
-            return Decision.LivelockThreadSwitch(cyclePeriod)
-        }
+if (detectedFirstTime || detectedEarly) return Decision.LivelockThreadSwitch(replayModeCurrentCyclePeriod)
         return Decision.Idle
     }
 
