@@ -668,7 +668,7 @@ private class ReplayModeLoopDetectorHelper(
     /**
      * Called before next execution in current thread.
      */
-    @Suppress("UNUSED_PARAMETER")
+    @Suppress("UNUSED_PARAMETER") // pass `codeLocation` only for uniformity with `LoopDetector.visitCodeLocation`
     fun visitCodeLocation(codeLocation: Int) {
         executionsPerformedInCurrentThread++
     }
