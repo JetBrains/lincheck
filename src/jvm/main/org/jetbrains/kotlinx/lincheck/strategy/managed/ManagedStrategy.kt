@@ -274,7 +274,7 @@ abstract class ManagedStrategy(
     protected open fun initializeInvocation() {
         traceCollector = if (collectTrace) TraceCollector() else null
         suddenInvocationResult = null
-        loopDetector.initialize()
+        loopDetector.reset()
         objectTracker?.reset()
         monitorTracker.reset()
         parkingTracker.reset()

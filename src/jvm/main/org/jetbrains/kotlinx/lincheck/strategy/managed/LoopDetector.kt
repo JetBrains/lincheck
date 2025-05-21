@@ -137,13 +137,13 @@ internal class LoopDetector(
     /**
      * Is called before each interleaving processing
      */
-    fun initialize() {
+    fun reset() {
         currentThreadId = -1
         totalExecutionsCount = 0
         currentThreadCodeLocationVisitCountMap.clear()
         currentThreadCodeLocationsHistory.clear()
         currentInterleavingHistory.clear()
-        replayModeLoopDetectorHelper?.initialize()
+        replayModeLoopDetectorHelper?.reset()
     }
 
     fun enableReplayMode(failDueToDeadlockInTheEnd: Boolean) {
@@ -661,7 +661,7 @@ private class ReplayModeLoopDetectorHelper(
     val currentlyInSpinCycle: Boolean get() =
         currentHistoryNode?.let { it.cycleOccurred && it.executions < executionsPerformedInCurrentThread } ?: false
 
-    fun initialize() {
+    fun reset() {
         currentInterleavingNodeIndex = 0
         executionsPerformedInCurrentThread = 0
     }
