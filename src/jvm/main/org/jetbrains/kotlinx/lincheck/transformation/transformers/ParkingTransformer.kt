@@ -11,6 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.objectweb.asm.commons.GeneratorAdapter
+import org.objectweb.asm.Opcodes.*
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import sun.nio.ch.lincheck.*
 import java.util.concurrent.locks.LockSupport
@@ -134,10 +135,24 @@ internal class ParkingTransformer(
         if (isUnsafe) {
             pop() // this: Unsafe
         }
-        // Thread parameter is already on the stack
+        // STACK: thread
+        val exitLabel = newLabel()
+        val notNullLabel = newLabel()
+        // check if the top stack value (thread) is null
+        visitInsn(DUP)
+        visitJumpInsn(IFNONNULL, notNullLabel)
+        // STACK: thread
+        pop()
+        goTo(exitLabel)
+
+        visitLabel(notNullLabel)
+        // STACK: thread
         loadNewCodeLocationId()
         invokeStatic(Injections::unpark)
         invokeBeforeEventIfPluginEnabled("unpark")
+
+        // STACK: <empty>
+        visitLabel(exitLabel)
     }
 
     private fun isUnsafe(owner: String) =
