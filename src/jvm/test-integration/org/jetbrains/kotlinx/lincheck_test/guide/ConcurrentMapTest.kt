@@ -36,6 +36,7 @@ class ConcurrentHashMapTest {
         .actorsAfter(0)
         .minimizeFailedScenario(false)
         .checkObstructionFreedom(true)
+        .analyzeStdLib(true)
         .check(this::class)
 }
 
@@ -53,5 +54,6 @@ class ConcurrentSkipListMapTest {
     @Test
     fun modelCheckingTest() = ModelCheckingOptions()
         .checkObstructionFreedom(true)
+        .analyzeStdLib(true)
         .check(this::class)
 }

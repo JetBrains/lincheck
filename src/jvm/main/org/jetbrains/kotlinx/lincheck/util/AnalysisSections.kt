@@ -209,9 +209,10 @@ internal fun getSectionDefinitionFor(className: String, methodName: String = "")
     isThreadContainerClass(className) -> AnalysisSectionType.NORMAL
     
     // These cannot be ignored by managed strategy
-    className.startsWith("kotlin.jvm.functions.") -> AnalysisSectionType.NORMAL
-    className.startsWith("java.util.function.") -> AnalysisSectionType.NORMAL
-    className == "java.lang.Runnable" -> AnalysisSectionType.NORMAL
+    className.startsWith("kotlin.jvm.functions.") -> AnalysisSectionType.SILENT
+    className.startsWith("java.util.function.") -> AnalysisSectionType.SILENT
+    className == "java.lang.Runnable" -> AnalysisSectionType.SILENT
+    className == "java.lang.StringBuilder" -> AnalysisSectionType.SILENT
 
     // Specific Kotlin classes that need to be transformed
     className.startsWith("kotlin.concurrent.ThreadsKt") -> AnalysisSectionType.NORMAL
