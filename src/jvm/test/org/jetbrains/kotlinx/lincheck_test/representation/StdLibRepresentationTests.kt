@@ -78,6 +78,7 @@ class ThreadSafeCollectionUnmutedLambdaRepresentationTest: BaseRunConcurrentRepr
     override val analyzeStdLib: Boolean = true
 }
 
+// TODO potentially switch to runConcurrentTest if #650 is fixed by #663
 class UnsafeCollectionSwitchPointTest {
     private val hm = HashMap<Int, Int>()
     
@@ -102,6 +103,7 @@ class UnsafeCollectionSwitchPointTest {
     
 }
 
+// TODO potentially switch to runConcurrentTest if #650 is fixed by #663
 class UnsafeCollectionNoSwitchPointTest {
     private val hm = HashMap<Int, Int>()
 

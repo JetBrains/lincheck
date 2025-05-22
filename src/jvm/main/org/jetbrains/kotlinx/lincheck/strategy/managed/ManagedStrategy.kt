@@ -217,6 +217,8 @@ abstract class ManagedStrategy(
     private var spinCycleStartAdded = false
     // Stores the accumulated call stack after the start of spin cycle
     private val spinCycleMethodCallsStackTraces: MutableList<List<CallStackTraceElement>> = mutableListOf()
+    
+    private val analysisProfile: AnalysisProfile = AnalysisProfile(testCfg)
 
     init {
         ObjectLabelFactory.isGPMCMode = isGeneralPurposeModelCheckingScenario(scenario)
@@ -407,9 +409,9 @@ abstract class ManagedStrategy(
             StringBuilder().apply {
                 appendLine("Non-determinism found. Probably caused by non-deterministic code (WeakHashMap, Object.hashCode, etc).")
                 appendLine("== Reporting the first execution without execution trace ==")
-                appendLine(result.toLincheckFailure(scenario, null, testCfg))
+                appendLine(result.toLincheckFailure(scenario, null, analysisProfile))
                 appendLine("== Reporting the second execution ==")
-                appendLine(loggedResults.toLincheckFailure(scenario, trace, testCfg).toString())
+                appendLine(loggedResults.toLincheckFailure(scenario, trace, analysisProfile).toString())
             }.toString()
         }
 
@@ -1877,20 +1879,13 @@ abstract class ManagedStrategy(
         when (owner) {
             System.`in`, System.out, System.err -> return AnalysisSectionType.IGNORED
         }
-        val section = getAnalysisSectionFor(ownerName, methodName)
+        val section = analysisProfile.getAnalysisSectionFor(ownerName, methodName)
         userDefinedGuarantees?.forEach { guarantee ->
             if (guarantee.classPredicate(ownerName) && guarantee.methodPredicate(methodName)) {
                 return guarantee.type
             }
         }
-        return if (section == AnalysisSectionType.IGNORED) AnalysisSectionType.SILENT else section
-    }
-    
-    private fun getAnalysisSectionFor(className: String, methodName: String): AnalysisSectionType {
-        if (testCfg is ModelCheckingCTestConfiguration && testCfg.stdLibAnalysisEnabled && isConcurrentCollectionsLibrary(className)) {
-            return AnalysisSectionType.NORMAL
-        }
-        return getSectionDefinitionFor(className, methodName)
+        return section
     }
 
     private fun enterAnalysisSection(threadId: ThreadId, section: AnalysisSectionType) {

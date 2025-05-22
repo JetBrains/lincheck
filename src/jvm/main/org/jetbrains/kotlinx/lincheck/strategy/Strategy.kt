@@ -13,6 +13,7 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.kotlinx.lincheck.trace.Trace
+import org.jetbrains.kotlinx.lincheck.util.AnalysisProfile
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.util.concurrent.TimeoutException
 import java.io.Closeable
@@ -149,9 +150,9 @@ fun Strategy.verify(result: InvocationResult, verifier: Verifier): LincheckFailu
         is SpinCycleFoundAndReplayRequired -> null
         is CompletedInvocationResult ->
             if (!verifier.verifyResults(scenario, result.results)) {
-                IncorrectResultsFailure(scenario, result.results, tryCollectTrace(result), testCfg)
+                IncorrectResultsFailure(scenario, result.results, tryCollectTrace(result), AnalysisProfile(testCfg))
             } else null
         else -> 
-            result.toLincheckFailure(scenario, tryCollectTrace(result), testCfg)
+            result.toLincheckFailure(scenario, tryCollectTrace(result), AnalysisProfile(testCfg))
     }
 }

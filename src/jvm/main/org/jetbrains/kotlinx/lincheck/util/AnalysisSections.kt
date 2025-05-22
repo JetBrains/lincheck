@@ -10,8 +10,9 @@
 
 package org.jetbrains.kotlinx.lincheck.util
 
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
-import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.isEagerlyInstrumentedClass
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.transformation.isThreadContainerClass
 import sun.nio.ch.lincheck.ThreadDescriptor
 import sun.nio.ch.lincheck.Injections
@@ -185,79 +186,117 @@ internal inline fun <R> runOutsideIgnoredSection(block: () -> R): R {
 }
 
 /**
- * Determines the analysis section type for a given class. And optionally function.
+ * Configures how different code sections should be analyzed.
+ * Used to control which classes should be transformed for analysis, what analysis sections
+ * should be applied, and which methods should be hidden from trace results.
  *
- * @param className The name of the class to analyze.
- * @param methodName The name of the method to analyze.
- * @return AnalysisSectionType.NORMAL if the class should be transformed, AnalysisSectionType.IGNORED otherwise.
+ * @property analyzeStdLib Controls whether standard library code should be analyzed. When false,
+ *                        standard collections and concurrent collections are hidden,
+ *                        concurrent collections are muted.
  */
-internal fun getSectionDefinitionFor(className: String, methodName: String = ""): AnalysisSectionType = when {
-    isJavaExecutorService(className) && methodName == "submit" -> AnalysisSectionType.SILENT_PROPAGATING
-    isJavaExecutorService(className) -> AnalysisSectionType.SILENT
-    className.startsWith("java.util.concurrent.locks.AbstractQueuedSynchronizer") -> AnalysisSectionType.SILENT
-    className == "java.util.concurrent.FutureTask" -> AnalysisSectionType.SILENT
+internal class AnalysisProfile(val analyzeStdLib: Boolean) {
     
-    // We should transform all eagerly instrumented classes.
-    isEagerlyInstrumentedClass(className) -> AnalysisSectionType.NORMAL
-    
-    isConcurrentCollectionsLibrary(className) -> AnalysisSectionType.SILENT
-
-    // Specific class handling for java.lang.Thread
-    className == "java.lang.Thread" -> AnalysisSectionType.NORMAL
-
-    // Specific handling for ThreadContainer classes
-    isThreadContainerClass(className) -> AnalysisSectionType.NORMAL
-
-    // Specific Kotlin classes that need to be transformed
-    className.startsWith("kotlin.concurrent.ThreadsKt") -> AnalysisSectionType.NORMAL
-    className.startsWith("kotlin.collections.") -> AnalysisSectionType.NORMAL
-    className.startsWith("kotlin.jvm.internal.Array") && className.contains("Iterator") -> AnalysisSectionType.NORMAL
-    className.startsWith("kotlin.ranges.") -> AnalysisSectionType.NORMAL
-    className.startsWith("kotlin.random.") -> AnalysisSectionType.NORMAL
-    className.startsWith("kotlin.coroutines.jvm.internal.") -> AnalysisSectionType.IGNORED
-    className.startsWith("kotlin.coroutines.") -> AnalysisSectionType.NORMAL
-
-    // Java util classes except atomic ones
-    className.startsWith("java.util.concurrent.") && className.contains("Atomic") -> AnalysisSectionType.IGNORED
-    className.startsWith("java.util.") -> AnalysisSectionType.NORMAL
-
-    // AtomicFU non-atomic classes
-    className.startsWith("kotlinx.atomicfu.") && !className.contains("Atomic") -> AnalysisSectionType.NORMAL
-    className.startsWith("kotlinx.atomicfu.") -> AnalysisSectionType.IGNORED
+    constructor(testConfiguration: ManagedCTestConfiguration?) : this(
+        testConfiguration is ModelCheckingCTestConfiguration && testConfiguration.stdLibAnalysisEnabled
+    )
 
 
-    // Specific classes and packages that should be ignored
-    className.startsWith("kotlinx.coroutines.debug.") -> AnalysisSectionType.IGNORED
-    className == "kotlinx.coroutines.DebugKt" -> AnalysisSectionType.IGNORED
-    className.startsWith("com.intellij.rt.coverage.") -> AnalysisSectionType.IGNORED
-    className.startsWith("com.intellij.rt.debugger.agent.") -> AnalysisSectionType.IGNORED
-    className.startsWith("com.esotericsoftware.kryo.") -> AnalysisSectionType.IGNORED
-    className.startsWith("net.bytebuddy.") -> AnalysisSectionType.IGNORED
-    className.startsWith("net.rubygrapefruit.platform.") -> AnalysisSectionType.IGNORED
-    className.startsWith("io.mockk.") -> AnalysisSectionType.IGNORED
-    className.startsWith("it.unimi.dsi.fastutil.") -> AnalysisSectionType.IGNORED
-    className.startsWith("worker.org.gradle.") -> AnalysisSectionType.IGNORED
-    className.startsWith("org.objectweb.asm.") -> AnalysisSectionType.IGNORED
-    className.startsWith("org.gradle.") -> AnalysisSectionType.IGNORED
-    className.startsWith("org.slf4j.") -> AnalysisSectionType.IGNORED
-    className.startsWith("org.apache.commons.lang.") -> AnalysisSectionType.IGNORED
-    className.startsWith("org.junit.") -> AnalysisSectionType.IGNORED
-    className.startsWith("junit.framework.") -> AnalysisSectionType.IGNORED
+    /**
+     * Determines whether a given class and method should be transformed (instrumented) for analysis.
+     *
+     * @param className The fully qualified name of the class to check
+     * @param methodName The name of the method to check
+     * @return true if the class/method should be transformed, false otherwise
+     */
+    @Suppress("UNUSED_PARAMETER") // methodName is here for uniformity and might become useful in the future  
+    fun shouldTransform(className: String, methodName: String): Boolean = when {
+        // We do not need to instrument most standard Java classes.
+        // It is fine to inject the Lincheck analysis only into the
+        // `java.util.*` ones, ignored the known atomic constructs.
+        className == "java.lang.Thread" -> true
+        className.startsWith("java.util.concurrent.") && className.contains("Atomic") -> false
+        className.startsWith("java.util.") -> true
+        className.startsWith("java.") -> false
 
-    // Lincheck classes should never be transformed
-    className.startsWith("org.jetbrains.kotlinx.lincheck.") -> AnalysisSectionType.IGNORED
-    className.startsWith("sun.nio.ch.lincheck.") -> AnalysisSectionType.IGNORED
-    
-    // More general patterns for classes that should be ignored
-    className.startsWith("java.") -> AnalysisSectionType.IGNORED
-    className.startsWith("com.sun.") -> AnalysisSectionType.IGNORED
-    className.startsWith("sun.") -> AnalysisSectionType.IGNORED
-    className.startsWith("javax.") -> AnalysisSectionType.IGNORED
-    className.startsWith("jdk.") -> AnalysisSectionType.IGNORED
-    className.startsWith("kotlin.") -> AnalysisSectionType.IGNORED
 
-    // All other classes should be transformed
-    else -> AnalysisSectionType.NORMAL
+        className.startsWith("com.sun.") -> false
+        className.startsWith("sun.") -> false
+        className.startsWith("javax.") -> false
+        
+        // Transform `ThreadContainer.start` to detect thread forking.
+        isThreadContainerClass(className) -> true
+        className.startsWith("jdk.") -> false
+        
+        // We do not need to instrument most standard Kotlin classes.
+        // However, we need to inject the Lincheck analysis into the classes
+        // related to collections, iterators, random and coroutines.
+        className.startsWith("kotlin.concurrent.ThreadsKt") -> true
+        className.startsWith("kotlin.collections.") -> true
+        className.startsWith("kotlin.jvm.internal.Array") && className.contains("Iterator") -> true
+        className.startsWith("kotlin.ranges.") -> true
+        className.startsWith("kotlin.random.") -> true
+        className.startsWith("kotlin.coroutines.jvm.internal.") -> false
+        className.startsWith("kotlin.coroutines.") -> true
+        className.startsWith("kotlin.") -> false
+
+        // We do not instrument AtomicFU atomics.
+        className.contains("Atomic") && className.startsWith("kotlinx.atomicfu.") -> false
+
+        // We need to skip the classes related to the debugger support in Kotlin coroutines.
+        className.startsWith("kotlinx.coroutines.debug.") -> false
+        className == "kotlinx.coroutines.DebugKt" -> false
+        // We should never transform the coverage-related classes.
+        className.startsWith("com.intellij.rt.coverage.") -> false
+        // We should skip intellij debugger agent classes.
+        className.startsWith("com.intellij.rt.debugger.agent.") -> false
+        // We can also safely do not instrument some libraries for performance reasons.
+        className.startsWith("com.esotericsoftware.kryo.") -> false
+        className.startsWith("net.bytebuddy.") -> false
+        className.startsWith("net.rubygrapefruit.platform.") -> false
+        className.startsWith("io.mockk.") -> false
+        className.startsWith("it.unimi.dsi.fastutil.") -> false
+        className.startsWith("worker.org.gradle.") -> false
+        className.startsWith("org.objectweb.asm.") -> false
+        className.startsWith("org.gradle.") -> false
+        className.startsWith("org.slf4j.") -> false
+        className.startsWith("org.apache.commons.lang.") -> false
+        className.startsWith("org.junit.") -> false
+        className.startsWith("junit.framework.") -> false
+        // Finally, we should never instrument the Lincheck classes.
+        className.startsWith("org.jetbrains.kotlinx.lincheck.") -> false
+        className.startsWith("sun.nio.ch.lincheck.") -> false
+        // All the classes that were not filtered out are eligible for transformation.
+        else -> true
+    }
+
+    /**
+     * Determines what type of analysis section should be applied to a given class and method.
+     *
+     * @param className The fully qualified name of the class to check
+     * @param methodName The name of the method to check
+     * @return The [AnalysisSectionType] to use for analyzing this class/method
+     */
+    fun getAnalysisSectionFor(className: String,  methodName: String): AnalysisSectionType = when {
+        isJavaExecutorService(className) && methodName == "submit" -> AnalysisSectionType.SILENT_PROPAGATING
+        isJavaExecutorService(className) -> AnalysisSectionType.SILENT
+        className.startsWith("java.util.concurrent.locks.AbstractQueuedSynchronizer") -> AnalysisSectionType.SILENT
+        className == "java.util.concurrent.FutureTask" -> AnalysisSectionType.SILENT
+        isConcurrentCollectionsLibrary(className) && !analyzeStdLib -> AnalysisSectionType.SILENT
+        
+        else -> AnalysisSectionType.NORMAL
+    }
+
+    /**
+     * Determines whether calls to a given class/method should be hidden from trace results.
+     * Used to filter out standard library implementation details.
+     *
+     * @param className The fully qualified name of the class to check
+     * @param methodName The name of the method to check
+     * @return true if calls should be hidden from results, false otherwise
+     */
+    @Suppress("UNUSED_PARAMETER") // methodName is here for uniformity and might become useful in the future
+    fun shouldBeHidden(className: String, methodName: String): Boolean = 
+        !analyzeStdLib && (isConcurrentCollectionsLibrary(className) || isCollectionsLibrary(className))
 }
 
 internal fun isCollectionsLibrary(className: String) = className in setOf(

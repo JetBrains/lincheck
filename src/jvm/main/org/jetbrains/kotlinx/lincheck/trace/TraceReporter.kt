@@ -62,7 +62,7 @@ internal class TraceReporter(
         // Optimizes trace by combining trace points for synthetic field accesses etc..
         val compressedTraceGraph = traceGraph
             .compressTrace()
-            .let { if (failure.testConfig is ModelCheckingCTestConfiguration && !failure.testConfig.stdLibAnalysisEnabled) it.collapseLibraries() else it }
+            .collapseLibraries(failure.analysisProfile)
         
         graph = if (isGeneralPurposeModelCheckingScenario(failure.scenario)) removeGPMCLambda(compressedTraceGraph) else compressedTraceGraph
     }

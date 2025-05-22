@@ -476,8 +476,9 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         if (instrumentationMode == STRESS) {
             if (className.startsWith("java.") || className.startsWith("kotlin.")) return false
         }
+        if (isEagerlyInstrumentedClass(className)) return true
 
-        return getSectionDefinitionFor(className) != AnalysisSectionType.IGNORED
+        return AnalysisProfile(true).shouldTransform(className, "")
     }
 
 

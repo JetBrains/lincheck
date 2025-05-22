@@ -10,8 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.trace
 
-import org.jetbrains.kotlinx.lincheck.util.isCollectionsLibrary
-import org.jetbrains.kotlinx.lincheck.util.isConcurrentCollectionsLibrary
+import org.jetbrains.kotlinx.lincheck.util.AnalysisProfile
 
 
 internal fun SingleThreadedTable<TraceNode>.compressTrace() = this
@@ -190,16 +189,16 @@ private fun SingleThreadedTable<TraceNode>.compressThreadStart() = compressNodes
     newNode
 }
 
-internal fun SingleThreadedTable<TraceNode>.collapseLibraries() = compressNodes { node -> 
+internal fun SingleThreadedTable<TraceNode>.collapseLibraries(analysisProfile: AnalysisProfile) = compressNodes { node -> 
     // if should not be hidden
-    if (node !is CallNode || !shouldBeHidden(node)) return@compressNodes node
+    if (node !is CallNode || !analysisProfile.shouldBeHidden(node)) return@compressNodes node
     
     // if cannot be hidden (due to switch point)
     if (node.containsDescendant { it is EventNode && it.tracePoint is SwitchEventTracePoint }) 
         return@compressNodes node
     
     val newNode = node.copy()
-    findSubTreesToBeShown(node).forEach {  newNode.addChild(it) }
+    findSubTreesToBeShown(node, analysisProfile).forEach {  newNode.addChild(it) }
     return@compressNodes newNode
 }
 
@@ -207,10 +206,10 @@ internal fun SingleThreadedTable<TraceNode>.collapseLibraries() = compressNodes 
  * Finds descendants that should not be hidden.
  * But not descendants of descendants, aka the roots of all subtrees that should be shown in the trace.
  */
-private fun findSubTreesToBeShown(node: TraceNode): List<TraceNode> {
+private fun findSubTreesToBeShown(node: TraceNode, analysisProfile: AnalysisProfile): List<TraceNode> {
     if (node !is CallNode) return emptyList()
-    if (!shouldBeHidden(node)) return listOf(node)
-    return node.children.map { findSubTreesToBeShown(it) }.flatten()
+    if (!analysisProfile.shouldBeHidden(node)) return listOf(node)
+    return node.children.map { findSubTreesToBeShown(it, analysisProfile) }.flatten()
 }
 
 private fun SingleThreadedTable<TraceNode>.compressNodes(compressionRule: (TraceNode) -> TraceNode) = map {
@@ -254,6 +253,5 @@ private fun isUserThreadStart(currentTracePoint: MethodCallTracePoint, nextTrace
             && nextTracePoint.className == "kotlin.jvm.functions.Function0"
             && nextTracePoint.methodName == "invoke"
 
-private fun shouldBeHidden(callNode: CallNode): Boolean =
-    isConcurrentCollectionsLibrary(callNode.tracePoint.className)
-    || isCollectionsLibrary(callNode.tracePoint.className)
+private fun AnalysisProfile.shouldBeHidden(callNode: CallNode): Boolean = 
+    shouldBeHidden(callNode.tracePoint.className, callNode.tracePoint.methodName)
