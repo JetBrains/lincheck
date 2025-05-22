@@ -19,8 +19,7 @@ The following interleaving leads to the error:
 |             blocker.isReleasable(): false at ForkJoinPool.unmanagedBlock(ForkJoinPool.java:3745)                                                   |
 |             blocker.block() at ForkJoinPool.unmanagedBlock(ForkJoinPool.java:3745)                                                                 |
 |               isReleasable(): false at AbstractQueuedSynchronizer$ConditionNode.block(AbstractQueuedSynchronizer.java:506)                         |
-|               LockSupport.park() at AbstractQueuedSynchronizer$ConditionNode.block(AbstractQueuedSynchronizer.java:506)                            |
-|                 PARK at LockSupport.park(LockSupport.java:371)                                                                                     |
+|               PARK at AbstractQueuedSynchronizer$ConditionNode.block(AbstractQueuedSynchronizer.java:506)                                          |
 | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 All unfinished threads are in deadlock
 
@@ -75,7 +74,6 @@ Detailed trace:
 |             blocker.block() at ForkJoinPool.unmanagedBlock(ForkJoinPool.java:3745)                                                                           |
 |               isReleasable(): false at AbstractQueuedSynchronizer$ConditionNode.block(AbstractQueuedSynchronizer.java:506)                                   |
 |                 status ➜ 3 at AbstractQueuedSynchronizer$ConditionNode.isReleasable(AbstractQueuedSynchronizer.java:502)                                     |
-|               LockSupport.park() at AbstractQueuedSynchronizer$ConditionNode.block(AbstractQueuedSynchronizer.java:506)                                      |
-|                 PARK at LockSupport.park(LockSupport.java:371)                                                                                               |
+|               PARK at AbstractQueuedSynchronizer$ConditionNode.block(AbstractQueuedSynchronizer.java:506)                                                    |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 All unfinished threads are in deadlock

@@ -9,9 +9,7 @@ The following interleaving leads to the error:
 |     q.take() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:101)                                    |
 |       lock.lockInterruptibly() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:400)                                                             |
 |       notEmpty.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:403)                                                                     |
-|         LockSupport.park(ConditionObject#1) at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2039)              |
-|           LockSupport.setBlocker(Thread#0, ConditionObject#1) at LockSupport.park(LockSupport.java:174)                                            |
-|           PARK at LockSupport.park(LockSupport.java:175)                                                                                           |
+|         PARK at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2039)                                             |
 | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 All unfinished threads are in deadlock
 
@@ -29,9 +27,6 @@ Detailed trace:
 |               compareAndSetState(0, 1): true at ReentrantLock$Sync.nonfairTryAcquire(ReentrantLock.java:133)                                                    |
 |                 Unsafe#1.compareAndSwapInt(NonfairSync#1, 16, 0, 1): true at AbstractQueuedSynchronizer.compareAndSetState(AbstractQueuedSynchronizer.java:566) |
 |       notEmpty.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:403)                                                                                  |
-|         LockSupport.park(ConditionObject#1) at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2039)                           |
-|           LockSupport.setBlocker(Thread#0, ConditionObject#1) at LockSupport.park(LockSupport.java:174)                                                         |
-|             Unsafe#1.putObject(Thread#0, 88, ConditionObject#1) at LockSupport.setBlocker(LockSupport.java:125)                                                 |
-|           PARK at LockSupport.park(LockSupport.java:175)                                                                                                        |
+|         PARK at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2039)                                                          |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 All unfinished threads are in deadlock
