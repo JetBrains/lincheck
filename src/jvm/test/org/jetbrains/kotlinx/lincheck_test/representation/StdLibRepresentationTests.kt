@@ -18,45 +18,64 @@ import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
 import org.junit.Test
 import java.util.concurrent.ConcurrentHashMap
 
-class ThreadSafeCollectionMutedRepresentationTest: BaseTraceRepresentationTest("thread_safe_collection_muted") {
+class ThreadSafeCollectionMutedRepresentationTest: BaseRunConcurrentRepresentationTest<Unit>("thread_safe_collection_muted") {
     
     private val concurrentMap = ConcurrentHashMap<Int, Int>()
     private var a = 1
     
-    override fun operation() {
+    override fun block() {
         concurrentMap.put(1, 1)
         a++
+        check(false)
     }
+    override val analyzeStdLib: Boolean = false
 }
 
-class ThreadSafeCollectionMutedLambdaRepresentationTest: BaseTraceRepresentationTest("thread_safe_collection_muted_lambda") {
+class ThreadSafeCollectionUnmutedRepresentationTest: BaseRunConcurrentRepresentationTest<Unit>("thread_safe_collection_unmuted") {
+    private val concurrentMap = ConcurrentHashMap<Int, Int>()
+    private var a = 1
+
+    override fun block() {
+        concurrentMap.put(1, 1)
+        a++
+        check(false)
+    }
+    override val analyzeStdLib: Boolean = true
+}
+
+class ThreadSafeCollectionMutedLambdaRepresentationTest: BaseRunConcurrentRepresentationTest<Unit>("thread_safe_collection_muted_lambda") {
 
     private val concurrentMap = ConcurrentHashMap<Int, Int>()
     private val innerConcurrentMap = ConcurrentHashMap<Int, Int>()
     private var a = 1
 
-    override fun operation() {
+    override fun block() {
         concurrentMap.computeIfAbsent(1) { 
             a = 5
             innerConcurrentMap.computeIfAbsent(1) { ++a }
             ++a 
         }
         a++
+        check(false)
     }
+    override val analyzeStdLib: Boolean = false
 }
 
-class ThreadSafeCollectionUnmutedRepresentationTest: BaseTraceRepresentationTest("thread_safe_collection_unmuted") {
+class ThreadSafeCollectionUnmutedLambdaRepresentationTest: BaseRunConcurrentRepresentationTest<Unit>("thread_safe_collection_unmuted_lambda") {
     private val concurrentMap = ConcurrentHashMap<Int, Int>()
+    private val innerConcurrentMap = ConcurrentHashMap<Int, Int>()
     private var a = 1
 
-    override fun operation() {
-        concurrentMap.put(1, 1)
+    override fun block() {
+        concurrentMap.computeIfAbsent(1) {
+            a = 5
+            innerConcurrentMap.computeIfAbsent(1) { ++a }
+            ++a
+        }
         a++
+        check(false)
     }
-
-    override fun ModelCheckingOptions.customize() {
-        analyzeStdLib(true)
-    }
+    override val analyzeStdLib: Boolean = true
 }
 
 class UnsafeCollectionSwitchPointTest {
