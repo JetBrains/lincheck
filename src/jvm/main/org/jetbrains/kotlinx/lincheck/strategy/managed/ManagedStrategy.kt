@@ -339,7 +339,7 @@ internal abstract class ManagedStrategy(
     /**
      * Re-runs the last invocation to collect its trace.
      */
-    override fun tryCollectTrace(result: InvocationResult): Trace? {
+    override fun tryCollectTrace(result: InvocationResult): Pair<Trace?, InvocationResult> {
         val detectedByStrategy = suddenInvocationResult != null
         val canCollectTrace = when {
             detectedByStrategy -> true // ObstructionFreedomViolationInvocationResult or UnexpectedExceptionInvocationResult
@@ -350,7 +350,7 @@ internal abstract class ManagedStrategy(
         if (!canCollectTrace) {
             // Interleaving events can be collected almost always,
             // except for the strange cases such as Runner's timeout or exceptions in LinCheck.
-            return null
+            return null to result
         }
 
         collectTrace = true
@@ -368,7 +368,7 @@ internal abstract class ManagedStrategy(
         // In case the runner detects a deadlock, some threads can still be in an active state,
         // simultaneously adding events to the TraceCollector, which leads to an inconsistent trace.
         // Therefore, if the runner detects deadlock, we don't even try to collect trace.
-        if (loggedResults is RunnerTimeoutInvocationResult) return null
+        if (loggedResults is RunnerTimeoutInvocationResult) return null to result
 
         val threadNames = MutableList<String>(threadScheduler.nThreads) { "" }
         getRegisteredThreads().forEach { (threadId, thread) ->
@@ -396,7 +396,7 @@ internal abstract class ManagedStrategy(
             }.toString()
         }
 
-        return trace
+        return trace to loggedResults
     }
 
     private fun failDueToDeadlock(): Nothing {
@@ -968,32 +968,17 @@ internal abstract class ManagedStrategy(
         enableAnalysis()
     }
 
-    override fun onActorFinish() = runInsideIgnoredSection {
-        val eventId = getNextEventId()
-        val threadId = threadScheduler.getCurrentThreadId()
-        val actorId = currentActorId[threadId]!!
-
-        val actor = if (actorId < scenario.threads[threadId].size) scenario.threads[threadId][actorId]
-                    else validationFunction
-        check(actor != null) { "Could not find current actor" }
-
-        // TODO rewrite. This will create an additional return trace point if actor's thread was aborted
-        val className = actor.method.declaringClass.name
-        val methodName = actor.method.name
-        val actorStartTracePoint = MethodCallTracePoint(
-            eventId = eventId,
-            iThread = threadId,
-            actorId = currentActorId[threadId]!!,
-            className = className,
-            methodName = methodName,
-            codeLocation = UNKNOWN_CODE_LOCATION,
-            isStatic = false,
-            callType = MethodCallTracePoint.CallType.ACTOR,
-            isSuspend = isSuspendFunction(className, methodName, actor.arguments.toTypedArray())
-        )
-        val actorFinishTracePoint = MethodReturnTracePoint(getNextEventId(), actorStartTracePoint)
-        traceCollector?.addTracePointInternal(actorFinishTracePoint)
-
+    override fun onActorFinish(iThread: Int) = runInsideIgnoredSection {
+        val actorStartTracePoint = traceCollector?.trace
+                ?.filterIsInstance<MethodCallTracePoint>()
+                ?.firstOrNull { it.isActor && it.actorId == currentActorId[iThread] && it.iThread == iThread }
+        if (actorStartTracePoint != null) {
+            runner.getActorResult(iThread, currentActorId[iThread]!!)?.let { result ->
+                actorStartTracePoint.initializeActorResult(result)
+            }
+            val actorFinishTracePoint = MethodReturnTracePoint(getNextEventId(), actorStartTracePoint)
+            traceCollector?.addTracePointInternal(actorFinishTracePoint)
+        }
         // This is a hack to guarantee correct stepping in the plugin.
         // When stepping out to the TestThreadExecution class, stepping continues unproductively.
         // With this method, we force the debugger to stop at the beginning of the next actor.

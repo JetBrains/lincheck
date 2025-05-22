@@ -371,7 +371,7 @@ internal fun Appendable.appendFailure(failure: LincheckFailure): Appendable {
         }
         if (failure.trace != null) {
             appendLine()
-            appendTrace(failure, results, failure.trace, exceptionStackTraces)
+            appendTrace(failure, failure.trace, exceptionStackTraces)
         }
         return this
     }
@@ -389,7 +389,7 @@ internal fun Appendable.appendFailure(failure: LincheckFailure): Appendable {
     }
     if (failure.trace != null) {
         appendLine()
-        appendTrace(failure, results, failure.trace, exceptionStackTraces)
+        appendTrace(failure, failure.trace, exceptionStackTraces)
     } else {
         appendExceptionsStackTracesBlock(exceptionStackTraces)
     }
@@ -563,16 +563,6 @@ internal data class ExceptionNumberAndStacktrace(
     val stackTrace: List<StackTraceElement>
 )
 
-internal fun resultRepresentation(result: Result, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): String {
-    return when (result) {
-        is ExceptionResult -> {
-            val exceptionNumberRepresentation = exceptionStackTraces[result.throwable]?.let { " #${it.number}" } ?: ""
-            "$result$exceptionNumberRepresentation"
-        }
-        else -> result.toString()
-    }
-}
-
 /**
  * Result of collecting exceptions into a map from throwable to its number and stacktrace
  * to use this information to numerate them and print their stacktrace with number.
@@ -608,7 +598,12 @@ internal data class ExceptionStackTracesResult(val exceptionStackTraces: Map<Thr
  */
 internal fun collectExceptionStackTraces(executionResult: ExecutionResult): ExceptionsProcessingResult {
     val exceptionStackTraces = mutableMapOf<Throwable, ExceptionNumberAndStacktrace>()
-    executionResult.allResults
+    listOf(
+        executionResult.initResults + executionResult.parallelResults[0] + executionResult.postResults, 
+        *executionResult.parallelResults.drop(1).toTypedArray())
+        .flatMap { it.mapIndexed { index, result -> Pair(index, result) } }
+        .sortedBy { (index, _) -> index }
+        .map { (_, exception) -> exception }
         .filterIsInstance<ExceptionResult>()
         .forEachIndexed { index, exceptionResult ->
             val exception = exceptionResult.throwable

@@ -346,6 +346,19 @@ internal class MethodCallTracePoint(
     fun initializeOwnerName(ownerName: String) {
         this.ownerName = ownerName
     }
+    
+    fun initializeActorResult(result: Result?) {
+        check(isActor)
+        this.returnedValue = when (result) {
+            null -> ReturnedValueResult.VoidResult
+            is ExceptionResult -> when (result.throwable) {
+                is LincheckAnalysisAbortedError -> ReturnedValueResult.ActorHungResult
+                else -> ReturnedValueResult.ActorExceptionResult(result.toString())
+            }
+            is VoidResult -> ReturnedValueResult.ActorVoidResult
+            else -> ReturnedValueResult.ActorValueResult(result.toString())
+        }
+    }
 
     fun isThreadCreation() = 
         methodName == threadFunctionInfo.functionName && className.replace('/', '.') == threadFunctionInfo.className
@@ -382,22 +395,40 @@ internal sealed interface ReturnedValueResult {
     data class ValueResult(val valueRepresentation: String, val valueType: String): ReturnedValueResult
     
     // Holds any needed data to construct result lines
-    data class ActorResult(
+    interface ActorResult: ReturnedValueResult {
         // representation
-        val resultRepresentation: String,
+        val resultRepresentation: String
         
         // Needs to be shown next to the actor line as `actor(): ...`
-        val showAtBeginningOfActor: Boolean = true,
+        val showAtBeginningOfActor: Boolean
         
         // Needs to be shown after last event in actor as `result: ...`
-        val showAtEndOfActor: Boolean = true,
-        
-        // Is true if actor is hung, prevents empty actors from appearing
-        val isHung: Boolean = false,
-        
-        // For idea plugin
-        val exceptionNumber: Int = -1,
-    ): ReturnedValueResult
+        val showAtEndOfActor: Boolean
+    }
+    
+    data object ActorHungResult: ActorResult {
+        override val resultRepresentation = "<hung>"
+        override val showAtBeginningOfActor = true
+        override val showAtEndOfActor = false
+    }
+
+    data class ActorValueResult(override val resultRepresentation: String): ActorResult {
+        override val showAtBeginningOfActor = true
+        override val showAtEndOfActor = true
+    }
+    
+    data object ActorVoidResult: ActorResult {
+        override val resultRepresentation = "void"
+        override val showAtBeginningOfActor = false
+        override val showAtEndOfActor = true
+    }
+    
+    data class ActorExceptionResult(val exceptionResultRepresentation: String): ActorResult {
+        override val resultRepresentation: String get() = "$exceptionResultRepresentation #$excNumber" 
+        override val showAtBeginningOfActor = true
+        override val showAtEndOfActor = true
+        var excNumber = -1
+    }
 }
 
 internal class MonitorEnterTracePoint(

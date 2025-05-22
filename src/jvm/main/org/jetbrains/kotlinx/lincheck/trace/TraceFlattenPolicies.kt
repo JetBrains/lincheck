@@ -60,8 +60,7 @@ internal class VerboseTraceFlattenPolicy : TraceFlattenPolicy {
                 // Dont show hung actor
                 if (descendants.size == 1 &&
                     descendants.contains(currentNode) &&
-                    returnedValue is ReturnedValueResult.ActorResult &&
-                    returnedValue.isHung) return emptyList()
+                    returnedValue is ReturnedValueResult.ActorHungResult) return emptyList()
 
                 // Check if result node should be added
                 if (descendants.size > 1 && returnedValue is ReturnedValueResult.ActorResult && returnedValue.showAtEndOfActor) {
@@ -110,8 +109,7 @@ internal class ShortTraceFlattenPolicy : TraceFlattenPolicy {
                 // Dont show hung actor
                 if (descendants.size == 1 &&
                     descendants.contains(currentNode) &&
-                    returnedValue is ReturnedValueResult.ActorResult &&
-                    returnedValue.isHung) return emptyList()
+                    returnedValue is ReturnedValueResult.ActorHungResult) return emptyList()
 
 
                 // Check if result node should be added

@@ -497,6 +497,19 @@ internal open class ParallelThreadsRunner(
     override fun isCurrentRunnerThread(thread: Thread): Boolean = executor.threads.any { it === thread }
 
     override fun onThreadFinish(iThread: Int) {}
+    
+    fun getActorResult(iThread: Int, actorId: Int): Result? {
+        if (iThread != 0) return parallelPartExecutions[iThread].results.getOrNull(actorId)
+        
+        val initSize = initialPartExecution?.results?.size ?: 0
+        val parSize =  parallelPartExecutions[0].results.size
+        val postSize = postPartExecution?.results?.size ?: 0
+        
+        if (actorId < initSize) return initialPartExecution?.results?.getOrNull(actorId)
+        if (actorId < parSize + initSize) return parallelPartExecutions[iThread].results?.getOrNull(actorId - initSize)
+        if (actorId < postSize + parSize + initSize) return postPartExecution?.results?.getOrNull(actorId - parSize - initSize)
+        return validationPartExecution?.results?.getOrNull(actorId - postSize - parSize - initSize)
+    }
 }
 
 internal enum class UseClocks { ALWAYS, RANDOM }
