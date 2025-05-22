@@ -67,6 +67,7 @@ class DataStructuresTests {
         testOperation = this::incorrectHashMap,
         expectedExceptions = setOf(IllegalStateException::class),
         invocations = 1_000,
+        stdLibAnalysis = true,
     )
 
     fun correctConcurrentHashMap() {
@@ -90,6 +91,7 @@ class DataStructuresTests {
         testOperation = this::correctConcurrentHashMap,
         expectedOutcomes = setOf(),
         invocations = 1_000,
+        stdLibAnalysis = true,
     )
 
     fun correctConcurrentSkipListMap() {
@@ -113,6 +115,7 @@ class DataStructuresTests {
         testOperation = this::correctConcurrentSkipListMap,
         expectedOutcomes = setOf(),
         invocations = if (isInTraceDebuggerMode) 1 else 1_000,
+        stdLibAnalysis = true,
     )
 
 }
