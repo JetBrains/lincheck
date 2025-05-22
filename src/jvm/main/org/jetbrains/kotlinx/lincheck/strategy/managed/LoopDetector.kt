@@ -70,20 +70,33 @@ import java.util.ArrayList
 internal class LoopDetector(
     private val hangingDetectionThreshold: Int
 ) {
-    private var lastExecutedThread = -1 // no last thread
+    /**
+     * Current mode.
+     */
+    private var mode: Mode = Mode.DEFAULT
 
     /**
-     * Map, which helps us to determine how many times current thread visits some code location.
+     * Thread id of the current thread.
+     */
+    private var currentThreadId = -1
+
+    /**
+     * Tracks the count of total thread execution points handled by the loop detector.
+     */
+    private var totalExecutionsCount = 0
+
+    /**
+     * Map, which helps us to determine how many times the current thread visits some code location.
      */
     private val currentThreadCodeLocationVisitCountMap = mutableMapOf<Int, Int>()
 
     /**
-     * Is used to find a cycle period inside exact thread execution if it has hung
+     * Is used to find a cycle period inside the exact thread execution if it has hung.
      */
     private val currentThreadCodeLocationsHistory = mutableListOf<CodeIdentity>()
 
     /**
-     *  Threads switches and executions history to store sequences lead to loops
+     * Threads switches and executions history to store sequences lead to loops.
      */
     private val currentInterleavingHistory = ArrayList<InterleavingHistoryNode>()
 
@@ -93,13 +106,9 @@ internal class LoopDetector(
     private val interleavingsLeadToSpinLockSet = InterleavingSequenceTrackableSet()
 
     /**
-     * Helps to determine does current interleaving equal to some saved interleaving leading to spin cycle or not
+     * Helps to determine does current interleaving equal to some saved interleaving leading to spin cycle or not.
      */
     private val loopTrackingCursor = interleavingsLeadToSpinLockSet.cursor
-
-    private var totalExecutionsCount = 0
-
-    private val firstThreadSet: Boolean get() = lastExecutedThread != -1
 
     /**
      * Delegate helper, active in replay (trace collection) mode.
@@ -107,32 +116,44 @@ internal class LoopDetector(
      */
     private var replayModeLoopDetectorHelper: ReplayModeLoopDetectorHelper? = null
 
-    private val replayModeCurrentCyclePeriod: Int
-        get() = replayModeLoopDetectorHelper?.currentCyclePeriod ?: 0
-
+    /**
+     * Indicates whether replay mode is currently enabled in the `LoopDetector`.
+     */
     val replayModeEnabled: Boolean
         get() = replayModeLoopDetectorHelper != null
 
     /**
-     * Indicates if we analyze method parameters to calculate the spin-cycle period.
-     */
-    private var mode: Mode = Mode.DEFAULT
-
-    /**
      * Indicates that we are in a spin cycle iteration now.
-     * Should be called only in replay mode.
      */
     val replayModeCurrentlyInSpinCycle: Boolean get() =
         replayModeLoopDetectorHelper?.currentlyInSpinCycle ?: false
 
+    /**
+     * In replay mode, represents the period of spin-cycle if spin-cycle was entered.
+     */
+    private val replayModeCurrentCyclePeriod: Int
+        get() = replayModeLoopDetectorHelper?.currentCyclePeriod ?: 0
+
+    /**
+     * Is called before each interleaving processing
+     */
+    fun reset() {
+        currentThreadId = -1
+        totalExecutionsCount = 0
+        currentThreadCodeLocationVisitCountMap.clear()
+        currentThreadCodeLocationsHistory.clear()
+        currentInterleavingHistory.clear()
+        replayModeLoopDetectorHelper?.reset()
+    }
+
     fun enableReplayMode(failDueToDeadlockInTheEnd: Boolean) {
         if (isInTraceDebuggerMode) return
 
-        val contextSwitchesBeforeHalt =
-            findMaxPrefixLengthWithNoCycleOnSuffix(currentInterleavingHistory)?.let { it.executionsBeforeCycle + it.cyclePeriod }
-                ?: currentInterleavingHistory.size
+        val contextSwitchesBeforeHalt = findMaxPrefixLengthWithNoCycleOnSuffix(currentInterleavingHistory)
+            ?.let { it.executionsBeforeCycle + it.cyclePeriod }
+            ?: currentInterleavingHistory.size
         val spinCycleInterleavingHistory = currentInterleavingHistory.take(contextSwitchesBeforeHalt)
-        // Remove references to interleaving tree
+        // Remove references to the interleaving tree
         interleavingsLeadToSpinLockSet.clear()
         loopTrackingCursor.clear()
 
@@ -218,36 +239,41 @@ internal class LoopDetector(
      * @see LoopDetector.Decision
      */
     fun visitCodeLocation(iThread: Int, codeLocation: Int): Decision {
-        replayModeLoopDetectorHelper?.let {
-            it.onNextExecution()
-            return it.detectLivelock()
+        check(currentThreadId == iThread) {
+            "The current thread id $currentThreadId is not equal to the one provided $iThread."
         }
         // Increase the total number of happened operations for live-lock detection
         totalExecutionsCount++
-        // Has the thread changed? Reset the counters in this case.
-        check(lastExecutedThread == iThread) { "reset expected!" }
         // Ignore unknown code locations.
-        if (codeLocation == UNKNOWN_CODE_LOCATION) return Decision.Idle
-        // Increment the number of times the specified code location is visited.
-        val count = currentThreadCodeLocationVisitCountMap.getOrDefault(codeLocation, 0) + 1
-        currentThreadCodeLocationVisitCountMap[codeLocation] = count
-        if (mode != Mode.DEFAULT) {
-            currentThreadCodeLocationsHistory += CodeIdentity.RegularCodeLocationIdentity(codeLocation)
+        if (codeLocation == UNKNOWN_CODE_LOCATION) {
+            return Decision.Idle
         }
-        val detectedFirstTime = count > hangingDetectionThreshold
-        val detectedEarly = loopTrackingCursor.isInCycle
-        // DetectedFirstTime and detectedEarly can both sometimes be true
-        // when we can't find a cycle period and can't switch to another thread.
+        // Update code location visit counter
+        updateCodeLocationVisitCounter(codeLocation)
+        val count = currentThreadCodeLocationVisitCountMap.getOrDefault(codeLocation, 0)
+        // If we are in replay mode, check if the replay has lead to a deadlock
+        replayModeLoopDetectorHelper?.let {
+            return it.detectLivelock()
+        }
+        // In trace debugger mode, check whether the count exceeds
+        // the maximum number of repetitions for spin-loop detection.
         // Check whether the count exceeds the maximum number of repetitions for loop/hang detection.
         if (isInTraceDebuggerMode) {
             return when {
-                count > hangingDetectionThreshold -> Decision.LivelockThreadSwitch(hangingDetectionThreshold) // spin-loop
+                // spin-loop detected - switch
+                count > hangingDetectionThreshold ->
+                    Decision.LivelockThreadSwitch(hangingDetectionThreshold)
+                // live-lock detected - fail
                 totalExecutionsCount > ManagedCTestConfiguration.LIVELOCK_EVENTS_THRESHOLD ->
-                    Decision.EventsThresholdReached // live-lock detected, fail
+                    Decision.EventsThresholdReached
+                // else - continue
                 else -> Decision.Idle
             }
         }
-        
+        val detectedFirstTime = count > hangingDetectionThreshold
+        val detectedEarly = loopTrackingCursor.isInCycle
+        // detectedFirstTime and detectedEarly can both sometimes be true
+        // when we can't find a cycle period and can't switch to another thread.
         if (detectedFirstTime && !detectedEarly) {
             if (mode == Mode.DEFAULT) {
                 // Turn on parameters and read/write values and receivers tracking and request one more replay.
@@ -281,25 +307,35 @@ internal class LoopDetector(
                 return Decision.EventsThresholdReached
             }
         }
-        val cyclePeriod = replayModeCurrentCyclePeriod
-        return if (detectedFirstTime || detectedEarly)
-            Decision.LivelockThreadSwitch(cyclePeriod)
-        else
-            Decision.Idle
+        if (detectedFirstTime || detectedEarly) {
+            return Decision.LivelockThreadSwitch(replayModeCurrentCyclePeriod)
+        }
+        return Decision.Idle
     }
 
     /**
-     * Called before regular method calls.
+     * Updates the internal hit counters for a given code location during the execution process.
+     * This method tracks the number of visits to a specific code location and appends it to the
+     * current thread's code location history.
+     *
+     * @param codeLocation unique identifier of a code location being visited.
+     * @return the updated number of times the specified code location has been visited by the current thread,
+     *         or -1 if the `codeLocation` is unknown
      */
-    fun beforeMethodCall(codeLocation: Int, params: Array<Any?>) {
+    private fun updateCodeLocationVisitCounter(codeLocation: Int) {
+        require(codeLocation != UNKNOWN_CODE_LOCATION)
         replayModeLoopDetectorHelper?.let {
-            it.onNextExecution()
+            it.visitCodeLocation(codeLocation)
             return
         }
+        val count = currentThreadCodeLocationVisitCountMap.getOrDefault(codeLocation, 0)
+        currentThreadCodeLocationVisitCountMap[codeLocation] = count + 1
         if (mode != Mode.DEFAULT) {
-            currentThreadCodeLocationsHistory += CodeIdentity.RegularCodeLocationIdentity(codeLocation)
+            currentThreadCodeLocationsHistory += RegularCodeLocationIdentity(codeLocation)
         }
-        passParameters(params)
+    }
+
+    private fun updateInterleavingHistory(codeLocation: Int) {
         val lastInterleavingHistoryNode = currentInterleavingHistory.last()
         if (lastInterleavingHistoryNode.cycleOccurred) {
             return /* If we already ran into cycle and haven't switched than no need to track executions */
@@ -309,23 +345,18 @@ internal class LoopDetector(
     }
 
     /**
-     * Called after any method calls.
+     * Called when we:
+     * - Read/write some value.
+     * - Use some object as a receiver (receiver is passed as a parameter [obj]).
+     * - Use an index to access an array cell (index is passed as a parameter [obj]).
+     *
+     * Used only if LoopDetector is in the cycle calculation mode.
+     * Otherwise, does nothing.
      */
-    fun afterMethodCall() {
-        replayModeLoopDetectorHelper?.let {
-            it.onNextExecution()
-            return
-        }
-        val methodExitLocationIdentity = RegularCodeLocationIdentity(0)
-        if (mode != Mode.DEFAULT) {
-            currentThreadCodeLocationsHistory += methodExitLocationIdentity
-        }
-        val lastInterleavingHistoryNode = currentInterleavingHistory.last()
-        if (lastInterleavingHistoryNode.cycleOccurred) {
-            return /* If we already ran into cycle and haven't switched than no need to track executions */
-        }
-        lastInterleavingHistoryNode.addExecution(methodExitLocationIdentity.location)
-        loopTrackingCursor.onNextExecutionPoint()
+    private fun passValue(obj: Any?) {
+        if (mode == Mode.DEFAULT) return
+        val hash = primitiveOrIdentityHashCode(obj)
+        currentThreadCodeLocationsHistory += CodeIdentity.ValueRepresentationIdentity(hash)
     }
 
     /**
@@ -333,22 +364,46 @@ internal class LoopDetector(
      * Used only if LoopDetector is in the cycle calculation mode.
      * Otherwise, does nothing.
      */
-    fun passParameters(params: Array<Any?>) {
+    private fun passParameters(params: Array<Any?>) {
         if (mode == Mode.DEFAULT) return
         params.forEach { param ->
-            currentThreadCodeLocationsHistory += CodeIdentity.ValueRepresentationIdentity(primitiveOrIdentityHashCode(param))
+            val hash = primitiveOrIdentityHashCode(param)
+            currentThreadCodeLocationsHistory += CodeIdentity.ValueRepresentationIdentity(hash)
         }
+    }
+
+    /**
+     * Called before regular method calls.
+     */
+    fun beforeMethodCall(codeLocation: Int, params: Array<Any?>) {
+        passParameters(params)
+        updateCodeLocationVisitCounter(codeLocation)
+        updateInterleavingHistory(codeLocation)
+    }
+
+    /**
+     * Called before atomic method calls.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    fun beforeAtomicMethodCall(codeLocation: Int, params: Array<Any?>) {
+        // atomic methods are handled via `visitCodeLocation`,
+        // so we only need to pass method parameters
+        passParameters(params)
     }
 
     /**
      * Should be called before each read non-local mutable field read.
      */
-    fun beforeReadField(receiver: Any?) = passValue(receiver)
+    fun beforeReadField(receiver: Any?) {
+        passValue(receiver)
+    }
 
     /**
      * Should be called after each read non-local mutable field read.
      */
-    fun afterRead(value: Any?) = passValue(value)
+    fun afterRead(value: Any?) {
+        passValue(value)
+    }
 
     /**
      * Should be called before each non-local array element read.
@@ -376,96 +431,77 @@ internal class LoopDetector(
     }
 
     fun onActorStart(iThread: Int) {
-        check(iThread == lastExecutedThread)
+        check(iThread == currentThreadId)
         // if a thread has reached a new actor, then it means it has made some progress;
         // therefore, we reset the code location counters,
         // so that code location hits from a previous actor do not affect subsequent actors
         currentThreadCodeLocationVisitCountMap.clear()
     }
 
-    fun onThreadSwitch(iThread: Int) {
-        lastExecutedThread = iThread
-        currentThreadCodeLocationVisitCountMap.clear()
-        currentThreadCodeLocationsHistory.clear()
-        onNextThreadSwitchPoint(iThread)
+    /**
+     * Is called before each interleaving part processing
+     */
+    fun beforePart(nextThread: Int) {
+        if (currentThreadId == -1) {
+            setFirstThread(nextThread)
+        } else if (currentThreadId != nextThread) {
+            beforeThreadSwitch(nextThread)
+        }
+    }
+
+    private fun setFirstThread(iThread: Int) {
+        currentThreadId = iThread
+        loopTrackingCursor.reset(iThread)
+        currentInterleavingHistory.add(InterleavingHistoryNode(threadId = iThread))
     }
 
     fun onThreadFinish(iThread: Int) {
-        check(iThread == lastExecutedThread)
-        onNextExecutionPoint(executionIdentity = -iThread)
+        check(iThread == currentThreadId)
+        afterCodeLocation(codeLocation = UNKNOWN_CODE_LOCATION)
     }
 
-    private fun onNextThreadSwitchPoint(nextThread: Int) {
-        /*
-            When we're back to some thread, newSwitchPoint won't be called before the fist
-            in current thread part as it was called before switch.
-            So, we're tracking that to maintain the number of performed operations correctly.
-         */
-        if (currentInterleavingHistory.isNotEmpty() && currentInterleavingHistory.last().threadId == nextThread) {
+    /**
+     * Called before a thread switch to another thread.
+     */
+    fun beforeThreadSwitch(nextThreadId: Int) {
+        currentThreadId = nextThreadId
+        currentThreadCodeLocationVisitCountMap.clear()
+        currentThreadCodeLocationsHistory.clear()
+
+        if (currentInterleavingHistory.isNotEmpty() &&
+            currentInterleavingHistory.last().threadId == nextThreadId) {
             return
         }
         currentInterleavingHistory.add(
             InterleavingHistoryNode(
-                threadId = nextThread,
+                threadId = nextThreadId,
                 executions = 0,
             )
         )
-        loopTrackingCursor.onNextSwitchPoint(nextThread)
+        loopTrackingCursor.onNextSwitchPoint(nextThreadId)
         replayModeLoopDetectorHelper?.onNextSwitch()
     }
 
     /**
-     * Is called after switch back to a thread.
-     * Required because after we switch back to the thread no `visitCodeLocations` will be called before the next
-     * execution point, as it was called earlier.
-     * But we need to track that this point is going to
-     * be executed after the switch, so we pass it after the switch back,
-     * but before the instruction is actually executed.
+     * Is called after a thread switch back to a thread.
      */
-    fun initializeFirstCodeLocationAfterSwitch(codeLocation: Int) {
-        replayModeLoopDetectorHelper?.let { helper ->
-            helper.onNextExecution()
-            return
-        }
-        onNextExecutionPoint(codeLocation)
-        // Increase the total number of happened operations for live-lock detection
-        totalExecutionsCount++
-        // Increment the number of times the specified code location is visited.
-        val count = currentThreadCodeLocationVisitCountMap.getOrDefault(codeLocation, 0) + 1
-        currentThreadCodeLocationVisitCountMap[codeLocation] = count
-        if (mode != Mode.DEFAULT) {
-            currentThreadCodeLocationsHistory += CodeIdentity.RegularCodeLocationIdentity(codeLocation)
-        }
+    fun afterThreadSwitch(codeLocation: Int) {
+        if (codeLocation == UNKNOWN_CODE_LOCATION) return
+        // After we switch back to the thread, no `visitCodeLocations` will be called
+        // before the next switch point as it was called earlier.
+        // But we need to track that this point is going to be executed after the switch,
+        // so we pass it after the switch back,
+        // but before the instruction is actually executed.
+        updateCodeLocationVisitCounter(codeLocation)
     }
 
-    /**
-     * Called only when replay mode is disabled.
-     */
-    fun onNextExecutionPoint(executionIdentity: Int) {
-        val lastInterleavingHistoryNode = currentInterleavingHistory.last()
-        if (lastInterleavingHistoryNode.cycleOccurred) {
-            return /* If we already ran into cycle and haven't switched than no need to track executions */
-        }
-        lastInterleavingHistoryNode.addExecution(executionIdentity)
-        loopTrackingCursor.onNextExecutionPoint()
-    }
-
-    /**
-     * Called when we:
-     * - Read/write some value.
-     * - Use some object as a receiver (receiver is passed as a parameter [obj]).
-     * - Use an index to access an array cell (index is passed as a parameter [obj]).
-     *
-     * Used only if LoopDetector is in the cycle calculation mode.
-     * Otherwise, does nothing.
-     */
-    private fun passValue(obj: Any?) {
-        if (mode == Mode.DEFAULT) return
-        currentThreadCodeLocationsHistory += CodeIdentity.ValueRepresentationIdentity(primitiveOrIdentityHashCode(obj))
+    fun afterCodeLocation(codeLocation: Int) {
+        if (replayModeEnabled) return
+        updateInterleavingHistory(codeLocation)
     }
 
     private fun registerCycle() {
-        val (cycleInfo, switchPointsCodeLocationsHistory) = tryFindCycleWithParamsOrWithout()
+        val (cycleInfo, switchPointsCodeLocationsHistory) = tryFindCycle()
 
         if (cycleInfo == null) {
             val lastNode = currentInterleavingHistory.last()
@@ -480,27 +516,9 @@ internal class LoopDetector(
             return
         }
         /*
-        For nodes, correspond to cycles we re-calculate hash using only code locations related to the cycle,
-        because if we run into a DeadLock,
-        it's enough to show events before the cycle and first cycle iteration in the current thread.
-        For example,
-        [threadId = 0, executions = 10],
-        [threadId = 1, executions = 5], // 2 executions before cycle and then cycle of 3 executions begins
-        [threadId = 0, executions = 3],
-        [threadId = 1, executions = 3],
-        [threadId = 0, executions = 3],
-        ...
-        [threadId = 1, executions = 3],
-        [threadId = 0, executions = 3]
-
-        In this situation, we have a spin cycle:[threadId = 1, executions = 3], [threadId = 0, executions = 3].
-        We want to cut off events suffix to get:
-        [threadId = 0, executions = 10],
-        [threadId = 1, executions = 5], // 2 executions before cycle, and then cycle begins
-        [threadId = 0, executions = 3],
-
-        So we need to [threadId = 1, executions = 5] execution part to have a hash equals to next cycle nodes,
-        because we will take only thread executions before cycle and the first cycle iteration.
+         * For nodes, correspond to cycles we re-calculate hash using only code locations related to the cycle,
+         * because if we run into a deadlock, it's enough to show events before the cycle
+         * and first cycle iteration in the current thread.
          */
         var cycleExecutionLocationsHash = switchPointsCodeLocationsHistory[cycleInfo.executionsBeforeCycle]
         for (i in cycleInfo.executionsBeforeCycle + 1 until cycleInfo.executionsBeforeCycle + cycleInfo.cyclePeriod) {
@@ -508,9 +526,9 @@ internal class LoopDetector(
         }
 
         val cycleStateLastNode = currentInterleavingHistory.last().asNodeCorrespondingToCycle(
-            executionsBeforeCycle = cycleInfo.executionsBeforeCycle,
             cyclePeriod = cycleInfo.cyclePeriod,
-            cycleExecutionsHash = cycleExecutionLocationsHash // corresponds to a cycle
+            cycleExecutionsHash = cycleExecutionLocationsHash, // corresponds to a cycle
+            executionsBeforeCycle = cycleInfo.executionsBeforeCycle,
         )
 
         currentInterleavingHistory[currentInterleavingHistory.lastIndex] = cycleStateLastNode
@@ -525,75 +543,44 @@ internal class LoopDetector(
      * **without** parameters and values, (i.e. considering only code locations) and a list of visited code
      * locations **without** parameters and values, only potential switch points.
      */
-    private fun tryFindCycleWithParamsOrWithout(): Pair<CycleInfo?, List<Int>> {
+    private fun tryFindCycle(): Pair<CycleInfo?, List<Int>> {
         // Get the code locations history of potential switch points, without parameters and values.
-        val historyWithoutParams = currentThreadCodeLocationsHistory.mapNotNull { (it as? CodeIdentity.RegularCodeLocationIdentity)?.location }
+        val historyWithoutParams = currentThreadCodeLocationsHistory.mapNotNull {
+            (it as? RegularCodeLocationIdentity)?.location
+        }
         // Trying to find a cycle with them.
         val cycleInfo = findMaxPrefixLengthWithNoCycleOnSuffix(currentThreadCodeLocationsHistory)
-            // If it's not possible - searching for the cycle in the filtered history list - without params and values.
-            ?: return findMaxPrefixLengthWithNoCycleOnSuffix(historyWithoutParams) to historyWithoutParams
+        // If it's not possible - searching for the cycle in the filtered history list - without params and values.
+        if (cycleInfo == null) {
+            return findMaxPrefixLengthWithNoCycleOnSuffix(historyWithoutParams) to historyWithoutParams
+        }
 
         // If we found a spin cycle in the code locations history with parameters and values -
-        // than we need to calculate how many executions,
+        // then we need to calculate how many executions,
         // that are potential switch points, before and during the cycle happened.
         // We need it because in normal mode LoopDetector only uses potential switch points code locations
-        // to detect spin locks, so we have to count code locations, that don't represent parameters or values.
-        var operationsBefore = 0
+        // to detect spin locks, so we have to count code locations that don't represent parameters or values.
         var cyclePeriod = 0
-
-        var operationsBeforeWithParams = 0
-        var cyclePeriodWithParams = 0
+        var operationsBefore = 0
 
         var i = 0
         // Count how many potential switch point executions happened before the spin cycle.
-        while (operationsBeforeWithParams < cycleInfo.executionsBeforeCycle) {
+        repeat(cycleInfo.executionsBeforeCycle) {
             // Potential switch point code locations are only RegularCodeLocationIdentity
-            if (currentThreadCodeLocationsHistory[i] is CodeIdentity.RegularCodeLocationIdentity) {
+            if (currentThreadCodeLocationsHistory[i] is RegularCodeLocationIdentity) {
                 operationsBefore++
             }
-            operationsBeforeWithParams++
             i++
         }
-        while (cyclePeriodWithParams < cycleInfo.cyclePeriod) {
+        repeat(cycleInfo.cyclePeriod) {
             // Potential switch point code locations are only RegularCodeLocationIdentity
-            if (currentThreadCodeLocationsHistory[i] is CodeIdentity.RegularCodeLocationIdentity) {
+            if (currentThreadCodeLocationsHistory[i] is RegularCodeLocationIdentity) {
                 cyclePeriod++
             }
-            cyclePeriodWithParams++
             i++
         }
 
         return CycleInfo(operationsBefore, cyclePeriod) to historyWithoutParams
-    }
-
-    /**
-     * Is called before each interleaving part processing
-     */
-    fun beforePart(nextThread: Int) {
-        if (!firstThreadSet) {
-            setFirstThread(nextThread)
-        } else if (lastExecutedThread != nextThread) {
-            onThreadSwitch(nextThread)
-        }
-    }
-
-    /**
-     * Is called before each interleaving processing
-     */
-    fun initialize() {
-        lastExecutedThread = -1
-    }
-
-    private fun setFirstThread(iThread: Int) {
-        lastExecutedThread = iThread // certain last thread
-        currentThreadCodeLocationVisitCountMap.clear()
-        currentThreadCodeLocationsHistory.clear()
-        totalExecutionsCount = 0
-
-        loopTrackingCursor.reset(iThread)
-        currentInterleavingHistory.clear()
-        currentInterleavingHistory.add(InterleavingHistoryNode(threadId = iThread))
-        replayModeLoopDetectorHelper?.initialize()
     }
 
     /**
@@ -669,39 +656,21 @@ private class ReplayModeLoopDetectorHelper(
         currentHistoryNode?.spinCyclePeriod ?: 0
 
     /**
-     * A set of thread, executed at least once during this interleaving.
-     *
-     * We have to maintain this set to determine how to initialize
-     * [executionsPerformedInCurrentThread] after thread switch.
-     * When a thread is executed for the first time, [newSwitchPoint]
-     * strategy method is called before the first switch point,
-     * so number of executions in this thread should start with zero,
-     * and it will be incremented after [onNextExecution] call.
-     *
-     * But when we return to a thread which has already executed its operations, [newSwitchPoint]
-     * strategy method won't be called,
-     * as we already considered this switch point before we switched from this thread earlier,
-     * [onNextExecution] won't be called before the first execution,
-     * so we have to start [executionsPerformedInCurrentThread] from 1.
-     */
-    private val threadsRan = hashSetOf<Int>()
-
-    /**
      * Returns if we ran in the spin cycle and now are performing executions inside it.
      */
     val currentlyInSpinCycle: Boolean get() =
         currentHistoryNode?.let { it.cycleOccurred && it.executions < executionsPerformedInCurrentThread } ?: false
 
-    fun initialize() {
+    fun reset() {
         currentInterleavingNodeIndex = 0
         executionsPerformedInCurrentThread = 0
-        threadsRan.clear()
     }
 
     /**
      * Called before next execution in current thread.
      */
-    fun onNextExecution() {
+    @Suppress("UNUSED_PARAMETER") // pass `codeLocation` only for uniformity with `LoopDetector.visitCodeLocation`
+    fun visitCodeLocation(codeLocation: Int) {
         executionsPerformedInCurrentThread++
     }
 
