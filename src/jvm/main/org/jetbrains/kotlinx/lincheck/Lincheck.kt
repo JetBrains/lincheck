@@ -32,9 +32,24 @@ object Lincheck {
     @JvmStatic
     fun runConcurrentTest(
         invocations: Int = DEFAULT_INVOCATIONS_COUNT,
-        analyzeStdLib: Boolean = false,
-    block: Runnable
-) {
+        block: Runnable
+    ) = runConcurrentTest(LincheckSettings.default, invocations, block)
+
+    /**
+     * This method will explore different interleavings of the [block] body and all the threads created within it,
+     * searching for the first raised exception.
+     *
+     * @param lincheckSettings settings that determine linchecks behaviour like analyse std library collections.
+     * @param invocations number of different interleavings of code in the [block] that should be explored.
+     * @param block lambda which body will be a target for the interleavings exploration.
+     */
+    @JvmOverloads
+    @JvmStatic
+    internal fun runConcurrentTest(
+        lincheckSettings: LincheckSettings,
+        invocations: Int = DEFAULT_INVOCATIONS_COUNT,
+        block: Runnable
+    ) {
         val scenario = ExecutionScenario(
             initExecution = emptyList(),
             parallelExecution = listOf(
@@ -50,8 +65,8 @@ object Lincheck {
             .iterations(0)
             .addCustomScenario(scenario)
             .invocationsPerIteration(invocations)
-            .analyzeStdLib(analyzeStdLib)
-        .verifier(NoExceptionVerifier::class.java)
+            .analyzeStdLib(lincheckSettings.analyzeStdLib)
+            .verifier(NoExceptionVerifier::class.java)
 
         val testCfg = options.createTestConfigurations(GeneralPurposeModelCheckingWrapper::class.java)
         withLincheckJavaAgent(testCfg.instrumentationMode) {
@@ -81,6 +96,12 @@ object Lincheck {
     }
 
     internal const val DEFAULT_INVOCATIONS_COUNT = 50_000
+}
+
+internal data class LincheckSettings(val analyzeStdLib: Boolean) {
+    companion object {
+        val default =  LincheckSettings(analyzeStdLib = false)
+    }
 }
 
 internal class GeneralPurposeModelCheckingWrapper {
