@@ -209,64 +209,67 @@ internal class AnalysisProfile(val analyzeStdLib: Boolean) {
      * @return true if the class/method should be transformed, false otherwise
      */
     @Suppress("UNUSED_PARAMETER") // methodName is here for uniformity and might become useful in the future  
-    fun shouldTransform(className: String, methodName: String): Boolean = when {
+    fun shouldTransform(className: String, methodName: String): Boolean {
         // We do not need to instrument most standard Java classes.
         // It is fine to inject the Lincheck analysis only into the
         // `java.util.*` ones, ignored the known atomic constructs.
-        className == "java.lang.Thread" -> true
-        className.startsWith("java.util.concurrent.") && className.contains("Atomic") -> false
-        className.startsWith("java.util.") -> true
-        className.startsWith("java.") -> false
-
-
-        className.startsWith("com.sun.") -> false
-        className.startsWith("sun.") -> false
-        className.startsWith("javax.") -> false
-        
-        // Transform `ThreadContainer.start` to detect thread forking.
-        isThreadContainerClass(className) -> true
-        className.startsWith("jdk.") -> false
-        
-        // We do not need to instrument most standard Kotlin classes.
-        // However, we need to inject the Lincheck analysis into the classes
-        // related to collections, iterators, random and coroutines.
-        className.startsWith("kotlin.concurrent.ThreadsKt") -> true
-        className.startsWith("kotlin.collections.") -> true
-        className.startsWith("kotlin.jvm.internal.Array") && className.contains("Iterator") -> true
-        className.startsWith("kotlin.ranges.") -> true
-        className.startsWith("kotlin.random.") -> true
-        className.startsWith("kotlin.coroutines.jvm.internal.") -> false
-        className.startsWith("kotlin.coroutines.") -> true
-        className.startsWith("kotlin.") -> false
-
-        // We do not instrument AtomicFU atomics.
-        className.contains("Atomic") && className.startsWith("kotlinx.atomicfu.") -> false
-
+        if (className.startsWith("java.")) {
+            if (className == "java.lang.Thread") return true
+            if (className.startsWith("java.util.concurrent.") && className.contains("Atomic")) return false
+            if (className.startsWith("java.util.")) return true
+            return false
+        }
+            if (className.startsWith("com.sun.")) return false
+        if (className.startsWith("sun.")) return false
+            if (className.startsWith("javax.")) return false
+        if (className.startsWith("jdk.")) {
+            // Transform `ThreadContainer.start` to detect thread forking.
+            if (isThreadContainerClass(className)) return true
+            return false
+        }
+            // We do not need to instrument most standard Kotlin classes.
+            // However, we need to inject the Lincheck analysis into the classes
+            // related to collections, iterators, random and coroutines.
+            if (className.startsWith("kotlin.")) {
+                if (className.startsWith("kotlin.concurrent.ThreadsKt")) return true
+                if (className.startsWith("kotlin.collections.")) return true
+                if (className.startsWith("kotlin.jvm.internal.Array") && className.contains("Iterator")) return true
+                if (className.startsWith("kotlin.ranges.")) return true
+                if (className.startsWith("kotlin.random.")) return true
+                if (className.startsWith("kotlin.coroutines.jvm.internal.")) return false
+                if (className.startsWith("kotlin.coroutines.")) return true
+                return false
+            }
+            // We do not instrument AtomicFU atomics.
+            if (className.startsWith("kotlinx.atomicfu.")) {
+            if (className.contains("Atomic")) return false
+            return true
+        }
         // We need to skip the classes related to the debugger support in Kotlin coroutines.
-        className.startsWith("kotlinx.coroutines.debug.") -> false
-        className == "kotlinx.coroutines.DebugKt" -> false
+        if (className.startsWith("kotlinx.coroutines.debug.")) return false
+            if (className == "kotlinx.coroutines.DebugKt") return false
         // We should never transform the coverage-related classes.
-        className.startsWith("com.intellij.rt.coverage.") -> false
-        // We should skip intellij debugger agent classes.
-        className.startsWith("com.intellij.rt.debugger.agent.") -> false
+        if (className.startsWith("com.intellij.rt.coverage.")) return false
+            // We should skip intellij debugger agent classes.
+            if (className.startsWith("com.intellij.rt.debugger.agent.")) return false
         // We can also safely do not instrument some libraries for performance reasons.
-        className.startsWith("com.esotericsoftware.kryo.") -> false
-        className.startsWith("net.bytebuddy.") -> false
-        className.startsWith("net.rubygrapefruit.platform.") -> false
-        className.startsWith("io.mockk.") -> false
-        className.startsWith("it.unimi.dsi.fastutil.") -> false
-        className.startsWith("worker.org.gradle.") -> false
-        className.startsWith("org.objectweb.asm.") -> false
-        className.startsWith("org.gradle.") -> false
-        className.startsWith("org.slf4j.") -> false
-        className.startsWith("org.apache.commons.lang.") -> false
-        className.startsWith("org.junit.") -> false
-        className.startsWith("junit.framework.") -> false
+        if (className.startsWith("com.esotericsoftware.kryo.")) return false
+            if (className.startsWith("net.bytebuddy.")) return false
+        if (className.startsWith("net.rubygrapefruit.platform.")) return false
+            if (className.startsWith("io.mockk.")) return false
+        if (className.startsWith("it.unimi.dsi.fastutil.")) return false
+            if (className.startsWith("worker.org.gradle.")) return false
+        if (className.startsWith("org.objectweb.asm.")) return false
+            if (className.startsWith("org.gradle.")) return false
+        if (className.startsWith("org.slf4j.")) return false
+            if (className.startsWith("org.apache.commons.lang.")) return false
+        if (className.startsWith("org.junit.")) return false
+            if (className.startsWith("junit.framework.")) return false
         // Finally, we should never instrument the Lincheck classes.
-        className.startsWith("org.jetbrains.kotlinx.lincheck.") -> false
-        className.startsWith("sun.nio.ch.lincheck.") -> false
+        if (className.startsWith("org.jetbrains.kotlinx.lincheck.")) return false
+            if (className.startsWith("sun.nio.ch.lincheck.")) return false
         // All the classes that were not filtered out are eligible for transformation.
-        else -> true
+        return true
     }
 
     /**
