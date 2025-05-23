@@ -478,7 +478,7 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         }
         if (isEagerlyInstrumentedClass(className)) return true
 
-        return AnalysisProfile(true).shouldTransform(className, "")
+        return AnalysisProfile(analyzeStdLib = true).shouldTransform(className, "")
     }
 
 
