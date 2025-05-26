@@ -461,6 +461,7 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         // Java and Kotlin classes -- they do not have coroutine suspension points.
         if (instrumentationMode == STRESS) {
             if (className.startsWith("java.") || className.startsWith("kotlin.")) return false
+            if (isJavaLambdaClass(className)) return false
         }
         // We should transform all eagerly instrumented classes.
         if (isEagerlyInstrumentedClass(className)) {
