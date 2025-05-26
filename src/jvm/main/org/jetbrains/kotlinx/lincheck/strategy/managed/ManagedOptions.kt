@@ -24,7 +24,7 @@ abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfigurat
     protected var checkObstructionFreedom = DEFAULT_CHECK_OBSTRUCTION_FREEDOM
     protected var hangingDetectionThreshold = DEFAULT_HANGING_DETECTION_THRESHOLD
     protected val guarantees: MutableList<ManagedStrategyGuarantee> = ArrayList(DEFAULT_GUARANTEES)
-    protected var stdLibAnalysisEnabled: Boolean = false
+    internal var stdLibAnalysisEnabled: Boolean = false
 
     /**
      * Use the specified number of scenario invocations to study interleavings in each iteration.
@@ -73,7 +73,7 @@ abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfigurat
      *
      * @param analyzeStdLib true to analyze standard library methods, false to treat them as silent
      */
-    fun analyzeStdLib(analyzeStdLib: Boolean): OPT = applyAndCast {
+    internal fun analyzeStdLib(analyzeStdLib: Boolean): OPT = applyAndCast {
         this.stdLibAnalysisEnabled = analyzeStdLib
     }
 
