@@ -14,8 +14,8 @@ import java.security.SecureRandom
 import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck_test.util.TestJdkVersion
-import org.jetbrains.kotlinx.lincheck_test.util.testJdkVersion
+import org.jetbrains.kotlinx.lincheck.util.TestJdkVersion
+import org.jetbrains.kotlinx.lincheck.util.testJdkVersion
 import org.junit.Assume.assumeFalse
 import org.junit.Assume.assumeTrue
 import org.junit.Before

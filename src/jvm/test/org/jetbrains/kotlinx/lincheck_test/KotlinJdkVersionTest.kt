@@ -12,9 +12,9 @@ package org.jetbrains.kotlinx.lincheck_test
 
 import junit.framework.TestCase.assertEquals
 import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
-import org.jetbrains.kotlinx.lincheck_test.util.TestJdkVersion
-import org.jetbrains.kotlinx.lincheck_test.util.isJdk8
-import org.jetbrains.kotlinx.lincheck_test.util.testJdkVersion
+import org.jetbrains.kotlinx.lincheck.util.TestJdkVersion
+import org.jetbrains.kotlinx.lincheck.util.isJdk8
+import org.jetbrains.kotlinx.lincheck.util.testJdkVersion
 import org.junit.Assume.assumeFalse
 import org.junit.Test
 import org.objectweb.asm.ClassReader

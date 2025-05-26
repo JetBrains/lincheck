@@ -10,10 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck_test.util.TestJdkVersion
-import org.jetbrains.kotlinx.lincheck_test.util.testJdkVersion
-import java.lang.invoke.MethodType
 import java.lang.invoke.MethodHandles
+import java.lang.invoke.MethodType
 import java.util.concurrent.ConcurrentHashMap
 
 /**

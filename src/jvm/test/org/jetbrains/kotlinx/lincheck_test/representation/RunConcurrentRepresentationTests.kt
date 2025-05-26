@@ -20,6 +20,8 @@ import java.util.concurrent.atomic.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import org.jetbrains.kotlinx.lincheck.Lincheck.runConcurrentTest
+import org.jetbrains.kotlinx.lincheck.util.TestJdkVersion
+import org.jetbrains.kotlinx.lincheck.util.testJdkVersion
 import kotlin.concurrent.thread
 import org.junit.*
 import org.junit.Assume.assumeFalse

@@ -10,8 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck_test.util.TestJdkVersion
-import org.jetbrains.kotlinx.lincheck_test.util.testJdkVersion
+import org.jetbrains.kotlinx.lincheck.util.TestJdkVersion
+import org.jetbrains.kotlinx.lincheck.util.testJdkVersion
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.MethodType
 
