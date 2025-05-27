@@ -1821,7 +1821,6 @@ abstract class ManagedStrategy(
         methodName: String,
         methodId: Int,
     ) = runInsideIgnoredSection {
-        loopDetector.afterMethodCall()
         val threadId = threadScheduler.getCurrentThreadId()
         if (collectTrace) {
             // an empty stack trace case is possible and can occur when we resume the coroutine,
