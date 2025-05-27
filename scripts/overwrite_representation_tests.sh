@@ -27,7 +27,7 @@ cd ../
 # always created at the beginning.
 #
 # JDK 11 is SLOW! So remove it if you don't expect files to change
-jdks=("17" "8" "11" "13" "15" "19" "20" "21")
+jdks=("17" "8" "11" "21")
 
 testFilter="org.jetbrains.kotlinx.lincheck_test.representation.*"
 
