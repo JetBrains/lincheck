@@ -65,7 +65,7 @@ private fun SingleThreadedTable<TraceNode>.compressSuspendImpl() = compressNodes
 private fun SingleThreadedTable<TraceNode>.compressDefaultPairs() = compressNodes { node ->
     val singleChild = if (node.children.size == 1) node.children[0] else return@compressNodes node
     if (node !is CallNode || singleChild !is CallNode) return@compressNodes node
-    if (!isDefaultPair(node.tracePoint.methodName, singleChild.tracePoint.methodName)) return@compressNodes node
+    if (!haveSameOwner(node.tracePoint, singleChild.tracePoint) || !isDefaultPair(node.tracePoint.methodName, singleChild.tracePoint.methodName)) return@compressNodes node
     combineNodes(node, singleChild)
 }
 
@@ -92,7 +92,7 @@ private fun SingleThreadedTable<TraceNode>.compressDefaultPairs() = compressNode
 private fun SingleThreadedTable<TraceNode>.compressAccessPairs() = compressNodes { node ->
     val singleChild = if (node.children.size == 1) node.children[0] else return@compressNodes node
     if (node !is CallNode || singleChild !is CallNode) return@compressNodes node
-    if (!isAccessPair(node.tracePoint.methodName, singleChild.tracePoint.methodName)) return@compressNodes node
+    if (!haveSameOwner(node.tracePoint, singleChild.tracePoint) || !isAccessPair(node.tracePoint.methodName, singleChild.tracePoint.methodName)) return@compressNodes node
     combineNodes(node, singleChild)
 }
 
@@ -201,6 +201,12 @@ private fun TraceNode.compress(compressionRule: (TraceNode) -> TraceNode): Trace
     compressedNode.children.forEach { newNode.addChild(it.compress(compressionRule)) }
     return newNode
 }
+
+/**
+ * Used in [compressDefaultPairs] and [compressAccessPairs]
+ */
+private fun haveSameOwner(currentPoint: MethodCallTracePoint, nextPoint: MethodCallTracePoint): Boolean =
+    currentPoint.className == nextPoint.className
 
 /**
  * Used in [compressDefaultPairs]
