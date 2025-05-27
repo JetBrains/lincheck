@@ -26,7 +26,8 @@ internal class InlineMethodCallTransformer(
     methodName: String,
     desc: String,
     adapter: GeneratorAdapter,
-    val locals: MethodVariables
+    val locals: MethodVariables,
+    val localsTracker: LocalVariablesAccessTransformer
 ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
     private companion object {
         val objectType = getObjectType("java/lang/Object").className
@@ -109,22 +110,22 @@ internal class InlineMethodCallTransformer(
         push(inlineMethodName)
         push(methodId)
         loadNewCodeLocationId()
-        if (owner == null || getLocalType(owner) == null) {
+        if (owner == null) {
             pushNull()
         }
         else {
             val asmType = getLocalType(owner)
-            if (asmType == null) {
-                loadLocal(owner, ownerType)
-            }
-            else if (asmType.sort == ownerType?.sort) {
-                loadLocal(owner)
-            }
-            else {
-                // Sometimes ASM freaks out when a slot has completely different types in different frames.
-                // Like, two variables of types Int and Object share a slot, and ASM thinks about it as about Int,
-                // and we try to load it as an Object.
-                pushNull()
+            localsTracker.runWithoutLocalVariablesTracking {
+                if (asmType == null) {
+                    loadLocal(owner, ownerType)
+                } else if (asmType.sort == ownerType?.sort) {
+                    loadLocal(owner)
+                } else {
+                    // Sometimes ASM freaks out when a slot has completely different types in different frames.
+                    // Like, two variables of types Int and Object share a slot, and ASM thinks about it as about Int,
+                    // and we try to load it as an Object.
+                    pushNull()
+                }
             }
         }
         invokeStatic(Injections::onInlineMethodCall)

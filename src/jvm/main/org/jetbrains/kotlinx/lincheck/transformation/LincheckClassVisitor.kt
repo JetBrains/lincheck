@@ -83,6 +83,7 @@ internal class LincheckClassVisitor(
         }
         val intrinsicDelegateVisitor = mv
         fun MethodVisitor.newAdapter() = GeneratorAdapter(this, access, methodName, desc)
+        fun MethodVisitor.newNonRemappingAdapter() = GeneratorAdapterWithoutLocals(this, access, methodName, desc)
         if (methodName == "<clinit>") {
             mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
@@ -201,16 +202,20 @@ internal class LincheckClassVisitor(
             aa
         }
         val locals: Map<Int, List<LocalVariableInfo>> = methods[methodName + desc]?.variables ?: emptyMap()
-        // Inline method call transformer can produce local variable access which must not be insturmented!
-        mv = InlineMethodCallTransformer(fileName, className, methodName, desc, mv.newAdapter(), methods[methodName + desc] ?: MethodVariables())
         mv = LocalVariablesAccessTransformer(fileName, className, methodName, mv.newAdapter(), locals)
+        // Inline method call transformer relies on the original variables' indices, so it should go before (in FIFO order)
+        // all transformers which can create local variables.
+        // We cannot use trick with
+        // All visitors created AFTER InlineMethodCallTransformer must use a non-remapping Generator adapter too
+        mv = InlineMethodCallTransformer(fileName, className, methodName, desc, mv.newNonRemappingAdapter(), methods[methodName + desc] ?: MethodVariables(), mv)
         // Must appear in code after `SharedMemoryAccessTransformer` (to be able to skip this transformer).
         // It can appear earlier in code than `IntrinsicCandidateMethodFilter` because if kover instruments intrinsic methods
         // (which cannot disallow) then we don't need to hide coverage instrumentation from lincheck,
         // because lincheck will not see intrinsic method bodies at all.
-        mv = CoverageBytecodeFilter(coverageDelegateVisitor.newAdapter(), mv.newAdapter())
+        mv = CoverageBytecodeFilter(coverageDelegateVisitor.newAdapter(), mv.newNonRemappingAdapter())
         // Must appear last in the code, to completely hide intrinsic candidate methods from all transformers
-        mv = IntrinsicCandidateMethodFilter(className, methodName, desc, intrinsicDelegateVisitor.newAdapter(), mv.newAdapter())
+        mv = IntrinsicCandidateMethodFilter(className, methodName, desc, intrinsicDelegateVisitor.newAdapter(), mv.newNonRemappingAdapter())
+
         return mv
     }
 
