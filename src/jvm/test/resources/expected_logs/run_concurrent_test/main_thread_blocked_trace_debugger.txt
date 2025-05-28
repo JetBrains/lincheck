@@ -4,10 +4,11 @@ The following interleaving leads to the error:
 | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                    Main Thread                                                                     |
 | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| $this_runCatching.block() at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:47) |
-|   block() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:98)                                        |
-|     q.take() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:103)                                    |
+| $this_runCatching.block() at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:45) |
+|   block() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:96)                                        |
+|     q.take() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:101)                                    |
 |       lock.lockInterruptibly() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:417)                                                             |
+|       count ➜ 0 at ArrayBlockingQueue.take(ArrayBlockingQueue.java:419)                                                                            |
 |       notEmpty.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:420)                                                                     |
 |         enableWait(ConditionNode#1): 1 at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1611)                   |
 |         LockSupport.setCurrentBlocker(ConditionObject#1) at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1612) |
@@ -27,9 +28,9 @@ Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 |                                                                         Main Thread                                                                          |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| $this_runCatching.block() at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:47)           |
-|   block() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:98)                                                  |
-|     q.take() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:103)                                              |
+| $this_runCatching.block() at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:45)           |
+|   block() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:96)                                                  |
+|     q.take() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:101)                                              |
 |       lock.lockInterruptibly() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:417)                                                                       |
 |         sync.lockInterruptibly() at ReentrantLock.lockInterruptibly(ReentrantLock.java:372)                                                                  |
 |           initialTryLock(): true at ReentrantLock$Sync.lockInterruptibly(ReentrantLock.java:160)                                                             |
@@ -37,6 +38,7 @@ Detailed trace:
 |               Unsafe#1.compareAndSetInt(NonfairSync#1, 16, 0, 1): true at AbstractQueuedSynchronizer.compareAndSetState(AbstractQueuedSynchronizer.java:556) |
 |             setExclusiveOwnerThread(Thread#0) at ReentrantLock$NonfairSync.initialTryLock(ReentrantLock.java:226)                                            |
 |               exclusiveOwnerThread = Thread#0 at AbstractOwnableSynchronizer.setExclusiveOwnerThread(AbstractOwnableSynchronizer.java:74)                    |
+|       count ➜ 0 at ArrayBlockingQueue.take(ArrayBlockingQueue.java:419)                                                                                      |
 |       notEmpty.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:420)                                                                               |
 |         enableWait(ConditionNode#1): 1 at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1611)                             |
 |           this$0.isHeldExclusively(): true at AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1502)                    |

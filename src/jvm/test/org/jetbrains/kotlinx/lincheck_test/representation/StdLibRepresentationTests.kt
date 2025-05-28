@@ -97,6 +97,7 @@ class UnsafeCollectionSwitchPointTest {
             }
         }
         .iterations(0)
+        .analyzeStdLib(false)
         .checkImpl(this::class.java) { failure ->
             failure.checkLincheckOutput("unsafe_collection_switch_point")
         }
@@ -123,6 +124,7 @@ class UnsafeCollectionNoSwitchPointTest {
         }
         .addGuarantee(forClasses("java.util.Map", "java.util.HashMap").allMethods().mute())
         .iterations(0)
+        .analyzeStdLib(false)
         .checkImpl(this::class.java) { failure ->
             check(failure == null) { "Test should pass" }
         }

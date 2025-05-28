@@ -100,7 +100,7 @@ object Lincheck {
 
 internal data class LincheckSettings(val analyzeStdLib: Boolean) {
     companion object {
-        val default =  LincheckSettings(analyzeStdLib = false)
+        val default =  LincheckSettings(analyzeStdLib = true)
     }
 }
 

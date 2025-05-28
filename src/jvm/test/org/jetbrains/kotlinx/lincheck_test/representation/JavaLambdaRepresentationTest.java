@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation;
 
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions;
 import java.util.HashMap;
 
 public class JavaLambdaRepresentationTest extends BaseTraceRepresentationTest {
@@ -22,5 +23,10 @@ public class JavaLambdaRepresentationTest extends BaseTraceRepresentationTest {
     @Override
     public void operation() {
         hm.computeIfAbsent(1, k -> 1);
+    }
+
+    @Override
+    public void customize(ModelCheckingOptions $this$customize) {
+        $this$customize.analyzeStdLib$lincheck(false);
     }
 }
