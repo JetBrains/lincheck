@@ -33,7 +33,7 @@ object Lincheck {
     fun runConcurrentTest(
         invocations: Int = DEFAULT_INVOCATIONS_COUNT,
         block: Runnable
-    ) = runConcurrentTest(LincheckSettings.default, invocations, block)
+    ) = runConcurrentTestInternal(LincheckSettings.default, invocations, block)
 
     /**
      * This method will explore different interleavings of the [block] body and all the threads created within it,
@@ -45,7 +45,7 @@ object Lincheck {
      */
     @JvmOverloads
     @JvmStatic
-    internal fun runConcurrentTest(
+    internal fun runConcurrentTestInternal(
         lincheckSettings: LincheckSettings,
         invocations: Int = DEFAULT_INVOCATIONS_COUNT,
         block: Runnable
@@ -112,7 +112,7 @@ private val runGPMCTestMethod =
     GeneralPurposeModelCheckingWrapper::class.java.getDeclaredMethod("runGPMCTest", Runnable::class.java)
 
 /**
- * [NoExceptionVerifier] checks that the lambda passed into [Lincheck.runConcurrentTest] does not throw an exception.
+ * [NoExceptionVerifier] checks that the lambda passed into [Lincheck.runConcurrentTestInternal] does not throw an exception.
  */
 private class NoExceptionVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : Verifier {
     override fun verifyResults(scenario: ExecutionScenario, results: ExecutionResult): Boolean =

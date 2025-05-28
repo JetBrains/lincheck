@@ -24,7 +24,7 @@ public class JavaAPITest {
 
     @Test(expected = LincheckAssertionError.class)
     public void testMethodReference() {
-        runConcurrentTest$lincheck(new LincheckSettings(true), DEFAULT_INVOCATIONS_COUNT, JavaAPITest::testImpl);
+        runConcurrentTestInternal$lincheck(new LincheckSettings(true), DEFAULT_INVOCATIONS_COUNT, JavaAPITest::testImpl);
     }
 
     public static void testImpl() {
@@ -56,7 +56,7 @@ public class JavaAPITest {
 
     @Test(expected = LincheckAssertionError.class)
     public void testLambda() {
-        Lincheck.runConcurrentTest$lincheck(new LincheckSettings(true), DEFAULT_INVOCATIONS_COUNT, () -> {
+        Lincheck.runConcurrentTestInternal$lincheck(new LincheckSettings(true), DEFAULT_INVOCATIONS_COUNT, () -> {
             int[] results = new int[2];
 
             ConcurrentLinkedDeque<Integer> deque = new ConcurrentLinkedDeque<>();
