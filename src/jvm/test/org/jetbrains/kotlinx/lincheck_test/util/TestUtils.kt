@@ -13,6 +13,9 @@ package org.jetbrains.kotlinx.lincheck_test.util
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator
+import org.jetbrains.kotlinx.lincheck.util.DEFAULT_TEST_JDK_VERSION
+import org.jetbrains.kotlinx.lincheck.util.JdkVersion
+import org.jetbrains.kotlinx.lincheck.util.jdkVersion
 import org.junit.Assert.*
 import java.io.File
 
@@ -61,11 +64,11 @@ private fun compareAndOverwrite(expectedOutputFilePrefix: String, actualOutput: 
     if (actualOutput.filtered != expectedOutput?.filtered) {
         if (OVERWRITE_REPRESENTATION_TESTS_OUTPUT &&
             // overwrite if the expected log already exists, or we are in the default configuration
-            (expectedOutputFile != null || isDefaultConfiguration(testJdkVersion, isInTraceDebuggerMode))
+            (expectedOutputFile != null || isDefaultConfiguration(jdkVersion, isInTraceDebuggerMode))
         ) {
             val overwriteOutputFileName = generateExpectedLogFileName(
                 fileNamePrefix = expectedOutputFilePrefix,
-                jdkVersion = testJdkVersion,
+                jdkVersion = jdkVersion,
                 inTraceDebuggerMode = isInTraceDebuggerMode,
             )
             val overwriteOutputFile = getExpectedLogFileFromSources(overwriteOutputFileName)
@@ -77,7 +80,7 @@ private fun compareAndOverwrite(expectedOutputFilePrefix: String, actualOutput: 
             error(
                 """
                 No file exists yet for the test $expectedOutputFilePrefix. 
-                    JDK version = $testJdkVersion;
+                    JDK version = $jdkVersion;
                     Trace debugger mode = $isInTraceDebuggerMode.
                 """
                 .trimIndent()
@@ -106,13 +109,13 @@ private fun getExpectedLogFile(expectedOutputFilePrefix: String): File? {
     val testConfigurations = listOfNotNull(
         // first try to pick the most specific file if it exists
         TestFileConfiguration(
-            jdkVersion = testJdkVersion,
+            jdkVersion = jdkVersion,
             inTraceDebuggerMode = isInTraceDebuggerMode
         ),
 
         // next, try to pick the jdk-specific file
         TestFileConfiguration(
-            jdkVersion = testJdkVersion,
+            jdkVersion = jdkVersion,
             inTraceDebuggerMode = false
         ),
 
@@ -154,7 +157,7 @@ internal fun getExpectedLogFileFromSources(fullFileName: String): File =
 // prefix.txt, prefix_jdk15.txt, prefix_trace_debugger.txt, prefix_trace_debugger_jdk15.txt
 private fun generateExpectedLogFileName(
     fileNamePrefix: String,
-    jdkVersion: TestJdkVersion,
+    jdkVersion: JdkVersion,
     inTraceDebuggerMode: Boolean
 ): String {
     val traceDebuggerSuffix = if (inTraceDebuggerMode) "_trace_debugger" else ""
@@ -163,12 +166,12 @@ private fun generateExpectedLogFileName(
 }
 
 private data class TestFileConfiguration(
-    val jdkVersion: TestJdkVersion,
+    val jdkVersion: JdkVersion,
     val inTraceDebuggerMode: Boolean
 )
 
-private fun isDefaultConfiguration(testJdkVersion: TestJdkVersion, inTraceDebuggerMode: Boolean) =
-    (testJdkVersion == DEFAULT_TEST_JDK_VERSION) && !inTraceDebuggerMode
+private fun isDefaultConfiguration(jdkVersion: JdkVersion, inTraceDebuggerMode: Boolean) =
+    (jdkVersion == DEFAULT_TEST_JDK_VERSION) && !inTraceDebuggerMode
 
 private val String.filtered: String get() {
     // Remove platform-specific lines
@@ -226,41 +229,3 @@ class StringPoolGenerator(randomProvider: RandomProvider, configuration: String)
 
 internal val OVERWRITE_REPRESENTATION_TESTS_OUTPUT: Boolean =
     System.getProperty("lincheck.overwriteRepresentationTestsOutput").toBoolean()
-
-/**
- * Represents a set of Java Development Kit (JDK) versions on which the tests are run.
- */
-internal enum class TestJdkVersion {
-    JDK_8, JDK_11, JDK_13, JDK_15, JDK_17, JDK_19, JDK_20, JDK_21;
-    override fun toString(): String {
-        return "jdk${name.removePrefix("JDK_")}"
-    }
-}
-
-internal val DEFAULT_TEST_JDK_VERSION = TestJdkVersion.JDK_17
-
-/**
- * Determines the current JDK version based on the `java.specification.version` system property.
- * If the system property indicates an unsupported JDK version, an error is thrown.
- */
-internal val testJdkVersion: TestJdkVersion = run {
-    val jdkVersion = System.getProperty("java.specification.version")
-    // java.specification.version is "1.x" for Java prior to 8 and "x" for the newer ones
-    when {
-        jdkVersion.removePrefix("1.") == "8"    -> TestJdkVersion.JDK_8
-        jdkVersion == "11"                      -> TestJdkVersion.JDK_11
-        jdkVersion == "13"                      -> TestJdkVersion.JDK_13
-        jdkVersion == "15"                      -> TestJdkVersion.JDK_15
-        jdkVersion == "17"                      -> TestJdkVersion.JDK_17
-        jdkVersion == "19"                      -> TestJdkVersion.JDK_19
-        jdkVersion == "20"                      -> TestJdkVersion.JDK_20
-        jdkVersion == "21"                      -> TestJdkVersion.JDK_21
-        else ->
-            error("Unsupported JDK version: $jdkVersion")
-    }
-}
-
-/**
- * Indicates whether the current Java Development Kit (JDK) version is JDK 8.
- */
-internal val isJdk8 = (testJdkVersion == TestJdkVersion.JDK_8)

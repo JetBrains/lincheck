@@ -13,6 +13,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
+import org.jetbrains.kotlinx.lincheck.transformation.isJavaLambdaClass
 import org.jetbrains.kotlinx.lincheck.util.*
 import java.lang.reflect.*
 import java.util.*
@@ -466,7 +467,13 @@ internal class LocalObjectManager : ObjectTracker {
     private fun markObjectNonLocal(root: Any) {
         traverseObjectGraph(root) { obj ->
             val wasLocal = localObjects.remove(obj)
-            if (wasLocal) obj else null
+            if (
+                wasLocal ||
+                // lambdas do not appear in localObjects because its class is generated at runtime,
+                // so we do not instrument its constructor (<init> blocks) invocations
+                isJavaLambdaClass(obj.javaClass.name)
+            ) obj
+            else null
         }
     }
 

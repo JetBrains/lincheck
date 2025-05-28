@@ -50,10 +50,12 @@ kotlin {
     jvm {
         withJava()
 
+        val main by compilations.getting
+        val test by compilations.getting
         val integrationTest by compilations.creating {
             defaultSourceSet {
-                associateWith(compilations["main"])
-                associateWith(compilations["test"])
+                associateWith(main)
+                associateWith(test)
             }
         }
     }
@@ -66,6 +68,7 @@ kotlin {
             val kotlinxCoroutinesVersion: String by project
             val asmVersion: String by project
             val byteBuddyVersion: String by project
+            val atomicfuVersion: String by project
             dependencies {
                 compileOnly(project(":bootstrap"))
                 api("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
@@ -76,6 +79,7 @@ kotlin {
                 api("org.ow2.asm:asm-util:$asmVersion")
                 api("net.bytebuddy:byte-buddy:$byteBuddyVersion")
                 api("net.bytebuddy:byte-buddy-agent:$byteBuddyVersion")
+                api("org.jetbrains.kotlinx:atomicfu:$atomicfuVersion")
             }
         }
 

@@ -205,4 +205,22 @@ class KotlinAPITest {
 
         Assert.fail()
     }
+
+    @Test(expected = LincheckAssertionError::class)
+    fun `test non-joined thread modify field`() {
+        runConcurrentTest {
+            val wr = Wrapper()
+            wr.run()
+        }
+    }
+
+    private class Wrapper {
+        var a = 1
+
+        fun run() {
+            thread { a = 2 }
+            a = 3
+            check(a == 3)
+        }
+    }
 }

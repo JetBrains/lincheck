@@ -23,6 +23,7 @@ import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumen
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentationMode
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentedClasses
 import org.jetbrains.kotlinx.lincheck.util.Logger
+import org.jetbrains.kotlinx.lincheck.util.isJdk8
 import org.jetbrains.kotlinx.lincheck.util.readFieldSafely
 import org.jetbrains.kotlinx.lincheck.util.runInsideIgnoredSection
 import org.objectweb.asm.ClassReader
@@ -180,8 +181,20 @@ internal object LincheckJavaAgent {
 
     private fun getLoadedClassesToInstrument(): List<Class<*>> =
         instrumentation.allLoadedClasses
-            .filter(instrumentation::isModifiableClass)
+            // Filtering is done in the following order to hide lincheck source classes from
+            // `canRetransform` method which uses `TransformationUtilsKt::isJavaLambdaClass` internally.
+            // The other order causes class linkage error on double definition of `TransformationUtilsKt`
+            // when it itself is passed as argument to `canRetransformClass`.
             .filter { shouldTransform(it.name, instrumentationMode) }
+            .filter(::canRetransformClass)
+
+    private fun canRetransformClass(clazz: Class<*>): Boolean {
+        return instrumentation.isModifiableClass(clazz) &&
+               // Note: Java 8 has a bug and does not allow lambdas redefinition and retransformation
+               //  - https://bugs.openjdk.org/browse/JDK-8145964
+               //  - https://stackoverflow.com/questions/34162074/transforming-lambdas-in-java-8
+               (!isJdk8 || !isJavaLambdaClass(clazz.name))
+    }
 
     /**
      * Detaches [LincheckClassFileTransformer] from this JVM instance and re-transforms
@@ -318,7 +331,7 @@ internal object LincheckJavaAgent {
      */
     private fun ensureClassHierarchyIsTransformed(clazz: Class<*>, processedObjects: MutableSet<Any>) {
         if (!shouldTransform(clazz.name, instrumentationMode)) return
-        if (instrumentation.isModifiableClass(clazz)) {
+        if (canRetransformClass(clazz)) {
             instrumentedClasses += clazz.name
             instrumentation.retransformClasses(clazz)
         }

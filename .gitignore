@@ -8,6 +8,7 @@
 # Gradle
 .gradle
 .gradletasknamecache
+.kotlin
 build
 out
 target
