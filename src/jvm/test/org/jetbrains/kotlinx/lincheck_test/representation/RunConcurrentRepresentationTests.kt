@@ -43,7 +43,8 @@ abstract class BaseRunConcurrentRepresentationTest<R>(private val outputFileName
     @Test
     fun testRunWithModelChecker() {
         val result = runCatching {
-            runConcurrentTestInternal(LincheckSettings(analyzeStdLib = analyzeStdLib)) {
+            val settings = LincheckSettings(analyzeStdLib = analyzeStdLib)
+            runConcurrentTestInternal(settings) {
                 block()
             }
         }

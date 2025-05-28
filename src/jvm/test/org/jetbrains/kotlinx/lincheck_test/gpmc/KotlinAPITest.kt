@@ -10,9 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck_test.gpmc
 
-import org.jetbrains.kotlinx.lincheck.Lincheck.runConcurrentTestInternal
+import org.jetbrains.kotlinx.lincheck.Lincheck.runConcurrentTest
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
-import org.jetbrains.kotlinx.lincheck.LincheckSettings
 import kotlin.concurrent.thread
 import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.atomic.AtomicInteger
@@ -22,7 +21,7 @@ import org.junit.Test
 class KotlinAPITest {
 
     @Test(expected = LincheckAssertionError::class)
-    fun `test Kotlin thread`() = runConcurrentTestInternal(LincheckSettings(analyzeStdLib = true)) {
+    fun `test Kotlin thread`() = runConcurrentTest {
         var r1: Int = -1
         var r2: Int = -1
 
@@ -44,7 +43,7 @@ class KotlinAPITest {
     }
 
     @Test(expected = LincheckAssertionError::class)
-    fun `test Kotlin thread(start=false)`() = runConcurrentTestInternal(LincheckSettings(analyzeStdLib = true)) {
+    fun `test Kotlin thread(start=false)`() = runConcurrentTest {
         var r1: Int = -1
         var r2: Int = -1
 
@@ -68,7 +67,7 @@ class KotlinAPITest {
     }
 
     @Test(expected = LincheckAssertionError::class)
-    fun `test Java Thread`() = runConcurrentTestInternal(LincheckSettings(analyzeStdLib = true)) {
+    fun `test Java Thread`() = runConcurrentTest {
         var r1: Int = -1
         var r2: Int = -1
 
@@ -92,7 +91,7 @@ class KotlinAPITest {
     }
 
     @Test(expected = LincheckAssertionError::class)
-    fun `test Java Thread and AtomicInteger`() = runConcurrentTestInternal(LincheckSettings(analyzeStdLib = true)) {
+    fun `test Java Thread and AtomicInteger`() = runConcurrentTest {
         val r1 = AtomicInteger(-1)
         val r2 = AtomicInteger(-1)
 
@@ -116,7 +115,7 @@ class KotlinAPITest {
     }
 
     @Test(expected = LincheckAssertionError::class)
-    fun `test method reference`() = runConcurrentTestInternal(LincheckSettings(analyzeStdLib = true), block = ::testImpl)
+    fun `test method reference`() = runConcurrentTest(block = ::testImpl)
 
     private fun testImpl() {
         var r1: Int = -1
@@ -140,7 +139,7 @@ class KotlinAPITest {
     }
 
     @Test(expected = LincheckAssertionError::class)
-    fun `test Kotlin check`() = runConcurrentTestInternal(LincheckSettings(analyzeStdLib = true)) {
+    fun `test Kotlin check`() = runConcurrentTest {
         var r1: Int = -1
         var r2: Int = -1
 
@@ -162,7 +161,7 @@ class KotlinAPITest {
     }
 
     @Test(expected = LincheckAssertionError::class)
-    fun `test JUnit assert`() = runConcurrentTestInternal(LincheckSettings(analyzeStdLib = true)) {
+    fun `test JUnit assert`() = runConcurrentTest {
         var r1: Int = -1
         var r2: Int = -1
 
@@ -184,7 +183,7 @@ class KotlinAPITest {
     }
 
     @Test
-    fun `test thread double start`() = runConcurrentTestInternal(LincheckSettings(analyzeStdLib = true)) {
+    fun `test thread double start`() = runConcurrentTest {
         var counter = AtomicInteger(0)
         val t1 = thread {
             counter.incrementAndGet()
@@ -198,7 +197,7 @@ class KotlinAPITest {
             t2.start()
         } catch (_: IllegalThreadStateException) {
             // expected behavior
-            return@runConcurrentTestInternal
+            return@runConcurrentTest
         }
 
         t1.join()
