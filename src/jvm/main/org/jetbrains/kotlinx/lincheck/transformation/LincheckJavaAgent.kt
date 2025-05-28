@@ -12,23 +12,23 @@ package org.jetbrains.kotlinx.lincheck.transformation
 
 import net.bytebuddy.agent.ByteBuddyAgent
 import org.jetbrains.kotlinx.lincheck.dumpTransformedSources
-import org.jetbrains.kotlinx.lincheck.util.runInsideIgnoredSection
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.MODEL_CHECKING
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.STRESS
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.isEagerlyInstrumentedClass
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.shouldTransform
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.transformedClassesStress
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.INSTRUMENT_ALL_CLASSES
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.install
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentation
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentationMode
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentedClasses
-import org.jetbrains.kotlinx.lincheck.transformation.transformers.LocalVariableInfo
 import org.jetbrains.kotlinx.lincheck.util.Logger
-import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.kotlinx.lincheck.util.readFieldSafely
+import org.jetbrains.kotlinx.lincheck.util.runInsideIgnoredSection
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Type
 import org.objectweb.asm.tree.ClassNode
-import sun.misc.Unsafe
 import java.io.File
 import java.io.PrintWriter
 import java.io.StringWriter
@@ -412,9 +412,10 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         reader.accept(classNode, ClassReader.EXPAND_FRAMES)
 
         val methods = mapMethodsToLabels(classNode)
+        val methodVariables = methods.mapValues { MethodVariables(it.value) }
 
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
-        val visitor = LincheckClassVisitor(writer, instrumentationMode, methods)
+        val visitor = LincheckClassVisitor(writer, instrumentationMode, methodVariables)
         try {
             classNode.accept(visitor)
             writer.toByteArray().also {
@@ -446,7 +447,7 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
                     m.localVariables?.forEach { local ->
                         val index = local.index
                         val type = Type.getType(local.desc)
-                        val info = LocalVariableInfo(local.name, local.start.label to local.end.label, type)
+                        val info = LocalVariableInfo(local.name, local.index, local.start.label to local.end.label, type)
                         map.getOrPut(index) { mutableListOf() }.add(info)
                     }
                 }

@@ -23,7 +23,7 @@ internal class LocalVariablesAccessTransformer(
     adapter: GeneratorAdapter,
     private val locals: Map<Int, List<LocalVariableInfo>>,
 ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
-
+    private var turnoffTransform = false
     private val visitedLabels = HashSet<Label>()
 
     override fun visitLabel(label: Label) = adapter.run {
@@ -33,7 +33,7 @@ internal class LocalVariablesAccessTransformer(
 
     override fun visitVarInsn(opcode: Int, varIndex: Int) = adapter.run {
         val localVariableInfo = getVariableName(varIndex)?.takeIf { it.name != "this" }
-        if (localVariableInfo == null) {
+        if (localVariableInfo == null || turnoffTransform) {
             visitVarInsn(opcode, varIndex)
             return
         }
@@ -49,6 +49,16 @@ internal class LocalVariablesAccessTransformer(
             else -> {
                 visitVarInsn(opcode, varIndex)
             }
+        }
+    }
+
+    fun runWithoutLocalVariablesTracking(block: () -> Unit) {
+        val currentState = turnoffTransform
+        try {
+            turnoffTransform = true
+            block()
+        } finally {
+            turnoffTransform = currentState
         }
     }
 
@@ -121,7 +131,7 @@ internal class LocalVariablesAccessTransformer(
 
     // TODO: does not work
     private fun findNameForLabelIndex(localList: List<LocalVariableInfo>) =
-        localList.find { (_, range, _) -> 
+        localList.find { (_, _, range, _) ->
             val (start, finish) = range
             start in visitedLabels && finish !in visitedLabels
         }
@@ -142,11 +152,3 @@ internal class LocalVariablesAccessTransformer(
         else -> throw IllegalArgumentException("Invalid opcode: $opcode")
     }
 }
-
-private fun List<LocalVariableInfo>.isUniqueVariable(): Boolean {
-    val name = first().name
-    val type = first().type
-    return all { it.name == name && it.type == type }
-}
-
-internal data class LocalVariableInfo(val name: String, val labelIndexRange: Pair<Label, Label>, val type: Type)

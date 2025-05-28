@@ -37,7 +37,16 @@ internal class ShadowStackFrame(val instance: Any?) {
     }
 
     fun getLastAccessVariable(value: Any?): String? {
+        // Filter out two patterns which are used as virtual `this` in inlined code.
+        // They should not be used as "owner" of the call, as they are "hidden".
+        // Otherwise, inline calls will be attributed to this variable, as the local variable has higher precedence
+        // in resolving `owner` than other places, like fields.
+        // When other "inlined" variables are converted to arguments to inlined functions, they will be
+        // filtered out too.
+        // Keep the current behavior of such variables for now.
         return localVariables
+            .filter { (name, _) -> !name.startsWith("this_\$iv") }
+            .filter { (name, _) -> !name.contains(Regex("^\\\$this\\$.+?(\\\$iv)+$")) }
             .filter { (_, state) -> state.value === value }
             .maxByOrNull { (_, state) -> state.accessCounter }
             ?.key

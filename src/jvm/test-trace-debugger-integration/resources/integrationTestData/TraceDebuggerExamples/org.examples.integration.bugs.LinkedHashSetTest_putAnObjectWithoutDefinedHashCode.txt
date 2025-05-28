@@ -51,14 +51,14 @@ Detailed trace:
 |       putVal(1, A#2, Object#1, false, true): null at HashMap.put(HashMap.java:610)                                                |
 |         table ➜ Array<Node>#1 at HashMap.putVal(HashMap.java:626)                                                                 |
 |         Array<Node>#1[1] ➜ Entry#1 at HashMap.putVal(HashMap.java:628)                                                            |
-|         i.next ➜ null at HashMap.putVal(HashMap.java:639)                                                                         |
+|         p.next ➜ null at HashMap.putVal(HashMap.java:639)                                                                         |
 |         newNode(1, A#2, Object#1, null): Entry#2 at HashMap.putVal(HashMap.java:640)                                              |
 |           linkNodeLast(Entry#2) at LinkedHashMap.newNode(LinkedHashMap.java:259)                                                  |
 |             tail ➜ Entry#1 at LinkedHashMap.linkNodeLast(LinkedHashMap.java:224)                                                  |
 |             tail = Entry#2 at LinkedHashMap.linkNodeLast(LinkedHashMap.java:225)                                                  |
 |             p.before = Entry#1 at LinkedHashMap.linkNodeLast(LinkedHashMap.java:229)                                              |
 |             last.after = Entry#2 at LinkedHashMap.linkNodeLast(LinkedHashMap.java:230)                                            |
-|         i.next = Entry#2 at HashMap.putVal(HashMap.java:640)                                                                      |
+|         p.next = Entry#2 at HashMap.putVal(HashMap.java:640)                                                                      |
 |         modCount ➜ 1 at HashMap.putVal(HashMap.java:659)                                                                          |
 |         modCount = 2 at HashMap.putVal(HashMap.java:659)                                                                          |
 |         size ➜ 1 at HashMap.putVal(HashMap.java:660)                                                                              |

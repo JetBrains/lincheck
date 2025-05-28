@@ -1,0 +1,27 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| -------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                   Thread 1                                                                   |
+| -------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                  |
+|   escape = "START" at InlineMethodRepresentationTest.operation(InlineMethodRepresentationTest.kt:23)                                         |
+|   thisClassInlineFunc() at InlineMethodRepresentationTest.operation(InlineMethodRepresentationTest.kt:24)                                    |
+|     isc.otherClassInlineFunc() at InlineMethodRepresentationTest.operation(InlineMethodRepresentationTest.kt:44)                             |
+|       outsideInlineFunc() at InlineMethodRepresentationTest.operation(InlineMethodRepresentationTest.kt:45)                                  |
+|         InlineMethodRepresentationTest#1.escape = "INLINE" at InlineMethodRepresentationTest.operation(InlineMethodRepresentationTest.kt:25) |
+|   escape = "END" at InlineMethodRepresentationTest.operation(InlineMethodRepresentationTest.kt:27)                                           |
+|   result: void                                                                                                                               |
+| -------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -1790,6 +1790,52 @@ abstract class ManagedStrategy(
         leaveAnalysisSection(threadId, methodSection)
     }
 
+    override fun onInlineMethodCall(
+        className: String,
+        methodName: String,
+        methodId: Int,
+        codeLocation: Int,
+        owner: Any?,
+    ) = runInsideIgnoredSection {
+        val threadId = threadScheduler.getCurrentThreadId()
+        if (threadScheduler.isAborted(threadId)) {
+            threadScheduler.abortCurrentThread()
+        }
+        if (collectTrace) {
+            traceCollector!!.checkActiveLockDetected()
+            addBeforeMethodCallTracePoint(
+                threadId = threadId,
+                owner = owner,
+                codeLocation = codeLocation,
+                methodId = methodId,
+                className = className,
+                methodName = methodName,
+                methodParams = emptyArray(),
+                atomicMethodDescriptor = null,
+                callType = MethodCallTracePoint.CallType.NORMAL
+            )
+        }
+    }
+
+    override fun onInlineMethodCallReturn(
+        methodName: String,
+        methodId: Int,
+    ) = runInsideIgnoredSection {
+        val threadId = threadScheduler.getCurrentThreadId()
+        if (collectTrace) {
+            // an empty stack trace case is possible and can occur when we resume the coroutine,
+            // and it results in a call to a top-level actor `suspend` function;
+            // currently top-level actor functions are not represented in the `callStackTrace`,
+            // we should probably refactor and fix that, because it is very inconvenient
+            if (callStackTrace[threadId]!!.isNotEmpty()) {
+                val tracePoint = callStackTrace[threadId]!!.last().tracePoint
+                tracePoint.initializeVoidReturnedValue()
+                afterMethodCall(threadId, tracePoint)
+                traceCollector!!.addStateRepresentation()
+            }
+        }
+    }
+
     private fun <T> KResult<T>.toBootstrapResult() =
         if (isSuccess) BootstrapResult.fromSuccess(getOrThrow())
         else BootstrapResult.fromFailure(exceptionOrNull()!!)
@@ -2039,7 +2085,7 @@ abstract class ManagedStrategy(
         // handle non-atomic methods
         if (atomicMethodDescriptor == null) {
             val ownerName = if (owner != null) findOwnerName(owner) else className.toSimpleClassName()
-            if (ownerName != null) {
+            if (!ownerName.isNullOrEmpty()) {
                 tracePoint.initializeOwnerName(ownerName)
             }
             tracePoint.initializeParameters(params.toList())
