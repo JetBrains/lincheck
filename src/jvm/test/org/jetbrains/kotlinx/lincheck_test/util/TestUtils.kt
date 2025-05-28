@@ -14,8 +14,8 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator
 import org.jetbrains.kotlinx.lincheck.util.DEFAULT_TEST_JDK_VERSION
-import org.jetbrains.kotlinx.lincheck.util.TestJdkVersion
-import org.jetbrains.kotlinx.lincheck.util.testJdkVersion
+import org.jetbrains.kotlinx.lincheck.util.JdkVersion
+import org.jetbrains.kotlinx.lincheck.util.jdkVersion
 import org.junit.Assert.*
 import java.io.File
 
@@ -64,11 +64,11 @@ private fun compareAndOverwrite(expectedOutputFilePrefix: String, actualOutput: 
     if (actualOutput.filtered != expectedOutput?.filtered) {
         if (OVERWRITE_REPRESENTATION_TESTS_OUTPUT &&
             // overwrite if the expected log already exists, or we are in the default configuration
-            (expectedOutputFile != null || isDefaultConfiguration(testJdkVersion, isInTraceDebuggerMode))
+            (expectedOutputFile != null || isDefaultConfiguration(jdkVersion, isInTraceDebuggerMode))
         ) {
             val overwriteOutputFileName = generateExpectedLogFileName(
                 fileNamePrefix = expectedOutputFilePrefix,
-                jdkVersion = testJdkVersion,
+                jdkVersion = jdkVersion,
                 inTraceDebuggerMode = isInTraceDebuggerMode,
             )
             val overwriteOutputFile = getExpectedLogFileFromSources(overwriteOutputFileName)
@@ -80,7 +80,7 @@ private fun compareAndOverwrite(expectedOutputFilePrefix: String, actualOutput: 
             error(
                 """
                 No file exists yet for the test $expectedOutputFilePrefix. 
-                    JDK version = $testJdkVersion;
+                    JDK version = $jdkVersion;
                     Trace debugger mode = $isInTraceDebuggerMode.
                 """
                 .trimIndent()
@@ -109,13 +109,13 @@ private fun getExpectedLogFile(expectedOutputFilePrefix: String): File? {
     val testConfigurations = listOfNotNull(
         // first try to pick the most specific file if it exists
         TestFileConfiguration(
-            jdkVersion = testJdkVersion,
+            jdkVersion = jdkVersion,
             inTraceDebuggerMode = isInTraceDebuggerMode
         ),
 
         // next, try to pick the jdk-specific file
         TestFileConfiguration(
-            jdkVersion = testJdkVersion,
+            jdkVersion = jdkVersion,
             inTraceDebuggerMode = false
         ),
 
@@ -157,7 +157,7 @@ internal fun getExpectedLogFileFromSources(fullFileName: String): File =
 // prefix.txt, prefix_jdk15.txt, prefix_trace_debugger.txt, prefix_trace_debugger_jdk15.txt
 private fun generateExpectedLogFileName(
     fileNamePrefix: String,
-    jdkVersion: TestJdkVersion,
+    jdkVersion: JdkVersion,
     inTraceDebuggerMode: Boolean
 ): String {
     val traceDebuggerSuffix = if (inTraceDebuggerMode) "_trace_debugger" else ""
@@ -166,12 +166,12 @@ private fun generateExpectedLogFileName(
 }
 
 private data class TestFileConfiguration(
-    val jdkVersion: TestJdkVersion,
+    val jdkVersion: JdkVersion,
     val inTraceDebuggerMode: Boolean
 )
 
-private fun isDefaultConfiguration(testJdkVersion: TestJdkVersion, inTraceDebuggerMode: Boolean) =
-    (testJdkVersion == DEFAULT_TEST_JDK_VERSION) && !inTraceDebuggerMode
+private fun isDefaultConfiguration(jdkVersion: JdkVersion, inTraceDebuggerMode: Boolean) =
+    (jdkVersion == DEFAULT_TEST_JDK_VERSION) && !inTraceDebuggerMode
 
 private val String.filtered: String get() {
     // Remove platform-specific lines

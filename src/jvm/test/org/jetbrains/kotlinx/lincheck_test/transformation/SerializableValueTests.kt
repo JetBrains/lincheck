@@ -14,8 +14,8 @@ import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.paramgen.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
-import org.jetbrains.kotlinx.lincheck.util.TestJdkVersion
-import org.jetbrains.kotlinx.lincheck.util.testJdkVersion
+import org.jetbrains.kotlinx.lincheck.util.JdkVersion
+import org.jetbrains.kotlinx.lincheck.util.jdkVersion
 import org.junit.Assume.assumeFalse
 import org.junit.Before
 import java.io.*
@@ -104,7 +104,7 @@ class SerializableJavaUtilParameterTest : AbstractLincheckTest() {
     @Before
     fun setUp() {
         // https://github.com/JetBrains/lincheck/issues/499
-        assumeFalse(testJdkVersion == TestJdkVersion.JDK_21 && isInTraceDebuggerMode)
+        assumeFalse(jdkVersion == JdkVersion.JDK_21 && isInTraceDebuggerMode)
     }
     
     @Operation

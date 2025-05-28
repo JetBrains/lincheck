@@ -188,10 +188,10 @@ internal object LincheckJavaAgent {
             .filter(::canRetransformClass)
 
     private fun canRetransformClass(clazz: Class<*>): Boolean {
-        // Note: Java 8 has a bug and does not allow lambdas redefinition and retransformation
-        //  - https://bugs.openjdk.org/browse/JDK-8145964
-        //  - https://stackoverflow.com/questions/34162074/transforming-lambdas-in-java-8
         return instrumentation.isModifiableClass(clazz) &&
+               // Note: Java 8 has a bug and does not allow lambdas redefinition and retransformation
+               //  - https://bugs.openjdk.org/browse/JDK-8145964
+               //  - https://stackoverflow.com/questions/34162074/transforming-lambdas-in-java-8
                (!isJdk8 || !isJavaLambdaClass(clazz.name))
     }
 

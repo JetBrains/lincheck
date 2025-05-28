@@ -11,8 +11,8 @@
 package org.jetbrains.kotlinx.lincheck_test.trace_debugger
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.util.TestJdkVersion
-import org.jetbrains.kotlinx.lincheck.util.testJdkVersion
+import org.jetbrains.kotlinx.lincheck.util.JdkVersion
+import org.jetbrains.kotlinx.lincheck.util.jdkVersion
 import org.junit.Assume.assumeFalse
 import org.junit.Before
 import java.util.concurrent.ThreadLocalRandom
@@ -350,7 +350,7 @@ class FailingRandomBytesTest : RandomTests() {
     @Before
     fun setUp() {
         // https://github.com/JetBrains/lincheck/issues/564
-        assumeFalse(testJdkVersion == TestJdkVersion.JDK_21 || testJdkVersion == TestJdkVersion.JDK_20)
+        assumeFalse(jdkVersion == JdkVersion.JDK_21 || jdkVersion == JdkVersion.JDK_20)
     }
     
     class FailingRandom : JRandom() {

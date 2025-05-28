@@ -150,20 +150,17 @@ private fun SingleThreadedTable<TraceNode>.removeCoroutinesCoreSuffix() = compre
 }
 
 /**
- * Removes the two `invoke()` lines at the beginning of a user-defined thread trace.
+ * Removes the lambda invocation line at the beginning of a user-defined thread trace.
  */
 private fun SingleThreadedTable<TraceNode>.compressUserThreadRun() = compressNodes { node ->
-    if (node !is CallNode || !node.tracePoint.isThreadStart ) return@compressNodes node
-    val firstChild = if (node.children.size == 1) node.children[0] else return@compressNodes node
-    val secondChild = if (firstChild.children.size == 1) firstChild.children[0] else return@compressNodes node
+    if (node !is CallNode || !node.tracePoint.isThreadStart) return@compressNodes node
+    val child = if (node.children.size == 1) node.children[0] else return@compressNodes node
 
-    // Test if we are dealing with a custom thread start
-    if (firstChild !is CallNode || secondChild !is CallNode) return@compressNodes node
-    if (!isUserThreadStart(firstChild.tracePoint, secondChild.tracePoint)) return@compressNodes node
+    if (child !is CallNode) return@compressNodes node
+    if (!isUserThreadStart(node.tracePoint, child.tracePoint)) return@compressNodes node
 
     val newNode = node.copy()
-    node.children.getOrNull(0)?.children?.getOrNull(0)?.children?.forEach {
-        it.decrementCallDepthOfTree()
+    node.children.getOrNull(0)?.children?.forEach {
         it.decrementCallDepthOfTree()
         newNode.addChild(it)
     }
@@ -224,11 +221,10 @@ private fun isSyntheticFieldAccess(methodName: String): Boolean =
     methodName.contains("access\$get") || methodName.contains("access\$set")
 
 /**
- * Used to remove the two `invoke()` lines at the beginning of
+ * Used to remove the lambda invocation line at the beginning of
  * a user-defined thread trace.
  */
 private fun isUserThreadStart(currentTracePoint: MethodCallTracePoint, nextTracePoint: MethodCallTracePoint): Boolean =
-    currentTracePoint.stackTraceElement.methodName == "run"
-            && currentTracePoint.stackTraceElement.fileName == "Thread.kt"
-            && currentTracePoint.methodName == "invoke"
+    currentTracePoint.isThreadStart
+            && nextTracePoint.className == "kotlin.jvm.functions.Function0"
             && nextTracePoint.methodName == "invoke"
