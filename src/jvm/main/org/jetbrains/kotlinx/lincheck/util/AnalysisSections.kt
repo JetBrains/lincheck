@@ -389,6 +389,6 @@ internal fun isConcurrentCollectionsLibrary(className: String) = className in se
 )
 
 private fun isJavaExecutorService(className: String) =
-    className.startsWith("java.util.concurrent.AbstractExecutorService") 
-    || className.startsWith("java.util.concurrent.ThreadPoolExecutor") 
-    || className.startsWith("java.util.concurrent.ForkJoinPool")
+    className.startsWith("java.util.concurrent.AbstractExecutorService") ||
+    className.startsWith("java.util.concurrent.ThreadPoolExecutor") ||
+    className.startsWith("java.util.concurrent.ForkJoinPool")
