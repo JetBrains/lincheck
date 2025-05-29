@@ -103,12 +103,6 @@ object Lincheck {
     internal const val DEFAULT_INVOCATIONS = 50_000
 }
 
-internal data class LincheckSettings(val analyzeStdLib: Boolean) {
-    companion object {
-        val default =  LincheckSettings(analyzeStdLib = true)
-    }
-}
-
 internal class GeneralPurposeModelCheckingWrapper {
     fun runGPMCTest(block: Runnable) = block.run()
 }
