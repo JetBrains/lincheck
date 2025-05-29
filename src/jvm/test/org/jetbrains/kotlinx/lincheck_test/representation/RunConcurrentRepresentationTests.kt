@@ -23,6 +23,7 @@ import org.jetbrains.lincheck.Lincheck.runConcurrentTestInternal
 import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.kotlinx.lincheck.util.JdkVersion
 import org.jetbrains.kotlinx.lincheck.util.jdkVersion
+import org.jetbrains.lincheck.Lincheck
 import kotlin.concurrent.thread
 import org.junit.*
 import org.junit.Assume.assumeFalse
@@ -44,7 +45,10 @@ abstract class BaseRunConcurrentRepresentationTest<R>(private val outputFileName
     fun testRunWithModelChecker() {
         val result = runCatching {
             val settings = LincheckSettings(analyzeStdLib = analyzeStdLib)
-            runConcurrentTestInternal(settings) {
+            runConcurrentTestInternal(
+                invocations = Lincheck.DEFAULT_INVOCATIONS,
+                lincheckSettings = settings
+            ) {
                 block()
             }
         }
