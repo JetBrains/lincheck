@@ -9,8 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.kotlinx.lincheck.strategy.*
-import java.lang.AssertionError
+import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 
 class LincheckAssertionError(
     val failure: LincheckFailure

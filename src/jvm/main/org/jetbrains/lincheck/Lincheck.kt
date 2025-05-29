@@ -92,7 +92,6 @@ object Lincheck {
                             invocations = invocations,
                             verifier = verifier
                         )
-                        throw LincheckAssertionError(failure)
                     }
                     throw LincheckAssertionError(failure)
                 }
