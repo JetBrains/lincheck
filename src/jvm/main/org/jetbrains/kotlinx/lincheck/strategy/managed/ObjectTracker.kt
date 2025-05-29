@@ -180,6 +180,15 @@ fun ObjectID.getObjectHashCode(): Int =
 fun ObjectTracker.getObjectNumber(obj: Any): Int =
     get(obj)?.objectNumber ?: -1
 
+internal fun ObjectTracker.enumerateAllObjects(): Map<Any, Int> {
+    val objectNumberMap = hashMapOf<Any, Int>()
+    TODO()
+    // objectNumeration.forEach { _, numbers ->
+    //     objectNumberMap.putAll(numbers)
+    // }
+    return objectNumberMap
+}
+
 /**
  * Enumerates all objects reachable from the given root object,
  * assigning each object a unique serial number as determined by the object tracker.

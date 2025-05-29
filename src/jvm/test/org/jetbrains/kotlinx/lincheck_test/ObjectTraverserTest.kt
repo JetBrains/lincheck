@@ -134,7 +134,7 @@ class ObjectTraverserTest {
             val javaRef = AtomicReference<AtomicReference<Any>>(AtomicReference(a))
             val atomicFURef: AtomicRef<AtomicReference<Any>?> = atomic(null)
         }
-        myObject.atomicFURef.value = atomic<Any>(b)
+        myObject.atomicFURef.value = AtomicReference<Any>(b)
 
         val objectEnumeration = objectTracker.enumerateReachableObjects(myObject)
         Assert.assertTrue(

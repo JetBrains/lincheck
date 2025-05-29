@@ -62,7 +62,7 @@ internal class ModelCheckingStrategy(
     private var isReplayingSpinCycle = false
 
     // Tracker of objects' allocations and object graph topology.
-    override val objectTracker: ObjectTracker? = if (isInTraceDebuggerMode) null else LocalObjectManager()
+    override val objectTracker: ObjectTracker = LocalObjectManager()
     // Tracker of the monitors' operations.
     override val monitorTracker: MonitorTracker = ModelCheckingMonitorTracker()
     // Tracker of the thread parking.
@@ -490,12 +490,13 @@ internal class LocalObjectManager : AbstractObjectTracker() {
             val entry = getObjectEntry(obj)
             val wasLocal = (entry?.isLocal == true)
             entry?.isLocal = false
-            if (wasLocal ||
+
+            return@traverseObjectGraph(
+                wasLocal ||
                 // lambdas do not appear in localObjects because its class is generated at runtime,
                 // so we do not instrument its constructor (<init> blocks) invocations
                 isJavaLambdaClass(obj.javaClass.name)
-            ) obj
-            else null
+            )
         }
     }
 
