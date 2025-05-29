@@ -13,7 +13,7 @@ package org.jetbrains.kotlinx.lincheck_test.gpmc
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import org.jetbrains.kotlinx.lincheck.Lincheck
+import org.jetbrains.lincheck.Lincheck
 import org.junit.Test
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors

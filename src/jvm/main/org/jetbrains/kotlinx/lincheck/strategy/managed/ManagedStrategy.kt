@@ -36,6 +36,7 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.Continuation
 import java.util.concurrent.TimeoutException
 import kotlinx.coroutines.CancellableContinuation
+import org.jetbrains.lincheck.GeneralPurposeModelCheckingWrapper
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 import kotlin.Result as KResult
 import org.objectweb.asm.commons.Method.getMethod as getAsmMethod
@@ -1719,7 +1720,7 @@ abstract class ManagedStrategy(
         val atomicMethodDescriptor = getAtomicMethodDescriptor(receiver, methodDescriptor.methodName)
         // get method's analysis section type
         val methodSection = methodAnalysisSectionType(
-            receiver, 
+            receiver,
             methodDescriptor.className,
             methodDescriptor.methodName,
             atomicMethodDescriptor,

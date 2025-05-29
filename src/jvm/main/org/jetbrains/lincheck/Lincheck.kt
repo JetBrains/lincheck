@@ -1,17 +1,23 @@
 /*
  * Lincheck
  *
- * Copyright (C) 2019 - 2024 JetBrains s.r.o.
+ * Copyright (C) 2019 - 2025 JetBrains s.r.o.
  *
  * This Source Code Form is subject to the terms of the
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.jetbrains.kotlinx.lincheck
+package org.jetbrains.lincheck
 
+import org.jetbrains.kotlinx.lincheck.Actor
+import org.jetbrains.kotlinx.lincheck.ExceptionResult
+import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
+import org.jetbrains.kotlinx.lincheck.createVerifier
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
+import org.jetbrains.kotlinx.lincheck.ideaPluginEnabled
+import org.jetbrains.kotlinx.lincheck.runPluginReplay
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.runIteration
