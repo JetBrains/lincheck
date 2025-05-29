@@ -45,7 +45,7 @@ object Lincheck {
      * This method will explore different interleavings of the [block] body and all the threads created within it,
      * searching for the first raised exception.
      *
-     * @param lincheckSettings settings that determine linchecks behaviour like analyse std library collections.
+     * @param lincheckSettings advanced settings that determine Lincheck behavior.
      * @param invocations number of different interleavings of code in the [block] that should be explored.
      * @param block lambda which body will be a target for the interleavings exploration.
      */
