@@ -39,7 +39,7 @@ object Lincheck {
     fun runConcurrentTest(
         invocations: Int = DEFAULT_INVOCATIONS,
         block: Runnable
-    ) = runConcurrentTestInternal(LincheckSettings.default, invocations, block)
+    ) = runConcurrentTestInternal(LincheckSettings.DEFAULT, invocations, block)
 
     /**
      * This method will explore different interleavings of the [block] body and all the threads created within it,

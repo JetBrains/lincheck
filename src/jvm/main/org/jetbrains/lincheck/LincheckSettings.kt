@@ -12,6 +12,6 @@ package org.jetbrains.lincheck
 
 internal data class LincheckSettings(val analyzeStdLib: Boolean) {
     companion object {
-        val default =  LincheckSettings(analyzeStdLib = true)
+        val DEFAULT = LincheckSettings(analyzeStdLib = true)
     }
 }
