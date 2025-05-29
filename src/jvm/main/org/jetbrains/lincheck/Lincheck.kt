@@ -32,6 +32,8 @@ object Lincheck {
      *
      * @param invocations number of different interleavings of code in the [block] that should be explored.
      * @param block lambda which body will be a target for the interleavings exploration.
+     *
+     * @throws LincheckAssertionError in case if some exception was discovered.
      */
     @JvmStatic
     @JvmOverloads
@@ -47,6 +49,8 @@ object Lincheck {
      * @param invocations number of different interleavings of code in the [block] that should be explored.
      * @param lincheckSettings advanced settings that determine Lincheck behavior.
      * @param block lambda which body will be a target for the interleavings exploration.
+     *
+     * @throws LincheckAssertionError in case if some exception was discovered.
      */
     @JvmStatic
     internal fun runConcurrentTestInternal(
