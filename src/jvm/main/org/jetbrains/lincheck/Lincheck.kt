@@ -34,8 +34,8 @@ object Lincheck {
      * @param invocations number of different interleavings of code in the [block] that should be explored.
      * @param block lambda which body will be a target for the interleavings exploration.
      */
-    @JvmOverloads
     @JvmStatic
+    @JvmOverloads
     fun runConcurrentTest(
         invocations: Int = DEFAULT_INVOCATIONS_COUNT,
         block: Runnable
@@ -49,7 +49,6 @@ object Lincheck {
      * @param invocations number of different interleavings of code in the [block] that should be explored.
      * @param block lambda which body will be a target for the interleavings exploration.
      */
-    @JvmOverloads
     @JvmStatic
     internal fun runConcurrentTestInternal(
         lincheckSettings: LincheckSettings,
