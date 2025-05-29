@@ -62,7 +62,7 @@ internal class ModelCheckingStrategy(
     private var isReplayingSpinCycle = false
 
     // Tracker of objects' allocations and object graph topology.
-    override val objectTracker: ObjectTracker = LocalObjectManager()
+    override val objectTracker: ObjectTracker = LocalObjectManager(executionMode)
     // Tracker of the monitors' operations.
     override val monitorTracker: MonitorTracker = ModelCheckingMonitorTracker()
     // Tracker of the thread parking.
@@ -435,9 +435,12 @@ internal class ModelCheckingStrategy(
  * This tracking helps to avoid exploring unnecessary interleavings, which can occur if access to such local
  * objects triggers switch points in the model checking strategy.
  */
-internal class LocalObjectManager : AbstractObjectTracker() {
+internal class LocalObjectManager(
+    executionMode: ExecutionMode
+) : AbstractObjectTracker(executionMode) {
 
     override fun registerThread(threadId: Int, thread: Thread) {
+        super.registerThread(threadId, thread)
         markObjectNonLocal(thread)
     }
 
@@ -448,18 +451,21 @@ internal class LocalObjectManager : AbstractObjectTracker() {
     private class LocalObjectManagerEntry(
         objNumber: Int,
         objHashCode: Int,
+        objDisplayNumber: Int,
         objReference: WeakReference<Any>,
         var isLocal: Boolean,
-    ) : ObjectEntry(objNumber, objHashCode, objReference)
+    ) : ObjectEntry(objNumber, objHashCode, objDisplayNumber, objReference)
 
     override fun createObjectEntry(
         objNumber: Int,
         objHashCode: Int,
+        objDisplayNumber: Int,
         objReference: WeakReference<Any>,
         kind: ObjectKind
     ): ObjectEntry = LocalObjectManagerEntry(
         objNumber = objNumber,
         objHashCode = objHashCode,
+        objDisplayNumber = objDisplayNumber,
         objReference = objReference,
         isLocal = when (kind) {
             // every newly registered object is considered local initially

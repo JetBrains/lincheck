@@ -13,6 +13,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import org.jetbrains.kotlinx.lincheck.util.*
 import java.lang.ref.ReferenceQueue
 import java.lang.ref.WeakReference
+import java.util.WeakHashMap
 import kotlin.coroutines.Continuation
 
 /**
@@ -138,11 +139,13 @@ typealias ObjectID = Long
  *
  * @property objectNumber A unique serial number for the object.
  * @property objectHashCode The identity hash code of the object.
+ * @property objectDisplayNumber The number used in string representation of the object.
  * @property objectReference A weak reference to the associated object.
  */
 open class ObjectEntry(
     val objectNumber: Int,
     val objectHashCode: Int,
+    val objectDisplayNumber: Int,
     val objectReference: WeakReference<Any>,
 )
 
@@ -180,6 +183,9 @@ fun ObjectID.getObjectHashCode(): Int =
 fun ObjectTracker.getObjectNumber(obj: Any): Int =
     get(obj)?.objectNumber ?: -1
 
+fun ObjectTracker.getObjectDisplayNumber(obj: Any): Int =
+    get(obj)?.objectDisplayNumber ?: -1
+
 internal fun ObjectTracker.enumerateAllObjects(): Map<Any, Int> {
     val objectNumberMap = hashMapOf<Any, Int>()
     TODO()
@@ -194,7 +200,7 @@ internal fun ObjectTracker.enumerateAllObjects(): Map<Any, Int> {
  * assigning each object a unique serial number as determined by the object tracker.
  *
  * Enumeration is required for the Plugin as we want to see on the diagram if some object was replaced by a new one.
- * Uses the same a numeration map as the trace reporter via [getObjectNumber] method, so objects have the
+ * Uses the same a numeration map as the trace reporter via [getObjectDisplayNumber] method, so objects have the
  * same numbers, as they have in the trace.
  *
  * @param root the object from which the traversal begins.
@@ -212,7 +218,7 @@ internal fun ObjectTracker.enumerateReachableObjects(root: Any): Map<Any, Int> {
             promoteAtomicObjects = true,
         ),
         onObject = { obj ->
-            objectNumberMap[obj] = getObjectNumber(obj)
+            objectNumberMap[obj] = getObjectDisplayNumber(obj)
             shouldEnumerateRecursively(obj)
         },
     )
@@ -256,8 +262,8 @@ fun ObjectTracker.getObjectRepresentation(obj: Any?) = when {
     // finally, all other objects are represented as `className#objectNumber`
     else -> {
         val className = objectClassNameRepresentation(obj)
-        val objectNumber = registerObjectIfAbsent(obj).objectNumber
-        "$className#$objectNumber"
+        val objectDisplayNumber = registerObjectIfAbsent(obj).objectDisplayNumber
+        "$className#$objectDisplayNumber"
     }
 }
 
@@ -290,7 +296,9 @@ private fun objectClassNameRepresentation(obj: Any): String = when (obj) {
  * It provides an implementation for registering, retrieving, updating,
  * and managing objects and their entries in the registry.
  */
-abstract class AbstractObjectTracker : ObjectTracker {
+abstract class AbstractObjectTracker(
+    val executionMode: ExecutionMode
+) : ObjectTracker {
 
     // counter of all registered objects
     private var objectCounter = 0
@@ -300,6 +308,9 @@ abstract class AbstractObjectTracker : ObjectTracker {
 
     // reference queue keeping track of garbage-collected objects
     private val referenceQueue = ReferenceQueue<Any>()
+
+    // per-class numeration map, used to assign display numbers of objects
+    private val perClassObjectNumeration = WeakHashMap<Class<*>, Int>()
 
     /**
      * Represents the kind of object being tracked.
@@ -318,24 +329,39 @@ abstract class AbstractObjectTracker : ObjectTracker {
     protected open fun createObjectEntry(
         objNumber: Int,
         objHashCode: Int,
+        objDisplayNumber: Int,
         objReference: WeakReference<Any>,
         kind: ObjectKind = ObjectKind.NEW,
     ): ObjectEntry {
-        return ObjectEntry(objNumber, objHashCode, objReference)
+        return ObjectEntry(objNumber, objHashCode, objDisplayNumber, objReference)
+    }
+
+    protected fun computeObjectDisplayNumber(obj: Any): Int {
+        if (obj is Thread) {
+            // In the case of general-purpose model checking mode, the thread numeration starts from 0.
+            val offset = if (executionMode == ExecutionMode.GENERAL_PURPOSE_MODEL_CHECKER) -1 else 0
+            return perClassObjectNumeration.update(Thread::class.java, default = offset) { it + 1 }
+        }
+        return perClassObjectNumeration.update(obj.javaClass, default = 0) { it + 1 }
+    }
+
+    override fun registerThread(threadId: Int, thread: Thread) {
+        registerObjectIfAbsent(thread)
     }
 
     override fun registerNewObject(obj: Any): ObjectEntry =
-        registerObject(obj, ObjectKind.NEW)
+        registerObject(ObjectKind.NEW, obj)
 
     override fun registerExternalObject(obj: Any): ObjectEntry =
-        registerObject(obj, ObjectKind.EXTERNAL)
+        registerObject(ObjectKind.EXTERNAL, obj)
 
-    private fun registerObject(obj: Any, kind: ObjectKind): ObjectEntry {
+    private fun registerObject(kind: ObjectKind, obj: Any): ObjectEntry {
         check(!obj.isImmutable)
         cleanup()
         val entry = createObjectEntry(
             objNumber = ++objectCounter,
             objHashCode = System.identityHashCode(obj),
+            objDisplayNumber = computeObjectDisplayNumber(obj),
             objReference = IdentityWeakReference(obj, referenceQueue),
             kind = kind,
         )
@@ -381,6 +407,7 @@ abstract class AbstractObjectTracker : ObjectTracker {
         objectCounter = 0
         objectIndex.clear()
         referenceQueue.clear()
+        perClassObjectNumeration.clear()
     }
 
     private fun cleanup() {

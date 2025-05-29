@@ -12,11 +12,12 @@ package org.jetbrains.kotlinx.lincheck_test
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.enumerateReachableObjects
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.LocalObjectManager
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ExecutionMode
 import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.atomic.AtomicReferenceArray
+import kotlinx.atomicfu.atomic
 import kotlinx.atomicfu.AtomicRef
 import kotlinx.atomicfu.AtomicArray
-import kotlinx.atomicfu.atomic
 import kotlinx.atomicfu.atomicArrayOfNulls
 import org.junit.Assert
 import org.junit.Before
@@ -27,7 +28,9 @@ import org.junit.Test
  */
 class ObjectTraverserTest {
 
-    private val objectTracker = LocalObjectManager()
+    private val objectTracker = LocalObjectManager(
+        executionMode = ExecutionMode.GENERAL_PURPOSE_MODEL_CHECKER
+    )
 
     @Before
     fun setUp() {
@@ -103,7 +106,7 @@ class ObjectTraverserTest {
         val c = Any()
         val arraySize = 3
         val myObject = object : Any() {
-            val array = AtomicIntArray(arraySize)
+            val array = atomicArrayOfNulls<Any>(arraySize)
             init {
                 array[0].value = a
                 array[1].value = b
