@@ -708,9 +708,6 @@ private fun StringBuilder.appendTimeoutDeadlockWithDumpFailure(
     return this
 }
 
-private val StackTraceElement.isLincheckInternals get() =
-    this.className.startsWith("org.jetbrains.kotlinx.lincheck.")
-
 private fun StringBuilder.appendIncorrectResultsFailure(
     failure: IncorrectResultsFailure,
     exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>,
