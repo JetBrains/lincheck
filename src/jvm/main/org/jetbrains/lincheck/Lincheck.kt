@@ -37,7 +37,7 @@ object Lincheck {
     @JvmStatic
     @JvmOverloads
     fun runConcurrentTest(
-        invocations: Int = DEFAULT_INVOCATIONS_COUNT,
+        invocations: Int = DEFAULT_INVOCATIONS,
         block: Runnable
     ) = runConcurrentTestInternal(LincheckSettings.default, invocations, block)
 
@@ -52,7 +52,7 @@ object Lincheck {
     @JvmStatic
     internal fun runConcurrentTestInternal(
         lincheckSettings: LincheckSettings,
-        invocations: Int = DEFAULT_INVOCATIONS_COUNT,
+        invocations: Int = DEFAULT_INVOCATIONS,
         block: Runnable
     ) {
         val scenario = ExecutionScenario(
@@ -100,7 +100,7 @@ object Lincheck {
         }
     }
 
-    internal const val DEFAULT_INVOCATIONS_COUNT = 50_000
+    internal const val DEFAULT_INVOCATIONS = 50_000
 }
 
 internal data class LincheckSettings(val analyzeStdLib: Boolean) {

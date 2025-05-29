@@ -18,7 +18,7 @@ import java.util.concurrent.Executors
 
 abstract class BaseCoroutineTest(
     private val shouldFail: Boolean = false,
-    private val invocations: Int = Lincheck.DEFAULT_INVOCATIONS_COUNT,
+    private val invocations: Int = Lincheck.DEFAULT_INVOCATIONS,
 ) {
 
     protected abstract fun createDispatcher(): CoroutineDispatcher
