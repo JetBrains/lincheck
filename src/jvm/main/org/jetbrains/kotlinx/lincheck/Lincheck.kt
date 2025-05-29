@@ -33,6 +33,22 @@ object Lincheck {
     fun runConcurrentTest(
         invocations: Int = DEFAULT_INVOCATIONS_COUNT,
         block: Runnable
+    ) = runConcurrentTestInternal(LincheckSettings.default, invocations, block)
+
+    /**
+     * This method will explore different interleavings of the [block] body and all the threads created within it,
+     * searching for the first raised exception.
+     *
+     * @param lincheckSettings settings that determine linchecks behaviour like analyse std library collections.
+     * @param invocations number of different interleavings of code in the [block] that should be explored.
+     * @param block lambda which body will be a target for the interleavings exploration.
+     */
+    @JvmOverloads
+    @JvmStatic
+    internal fun runConcurrentTestInternal(
+        lincheckSettings: LincheckSettings,
+        invocations: Int = DEFAULT_INVOCATIONS_COUNT,
+        block: Runnable
     ) {
         val scenario = ExecutionScenario(
             initExecution = emptyList(),
@@ -49,6 +65,7 @@ object Lincheck {
             .iterations(0)
             .addCustomScenario(scenario)
             .invocationsPerIteration(invocations)
+            .analyzeStdLib(lincheckSettings.analyzeStdLib)
             .verifier(NoExceptionVerifier::class.java)
 
         val testCfg = options.createTestConfigurations(GeneralPurposeModelCheckingWrapper::class.java)
@@ -81,6 +98,12 @@ object Lincheck {
     internal const val DEFAULT_INVOCATIONS_COUNT = 50_000
 }
 
+internal data class LincheckSettings(val analyzeStdLib: Boolean) {
+    companion object {
+        val default =  LincheckSettings(analyzeStdLib = true)
+    }
+}
+
 internal class GeneralPurposeModelCheckingWrapper {
     fun runGPMCTest(block: Runnable) = block.run()
 }
@@ -89,7 +112,7 @@ private val runGPMCTestMethod =
     GeneralPurposeModelCheckingWrapper::class.java.getDeclaredMethod("runGPMCTest", Runnable::class.java)
 
 /**
- * [NoExceptionVerifier] checks that the lambda passed into [Lincheck.runConcurrentTest] does not throw an exception.
+ * [NoExceptionVerifier] checks that the lambda passed into [Lincheck.runConcurrentTestInternal] does not throw an exception.
  */
 private class NoExceptionVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : Verifier {
     override fun verifyResults(scenario: ExecutionScenario, results: ExecutionResult): Boolean =

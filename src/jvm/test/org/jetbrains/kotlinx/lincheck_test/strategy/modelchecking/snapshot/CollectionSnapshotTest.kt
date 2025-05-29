@@ -31,6 +31,7 @@ abstract class CollectionSnapshotTest : AbstractSnapshotTest() {
         .invocationsPerIteration(1)
         .threads(1)
         .actorsPerThread(10)
+        .analyzeStdLib(true)
         .apply { customize() }
         .check(this::class)
 

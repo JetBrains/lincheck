@@ -36,6 +36,7 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.Continuation
 import java.util.concurrent.TimeoutException
 import kotlinx.coroutines.CancellableContinuation
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 import kotlin.Result as KResult
 import org.objectweb.asm.commons.Method.getMethod as getAsmMethod
@@ -53,7 +54,7 @@ abstract class ManagedStrategy(
     scenario: ExecutionScenario,
     private val validationFunction: Actor?,
     private val stateRepresentationFunction: Method?,
-    private val testCfg: ManagedCTestConfiguration,
+    internal val testCfg: ManagedCTestConfiguration,
 ) : Strategy(scenario), EventTracker {
 
     val executionMode: ExecutionMode =
@@ -216,6 +217,8 @@ abstract class ManagedStrategy(
     private var spinCycleStartAdded = false
     // Stores the accumulated call stack after the start of spin cycle
     private val spinCycleMethodCallsStackTraces: MutableList<List<CallStackTraceElement>> = mutableListOf()
+    
+    private val analysisProfile: AnalysisProfile = AnalysisProfile(testCfg)
 
     init {
         ObjectLabelFactory.isGPMCMode = isGeneralPurposeModelCheckingScenario(scenario)
@@ -406,9 +409,9 @@ abstract class ManagedStrategy(
             StringBuilder().apply {
                 appendLine("Non-determinism found. Probably caused by non-deterministic code (WeakHashMap, Object.hashCode, etc).")
                 appendLine("== Reporting the first execution without execution trace ==")
-                appendLine(result.toLincheckFailure(scenario, null))
+                appendLine(result.toLincheckFailure(scenario, null, analysisProfile))
                 appendLine("== Reporting the second execution ==")
-                appendLine(loggedResults.toLincheckFailure(scenario, trace).toString())
+                appendLine(loggedResults.toLincheckFailure(scenario, trace, analysisProfile).toString())
             }.toString()
         }
 
@@ -1876,17 +1879,13 @@ abstract class ManagedStrategy(
         when (owner) {
             System.`in`, System.out, System.err -> return AnalysisSectionType.IGNORED
         }
-        val silentSection = getDefaultSilentSectionType(ownerName, methodName)
-            ?.ensure { it.isSilent() }
-        if (silentSection != null) {
-            return silentSection
-        }
+        val section = analysisProfile.getAnalysisSectionFor(ownerName, methodName)
         userDefinedGuarantees?.forEach { guarantee ->
             if (guarantee.classPredicate(ownerName) && guarantee.methodPredicate(methodName)) {
                 return guarantee.type
             }
         }
-        return AnalysisSectionType.NORMAL
+        return section
     }
 
     private fun enterAnalysisSection(threadId: ThreadId, section: AnalysisSectionType) {

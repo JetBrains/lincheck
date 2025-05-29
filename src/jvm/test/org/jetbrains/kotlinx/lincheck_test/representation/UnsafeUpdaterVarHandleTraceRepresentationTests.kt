@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import sun.misc.Unsafe
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
@@ -53,6 +54,9 @@ class JdkUnsafeTraceRepresentationTest : BaseTraceRepresentationTest("jdk_unsafe
         hashMap[1] = 2
     }
 
+    override fun ModelCheckingOptions.customize() {
+        analyzeStdLib(true)
+    }
 }
 
 /**

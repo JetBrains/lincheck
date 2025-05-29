@@ -39,5 +39,7 @@ class ConcurrentLinkedDequeTest {
 
     //@Test // TODO: Please, uncomment me and comment the line below to run the test and get the output
     @Test(expected = AssertionError::class)
-    fun modelCheckingTest() = ModelCheckingOptions().check(this::class)
+    fun modelCheckingTest() = ModelCheckingOptions()
+        .analyzeStdLib(true)
+        .check(this::class)
 }

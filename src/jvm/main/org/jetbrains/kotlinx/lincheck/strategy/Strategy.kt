@@ -13,6 +13,7 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.kotlinx.lincheck.trace.Trace
+import org.jetbrains.kotlinx.lincheck.util.AnalysisProfile
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.util.concurrent.TimeoutException
 import java.io.Closeable
@@ -143,12 +144,15 @@ fun Strategy.runIteration(invocations: Int, verifier: Verifier): LincheckFailure
  *
  * @return failure, if invocation results are incorrect, null otherwise.
  */
-fun Strategy.verify(result: InvocationResult, verifier: Verifier): LincheckFailure? = when (result) {
-    is SpinCycleFoundAndReplayRequired -> null
-    is CompletedInvocationResult ->
-        if (!verifier.verifyResults(scenario, result.results)) {
-            IncorrectResultsFailure(scenario, result.results, tryCollectTrace(result))
-        } else null
-    else ->
-        result.toLincheckFailure(scenario, tryCollectTrace(result))
+fun Strategy.verify(result: InvocationResult, verifier: Verifier): LincheckFailure? {
+    val testCfg = if (this is ManagedStrategy) testCfg else null
+    return when (result) {
+        is SpinCycleFoundAndReplayRequired -> null
+        is CompletedInvocationResult ->
+            if (!verifier.verifyResults(scenario, result.results)) {
+                IncorrectResultsFailure(scenario, result.results, tryCollectTrace(result), AnalysisProfile(testCfg))
+            } else null
+        else -> 
+            result.toLincheckFailure(scenario, tryCollectTrace(result), AnalysisProfile(testCfg))
+    }
 }

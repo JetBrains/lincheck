@@ -9,8 +9,10 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.verifier.linearizability
 
+import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.*
 import java.util.concurrent.*
 
@@ -29,4 +31,8 @@ class ConcurrentLinkedQueueTest : AbstractLincheckTest() {
 
     @Operation
     fun poll() = queue.poll()
+
+    override fun <O : Options<O, *>> O.customize() {
+        if (this is ModelCheckingOptions) analyzeStdLib(true)
+    }
 }

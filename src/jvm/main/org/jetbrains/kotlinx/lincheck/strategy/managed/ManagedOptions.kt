@@ -24,6 +24,7 @@ abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfigurat
     protected var checkObstructionFreedom = DEFAULT_CHECK_OBSTRUCTION_FREEDOM
     protected var hangingDetectionThreshold = DEFAULT_HANGING_DETECTION_THRESHOLD
     protected val guarantees: MutableList<ManagedStrategyGuarantee> = ArrayList(DEFAULT_GUARANTEES)
+    internal var stdLibAnalysisEnabled: Boolean = true
 
     /**
      * Use the specified number of scenario invocations to study interleavings in each iteration.
@@ -60,6 +61,20 @@ abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfigurat
      */
     fun addGuarantee(guarantee: ManagedStrategyGuarantee): OPT = applyAndCast {
         guarantees.add(guarantee)
+    }
+    
+
+    /**
+     * Controls whether the strategy should analyze standard library collections.
+     * When `false` (default), all library collections are hidden if no thread switch happened in it.
+     * In concurrent collections the scheduler tries to avoid switching in it unless forced by a live or deadlock.
+     * 
+     * When `true` all standard library collections are treated as user code.
+     *
+     * @param analyzeStdLib true to analyze standard library methods, false to treat them as silent
+     */
+    internal fun analyzeStdLib(analyzeStdLib: Boolean): OPT = applyAndCast {
+        this.stdLibAnalysisEnabled = analyzeStdLib
     }
 
     companion object {

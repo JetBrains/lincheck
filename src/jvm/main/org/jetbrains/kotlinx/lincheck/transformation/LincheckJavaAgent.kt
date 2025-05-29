@@ -14,6 +14,7 @@ import net.bytebuddy.agent.ByteBuddyAgent
 import org.jetbrains.kotlinx.lincheck.dumpTransformedSources
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.MODEL_CHECKING
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.STRESS
+import org.jetbrains.kotlinx.lincheck.util.AnalysisSectionType
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.isEagerlyInstrumentedClass
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.shouldTransform
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.transformedClassesStress
@@ -22,6 +23,7 @@ import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.install
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentation
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentationMode
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentedClasses
+import org.jetbrains.kotlinx.lincheck.util.AnalysisProfile
 import org.jetbrains.kotlinx.lincheck.util.Logger
 import org.jetbrains.kotlinx.lincheck.util.isJdk8
 import org.jetbrains.kotlinx.lincheck.util.readFieldSafely
@@ -475,71 +477,11 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         if (instrumentationMode == STRESS) {
             if (className.startsWith("java.") || className.startsWith("kotlin.")) return false
         }
-        // We should transform all eagerly instrumented classes.
-        if (isEagerlyInstrumentedClass(className)) {
-            return true
-        }
-        // We do not need to instrument most standard Java classes.
-        // It is fine to inject the Lincheck analysis only into the
-        // `java.util.*` ones, ignored the known atomic constructs.
-        if (className.startsWith("java.")) {
-            if (className == "java.lang.Thread") return true
-            if (className.startsWith("java.util.concurrent.") && className.contains("Atomic")) return false
-            if (className.startsWith("java.util.")) return true
-            return false
-        }
-        if (className.startsWith("com.sun.")) return false
-        if (className.startsWith("sun.")) return false
-        if (className.startsWith("javax.")) return false
-        if (className.startsWith("jdk.")) {
-            // Transform `ThreadContainer.start` to detect thread forking.
-            if (isThreadContainerClass(className)) return true
-            return false
-        }
-        // We do not need to instrument most standard Kotlin classes.
-        // However, we need to inject the Lincheck analysis into the classes
-        // related to collections, iterators, random and coroutines.
-        if (className.startsWith("kotlin.")) {
-            if (className.startsWith("kotlin.concurrent.ThreadsKt")) return true
-            if (className.startsWith("kotlin.collections.")) return true
-            if (className.startsWith("kotlin.jvm.internal.Array") && className.contains("Iterator")) return true
-            if (className.startsWith("kotlin.ranges.")) return true
-            if (className.startsWith("kotlin.random.")) return true
-            if (className.startsWith("kotlin.coroutines.jvm.internal.")) return false
-            if (className.startsWith("kotlin.coroutines.")) return true
-            return false
-        }
-        // We do not instrument AtomicFU atomics.
-        if (className.startsWith("kotlinx.atomicfu.")) {
-            if (className.contains("Atomic")) return false
-            return true
-        }
-        // We need to skip the classes related to the debugger support in Kotlin coroutines.
-        if (className.startsWith("kotlinx.coroutines.debug.")) return false
-        if (className == "kotlinx.coroutines.DebugKt") return false
-        // We should never transform the coverage-related classes.
-        if (className.startsWith("com.intellij.rt.coverage.")) return false
-        // We should skip intellij debugger agent classes.
-        if (className.startsWith("com.intellij.rt.debugger.agent.")) return false
-        // We can also safely do not instrument some libraries for performance reasons.
-        if (className.startsWith("com.esotericsoftware.kryo.")) return false
-        if (className.startsWith("net.bytebuddy.")) return false
-        if (className.startsWith("net.rubygrapefruit.platform.")) return false
-        if (className.startsWith("io.mockk.")) return false
-        if (className.startsWith("it.unimi.dsi.fastutil.")) return false
-        if (className.startsWith("worker.org.gradle.")) return false
-        if (className.startsWith("org.objectweb.asm.")) return false
-        if (className.startsWith("org.gradle.")) return false
-        if (className.startsWith("org.slf4j.")) return false
-        if (className.startsWith("org.apache.commons.lang.")) return false
-        if (className.startsWith("org.junit.")) return false
-        if (className.startsWith("junit.framework.")) return false
-        // Finally, we should never instrument the Lincheck classes.
-        if (className.startsWith("org.jetbrains.kotlinx.lincheck.")) return false
-        if (className.startsWith("sun.nio.ch.lincheck.")) return false
-        // All the classes that were not filtered out are eligible for transformation.
-        return true
+        if (isEagerlyInstrumentedClass(className)) return true
+
+        return AnalysisProfile(analyzeStdLib = true).shouldTransform(className, "")
     }
+
 
     // We should always eagerly transform the following classes.
     internal fun isEagerlyInstrumentedClass(className: String): Boolean =

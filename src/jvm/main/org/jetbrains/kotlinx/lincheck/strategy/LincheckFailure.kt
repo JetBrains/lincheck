@@ -13,11 +13,13 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.trace.Trace
+import org.jetbrains.kotlinx.lincheck.util.AnalysisProfile
 
 sealed class LincheckFailure(
     val scenario: ExecutionScenario,
     val results: ExecutionResult,
-    val trace: Trace?
+    val trace: Trace?,
+    internal val analysisProfile: AnalysisProfile
 ) {
     override fun toString() = StringBuilder().appendFailure(this).toString()
 }
@@ -25,34 +27,39 @@ sealed class LincheckFailure(
 internal class IncorrectResultsFailure(
     scenario: ExecutionScenario,
     results: ExecutionResult,
-    trace: Trace? = null
-) : LincheckFailure(scenario, results, trace)
+    trace: Trace? = null,
+    analysisProfile: AnalysisProfile 
+) : LincheckFailure(scenario, results, trace, analysisProfile)
 
 internal class ManagedDeadlockFailure(
     scenario: ExecutionScenario,
     results: ExecutionResult,
-    trace: Trace? = null
-) : LincheckFailure(scenario,results, trace)
+    trace: Trace? = null,
+    analysisProfile: AnalysisProfile
+) : LincheckFailure(scenario,results, trace, analysisProfile)
 
 internal class TimeoutFailure(
     scenario: ExecutionScenario,
     results: ExecutionResult,
     val threadDump: Map<Thread, Array<StackTraceElement>>,
-) : LincheckFailure(scenario,results, null)
+    analysisProfile: AnalysisProfile
+) : LincheckFailure(scenario,results, null, analysisProfile)
 
 internal class UnexpectedExceptionFailure(
     scenario: ExecutionScenario,
     results: ExecutionResult,
     val exception: Throwable,
-    trace: Trace? = null
-) : LincheckFailure(scenario,results, trace)
+    trace: Trace? = null,
+    analysisProfile: AnalysisProfile
+) : LincheckFailure(scenario,results, trace,  analysisProfile)
 
 internal class ValidationFailure(
     scenario: ExecutionScenario,
     results: ExecutionResult,
     val exception: Throwable,
-    trace: Trace? = null
-) : LincheckFailure(scenario,results, trace) {
+    trace: Trace? = null,
+    analysisProfile: AnalysisProfile
+) : LincheckFailure(scenario,results, trace, analysisProfile) {
     val validationFunctionName: String = scenario.validationFunction!!.method.name
 }
 
@@ -60,15 +67,16 @@ internal class ObstructionFreedomViolationFailure(
     scenario: ExecutionScenario,
     results: ExecutionResult,
     val reason: String,
-    trace: Trace? = null
-) : LincheckFailure(scenario, results, trace)
+    trace: Trace? = null,
+    analysisProfile: AnalysisProfile
+) : LincheckFailure(scenario, results, trace, analysisProfile)
 
-internal fun InvocationResult.toLincheckFailure(scenario: ExecutionScenario, trace: Trace? = null) = when (this) {
-    is ManagedDeadlockInvocationResult -> ManagedDeadlockFailure(scenario, results, trace)
-    is RunnerTimeoutInvocationResult -> TimeoutFailure(scenario, results, threadDump)
-    is UnexpectedExceptionInvocationResult -> UnexpectedExceptionFailure(scenario, results, exception, trace)
-    is ValidationFailureInvocationResult -> ValidationFailure(scenario, results, exception, trace)
-    is ObstructionFreedomViolationInvocationResult -> ObstructionFreedomViolationFailure(scenario, results, reason, trace)
-    is CompletedInvocationResult -> IncorrectResultsFailure(scenario, results, trace)
+internal fun InvocationResult.toLincheckFailure(scenario: ExecutionScenario, trace: Trace? = null, analysisProfile: AnalysisProfile) = when (this) {
+    is ManagedDeadlockInvocationResult -> ManagedDeadlockFailure(scenario, results, trace, analysisProfile)
+    is RunnerTimeoutInvocationResult -> TimeoutFailure(scenario, results, threadDump, analysisProfile)
+    is UnexpectedExceptionInvocationResult -> UnexpectedExceptionFailure(scenario, results, exception, trace, analysisProfile)
+    is ValidationFailureInvocationResult -> ValidationFailure(scenario, results, exception, trace, analysisProfile)
+    is ObstructionFreedomViolationInvocationResult -> ObstructionFreedomViolationFailure(scenario, results, reason, trace, analysisProfile)
+    is CompletedInvocationResult -> IncorrectResultsFailure(scenario, results, trace, analysisProfile)
     else -> error("Unexpected invocation result type: ${this.javaClass.simpleName}")
 }

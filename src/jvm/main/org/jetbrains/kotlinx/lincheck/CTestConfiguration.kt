@@ -104,7 +104,8 @@ internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConf
                         testClass
                     ),
                     timeoutMs = DEFAULT_TIMEOUT_MS,
-                    customScenarios = emptyList()
+                    customScenarios = emptyList(),
+                    stdLibAnalysisEnabled = false,
                 )
             }
     return stressConfigurations + modelCheckingConfigurations

@@ -10,7 +10,10 @@
 
 package org.jetbrains.kotlinx.lincheck.util
 
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.transformation.isThreadContainerClass
 import sun.nio.ch.lincheck.ThreadDescriptor
 import sun.nio.ch.lincheck.Injections
 
@@ -182,23 +185,198 @@ internal inline fun <R> runOutsideIgnoredSection(block: () -> R): R {
     }
 }
 
-internal fun getDefaultSilentSectionType(className: String, methodName: String): AnalysisSectionType? {
-    if (className.startsWith("java.util.concurrent.")) {
-        if (isJavaExecutorService(className)) {
-            if (methodName == "submit") {
-                return AnalysisSectionType.SILENT_PROPAGATING
-            }
-            return AnalysisSectionType.SILENT
+/**
+ * Configures how different code sections should be analyzed.
+ * Used to control which classes should be transformed for analysis, what analysis sections
+ * should be applied, and which methods should be hidden from trace results.
+ *
+ * @property analyzeStdLib Controls whether standard library code should be analyzed. When false,
+ *                        standard collections and concurrent collections are hidden,
+ *                        concurrent collections are muted.
+ */
+internal class AnalysisProfile(val analyzeStdLib: Boolean) {
+    
+    constructor(testConfiguration: ManagedCTestConfiguration?) : this(
+        testConfiguration is ModelCheckingCTestConfiguration && testConfiguration.stdLibAnalysisEnabled
+    )
+
+
+    /**
+     * Determines whether a given class and method should be transformed (instrumented) for analysis.
+     *
+     * @param className The fully qualified name of the class to check
+     * @param methodName The name of the method to check
+     * @return true if the class/method should be transformed, false otherwise
+     */
+    @Suppress("UNUSED_PARAMETER") // methodName is here for uniformity and might become useful in the future  
+    fun shouldTransform(className: String, methodName: String): Boolean {
+        // We do not need to instrument most standard Java classes.
+        // It is fine to inject the Lincheck analysis only into the
+        // `java.util.*` ones, ignored the known atomic constructs.
+        if (className.startsWith("java.")) {
+            if (className == "java.lang.Thread") return true
+            if (className.startsWith("java.util.concurrent.") && className.contains("Atomic")) return false
+            if (className.startsWith("java.util.")) return true
+            return false
         }
-        if (className.startsWith("java.util.concurrent.locks.AbstractQueuedSynchronizer"))
-            return AnalysisSectionType.SILENT
-        if (className == "java.util.concurrent.FutureTask")
-            return AnalysisSectionType.SILENT
+        if (className.startsWith("com.sun.")) return false
+        if (className.startsWith("sun.")) return false
+        if (className.startsWith("javax.")) return false
+        if (className.startsWith("jdk.")) {
+            // Transform `ThreadContainer.start` to detect thread forking.
+            if (isThreadContainerClass(className)) return true
+            return false
+        }
+        // We do not need to instrument most standard Kotlin classes.
+        // However, we need to inject the Lincheck analysis into the classes
+        // related to collections, iterators, random and coroutines.
+        if (className.startsWith("kotlin.")) {
+            if (className.startsWith("kotlin.concurrent.ThreadsKt")) return true
+            if (className.startsWith("kotlin.collections.")) return true
+            if (className.startsWith("kotlin.jvm.internal.Array") && className.contains("Iterator")) return true
+            if (className.startsWith("kotlin.ranges.")) return true
+            if (className.startsWith("kotlin.random.")) return true
+            if (className.startsWith("kotlin.coroutines.jvm.internal.")) return false
+            if (className.startsWith("kotlin.coroutines.")) return true
+            return false
+        }
+        // We do not instrument AtomicFU atomics.
+        if (className.startsWith("kotlinx.atomicfu.")) {
+            if (className.contains("Atomic")) return false
+            return true
+        }
+        // We need to skip the classes related to the debugger support in Kotlin coroutines.
+        if (className.startsWith("kotlinx.coroutines.debug.")) return false
+        if (className == "kotlinx.coroutines.DebugKt") return false
+        // We should never transform the coverage-related classes.
+        if (className.startsWith("com.intellij.rt.coverage.")) return false
+        // We should skip intellij debugger agent classes.
+        if (className.startsWith("com.intellij.rt.debugger.agent.")) return false
+        // We can also safely do not instrument some libraries for performance reasons.
+        if (className.startsWith("com.esotericsoftware.kryo.")) return false
+        if (className.startsWith("net.bytebuddy.")) return false
+        if (className.startsWith("net.rubygrapefruit.platform.")) return false
+        if (className.startsWith("io.mockk.")) return false
+        if (className.startsWith("it.unimi.dsi.fastutil.")) return false
+        if (className.startsWith("worker.org.gradle.")) return false
+        if (className.startsWith("org.objectweb.asm.")) return false
+        if (className.startsWith("org.gradle.")) return false
+        if (className.startsWith("org.slf4j.")) return false
+        if (className.startsWith("org.apache.commons.lang.")) return false
+        if (className.startsWith("org.junit.")) return false
+        if (className.startsWith("junit.framework.")) return false
+        // Finally, we should never instrument the Lincheck classes.
+        if (className.startsWith("org.jetbrains.kotlinx.lincheck.")) return false
+        if (className.startsWith("sun.nio.ch.lincheck.")) return false
+        // All the classes that were not filtered out are eligible for transformation.
+        return true
     }
-    return null
+
+    /**
+     * Determines what type of analysis section should be applied to a given class and method.
+     *
+     * @param className The fully qualified name of the class to check
+     * @param methodName The name of the method to check
+     * @return The [AnalysisSectionType] to use for analyzing this class/method
+     */
+    fun getAnalysisSectionFor(className: String,  methodName: String): AnalysisSectionType = when {
+        isJavaExecutorService(className) && methodName == "submit" -> AnalysisSectionType.SILENT_PROPAGATING
+        isJavaExecutorService(className) -> AnalysisSectionType.SILENT
+        className.startsWith("java.util.concurrent.locks.AbstractQueuedSynchronizer") -> AnalysisSectionType.SILENT
+        className == "java.util.concurrent.FutureTask" -> AnalysisSectionType.SILENT
+        isConcurrentCollectionsLibrary(className) && !analyzeStdLib -> AnalysisSectionType.SILENT
+        
+        else -> AnalysisSectionType.NORMAL
+    }
+
+    /**
+     * Determines whether calls to a given class/method should be hidden from trace results.
+     * Used to filter out standard library implementation details.
+     *
+     * @param className The fully qualified name of the class to check
+     * @param methodName The name of the method to check
+     * @return true if calls should be hidden from results, false otherwise
+     */
+    @Suppress("UNUSED_PARAMETER") // methodName is here for uniformity and might become useful in the future
+    fun shouldBeHidden(className: String, methodName: String): Boolean = 
+        !analyzeStdLib && (isConcurrentCollectionsLibrary(className) || isCollectionsLibrary(className))
 }
 
+internal fun isCollectionsLibrary(className: String) = className in setOf(
+    // Interfaces
+    "java.lang.Iterable",
+    "java.util.Collection",
+    "java.util.List",
+    "java.util.Set",
+    "java.util.Queue",
+    "java.util.Deque",
+    "java.util.NavigableSet",
+    "java.util.SortedSet",
+    "java.util.Map",
+    "java.util.SortedMap",
+    "java.util.NavigableMap",
+    
+
+    // Abstract implementations
+    "java.util.AbstractCollection",
+    "java.util.AbstractList",
+    "java.util.AbstractQueue",
+    "java.util.AbstractSequentialList",
+    "java.util.AbstractSet",
+    "java.util.AbstractMap",
+
+    // Concrete implementations
+    "java.util.ArrayDeque",
+    "java.util.ArrayList",
+    "java.util.AttributeList",
+    "java.util.EnumSet",
+    "java.util.HashSet",
+    "java.util.LinkedHashSet",
+    "java.util.LinkedList",
+    "java.util.PriorityQueue",
+    "java.util.Stack",
+    "java.util.TreeSet",
+    "java.util.Vector",
+    "java.util.HashMap",
+    "java.util.LinkedHashMap",
+    "java.util.WeakHashMap",
+    "java.util.TreeMap",
+)
+
+internal fun isConcurrentCollectionsLibrary(className: String) = className in setOf(
+    // Interfaces
+    "java.util.concurrent.BlockingDeque",
+    "java.util.concurrent.BlockingQueue",
+    "java.util.concurrent.TransferQueue",
+    "java.util.concurrent.ConcurrentMap",
+    "java.util.concurrent.ConcurrentNavigableMap",
+
+    // Concrete implementations
+    // Concurrent collections
+    "java.util.concurrent.ConcurrentHashMap",
+    "java.util.concurrent.ConcurrentLinkedDeque",
+    "java.util.concurrent.ConcurrentLinkedQueue",
+    "java.util.concurrent.ConcurrentSkipListMap",
+    "java.util.concurrent.ConcurrentSkipListSet",
+
+    // Blocking queues
+    "java.util.concurrent.ArrayBlockingQueue",
+    "java.util.concurrent.LinkedBlockingDeque",
+    "java.util.concurrent.LinkedBlockingQueue",
+    "java.util.concurrent.DelayQueue",
+    "java.util.concurrent.PriorityBlockingQueue",
+    "java.util.concurrent.SynchronousQueue",
+    "java.util.concurrent.LinkedTransferQueue",
+
+    // Copy-on-write collections
+    "java.util.concurrent.CopyOnWriteArrayList",
+    "java.util.concurrent.CopyOnWriteArraySet",
+
+    // Inner class view
+    "java.util.concurrent.ConcurrentHashMap\$KeySetView"
+)
+
 private fun isJavaExecutorService(className: String) =
-    className.startsWith("java.util.concurrent.AbstractExecutorService") ||
-    className.startsWith("java.util.concurrent.ThreadPoolExecutor") ||
-    className.startsWith("java.util.concurrent.ForkJoinPool")
+    className.startsWith("java.util.concurrent.AbstractExecutorService") 
+    || className.startsWith("java.util.concurrent.ThreadPoolExecutor") 
+    || className.startsWith("java.util.concurrent.ForkJoinPool")

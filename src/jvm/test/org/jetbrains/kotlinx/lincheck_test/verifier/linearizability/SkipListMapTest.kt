@@ -22,6 +22,7 @@ class SkipListMapTest : AbstractLincheckTest() {
         if (isInTraceDebuggerMode && this is ModelCheckingOptions) {
             invocationsPerIteration(1)
         }
+        if (this is ModelCheckingOptions) analyzeStdLib(true)
     }
     
     private val skiplistMap = ConcurrentSkipListMap<Int, Int>()
