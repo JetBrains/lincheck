@@ -113,7 +113,7 @@ private val runGPMCTestMethod =
 /**
  * [NoExceptionVerifier] checks that the lambda passed into [Lincheck.runConcurrentTestInternal] does not throw an exception.
  */
-private class NoExceptionVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : Verifier {
+internal class NoExceptionVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : Verifier {
     override fun verifyResults(scenario: ExecutionScenario, results: ExecutionResult): Boolean =
         results.parallelResults[0][0] !is ExceptionResult
 }
