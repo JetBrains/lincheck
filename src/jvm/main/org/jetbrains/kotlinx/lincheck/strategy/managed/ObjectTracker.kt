@@ -33,8 +33,11 @@ import java.util.WeakHashMap
  * The registered objects are associated with the registry entries [ObjectEntry],
  * keeping object's serial number, its identity hash code, a weak reference to the object,
  * and, potentially, other meta-data (defined by the concrete implementations of the interface).
- * The tracker allows retrieving the registry entry either by the object reference itself
- * or by unique object id.
+ *
+ * The tracker allows retrieving the registry entry either by the object reference itself or by unique object id.
+ * In this way, the tracker allows to:
+ *   - get an object by its object id: `ObjectId -> Object`;
+ *   - get an object id by the object itself: `Object -> ObjectId`.
  */
 interface ObjectTracker {
 
@@ -184,9 +187,25 @@ fun ObjectID.getObjectHashCode(): Int =
 fun ObjectTracker.getObjectNumber(obj: Any): Int =
     get(obj)?.objectNumber ?: -1
 
+/**
+ * Retrieves the display number of a given object.
+ *
+ * @param obj the object for which the display number is to be retrieved.
+ * @return the display number of the object if it exists; otherwise, -1 if the object is not registered.
+ */
 fun ObjectTracker.getObjectDisplayNumber(obj: Any): Int =
     get(obj)?.objectDisplayNumber ?: -1
 
+/**
+ * Enumerates all objects currently tracked by the object tracker,
+ * assigning each object its display number as determined by the object tracker.
+ *
+ * Enumeration is required for the Plugin as we want to see on the diagram if some object was replaced by a new one.
+ * Uses the same a numeration map as the trace reporter via [getObjectDisplayNumber] method, so objects have the
+ * same numbers, as they have in the trace.
+ *
+ * @return a map associating each reachable object with its display number.
+ */
 internal fun ObjectTracker.enumerateAllObjects(): Map<Any, Int> {
     val objectNumberMap = hashMapOf<Any, Int>()
     TODO()
@@ -198,14 +217,14 @@ internal fun ObjectTracker.enumerateAllObjects(): Map<Any, Int> {
 
 /**
  * Enumerates all objects reachable from the given root object,
- * assigning each object a unique serial number as determined by the object tracker.
+ * assigning each object its display number as determined by the object tracker.
  *
  * Enumeration is required for the Plugin as we want to see on the diagram if some object was replaced by a new one.
  * Uses the same a numeration map as the trace reporter via [getObjectDisplayNumber] method, so objects have the
  * same numbers, as they have in the trace.
  *
  * @param root the object from which the traversal begins.
- * @return a map associating each reachable object with its serial number.
+ * @return a map associating each reachable object with its display number.
  */
 internal fun ObjectTracker.enumerateReachableObjects(root: Any): Map<Any, Int> {
     val objectNumberMap = hashMapOf<Any, Int>()
