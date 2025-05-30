@@ -275,7 +275,7 @@ fun ObjectTracker.getObjectRepresentation(obj: Any?) = when {
     else -> {
         // special representation for anonymous classes
         runCatching {
-            if (obj.javaClass.isAnonymousClass && !hasSpecialClassNameRepresentation()) {
+            if (obj.javaClass.isAnonymousClass && !obj.hasSpecialClassNameRepresentation()) {
                 return obj.javaClass.anonymousClassSimpleName
             }
         }
@@ -391,7 +391,7 @@ abstract class AbstractObjectTracker(
     protected fun computeObjectDisplayNumber(obj: Any): Int {
         // In the case of general-purpose model checking mode, the thread numeration starts from 0.
         val offset = if (obj is Thread && executionMode == ExecutionMode.GENERAL_PURPOSE_MODEL_CHECKER) -1 else 0
-        val objClassKey = getSpecialClassNameRepresentation()?.classKey ?: obj.javaClass
+        val objClassKey = obj.getSpecialClassNameRepresentation()?.classKey ?: obj.javaClass
         return perClassObjectNumeration.update(objClassKey, default = offset) { it + 1 }
     }
 
