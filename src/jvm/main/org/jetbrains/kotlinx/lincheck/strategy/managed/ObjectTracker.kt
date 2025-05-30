@@ -256,7 +256,7 @@ fun ObjectTracker.getObjectRepresentation(obj: Any?) = when {
     else -> {
         // special representation for anonymous classes
         runCatching {
-            if (obj.javaClass.isAnonymousClass) {
+            if (obj.javaClass.isAnonymousClass && !hasSpecialClassNameRepresentation()) {
                 return obj.javaClass.anonymousClassSimpleName
             }
         }
@@ -286,24 +286,42 @@ private val Class<*>.anonymousClassSimpleName: String get() {
     return matchResult?.groups?.get(2)?.value ?: withoutPackage
 }
 
-private fun objectClassNameRepresentation(obj: Any): String = when {
-    isJavaLambdaClass(obj.javaClass.name) -> "Lambda"
+private fun objectClassNameRepresentation(obj: Any): String = when (obj) {
+    is IntArray     -> "IntArray"
+    is ShortArray   -> "ShortArray"
+    is CharArray    -> "CharArray"
+    is ByteArray    -> "ByteArray"
+    is BooleanArray -> "BooleanArray"
+    is DoubleArray  -> "DoubleArray"
+    is FloatArray   -> "FloatArray"
+    is LongArray    -> "LongArray"
+    is Array<*>     -> "Array<${obj.javaClass.componentType.simpleName}>"
 
-    obj is Thread           -> "Thread"
-    obj is Continuation<*>  -> "Continuation"
-
-    obj is IntArray     -> "IntArray"
-    obj is ShortArray   -> "ShortArray"
-    obj is CharArray    -> "CharArray"
-    obj is ByteArray    -> "ByteArray"
-    obj is BooleanArray -> "BooleanArray"
-    obj is DoubleArray  -> "DoubleArray"
-    obj is FloatArray   -> "FloatArray"
-    obj is LongArray    -> "LongArray"
-    obj is Array<*>     -> "Array<${obj.javaClass.componentType.simpleName}>"
-
-    else -> obj.javaClass.simpleName
+    else -> {
+        val specialClassNameRepresentation = obj.getSpecialClassNameRepresentation()
+        specialClassNameRepresentation?.name ?: obj.javaClass.simpleName
+    }
 }
+
+private data class ClassNameRepresentation(
+    val name: String,
+    val classKey: Class<*>,
+)
+
+private fun Any.getSpecialClassNameRepresentation(): ClassNameRepresentation? = when {
+    this is Thread                      -> ClassNameRepresentation("Thread", Thread::class.java)
+    this is Continuation<*>             -> ClassNameRepresentation("Continuation", Continuation::class.java)
+    isJavaLambdaClass(javaClass.name)   -> ClassNameRepresentation("Lambda", Lambda::class.java)
+    else                                -> null
+}
+
+private fun Any.hasSpecialClassNameRepresentation(): Boolean =
+    getSpecialClassNameRepresentation() != null
+
+/**
+ * Since lambdas do not have a specific type, this class is used as a class key in [ClassNameRepresentation].
+ */
+private class Lambda
 
 /**
  * Abstract base class for tracking objects.
@@ -354,12 +372,7 @@ abstract class AbstractObjectTracker(
     protected fun computeObjectDisplayNumber(obj: Any): Int {
         // In the case of general-purpose model checking mode, the thread numeration starts from 0.
         val offset = if (obj is Thread && executionMode == ExecutionMode.GENERAL_PURPOSE_MODEL_CHECKER) -1 else 0
-        val objClassKey = when {
-            obj is Thread -> Thread::class.java
-            obj is Continuation<*> -> Continuation::class.java
-            isJavaLambdaClass(obj.javaClass.name) -> Lambda::class.java
-            else -> obj.javaClass
-        }
+        val objClassKey = getSpecialClassNameRepresentation()?.classKey ?: obj.javaClass
         return perClassObjectNumeration.update(objClassKey, default = offset) { it + 1 }
     }
 
@@ -443,11 +456,6 @@ abstract class AbstractObjectTracker(
     private fun MutableList<ObjectEntry>.cleanup() {
         retainAll { it.objectReference.get() != null }
     }
-
-    /**
-     * Since lambdas do not have a specific type, this class is used as key for [computeObjectDisplayNumber].
-     */
-    private class Lambda
 }
 
 private fun ReferenceQueue<Any>.clear() {
