@@ -466,28 +466,12 @@ internal class UnparkTracePoint(
     }
 }
 
-internal class ThreadStartTracePoint(
-    iThread: Int, actorId: Int,
-    val startedThreadDisplayNumber: Int,
-    callStackTrace: CallStackTrace,
-) : TracePoint(iThread, actorId, callStackTrace) {
-    override fun toStringImpl(withLocation: Boolean): String = "start Thread $startedThreadDisplayNumber"
-    override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
-        ThreadStartTracePoint(iThread, actorId, startedThreadDisplayNumber, callStackTrace.deepCopy(copiedObjects))
-            .also { it.eventId = eventId }
-    }
+internal fun TracePoint.isThreadStart(): Boolean {
+    return this is MethodCallTracePoint && this.className == "java.lang.Thread" && this.methodName == "start"
 }
 
-internal class ThreadJoinTracePoint( 
-    iThread: Int, actorId: Int,
-    val joinedThreadDisplayNumber: Int,
-    callStackTrace: CallStackTrace,
-) : TracePoint(iThread, actorId, callStackTrace) {
-    override fun toStringImpl(withLocation: Boolean): String = "join Thread $joinedThreadDisplayNumber"
-    override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
-        ThreadJoinTracePoint(iThread, actorId, joinedThreadDisplayNumber, callStackTrace.deepCopy(copiedObjects))
-            .also { it.eventId = eventId }
-    }
+internal fun TracePoint.isThreadJoin(): Boolean {
+    return this is MethodCallTracePoint && this.className == "java.lang.Thread" && this.methodName == "join"
 }
 
 internal class CoroutineCancellationTracePoint(

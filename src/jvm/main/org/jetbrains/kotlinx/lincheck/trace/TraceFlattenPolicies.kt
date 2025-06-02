@@ -136,13 +136,6 @@ internal class ShortTraceFlattenPolicy : TraceFlattenPolicy {
             else -> return descendants
         }
     }
-
-    // virtual trace points are not displayed in the trace
-    private val TracePoint.isVirtual: Boolean get() = when (this) {
-        is ThreadStartTracePoint, is ThreadJoinTracePoint -> true
-        else -> false
-    }
-
 }
 
 internal fun TraceNode.flattenNodes(policy: TraceFlattenPolicy): List<TraceNode> {
@@ -167,10 +160,7 @@ internal fun SingleThreadedTable<TraceNode>.extractPreExpandedNodes(flattenPolic
     flatMap { section -> section.flatMap { it.extractPreExpanded(flattenPolicy).first }}
 
 // virtual trace points are not displayed in the trace
-private val TracePoint.isVirtual: Boolean get() = when (this) {
-    is ThreadStartTracePoint, is ThreadJoinTracePoint -> true
-    else -> false
-}
+private val TracePoint.isVirtual: Boolean get() = this.isThreadStart() || this.isThreadJoin()
 
 private val TracePoint.isBlocking: Boolean get() = when (this) {
     is MonitorEnterTracePoint, is WaitTracePoint, is ParkTracePoint -> true

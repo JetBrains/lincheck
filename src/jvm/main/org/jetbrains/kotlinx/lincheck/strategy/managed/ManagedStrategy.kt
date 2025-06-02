@@ -713,22 +713,13 @@ internal abstract class ManagedStrategy(
 
     // == LISTENING METHODS ==
 
-    override fun beforeThreadFork(thread: Thread, descriptor: ThreadDescriptor) = runInsideIgnoredSection {
+    override fun beforeThreadFork(thread: Thread, descriptor: ThreadDescriptor): Unit = runInsideIgnoredSection {
         val currentThreadId = threadScheduler.getCurrentThreadId()
         // do not track threads forked from unregistered threads
         if (currentThreadId < 0) return
         // scenario threads are handled separately by the runner itself
         if (thread is TestThread) return
-        val forkedThreadId = registerThread(thread, descriptor)
-        if (collectTrace) {
-            val tracePoint = ThreadStartTracePoint(
-                iThread = currentThreadId,
-                actorId = currentActorId[currentThreadId]!!,
-                startedThreadDisplayNumber = getThreadDisplayNumber(forkedThreadId),
-                callStackTrace = callStackTrace[currentThreadId]!!,
-            )
-            traceCollector!!.addTracePointInternal(tracePoint)
-        }
+        registerThread(thread, descriptor)
     }
 
     override fun beforeThreadStart() = runInsideIgnoredSection {
@@ -737,6 +728,8 @@ internal abstract class ManagedStrategy(
         if (currentThreadId < 0) return
         // scenario threads are handled separately
         if (isTestThread(currentThreadId)) return
+
+        onThreadStart(currentThreadId)
 
         val methodDescriptor = getAsmMethod("void run()").descriptor
         addBeforeMethodCallTracePoint(
@@ -754,7 +747,7 @@ internal abstract class ManagedStrategy(
             atomicMethodDescriptor = null,
             callType = MethodCallTracePoint.CallType.THREAD_RUN
         )
-        onThreadStart(currentThreadId)
+
         enableAnalysis()
     }
 
@@ -807,15 +800,6 @@ internal abstract class ManagedStrategy(
             onSwitchPoint(currentThreadId)
             // Switch to another thread and wait for a moment when the thread is finished
             switchCurrentThread(currentThreadId, BlockingReason.ThreadJoin(joinThreadId))
-        }
-        if (collectTrace) {
-            val tracePoint = ThreadJoinTracePoint(
-                iThread = currentThreadId,
-                actorId = currentActorId[currentThreadId]!!,
-                joinedThreadDisplayNumber = getThreadDisplayNumber(joinThreadId),
-                callStackTrace = callStackTrace[currentThreadId]!!,
-            )
-            traceCollector!!.addTracePointInternal(tracePoint)
         }
     }
 
