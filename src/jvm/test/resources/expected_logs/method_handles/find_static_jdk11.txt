@@ -19,9 +19,12 @@ Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:47) |
 |   block(): threw IllegalStateException at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:46)                                                        |
+|     ensureConcurrentHashMapIsInstrumented() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:52)                                                   |
 |     doTest() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:55)                                                                                  |
 |       Companion.create(): Counter#1 at MethodHandlesFindStaticRepresentationTest.doTest(MethodHandlesLookupTests.kt:103)                                                        |
 |         Counter.shared = Counter#1 at Counter$Companion.create(MethodHandlesLookupTests.kt:167)                                                                                 |
+|       MethodType.methodType(Class#1, Class#2): MethodType#1 at MethodHandlesFindStaticRepresentationTest.doTest(MethodHandlesLookupTests.kt:106)                                |
+|       Lookup#1.findStatic(Class#2, "increment", MethodType#1): DirectMethodHandle#1 at MethodHandlesFindStaticRepresentationTest.doTest(MethodHandlesLookupTests.kt:105)        |
 |       methodHandle.invoke(Counter#1) at MethodHandlesFindStaticRepresentationTest.doTest(MethodHandlesLookupTests.kt:108)                                                       |
 |         MethodHandle.linkToStatic(Counter#1, MemberName#1) at DirectMethodHandle$Holder.invokeStatic(DirectMethodHandle$Holder:0)                                               |
 |           Companion.increment(Counter#1) at Counter.increment(MethodHandlesLookupTests.kt:0)                                                                                    |
@@ -33,5 +36,6 @@ Detailed trace:
 |             counter.value ➜ 1 at Counter$Companion.increment(MethodHandlesLookupTests.kt:171)                                                                                   |
 |             counter.value = 2 at Counter$Companion.increment(MethodHandlesLookupTests.kt:171)                                                                                   |
 |       counter.value ➜ 2 at MethodHandlesFindStaticRepresentationTest.doTest(MethodHandlesLookupTests.kt:110)                                                                    |
+|     "Check failed.".toString(): "Check failed." at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:58)                                               |
 |   result: IllegalStateException #1                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

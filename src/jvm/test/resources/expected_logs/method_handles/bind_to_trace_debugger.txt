@@ -19,9 +19,13 @@ Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:47) |
 |   block(): threw IllegalStateException at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:46)                                                        |
+|     ensureConcurrentHashMapIsInstrumented() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:52)                                                   |
 |     doTest() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:55)                                                                                  |
 |       Companion.create(): Counter#1 at MethodHandlesBindToRepresentationTest.doTest(MethodHandlesLookupTests.kt:133)                                                            |
 |         Counter.shared = Counter#1 at Counter$Companion.create(MethodHandlesLookupTests.kt:167)                                                                                 |
+|       MethodType.methodType(Class#1): MethodType#1 at MethodHandlesBindToRepresentationTest.doTest(MethodHandlesLookupTests.kt:136)                                             |
+|       Lookup#1.findVirtual(Class#2, "increment", MethodType#1): DirectMethodHandle#1 at MethodHandlesBindToRepresentationTest.doTest(MethodHandlesLookupTests.kt:135)           |
+|       DirectMethodHandle#1.bindTo(Counter#1): BoundMethodHandle$Species_LL#1 at MethodHandlesBindToRepresentationTest.doTest(MethodHandlesLookupTests.kt:138)                   |
 |       methodHandle.invoke() at MethodHandlesBindToRepresentationTest.doTest(MethodHandlesLookupTests.kt:139)                                                                    |
 |         argL1.value ➜ 0 at Counter.increment(MethodHandlesLookupTests.kt:158)                                                                                                   |
 |         argL1.value = 1 at Counter.increment(MethodHandlesLookupTests.kt:158)                                                                                                   |
@@ -29,5 +33,6 @@ Detailed trace:
 |         argL1.value ➜ 1 at Counter.increment(MethodHandlesLookupTests.kt:158)                                                                                                   |
 |         argL1.value = 2 at Counter.increment(MethodHandlesLookupTests.kt:158)                                                                                                   |
 |       counter.value ➜ 2 at MethodHandlesBindToRepresentationTest.doTest(MethodHandlesLookupTests.kt:141)                                                                        |
+|     "Check failed.".toString(): "Check failed." at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:58)                                               |
 |   result: IllegalStateException #1                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -10,36 +10,39 @@ The number next to an exception name helps you find its stack trace provided aft
 ---
 
 The following interleaving leads to the error:
-| ---------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                               Thread 1                                                |                Thread 2                |
-| ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| operation1(): IllegalStateException #1                                                                |                                        |
-|   canEnterForbiddenSection = true at ExceptionsInOutputTest.operation1(ExceptionsInOutputTest.kt:26)  |                                        |
-|   switch                                                                                              |                                        |
-|                                                                                                       | operation2(): IllegalStateException #2 |
-|   canEnterForbiddenSection = false at ExceptionsInOutputTest.operation1(ExceptionsInOutputTest.kt:27) |                                        |
-|   result: IllegalStateException #1                                                                    |                                        |
-| ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                       Thread 1                                                       |                Thread 2                |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation1(): IllegalStateException #1                                                                               |                                        |
+|   canEnterForbiddenSection = true at ExceptionsInOutputTest.operation1(ExceptionsInOutputTest.kt:26)                 |                                        |
+|   switch                                                                                                             |                                        |
+|                                                                                                                      | operation2(): IllegalStateException #2 |
+|   canEnterForbiddenSection = false at ExceptionsInOutputTest.operation1(ExceptionsInOutputTest.kt:27)                |                                        |
+|   "Legal exception".toString(): "Legal exception" at ExceptionsInOutputTest.operation1(ExceptionsInOutputTest.kt:28) |                                        |
+|   result: IllegalStateException #1                                                                                   |                                        |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 
 Exception stack traces:
 #1: java.lang.IllegalStateException: Legal exception
 	at org.jetbrains.kotlinx.lincheck_test.representation.ExceptionsInOutputTest.operation1(ExceptionsInOutputTest.kt:28)
-	at java.lang.Thread.run(Thread.java:750)
+	at java.base/java.lang.Thread.run(Thread.java:840)
 
 #2: java.lang.IllegalStateException: Violating exception
 	at org.jetbrains.kotlinx.lincheck_test.representation.ExceptionsInOutputTest.operation2(ExceptionsInOutputTest.kt:32)
-	at java.lang.Thread.run(Thread.java:750)
+	at java.base/java.lang.Thread.run(Thread.java:840)
 
 Detailed trace:
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-|                                               Thread 1                                                |                                               Thread 2                                               |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| operation1(): IllegalStateException #1                                                                |                                                                                                      |
-|   canEnterForbiddenSection = true at ExceptionsInOutputTest.operation1(ExceptionsInOutputTest.kt:26)  |                                                                                                      |
-|   switch                                                                                              |                                                                                                      |
-|                                                                                                       | operation2(): IllegalStateException #2                                                               |
-|                                                                                                       |   canEnterForbiddenSection ➜ true at ExceptionsInOutputTest.operation2(ExceptionsInOutputTest.kt:32) |
-|                                                                                                       |   result: IllegalStateException #2                                                                   |
-|   canEnterForbiddenSection = false at ExceptionsInOutputTest.operation1(ExceptionsInOutputTest.kt:27) |                                                                                                      |
-|   result: IllegalStateException #1                                                                    |                                                                                                      |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                       Thread 1                                                       |                                                                        Thread 2                                                                        |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation1(): IllegalStateException #1                                                                               |                                                                                                                                                        |
+|   canEnterForbiddenSection = true at ExceptionsInOutputTest.operation1(ExceptionsInOutputTest.kt:26)                 |                                                                                                                                                        |
+|   switch                                                                                                             |                                                                                                                                                        |
+|                                                                                                                      | operation2(): IllegalStateException #2                                                                                                                 |
+|                                                                                                                      |   canEnterForbiddenSection ➜ true at ExceptionsInOutputTest.operation2(ExceptionsInOutputTest.kt:32)                                                   |
+|                                                                                                                      |   $i$a$-check-ExceptionsInOutputTest$operation2$1.toString(): "Violating exception" at ExceptionsInOutputTest.operation2(ExceptionsInOutputTest.kt:32) |
+|                                                                                                                      |   result: IllegalStateException #2                                                                                                                     |
+|   canEnterForbiddenSection = false at ExceptionsInOutputTest.operation1(ExceptionsInOutputTest.kt:27)                |                                                                                                                                                        |
+|   "Legal exception".toString(): "Legal exception" at ExceptionsInOutputTest.operation1(ExceptionsInOutputTest.kt:28) |                                                                                                                                                        |
+|   result: IllegalStateException #1                                                                                   |                                                                                                                                                        |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

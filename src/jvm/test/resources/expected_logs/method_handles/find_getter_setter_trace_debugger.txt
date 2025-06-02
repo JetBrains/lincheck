@@ -19,9 +19,15 @@ Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:47) |
 |   block(): threw IllegalStateException at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:46)                                                        |
+|     ensureConcurrentHashMapIsInstrumented() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:52)                                                   |
 |     doTest() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:55)                                                                                  |
 |       Companion.create(): Counter#1 at MethodHandlesFindGetterSetterRepresentationTest.doTest(MethodHandlesLookupTests.kt:118)                                                  |
 |         Counter.shared = Counter#1 at Counter$Companion.create(MethodHandlesLookupTests.kt:167)                                                                                 |
+|       Lookup#1.findGetter(Class#1, "value", Class#2): Accessor#1 at MethodHandlesFindGetterSetterRepresentationTest.doTest(MethodHandlesLookupTests.kt:120)                     |
+|       Lookup#2.findSetter(Class#1, "value", Class#2): Accessor#2 at MethodHandlesFindGetterSetterRepresentationTest.doTest(MethodHandlesLookupTests.kt:122)                     |
+|       setterHandle.invoke(Counter#1, 42) at MethodHandlesFindGetterSetterRepresentationTest.doTest(MethodHandlesLookupTests.kt:123)                                             |
+|       getterHandle.invoke(Counter#1): 42 at MethodHandlesFindGetterSetterRepresentationTest.doTest(MethodHandlesLookupTests.kt:124)                                             |
 |       counter.value ➜ 42 at MethodHandlesFindGetterSetterRepresentationTest.doTest(MethodHandlesLookupTests.kt:125)                                                             |
+|     "Check failed.".toString(): "Check failed." at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:58)                                               |
 |   result: IllegalStateException #1                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

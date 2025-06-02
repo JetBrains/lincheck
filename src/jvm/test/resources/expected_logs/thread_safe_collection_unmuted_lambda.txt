@@ -20,6 +20,7 @@ Detailed trace:
 | $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48) |
 |   block(): threw IllegalStateException at ThreadSafeCollectionUnmutedLambdaRepresentationTest.block(StdLibRepresentationTests.kt:64)                                            |
 |     concurrentMap.computeIfAbsent(1, Lambda#2): 7 at ThreadSafeCollectionUnmutedLambdaRepresentationTest.block(StdLibRepresentationTests.kt:70)                                 |
+|       ConcurrentHashMap.spread(1): 1 at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1694)                                                                          |
 |       table ➜ Array<Node>#1 at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1697)                                                                                   |
 |       ConcurrentHashMap.tabAt(Array<Node>#1, 1): Node#1 at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1701)                                                       |
 |         Array<Node>#1[1].getReferenceAcquire(): Node#1 at ConcurrentHashMap.tabAt(ConcurrentHashMap.java:760)                                                                   |

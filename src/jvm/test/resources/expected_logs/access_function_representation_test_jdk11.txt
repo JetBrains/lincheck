@@ -26,5 +26,6 @@ Detailed trace:
 |             AccessFunctionRepresentationTest.inc3() at AccessFunctionRepresentationTest$Nested.inc2(AccessFunctionRepresentationTest.kt:33)                                     |
 |               a ➜ 1 at AccessFunctionRepresentationTest.inc3(AccessFunctionRepresentationTest.kt:28)                                                                            |
 |               a = 2 at AccessFunctionRepresentationTest.inc3(AccessFunctionRepresentationTest.kt:28)                                                                            |
+|     "Check failed.".toString(): "Check failed." at AccessFunctionRepresentationTest.block(AccessFunctionRepresentationTest.kt:20)                                               |
 |   result: IllegalStateException #1                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
