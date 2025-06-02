@@ -2057,6 +2057,7 @@ internal abstract class ManagedStrategy(
             atomicMethodDescriptor = atomicMethodDescriptor,
             callType = callType,
         )
+        traceCollector?.addTracePointInternal(tracePoint)
         // Method invocation id used to calculate spin cycle start label call depth.
         // Two calls are considered equals if two same methods were called with the same parameters.
         val methodInvocationId = Objects.hash(methodId,
