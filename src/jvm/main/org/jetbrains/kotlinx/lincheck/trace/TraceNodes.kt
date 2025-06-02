@@ -123,56 +123,40 @@ internal fun SingleThreadedTable<TraceNode>.reorder(): SingleThreadedTable<Trace
 /**
  * Returns [preActos, parrallelActors, postActors], no threads!!
  */
-internal fun traceToGraph(trace: Trace): SingleThreadedTable<TraceNode> {
-    val callNodes = mutableMapOf<TracePoint, CallNode>()
-    val sections = mutableListOf<List<TraceNode>>()
-    var currentSection = mutableListOf<TraceNode>()
-    
+internal fun traceToGraph(trace: Trace): SingleThreadedTable<CallNode> {
+    val sections = mutableListOf<List<CallNode>>()
+    var currentSection = mutableListOf<CallNode>()
+
+    val threadMap = mutableMapOf<Int, CallNode?>()
+
     // loop over events
     trace.trace.forEachIndexed { eventNumber, event ->
-        
-        if (event is SectionDelimiterTracePoint) {
-            currentSection = mutableListOf()
-            sections.add(currentSection)
-            return@forEachIndexed
-        }
-        
-        // Add callpath to graph where needed and return last element in path
-        val lastCallBeforeEvent = event.callStackTrace.foldIndexed(null) { depth, prevNode: CallNode?, call ->
-            if (event is SwitchEventTracePoint && !callNodes.containsKey(call.tracePoint) && prevNode != null) return@foldIndexed prevNode
-            callNodes.computeIfAbsent(call.tracePoint) {
-                val newNode = CallNode(depth, call.tracePoint, eventNumber)
-                if (call.tracePoint.isRootCall) currentSection.add(newNode)
-                prevNode?.addChild(newNode)
-                newNode
+        val currentThreadId = event.iThread
+        val currentCallNode = threadMap[currentThreadId]
+
+        when {
+            event is SectionDelimiterTracePoint -> {
+                currentSection = mutableListOf()
+                sections.add(currentSection)
             }
-        }
-        
-        // if event has trace add to end of path in graph
-        if (lastCallBeforeEvent != null) {
-            val eventNode = EventNode(lastCallBeforeEvent.callDepth + 1, event, eventNumber)
-            lastCallBeforeEvent.addChild(eventNode)
-            return@forEachIndexed
-        }
-        
-        // if actor add node
-        if (event is MethodCallTracePoint && event.isRootCall) {
-            callNodes.computeIfAbsent(event) { 
-                val callNode = CallNode(0, event, eventNumber)
-                currentSection.add(callNode)
-                callNode
+            event is MethodReturnTracePoint -> {
+                threadMap[currentThreadId] = currentCallNode?.parent as? CallNode
+                if (threadMap[currentThreadId] == null && currentCallNode?.isRootCall != true) {
+                    error("Return is not allowed here")
+                }
             }
-            return@forEachIndexed
+            event is MethodCallTracePoint -> {
+                val newNode = CallNode((currentCallNode?.callDepth ?: -1) + 1, event, eventNumber)
+                if (event.isRootCall) currentSection.add(newNode)
+                currentCallNode?.addChild(newNode)
+                threadMap[currentThreadId] = newNode
+            }
+            currentCallNode != null -> {
+                val eventNode = EventNode(currentCallNode.callDepth + 1, event, eventNumber)
+                currentCallNode.addChild(eventNode)
+            }
+            else -> check(false) { "Event has no trace that leads to it" }
         }
-        
-        // Hack to circumvent problem with empty stack traces after coroutine suspend TODO fix in `ManagedStrategy`
-        if (event.callStackTrace.isEmpty()) {
-            val actor = currentSection.first {it.actorId == event.actorId && it.iThread == event.iThread}
-            actor.addChild(EventNode(1, event, eventNumber))
-            return@forEachIndexed
-        }
-        
-        check(false) { "Event has no trace that leads to it" }
     }
     return sections
 }
