@@ -36,7 +36,6 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.Continuation
 import java.util.concurrent.TimeoutException
 import kotlinx.coroutines.CancellableContinuation
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 import kotlin.Result as KResult
 import org.objectweb.asm.commons.Method.getMethod as getAsmMethod
@@ -2351,17 +2350,17 @@ abstract class ManagedStrategy(
      */
     internal fun createAndLogCancellationTracePoint(): CoroutineCancellationTracePoint? {
         if (collectTrace) {
-            val cancellationTracePoint = doCreateTracePoint(::CoroutineCancellationTracePoint)
+            val iThread = threadScheduler.getCurrentThreadId()
+            val actorId = currentActorId[iThread] ?: Int.MIN_VALUE
+            val cancellationTracePoint = CoroutineCancellationTracePoint(
+                iThread,
+                actorId,
+                callStackTrace[iThread]?.toList() ?: emptyList()
+            )
             traceCollector?.addTracePointInternal(cancellationTracePoint)
             return cancellationTracePoint
         }
         return null
-    }
-
-    private fun <T : TracePoint> doCreateTracePoint(constructor: (iThread: Int, actorId: Int, CallStackTrace) -> T): T {
-        val iThread = threadScheduler.getCurrentThreadId()
-        val actorId = currentActorId[iThread] ?: Int.MIN_VALUE
-        return constructor(iThread, actorId, callStackTrace[iThread]?.toList() ?: emptyList())
     }
 
     fun enableReplayModeForIdeaPlugin() {
