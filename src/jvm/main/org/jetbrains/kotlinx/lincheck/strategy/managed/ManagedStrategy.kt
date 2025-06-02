@@ -2326,6 +2326,7 @@ abstract class ManagedStrategy(
 
         popShadowStackFrame()
         callStackTrace.removeLast()
+        traceCollector?.addTracePointInternal(MethodReturnTracePoint(tracePoint))
     }
 
     // == LOGGING METHODS ==
