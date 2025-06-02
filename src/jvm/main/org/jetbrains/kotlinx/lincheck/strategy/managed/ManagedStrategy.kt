@@ -460,6 +460,7 @@ abstract class ManagedStrategy(
      * @param threadId the current thread id.
      * @param codeLocation the byte-code location identifier of the point in code.
      */
+    // TODO drop beforeMethodCallSwitch
     private fun newSwitchPoint(threadId: Int, codeLocation: Int, beforeMethodCallSwitch: Boolean = false) {
         // re-throw abort error if the thread was aborted
         if (threadScheduler.isAborted(threadId)) {
@@ -2393,6 +2394,7 @@ abstract class ManagedStrategy(
      * This method generates and sets separate event id for the last method call.
      * Method call trace points are not added to the event list by default, so their event ids are not set otherwise.
      */
+    // TODO drop; we have every event in a list, most probably we can set these IDs later on during graph construction
     override fun setLastMethodCallEventId() {
         val currentThreadId = threadScheduler.getCurrentThreadId()
         val lastMethodCall = callStackTrace[currentThreadId]!!.lastOrNull()?.tracePoint ?: return
