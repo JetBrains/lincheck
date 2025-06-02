@@ -195,7 +195,7 @@ internal class WriteTracePoint(
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, codeLocation) {
     private lateinit var valueRepresentation: String
     lateinit var valueType: String
-    
+
     var fieldName = fieldName
         private set
     fun updateFieldName(name: String) { fieldName = name }
@@ -242,7 +242,7 @@ internal class MethodCallTracePoint(
     var thrownException: Throwable? = null
     var parameters: List<String>? = null
     var parameterTypes: List<String>? = null
-    
+
     var ownerName: String? = null
         private set
     fun updateOwnerName(name: String?) { ownerName = name }
@@ -524,6 +524,16 @@ internal class SpinCycleStartTracePoint(iThread: Int, actorId: Int, callStackTra
     override fun toStringImpl(withLocation: Boolean) =  "/* The following events repeat infinitely: */"
     override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) { 
         SpinCycleStartTracePoint(iThread, actorId, callStackTrace.deepCopy(copiedObjects))
+            .also { it.eventId = eventId }
+    }
+}
+
+internal class MethodReturnTracePoint(
+    private val methodTracePoint: MethodCallTracePoint
+): TracePoint(methodTracePoint.iThread, methodTracePoint.actorId, emptyList()) {
+    override fun toStringImpl(withLocation: Boolean) =  "This trace point is temporary, it should not appear in the logs; method: ${methodTracePoint.methodName}"
+    override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
+        MethodReturnTracePoint(methodTracePoint)
             .also { it.eventId = eventId }
     }
 }
