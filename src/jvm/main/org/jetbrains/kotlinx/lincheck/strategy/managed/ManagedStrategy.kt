@@ -978,11 +978,37 @@ internal abstract class ManagedStrategy(
             atomicMethodDescriptor = null,
             callType = MethodCallTracePoint.CallType.ACTOR,
         )
-        traceCollector?.addTracePointInternal(callStackTrace[iThread]!!.first().tracePoint)
         enableAnalysis()
     }
 
     override fun onActorFinish() {
+        val iThread = threadScheduler.getCurrentThreadId()
+        val actorId = currentActorId[iThread]!!
+
+        val actor = if (actorId < scenario.threads[iThread].size) scenario.threads[iThread][actorId]
+        else validationFunction
+        check(actor != null) { "Could not find current actor" }
+
+        // TODO rewrite. This will create an additional return trace point if actor is a suspend function
+        //  or if the actor is in the loop cycle.
+        runInsideIgnoredSection {
+            val className = actor.method.declaringClass.name
+            val methodName = actor.method.name
+            val callStackTrace = callStackTrace[iThread]!!
+            val tracePoint = MethodCallTracePoint(
+                iThread = iThread,
+                actorId = currentActorId[iThread]!!,
+                className = className,
+                methodName = methodName,
+                callStackTrace = callStackTrace,
+                codeLocation = UNKNOWN_CODE_LOCATION,
+                isStatic = false,
+                callType = MethodCallTracePoint.CallType.ACTOR,
+                isSuspend = isSuspendFunction(className, methodName, actor.arguments.toTypedArray())
+            )
+            traceCollector?.addTracePointInternal(MethodReturnTracePoint(tracePoint))
+        }
+
         // This is a hack to guarantee correct stepping in the plugin.
         // When stepping out to the TestThreadExecution class, stepping continues unproductively.
         // With this method, we force the debugger to stop at the beginning of the next actor.
