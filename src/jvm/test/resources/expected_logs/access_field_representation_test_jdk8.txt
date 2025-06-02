@@ -3,25 +3,26 @@
 java.lang.IllegalStateException: Check failed.
 	at org.jetbrains.kotlinx.lincheck_test.representation.AccessFieldRepresentationTest.block(AccessFunctionRepresentationTest.kt:50)
 	at org.jetbrains.kotlinx.lincheck_test.representation.AccessFieldRepresentationTest.block(AccessFunctionRepresentationTest.kt:43)
-	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:49)
+	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:47)
 	at java.lang.Thread.run(Thread.java:750)
 
 The following interleaving leads to the error:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                                   Main Thread                                                                                   |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:49) |
+| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:47) |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 
 Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                                   Main Thread                                                                                   |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:49) |
+| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:47) |
 |   block(): threw IllegalStateException at AccessFieldRepresentationTest.block(AccessFunctionRepresentationTest.kt:43)                                                           |
 |     AccessFunctionRepresentationTestKt.runLambda(Lambda#2) at AccessFieldRepresentationTest.block(AccessFunctionRepresentationTest.kt:49)                                       |
 |       r.invoke() at AccessFunctionRepresentationTestKt.runLambda(AccessFunctionRepresentationTest.kt:40)                                                                        |
-|         this$0.a ➜ 0 at AccessFieldRepresentationTest.block$lambda$0(AccessFunctionRepresentationTest.kt:49)                                                                    |
-|         this$0.a = 1 at AccessFieldRepresentationTest.block$lambda$0(AccessFunctionRepresentationTest.kt:49)                                                                    |
+|         this$0.a ➜ 1 at AccessFieldRepresentationTest.block$lambda$0(AccessFunctionRepresentationTest.kt:49)                                                                    |
+|         this$0.a = 2 at AccessFieldRepresentationTest.block$lambda$0(AccessFunctionRepresentationTest.kt:49)                                                                    |
+|     "Check failed.".toString(): "Check failed." at AccessFieldRepresentationTest.block(AccessFunctionRepresentationTest.kt:50)                                                  |
 |   result: IllegalStateException #1                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
