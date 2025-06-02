@@ -747,7 +747,7 @@ private class ReplayModeLoopDetectorHelper(
  *
  * # The problem overview
  *
- * [TraceCollector] collects two types of the [TracePoint]:
+ * [org.jetbrains.kotlinx.lincheck.trace.TraceCollector] collects two types of the [TracePoint]:
  * 1. TracePoints that represents places where potential context switch points could happened.
  * 2. TracePoints, representing regular, non-atomic method calls.
  *
@@ -957,9 +957,9 @@ internal fun afterSpinCycleTraceCollected(
             // Comparing corresponding calls.
             if (identifier != currentCallStackTrace[currentI].methodInvocationId) break
             // Check for the last trace point before the cycle.
-            if ((tracePointBeforeCycle != null) &&
-                (tracePointBeforeCycle.callStackTrace.lastIndex >= firstI) &&
-                (tracePointBeforeCycle.callStackTrace[firstI].methodInvocationId == identifier)
+            if (tracePointBeforeCycle != null &&
+                tracePointBeforeCycle.callStackTrace.lastIndex >= firstI &&
+                tracePointBeforeCycle.callStackTrace[firstI].methodInvocationId == identifier
             ) break
 
             currentI--
