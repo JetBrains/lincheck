@@ -142,7 +142,8 @@ internal fun traceToGraph(trace: Trace): SingleThreadedTable<CallNode> {
             event is MethodReturnTracePoint -> {
                 threadMap[currentThreadId] = currentCallNode?.parent as? CallNode
                 if (threadMap[currentThreadId] == null && currentCallNode?.isRootCall != true) {
-                    error("Return is not allowed here")
+                    // TODO re-enable later on when the problem with actors will be resolved
+//                    error("Return is not allowed here")
                 }
             }
             event is MethodCallTracePoint -> {
