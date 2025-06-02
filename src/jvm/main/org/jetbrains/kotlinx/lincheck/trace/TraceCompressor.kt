@@ -236,7 +236,7 @@ private fun SingleThreadedTable<TraceNode>.compressThreadStart() = compressNodes
     if (node !is CallNode || !node.tracePoint.isThreadCreation() ) return@compressNodes node
     val firstChild = if (node.children.size == 1) node.children[0] else return@compressNodes node
     val secondChild = if (firstChild.children.size == 1) firstChild.children[0] else return@compressNodes node
-    if (secondChild !is EventNode || secondChild.tracePoint !is ThreadStartTracePoint) return@compressNodes node
+    if (secondChild !is EventNode || !secondChild.tracePoint.isThreadStart()) return@compressNodes node
 
     val newNode = node.copy()
     newNode.addChild(secondChild)
