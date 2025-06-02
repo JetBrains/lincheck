@@ -2365,17 +2365,17 @@ internal abstract class ManagedStrategy(
      */
     internal fun createAndLogCancellationTracePoint(): CoroutineCancellationTracePoint? {
         if (collectTrace) {
-            val cancellationTracePoint = doCreateTracePoint(::CoroutineCancellationTracePoint)
+            val iThread = threadScheduler.getCurrentThreadId()
+            val actorId = currentActorId[iThread] ?: Int.MIN_VALUE
+            val cancellationTracePoint = CoroutineCancellationTracePoint(
+                iThread,
+                actorId,
+                callStackTrace[iThread]?.toList() ?: emptyList()
+            )
             traceCollector?.addTracePointInternal(cancellationTracePoint)
             return cancellationTracePoint
         }
         return null
-    }
-
-    private fun <T : TracePoint> doCreateTracePoint(constructor: (iThread: Int, actorId: Int, CallStackTrace) -> T): T {
-        val iThread = threadScheduler.getCurrentThreadId()
-        val actorId = currentActorId[iThread] ?: Int.MIN_VALUE
-        return constructor(iThread, actorId, callStackTrace[iThread]?.toList() ?: emptyList())
     }
 
     fun enableReplayModeForIdeaPlugin() {
