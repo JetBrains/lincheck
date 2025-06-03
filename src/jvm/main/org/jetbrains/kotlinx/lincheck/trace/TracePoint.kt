@@ -14,6 +14,7 @@ import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import org.jetbrains.kotlinx.lincheck.strategy.managed.LincheckAnalysisAbortedError
 import org.jetbrains.kotlinx.lincheck.strategy.BlockingReason
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory
 import org.jetbrains.kotlinx.lincheck.util.ThreadId
 import kotlin.collections.map
 import org.jetbrains.kotlinx.lincheck.transformation.CodeLocations
@@ -333,6 +334,23 @@ internal class MethodCallTracePoint(
 
     fun initializeOwnerName(ownerName: String) {
         this.ownerName = ownerName
+    }
+    
+    fun initializeActorResult(result: Result?) {
+        check(isActor)
+        this.returnedValue = when (result) {
+            null -> ReturnedValueResult.ActorResult("NULL result")
+            is ExceptionResult -> when (result.throwable) {
+                is LincheckAnalysisAbortedError -> ReturnedValueResult.ActorResult("<hung>", true, false, true)
+                else -> {
+                    val excNumber = ObjectLabelFactory.getExceptionResultNumber(result.throwable)
+                    val exceptionNumberRepresentation = " #$excNumber"
+                    ReturnedValueResult.ActorResult("$result$exceptionNumberRepresentation", true, true, false, excNumber)
+                }
+            }
+            is VoidResult -> ReturnedValueResult.ActorResult("void", false, true, false)
+            else -> ReturnedValueResult.ActorResult(result.toString(), true, true, false)
+        }
     }
 
     fun isThreadCreation() = 

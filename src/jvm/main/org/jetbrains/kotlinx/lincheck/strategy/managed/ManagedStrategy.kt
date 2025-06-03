@@ -357,7 +357,7 @@ abstract class ManagedStrategy(
     /**
      * Re-runs the last invocation to collect its trace.
      */
-    override fun tryCollectTrace(result: InvocationResult): Trace? {
+    override fun tryCollectTrace(result: InvocationResult): Pair<Trace?, InvocationResult> {
         val detectedByStrategy = suddenInvocationResult != null
         val canCollectTrace = when {
             detectedByStrategy -> true // ObstructionFreedomViolationInvocationResult or UnexpectedExceptionInvocationResult
@@ -368,7 +368,7 @@ abstract class ManagedStrategy(
         if (!canCollectTrace) {
             // Interleaving events can be collected almost always,
             // except for the strange cases such as Runner's timeout or exceptions in LinCheck.
-            return null
+            return Pair(null, result)
         }
 
         collectTrace = true
@@ -387,7 +387,7 @@ abstract class ManagedStrategy(
         // In case the runner detects a deadlock, some threads can still be in an active state,
         // simultaneously adding events to the TraceCollector, which leads to an inconsistent trace.
         // Therefore, if the runner detects deadlock, we don't even try to collect trace.
-        if (loggedResults is RunnerTimeoutInvocationResult) return null
+        if (loggedResults is RunnerTimeoutInvocationResult) return Pair(null, loggedResults)
 
         val threadNames = MutableList<String>(threadScheduler.nThreads) { "" }
         getRegisteredThreads().forEach { (threadId, thread) ->
@@ -415,7 +415,7 @@ abstract class ManagedStrategy(
             }.toString()
         }
 
-        return trace
+        return Pair(trace, loggedResults)
     }
 
     private fun failDueToDeadlock(): Nothing {
@@ -996,8 +996,13 @@ abstract class ManagedStrategy(
         enableAnalysis()
     }
 
-    override fun onActorFinish() {
     override fun onActorFinish(iThread: Int) {
+        runner.getActorResult(iThread, currentActorId[iThread]!!)?.let { result ->
+            traceCollector?.trace
+                ?.filterIsInstance<MethodCallTracePoint>()
+                ?.firstOrNull { it.isActor && it.actorId == currentActorId[iThread] && it.iThread == iThread }
+                ?.initializeActorResult(result)
+        }
         // This is a hack to guarantee correct stepping in the plugin.
         // When stepping out to the TestThreadExecution class, stepping continues unproductively.
         // With this method, we force the debugger to stop at the beginning of the next actor.

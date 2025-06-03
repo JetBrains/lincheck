@@ -39,12 +39,12 @@ internal fun StringBuilder.appendTrace(
  */
 internal class TraceReporter(
     private val failure: LincheckFailure,
-    results: ExecutionResult,
+    // TODO remove
+    @Suppress("UNUSED_PARAMETER") results: ExecutionResult,
     trace: Trace,
     private val exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>,
 ) {
     private val trace = trace.deepCopy()
-    private val resultProvider = ExecutionResultsProvider(results, failure, exceptionStackTraces)
     val graph: SingleThreadedTable<TraceNode>
     
     init {
@@ -53,7 +53,6 @@ internal class TraceReporter(
         // - adding `ActorResult` to actors
         val fixedTrace = trace
             .removeValidationIfNeeded()
-            .addResultsToActors()
 
 
         // Turn trace into graph which is List of sections. Where a section is a list of rootNodes (actors).
@@ -108,16 +107,6 @@ internal class TraceReporter(
         }
     }
 
-    /**
-     * Adds result info to actor [MethodCallTracePoint]s
-     */
-    private fun Trace.addResultsToActors(): Trace = this.deepCopy().also {
-        it.trace
-            .filterIsInstance<MethodCallTracePoint>()
-            .filter { it.isActor }
-            .forEach { event -> event.returnedValue = resultProvider[event.iThread, event.actorId] }
-    }
-    
     private fun Trace.removeValidationIfNeeded(): Trace {
         if (failure is ValidationFailure) return this
         val newTrace = this.trace.takeWhile { !(it is SectionDelimiterTracePoint && it.executionPart == ExecutionPart.VALIDATION) }
@@ -206,62 +195,6 @@ private fun traceNodeTableToString(table: MultiThreadedTable<TraceNode?>): Multi
             return@map "  ".repeat(virtualCallDepth) + node.toString()
         }
     }
-}
-
-
-/**
- * Helper class to provider execution results, including a validation function result
- */
-private class ExecutionResultsProvider(
-    result: ExecutionResult?, 
-    val failure: LincheckFailure,
-    val exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>,
-) {
-
-    /**
-     * A map of type Map<(threadId, actorId) -> Result>
-     */
-    val threadNumberToActorResultMap: Map<Pair<Int, Int>, Result?>
-
-    init {
-        val results = hashMapOf<Pair<Int, Int>, Result?>()
-        if (result != null) {
-            results += result.threadsResults
-                .flatMapIndexed { tId, actors -> actors.flatMapIndexed { actorId, result ->
-                    listOf((tId to actorId) to result)
-                }}
-                .toMap()
-        }
-        if (failure is ValidationFailure) {
-            results[0 to firstThreadActorCount(failure)] = ExceptionResult.create(failure.exception)
-        }
-        threadNumberToActorResultMap = results
-    }
-
-    operator fun get(iThread: Int, actorId: Int): ReturnedValueResult.ActorResult {
-        return actorNodeResultRepresentation(threadNumberToActorResultMap[iThread to actorId])
-    }
-
-    private fun firstThreadActorCount(failure: ValidationFailure): Int =
-        failure.scenario.initExecution.size + failure.scenario.parallelExecution[0].size + failure.scenario.postExecution.size
-    
-    private fun actorNodeResultRepresentation(
-        result: Result?,
-    ): ReturnedValueResult.ActorResult {
-        // We don't mark actors that violated obstruction freedom as hung.
-        if (result == null && failure is ObstructionFreedomViolationFailure) return ReturnedValueResult.ActorResult("", false, false, false)
-        return when (result) {
-            null -> ReturnedValueResult.ActorResult("<hung>", true, false, true)
-            is ExceptionResult -> {
-                val excNumber = exceptionStackTraces[result.throwable]?.number ?: -1
-                val exceptionNumberRepresentation = exceptionStackTraces[result.throwable]?.let { " #${it.number}" } ?: ""
-                ReturnedValueResult.ActorResult("$result$exceptionNumberRepresentation", true, true, false, excNumber)
-            }
-            is VoidResult -> ReturnedValueResult.ActorResult("void", false, true, false)
-            else -> ReturnedValueResult.ActorResult(result.toString(), true, true, false)
-        }
-    }
-
 }
 
 internal const val ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE = "All unfinished threads are in deadlock"

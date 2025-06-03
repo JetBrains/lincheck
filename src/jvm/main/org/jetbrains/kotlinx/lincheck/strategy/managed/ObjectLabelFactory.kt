@@ -95,6 +95,9 @@ object ObjectLabelFactory {
         }
         return objectName
     }
+    
+    internal fun getExceptionResultNumber(exception: Throwable): Int =
+        getObjectNumber(ExceptionResult::class.java, exception)
 
     private fun objectName(obj: Any): String {
         return when (obj) {
@@ -116,3 +119,4 @@ object ObjectLabelFactory {
  * Since lambdas do not have a specific type, this class is used as key for [ObjectLabelFactory.getObjectNumber].
  */
 private class Lambda
+private class ExceptionResult
