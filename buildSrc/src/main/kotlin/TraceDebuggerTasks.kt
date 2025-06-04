@@ -48,7 +48,7 @@ fun Project.registerTraceDebuggerTasks() {
         manifest {
             attributes(
                 mapOf(
-                    "Premain-Class" to "org.jetbrains.kotlinx.lincheck.transformation.TraceDebuggerAgent",
+                    "Premain-Class" to "org.jetbrains.kotlinx.lincheck.transformation.JavaAgent",
                     "Can-Redefine-Classes" to "true",
                     "Can-Retransform-Classes" to "true"
                 )

@@ -18,7 +18,7 @@ import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
-import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
+import org.jetbrains.kotlinx.lincheck.transformation.JavaAgent
 import org.jetbrains.kotlinx.lincheck.util.*
 import sun.nio.ch.lincheck.*
 import java.lang.reflect.*
@@ -186,7 +186,7 @@ internal open class ParallelThreadsRunner(
             // that all the necessary classes and instrumented
             // after creating a test instance.
             if (!ensuredTestInstanceIsTransformed) {
-                LincheckJavaAgent.ensureObjectIsTransformed(testInstance)
+                JavaAgent.ensureObjectIsTransformed(testInstance)
                 ensuredTestInstanceIsTransformed = true
             }
         }

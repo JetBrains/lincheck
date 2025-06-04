@@ -239,6 +239,7 @@ tasks {
         extraArgs.add("-Dlincheck.version=$version")
         findProperty("lincheck.logFile")?.let { extraArgs.add("-Dlincheck.logFile=${it as String}") }
         findProperty("lincheck.logLevel")?.let { extraArgs.add("-Dlincheck.logLevel=${it as String}") }
+        extraArgs.add("-javaagent:${buildDir}/libs/${project.name}-jvm-${version}.jar")
         jvmArgs(extraArgs)
     }
 
@@ -322,10 +323,14 @@ tasks {
                         "Copyright (C) 2015 - 2019 Devexperts, LLC\n                                " +
                         "Copyright (C) $inceptionYear - $lastCopyrightYear JetBrains, s.r.o.",
                 // This attribute let us get the version from the code.
-                "Implementation-Version" to version
+                "Implementation-Version" to version,
+                "Premain-Class" to "org.jetbrains.kotlinx.lincheck.transformation.JavaAgent",
+                "Can-Redefine-Classes" to "true",
+                "Can-Retransform-Classes" to "true"
             )
         }
     }
+
 }
 
 infra {

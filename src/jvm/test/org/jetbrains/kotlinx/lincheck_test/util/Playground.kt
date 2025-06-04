@@ -13,7 +13,7 @@ package org.jetbrains.kotlinx.lincheck_test.util
 import net.bytebuddy.dynamic.loading.ByteArrayClassLoader
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer
-import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
+import org.jetbrains.kotlinx.lincheck.transformation.JavaAgent
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
@@ -95,7 +95,7 @@ private fun generateClassBytecode(
 
     return cw.toByteArray().let {
         if (instrumentationMode != null) {
-            LincheckJavaAgent.instrumentationMode = instrumentationMode
+            JavaAgent.instrumentationMode = instrumentationMode
             LincheckClassFileTransformer.transformImpl((object {})::class.java.classLoader, className, it)
         } else {
             it

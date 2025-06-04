@@ -10,37 +10,23 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
-import net.bytebuddy.agent.ByteBuddyAgent
-import org.jetbrains.kotlinx.lincheck.dumpTransformedSources
+import org.jetbrains.kotlinx.lincheck.TraceDebuggerInjections
+import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
+import org.jetbrains.kotlinx.lincheck.transformation.AgentMode.Companion.toAgentMode
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.MODEL_CHECKING
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.STRESS
-import org.jetbrains.kotlinx.lincheck.util.AnalysisSectionType
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.isEagerlyInstrumentedClass
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.shouldTransform
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.transformedClassesStress
-import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.INSTRUMENT_ALL_CLASSES
-import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.install
-import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentation
-import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentationMode
-import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentedClasses
-import org.jetbrains.kotlinx.lincheck.util.AnalysisProfile
-import org.jetbrains.kotlinx.lincheck.util.Logger
+import org.jetbrains.kotlinx.lincheck.transformation.JavaAgent.install
+import org.jetbrains.kotlinx.lincheck.transformation.JavaAgent.instrumentation
+import org.jetbrains.kotlinx.lincheck.transformation.JavaAgent.instrumentationMode
 import org.jetbrains.kotlinx.lincheck.util.isJdk8
 import org.jetbrains.kotlinx.lincheck.util.readFieldSafely
-import org.jetbrains.kotlinx.lincheck.util.runInsideIgnoredSection
-import org.objectweb.asm.ClassReader
-import org.objectweb.asm.ClassWriter
-import org.objectweb.asm.Type
-import org.objectweb.asm.tree.ClassNode
 import java.io.File
-import java.io.PrintWriter
-import java.io.StringWriter
-import java.lang.instrument.ClassFileTransformer
 import java.lang.instrument.Instrumentation
 import java.lang.reflect.Modifier
-import java.security.ProtectionDomain
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
 import java.util.jar.JarFile
 
 
@@ -48,11 +34,11 @@ import java.util.jar.JarFile
  * Executes [block] with the Lincheck java agent for byte-code instrumentation.
  */
 internal inline fun withLincheckJavaAgent(instrumentationMode: InstrumentationMode, block: () -> Unit) {
-    LincheckJavaAgent.install(instrumentationMode)
+    JavaAgent.install(instrumentationMode)
     return try {
         block()
     } finally {
-        LincheckJavaAgent.uninstall()
+        JavaAgent.uninstall()
     }
 }
 
@@ -70,17 +56,64 @@ internal enum class InstrumentationMode {
     MODEL_CHECKING
 }
 
+private enum class AgentMode(val id: String) {
+    /**
+     * Default lincheck agent which has bytecode caching and
+     * possibility to transform classes back to original bytecode.
+     */
+    LINCHECK("LINCHECK"),
+    /**
+     * Has manual setup of lincheck (scenario, model checking mode) and
+     * does not retransform instrumented classes.
+     */
+    TRACE_DEBUGGER("TRACE_DEBUGGER");
+
+    companion object {
+        fun String?.toAgentMode(): AgentMode? = when (this) {
+            LINCHECK.id -> LINCHECK
+            TRACE_DEBUGGER.id -> TRACE_DEBUGGER
+            else -> null
+        }
+    }
+}
+
+
 /**
- * LincheckJavaAgent represents the Lincheck Java agent responsible for instrumenting bytecode.
+ * JavaAgent represents the Lincheck Java agent responsible for instrumenting bytecode.
  *
- * @property instrumentation The ByteBuddy instrumentation instance.
+ * @property instrumentation The instrumentation instance.
  * @property instrumentationMode The instrumentation mode to determine which classes to transform.
  */
-internal object LincheckJavaAgent {
+internal object JavaAgent {
+
+    @JvmStatic
+    fun premain(agentArgs: String?, inst: Instrumentation) {
+        println("Installed Lincheck static agent, args: $agentArgs")
+        instrumentation = inst
+
+        when (getAgentType(agentArgs)) {
+            AgentMode.LINCHECK -> { /* Do nothing because we have lazy class instrumentation in lincheck */ }
+            AgentMode.TRACE_DEBUGGER -> {
+                check(isInTraceDebuggerMode) {
+                    "When trace debugger agent is attached to process, " +
+                    "VM parameter `lincheck.traceDebuggerMode` is expected to be true. " +
+                    "Rerun with -Dlincheck.traceDebuggerMode=true."
+                }
+                val traceDebuggerArgs = agentArgs?.split(",")?.drop(1)?.joinToString(",")
+                TraceDebuggerInjections.parseArgs(traceDebuggerArgs)
+                instrumentation.addTransformer(TraceDebuggerTransformer, true)
+            }
+        }
+    }
+
+    private fun getAgentType(agentArgs: String?): AgentMode {
+        return agentArgs?.split(",")?.getOrNull(0)?.toAgentMode() ?: AgentMode.LINCHECK
+    }
+
     /**
      * The [Instrumentation] instance is used to perform bytecode transformations during runtime.
      */
-    private val instrumentation = ByteBuddyAgent.install()
+    private lateinit var instrumentation: Instrumentation
 
     /**
      * Determines how to transform classes;
@@ -101,12 +134,12 @@ internal object LincheckJavaAgent {
     val instrumentedClasses = HashSet<String>()
 
     /**
-     * Dynamically attaches [LincheckClassFileTransformer] to this JVM instance.
-     * Please note that the dynamic attach feature will be disabled in future JVM releases,
-     * but at the moment of implementing this logic (March 2024), it was the smoothest way
-     * to inject code in the user codebase when the `java.base` module also needs to be instrumented.
+     * Adds [LincheckClassFileTransformer] to this JVM instance.
+     * Also, retransforms already loaded classes.
      */
     fun install(instrumentationMode: InstrumentationMode) {
+        check(this::instrumentation.isInitialized) { "Lincheck static agent must be installed before applying transformations." }
+        RuntimeException().printStackTrace()
         this.instrumentationMode = instrumentationMode
         // The bytecode injections must be loaded with the bootstrap class loader,
         // as the `java.base` module is loaded with it. To achieve that, we pack the
@@ -199,10 +232,12 @@ internal object LincheckJavaAgent {
     }
 
     /**
-     * Detaches [LincheckClassFileTransformer] from this JVM instance and re-transforms
+     * Removes [LincheckClassFileTransformer] from this JVM instance and re-transforms
      * the transformed classes to remove the Lincheck injections.
      */
     fun uninstall() {
+        check(this::instrumentation.isInitialized) { "Lincheck static agent must be installed before applying transformations." }
+        RuntimeException().printStackTrace()
         // Remove the Lincheck transformer.
         instrumentation.removeTransformer(LincheckClassFileTransformer)
         // Collect the set of instrumented classes.
@@ -362,139 +397,4 @@ internal object LincheckJavaAgent {
      */
     internal val INSTRUMENT_ALL_CLASSES =
         System.getProperty("lincheck.instrumentAllClasses")?.toBoolean() ?: false
-}
-
-internal object LincheckClassFileTransformer : ClassFileTransformer {
-    /*
-     * In order not to transform the same class several times,
-     * Lincheck caches the transformed bytes in this object.
-     * Notice that the transformation depends on the [InstrumentationMode].
-     * Additionally, this object caches bytes of non-transformed classes.
-     */
-    val transformedClassesModelChecking = ConcurrentHashMap<String, ByteArray>()
-    val transformedClassesStress = ConcurrentHashMap<String, ByteArray>()
-
-    private val transformedClassesCache
-        get() = when (instrumentationMode) {
-            STRESS -> transformedClassesStress
-            MODEL_CHECKING -> transformedClassesModelChecking
-        }
-
-    override fun transform(
-        loader: ClassLoader?,
-        internalClassName: String?,
-        classBeingRedefined: Class<*>?,
-        protectionDomain: ProtectionDomain?,
-        classBytes: ByteArray
-    ): ByteArray? = runInsideIgnoredSection {
-        if (classBeingRedefined != null) {
-            require(internalClassName != null) {
-                "Internal class name of redefined class ${classBeingRedefined.name} must not be null"
-            }
-        }
-        // Internal class name could be `null` in some cases (can be witnessed on JDK-8),
-        // this can be related to the Kotlin compiler bug:
-        // - https://youtrack.jetbrains.com/issue/KT-16727/
-        if (internalClassName == null) return null
-        // If the class should not be transformed, return immediately.
-        if (!shouldTransform(internalClassName.toCanonicalClassName(), instrumentationMode)) {
-            return null
-        }
-        // In the model checking mode, we transform classes lazily,
-        // once they are used in the testing code.
-        if (!INSTRUMENT_ALL_CLASSES &&
-            instrumentationMode == MODEL_CHECKING &&
-            // do not re-transform already instrumented classes
-            internalClassName.toCanonicalClassName() !in instrumentedClasses &&
-            // always transform eagerly instrumented classes
-            !isEagerlyInstrumentedClass(internalClassName.toCanonicalClassName())) {
-            return null
-        }
-        return transformImpl(loader, internalClassName, classBytes)
-    }
-
-    internal fun transformImpl(
-        loader: ClassLoader?,
-        internalClassName: String,
-        classBytes: ByteArray
-    ): ByteArray = transformedClassesCache.computeIfAbsent(internalClassName.toCanonicalClassName()) {
-        Logger.debug { "Transforming $internalClassName" }
-
-        val reader = ClassReader(classBytes)
-
-        // the following code is required for local variables access tracking
-        val classNode = ClassNode()
-        reader.accept(classNode, ClassReader.EXPAND_FRAMES)
-
-        val methods = mapMethodsToLabels(classNode)
-        val methodVariables = methods.mapValues { MethodVariables(it.value) }
-
-        val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
-        val visitor = LincheckClassVisitor(writer, instrumentationMode, methodVariables)
-        try {
-            classNode.accept(visitor)
-            writer.toByteArray().also {
-                if (dumpTransformedSources) {
-                    val cr = ClassReader(it)
-                    val sw = StringWriter()
-                    val pw = PrintWriter(sw)
-                    cr.accept(org.objectweb.asm.util.TraceClassVisitor(pw), 0)
-
-                    File("build/transformedBytecode/${classNode.name}.txt")
-                        .apply { parentFile.mkdirs() }
-                        .writeText(sw.toString())
-                }
-            }
-        } catch (e: Throwable) {
-            System.err.println("Unable to transform $internalClassName")
-            e.printStackTrace()
-            classBytes
-        }
-    }
-
-    private fun mapMethodsToLabels(
-        classNode: ClassNode
-    ): Map<String, Map<Int, List<LocalVariableInfo>>> {
-        return classNode.methods.associateBy(
-            keySelector = { m -> m.name + m.desc },
-            valueTransform = { m ->
-                mutableMapOf<Int, MutableList<LocalVariableInfo>>().also { map ->
-                    m.localVariables?.forEach { local ->
-                        val index = local.index
-                        val type = Type.getType(local.desc)
-                        val info = LocalVariableInfo(local.name, local.index, local.start.label to local.end.label, type)
-                        map.getOrPut(index) { mutableListOf() }.add(info)
-                    }
-                }
-            }
-        )
-    }
-
-    @Suppress("SpellCheckingInspection")
-    fun shouldTransform(className: String, instrumentationMode: InstrumentationMode): Boolean {
-        // In the stress testing mode, we can simply skip the standard
-        // Java and Kotlin classes -- they do not have coroutine suspension points.
-        if (instrumentationMode == STRESS) {
-            if (className.startsWith("java.") || className.startsWith("kotlin.")) return false
-        }
-        if (isEagerlyInstrumentedClass(className)) return true
-
-        return AnalysisProfile(analyzeStdLib = true).shouldTransform(className, "")
-    }
-
-
-    // We should always eagerly transform the following classes.
-    internal fun isEagerlyInstrumentedClass(className: String): Boolean =
-        // `ClassLoader` classes, to wrap `loadClass` methods in the ignored section.
-        isClassLoaderClassName(className) ||
-        // `MethodHandle` class, to wrap its methods (except `invoke` methods) in the ignored section.
-        isMethodHandleRelatedClass(className) ||
-        // `StackTraceElement` class, to wrap all its methods into the ignored section.
-        isStackTraceElementClass(className) ||
-        // `ThreadContainer` classes, to detect threads started in the thread containers.
-        isThreadContainerClass(className) ||
-        // TODO: instead of eagerly instrumenting `DispatchedContinuation`
-        //  we should try to fix lazy class re-transformation logic
-        isCoroutineDispatcherInternalClass(className) ||
-        isCoroutineConcurrentKtInternalClass(className)
 }

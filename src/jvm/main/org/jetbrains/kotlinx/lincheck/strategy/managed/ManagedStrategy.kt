@@ -36,7 +36,6 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.Continuation
 import java.util.concurrent.TimeoutException
 import kotlinx.coroutines.CancellableContinuation
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 import kotlin.Result as KResult
 import org.objectweb.asm.commons.Method.getMethod as getAsmMethod
@@ -1246,7 +1245,7 @@ abstract class ManagedStrategy(
         // We need to ensure all the classes related to the reading object are instrumented.
         // The following call checks all the static fields.
         if (isStatic) {
-            LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
+            JavaAgent.ensureClassHierarchyIsTransformed(className)
         }
         if (collectTrace && isStatic && isFinal) {
             lastReadConstantName = fieldName
@@ -1443,7 +1442,7 @@ abstract class ManagedStrategy(
     }
 
     override fun beforeNewObjectCreation(className: String) = runInsideIgnoredSection {
-        LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
+        JavaAgent.ensureClassHierarchyIsTransformed(className)
     }
 
     override fun afterNewObjectCreation(obj: Any) {
@@ -1647,7 +1646,7 @@ abstract class ManagedStrategy(
         )
         // in case if a static method is called, ensure its class is instrumented
         if (receiver == null && methodSection < AnalysisSectionType.ATOMIC) {
-            LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
+            JavaAgent.ensureClassHierarchyIsTransformed(className)
         }
         // in case of atomics API setter method call, notify the object tracker about a new link between objects
         if (atomicMethodDescriptor != null && atomicMethodDescriptor.kind.isSetter) {

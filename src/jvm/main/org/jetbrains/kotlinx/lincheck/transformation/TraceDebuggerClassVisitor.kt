@@ -63,9 +63,9 @@ class TraceDebuggerClassVisitor(
  * To:
  * ```kotlin
  * fun methodUnderTraceDebugging() {
- *   if (TraceDebuggerAgent.isFirstRun) {
- *     TraceDebuggerAgent.isFirstRun = false
- *     setupLincheck() // lincheck internally calls `method` again
+ *   if (TraceDebuggerInjections.isFirstRun) {
+ *     TraceDebuggerInjections.isFirstRun = false
+ *     runWithLincheck() // lincheck internally calls `method` again
  *   } else {
  *     /* code */
  *   }
