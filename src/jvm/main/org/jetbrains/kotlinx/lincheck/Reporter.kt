@@ -614,9 +614,14 @@ internal data class ExceptionStackTracesResult(val exceptionStackTraces: Map<Thr
  */
 internal fun collectExceptionStackTraces(executionResult: ExecutionResult): ExceptionsProcessingResult {
     val exceptionStackTraces = mutableMapOf<Throwable, ExceptionNumberAndStacktrace>()
-    executionResult.allResults
+    listOf(
+        executionResult.initResults + executionResult.parallelResults[0] + executionResult.postResults, 
+        *executionResult.parallelResults.drop(0).toTypedArray())
+        .flatMap { it.mapIndexed { index, result -> Pair(index, result) } }
+        .sortedBy { (index, _) -> index }
+        .map { (_, exception) -> exception }
         .filterIsInstance<ExceptionResult>()
-        .forEach { exceptionResult ->
+        .forEachIndexed { index, exceptionResult ->
             val exception = exceptionResult.throwable
             if (exception.isInternalLincheckBug()) {
                 return InternalLincheckBugResult(exception)
@@ -624,8 +629,7 @@ internal fun collectExceptionStackTraces(executionResult: ExecutionResult): Exce
             val stackTrace = exception.stackTrace
                 // filter lincheck methods
                 .filter { !isInLincheckPackage(it.className) }
-            exceptionStackTraces[exception] = 
-                ExceptionNumberAndStacktrace(ObjectLabelFactory.getExceptionResultNumber(exception), stackTrace)
+            exceptionStackTraces[exception] = ExceptionNumberAndStacktrace(index, stackTrace)
         }
     return ExceptionStackTracesResult(exceptionStackTraces)
 }

@@ -14,7 +14,6 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
 import kotlin.math.max
 
 internal typealias SingleThreadedTable<T> = List<SingleThreadedSection<T>>
@@ -50,10 +49,10 @@ internal class TraceReporter(
     init {
         // Prepares trace by: 
         // - removing validation section (in case of no validation failure)
-        // - adding `ActorResult` to actors
-        val fixedTrace = trace
+        // - Numbering actor exceptions
+        val fixedTrace = this.trace
             .removeValidationIfNeeded()
-
+            .numberExceptionResults()
 
         // Turn trace into graph which is List of sections. Where a section is a list of rootNodes (actors).
         val traceGraph = traceToGraph(fixedTrace)
@@ -111,6 +110,23 @@ internal class TraceReporter(
         if (failure is ValidationFailure) return this
         val newTrace = this.trace.takeWhile { !(it is SectionDelimiterTracePoint && it.executionPart == ExecutionPart.VALIDATION) }
         return Trace(newTrace, this.threadNames)
+    }
+
+    /**
+     * Assigns an exception number for each `ActorExceptionResult` in the trace. 
+     * To be consistent with the reported exceptions.
+     * The numbering is based on the actor order, sorted by `actorId` and `iThread`.
+     *
+     * @return A new `Trace` instance with updated exception numbers for `ActorExceptionResult` instances.
+     */
+    private fun Trace.numberExceptionResults(): Trace = this.deepCopy().also { copy ->
+        copy.trace
+            .filterIsInstance<MethodCallTracePoint>()
+            .filter { it.isActor }
+            .sortedWith (compareBy({ it.actorId }, { it.iThread }))
+            .map { it.returnedValue }
+            .filterIsInstance<ReturnedValueResult.ActorExceptionResult>() 
+            .forEachIndexed { index, exceptionResult -> exceptionResult.excNumber = index + 1 }
     }
 }
 

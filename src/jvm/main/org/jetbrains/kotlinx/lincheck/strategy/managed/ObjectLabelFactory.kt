@@ -95,9 +95,6 @@ object ObjectLabelFactory {
         }
         return objectName
     }
-    
-    internal fun getExceptionResultNumber(exception: Throwable): Int =
-        getObjectNumber(ExceptionResult::class.java, exception)
 
     private fun objectName(obj: Any): String {
         return when (obj) {

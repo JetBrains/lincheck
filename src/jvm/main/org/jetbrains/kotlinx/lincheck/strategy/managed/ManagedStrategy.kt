@@ -368,7 +368,7 @@ abstract class ManagedStrategy(
         if (!canCollectTrace) {
             // Interleaving events can be collected almost always,
             // except for the strange cases such as Runner's timeout or exceptions in LinCheck.
-            return Pair(null, result)
+            return null to result
         }
 
         collectTrace = true
@@ -387,7 +387,7 @@ abstract class ManagedStrategy(
         // In case the runner detects a deadlock, some threads can still be in an active state,
         // simultaneously adding events to the TraceCollector, which leads to an inconsistent trace.
         // Therefore, if the runner detects deadlock, we don't even try to collect trace.
-        if (loggedResults is RunnerTimeoutInvocationResult) return Pair(null, loggedResults)
+        if (loggedResults is RunnerTimeoutInvocationResult) return null to result
 
         val threadNames = MutableList<String>(threadScheduler.nThreads) { "" }
         getRegisteredThreads().forEach { (threadId, thread) ->
@@ -415,7 +415,7 @@ abstract class ManagedStrategy(
             }.toString()
         }
 
-        return Pair(trace, loggedResults)
+        return trace to loggedResults
     }
 
     private fun failDueToDeadlock(): Nothing {
@@ -996,7 +996,7 @@ abstract class ManagedStrategy(
         enableAnalysis()
     }
 
-    override fun onActorFinish(iThread: Int) {
+    override fun onActorFinish(iThread: Int) = runInsideIgnoredSection {
         runner.getActorResult(iThread, currentActorId[iThread]!!)?.let { result ->
             traceCollector?.trace
                 ?.filterIsInstance<MethodCallTracePoint>()
