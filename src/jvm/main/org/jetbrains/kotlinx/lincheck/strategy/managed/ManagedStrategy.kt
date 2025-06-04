@@ -1393,9 +1393,6 @@ abstract class ManagedStrategy(
         invokeDynamicCallSites[invokeDynamic] = callSite
     }
 
-    private fun Injections.HandlePojo.toAsmHandle(): Handle =
-        Handle(tag, owner, name, desc, isInterface)
-
     override fun getNextTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker): TraceDebuggerEventId = runInsideIgnoredSection {
         traceDebuggerEventTrackers[tracker]?.getNextId() ?: 0
     }

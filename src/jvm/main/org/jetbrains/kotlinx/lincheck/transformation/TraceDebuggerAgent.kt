@@ -11,7 +11,10 @@
 package org.jetbrains.kotlinx.lincheck.transformation
 
 import org.jetbrains.kotlinx.lincheck.TraceDebuggerInjections
+import org.jetbrains.kotlinx.lincheck.TraceDebuggerInjections.classUnderTraceDebugging
+import org.jetbrains.kotlinx.lincheck.TraceDebuggerInjections.methodUnderTraceDebugging
 import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
+import org.jetbrains.kotlinx.lincheck.isInTraceRecorderMode
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import java.lang.instrument.ClassFileTransformer
@@ -26,13 +29,22 @@ import java.security.ProtectionDomain
 internal object TraceDebuggerAgent {
     @JvmStatic
     fun premain(agentArgs: String?, inst: Instrumentation) {
-        check(isInTraceDebuggerMode) {
+        check(isInTraceDebuggerMode || isInTraceRecorderMode) {
             "When trace debugger agent is attached to process, " +
-            "VM parameter `lincheck.traceDebuggerMode` is expected to be true. " +
-            "Rerun with -Dlincheck.traceDebuggerMode=true."
+            "One of VM parameters `lincheck.traceDebuggerMode` or `lincheck.traceRecorderMode` is expected to be true. " +
+            "Rerun with -Dlincheck.traceDebuggerMode=true or -Dlincheck.traceRecorderMode=true."
+        }
+        check(isInTraceDebuggerMode != isInTraceRecorderMode) {
+            "When trace debugger agent is attached to process, " +
+            "Only one of VM parameters `lincheck.traceDebuggerMode` or `lincheck.traceRecorderMode` is expected to be true. " +
+            "Remove one of -Dlincheck.traceDebuggerMode=true or -Dlincheck.traceRecorderMode=true."
         }
         TraceDebuggerInjections.parseArgs(agentArgs)
-        inst.addTransformer(TraceDebuggerTransformer, true)
+        if (isInTraceDebuggerMode) {
+            inst.addTransformer(TraceDebuggerTransformer, true)
+        } else {
+            inst.addTransformer(TraceRecorderTransformer, true)
+        }
     }
 }
 
@@ -75,3 +87,44 @@ internal object TraceDebuggerTransformer : ClassFileTransformer {
         }
     }
 }
+
+internal object TraceRecorderTransformer : ClassFileTransformer {
+
+    override fun transform(
+        loader: ClassLoader?,
+        internalClassName: String,
+        classBeingRedefined: Class<*>?,
+        protectionDomain: ProtectionDomain?,
+        classBytes: ByteArray
+    ): ByteArray? {
+        // If the class should not be transformed, return immediately.
+        if (TraceDebuggerInjections.classUnderTraceDebugging != internalClassName.toCanonicalClassName()) {
+            return null
+        }
+        return transformImpl(loader, internalClassName, classBytes)
+    }
+
+    private fun transformImpl(
+        loader: ClassLoader?,
+        internalClassName: String,
+        classBytes: ByteArray
+    ): ByteArray {
+        try {
+            val bytes: ByteArray
+            val reader = ClassReader(classBytes)
+            val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
+
+            reader.accept(
+                TraceRecorderClassVisitor(writer),
+                ClassReader.EXPAND_FRAMES
+            )
+            bytes = writer.toByteArray()
+
+            return bytes
+        } catch (e: Throwable) {
+            System.err.println("Unable to transform '$internalClassName': $e")
+            return classBytes
+        }
+    }
+}
+
