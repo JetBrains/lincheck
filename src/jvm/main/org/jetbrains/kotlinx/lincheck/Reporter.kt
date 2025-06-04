@@ -386,7 +386,7 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
         }
         if (failure.trace != null) {
             appendLine()
-            appendTrace(failure, results, failure.trace, exceptionStackTraces)
+            appendTrace(failure, failure.trace, exceptionStackTraces)
         }
         return this
     }
@@ -404,7 +404,7 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
     }
     if (failure.trace != null) {
         appendLine()
-        appendTrace(failure, results, failure.trace, exceptionStackTraces)
+        appendTrace(failure, failure.trace, exceptionStackTraces)
     } else {
         appendExceptionsStackTracesBlock(exceptionStackTraces)
     }

@@ -26,11 +26,10 @@ internal typealias Column<T> = List<T>
 @Synchronized // we should avoid concurrent executions to keep `objectNumeration` consistent
 internal fun StringBuilder.appendTrace(
     failure: LincheckFailure,
-    results: ExecutionResult,
     trace: Trace,
     exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>,
 ) {
-    TraceReporter(failure, results, trace, exceptionStackTraces).appendTrace(this)
+    TraceReporter(failure, trace, exceptionStackTraces).appendTrace(this)
 }
 
 /**
@@ -38,8 +37,6 @@ internal fun StringBuilder.appendTrace(
  */
 internal class TraceReporter(
     private val failure: LincheckFailure,
-    // TODO remove
-    @Suppress("UNUSED_PARAMETER") results: ExecutionResult,
     trace: Trace,
     private val exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>,
 ) {

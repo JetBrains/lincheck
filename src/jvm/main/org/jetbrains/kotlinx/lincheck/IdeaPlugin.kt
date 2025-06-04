@@ -205,8 +205,7 @@ internal fun ManagedStrategy.runReplayIfPluginEnabled(failure: LincheckFailure) 
  * | FIELD_WRITE                    | 10   |
  */
 internal fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Array<String> {
-    val results = failure.results
-    val graph = TraceReporter(failure, results, trace, collectExceptionsOrEmpty(failure)).graph
+    val graph = TraceReporter(failure, trace, collectExceptionsOrEmpty(failure)).graph
     val nodeList = graph.flattenNodes(VerboseTraceFlattenPolicy()).reorder()
     val preExpandedNodeSet = graph.extractPreExpandedNodes(ShortTraceFlattenPolicy()).toHashSet()
     
