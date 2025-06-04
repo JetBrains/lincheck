@@ -13,7 +13,6 @@ package org.jetbrains.kotlinx.lincheck
 import sun.nio.ch.lincheck.TestThread
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory
 import org.jetbrains.kotlinx.lincheck.trace.appendTrace
 import org.jetbrains.kotlinx.lincheck.util.LoggingLevel
 import org.jetbrains.kotlinx.lincheck.util.LoggingLevel.*
@@ -616,7 +615,7 @@ internal fun collectExceptionStackTraces(executionResult: ExecutionResult): Exce
     val exceptionStackTraces = mutableMapOf<Throwable, ExceptionNumberAndStacktrace>()
     listOf(
         executionResult.initResults + executionResult.parallelResults[0] + executionResult.postResults, 
-        *executionResult.parallelResults.drop(0).toTypedArray())
+        *executionResult.parallelResults.drop(1).toTypedArray())
         .flatMap { it.mapIndexed { index, result -> Pair(index, result) } }
         .sortedBy { (index, _) -> index }
         .map { (_, exception) -> exception }
@@ -629,7 +628,7 @@ internal fun collectExceptionStackTraces(executionResult: ExecutionResult): Exce
             val stackTrace = exception.stackTrace
                 // filter lincheck methods
                 .filter { !isInLincheckPackage(it.className) }
-            exceptionStackTraces[exception] = ExceptionNumberAndStacktrace(index, stackTrace)
+            exceptionStackTraces[exception] = ExceptionNumberAndStacktrace(index + 1, stackTrace)
         }
     return ExceptionStackTracesResult(exceptionStackTraces)
 }
