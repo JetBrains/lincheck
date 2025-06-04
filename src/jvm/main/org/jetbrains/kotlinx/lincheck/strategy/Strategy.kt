@@ -15,6 +15,8 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.kotlinx.lincheck.trace.Trace
 import org.jetbrains.kotlinx.lincheck.util.AnalysisProfile
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
+import org.objectweb.asm.Handle
+import sun.nio.ch.lincheck.Injections
 import java.util.concurrent.TimeoutException
 import java.io.Closeable
 
@@ -152,7 +154,12 @@ fun Strategy.verify(result: InvocationResult, verifier: Verifier): LincheckFailu
             if (!verifier.verifyResults(scenario, result.results)) {
                 IncorrectResultsFailure(scenario, result.results, tryCollectTrace(result), AnalysisProfile(testCfg))
             } else null
-        else -> 
+        else ->
             result.toLincheckFailure(scenario, tryCollectTrace(result), AnalysisProfile(testCfg))
     }
 }
+
+/**
+ * Utility function which converts injection's data class describing method to an ASM library handle.
+ */
+fun Injections.HandlePojo.toAsmHandle(): Handle = Handle(tag, owner, name, desc, isInterface)

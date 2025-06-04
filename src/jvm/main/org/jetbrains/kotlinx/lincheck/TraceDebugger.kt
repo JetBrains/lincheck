@@ -15,7 +15,9 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.execution.threadsResults
 import org.jetbrains.kotlinx.lincheck.strategy.managed.forClasses
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.ensureClassHierarchyIsTransformed
+import org.jetbrains.kotlinx.lincheck.strategy.traceonly.TraceRecorder
+import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.util.LoggingLevel
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.io.File
@@ -24,8 +26,10 @@ import java.lang.reflect.Modifier
 import kotlin.reflect.jvm.kotlinFunction
 
 private const val TRACE_DEBUGGER_MODE_PROPERTY = "lincheck.traceDebuggerMode"
+private const val TRACE_RECORDER_MODE_PROPERTY = "lincheck.traceRecorderMode"
 private const val DUMP_TRANSFORMED_SOURCES_PROPERTY = "lincheck.dumpTransformedSources"
 val isInTraceDebuggerMode by lazy { System.getProperty(TRACE_DEBUGGER_MODE_PROPERTY, "false").toBoolean() }
+val isInTraceRecorderMode by lazy { System.getProperty(TRACE_RECORDER_MODE_PROPERTY, "false").toBoolean() }
 val dumpTransformedSources by lazy { System.getProperty(DUMP_TRANSFORMED_SOURCES_PROPERTY, "false").toBoolean() }
 
 internal object TraceDebuggerInjections {
@@ -108,6 +112,23 @@ internal object TraceDebuggerInjections {
         return firstRun
     }
 
+    @JvmStatic
+    fun setupTraceRecorder() {
+        // Must be forst or
+        LincheckJavaAgent.install(InstrumentationMode.TRACE_RECORDING)
+
+        TraceRecorder.install(traceDumpFilePath)
+
+        // Retransform classes for event tracking
+        LincheckJavaAgent.ensureClassHierarchyIsTransformed(classUnderTraceDebugging)
+    }
+
+    @JvmStatic
+    fun dumpRecordedTrace() {
+        LincheckJavaAgent.uninstall()
+        TraceRecorder.dumpTrace()
+    }
+
     class FailingVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : Verifier {
         override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?) = false
     }
@@ -115,7 +136,7 @@ internal object TraceDebuggerInjections {
 
 internal class TraceDebuggerStaticMethodWrapper {
     fun callStaticMethod(clazz: Class<*>, method: Method) {
-        ensureClassHierarchyIsTransformed(clazz.name)
+        LincheckJavaAgent.ensureClassHierarchyIsTransformed(clazz.name)
         method.invoke(null)
     }
 }

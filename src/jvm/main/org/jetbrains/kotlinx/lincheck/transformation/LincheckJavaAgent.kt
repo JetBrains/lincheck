@@ -15,6 +15,7 @@ import org.jetbrains.kotlinx.lincheck.dumpTransformedSources
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.MODEL_CHECKING
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.STRESS
 import org.jetbrains.kotlinx.lincheck.util.AnalysisSectionType
+import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.TRACE_RECORDING
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.isEagerlyInstrumentedClass
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.shouldTransform
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.transformedClassesStress
@@ -67,7 +68,12 @@ internal enum class InstrumentationMode {
      * In this mode, Lincheck tracks
      * all shared memory manipulations.
      */
-    MODEL_CHECKING
+    MODEL_CHECKING,
+
+    /**
+     * In this mode, lincheck adds only to track events
+     */
+    TRACE_RECORDING
 }
 
 /**
@@ -373,11 +379,13 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
      */
     val transformedClassesModelChecking = ConcurrentHashMap<String, ByteArray>()
     val transformedClassesStress = ConcurrentHashMap<String, ByteArray>()
+    val transformedClassesTraceRecroding = ConcurrentHashMap<String, ByteArray>()
 
     private val transformedClassesCache
         get() = when (instrumentationMode) {
             STRESS -> transformedClassesStress
             MODEL_CHECKING -> transformedClassesModelChecking
+            TRACE_RECORDING -> transformedClassesTraceRecroding
         }
 
     override fun transform(
