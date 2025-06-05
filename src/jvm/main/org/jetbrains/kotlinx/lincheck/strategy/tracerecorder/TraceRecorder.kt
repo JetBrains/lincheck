@@ -8,7 +8,7 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.strategy.traceonly
+package org.jetbrains.kotlinx.lincheck.strategy.tracerecorder
 
 import sun.nio.ch.lincheck.ThreadDescriptor
 
