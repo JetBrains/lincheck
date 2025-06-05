@@ -153,19 +153,27 @@ java {
 fun JavaCompile.setupJavaToolchain() {
     val jdkToolchainVersion: String by project
     javaToolchains {
-        javaCompiler = compilerFor { languageVersion.set(JavaLanguageVersion.of(jdkToolchainVersion)) }
+        javaCompiler = compilerFor {
+            languageVersion.set(JavaLanguageVersion.of(jdkToolchainVersion))
+        }
     }
 }
 
 fun KotlinCompile.setupKotlinToolchain() {
     val jdkToolchainVersion: String by project
-    kotlinJavaToolchain.toolchain.use(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(jdkToolchainVersion)) })
+    kotlinJavaToolchain.toolchain.use(javaToolchains.launcherFor {
+        languageVersion.set(JavaLanguageVersion.of(jdkToolchainVersion))
+    })
 }
 
 tasks {
     named<JavaCompile>("compileTestJava") {
         setupJavaToolchain()
     }
+    named<KotlinCompile>("compileTestKotlin") {
+        setupKotlinToolchain()
+    }
+
     // named<JavaCompile>("compileIntegrationTestJava") {
     //     setupJavaToolchain()
     // }
