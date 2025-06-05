@@ -107,29 +107,27 @@ sourceSets {
         val byteBuddyVersion: String by project
         val atomicfuVersion: String by project
 
-        main {
-            compileOnly(project(":bootstrap"))
-            api("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
-            api("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion")
-            api("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
-            api("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinxCoroutinesVersion")
-            api("org.ow2.asm:asm-commons:$asmVersion")
-            api("org.ow2.asm:asm-util:$asmVersion")
-            api("net.bytebuddy:byte-buddy:$byteBuddyVersion")
-            api("net.bytebuddy:byte-buddy-agent:$byteBuddyVersion")
-            api("org.jetbrains.kotlinx:atomicfu:$atomicfuVersion")
-        }
+        // main
+        compileOnly(project(":bootstrap"))
+        api("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
+        api("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion")
+        api("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
+        api("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinxCoroutinesVersion")
+        api("org.ow2.asm:asm-commons:$asmVersion")
+        api("org.ow2.asm:asm-util:$asmVersion")
+        api("net.bytebuddy:byte-buddy:$byteBuddyVersion")
+        api("net.bytebuddy:byte-buddy-agent:$byteBuddyVersion")
+        api("org.jetbrains.kotlinx:atomicfu:$atomicfuVersion")
 
         val junitVersion: String by project
         val jctoolsVersion: String by project
         val mockkVersion: String by project
         val gradleToolingApiVersion: String by project
 
-        test {
-            implementation("junit:junit:$junitVersion")
-            implementation("org.jctools:jctools-core:$jctoolsVersion")
-            implementation("io.mockk:mockk:${mockkVersion}")
-        }
+        // test
+        testImplementation("junit:junit:$junitVersion")
+        testImplementation("org.jctools:jctools-core:$jctoolsVersion")
+        testImplementation("io.mockk:mockk:${mockkVersion}")
 
         // sourceSets.named("integrationTest") {
         //     implementation(rootProject)
