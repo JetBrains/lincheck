@@ -5,21 +5,22 @@ import org.jetbrains.kotlin.gradle.*
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 // atomicfu
-buildscript {
-    val atomicfuVersion: String by project
-    val asmVersion: String by project
-    dependencies {
-        classpath("org.jetbrains.kotlinx:atomicfu-gradle-plugin:$atomicfuVersion") {
-            classpath("org.ow2.asm:asm-commons:$asmVersion")
-            classpath("org.ow2.asm:asm-util:$asmVersion")
-        }
-    }
-}
-apply(plugin = "kotlinx-atomicfu")
+// buildscript {
+//     val atomicfuVersion: String by project
+//     val asmVersion: String by project
+//     dependencies {
+//         classpath("org.jetbrains.kotlinx:atomicfu-gradle-plugin:$atomicfuVersion") {
+//             classpath("org.ow2.asm:asm-commons:$asmVersion")
+//             classpath("org.ow2.asm:asm-util:$asmVersion")
+//         }
+//     }
+// }
+// apply(plugin = "kotlinx-atomicfu")
 
 plugins {
     java
     kotlin("jvm")
+    id("org.jetbrains.kotlinx.atomicfu")
     id("maven-publish")
     id("kotlinx.team.infra") version "0.4.0-dev-80"
 }
@@ -175,6 +176,28 @@ tasks {
     // named<KotlinCompile>("compileIntegrationTestKotlinJvm") {
     //     setupKotlinToolchain()
     // }
+}
+
+/*
+ * We were unfortunate enough to be affected by several bugs of the ` atomicfu ` compiler plugin.
+ *
+ * - When using JVM-only Kotlin gradle plugin with atomicfu version 0.20.2 we hit the following bug:
+ *   https://github.com/Kotlin/kotlinx-atomicfu/issues/301, resolved by
+ *   https://github.com/Kotlin/kotlinx-atomicfu/pull/303
+ *
+ * - When using JVM-only Kotlin gradle plugin with atomicfu versions 0.21.0 <= ... < 0.23.2 we hit the following bug:
+ *   https://github.com/Kotlin/kotlinx-atomicfu/issues/388, resolved by
+ *   https://github.com/Kotlin/kotlinx-atomicfu/pull/394
+ *
+ * - For both JVM and Multiplatform gradle plugins and for atomicfu versions >= 0.23.2 we hit the following bug:
+ *   https://github.com/Kotlin/kotlinx-atomicfu/issues/525, still open.
+ *
+ * To use the latest available atomicfu version 0.27.0 (at the moment when this comment was written)
+ * and mitigate the bug, the solution is to disable post-compilation JVM bytecode transformation
+ * and enable only the JVM-IR transformation at the Kotlin sources compilation stage.
+ */
+atomicfu {
+    transformJvm = false
 }
 
 val bootstrapJar = tasks.register<Copy>("bootstrapJar") {
