@@ -211,7 +211,7 @@ atomicfu {
 val bootstrapJar = tasks.register<Copy>("bootstrapJar") {
     dependsOn(":bootstrap:jar")
     from(file("${project(":bootstrap").buildDir}/libs/bootstrap.jar"))
-    into(file("$buildDir/processedResources/jvm/main"))
+    into(file("$buildDir/resources/main"))
 }
 
 tasks.withType<Test> {
