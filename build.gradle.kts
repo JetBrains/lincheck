@@ -77,6 +77,9 @@ sourceSets {
             java.srcDir("src/jvm/test-jdk8")
         }
 
+        compileClasspath += files("${project(":bootstrap").buildDir}/classes/java/main")
+            // project(":bootstrap").sourceSets.main.get().output
+
         resources {
             srcDir("src/jvm/test/resources")
         }
@@ -122,6 +125,8 @@ sourceSets {
         val gradleToolingApiVersion: String by project
 
         test {
+            compileOnly(project(":bootstrap"))
+            // implementation(project(":bootstrap"))
             implementation("junit:junit:$junitVersion")
             implementation("org.jctools:jctools-core:$jctoolsVersion")
             implementation("io.mockk:mockk:${mockkVersion}")
@@ -326,6 +331,10 @@ tasks {
         include("**/*IsolatedTest*")
         configureJvmTestCommon()
         forkEvery = 1
+
+        // dependencies {
+        //     compileOnly(project(":bootstrap"))
+        // }
     }
 
     // val integrationTest = register<Test>("integrationTest") {
