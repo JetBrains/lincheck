@@ -139,7 +139,6 @@ internal object JavaAgent {
      */
     fun install(instrumentationMode: InstrumentationMode) {
         check(this::instrumentation.isInitialized) { "Lincheck static agent must be installed before applying transformations." }
-        RuntimeException().printStackTrace()
         this.instrumentationMode = instrumentationMode
         // The bytecode injections must be loaded with the bootstrap class loader,
         // as the `java.base` module is loaded with it. To achieve that, we pack the
@@ -237,7 +236,6 @@ internal object JavaAgent {
      */
     fun uninstall() {
         check(this::instrumentation.isInitialized) { "Lincheck static agent must be installed before applying transformations." }
-        RuntimeException().printStackTrace()
         // Remove the Lincheck transformer.
         instrumentation.removeTransformer(LincheckClassFileTransformer)
         // Collect the set of instrumented classes.
