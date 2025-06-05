@@ -30,6 +30,7 @@ class ConcurrentHashMapTest {
 
     //@Test // TODO: Please, uncomment me and comment the line below to run the test and get the output
     @Test(expected = AssertionError::class)
+    @Suppress("INVISIBLE_REFERENCE")
     fun modelCheckingTest() = ModelCheckingOptions()
         .actorsBefore(1)
         .actorsPerThread(1)
@@ -52,6 +53,7 @@ class ConcurrentSkipListMapTest {
     public fun put(key: Int, value: Int) = map.put(key, value)
 
     @Test
+    @Suppress("INVISIBLE_REFERENCE")
     fun modelCheckingTest() = ModelCheckingOptions()
         .checkObstructionFreedom(true)
         .analyzeStdLib(true)

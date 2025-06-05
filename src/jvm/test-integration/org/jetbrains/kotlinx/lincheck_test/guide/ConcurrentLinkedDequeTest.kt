@@ -39,6 +39,7 @@ class ConcurrentLinkedDequeTest {
 
     //@Test // TODO: Please, uncomment me and comment the line below to run the test and get the output
     @Test(expected = AssertionError::class)
+    @Suppress("INVISIBLE_REFERENCE")
     fun modelCheckingTest() = ModelCheckingOptions()
         .analyzeStdLib(true)
         .check(this::class)

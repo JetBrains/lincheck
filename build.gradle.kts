@@ -86,10 +86,10 @@ sourceSets {
         }
     }
 
-    // create("integrationTest") {
-    //     java.srcDir("src/jvm/test-integration")
-    //     configureClasspath()
-    // }
+    create("integrationTest") {
+        java.srcDir("src/jvm/test-integration")
+        configureClasspath()
+    }
 
     create("traceDebuggerTest") {
         java.srcDir("src/jvm/test-trace-debugger-integration")
@@ -128,10 +128,12 @@ sourceSets {
         testImplementation("org.jctools:jctools-core:$jctoolsVersion")
         testImplementation("io.mockk:mockk:${mockkVersion}")
 
-        // sourceSets.named("integrationTest") {
-        //     implementation(rootProject)
-        //     implementation("junit:junit:$junitVersion")
-        // }
+        // integrationTest
+        val integrationTestImplementation by configurations
+
+        integrationTestImplementation(rootProject)
+        integrationTestImplementation("junit:junit:$junitVersion")
+        integrationTestImplementation("org.jctools:jctools-core:$jctoolsVersion")
 
         // traceDebuggerTest
         val gradleToolingApiVersion: String by project
@@ -179,12 +181,12 @@ tasks {
         setupKotlinToolchain()
     }
 
-    // named<JavaCompile>("compileIntegrationTestJava") {
-    //     setupJavaToolchain()
-    // }
-    // named<KotlinCompile>("compileIntegrationTestKotlinJvm") {
-    //     setupKotlinToolchain()
-    // }
+    named<JavaCompile>("compileIntegrationTestJava") {
+        setupJavaToolchain()
+    }
+    named<KotlinCompile>("compileIntegrationTestKotlin") {
+        setupKotlinToolchain()
+    }
 }
 
 /*
@@ -333,14 +335,24 @@ tasks {
         // }
     }
 
-    // val integrationTest = register<Test>("integrationTest") {
-    //     group = "verification"
-    //     testClassesDirs = sourceSets["integrationTest"].output.classesDirs
-    //     classpath = sourceSets["integrationTest"].runtimeClasspath
-    //     enableAssertions = true
-    //     testLogging.showStandardStreams = true
-    //     outputs.upToDateWhen { false } // Always run tests when called
-    //     configureJvmTestCommon()
+    val integrationTest = register<Test>("integrationTest") {
+        group = "verification"
+        testClassesDirs = sourceSets["integrationTest"].output.classesDirs
+        classpath = sourceSets["integrationTest"].runtimeClasspath
+        enableAssertions = true
+        testLogging.showStandardStreams = true
+        outputs.upToDateWhen { false } // Always run tests when called
+        configureJvmTestCommon()
+    }
+
+    // TODO: try to fix and apply this approach instead of using `@Suppress("INVISIBLE_REFERENCE")`
+    // named<KotlinCompile>("compileIntegrationTestKotlin") {
+    //     kotlinOptions {
+    //         freeCompilerArgs = listOf(
+    //             "-Xfriend-paths=${project.buildDir}/classes/kotlin/main",
+    //             "-Xfriend-paths=${project.buildDir}/classes/java/main",
+    //         )
+    //     }
     // }
 
     val traceDebuggerIntegrationTest = register<Test>("traceDebuggerIntegrationTest") {
