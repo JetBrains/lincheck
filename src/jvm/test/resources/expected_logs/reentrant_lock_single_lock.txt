@@ -1,8 +1,8 @@
 = Concurrent test failed =
 
 java.lang.IllegalStateException: Check failed.
-	at org.jetbrains.kotlinx.lincheck_test.representation.ReentrantLockSingleLockRepresentationTest.block(ReentrantLockRepresentationTests.kt:23)
-	at org.jetbrains.kotlinx.lincheck_test.representation.ReentrantLockSingleLockRepresentationTest.block(ReentrantLockRepresentationTests.kt:15)
+	at org.jetbrains.kotlinx.lincheck_test.representation.ReentrantLockSingleLockRepresentationTest.block(ReentrantLockRepresentationTests.kt:25)
+	at org.jetbrains.kotlinx.lincheck_test.representation.ReentrantLockSingleLockRepresentationTest.block(ReentrantLockRepresentationTests.kt:17)
 	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48)
 	at java.base/java.lang.Thread.run(Unknown Source)
 
@@ -18,27 +18,10 @@ Detailed trace:
 |                                                                                   Main Thread                                                                                   |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48) |
-|   block(): threw IllegalStateException at ReentrantLockSingleLockRepresentationTest.block(ReentrantLockRepresentationTests.kt:15)                                               |
-|     lock.lock() at ReentrantLockSingleLockRepresentationTest.block(ReentrantLockRepresentationTests.kt:20)                                                                      |
-|       sync.lock() at ReentrantLock.lock(ReentrantLock.java:322)                                                                                                                 |
-|         initialTryLock(): true at ReentrantLock$Sync.lock(ReentrantLock.java:152)                                                                                               |
-|           compareAndSetState(0, 1): true at ReentrantLock$NonfairSync.initialTryLock(ReentrantLock.java:225)                                                                    |
-|             Unsafe#1.compareAndSetInt(NonfairSync#1, 16, 0, 1): true at AbstractQueuedSynchronizer.compareAndSetState(AbstractQueuedSynchronizer.java:556)                      |
-|           setExclusiveOwnerThread(Thread#0) at ReentrantLock$NonfairSync.initialTryLock(ReentrantLock.java:226)                                                                 |
-|             exclusiveOwnerThread = Thread#0 at AbstractOwnableSynchronizer.setExclusiveOwnerThread(AbstractOwnableSynchronizer.java:74)                                         |
-|     a ➜ 1 at ReentrantLockSingleLockRepresentationTest.block(ReentrantLockRepresentationTests.kt:21)                                                                            |
-|     a = 2 at ReentrantLockSingleLockRepresentationTest.block(ReentrantLockRepresentationTests.kt:21)                                                                            |
-|     lock.unlock() at ReentrantLockSingleLockRepresentationTest.block(ReentrantLockRepresentationTests.kt:22)                                                                    |
-|       sync.release(1): true at ReentrantLock.unlock(ReentrantLock.java:494)                                                                                                     |
-|         tryRelease(1): true at AbstractQueuedSynchronizer.release(AbstractQueuedSynchronizer.java:1007)                                                                         |
-|           getState(): 1 at ReentrantLock$Sync.tryRelease(ReentrantLock.java:173)                                                                                                |
-|             state ➜ 1 at AbstractQueuedSynchronizer.getState(AbstractQueuedSynchronizer.java:532)                                                                               |
-|           getExclusiveOwnerThread(): Thread#0 at ReentrantLock$Sync.tryRelease(ReentrantLock.java:174)                                                                          |
-|             exclusiveOwnerThread ➜ Thread#0 at AbstractOwnableSynchronizer.getExclusiveOwnerThread(AbstractOwnableSynchronizer.java:84)                                         |
-|           setExclusiveOwnerThread(null) at ReentrantLock$Sync.tryRelease(ReentrantLock.java:178)                                                                                |
-|             exclusiveOwnerThread = null at AbstractOwnableSynchronizer.setExclusiveOwnerThread(AbstractOwnableSynchronizer.java:74)                                             |
-|           setState(0) at ReentrantLock$Sync.tryRelease(ReentrantLock.java:179)                                                                                                  |
-|             state = 0 at AbstractQueuedSynchronizer.setState(AbstractQueuedSynchronizer.java:541)                                                                               |
-|         head ➜ null at AbstractQueuedSynchronizer.release(AbstractQueuedSynchronizer.java:1008)                                                                                 |
+|   block(): threw IllegalStateException at ReentrantLockSingleLockRepresentationTest.block(ReentrantLockRepresentationTests.kt:17)                                               |
+|     lock.lock() at ReentrantLockSingleLockRepresentationTest.block(ReentrantLockRepresentationTests.kt:22)                                                                      |
+|     a ➜ 1 at ReentrantLockSingleLockRepresentationTest.block(ReentrantLockRepresentationTests.kt:23)                                                                            |
+|     a = 2 at ReentrantLockSingleLockRepresentationTest.block(ReentrantLockRepresentationTests.kt:23)                                                                            |
+|     lock.unlock() at ReentrantLockSingleLockRepresentationTest.block(ReentrantLockRepresentationTests.kt:24)                                                                    |
 |   result: IllegalStateException #1                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
