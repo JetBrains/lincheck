@@ -1,21 +1,7 @@
 import groovy.util.*
 import kotlinx.team.infra.*
 import org.gradle.jvm.tasks.Jar
-import org.jetbrains.kotlin.gradle.*
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
-// atomicfu
-// buildscript {
-//     val atomicfuVersion: String by project
-//     val asmVersion: String by project
-//     dependencies {
-//         classpath("org.jetbrains.kotlinx:atomicfu-gradle-plugin:$atomicfuVersion") {
-//             classpath("org.ow2.asm:asm-commons:$asmVersion")
-//             classpath("org.ow2.asm:asm-util:$asmVersion")
-//         }
-//     }
-// }
-// apply(plugin = "kotlinx-atomicfu")
 
 plugins {
     java
@@ -30,37 +16,12 @@ repositories {
     maven { url = uri("https://repo.gradle.org/gradle/libs-releases/") }
 }
 
-fun SourceDirectorySet.configureTestSources() {
-    srcDir("src/jvm/test")
-    srcDir("src/jvm/test-trace-debugger-integration")
-
-    val jdkToolchainVersion: String by project
-    if (jdkToolchainVersion.toInt() >= 11) {
-        srcDir("src/jvm/test-jdk11")
-    } else {
-        srcDir("src/jvm/test-jdk8")
-    }
-}
-
 // kotlin {
 //     @OptIn(ExperimentalKotlinGradlePluginApi::class)
 //     compilerOptions {
 //         allWarningsAsErrors = true
 //     }
 // }
-
-    // jvm {
-    //     withJava()
-    //
-    //     val main by compilations.getting
-    //     val test by compilations.getting
-    //     val integrationTest by compilations.creating {
-    //         defaultSourceSet {
-    //             associateWith(main)
-    //             associateWith(test)
-    //         }
-    //     }
-    // }
 
 sourceSets {
     main {
@@ -329,10 +290,6 @@ tasks {
         include("**/*IsolatedTest*")
         configureJvmTestCommon()
         forkEvery = 1
-
-        // dependencies {
-        //     compileOnly(project(":bootstrap"))
-        // }
     }
 
     val integrationTest = register<Test>("integrationTest") {
@@ -389,13 +346,6 @@ tasks {
         }
     }
 }
-
-// tasks.named("transformAtomicfuClasses") {
-//     // Make sure this task runs after classes are compiled but before jar is created
-//     dependsOn("compileKotlinJvm")
-//     // Remove any direct dependencies on jar task
-// }
-
 
 infra {
     teamcity {
