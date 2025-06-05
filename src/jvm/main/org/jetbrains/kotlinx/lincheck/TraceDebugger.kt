@@ -15,7 +15,7 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.execution.threadsResults
 import org.jetbrains.kotlinx.lincheck.strategy.managed.forClasses
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck.strategy.traceonly.TraceRecorder
+import org.jetbrains.kotlinx.lincheck.strategy.tracerecorder.TraceRecorder
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.util.LoggingLevel
@@ -113,14 +113,26 @@ internal object TraceDebuggerInjections {
     }
 
     @JvmStatic
-    fun setupTraceRecorder() {
-        // Must be forst or
+    fun runWithTraceRecorder(owner: Any) {
+        firstRun = false
+
+        // Must be first or classes will not be found
         LincheckJavaAgent.install(InstrumentationMode.TRACE_RECORDING)
 
         TraceRecorder.install(traceDumpFilePath)
 
         // Retransform classes for event tracking
         LincheckJavaAgent.ensureClassHierarchyIsTransformed(classUnderTraceDebugging)
+
+        // And call method once more to hit instrumented code
+        val clazz = Class.forName(classUnderTraceDebugging)
+        val method = clazz.methods.find { it.name == methodUnderTraceDebugging }
+            ?: error("Method \"$methodUnderTraceDebugging\" was not found in class \"$classUnderTraceDebugging\". Check that method exists and it is public.")
+        if (Modifier.isStatic(method.modifiers)) {
+            method.invoke(null)
+        } else {
+            method.invoke(owner)
+        }
     }
 
     @JvmStatic

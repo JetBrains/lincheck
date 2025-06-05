@@ -11,10 +11,10 @@
 package org.jetbrains.kotlinx.lincheck.transformation
 
 import org.jetbrains.kotlinx.lincheck.TraceDebuggerInjections
-import org.jetbrains.kotlinx.lincheck.strategy.traceonly.TraceCollectingEventTracker
 import org.objectweb.asm.ClassVisitor
+import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
-import org.objectweb.asm.Type
+import org.objectweb.asm.commons.AdviceAdapter
 import org.objectweb.asm.commons.GeneratorAdapter
 
 class TraceRecorderClassVisitor(
@@ -46,7 +46,7 @@ class TraceRecorderClassVisitor(
         var mv = super.visitMethod(access, methodName, desc, signature, exceptions)
         if (className == TraceDebuggerInjections.classUnderTraceDebugging &&
             methodName == TraceDebuggerInjections.methodUnderTraceDebugging) {
-            mv = TraceRecorderRunMethodTransformer(mv.newAdapter())
+            mv = TraceRecorderRunMethodTransformer(mv, access, methodName, desc)
         }
 
         return mv
@@ -64,28 +64,34 @@ class TraceRecorderClassVisitor(
  * To:
  * ```kotlin
  * fun methodUnderTraceDebugging() {
- *  val recorder = setupTraceRecorder()
+ *  val recorder = runWithTraceRecorder()
  *  try { /* code */ }
  *  finally { recorder.dumpTrace(fileName) }
  * }
  * ```
  */
 private class TraceRecorderRunMethodTransformer(
-    private val adapter: GeneratorAdapter
-) : MethodVisitor(ASM_API, adapter) {
-    /**
-     * This method is called for the target class and method that requires trace-recorder functionality.
-     */
-
-    override fun visitCode() = adapter.run {
-        tryCatchFinally(
-            tryBlock = {
-                invokeStatic(TraceDebuggerInjections::setupTraceRecorder)
-                visitCode()
-            },
-            finallyBlock =  {
-                invokeStatic(TraceDebuggerInjections::dumpRecordedTrace)
-            }
-        )
-    }
+    mv: MethodVisitor,
+    access: Int,
+    name: String,
+    descriptor: String
+) : AdviceAdapter(ASM_API, mv, access, name, descriptor) {
+     override fun onMethodEnter() {
+         ifStatement(
+             condition = {
+                 invokeStatic(TraceDebuggerInjections::isFirstRun)
+             },
+             thenClause = {
+                 if ((access and ACC_STATIC) == ACC_STATIC) {
+                     pushNull()
+                 } else {
+                     loadThis()
+                 }
+                 // It will call method one more time
+                 invokeStatic(TraceDebuggerInjections::runWithTraceRecorder)
+                 invokeStatic(TraceDebuggerInjections::dumpRecordedTrace)
+                 visitInsn(RETURN)
+             },
+         )
+     }
 }

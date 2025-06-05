@@ -142,6 +142,7 @@ internal class LincheckClassVisitor(
         // so there are no beforeEvents inside.
         if (methodName == "<init>" || ideaPluginEnabled && methodName == "toString" && desc == "()Ljava/lang/String;") {
             mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
+            // TODO: replace with proper instrumentation mode for debugger, don't use globals
             if (isInTraceDebuggerMode) {
                 // Lincheck does not support true identity hash codes (it always uses zeroes),
                 // so there is no need for the `DeterministicInvokeDynamicTransformer` there.
@@ -160,8 +161,11 @@ internal class LincheckClassVisitor(
         }
         mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
         mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
-        mv = CoroutineCancellabilitySupportTransformer(mv, access, className, methodName, desc)
-        mv = CoroutineDelaySupportTransformer(fileName, className, methodName, mv.newAdapter())
+        if (instrumentationMode != TRACE_RECORDING) {
+            mv = CoroutineCancellabilitySupportTransformer(mv, access, className, methodName, desc)
+            mv = CoroutineDelaySupportTransformer(fileName, className, methodName, mv.newAdapter())
+        }
+        // We need this in TRACE_RECORDING mode to register new threads
         mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
         // We can do further instrumentation in methods of the custom thread subclasses,
         // but not in the `java.lang.Thread` itself.
@@ -177,15 +181,18 @@ internal class LincheckClassVisitor(
         // (to filter static method calls inserted by coverage library)
         val coverageDelegateVisitor: MethodVisitor = mv
         mv = MethodCallTransformer(fileName, className, methodName, mv.newAdapter())
-        mv = MonitorTransformer(fileName, className, methodName, mv.newAdapter())
-        mv = WaitNotifyTransformer(fileName, className, methodName, mv.newAdapter())
-        mv = ParkingTransformer(fileName, className, methodName, mv.newAdapter())
-        mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
+        if (instrumentationMode != TRACE_RECORDING) {
+            mv = MonitorTransformer(fileName, className, methodName, mv.newAdapter())
+            mv = WaitNotifyTransformer(fileName, className, methodName, mv.newAdapter())
+            mv = ParkingTransformer(fileName, className, methodName, mv.newAdapter())
+            mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
+        }
+        // TODO: replace with proper instrumentation mode for debugger, don't use globals
         if (isInTraceDebuggerMode) {
             // Lincheck does not support true identity hash codes (it always uses zeroes),
             // so there is no need for the `DeterministicInvokeDynamicTransformer` there.
             mv = DeterministicInvokeDynamicTransformer(fileName, className, methodName, classVersion, mv.newAdapter())
-        } else {
+        } else if (instrumentationMode != TRACE_RECORDING) {
             // In trace debugger mode we record hash codes of tracked objects and substitute them on re-run,
             // otherwise, we track all hash code calls in the instrumented code
             // and substitute them with constant.

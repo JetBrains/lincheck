@@ -156,7 +156,7 @@ internal object LincheckJavaAgent {
             }
 
             // In the model checking mode, Lincheck processes classes lazily, only when they are used.
-            instrumentationMode == MODEL_CHECKING -> {
+            instrumentationMode == MODEL_CHECKING || instrumentationMode == TRACE_RECORDING -> {
                 check(instrumentedClasses.isEmpty())
                 // Transform some predefined classes eagerly on start,
                 // because often it's the only place when we can do it
