@@ -101,13 +101,13 @@ sourceSets {
     }
 
     dependencies {
+        // main
         val kotlinVersion: String by project
         val kotlinxCoroutinesVersion: String by project
         val asmVersion: String by project
         val byteBuddyVersion: String by project
         val atomicfuVersion: String by project
 
-        // main
         compileOnly(project(":bootstrap"))
         api("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
         api("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion")
@@ -119,12 +119,11 @@ sourceSets {
         api("net.bytebuddy:byte-buddy-agent:$byteBuddyVersion")
         api("org.jetbrains.kotlinx:atomicfu:$atomicfuVersion")
 
+        // test
         val junitVersion: String by project
         val jctoolsVersion: String by project
         val mockkVersion: String by project
-        val gradleToolingApiVersion: String by project
 
-        // test
         testImplementation("junit:junit:$junitVersion")
         testImplementation("org.jctools:jctools-core:$jctoolsVersion")
         testImplementation("io.mockk:mockk:${mockkVersion}")
@@ -135,9 +134,13 @@ sourceSets {
         // }
 
         // traceDebuggerTest
-        "traceDebuggerTestImplementation"("junit:junit:$junitVersion")
-        "traceDebuggerTestImplementation"("org.gradle:gradle-tooling-api:${gradleToolingApiVersion}")
-        "traceDebuggerTestRuntimeOnly"("org.slf4j:slf4j-simple:1.7.10")
+        val gradleToolingApiVersion: String by project
+        val traceDebuggerTestImplementation by configurations
+        val traceDebuggerTestRuntimeOnly by configurations
+
+        traceDebuggerTestImplementation("junit:junit:$junitVersion")
+        traceDebuggerTestImplementation("org.gradle:gradle-tooling-api:${gradleToolingApiVersion}")
+        traceDebuggerTestRuntimeOnly("org.slf4j:slf4j-simple:1.7.10")
     }
 }
 
