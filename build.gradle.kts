@@ -148,6 +148,13 @@ tasks {
     named<KotlinCompile>("compileIntegrationTestKotlin") {
         setupKotlinToolchain()
     }
+
+    named<JavaCompile>("compileTraceDebuggerTestJava") {
+        setupJavaToolchain()
+    }
+    named<KotlinCompile>("compileTraceDebuggerTestKotlin") {
+        setupKotlinToolchain()
+    }
 }
 
 /*
