@@ -19,7 +19,7 @@ apply(plugin = "kotlinx-atomicfu")
 
 plugins {
     java
-    kotlin("multiplatform")
+    kotlin("jvm")
     id("maven-publish")
     id("kotlinx.team.infra") version "0.4.0-dev-80"
 }
@@ -41,84 +41,106 @@ fun SourceDirectorySet.configureTestSources() {
     }
 }
 
-kotlin {
-    @OptIn(ExperimentalKotlinGradlePluginApi::class)
-    compilerOptions {
-        allWarningsAsErrors = true
+// kotlin {
+//     @OptIn(ExperimentalKotlinGradlePluginApi::class)
+//     compilerOptions {
+//         allWarningsAsErrors = true
+//     }
+// }
+
+    // jvm {
+    //     withJava()
+    //
+    //     val main by compilations.getting
+    //     val test by compilations.getting
+    //     val integrationTest by compilations.creating {
+    //         defaultSourceSet {
+    //             associateWith(main)
+    //             associateWith(test)
+    //         }
+    //     }
+    // }
+
+sourceSets {
+    main {
+        java.srcDirs("src/jvm/main")
     }
 
-    jvm {
-        withJava()
+    test {
+        val jdkToolchainVersion: String by project
 
-        val main by compilations.getting
-        val test by compilations.getting
-        val integrationTest by compilations.creating {
-            defaultSourceSet {
-                associateWith(main)
-                associateWith(test)
-            }
+        java.srcDir("src/jvm/test")
+        if (jdkToolchainVersion.toInt() >= 11) {
+            java.srcDir("src/jvm/test-jdk11")
+        } else {
+            java.srcDir("src/jvm/test-jdk8")
+        }
+
+        resources {
+            srcDir("src/jvm/test/resources")
         }
     }
 
-    sourceSets {
-        val jvmMain by getting {
-            kotlin.srcDir("src/jvm/main")
+    // create("integrationTest") {
+    //     java.srcDir("src/jvm/test-integration")
+    //     configureClasspath()
+    // }
+    //
+    // create("traceDebuggerTest") {
+    //     java.srcDir("src/jvm/test-trace-debugger-integration")
+    //     configureClasspath()
+    //
+    //     resources {
+    //         srcDir("src/jvm/test-trace-debugger-integration/resources")
+    //     }
+    // }
 
-            val kotlinVersion: String by project
-            val kotlinxCoroutinesVersion: String by project
-            val asmVersion: String by project
-            val byteBuddyVersion: String by project
-            val atomicfuVersion: String by project
-            dependencies {
-                compileOnly(project(":bootstrap"))
-                api("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
-                api("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion")
-                api("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
-                api("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinxCoroutinesVersion")
-                api("org.ow2.asm:asm-commons:$asmVersion")
-                api("org.ow2.asm:asm-util:$asmVersion")
-                api("net.bytebuddy:byte-buddy:$byteBuddyVersion")
-                api("net.bytebuddy:byte-buddy-agent:$byteBuddyVersion")
-                api("org.jetbrains.kotlinx:atomicfu:$atomicfuVersion")
-            }
+    dependencies {
+        val kotlinVersion: String by project
+        val kotlinxCoroutinesVersion: String by project
+        val asmVersion: String by project
+        val byteBuddyVersion: String by project
+        val atomicfuVersion: String by project
+
+        main {
+            compileOnly(project(":bootstrap"))
+            api("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
+            api("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion")
+            api("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
+            api("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinxCoroutinesVersion")
+            api("org.ow2.asm:asm-commons:$asmVersion")
+            api("org.ow2.asm:asm-util:$asmVersion")
+            api("net.bytebuddy:byte-buddy:$byteBuddyVersion")
+            api("net.bytebuddy:byte-buddy-agent:$byteBuddyVersion")
+            api("org.jetbrains.kotlinx:atomicfu:$atomicfuVersion")
         }
 
-        val jvmTest by getting {
-            kotlin.configureTestSources()
+        val junitVersion: String by project
+        val jctoolsVersion: String by project
+        val mockkVersion: String by project
+        val gradleToolingApiVersion: String by project
 
-            val junitVersion: String by project
-            val jctoolsVersion: String by project
-            val mockkVersion: String by project
-            dependencies {
-                implementation("junit:junit:$junitVersion")
-                implementation("org.jctools:jctools-core:$jctoolsVersion")
-                implementation("io.mockk:mockk:${mockkVersion}")
-            }
+        test {
+            implementation("junit:junit:$junitVersion")
+            implementation("org.jctools:jctools-core:$jctoolsVersion")
+            implementation("io.mockk:mockk:${mockkVersion}")
         }
 
-        val jvmIntegrationTest by getting {
-            kotlin.srcDir("src/jvm/test-integration")
-
-            val junitVersion: String by project
-            dependencies {
-                implementation(rootProject)
-                implementation("junit:junit:$junitVersion")
-            }
-        }
-
-        create("traceDebuggerTest") {
-            kotlin.configureTestSources()
-        }
-
-        dependencies {
-            sourceSets.named("traceDebuggerTest") {
-                val gradleToolingApiVersion: String by project
-
-                implementation("org.gradle:gradle-tooling-api:${gradleToolingApiVersion}")
-                runtimeOnly("org.slf4j:slf4j-simple:1.7.10")
-            }
-        }
+        // sourceSets.named("integrationTest") {
+        //     implementation(rootProject)
+        //     implementation("junit:junit:$junitVersion")
+        // }
+        //
+        // sourceSets.named("traceDebuggerTest") {
+        //     implementation("org.gradle:gradle-tooling-api:${gradleToolingApiVersion}")
+        //     runtimeOnly("org.slf4j:slf4j-simple:1.7.10")
+        // }
     }
+}
+
+fun SourceSet.configureClasspath() {
+    compileClasspath += sourceSets.main.get().output + sourceSets.test.get().output
+    runtimeClasspath += sourceSets.main.get().output + sourceSets.test.get().output
 }
 
 java {
@@ -143,32 +165,16 @@ tasks {
     named<JavaCompile>("compileTestJava") {
         setupJavaToolchain()
     }
-    named<JavaCompile>("compileIntegrationTestJava") {
-        setupJavaToolchain()
-    }
+    // named<JavaCompile>("compileIntegrationTestJava") {
+    //     setupJavaToolchain()
+    // }
 
-    named<KotlinCompile>("compileTestKotlinJvm") {
-        setupKotlinToolchain()
-    }
-    named<KotlinCompile>("compileIntegrationTestKotlinJvm") {
-        setupKotlinToolchain()
-    }
-}
-
-sourceSets.main {
-    java.srcDirs("src/jvm/main")
-}
-
-sourceSets.test {
-    java.configureTestSources()
-    resources {
-        srcDir("src/jvm/test/resources")
-        srcDir("src/jvm/test-trace-debugger-integration/resources")
-    }
-}
-
-sourceSets.named("integrationTest") {
-    java.srcDirs("src/jvm/test-integration")
+    // named<KotlinCompile>("compileTestKotlinJvm") {
+    //     setupKotlinToolchain()
+    // }
+    // named<KotlinCompile>("compileIntegrationTestKotlinJvm") {
+    //     setupKotlinToolchain()
+    // }
 }
 
 val bootstrapJar = tasks.register<Copy>("bootstrapJar") {
@@ -195,7 +201,7 @@ tasks {
         dependsOn(bootstrapJar)
     }
 
-    replace("jvmSourcesJar", Jar::class).run {
+    val sourcesJar = register<Jar>("sourcesJar") {
         from(sourceSets["main"].allSource)
         // Also collect sources for the injected classes to simplify debugging
         from(project(":bootstrap").file("src"))
@@ -204,6 +210,7 @@ tasks {
     fun Test.configureJvmTestCommon() {
         maxParallelForks = 1
         maxHeapSize = "6g"
+
         val instrumentAllClasses: String by project
         if (instrumentAllClasses.toBoolean()) {
             systemProperty("lincheck.instrumentAllClasses", "true")
@@ -237,15 +244,16 @@ tasks {
             extraArgs.add("-Dlincheck.dumpTransformedSources=true")
         }
         extraArgs.add("-Dlincheck.version=$version")
+
         findProperty("lincheck.logFile")?.let { extraArgs.add("-Dlincheck.logFile=${it as String}") }
         findProperty("lincheck.logLevel")?.let { extraArgs.add("-Dlincheck.logLevel=${it as String}") }
+
         jvmArgs(extraArgs)
     }
 
-    registerIntegrationTestsPrerequisites()
+    // registerIntegrationTestsPrerequisites()
 
-    val jvmTest = named<Test>("jvmTest") {
-        dependsOn(traceDebuggerIntegrationTestsPrerequisites)
+    test {
         val ideaActive = System.getProperty("idea.active") == "true"
         if (!ideaActive) {
             // We need to be able to run these tests in IntelliJ IDEA.
@@ -277,10 +285,10 @@ tasks {
         }
     }
 
-    val jvmTestIsolated = register<Test>("jvmTestIsolated") {
+    val testIsolated = register<Test>("testIsolated") {
         group = "verification"
-        testClassesDirs = jvmTest.get().testClassesDirs
-        classpath = jvmTest.get().classpath
+        testClassesDirs = test.get().testClassesDirs
+        classpath = test.get().classpath
         enableAssertions = true
         testLogging.showStandardStreams = true
         outputs.upToDateWhen { false } // Always run tests when called
@@ -289,30 +297,30 @@ tasks {
         forkEvery = 1
     }
 
-    val jvmIntegrationTest = register<Test>("jvmIntegrationTest") {
-        val compilation = kotlin.targets["jvm"].compilations["integrationTest"]
-        group = "verification"
-        testClassesDirs = compilation.output.classesDirs
-        classpath = compilation.runtimeDependencyFiles!! + compilation.output.allOutputs
-        enableAssertions = true
-        testLogging.showStandardStreams = true
-        outputs.upToDateWhen { false } // Always run tests when called
-        configureJvmTestCommon()
-    }
+    // val integrationTest = register<Test>("integrationTest") {
+    //     group = "verification"
+    //     testClassesDirs = sourceSets["integrationTest"].output.classesDirs
+    //     classpath = sourceSets["integrationTest"].runtimeClasspath
+    //     enableAssertions = true
+    //     testLogging.showStandardStreams = true
+    //     outputs.upToDateWhen { false } // Always run tests when called
+    //     configureJvmTestCommon()
+    // }
+    //
+    // val traceDebuggerIntegrationTest = register<Test>("traceDebuggerIntegrationTest") {
+    //     dependsOn(traceDebuggerIntegrationTestsPrerequisites)
+    //     outputs.upToDateWhen { false } // Always run tests when called
+    //     include("org/jetbrains/kotlinx/trace_debugger/integration/*")
+    // }
 
-    val traceDebuggerIntegrationTest = register<Test>("traceDebuggerIntegrationTest") {
-        dependsOn(traceDebuggerIntegrationTestsPrerequisites)
-        outputs.upToDateWhen { false } // Always run tests when called
-        include("org/jetbrains/kotlinx/trace_debugger/integration/*")
-    }
-
-    check {
-        dependsOn += jvmTestIsolated
-        setDependsOn(dependsOn.filter { it != jvmIntegrationTest })
-    }
+    // check {
+    //     dependsOn += testIsolated
+    //     setDependsOn(dependsOn.filter { it != integrationTest })
+    // }
 
     withType<Jar> {
         dependsOn(bootstrapJar)
+
         manifest {
             val inceptionYear: String by project
             val lastCopyrightYear: String by project
@@ -327,6 +335,13 @@ tasks {
         }
     }
 }
+
+// tasks.named("transformAtomicfuClasses") {
+//     // Make sure this task runs after classes are compiled but before jar is created
+//     dependsOn("compileKotlinJvm")
+//     // Remove any direct dependencies on jar task
+// }
+
 
 infra {
     teamcity {
@@ -382,4 +397,4 @@ fun XmlProvider.removeAllLicencesExceptOne(licenceName: String) {
     }
 }
 
-registerTraceDebuggerTasks()
+// registerTraceDebuggerTasks()

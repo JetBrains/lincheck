@@ -2,7 +2,7 @@ pluginManagement {
     val kotlinVersion: String by settings
     plugins {
         java
-        kotlin("multiplatform") version kotlinVersion
+        kotlin("jvm") version kotlinVersion
     }
 
     repositories {
