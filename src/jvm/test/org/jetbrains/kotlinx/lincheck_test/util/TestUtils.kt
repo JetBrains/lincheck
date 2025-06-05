@@ -227,5 +227,5 @@ class StringPoolGenerator(randomProvider: RandomProvider, configuration: String)
         strings[random.nextInt(strings.size)]
 }
 
-internal val OVERWRITE_REPRESENTATION_TESTS_OUTPUT: Boolean =
+val OVERWRITE_REPRESENTATION_TESTS_OUTPUT: Boolean =
     System.getProperty("lincheck.overwriteRepresentationTestsOutput").toBoolean()

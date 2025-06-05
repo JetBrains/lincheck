@@ -90,15 +90,15 @@ sourceSets {
     //     java.srcDir("src/jvm/test-integration")
     //     configureClasspath()
     // }
-    //
-    // create("traceDebuggerTest") {
-    //     java.srcDir("src/jvm/test-trace-debugger-integration")
-    //     configureClasspath()
-    //
-    //     resources {
-    //         srcDir("src/jvm/test-trace-debugger-integration/resources")
-    //     }
-    // }
+
+    create("traceDebuggerTest") {
+        java.srcDir("src/jvm/test-trace-debugger-integration")
+        configureClasspath()
+
+        resources {
+            srcDir("src/jvm/test-trace-debugger-integration/resources")
+        }
+    }
 
     dependencies {
         val kotlinVersion: String by project
@@ -133,11 +133,11 @@ sourceSets {
         //     implementation(rootProject)
         //     implementation("junit:junit:$junitVersion")
         // }
-        //
-        // sourceSets.named("traceDebuggerTest") {
-        //     implementation("org.gradle:gradle-tooling-api:${gradleToolingApiVersion}")
-        //     runtimeOnly("org.slf4j:slf4j-simple:1.7.10")
-        // }
+
+        // traceDebuggerTest
+        "traceDebuggerTestImplementation"("junit:junit:$junitVersion")
+        "traceDebuggerTestImplementation"("org.gradle:gradle-tooling-api:${gradleToolingApiVersion}")
+        "traceDebuggerTestRuntimeOnly"("org.slf4j:slf4j-simple:1.7.10")
     }
 }
 
@@ -178,10 +178,6 @@ tasks {
 
     // named<JavaCompile>("compileIntegrationTestJava") {
     //     setupJavaToolchain()
-    // }
-
-    // named<KotlinCompile>("compileTestKotlinJvm") {
-    //     setupKotlinToolchain()
     // }
     // named<KotlinCompile>("compileIntegrationTestKotlinJvm") {
     //     setupKotlinToolchain()
@@ -284,7 +280,7 @@ tasks {
         jvmArgs(extraArgs)
     }
 
-    // registerIntegrationTestsPrerequisites()
+    registerIntegrationTestsPrerequisites()
 
     test {
         val ideaActive = System.getProperty("idea.active") == "true"
@@ -343,12 +339,18 @@ tasks {
     //     outputs.upToDateWhen { false } // Always run tests when called
     //     configureJvmTestCommon()
     // }
-    //
-    // val traceDebuggerIntegrationTest = register<Test>("traceDebuggerIntegrationTest") {
-    //     dependsOn(traceDebuggerIntegrationTestsPrerequisites)
-    //     outputs.upToDateWhen { false } // Always run tests when called
-    //     include("org/jetbrains/kotlinx/trace_debugger/integration/*")
-    // }
+
+    val traceDebuggerIntegrationTest = register<Test>("traceDebuggerIntegrationTest") {
+        group = "verification"
+        include("org/jetbrains/kotlinx/trace_debugger/integration/*")
+
+        testClassesDirs = sourceSets["traceDebuggerTest"].output.classesDirs
+
+        classpath = sourceSets["traceDebuggerTest"].runtimeClasspath
+
+        outputs.upToDateWhen { false } // Always run tests when called
+        dependsOn(traceDebuggerIntegrationTestsPrerequisites)
+    }
 
     // check {
     //     dependsOn += testIsolated
@@ -434,4 +436,4 @@ fun XmlProvider.removeAllLicencesExceptOne(licenceName: String) {
     }
 }
 
-// registerTraceDebuggerTasks()
+registerTraceDebuggerTasks()

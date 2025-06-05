@@ -10,12 +10,12 @@
 
 package org.jetbrains.kotlinx.trace_debugger.integration
 
-import org.gradle.tooling.GradleConnector
 import org.jetbrains.kotlinx.lincheck_test.util.OVERWRITE_REPRESENTATION_TESTS_OUTPUT
-import org.junit.Assert
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import org.gradle.tooling.GradleConnector
+import org.junit.Assert
 
 abstract class AbstractTraceDebuggerIntegrationTest {
     abstract val projectPath: String
