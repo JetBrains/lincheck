@@ -77,8 +77,9 @@ sourceSets {
             java.srcDir("src/jvm/test-jdk8")
         }
 
+        // Tests that test classes from the bootstrap module `sun.nio.ch.lincheck` need to import these classes;
+        // therefore, we need to add bootstrap to the compilation classpath.
         compileClasspath += files("${project(":bootstrap").buildDir}/classes/java/main")
-            // project(":bootstrap").sourceSets.main.get().output
 
         resources {
             srcDir("src/jvm/test/resources")
@@ -125,8 +126,6 @@ sourceSets {
         val gradleToolingApiVersion: String by project
 
         test {
-            compileOnly(project(":bootstrap"))
-            // implementation(project(":bootstrap"))
             implementation("junit:junit:$junitVersion")
             implementation("org.jctools:jctools-core:$jctoolsVersion")
             implementation("io.mockk:mockk:${mockkVersion}")
