@@ -65,7 +65,7 @@ abstract class BaseRunConcurrentRepresentationTest<R>(private val outputFileName
         }
     }
 
-    open val analyzeStdLib = true
+    open val analyzeStdLib = false
 }
 
 class NoEventsRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(

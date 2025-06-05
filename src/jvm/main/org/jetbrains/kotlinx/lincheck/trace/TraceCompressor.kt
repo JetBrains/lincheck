@@ -194,13 +194,16 @@ internal fun SingleThreadedTable<TraceNode>.collapseLibraries(analysisProfile: A
     if (node !is CallNode || !analysisProfile.shouldBeHidden(node)) return@compressNodes node
     
     // if cannot be hidden (due to switch point)
-    if (node.containsDescendant { it is EventNode && it.tracePoint is SwitchEventTracePoint }) 
+    if (node.containsDescendant(::isNonHideableNode)) 
         return@compressNodes node
     
     val newNode = node.copy()
     findSubTreesToBeShown(node, analysisProfile).forEach {  newNode.addChild(it) }
     return@compressNodes newNode
 }
+
+private fun isNonHideableNode(traceNode: TraceNode) = 
+    traceNode is EventNode && (traceNode.tracePoint is SwitchEventTracePoint || traceNode.tracePoint is ParkTracePoint)
 
 /**
  * Finds descendants that should not be hidden.
