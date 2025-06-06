@@ -66,7 +66,7 @@ class TraceRecorderClassVisitor(
  * fun methodUnderTraceDebugging() {
  *  val recorder = runWithTraceRecorder()
  *  try { /* code */ }
- *  finally { recorder.dumpTrace(fileName) }
+ *  finally { recorder.finishTrace(fileName) }
  * }
  * ```
  */
@@ -75,23 +75,12 @@ private class TraceRecorderRunMethodTransformer(
     access: Int,
     name: String,
     descriptor: String
-) : AdviceAdapter(ASM_API, mv, access, name, descriptor) {
+): AdviceAdapter(ASM_API, mv, access, name, descriptor) {
      override fun onMethodEnter() {
-         ifStatement(
-             condition = {
-                 invokeStatic(TraceDebuggerInjections::isFirstRun)
-             },
-             thenClause = {
-                 if ((access and ACC_STATIC) == ACC_STATIC) {
-                     pushNull()
-                 } else {
-                     loadThis()
-                 }
-                 // It will call method one more time
-                 invokeStatic(TraceDebuggerInjections::runWithTraceRecorder)
-                 invokeStatic(TraceDebuggerInjections::dumpRecordedTrace)
-                 visitInsn(RETURN)
-             },
-         )
+         invokeStatic(TraceDebuggerInjections::startTraceRecorder)
+     }
+
+     override fun onMethodExit(opcode: Int) {
+         invokeStatic(TraceDebuggerInjections::dumpRecordedTrace)
      }
 }

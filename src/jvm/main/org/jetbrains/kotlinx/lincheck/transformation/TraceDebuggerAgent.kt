@@ -43,7 +43,10 @@ internal object TraceDebuggerAgent {
         if (isInTraceDebuggerMode) {
             inst.addTransformer(TraceDebuggerTransformer, true)
         } else {
+            // This adds turn-on and turn-off of tracing to method in question
             inst.addTransformer(TraceRecorderTransformer, true)
+            // This prepare instrumentation of all future classes
+            TraceDebuggerInjections.prepareTraceRecorder()
         }
     }
 }
@@ -58,7 +61,7 @@ internal object TraceDebuggerTransformer : ClassFileTransformer {
         classBytes: ByteArray
     ): ByteArray? {
         // If the class should not be transformed, return immediately.
-        if (TraceDebuggerInjections.classUnderTraceDebugging != internalClassName.toCanonicalClassName()) {
+        if (classUnderTraceDebugging != internalClassName.toCanonicalClassName()) {
             return null
         }
         return transformImpl(loader, internalClassName, classBytes)
@@ -98,7 +101,7 @@ internal object TraceRecorderTransformer : ClassFileTransformer {
         classBytes: ByteArray
     ): ByteArray? {
         // If the class should not be transformed, return immediately.
-        if (TraceDebuggerInjections.classUnderTraceDebugging != internalClassName.toCanonicalClassName()) {
+        if (classUnderTraceDebugging != internalClassName.toCanonicalClassName()) {
             return null
         }
         return transformImpl(loader, internalClassName, classBytes)

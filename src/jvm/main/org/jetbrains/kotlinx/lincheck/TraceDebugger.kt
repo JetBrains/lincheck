@@ -113,32 +113,28 @@ internal object TraceDebuggerInjections {
     }
 
     @JvmStatic
-    fun runWithTraceRecorder(owner: Any) {
-        firstRun = false
-
+    fun prepareTraceRecorder() {
         // Must be first or classes will not be found
         LincheckJavaAgent.install(InstrumentationMode.TRACE_RECORDING)
-
-        TraceRecorder.install(traceDumpFilePath)
-
         // Retransform classes for event tracking
         LincheckJavaAgent.ensureClassHierarchyIsTransformed(classUnderTraceDebugging)
+    }
 
-        // And call method once more to hit instrumented code
-        val clazz = Class.forName(classUnderTraceDebugging)
-        val method = clazz.methods.find { it.name == methodUnderTraceDebugging }
+    @JvmStatic
+    fun startTraceRecorder() {
+        val testClass = Class.forName(classUnderTraceDebugging)
+        val testMethod = testClass.methods.find { it.name == methodUnderTraceDebugging }
             ?: error("Method \"$methodUnderTraceDebugging\" was not found in class \"$classUnderTraceDebugging\". Check that method exists and it is public.")
-        if (Modifier.isStatic(method.modifiers)) {
-            method.invoke(null)
-        } else {
-            method.invoke(owner)
-        }
+        val methodDescriptor = org.objectweb.asm.commons.Method.getMethod(testMethod).descriptor
+        // Init it, but not enable (yet)
+        TraceRecorder.install(classUnderTraceDebugging, methodUnderTraceDebugging, methodDescriptor, traceDumpFilePath)
+        TraceRecorder.enableTrace()
     }
 
     @JvmStatic
     fun dumpRecordedTrace() {
         LincheckJavaAgent.uninstall()
-        TraceRecorder.dumpTrace()
+        TraceRecorder.finishTrace()
     }
 
     class FailingVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : Verifier {

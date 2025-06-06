@@ -82,7 +82,14 @@ import kotlin.collections.set
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 
-class TraceCollectingEventTracker(val traceDumpPath: String?) :  EventTracker {
+private const val TRACE_OME_THREAD = true
+
+class TraceCollectingEventTracker(
+    private val className: String,
+    private val methodName: String,
+    private val methodDesc: String,
+    private val traceDumpPath: String?
+) :  EventTracker {
     private val invokeDynamicCallSites = ConcurrentHashMap<ConstantDynamic, CallSite>()
 
     private val randoms = ThreadLocal.withInitial { InjectedRandom() }
@@ -91,14 +98,12 @@ class TraceCollectingEventTracker(val traceDumpPath: String?) :  EventTracker {
     private val currentTracePointId = atomic(0)
     private val currentCallId = atomic(0)
 
-    init {
-        val td = ThreadData(threads.size)
-        // Shadow stack cannot be empty
-        td.shadowStack.add(ShadowStackFrame(Thread.currentThread()))
-        threads[Thread.currentThread()] = td
-    }
-
     override fun beforeThreadFork(thread: Thread, descriptor: ThreadDescriptor) = runInsideIgnoredSection {
+        // Don't init new threads forked from initial one if it is not enabled
+        if (TRACE_OME_THREAD) {
+            return
+        }
+
         val td = threads[Thread.currentThread()] ?: return
         val ftd = ThreadData(threads.size)
         threads[thread] = ftd
@@ -129,7 +134,7 @@ class TraceCollectingEventTracker(val traceDumpPath: String?) :  EventTracker {
 
     override fun afterThreadFinish() = Unit
 
-    override fun threadJoin(thread: Thread, withTimeout: Boolean) = runInsideIgnoredSection {
+    override fun threadJoin(thread: Thread?, withTimeout: Boolean) = runInsideIgnoredSection {
         val td = threads[Thread.currentThread()] ?: return
         addTracePoint(ThreadJoinTracePoint(
             iThread = td.id,
@@ -246,7 +251,7 @@ class TraceCollectingEventTracker(val traceDumpPath: String?) :  EventTracker {
     override fun updateSnapshotBeforeConstructorCall(objs: Array<out Any?>) = Unit
 
     override fun beforeReadField(
-        obj: Any,
+        obj: Any?,
         className: String,
         fieldName: String,
         codeLocation: Int,
@@ -313,10 +318,10 @@ class TraceCollectingEventTracker(val traceDumpPath: String?) :  EventTracker {
     }
 
     override fun beforeWriteField(
-        obj: Any,
+        obj: Any?,
         className: String,
         fieldName: String,
-        value: Any,
+        value: Any?,
         codeLocation: Int,
         isStatic: Boolean,
         isFinal: Boolean
@@ -344,7 +349,7 @@ class TraceCollectingEventTracker(val traceDumpPath: String?) :  EventTracker {
     override fun beforeWriteArrayElement(
         array: Any,
         index: Int,
-        value: Any,
+        value: Any?,
         codeLocation: Int
     ): Boolean = runInsideIgnoredSection {
         val td = threads[Thread.currentThread()] ?: return false
@@ -382,7 +387,7 @@ class TraceCollectingEventTracker(val traceDumpPath: String?) :  EventTracker {
         codeLocation: Int,
         methodId: Int,
         methodSignature: MethodSignature?,
-        receiver: Any,
+        receiver: Any?,
         params: Array<Any?>
     ): Any? = runInsideIgnoredSection {
         val td = threads[Thread.currentThread()] ?: return null
@@ -404,9 +409,9 @@ class TraceCollectingEventTracker(val traceDumpPath: String?) :  EventTracker {
         className: String,
         methodName: String,
         descriptorId: Long,
-        descriptor: Any,
+        determenisticDescriptor: Any?,
         methodId: Int,
-        receiver: Any,
+        receiver: Any?,
         params: Array<out Any?>,
         result: Any?
     ) = runInsideIgnoredSection {
@@ -429,8 +434,8 @@ class TraceCollectingEventTracker(val traceDumpPath: String?) :  EventTracker {
         className: String,
         methodName: String,
         descriptorId: Long,
-        descriptor: Any,
-        receiver: Any,
+        destermenisticDescriptor: Any?,
+        receiver: Any?,
         params: Array<out Any?>,
         t: Throwable
     ) = runInsideIgnoredSection {
@@ -467,7 +472,7 @@ class TraceCollectingEventTracker(val traceDumpPath: String?) :  EventTracker {
         ))
     }
 
-    override fun onInlineMethodCallReturn(className: String?, methodId: Int) = runInsideIgnoredSection {
+    override fun onInlineMethodCallReturn(className: String, methodId: Int) = runInsideIgnoredSection {
         val td = threads[Thread.currentThread()] ?: return@runInsideIgnoredSection
         if (td.stackTrace.isEmpty()) {
             return
@@ -480,8 +485,8 @@ class TraceCollectingEventTracker(val traceDumpPath: String?) :  EventTracker {
 
     override fun invokeDeterministicallyOrNull(
         descriptorId: Long,
-        descriptor: Any,
-        receiver: Any,
+        descriptor: Any?,
+        receiver: Any?,
         params: Array<out Any?>
     ): BootstrapResult<*>? = null
 
@@ -501,20 +506,47 @@ class TraceCollectingEventTracker(val traceDumpPath: String?) :  EventTracker {
 
     override fun setLastMethodCallEventId() = Unit
 
-    fun dumpTrace() {
+    fun enableTrace() {
+        // Start tracing in this thread
+        val td = ThreadData(threads.size)
+        // Shadow stack cannot be empty
+        td.shadowStack.add(ShadowStackFrame(Thread.currentThread()))
+        threads[Thread.currentThread()] = td
+
+        // Method in question was called
+        addTracePoint(addBeforeMethodCallTracePoint(
+            thread = td,
+            owner = null,
+            className = className,
+            methodName = methodName,
+            codeLocation = UNKNOWN_CODE_LOCATION,
+            methodId = MethodIds.getMethodId(className, methodName, methodDesc),
+            methodParams = emptyArray(),
+            atomicMethodDescriptor = null,
+            callType = MethodCallTracePoint.CallType.NORMAL
+        ))
+    }
+
+    fun finishTrace() = runInsideIgnoredSection {
+        val tds = ArrayList(threads.values)
+        threads.clear()
+
         val printStream = if (traceDumpPath == null) {
             System.out
         } else  {
             val f = File(traceDumpPath)
-            f.parentFile.mkdirs()
+            f.parentFile?.mkdirs()
             f.createNewFile()
             PrintStream(f)
         }
 
         // Merge all traces. Mergesort is possible as optimization
         val totalTrace = mutableListOf<TracePoint>()
-        threads.forEach { (_, td) -> totalTrace.addAll(td.collector.trace) }
+        tds.forEach { totalTrace.addAll(it.collector.trace) }
         totalTrace.sortWith { a, b -> a.eventId.compareTo(b.eventId) }
+
+        // Filter & prepare trace to "graph"
+
 
         // Output!
         totalTrace.forEach {
