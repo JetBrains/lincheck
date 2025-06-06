@@ -43,7 +43,7 @@ fun verify(
     block: ExecutionBuilder.() -> Unit,
     correct: Boolean
 ) {
-    withLincheckDynamicJavaAgent(InstrumentationMode.STRESS) {
+    withLincheckJavaAgent(InstrumentationMode.STRESS) {
         val (scenario, results) = scenarioWithResults(block)
         val verifier = verifierClass.getConstructor(Class::class.java).newInstance(testClass)
         val res = verifier.verifyResults(scenario, results)

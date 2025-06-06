@@ -17,7 +17,7 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
-import org.jetbrains.kotlinx.lincheck.transformation.withLincheckDynamicJavaAgent
+import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck_test.verifier.*
 import org.junit.*
 import org.junit.Assert.*
@@ -85,7 +85,7 @@ class ParallelThreadsRunnerExceptionTest {
     private val resSucc = SuspendResumeScenarios::resumeSuccessfully
 
     @Test
-    fun testResumeWithException() = withLincheckDynamicJavaAgent(InstrumentationMode.STRESS) {
+    fun testResumeWithException() = withLincheckJavaAgent(InstrumentationMode.STRESS) {
         val (scenario, expectedResults) = scenarioWithResults {
             parallel {
                 thread {
@@ -109,7 +109,7 @@ class ParallelThreadsRunnerExceptionTest {
     }
 
     @Test
-    fun testThrowExceptionInFollowUp() = withLincheckDynamicJavaAgent(InstrumentationMode.STRESS) {
+    fun testThrowExceptionInFollowUp() = withLincheckJavaAgent(InstrumentationMode.STRESS) {
         val (scenario, expectedResults) = scenarioWithResults {
             parallel {
                 thread {
@@ -132,7 +132,7 @@ class ParallelThreadsRunnerExceptionTest {
     }
 
     @Test
-    fun testThrow() = withLincheckDynamicJavaAgent(InstrumentationMode.STRESS) {
+    fun testThrow() = withLincheckJavaAgent(InstrumentationMode.STRESS) {
         val (scenario, expectedResults) = scenarioWithResults {
             parallel {
                 thread {
@@ -152,7 +152,7 @@ class ParallelThreadsRunnerExceptionTest {
 
 class ParallelThreadExecutionExceptionsTest {
     @Test
-    fun shouldCompleteWithUnexpectedException() = withLincheckDynamicJavaAgent(InstrumentationMode.STRESS) {
+    fun shouldCompleteWithUnexpectedException() = withLincheckJavaAgent(InstrumentationMode.STRESS) {
         val scenario = scenario {
             parallel {
                 thread { actor(::operation) }

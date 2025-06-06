@@ -90,7 +90,7 @@ internal object TraceDebuggerInjections {
             .logLevel(LoggingLevel.OFF)
             .invocationTimeout(5 * 60 * 1000) // 5 mins
 
-        val failure = lincheckOptions.checkImpl(instanceClass, isDynamicAgent = false)
+        val failure = lincheckOptions.checkImpl(instanceClass)
 
         val result = failure!!.results.threadsResults[0][0]
         if (result is ExceptionResult) throw result.throwable
