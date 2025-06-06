@@ -16,9 +16,8 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
-import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
+import org.jetbrains.kotlinx.lincheck.transformation.withLincheckDynamicJavaAgent
 import org.jetbrains.kotlinx.lincheck_test.verifier.*
 import org.junit.*
 import org.junit.Assert.*
@@ -86,7 +85,7 @@ class ParallelThreadsRunnerExceptionTest {
     private val resSucc = SuspendResumeScenarios::resumeSuccessfully
 
     @Test
-    fun testResumeWithException() = withLincheckJavaAgent(InstrumentationMode.STRESS) {
+    fun testResumeWithException() = withLincheckDynamicJavaAgent(InstrumentationMode.STRESS) {
         val (scenario, expectedResults) = scenarioWithResults {
             parallel {
                 thread {
@@ -110,7 +109,7 @@ class ParallelThreadsRunnerExceptionTest {
     }
 
     @Test
-    fun testThrowExceptionInFollowUp() = withLincheckJavaAgent(InstrumentationMode.STRESS) {
+    fun testThrowExceptionInFollowUp() = withLincheckDynamicJavaAgent(InstrumentationMode.STRESS) {
         val (scenario, expectedResults) = scenarioWithResults {
             parallel {
                 thread {
@@ -133,7 +132,7 @@ class ParallelThreadsRunnerExceptionTest {
     }
 
     @Test
-    fun testThrow() = withLincheckJavaAgent(InstrumentationMode.STRESS) {
+    fun testThrow() = withLincheckDynamicJavaAgent(InstrumentationMode.STRESS) {
         val (scenario, expectedResults) = scenarioWithResults {
             parallel {
                 thread {
@@ -153,7 +152,7 @@ class ParallelThreadsRunnerExceptionTest {
 
 class ParallelThreadExecutionExceptionsTest {
     @Test
-    fun shouldCompleteWithUnexpectedException() = withLincheckJavaAgent(InstrumentationMode.STRESS) {
+    fun shouldCompleteWithUnexpectedException() = withLincheckDynamicJavaAgent(InstrumentationMode.STRESS) {
         val scenario = scenario {
             parallel {
                 thread { actor(::operation) }

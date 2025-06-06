@@ -32,12 +32,12 @@ internal fun modelCheckerTest(
         parallel { thread { actor(testOperation) } }
     }
     val verifier = CollectResultsVerifier()
-    withLincheckJavaAgent(InstrumentationMode.MODEL_CHECKING) {
+    withLincheckDynamicJavaAgent(InstrumentationMode.MODEL_CHECKING) {
         val strategy = createStrategy(testClass.java, scenario, stdLibAnalysis)
         val failure = strategy.runIteration(invocations, verifier)
         if (expectedFailure != null) {
             assert(expectedFailure.isInstance(failure))
-            return
+            return@withLincheckDynamicJavaAgent
         }
         assert(failure == null) { failure.toString() }
         if (expectedExceptions.isNotEmpty()) {

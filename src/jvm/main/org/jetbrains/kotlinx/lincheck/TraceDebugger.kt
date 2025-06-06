@@ -15,7 +15,8 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.execution.threadsResults
 import org.jetbrains.kotlinx.lincheck.strategy.managed.forClasses
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck.transformation.JavaAgent.ensureClassHierarchyIsTransformed
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
+import org.jetbrains.kotlinx.lincheck.transformation.withLincheckStaticJavaAgent
 import org.jetbrains.kotlinx.lincheck.util.LoggingLevel
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.io.File
@@ -90,7 +91,7 @@ internal object TraceDebuggerInjections {
             .logLevel(LoggingLevel.OFF)
             .invocationTimeout(5 * 60 * 1000) // 5 mins
 
-        val failure = lincheckOptions.checkImpl(instanceClass)
+        val failure = lincheckOptions.checkImpl(instanceClass, ::withLincheckStaticJavaAgent)
 
         val result = failure!!.results.threadsResults[0][0]
         if (result is ExceptionResult) throw result.throwable
@@ -115,7 +116,7 @@ internal object TraceDebuggerInjections {
 
 internal class TraceDebuggerStaticMethodWrapper {
     fun callStaticMethod(clazz: Class<*>, method: Method) {
-        ensureClassHierarchyIsTransformed(clazz.name)
+        LincheckJavaAgent.ensureClassHierarchyIsTransformed(clazz.name)
         method.invoke(null)
     }
 }

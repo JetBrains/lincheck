@@ -10,17 +10,15 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
+import net.bytebuddy.agent.ByteBuddyAgent
 import org.jetbrains.kotlinx.lincheck.TraceDebuggerInjections
 import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
-import org.jetbrains.kotlinx.lincheck.transformation.AgentMode.Companion.toAgentMode
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.MODEL_CHECKING
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.STRESS
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.isEagerlyInstrumentedClass
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.shouldTransform
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.transformedClassesStress
-import org.jetbrains.kotlinx.lincheck.transformation.JavaAgent.install
-import org.jetbrains.kotlinx.lincheck.transformation.JavaAgent.instrumentation
-import org.jetbrains.kotlinx.lincheck.transformation.JavaAgent.instrumentationMode
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentation
 import org.jetbrains.kotlinx.lincheck.util.isJdk8
 import org.jetbrains.kotlinx.lincheck.util.readFieldSafely
 import java.io.File
@@ -31,15 +29,24 @@ import java.util.jar.JarFile
 
 
 /**
- * Executes [block] with the Lincheck java agent for byte-code instrumentation.
+ * Executes [block] with the Lincheck dynamic java agent for byte-code instrumentation.
  */
-internal inline fun withLincheckJavaAgent(instrumentationMode: InstrumentationMode, block: () -> Unit) {
-    JavaAgent.install(instrumentationMode)
+internal fun withLincheckDynamicJavaAgent(instrumentationMode: InstrumentationMode, block: () -> Unit) {
+    LincheckDynamicJavaAgent.install(instrumentationMode)
     return try {
         block()
     } finally {
-        JavaAgent.uninstall()
+        LincheckDynamicJavaAgent.uninstall()
     }
+}
+
+/**
+ * Executes [block] without explicit `install`/`uninstall` invocations, because Lincheck static java agent
+ * installs itself once and never calls `uninstall`.
+ */
+internal fun withLincheckStaticJavaAgent(instrumentationMode: InstrumentationMode, block: () -> Unit) {
+    check(instrumentationMode == MODEL_CHECKING) { "Only model-checking instrumentation mode is supported for static agent" }
+    block()
 }
 
 internal enum class InstrumentationMode {
@@ -56,27 +63,43 @@ internal enum class InstrumentationMode {
     MODEL_CHECKING
 }
 
-private enum class AgentMode(val id: String) {
-    /**
-     * Default lincheck agent which has bytecode caching and
-     * possibility to transform classes back to original bytecode.
-     */
-    LINCHECK("LINCHECK"),
-    /**
-     * Has manual setup of lincheck (scenario, model checking mode) and
-     * does not retransform instrumented classes.
-     */
-    TRACE_DEBUGGER("TRACE_DEBUGGER");
+/**
+ * [LincheckStaticJavaAgent] is an agent that is used by `TRACE_DEBUGGER` and `TRACE_RECORDER` modes of Lincheck.
+ * It appends [TraceDebuggerTransformer] in the transformers chain and then installs the agent once
+ * in the `MODEL_CHECKING` mode and never performs `uninstall`.
+ */
+internal object LincheckStaticJavaAgent : CachingJavaAgent by LincheckJavaAgent {
 
-    companion object {
-        fun String?.toAgentMode(): AgentMode? = when (this) {
-            LINCHECK.id -> LINCHECK
-            TRACE_DEBUGGER.id -> TRACE_DEBUGGER
-            else -> null
+    @JvmStatic
+    fun premain(agentArgs: String?, inst: Instrumentation) {
+        instrumentation = inst
+        check(isInTraceDebuggerMode) {
+            "When trace debugger agent is attached to process, " +
+            "VM parameter `lincheck.traceDebuggerMode` is expected to be true. " +
+            "Rerun with -Dlincheck.traceDebuggerMode=true."
         }
+        TraceDebuggerInjections.parseArgs(agentArgs)
+        instrumentation.addTransformer(TraceDebuggerTransformer, true)
+        install(MODEL_CHECKING)
     }
 }
 
+/**
+ * [LincheckDynamicJavaAgent] is an agent that is used by `DATA_STRUCTURES` and `GPMC` modes of Lincheck
+ * where bytecode caching is performed via invocations of [withLincheckDynamicJavaAgent] function,
+ * which itself uses `install`/`uninstall` methods for bytecode retransformations between tests.
+ */
+internal object LincheckDynamicJavaAgent : CachingJavaAgent by LincheckJavaAgent {
+
+    init {
+        instrumentation = ByteBuddyAgent.install()
+    }
+}
+
+internal interface CachingJavaAgent {
+    fun install(instrumentationMode: InstrumentationMode)
+    fun uninstall()
+}
 
 /**
  * JavaAgent represents the Lincheck Java agent responsible for instrumenting bytecode.
@@ -84,36 +107,12 @@ private enum class AgentMode(val id: String) {
  * @property instrumentation The instrumentation instance.
  * @property instrumentationMode The instrumentation mode to determine which classes to transform.
  */
-internal object JavaAgent {
-
-    @JvmStatic
-    fun premain(agentArgs: String?, inst: Instrumentation) {
-        println("Installed Lincheck static agent, args: $agentArgs")
-        instrumentation = inst
-
-        when (getAgentType(agentArgs)) {
-            AgentMode.LINCHECK -> { /* Do nothing because we have lazy class instrumentation in lincheck */ }
-            AgentMode.TRACE_DEBUGGER -> {
-                check(isInTraceDebuggerMode) {
-                    "When trace debugger agent is attached to process, " +
-                    "VM parameter `lincheck.traceDebuggerMode` is expected to be true. " +
-                    "Rerun with -Dlincheck.traceDebuggerMode=true."
-                }
-                val traceDebuggerArgs = agentArgs?.split(",")?.drop(1)?.joinToString(",")
-                TraceDebuggerInjections.parseArgs(traceDebuggerArgs)
-                instrumentation.addTransformer(TraceDebuggerTransformer, true)
-            }
-        }
-    }
-
-    private fun getAgentType(agentArgs: String?): AgentMode {
-        return agentArgs?.split(",")?.getOrNull(0)?.toAgentMode() ?: AgentMode.LINCHECK
-    }
+internal object LincheckJavaAgent : CachingJavaAgent {
 
     /**
      * The [Instrumentation] instance is used to perform bytecode transformations during runtime.
      */
-    private lateinit var instrumentation: Instrumentation
+    internal lateinit var instrumentation: Instrumentation
 
     /**
      * Determines how to transform classes;
@@ -137,8 +136,7 @@ internal object JavaAgent {
      * Adds [LincheckClassFileTransformer] to this JVM instance.
      * Also, retransforms already loaded classes.
      */
-    fun install(instrumentationMode: InstrumentationMode) {
-        check(this::instrumentation.isInitialized) { "Lincheck static agent must be installed before applying transformations." }
+    override fun install(instrumentationMode: InstrumentationMode) {
         this.instrumentationMode = instrumentationMode
         // The bytecode injections must be loaded with the bootstrap class loader,
         // as the `java.base` module is loaded with it. To achieve that, we pack the
@@ -234,8 +232,7 @@ internal object JavaAgent {
      * Removes [LincheckClassFileTransformer] from this JVM instance and re-transforms
      * the transformed classes to remove the Lincheck injections.
      */
-    fun uninstall() {
-        check(this::instrumentation.isInitialized) { "Lincheck static agent must be installed before applying transformations." }
+    override fun uninstall() {
         // Remove the Lincheck transformer.
         instrumentation.removeTransformer(LincheckClassFileTransformer)
         // Collect the set of instrumented classes.

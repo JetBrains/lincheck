@@ -14,9 +14,9 @@ import org.jetbrains.kotlinx.lincheck.TraceDebuggerInjections
 import org.jetbrains.kotlinx.lincheck.dumpTransformedSources
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.MODEL_CHECKING
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.STRESS
-import org.jetbrains.kotlinx.lincheck.transformation.JavaAgent.INSTRUMENT_ALL_CLASSES
-import org.jetbrains.kotlinx.lincheck.transformation.JavaAgent.instrumentationMode
-import org.jetbrains.kotlinx.lincheck.transformation.JavaAgent.instrumentedClasses
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.INSTRUMENT_ALL_CLASSES
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentationMode
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentedClasses
 import org.jetbrains.kotlinx.lincheck.util.AnalysisProfile
 import org.jetbrains.kotlinx.lincheck.util.Logger
 import org.jetbrains.kotlinx.lincheck.util.runInsideIgnoredSection
@@ -155,16 +155,16 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
     internal fun isEagerlyInstrumentedClass(className: String): Boolean =
         // `ClassLoader` classes, to wrap `loadClass` methods in the ignored section.
         isClassLoaderClassName(className) ||
-                // `MethodHandle` class, to wrap its methods (except `invoke` methods) in the ignored section.
-                isMethodHandleRelatedClass(className) ||
-                // `StackTraceElement` class, to wrap all its methods into the ignored section.
-                isStackTraceElementClass(className) ||
-                // `ThreadContainer` classes, to detect threads started in the thread containers.
-                isThreadContainerClass(className) ||
-                // TODO: instead of eagerly instrumenting `DispatchedContinuation`
-                //  we should try to fix lazy class re-transformation logic
-                isCoroutineDispatcherInternalClass(className) ||
-                isCoroutineConcurrentKtInternalClass(className)
+        // `MethodHandle` class, to wrap its methods (except `invoke` methods) in the ignored section.
+        isMethodHandleRelatedClass(className) ||
+        // `StackTraceElement` class, to wrap all its methods into the ignored section.
+        isStackTraceElementClass(className) ||
+        // `ThreadContainer` classes, to detect threads started in the thread containers.
+        isThreadContainerClass(className) ||
+        // TODO: instead of eagerly instrumenting `DispatchedContinuation`
+        //  we should try to fix lazy class re-transformation logic
+        isCoroutineDispatcherInternalClass(className) ||
+        isCoroutineConcurrentKtInternalClass(className)
 }
 
 internal object TraceDebuggerTransformer : ClassFileTransformer {
@@ -180,7 +180,6 @@ internal object TraceDebuggerTransformer : ClassFileTransformer {
         if (TraceDebuggerInjections.classUnderTraceDebugging != internalClassName.toCanonicalClassName()) {
             return null
         }
-        println("Transforming by trace debugger: $internalClassName")
         return transformImpl(loader, internalClassName, classBytes)
     }
 

@@ -13,10 +13,13 @@ import org.jetbrains.kotlinx.lincheck.annotations.LogLevel
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedOptions
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.runIteration
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfiguration
-import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
+import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
+import org.jetbrains.kotlinx.lincheck.transformation.withLincheckDynamicJavaAgent
 import org.jetbrains.kotlinx.lincheck.util.DEFAULT_LOG_LEVEL
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import kotlin.reflect.KClass
@@ -58,16 +61,15 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
      * @return [LincheckFailure] if a failure is discovered, null otherwise.
      */
     @Synchronized // never run Lincheck tests in parallel
-    internal fun checkImpl(cont: LincheckFailureContinuation? = null): LincheckFailure? {
+    internal fun checkImpl(checkImplWith: (InstrumentationMode, () -> Unit) -> Unit = ::withLincheckDynamicJavaAgent, cont: LincheckFailureContinuation? = null): LincheckFailure? {
         check(testConfigurations.isNotEmpty()) { "No Lincheck test configuration to run" }
         lincheckVerificationStarted()
         for (testCfg in testConfigurations) {
-            withLincheckJavaAgent(testCfg.instrumentationMode) {
-                val failure = testCfg.checkImpl()
-                if (failure != null) {
-                    if (cont != null) cont(failure)
-                    return failure
-                }
+            var failure: LincheckFailure? = null
+            checkImplWith(testCfg.instrumentationMode) { failure = testCfg.checkImpl() }
+            if (failure != null) {
+                if (cont != null) cont(failure)
+                return failure
             }
         }
         if (cont != null) cont(null)
@@ -309,6 +311,17 @@ internal fun <O : Options<O, *>> O.checkImpl(testClass: Class<*>): LincheckFailu
     LinChecker(testClass, this).checkImpl()
 
 /**
+ * Runs Lincheck to check the tested class under giver configurations.
+ * It accepts [checkImplWith] function which wraps the testing logic and
+ * can perform some preliminary actions.
+ * @param testClass Tested class.
+ * @param checkImplWith Function which wraps the testing logic.
+ * @return [LincheckFailure] if a failure is discovered, null otherwise.
+ */
+internal fun <O : Options<O, *>> O.checkImpl(testClass: Class<*>, checkImplWith: (InstrumentationMode, () -> Unit) -> Unit): LincheckFailure? =
+    LinChecker(testClass, this).checkImpl(checkImplWith)
+
+/**
  * Runs Lincheck to check the tested class under given configurations.
  *
  * Takes the [LincheckFailureContinuation] as an argument.
@@ -326,7 +339,7 @@ internal fun <O : Options<O, *>> O.checkImpl(testClass: Class<*>): LincheckFailu
  * @return [LincheckFailure] if a failure is discovered, null otherwise.
  */
 internal fun <O : Options<O, *>> O.checkImpl(testClass: Class<*>, cont: LincheckFailureContinuation) {
-    LinChecker(testClass, this).checkImpl(cont)
+    LinChecker(testClass, this).checkImpl(cont = cont)
 }
 
 internal typealias LincheckFailureContinuation = (LincheckFailure?) -> Unit

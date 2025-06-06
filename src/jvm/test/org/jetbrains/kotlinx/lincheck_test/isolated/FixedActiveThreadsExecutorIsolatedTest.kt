@@ -11,14 +11,14 @@ package org.jetbrains.kotlinx.lincheck_test.isolated
 
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.transformation.*
-import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
+import org.jetbrains.kotlinx.lincheck.transformation.withLincheckDynamicJavaAgent
 import org.junit.*
 import sun.nio.ch.lincheck.TestThread
 import java.util.concurrent.*
 
 class FixedActiveThreadsExecutorIsolatedTest {
     @Test
-    fun testSubmit() = withLincheckJavaAgent(InstrumentationMode.STRESS) {
+    fun testSubmit() = withLincheckDynamicJavaAgent(InstrumentationMode.STRESS) {
         FixedActiveThreadsExecutor("FixedActiveThreadsExecutorTest.testSubmit", 2).use { executor ->
             val executed = arrayOf(false, false)
             val tasks = Array<TestThreadExecution>(2) { iThread ->
@@ -34,7 +34,7 @@ class FixedActiveThreadsExecutorIsolatedTest {
     }
 
     @Test
-    fun testResubmit() = withLincheckJavaAgent(InstrumentationMode.STRESS) {
+    fun testResubmit() = withLincheckDynamicJavaAgent(InstrumentationMode.STRESS) {
         FixedActiveThreadsExecutor("FixedActiveThreadsExecutorTest.testResubmit", 2).use { executor ->
             val executed = arrayOf(false, false)
             val tasks = Array<TestThreadExecution>(2) { iThread ->
@@ -52,7 +52,7 @@ class FixedActiveThreadsExecutorIsolatedTest {
     }
 
     @Test(timeout = 100_000)
-    fun testSubmitTimeout() = withLincheckJavaAgent(InstrumentationMode.STRESS) {
+    fun testSubmitTimeout() = withLincheckDynamicJavaAgent(InstrumentationMode.STRESS) {
         FixedActiveThreadsExecutor(
             "FixedActiveThreadsExecutorTest.testSubmitTimeout",
             2
@@ -72,7 +72,7 @@ class FixedActiveThreadsExecutorIsolatedTest {
             try {
                 executor.submitAndAwait(tasks, 200)
             } catch (e: TimeoutException) {
-                return // TimeoutException is expected
+                return@withLincheckDynamicJavaAgent // TimeoutException is expected
             }
             check(false) { "TimeoutException was expected" }
         }

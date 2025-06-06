@@ -1245,7 +1245,7 @@ abstract class ManagedStrategy(
         // We need to ensure all the classes related to the reading object are instrumented.
         // The following call checks all the static fields.
         if (isStatic) {
-            JavaAgent.ensureClassHierarchyIsTransformed(className)
+            LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
         }
         if (collectTrace && isStatic && isFinal) {
             lastReadConstantName = fieldName
@@ -1442,7 +1442,7 @@ abstract class ManagedStrategy(
     }
 
     override fun beforeNewObjectCreation(className: String) = runInsideIgnoredSection {
-        JavaAgent.ensureClassHierarchyIsTransformed(className)
+        LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
     }
 
     override fun afterNewObjectCreation(obj: Any) {
@@ -1646,7 +1646,7 @@ abstract class ManagedStrategy(
         )
         // in case if a static method is called, ensure its class is instrumented
         if (receiver == null && methodSection < AnalysisSectionType.ATOMIC) {
-            JavaAgent.ensureClassHierarchyIsTransformed(className)
+            LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
         }
         // in case of atomics API setter method call, notify the object tracker about a new link between objects
         if (atomicMethodDescriptor != null && atomicMethodDescriptor.kind.isSetter) {
