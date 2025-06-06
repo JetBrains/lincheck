@@ -14,7 +14,6 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
 import kotlin.math.max
 
 internal typealias SingleThreadedTable<T> = List<SingleThreadedSection<T>>
@@ -62,15 +61,22 @@ internal class TraceReporter(
         // Optimizes trace by combining trace points for synthetic field accesses etc..
         val compressedTraceGraph = traceGraph
             .compressTrace()
-            .collapseLibraries(failure.analysisProfile)
         
         graph = if (isGeneralPurposeModelCheckingScenario(failure.scenario)) removeGPMCLambda(compressedTraceGraph) else compressedTraceGraph
     }
     
     fun appendTrace(stringBuilder: StringBuilder) = with(stringBuilder) {
         // Turn graph into chronological sequence of calls and events, for verbose and simple trace.
-        val flattenedShort: SingleThreadedTable<TraceNode> = graph.flattenNodes(ShortTraceFlattenPolicy()).reorder()
-        val flattenedVerbose: SingleThreadedTable<TraceNode> = graph.flattenNodes(VerboseTraceFlattenPolicy()).reorder()
+        val flattenedShort: SingleThreadedTable<TraceNode> = graph
+            .collapseLibraries(failure.analysisProfile, verbose = false)
+            .flattenNodes(ShortTraceFlattenPolicy())
+            .reorder()
+
+        val flattenedVerbose: SingleThreadedTable<TraceNode> = graph
+            .collapseLibraries(failure.analysisProfile, verbose = true)
+            .flattenNodes(VerboseTraceFlattenPolicy())
+            .reorder()
+        
         appendTraceTable(TRACE_TITLE, flattenedShort)
         appendLine()
         
@@ -133,7 +139,6 @@ private fun removeGPMCLambda(graph: SingleThreadedTable<TraceNode>): SingleThrea
         val first = section.first()
         if (first !is CallNode) return@map section
         if (first.children.isEmpty()) return@map listOf(first.createResultNodeForEmptyActor())
-        first.decrementCallDepthOfTree()
         if (first.children.firstOrNull() is CallNode) (first.children.first() as CallNode).tracePoint.returnedValue = first.tracePoint.returnedValue
         first.children + section.drop(1)
     }

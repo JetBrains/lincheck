@@ -39,7 +39,6 @@ private fun SingleThreadedTable<TraceNode>.compressSuspendImpl() = compressNodes
         if (it.tracePoint is CodeLocationTracePoint) {
             (it.tracePoint as CodeLocationTracePoint).codeLocation = singleChild.tracePoint.codeLocation
         }
-        it.decrementCallDepthOfTree()
         newNode.addChild(it)
     }
     newNode
@@ -110,7 +109,6 @@ private fun combineNodes(parent: CallNode, child: CallNode): TraceNode {
     check(parent.tracePoint.thrownException == child.tracePoint.thrownException)
 
     val newNode = parent.copy() 
-    child.decrementCallDepthOfTree()
     child.children.forEach { newNode.addChild(it) }
     return newNode
 }
@@ -128,7 +126,6 @@ private fun SingleThreadedTable<TraceNode>.compressSyntheticFieldAccess() = comp
     if (point is ReadTracePoint) point.codeLocation = node.tracePoint.codeLocation
     if (point is WriteTracePoint) point.codeLocation = node.tracePoint.codeLocation
 
-    singleChild.decrementCallDepthOfTree()
     singleChild
 }
 
@@ -162,10 +159,7 @@ private fun SingleThreadedTable<TraceNode>.compressUserThreadRun() = compressNod
     if (!isUserThreadStart(node.tracePoint, child.tracePoint)) return@compressNodes node
 
     val newNode = node.copy()
-    node.children.getOrNull(0)?.children?.forEach {
-        it.decrementCallDepthOfTree()
-        newNode.addChild(it)
-    }
+    node.children.getOrNull(0)?.children?.forEach { newNode.addChild(it) }
     newNode
 }
 
@@ -189,16 +183,20 @@ private fun SingleThreadedTable<TraceNode>.compressThreadStart() = compressNodes
     newNode
 }
 
-internal fun SingleThreadedTable<TraceNode>.collapseLibraries(analysisProfile: AnalysisProfile) = compressNodes { node -> 
+/**
+ * Collapses library code that should be hidden according to [analysisProfile].
+ * A [verbose] collapsed graph keeps the paths of hidden calls up to non hidden code visible.
+ */
+internal fun SingleThreadedTable<TraceNode>.collapseLibraries(analysisProfile: AnalysisProfile, verbose: Boolean) = compressNodes { node ->
     // if should not be hidden
     if (node !is CallNode || !analysisProfile.shouldBeHidden(node)) return@compressNodes node
     
     // if cannot be hidden (due to switch point)
-    if (node.containsDescendant(::isNonHideableNode)) 
+    if (verbose && node.containsDescendant(::isNonHideableNode))
         return@compressNodes node
     
     val newNode = node.copy()
-    findSubTreesToBeShown(node, analysisProfile).forEach {  newNode.addChild(it) }
+    findSubTreesAndEventsToBeShown(node, analysisProfile).forEach { newNode.addChild(it) }
     return@compressNodes newNode
 }
 
@@ -209,10 +207,11 @@ private fun isNonHideableNode(traceNode: TraceNode) =
  * Finds descendants that should not be hidden.
  * But not descendants of descendants, aka the roots of all subtrees that should be shown in the trace.
  */
-private fun findSubTreesToBeShown(node: TraceNode, analysisProfile: AnalysisProfile): List<TraceNode> {
+private fun findSubTreesAndEventsToBeShown(node: TraceNode, analysisProfile: AnalysisProfile): List<TraceNode> {
+    if (node is EventNode && node.tracePoint is SwitchEventTracePoint || node.tracePoint is ParkTracePoint) return listOf(node)
     if (node !is CallNode) return emptyList()
     if (!analysisProfile.shouldBeHidden(node)) return listOf(node)
-    return node.children.map { findSubTreesToBeShown(it, analysisProfile) }.flatten()
+    return node.children.map { findSubTreesAndEventsToBeShown(it, analysisProfile) }.flatten()
 }
 
 private fun SingleThreadedTable<TraceNode>.compressNodes(compressionRule: (TraceNode) -> TraceNode) = map {

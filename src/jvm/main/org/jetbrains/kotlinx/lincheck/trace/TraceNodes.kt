@@ -11,6 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.trace
 
 import kotlin.collections.plus
+import kotlin.math.max
 
 /**
  * Represents a single node in the hierarchical trace structure.
@@ -34,6 +35,9 @@ internal abstract class TraceNode(var callDepth: Int, val eventNumber: Int, open
     var parent: TraceNode? = null
         private set
     
+    var lastEventNumberOfDescendants = eventNumber
+    private set
+    
     // Am i last event. Check at parents and all ancestors
     val isLast: Boolean get() {
         if (parent == null) return true
@@ -43,14 +47,15 @@ internal abstract class TraceNode(var callDepth: Int, val eventNumber: Int, open
     fun addChild(node: TraceNode) {
         _children.add(node)
         node.parent = this
+        setLastEventNumber(node.lastEventNumberOfDescendants)
     }
 
     abstract override fun toString(): String
 
-    // Shifts stackTrace to the left
-    fun decrementCallDepthOfTree() {
-        callDepth--
-        children.forEach { it.decrementCallDepthOfTree() }
+    // Sets call depth of this (sub)tree
+    fun setCallDepthOfTree(depth: Int) {
+        callDepth = depth
+        children.forEach { it.setCallDepthOfTree(depth + 1) }
     }
 
     fun lastOrNull(predicate: (TraceNode) -> Boolean): TraceNode? {
@@ -83,6 +88,12 @@ internal abstract class TraceNode(var callDepth: Int, val eventNumber: Int, open
      * Shallow copy without children
      */
     abstract fun copy(): TraceNode 
+    
+    // sets the last event number of descendants, is called whenever a child is added
+    protected fun setLastEventNumber(lastEventNumber: Int) {
+        lastEventNumberOfDescendants = max(lastEventNumber, lastEventNumberOfDescendants)
+        parent?.setLastEventNumber(lastEventNumberOfDescendants)
+    }
 }
 
 internal class EventNode(
@@ -92,6 +103,7 @@ internal class EventNode(
 ): TraceNode(callDepth, eventNumber, tracePoint) {
     override fun toString(): String = tracePoint.toString()
     override fun copy(): TraceNode = EventNode(callDepth, tracePoint, eventNumber)
+        .also { it.setLastEventNumber(lastEventNumberOfDescendants) }
 }
 
 internal class CallNode(
@@ -104,6 +116,7 @@ internal class CallNode(
 
     override fun toString(): String = tracePoint.toString()
     override fun copy(): TraceNode = CallNode(callDepth, tracePoint, eventNumber)
+        .also { it.setLastEventNumber(lastEventNumberOfDescendants) }
     
     internal fun createResultNodeForEmptyActor() =
         ResultNode(callDepth + 1, tracePoint.returnedValue as ReturnedValueResult.ActorResult, eventNumber, tracePoint)
@@ -114,6 +127,7 @@ internal class ResultNode(callDepth: Int, val actorResult: ReturnedValueResult.A
     : TraceNode(callDepth, eventNumber, tracePoint) {
     override fun toString(): String = "result: ${actorResult.resultRepresentation}"
     override fun copy(): TraceNode = ResultNode(callDepth, actorResult, eventNumber, tracePoint)
+        .also { it.setLastEventNumber(lastEventNumberOfDescendants) }
 }
 
 // (stable) Sort on eventNumber
