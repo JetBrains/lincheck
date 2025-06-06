@@ -10,21 +10,34 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.tracerecorder
 
+import org.jetbrains.kotlinx.lincheck.util.runInsideIgnoredSection
+import sun.nio.ch.lincheck.Injections
 import sun.nio.ch.lincheck.ThreadDescriptor
 
 object TraceRecorder {
-    fun install(traceFileName: String?) {
-        val eventTracker = TraceCollectingEventTracker(traceFileName)
+    fun install(className: String, methodName: String, methodDesc: String, traceFileName: String?) {
+        val eventTracker = TraceCollectingEventTracker(className, methodName, methodDesc, traceFileName)
         val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: ThreadDescriptor(Thread.currentThread()).also {
             ThreadDescriptor.setCurrentThreadDescriptor(it)
         }
         desc.eventTracker = eventTracker
     }
 
-    fun dumpTrace() {
-        val eventTracker = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTracker ?: return
+    fun enableTrace() = runInsideIgnoredSection {
+        val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
+        val eventTracker = desc.eventTracker ?: return
         if (eventTracker is TraceCollectingEventTracker) {
-            eventTracker.dumpTrace()
+            eventTracker.enableTrace()
+            desc.enableAnalysis()
+        }
+    }
+
+    fun finishTrace() = runInsideIgnoredSection {
+        val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
+        val eventTracker = desc.eventTracker ?: return
+        if (eventTracker is TraceCollectingEventTracker) {
+            desc.disableAnalysis()
+            eventTracker.finishTrace()
         }
     }
 }

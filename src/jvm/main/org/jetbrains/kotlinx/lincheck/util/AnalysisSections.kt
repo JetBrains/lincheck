@@ -14,6 +14,7 @@ import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.strategy.tracerecorder.TraceCollectingEventTracker
 import org.jetbrains.kotlinx.lincheck.transformation.isThreadContainerClass
 import sun.nio.ch.lincheck.ThreadDescriptor
 import sun.nio.ch.lincheck.Injections
@@ -151,7 +152,7 @@ internal fun leaveIgnoredSection() {
  */
 internal inline fun <R> runInsideIgnoredSection(block: () -> R): R {
     val descriptor = ThreadDescriptor.getCurrentThreadDescriptor()
-    if (descriptor == null || descriptor.eventTracker !is ManagedStrategy) {
+    if (descriptor == null || descriptor.eventTracker == null) {
         return block()
     }
     descriptor.enterIgnoredSection()
