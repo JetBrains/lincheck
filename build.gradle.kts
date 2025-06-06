@@ -309,15 +309,17 @@ tasks {
         configureJvmTestCommon()
     }
 
-    // TODO: try to fix and apply this approach instead of using `@Suppress("INVISIBLE_REFERENCE")`
-    // named<KotlinCompile>("compileIntegrationTestKotlin") {
-    //     kotlinOptions {
-    //         freeCompilerArgs = listOf(
-    //             "-Xfriend-paths=${project.buildDir}/classes/kotlin/main",
-    //             "-Xfriend-paths=${project.buildDir}/classes/java/main",
-    //         )
-    //     }
-    // }
+    // add the main module jar to friend paths to enable access to `internal` APIs inside integration tests
+    named<KotlinCompile>("compileIntegrationTestKotlin") {
+        val friendModule = project(":")
+        val jarTask = friendModule.tasks.getByName("jar") as Jar
+        val jarPath = jarTask.archiveFile.get().asFile.absolutePath
+        compilerOptions {
+            freeCompilerArgs.add(
+                "-Xfriend-paths=$jarPath"
+            )
+        }
+    }
 
     val traceDebuggerIntegrationTest = register<Test>("traceDebuggerIntegrationTest") {
         group = "verification"
