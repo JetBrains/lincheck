@@ -15,7 +15,7 @@ import org.jetbrains.kotlinx.lincheck.execution.parallelResults
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.runIteration
-import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.ensureObjectIsTransformed
 import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 
@@ -70,7 +70,7 @@ object Lincheck {
 
         val testCfg = options.createTestConfigurations(GeneralPurposeModelCheckingWrapper::class.java)
         withLincheckJavaAgent(testCfg.instrumentationMode) {
-            LincheckJavaAgent.ensureObjectIsTransformed(block)
+            ensureObjectIsTransformed(block)
             val verifier = testCfg.createVerifier()
             val wrapperClass = GeneralPurposeModelCheckingWrapper::class.java
             testCfg.createStrategy(wrapperClass, scenario, null, null).use { strategy ->

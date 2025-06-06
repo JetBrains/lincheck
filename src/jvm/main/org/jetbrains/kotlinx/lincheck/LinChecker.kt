@@ -303,7 +303,6 @@ fun <O : Options<O, *>> O.check(testClass: KClass<*>) = this.check(testClass.jav
  * Runs Lincheck to check the tested class under given configurations.
  *
  * @param testClass Tested class.
- * @param isDynamicAgent Tells Lincheck whether to attach dynamic agent instrumentation of not.
  * @return [LincheckFailure] if a failure is discovered, null otherwise.
  */
 internal fun <O : Options<O, *>> O.checkImpl(testClass: Class<*>): LincheckFailure? =
@@ -327,7 +326,7 @@ internal fun <O : Options<O, *>> O.checkImpl(testClass: Class<*>): LincheckFailu
  * @return [LincheckFailure] if a failure is discovered, null otherwise.
  */
 internal fun <O : Options<O, *>> O.checkImpl(testClass: Class<*>, cont: LincheckFailureContinuation) {
-    LinChecker(testClass, this).checkImpl(cont = cont)
+    LinChecker(testClass, this).checkImpl(cont)
 }
 
 internal typealias LincheckFailureContinuation = (LincheckFailure?) -> Unit

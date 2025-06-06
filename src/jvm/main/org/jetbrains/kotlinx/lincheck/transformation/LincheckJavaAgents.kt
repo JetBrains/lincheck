@@ -32,7 +32,7 @@ import java.util.jar.JarFile
  */
 internal inline fun withLincheckJavaAgent(instrumentationMode: InstrumentationMode, block: () -> Unit) {
     // in case if trace debugger attached its static agent we don't need any
-    if (isTraceDebuggerAgentAttached) {
+    if (isTraceDebuggerJavaAgentAttached) {
         block()
     }
     // otherwise we perform instrumentation via ByteBuddy dynamic agent
@@ -40,6 +40,12 @@ internal inline fun withLincheckJavaAgent(instrumentationMode: InstrumentationMo
         // initialize instrumentation with dynamic ByteBuddy agent
         // if no agent is attached yet.
         if (!isInstrumentationInitialized) {
+            /**
+             * Dynamically attaches byte buddy instrumentation to this JVM instance.
+             * Please note that the dynamic attach feature will be disabled in future JVM releases,
+             * but at the moment of implementing this logic (March 2024), it was the smoothest way
+             * to inject code in the user codebase when the `java.base` module also needs to be instrumented.
+             */
             LincheckJavaAgent.instrumentation = ByteBuddyAgent.install()
             isInstrumentationInitialized = true
         }
@@ -84,7 +90,7 @@ internal object TraceDebuggerJavaAgent {
         }
         TraceDebuggerInjections.parseArgs(agentArgs)
         LincheckJavaAgent.instrumentation = inst
-        isTraceDebuggerAgentAttached = true
+        isTraceDebuggerJavaAgentAttached = true
         isInstrumentationInitialized = true
 
         LincheckJavaAgent.instrumentation.addTransformer(TraceDebuggerTransformer, true)
@@ -388,5 +394,5 @@ internal object LincheckJavaAgent {
         System.getProperty("lincheck.instrumentAllClasses")?.toBoolean() ?: false
 }
 
-private var isTraceDebuggerAgentAttached: Boolean = false
+private var isTraceDebuggerJavaAgentAttached: Boolean = false
 private var isInstrumentationInitialized: Boolean = false

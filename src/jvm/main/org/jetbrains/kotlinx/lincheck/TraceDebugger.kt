@@ -15,7 +15,7 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.execution.threadsResults
 import org.jetbrains.kotlinx.lincheck.strategy.managed.forClasses
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.ensureClassHierarchyIsTransformed
 import org.jetbrains.kotlinx.lincheck.util.LoggingLevel
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.io.File
@@ -115,7 +115,7 @@ internal object TraceDebuggerInjections {
 
 internal class TraceDebuggerStaticMethodWrapper {
     fun callStaticMethod(clazz: Class<*>, method: Method) {
-        LincheckJavaAgent.ensureClassHierarchyIsTransformed(clazz.name)
+        ensureClassHierarchyIsTransformed(clazz.name)
         method.invoke(null)
     }
 }
