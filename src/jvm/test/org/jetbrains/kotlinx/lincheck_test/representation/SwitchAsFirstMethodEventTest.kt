@@ -10,11 +10,11 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import kotlinx.atomicfu.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck_test.util.*
+import java.util.concurrent.atomic.AtomicInteger
 import org.junit.*
 
 /**
@@ -47,7 +47,7 @@ import org.junit.*
  * ```
  */
 class SwitchAsFirstMethodEventTest {
-    private val counter = atomic(0)
+    private val counter = AtomicInteger(0)
 
     @Operation
     fun incTwiceAndGet(): Int {
