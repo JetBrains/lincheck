@@ -84,6 +84,12 @@ class AtomicFUIntegerTest : AbstractLincheckTest() {
     @Operation
     fun decrementAndGet() = int.decrementAndGet()
 
+    /*
+     * `plusAssign` and `minusAssign` operators are not supported
+     * in atomicfu Kotlin-JVM IR compiler plugin:
+     * https://github.com/Kotlin/kotlinx-atomicfu/issues/414
+     */
+
     // @Operation
     // fun plusAssign(delta: Int) {
     //     int += delta
@@ -131,6 +137,12 @@ class AtomicFULongTest : AbstractLincheckTest() {
 
     @Operation
     fun decrementAndGet() = long.decrementAndGet()
+
+    /*
+     * `plusAssign` and `minusAssign` operators are not supported
+     * in atomicfu Kotlin-JVM IR compiler plugin:
+     * https://github.com/Kotlin/kotlinx-atomicfu/issues/414
+     */
 
     // @Operation
     // fun plusAssign(delta: Long) {
