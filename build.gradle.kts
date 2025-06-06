@@ -322,7 +322,7 @@ tasks {
                         "Copyright (C) 2015 - 2019 Devexperts, LLC\n                                " +
                         "Copyright (C) $inceptionYear - $lastCopyrightYear JetBrains, s.r.o.",
                 // This attribute let us get the version from the code.
-                "Implementation-Version" to version,
+                "Implementation-Version" to version
             )
         }
     }
