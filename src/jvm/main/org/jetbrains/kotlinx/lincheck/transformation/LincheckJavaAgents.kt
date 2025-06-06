@@ -31,7 +31,7 @@ import java.util.jar.JarFile
  * Executes [block] with the Lincheck java agent for byte-code instrumentation.
  */
 internal inline fun withLincheckJavaAgent(instrumentationMode: InstrumentationMode, block: () -> Unit) {
-    // in case if trace debugger attached its static agent we don't need any
+    // in case if trace debugger attached its static agent we don't do anything
     if (isTraceDebuggerJavaAgentAttached) {
         block()
     }
