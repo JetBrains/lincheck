@@ -1,6 +1,7 @@
 import groovy.util.*
 import kotlinx.team.infra.*
 import org.gradle.jvm.tasks.Jar
+import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -156,6 +157,24 @@ fun KotlinCompile.setupKotlinToolchain() {
     })
 }
 
+// add an association to main and test modules to enable access to `internal` APIs inside integration tests:
+// https://kotlinlang.org/docs/gradle-configure-project.html#associate-compiler-tasks
+kotlin {
+    target.compilations.named("integrationTest") {
+        configureAssociation()
+    }
+    target.compilations.named("traceDebuggerTest") {
+        configureAssociation()
+    }
+}
+
+fun KotlinCompilation<*>.configureAssociation() {
+    val main by target.compilations.getting
+    val test by target.compilations.getting
+    associateWith(main)
+    associateWith(test)
+}
+
 /*
  * Unfortunately, Lincheck was affected by the following bug in atomicfu
  * (at the latest version 0.27.0 at the time when this comment was written):
@@ -304,18 +323,6 @@ tasks {
         enableAssertions = true
         testLogging.showStandardStreams = true
         outputs.upToDateWhen { false } // Always run tests when called
-    }
-
-    // add the main module jar to friend paths to enable access to `internal` APIs inside integration tests
-    named<KotlinCompile>("compileIntegrationTestKotlin") {
-        val friendModule = project(":")
-        val jarTask = friendModule.tasks.getByName("jar") as Jar
-        val jarPath = jarTask.archiveFile.get().asFile.absolutePath
-        compilerOptions {
-            freeCompilerArgs.add(
-                "-Xfriend-paths=$jarPath"
-            )
-        }
     }
 
     registerTraceDebuggerIntegrationTestsPrerequisites()
