@@ -11,74 +11,29 @@
 package org.jetbrains.kotlinx.lincheck.strategy.tracerecorder
 
 import kotlinx.atomicfu.atomic
+import org.jetbrains.kotlinx.lincheck.flattenedTraceGraphToCSV
 import org.jetbrains.kotlinx.lincheck.primitiveOrIdentityHashCode
+import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
+import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicFieldUpdaterNames.getAtomicFieldUpdaterDescriptor
-import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceMethodType
-import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceMethodType.AtomicArrayInLocalVariable
-import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceMethodType.AtomicArrayMethod
-import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceMethodType.AtomicReferenceInLocalVariable
-import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceMethodType.AtomicReferenceInstanceMethod
-import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceMethodType.AtomicReferenceStaticMethod
-import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceMethodType.InstanceFieldAtomicArrayMethod
-import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceMethodType.StaticFieldAtomicArrayMethod
-import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceNames
+import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceMethodType.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.adornedStringRepresentation
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ShadowStackFrame
-import org.jetbrains.kotlinx.lincheck.strategy.managed.UNKNOWN_CODE_LOCATION
-import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName
-import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.UnsafeArrayMethod
-import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.UnsafeInstanceMethod
-import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.UnsafeStaticMethod
-import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeNames
-import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType
-import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.ArrayVarHandleMethod
-import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.InstanceVarHandleMethod
-import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.StaticVarHandleMethod
-import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleNames
+import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
 import org.jetbrains.kotlinx.lincheck.strategy.toAsmHandle
-import org.jetbrains.kotlinx.lincheck.trace.CallStackTraceElement
-import org.jetbrains.kotlinx.lincheck.trace.MethodCallTracePoint
-import org.jetbrains.kotlinx.lincheck.trace.MonitorEnterTracePoint
-import org.jetbrains.kotlinx.lincheck.trace.MonitorExitTracePoint
-import org.jetbrains.kotlinx.lincheck.trace.NotifyTracePoint
-import org.jetbrains.kotlinx.lincheck.trace.ParkTracePoint
-import org.jetbrains.kotlinx.lincheck.trace.ReadTracePoint
-import org.jetbrains.kotlinx.lincheck.trace.ThreadJoinTracePoint
-import org.jetbrains.kotlinx.lincheck.trace.ThreadStartTracePoint
-import org.jetbrains.kotlinx.lincheck.trace.TraceCollector
-import org.jetbrains.kotlinx.lincheck.trace.TracePoint
-import org.jetbrains.kotlinx.lincheck.trace.UnparkTracePoint
-import org.jetbrains.kotlinx.lincheck.trace.WaitTracePoint
-import org.jetbrains.kotlinx.lincheck.trace.WriteTracePoint
+import org.jetbrains.kotlinx.lincheck.trace.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.transformation.MethodIds
 import org.jetbrains.kotlinx.lincheck.transformation.toSimpleClassName
-import org.jetbrains.kotlinx.lincheck.util.AtomicMethodDescriptor
-import org.jetbrains.kotlinx.lincheck.util.findInstanceFieldReferringTo
-import org.jetbrains.kotlinx.lincheck.util.isAtomic
-import org.jetbrains.kotlinx.lincheck.util.isAtomicArray
-import org.jetbrains.kotlinx.lincheck.util.isAtomicFieldUpdater
-import org.jetbrains.kotlinx.lincheck.util.isSuspendFunction
-import org.jetbrains.kotlinx.lincheck.util.isUnsafe
-import org.jetbrains.kotlinx.lincheck.util.isVarHandle
-import org.jetbrains.kotlinx.lincheck.util.runInsideIgnoredSection
+import org.jetbrains.kotlinx.lincheck.util.*
 import org.objectweb.asm.ConstantDynamic
 import org.objectweb.asm.commons.Method.getMethod
-import sun.nio.ch.lincheck.BootstrapResult
-import sun.nio.ch.lincheck.EventTracker
-import sun.nio.ch.lincheck.InjectedRandom
-import sun.nio.ch.lincheck.Injections
-import sun.nio.ch.lincheck.MethodSignature
-import sun.nio.ch.lincheck.ThreadDescriptor
-import sun.nio.ch.lincheck.TraceDebuggerTracker
+import sun.nio.ch.lincheck.*
 import java.io.File
 import java.io.PrintStream
 import java.lang.invoke.CallSite
-import java.util.ArrayList
-import java.util.IdentityHashMap
-import java.util.Objects
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.collections.set
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 
@@ -391,7 +346,12 @@ class TraceCollectingEventTracker(
         params: Array<Any?>
     ): Any? = runInsideIgnoredSection {
         val td = threads[Thread.currentThread()] ?: return null
-        addTracePoint(addBeforeMethodCallTracePoint(
+
+        if (receiver == null) {
+            LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
+        }
+
+        addBeforeMethodCallTracePoint(
             thread = td,
             owner = receiver,
             codeLocation = codeLocation,
@@ -401,7 +361,7 @@ class TraceCollectingEventTracker(
             methodParams = params,
             atomicMethodDescriptor = null,
             callType = MethodCallTracePoint.CallType.NORMAL,
-        ))
+        )
         return null
     }
 
@@ -458,8 +418,8 @@ class TraceCollectingEventTracker(
         codeLocation: Int,
         owner: Any?
     ) = runInsideIgnoredSection {
-        val td = threads[Thread.currentThread()] ?: return
-        addTracePoint(addBeforeMethodCallTracePoint(
+        val td = threads[Thread.currentThread()] ?: return@runInsideIgnoredSection
+        addBeforeMethodCallTracePoint(
             thread = td,
             owner = owner,
             codeLocation = codeLocation,
@@ -469,7 +429,7 @@ class TraceCollectingEventTracker(
             methodParams = emptyArray(),
             atomicMethodDescriptor = null,
             callType = MethodCallTracePoint.CallType.NORMAL,
-        ))
+        )
     }
 
     override fun onInlineMethodCallReturn(className: String, methodId: Int) = runInsideIgnoredSection {
@@ -513,6 +473,9 @@ class TraceCollectingEventTracker(
         td.shadowStack.add(ShadowStackFrame(Thread.currentThread()))
         threads[Thread.currentThread()] = td
 
+        // Section start not to confuse trace post-processor
+        addTracePoint(SectionDelimiterTracePoint(ExecutionPart.PARALLEL))
+
         // Method in question was called
         addTracePoint(addBeforeMethodCallTracePoint(
             thread = td,
@@ -523,7 +486,7 @@ class TraceCollectingEventTracker(
             methodId = MethodIds.getMethodId(className, methodName, methodDesc),
             methodParams = emptyArray(),
             atomicMethodDescriptor = null,
-            callType = MethodCallTracePoint.CallType.NORMAL
+            callType = MethodCallTracePoint.CallType.ACTOR
         ))
     }
 
@@ -541,16 +504,22 @@ class TraceCollectingEventTracker(
         }
 
         // Merge all traces. Mergesort is possible as optimization
-        val totalTrace = mutableListOf<TracePoint>()
-        tds.forEach { totalTrace.addAll(it.collector.trace) }
-        totalTrace.sortWith { a, b -> a.eventId.compareTo(b.eventId) }
+        val totalTraceArray = mutableListOf<TracePoint>()
+        tds.forEach { totalTraceArray.addAll(it.collector.trace) }
+        totalTraceArray.sortWith { a, b -> a.eventId.compareTo(b.eventId) }
+
+        val totalTrace = Trace(totalTraceArray, listOf("Thread"))
 
         // Filter & prepare trace to "graph"
+        val graph = try {
+            traceToCollapsedGraph(totalTrace, AnalysisProfile(false), null)
+        } catch (t: Throwable) {
+            throw t
+        }
+        val nodeList = graph.flattenNodes(VerboseTraceFlattenPolicy())
 
-
-        // Output!
-        totalTrace.forEach {
-            printStream.println(it.toString())
+        flattenedTraceGraphToCSV(nodeList).forEach {
+            printStream.println(it)
         }
         printStream.close()
     }
