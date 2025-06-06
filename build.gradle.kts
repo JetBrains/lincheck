@@ -16,12 +16,11 @@ repositories {
     maven { url = uri("https://repo.gradle.org/gradle/libs-releases/") }
 }
 
-// kotlin {
-//     @OptIn(ExperimentalKotlinGradlePluginApi::class)
-//     compilerOptions {
-//         allWarningsAsErrors = true
-//     }
-// }
+kotlin {
+    compilerOptions {
+        allWarningsAsErrors = true
+    }
+}
 
 sourceSets {
     main {
@@ -254,6 +253,8 @@ tasks {
     }
 
     test {
+        configureJvmTestCommon()
+
         val ideaActive = System.getProperty("idea.active") == "true"
         if (!ideaActive) {
             // We need to be able to run these tests in IntelliJ IDEA.
@@ -268,7 +269,6 @@ tasks {
         if (jdkToolchainVersion.toInt() < 13) {
             exclude("**/*JdkUnsafeTraceRepresentationTest*")
         }
-        configureJvmTestCommon()
         val runAllTestsInSeparateJVMs: String by project
         forkEvery = when {
             runAllTestsInSeparateJVMs.toBoolean() -> 1
@@ -287,24 +287,31 @@ tasks {
 
     val testIsolated = register<Test>("testIsolated") {
         group = "verification"
+        include("**/*IsolatedTest*")
+
         testClassesDirs = test.get().testClassesDirs
         classpath = test.get().classpath
+
+        configureJvmTestCommon()
+
         enableAssertions = true
         testLogging.showStandardStreams = true
         outputs.upToDateWhen { false } // Always run tests when called
-        include("**/*IsolatedTest*")
-        configureJvmTestCommon()
+
         forkEvery = 1
     }
 
     val integrationTest = register<Test>("integrationTest") {
         group = "verification"
+
         testClassesDirs = sourceSets["integrationTest"].output.classesDirs
         classpath = sourceSets["integrationTest"].runtimeClasspath
+
+        configureJvmTestCommon()
+
         enableAssertions = true
         testLogging.showStandardStreams = true
         outputs.upToDateWhen { false } // Always run tests when called
-        configureJvmTestCommon()
     }
 
     // add the main module jar to friend paths to enable access to `internal` APIs inside integration tests
