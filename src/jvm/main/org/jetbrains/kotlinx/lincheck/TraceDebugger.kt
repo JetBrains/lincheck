@@ -16,7 +16,6 @@ import org.jetbrains.kotlinx.lincheck.execution.threadsResults
 import org.jetbrains.kotlinx.lincheck.strategy.managed.forClasses
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
-import org.jetbrains.kotlinx.lincheck.transformation.withLincheckStaticJavaAgent
 import org.jetbrains.kotlinx.lincheck.util.LoggingLevel
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.io.File
@@ -91,7 +90,7 @@ internal object TraceDebuggerInjections {
             .logLevel(LoggingLevel.OFF)
             .invocationTimeout(5 * 60 * 1000) // 5 mins
 
-        val failure = lincheckOptions.checkImpl(instanceClass, ::withLincheckStaticJavaAgent)
+        val failure = lincheckOptions.checkImpl(instanceClass, isDynamicAgent = false)
 
         val result = failure!!.results.threadsResults[0][0]
         if (result is ExceptionResult) throw result.throwable

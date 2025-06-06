@@ -31,22 +31,13 @@ import java.util.jar.JarFile
 /**
  * Executes [block] with the Lincheck dynamic java agent for byte-code instrumentation.
  */
-internal fun withLincheckDynamicJavaAgent(instrumentationMode: InstrumentationMode, block: () -> Unit) {
+internal inline fun withLincheckDynamicJavaAgent(instrumentationMode: InstrumentationMode, block: () -> Unit) {
     LincheckDynamicJavaAgent.install(instrumentationMode)
     return try {
         block()
     } finally {
         LincheckDynamicJavaAgent.uninstall()
     }
-}
-
-/**
- * Executes [block] without explicit `install`/`uninstall` invocations, because Lincheck static java agent
- * installs itself once and never calls `uninstall`.
- */
-internal fun withLincheckStaticJavaAgent(instrumentationMode: InstrumentationMode, block: () -> Unit) {
-    check(instrumentationMode == MODEL_CHECKING) { "Only model-checking instrumentation mode is supported for static agent" }
-    block()
 }
 
 internal enum class InstrumentationMode {
