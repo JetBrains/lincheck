@@ -7,21 +7,7 @@ The following interleaving leads to the error:
 | $this_runCatching.block() at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48) |
 |   block() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:99)                                        |
 |     q.take() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:104)                                    |
-|       lock.lockInterruptibly() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:417)                                                             |
-|       count ➜ 0 at ArrayBlockingQueue.take(ArrayBlockingQueue.java:419)                                                                            |
-|       notEmpty.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:420)                                                                     |
-|         newConditionNode(): ConditionNode#1 at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1692)              |
-|         enableWait(ConditionNode#1): 1 at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1695)                   |
-|         LockSupport.setCurrentBlocker(ConditionObject#1) at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1696) |
-|         canReacquire(ConditionNode#1): false at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1698)             |
-|         node.status ➜ 3 at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1702)                                  |
-|         ForkJoinPool.managedBlock(ConditionNode#1) at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1707)       |
-|           ForkJoinPool.unmanagedBlock(ConditionNode#1) at ForkJoinPool.managedBlock(ForkJoinPool.java:3725)                                        |
-|             blocker.isReleasable(): false at ForkJoinPool.unmanagedBlock(ForkJoinPool.java:3780)                                                   |
-|             blocker.block() at ForkJoinPool.unmanagedBlock(ForkJoinPool.java:3780)                                                                 |
-|               isReleasable(): false at AbstractQueuedSynchronizer$ConditionNode.block(AbstractQueuedSynchronizer.java:519)                         |
-|               LockSupport.park() at AbstractQueuedSynchronizer$ConditionNode.block(AbstractQueuedSynchronizer.java:519)                            |
-|                 PARK at LockSupport.park(LockSupport.java:371)                                                                                     |
+|       PARK at LockSupport.park(LockSupport.java:371)                                                                                               |
 | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 All unfinished threads are in deadlock
 

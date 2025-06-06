@@ -7,15 +7,7 @@ The following interleaving leads to the error:
 | $this_runCatching.block() at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48) |
 |   block() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:99)                                        |
 |     q.take() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:104)                                    |
-|       lock.lockInterruptibly() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:414)                                                             |
-|       count ➜ 0 at ArrayBlockingQueue.take(ArrayBlockingQueue.java:416)                                                                            |
-|       notEmpty.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:417)                                                                     |
-|         addConditionWaiter(): Node#1 at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2077)                     |
-|         this$0.fullyRelease(Node#1): 1 at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2078)                   |
-|         this$0.isOnSyncQueue(Node#1): false at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2080)              |
-|         LockSupport.park(ConditionObject#1) at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2081)              |
-|           LockSupport.setBlocker(Thread#0, ConditionObject#1) at LockSupport.park(LockSupport.java:193)                                            |
-|           PARK at LockSupport.park(LockSupport.java:194)                                                                                           |
+|       PARK at LockSupport.park(LockSupport.java:194)                                                                                               |
 | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 All unfinished threads are in deadlock
 

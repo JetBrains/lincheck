@@ -7,11 +7,7 @@ The following interleaving leads to the error:
 | $this_runCatching.block() at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48) |
 |   block() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:99)                                        |
 |     q.take() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:104)                                    |
-|       lock.lockInterruptibly() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:400)                                                             |
-|       notEmpty.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:403)                                                                     |
-|         LockSupport.park(ConditionObject#1) at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2039)              |
-|           LockSupport.setBlocker(Thread#0, ConditionObject#1) at LockSupport.park(LockSupport.java:174)                                            |
-|           PARK at LockSupport.park(LockSupport.java:175)                                                                                           |
+|       PARK at LockSupport.park(LockSupport.java:175)                                                                                               |
 | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 All unfinished threads are in deadlock
 
