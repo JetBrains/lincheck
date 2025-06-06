@@ -118,22 +118,6 @@ java {
     }
 }
 
-fun JavaCompile.setupJavaToolchain() {
-    val jdkToolchainVersion: String by project
-    javaToolchains {
-        javaCompiler = compilerFor {
-            languageVersion.set(JavaLanguageVersion.of(jdkToolchainVersion))
-        }
-    }
-}
-
-fun KotlinCompile.setupKotlinToolchain() {
-    val jdkToolchainVersion: String by project
-    kotlinJavaToolchain.toolchain.use(javaToolchains.launcherFor {
-        languageVersion.set(JavaLanguageVersion.of(jdkToolchainVersion))
-    })
-}
-
 tasks {
     named<JavaCompile>("compileTestJava") {
         setupJavaToolchain()
@@ -155,6 +139,22 @@ tasks {
     named<KotlinCompile>("compileTraceDebuggerTestKotlin") {
         setupKotlinToolchain()
     }
+}
+
+fun JavaCompile.setupJavaToolchain() {
+    val jdkToolchainVersion: String by project
+    javaToolchains {
+        javaCompiler = compilerFor {
+            languageVersion.set(JavaLanguageVersion.of(jdkToolchainVersion))
+        }
+    }
+}
+
+fun KotlinCompile.setupKotlinToolchain() {
+    val jdkToolchainVersion: String by project
+    kotlinJavaToolchain.toolchain.use(javaToolchains.launcherFor {
+        languageVersion.set(JavaLanguageVersion.of(jdkToolchainVersion))
+    })
 }
 
 /*
@@ -253,8 +253,6 @@ tasks {
         jvmArgs(extraArgs)
     }
 
-    registerIntegrationTestsPrerequisites()
-
     test {
         val ideaActive = System.getProperty("idea.active") == "true"
         if (!ideaActive) {
@@ -321,12 +319,13 @@ tasks {
         }
     }
 
+    registerTraceDebuggerIntegrationTestsPrerequisites()
+
     val traceDebuggerIntegrationTest = register<Test>("traceDebuggerIntegrationTest") {
         group = "verification"
         include("org/jetbrains/kotlinx/trace_debugger/integration/*")
 
         testClassesDirs = sourceSets["traceDebuggerTest"].output.classesDirs
-
         classpath = sourceSets["traceDebuggerTest"].runtimeClasspath
 
         outputs.upToDateWhen { false } // Always run tests when called
@@ -355,6 +354,8 @@ tasks {
         }
     }
 }
+
+registerTraceDebuggerTasks()
 
 infra {
     teamcity {
@@ -409,5 +410,3 @@ fun XmlProvider.removeAllLicencesExceptOne(licenceName: String) {
         }
     }
 }
-
-registerTraceDebuggerTasks()

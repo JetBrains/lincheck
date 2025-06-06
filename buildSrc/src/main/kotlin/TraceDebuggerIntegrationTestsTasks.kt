@@ -32,7 +32,7 @@ private val projectsToTest = listOf(
 
 lateinit var traceDebuggerIntegrationTestsPrerequisites: TaskProvider<Task>
 
-fun Project.registerIntegrationTestsPrerequisites() {
+fun Project.registerTraceDebuggerIntegrationTestsPrerequisites() {
     val unzippedTestProjectsDir = layout.buildDirectory.dir("integrationTestProjects")
     val prerequisite = projectsToTest.map { projectToTest ->
         val projectName = projectToTest.repositoryName
