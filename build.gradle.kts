@@ -157,22 +157,14 @@ fun KotlinCompile.setupKotlinToolchain() {
 }
 
 /*
- * We were unfortunate enough to be affected by several bugs of the ` atomicfu ` compiler plugin.
+ * Unfortunately, Lincheck was affected by the following bug in atomicfu
+ * (at the latest version 0.27.0 at the time when this comment was written):
+ * https://github.com/Kotlin/kotlinx-atomicfu/issues/525.
  *
- * - When using JVM-only Kotlin gradle plugin with atomicfu version 0.20.2 we hit the following bug:
- *   https://github.com/Kotlin/kotlinx-atomicfu/issues/301, resolved by
- *   https://github.com/Kotlin/kotlinx-atomicfu/pull/303
+ * To bypass the bug, the solution is to disable post-compilation JVM bytecode transformation
+ * and enable only the JVM-IR transformation at the Kotlin compilation stage.
  *
- * - When using JVM-only Kotlin gradle plugin with atomicfu versions 0.21.0 <= ... < 0.23.2 we hit the following bug:
- *   https://github.com/Kotlin/kotlinx-atomicfu/issues/388, resolved by
- *   https://github.com/Kotlin/kotlinx-atomicfu/pull/394
- *
- * - For both JVM and Multiplatform gradle plugins and for atomicfu versions >= 0.23.2 we hit the following bug:
- *   https://github.com/Kotlin/kotlinx-atomicfu/issues/525, still open.
- *
- * To use the latest available atomicfu version 0.27.0 (at the moment when this comment was written)
- * and mitigate the bug, the solution is to disable post-compilation JVM bytecode transformation
- * and enable only the JVM-IR transformation at the Kotlin sources compilation stage.
+ * See also https://github.com/JetBrains/lincheck/issues/668 for a more detailed description of the bug.
  */
 atomicfu {
     transformJvm = false
