@@ -11,11 +11,12 @@
 package org.jetbrains.kotlinx.lincheck_test
 
 import org.jetbrains.kotlinx.lincheck.enumerateObjects
-import org.junit.Assert
-import org.junit.Test
 import java.util.Optional
 import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.atomic.AtomicReferenceArray
+import kotlinx.atomicfu.AtomicIntArray
+import org.junit.Assert
+import org.junit.Test
 
 /**
  * Checks invariants and restrictions on [enumerateObjects] method.
@@ -81,46 +82,47 @@ class ObjectTraverserTest {
         )
     }
 
-    // @Test
-    // fun `should traverse array elements for atomicfu arrays`() {
-    //     val myObject = object : Any() {
-    //         val array = kotlinx.atomicfu.AtomicIntArray(3)
-    //         init {
-    //             for (i in 0 until array.size) {
-    //                 array[i].value = i + 1
-    //             }
-    //         }
-    //     }
-    //     val objectEnumeration = enumerateObjects(myObject)
-    //
-    //     Assert.assertTrue(
-    //         objectEnumeration.size == 5 &&
-    //         objectEnumeration.keys.containsAll(
-    //             listOf(
-    //                 myObject,
-    //                 // atomicfu transformers [are insane and] don't allow to compile direct reference to `myObject.array`
-    //                 myObject.javaClass.getDeclaredField("array").get(myObject),
-    //                 1, 2, 3
-    //             )
-    //         )
-    //     )
-    // }
+    @Test
+    fun `should traverse array elements for atomicfu arrays`() {
+        val arraySize = 3
+        val myObject = object : Any() {
+            val array = AtomicIntArray(arraySize)
+            init {
+                for (i in 0 until arraySize) {
+                    array[i].value = i + 1
+                }
+            }
+        }
+        val objectEnumeration = enumerateObjects(myObject)
 
-    // @Test
-    // @Suppress("UNUSED_VARIABLE")
-    // fun `should jump through atomic refs`() {
-    //     val myObject = object : Any() {
-    //         val javaRef = AtomicReference<AtomicReference<Int>>(AtomicReference(1))
-    //         val atomicFURef: kotlinx.atomicfu.AtomicRef<AtomicReference<Any>?> = kotlinx.atomicfu.atomic(null)
-    //     }
-    //     myObject.atomicFURef.value = AtomicReference<Any>(2)
-    //
-    //     val objectEnumeration = enumerateObjects(myObject)
-    //     Assert.assertTrue(
-    //         objectEnumeration.size == 3 &&
-    //         objectEnumeration.keys.containsAll(
-    //             listOf(myObject, 1, 2)
-    //         )
-    //     )
-    // }
+        Assert.assertTrue(
+            objectEnumeration.size == 5 &&
+            objectEnumeration.keys.containsAll(
+                listOf(
+                    myObject,
+                    // atomicfu transformers are insane and don't allow compile direct reference to `myObject.array`
+                    myObject.javaClass.getDeclaredField("array").apply { setAccessible(true) }.get(myObject),
+                    1, 2, 3,
+                )
+            )
+        )
+    }
+
+    @Test
+    @Suppress("UNUSED_VARIABLE")
+    fun `should jump through atomic refs`() {
+        val myObject = object : Any() {
+            val javaRef = AtomicReference<AtomicReference<Int>>(AtomicReference(1))
+            val atomicFURef: kotlinx.atomicfu.AtomicRef<AtomicReference<Any>?> = kotlinx.atomicfu.atomic(null)
+        }
+        myObject.atomicFURef.value = AtomicReference<Any>(2)
+
+        val objectEnumeration = enumerateObjects(myObject)
+        Assert.assertTrue(
+            objectEnumeration.size == 3 &&
+            objectEnumeration.keys.containsAll(
+                listOf(myObject, 1, 2)
+            )
+        )
+    }
 }
