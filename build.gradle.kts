@@ -339,10 +339,9 @@ tasks {
         dependsOn(traceDebuggerIntegrationTestsPrerequisites)
     }
 
-    // check {
-    //     dependsOn += testIsolated
-    //     setDependsOn(dependsOn.filter { it != integrationTest })
-    // }
+    check {
+        dependsOn += testIsolated
+    }
 
     withType<Jar> {
         dependsOn(bootstrapJar)
