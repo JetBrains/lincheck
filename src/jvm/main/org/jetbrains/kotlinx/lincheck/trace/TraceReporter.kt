@@ -14,7 +14,7 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.util.AnalysisProfile
 import kotlin.math.max
 
 internal typealias SingleThreadedTable<T> = List<SingleThreadedSection<T>>
@@ -55,16 +55,7 @@ internal class TraceReporter(
             .removeValidationIfNeeded()
             .addResultsToActors()
 
-
-        // Turn trace into graph which is List of sections. Where a section is a list of rootNodes (actors).
-        val traceGraph = traceToGraph(fixedTrace)
-
-        // Optimizes trace by combining trace points for synthetic field accesses etc..
-        val compressedTraceGraph = traceGraph
-            .compressTrace()
-            .collapseLibraries(failure.analysisProfile)
-        
-        graph = if (isGeneralPurposeModelCheckingScenario(failure.scenario)) removeGPMCLambda(compressedTraceGraph) else compressedTraceGraph
+        graph = traceToCollapsedGraph(fixedTrace, failure.analysisProfile, failure.scenario)
     }
     
     fun appendTrace(stringBuilder: StringBuilder) = with(stringBuilder) {
@@ -262,6 +253,18 @@ private class ExecutionResultsProvider(
         }
     }
 
+}
+
+internal fun traceToCollapsedGraph(trace: Trace, analysisProfile: AnalysisProfile, scenario: ExecutionScenario?): SingleThreadedTable<TraceNode> {
+    // Turn trace into graph which is List of sections. Where a section is a list of rootNodes (actors).
+    val traceGraph = traceToGraph(trace)
+
+    // Optimizes trace by combining trace points for synthetic field accesses etc..
+    val compressedTraceGraph = traceGraph
+        .compressTrace()
+        .collapseLibraries(analysisProfile)
+
+    return if (scenario != null && isGeneralPurposeModelCheckingScenario(scenario)) removeGPMCLambda(compressedTraceGraph) else compressedTraceGraph
 }
 
 internal const val ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE = "All unfinished threads are in deadlock"
