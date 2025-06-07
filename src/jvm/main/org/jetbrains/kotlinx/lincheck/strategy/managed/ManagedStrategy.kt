@@ -1675,9 +1675,6 @@ abstract class ManagedStrategy(
         ) {
             // create a switch point
             newSwitchPoint(threadId, codeLocation, beforeMethodCallSwitch = false)
-            // notify loop detector
-            loopDetector.beforeAtomicMethodCall(codeLocation, params)
-
             // create a trace point
             if (collectTrace) {
                 addBeforeMethodCallTracePoint(
@@ -1686,12 +1683,9 @@ abstract class ManagedStrategy(
                     MethodCallTracePoint.CallType.NORMAL,
                 )
             }
+            // notify loop detector
+            loopDetector.beforeAtomicMethodCall(codeLocation, params)
         } else {
-            // notify loop detector about the method call
-            if (methodSection < AnalysisSectionType.ATOMIC) {
-                loopDetector.beforeMethodCall(codeLocation, params)
-            }
-
             // handle non-atomic methods
             if (collectTrace) {
                 // check for livelock and create the method call trace point
@@ -1700,6 +1694,10 @@ abstract class ManagedStrategy(
                     atomicMethodDescriptor,
                     MethodCallTracePoint.CallType.NORMAL,
                 )
+            }
+            // notify loop detector about the method call
+            if (methodSection < AnalysisSectionType.ATOMIC) {
+                loopDetector.beforeMethodCall(codeLocation, params)
             }
         }
         // if the method has certain guarantees, enter the corresponding section
