@@ -20,6 +20,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceMethodType
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.adornedStringRepresentation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
+import org.jetbrains.kotlinx.lincheck.strategy.native_calls.DeterministicMethodDescriptor
 import org.jetbrains.kotlinx.lincheck.strategy.toAsmHandle
 import org.jetbrains.kotlinx.lincheck.trace.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
@@ -46,6 +47,8 @@ class TraceCollectingEventTracker(
     private val traceDumpPath: String?
 ) :  EventTracker {
     private val invokeDynamicCallSites = ConcurrentHashMap<ConstantDynamic, CallSite>()
+
+    private val analysisProfile: AnalysisProfile = AnalysisProfile(false)
 
     private val randoms = ThreadLocal.withInitial { InjectedRandom() }
     // We don't use [ThreadDescriptor.eventTrackerData] because we need to list all descriptors in the end
@@ -347,7 +350,9 @@ class TraceCollectingEventTracker(
     ): Any? = runInsideIgnoredSection {
         val td = threads[Thread.currentThread()] ?: return null
 
-        if (receiver == null) {
+        val methodSection = methodAnalysisSectionType(receiver, className, methodName)
+
+        if (receiver == null && methodSection < AnalysisSectionType.ATOMIC) {
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
         }
 
@@ -362,6 +367,10 @@ class TraceCollectingEventTracker(
             atomicMethodDescriptor = null,
             callType = MethodCallTracePoint.CallType.NORMAL,
         )
+
+        // if the method has certain guarantees, enter the corresponding section
+        enterAnalysisSection(td, methodSection)
+
         return null
     }
 
@@ -388,6 +397,8 @@ class TraceCollectingEventTracker(
         }
         popShadowStackFrame()
         td.stackTrace.removeLast()
+        val methodSection = methodAnalysisSectionType(receiver, className, methodName)
+        leaveAnalysisSection(td, methodSection)
     }
 
     override fun onMethodCallException(
@@ -409,6 +420,8 @@ class TraceCollectingEventTracker(
         }
         popShadowStackFrame()
         td.stackTrace.removeLast()
+        val methodSection = methodAnalysisSectionType(receiver, className, methodName)
+        leaveAnalysisSection(td, methodSection)
     }
 
     override fun onInlineMethodCall(
@@ -512,7 +525,7 @@ class TraceCollectingEventTracker(
 
         // Filter & prepare trace to "graph"
         val graph = try {
-            traceToCollapsedGraph(totalTrace, AnalysisProfile(false), null)
+            traceToCollapsedGraph(totalTrace, analysisProfile, null)
         } catch (t: Throwable) {
             throw t
         }
@@ -810,14 +823,56 @@ class TraceCollectingEventTracker(
     private fun MethodCallTracePoint.initializeParameters(parameters: List<Any?>) =
         initializeParameters(parameters.map { adornedStringRepresentation(it) }, parameters.map { objectFqTypeName(it) })
 
+    private fun methodAnalysisSectionType(
+        owner: Any?,
+        className: String,
+        methodName: String
+    ): AnalysisSectionType {
+        val ownerName = owner?.javaClass?.canonicalName ?: className
+        // Ignore methods called on standard I/O streams
+        when (owner) {
+            System.`in`, System.out, System.err -> return AnalysisSectionType.IGNORED
+        }
+        return analysisProfile.getAnalysisSectionFor(ownerName, methodName)
+    }
+
+    private fun enterAnalysisSection(td: ThreadData, section: AnalysisSectionType) {
+        val analysisSectionStack = td.analysisSectionStack
+        val currentSection = analysisSectionStack.lastOrNull()
+        if (currentSection != null && currentSection.isCallStackPropagating() && section < currentSection) {
+            analysisSectionStack.add(currentSection)
+        } else {
+            analysisSectionStack.add(section)
+        }
+        if (section == AnalysisSectionType.IGNORED ||
+            // TODO: atomic should have different semantics compared to ignored
+            section == AnalysisSectionType.ATOMIC
+        ) {
+            enterIgnoredSection()
+        }
+    }
+
+    private fun leaveAnalysisSection(td: ThreadData, section: AnalysisSectionType) {
+        if (section == AnalysisSectionType.IGNORED ||
+            // TODO: atomic should have different semantics compared to ignored
+            section == AnalysisSectionType.ATOMIC
+        ) {
+            leaveIgnoredSection()
+        }
+        val analysisSectionStack = td.analysisSectionStack
+        analysisSectionStack.removeLast().ensure { currentSection ->
+            currentSection == section || (currentSection.isCallStackPropagating() && section < currentSection)
+        }
+    }
 }
 
 private class ThreadData(
     val id: Int,
     val collector: TraceCollector = TraceCollector(),
     val stackTrace: MutableList<CallStackTraceElement> = arrayListOf(),
-    val shadowStack: MutableList<ShadowStackFrame> = ArrayList<ShadowStackFrame>(),
+    val shadowStack: MutableList<ShadowStackFrame> = arrayListOf(),
     val constants: IdentityHashMap<Any, String> = IdentityHashMap<Any, String>(),
+    val analysisSectionStack: MutableList<AnalysisSectionType> = arrayListOf(),
     var lastReadConstantName: String? = null,
     var lastReadTracePoint: ReadTracePoint? = null
 )
