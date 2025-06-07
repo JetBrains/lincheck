@@ -10,11 +10,10 @@
 package org.jetbrains.kotlinx.lincheck.trace
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
+import org.jetbrains.kotlinx.lincheck.execution.threadsResults
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
 import kotlin.math.max
 
 internal typealias SingleThreadedTable<T> = List<SingleThreadedSection<T>>
@@ -53,8 +52,8 @@ internal class TraceReporter(
         // - adding `ActorResult` to actors
         val fixedTrace = trace
             .removeValidationIfNeeded()
+            .moveStartingSwitchPointsOutOfMethodCalls()
             .addResultsToActors()
-
 
         // Turn trace into graph which is List of sections. Where a section is a list of rootNodes (actors).
         val traceGraph = traceToGraph(fixedTrace)
@@ -117,12 +116,69 @@ internal class TraceReporter(
             .filter { it.isActor }
             .forEach { event -> event.returnedValue = resultProvider[event.iThread, event.actorId] }
     }
+
+    private fun Trace.moveStartingSwitchPointsOutOfMethodCalls(): Trace {
+        val newTrace = this.trace.toMutableList()
+        for (i in newTrace.indices) {
+            val tracePoint = newTrace[i]
+            if (tracePoint !is SwitchEventTracePoint) continue
+
+            // find a place where to move the switch point
+            var j = i
+            while (j - 1 >= 0 && (newTrace[j - 1] is MethodCallTracePoint || newTrace[j - 1] is SpinCycleStartTracePoint)) {
+                j--
+            }
+            if (j == i) continue
+
+            // find the next section of the thread we are switching from,
+            // to move the remaining method call trace points there
+            var k = i + 1
+            val threadId = newTrace[i].iThread
+            while (k < newTrace.size && newTrace[k].iThread != threadId) {
+                k++
+            }
+
+            // move switch point before method calls
+            newTrace.move(i, j)
+
+            // handle the case when the switch point is the last event in the thread
+            if ((k == newTrace.size) || (newTrace[k] is MethodReturnTracePoint)) {
+                val remainingTracePoints = newTrace.subList(k, newTrace.size).filter { it.iThread == threadId }
+                check(remainingTracePoints.all { it is MethodReturnTracePoint }) {
+                    "All remaining thread trace points should be method return trace points"
+                }
+
+                // TODO: remove method call trace points
+                continue
+            } else {
+                // else move method call trace points to the next trace section of the current thread
+                newTrace.move(IntRange(j + 1, i + 1), k)
+            }
+        }
+        return Trace(newTrace, this.threadNames)
+    }
     
     private fun Trace.removeValidationIfNeeded(): Trace {
         if (failure is ValidationFailure) return this
         val newTrace = this.trace.takeWhile { !(it is SectionDelimiterTracePoint && it.executionPart == ExecutionPart.VALIDATION) }
         return Trace(newTrace, this.threadNames)
     }
+}
+
+fun <T> MutableList<T>.move(from: Int, to: Int) {
+    check(from > to)
+    val element = this[from]
+    removeAt(from)
+    add(to, element)
+}
+
+fun <T> MutableList<T>.move(from: IntRange, to: Int) {
+    check(from.first < to && from.last <= to)
+    val sublist = this.subList(from.first, from.last)
+    val elements = sublist.toList()
+    val rangeSize = from.last - from.first + 1
+    sublist.clear()
+    addAll(to - rangeSize, elements)
 }
 
 // TODO support multiple root nodes in GPMC mode, needs discussion on how to deal with `result: ...`
