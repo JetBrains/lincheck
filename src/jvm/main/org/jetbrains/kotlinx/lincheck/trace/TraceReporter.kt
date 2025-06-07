@@ -119,13 +119,19 @@ internal class TraceReporter(
 
     private fun Trace.moveStartingSwitchPointsOutOfMethodCalls(): Trace {
         val newTrace = this.trace.toMutableList()
+        val tracePointsToRemove = mutableListOf<IntRange>()
+
         for (i in newTrace.indices) {
             val tracePoint = newTrace[i]
             if (tracePoint !is SwitchEventTracePoint) continue
 
             // find a place where to move the switch point
             var j = i
-            while (j - 1 >= 0 && (newTrace[j - 1] is MethodCallTracePoint || newTrace[j - 1] is SpinCycleStartTracePoint)) {
+            while ((j - 1 >= 0) &&
+                   (newTrace[j - 1] is MethodCallTracePoint && !newTrace[j - 1].isThreadStart() && !newTrace[j - 1].isThreadJoin() ||
+                    newTrace[j - 1] is SpinCycleStartTracePoint
+                   )
+            ) {
                 j--
             }
             if (j == i) continue
@@ -149,12 +155,22 @@ internal class TraceReporter(
                 }
 
                 // TODO: remove method call trace points
+                val methodCallTracePoints = newTrace.subList(j + 1, i + 1).filter { it is MethodCallTracePoint }
+                tracePointsToRemove.add(IntRange(j + 1, i + 1))
+                tracePointsToRemove.add(IntRange(k, k + methodCallTracePoints.size))
+
                 continue
             } else {
                 // else move method call trace points to the next trace section of the current thread
                 newTrace.move(IntRange(j + 1, i + 1), k)
             }
         }
+
+        for (i in tracePointsToRemove.indices.reversed()) {
+            val range = tracePointsToRemove[i]
+            newTrace.subList(range.first, range.last).clear()
+        }
+
         return Trace(newTrace, this.threadNames)
     }
     
