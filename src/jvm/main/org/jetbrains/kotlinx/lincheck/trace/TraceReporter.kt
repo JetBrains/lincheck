@@ -10,7 +10,8 @@
 package org.jetbrains.kotlinx.lincheck.trace
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
+import org.jetbrains.kotlinx.lincheck.execution.threadsResults
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
@@ -53,9 +54,10 @@ internal class TraceReporter(
         // - adding `ActorResult` to actors
         val fixedTrace = trace
             .removeValidationIfNeeded()
+            .moveStartingSwitchPointsOutOfMethodCalls()
             .addResultsToActors()
 
-        graph = traceToCollapsedGraph(fixedTrace, failure.analysisProfile, failure.scenario)
+         graph = traceToCollapsedGraph(fixedTrace, failure.analysisProfile, failure.scenario)
     }
     
     fun appendTrace(app: Appendable) = with(app) {
@@ -82,7 +84,58 @@ internal class TraceReporter(
             .filter { it.isActor }
             .forEach { event -> event.returnedValue = resultProvider[event.iThread, event.actorId] }
     }
-    
+
+    private fun Trace.moveStartingSwitchPointsOutOfMethodCalls(): Trace {
+        val newTrace = this.trace.toMutableList()
+        val tracePointsToRemove = mutableListOf<IntRange>()
+
+        for (i in newTrace.indices) {
+            val tracePoint = newTrace[i]
+            if (tracePoint !is SwitchEventTracePoint) continue
+
+            // find a place where to move the switch point
+            var j = i
+            while ((j - 1 >= 0) && (
+                    (newTrace[j - 1] is MethodCallTracePoint && !newTrace[j - 1].isThreadStart() && !newTrace[j - 1].isThreadJoin()) ||
+                    (newTrace[j - 1] is SpinCycleStartTracePoint)
+            )) {
+                j--
+            }
+            if (j == i) continue
+
+            // find the next section of the thread we are switching from,
+            // to move the remaining method call trace points there
+            var k = i + 1
+            val threadId = newTrace[i].iThread
+            while (k < newTrace.size && newTrace[k].iThread != threadId) {
+                k++
+            }
+
+            // move switch point before method calls
+            newTrace.move(i, j)
+
+            val remainingTracePoints = newTrace.subList(k, newTrace.size).filter { it.iThread == threadId }
+            if ((k == newTrace.size) || remainingTracePoints.all {
+                    (it is MethodCallTracePoint && it.isActor) || it is MethodReturnTracePoint || it is SpinCycleStartTracePoint
+            }) {
+                // handle the case when the switch point is the last event in the thread
+                val methodCallTracePoints = newTrace.subList(j + 1, i + 1).filter { it is MethodCallTracePoint }
+                tracePointsToRemove.add(IntRange(j + 1, i + 1))
+                tracePointsToRemove.add(IntRange(k, k + methodCallTracePoints.size))
+            } else {
+                // else move method call trace points to the next trace section of the current thread
+                newTrace.move(IntRange(j + 1, i + 1), k)
+            }
+        }
+
+        for (i in tracePointsToRemove.indices.reversed()) {
+            val range = tracePointsToRemove[i]
+            newTrace.subList(range.first, range.last).clear()
+        }
+
+        return Trace(newTrace, this.threadNames)
+    }
+
     private fun Trace.removeValidationIfNeeded(): Trace {
         if (failure is ValidationFailure) return this
         val newTrace = this.trace.takeWhile { !(it is SectionDelimiterTracePoint && it.executionPart == ExecutionPart.VALIDATION) }
@@ -125,19 +178,24 @@ internal fun Appendable.appendTraceTableSimple(title: String, threadNames: List<
         interleavingSections = stringTable,
         threadNames = threadNames,
     )
-/*
-    with(layout) {
-        appendSeparatorLine()
-        appendHeader()
-        appendSeparatorLine()
-        stringTable.forEach { section ->
-            appendColumns(section)
-            appendSeparatorLine()
-        }
-    }
-*/
 }
 
+fun <T> MutableList<T>.move(from: Int, to: Int) {
+    check(from > to)
+    val element = this[from]
+    removeAt(from)
+    add(to, element)
+}
+
+fun <T> MutableList<T>.move(from: IntRange, to: Int) {
+    check(from.first < to && from.last <= to)
+    val sublist = this.subList(from.first, from.last)
+    val elements = sublist.toList()
+    sublist.clear()
+    addAll(to - elements.size, elements)
+}
+
+// TODO support multiple root nodes in GPMC mode, needs discussion on how to deal with `result: ...`
 private fun removeGPMCLambda(graph: SingleThreadedTable<TraceNode>): SingleThreadedTable<TraceNode> {
     check(graph.size == 1) { "When in GPMC mode only one scenario section is expected" }
     check(graph[0].isNotEmpty()) { "When in GPMC mode atleast one actor is expected (the run() call to be precise)" }
@@ -148,11 +206,11 @@ private fun removeGPMCLambda(graph: SingleThreadedTable<TraceNode>): SingleThrea
         first.decrementCallDepthOfTree()
 
         // TODO can be remove after actor results PR is through
-        // if only one child and child is callnode. Treat as actor. 
+        // if only one child and child is callnode. Treat as actor.
         if (first.children.size == 1 && first.children.first() is CallNode) {
             (first.children.first() as CallNode).tracePoint.returnedValue = first.tracePoint.returnedValue
-        } 
-        
+        }
+
         first.children + section.drop(1)
     }
 }
