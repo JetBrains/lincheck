@@ -147,19 +147,12 @@ internal class TraceReporter(
             // move switch point before method calls
             newTrace.move(i, j)
 
-            // handle the case when the switch point is the last event in the thread
-            if ((k == newTrace.size) || (newTrace[k] is MethodReturnTracePoint)) {
-                val remainingTracePoints = newTrace.subList(k, newTrace.size).filter { it.iThread == threadId }
-                check(remainingTracePoints.all { it is MethodReturnTracePoint }) {
-                    "All remaining thread trace points should be method return trace points"
-                }
-
-                // TODO: remove method call trace points
+            val remainingTracePoints = newTrace.subList(k, newTrace.size).filter { it.iThread == threadId }
+            if ((k == newTrace.size) || remainingTracePoints.all { it is MethodReturnTracePoint || it is SpinCycleStartTracePoint }) {
+                // handle the case when the switch point is the last event in the thread
                 val methodCallTracePoints = newTrace.subList(j + 1, i + 1).filter { it is MethodCallTracePoint }
                 tracePointsToRemove.add(IntRange(j + 1, i + 1))
                 tracePointsToRemove.add(IntRange(k, k + methodCallTracePoints.size))
-
-                continue
             } else {
                 // else move method call trace points to the next trace section of the current thread
                 newTrace.move(IntRange(j + 1, i + 1), k)
