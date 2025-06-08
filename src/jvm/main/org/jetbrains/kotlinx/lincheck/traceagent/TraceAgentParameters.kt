@@ -28,6 +28,9 @@ internal object TraceAgentParameters {
     var traceDumpFilePath: String? = null
 
     @JvmStatic
+    private var restOfArgs: List<String> = emptyList()
+
+    @JvmStatic
     fun parseArgs(args: String?) {
         if (args == null) {
             error("Please provide class and method names as arguments")
@@ -37,7 +40,13 @@ internal object TraceAgentParameters {
         classUnderTraceDebugging = actualArguments.getOrNull(0) ?: error("Class name was not provided")
         methodUnderTraceDebugging = actualArguments.getOrNull(1) ?: error("Method name was not provided")
         traceDumpFilePath = actualArguments.getOrNull(2)
+        if (actualArguments.size > 3) {
+            restOfArgs = actualArguments.subList(3, actualArguments.size)
+        }
     }
+
+    @JvmStatic
+    fun getRestOfArgs(): List<String> = restOfArgs
 
     @JvmStatic
     fun getClassAndMethod(): Pair<Class<*>, Method> {
