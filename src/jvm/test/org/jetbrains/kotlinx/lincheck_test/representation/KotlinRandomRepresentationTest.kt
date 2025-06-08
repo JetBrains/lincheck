@@ -1,6 +1,6 @@
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
+import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
 import org.junit.Assume.assumeFalse
 import org.junit.Before
 import kotlin.random.*

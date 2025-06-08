@@ -8,9 +8,8 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck
+package org.jetbrains.kotlinx.lincheck.traceagent
 
-import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import java.lang.reflect.Method
 
 private const val TRACE_DEBUGGER_MODE_PROPERTY = "lincheck.traceDebuggerMode"
@@ -44,7 +43,7 @@ internal object TraceAgentParameters {
     fun getClassAndMethod(): Pair<Class<*>, Method> {
         val testClass = Class.forName(classUnderTraceDebugging)
         val testMethod = testClass.methods.find { it.name == methodUnderTraceDebugging }
-            ?: error("Method \"${TraceAgentParameters.methodUnderTraceDebugging}\" was not found in class \"${TraceAgentParameters.classUnderTraceDebugging}\". Check that method exists and it is public.")
+            ?: error("Method \"${methodUnderTraceDebugging}\" was not found in class \"${classUnderTraceDebugging}\". Check that method exists and it is public.")
         return testClass to testMethod
     }
 }

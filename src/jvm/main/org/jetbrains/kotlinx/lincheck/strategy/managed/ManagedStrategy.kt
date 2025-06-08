@@ -28,7 +28,6 @@ import org.jetbrains.kotlinx.lincheck.transformation.toCanonicalClassName
 import org.jetbrains.kotlinx.lincheck.beforeEvent as ideaPluginBeforeEvent
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.objectweb.asm.ConstantDynamic
-import org.objectweb.asm.Handle
 import java.lang.invoke.CallSite
 import java.lang.reflect.*
 import java.util.concurrent.ConcurrentHashMap

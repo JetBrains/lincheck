@@ -8,11 +8,12 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck
+package org.jetbrains.kotlinx.lincheck.traceagent
 
 import org.jetbrains.kotlinx.lincheck.strategy.tracerecorder.TraceRecorder
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
+import org.objectweb.asm.commons.Method
 
 internal object TraceRecorderInjections {
     @JvmStatic
@@ -26,7 +27,7 @@ internal object TraceRecorderInjections {
     @JvmStatic
     fun startTraceRecorder() {
         val (_, testMethod) = TraceAgentParameters.getClassAndMethod()
-        val methodDescriptor = org.objectweb.asm.commons.Method.getMethod(testMethod).descriptor
+        val methodDescriptor = Method.getMethod(testMethod).descriptor
         // Init it, but not enable (yet)
         TraceRecorder.installAndStartTrace(TraceAgentParameters.classUnderTraceDebugging, TraceAgentParameters.methodUnderTraceDebugging, methodDescriptor, TraceAgentParameters.traceDumpFilePath)
     }

@@ -8,10 +8,10 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.transformation
+package org.jetbrains.kotlinx.lincheck.traceagent
 
-import org.jetbrains.kotlinx.lincheck.TraceRecorderInjections
-import org.objectweb.asm.MethodVisitor
+import org.jetbrains.kotlinx.lincheck.transformation.ASM_API
+import org.jetbrains.kotlinx.lincheck.transformation.invokeStatic
 import org.objectweb.asm.commons.AdviceAdapter
 import org.objectweb.asm.commons.GeneratorAdapter
 
