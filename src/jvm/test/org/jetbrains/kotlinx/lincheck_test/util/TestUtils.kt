@@ -13,6 +13,7 @@ package org.jetbrains.kotlinx.lincheck_test.util
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator
+import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.util.DEFAULT_TEST_JDK_VERSION
 import org.jetbrains.kotlinx.lincheck.util.JdkVersion
 import org.jetbrains.kotlinx.lincheck.util.jdkVersion
@@ -81,7 +82,7 @@ private fun compareAndOverwrite(expectedOutputFilePrefix: String, actualOutput: 
                 """
                 No file exists yet for the test $expectedOutputFilePrefix. 
                     JDK version = $jdkVersion;
-                    Trace debugger mode = $isInTraceDebuggerMode.
+                    Trace debugger mode = ${isInTraceDebuggerMode}.
                 """
                 .trimIndent()
             )

@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
+import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.primitiveOrIdentityHashCode
 import org.jetbrains.kotlinx.lincheck.strategy.managed.LoopDetector.CodeIdentity.RegularCodeLocationIdentity
 import org.jetbrains.kotlinx.lincheck.trace.CallStackTraceElement

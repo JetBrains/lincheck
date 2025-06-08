@@ -8,12 +8,11 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.transformation
+package org.jetbrains.kotlinx.lincheck.traceagent
 
-import org.jetbrains.kotlinx.lincheck.TraceAgentParameters
-import org.jetbrains.kotlinx.lincheck.TraceRecorderInjections
-import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
-import org.jetbrains.kotlinx.lincheck.isInTraceRecorderMode
+import org.jetbrains.kotlinx.lincheck.transformation.ASM_API
+import org.jetbrains.kotlinx.lincheck.transformation.SafeClassWriter
+import org.jetbrains.kotlinx.lincheck.transformation.toCanonicalClassName
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.ClassWriter

@@ -8,11 +8,14 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck
+package org.jetbrains.kotlinx.lincheck.traceagent
 
+import org.jetbrains.kotlinx.lincheck.ExceptionResult
+import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.execution.threadsResults
+import org.jetbrains.kotlinx.lincheck.scenario
 import org.jetbrains.kotlinx.lincheck.strategy.managed.forClasses
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent

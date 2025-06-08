@@ -28,7 +28,6 @@ import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.trace.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.objectweb.asm.ConstantDynamic
-import org.objectweb.asm.Handle
 import java.lang.invoke.CallSite
 import java.lang.reflect.*
 import java.util.*
@@ -36,7 +35,7 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.Continuation
 import java.util.concurrent.TimeoutException
 import kotlinx.coroutines.CancellableContinuation
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 import kotlin.Result as KResult
 import org.objectweb.asm.commons.Method.getMethod as getAsmMethod

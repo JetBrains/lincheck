@@ -13,6 +13,7 @@ import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
+import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
 import kotlin.coroutines.*
 
