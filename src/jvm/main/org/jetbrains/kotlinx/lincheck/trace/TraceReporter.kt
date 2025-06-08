@@ -127,11 +127,10 @@ internal class TraceReporter(
 
             // find a place where to move the switch point
             var j = i
-            while ((j - 1 >= 0) &&
-                   (newTrace[j - 1] is MethodCallTracePoint && !newTrace[j - 1].isThreadStart() && !newTrace[j - 1].isThreadJoin() ||
-                    newTrace[j - 1] is SpinCycleStartTracePoint
-                   )
-            ) {
+            while ((j - 1 >= 0) && (
+                    (newTrace[j - 1] is MethodCallTracePoint && !newTrace[j - 1].isThreadStart() && !newTrace[j - 1].isThreadJoin()) ||
+                    (newTrace[j - 1] is SpinCycleStartTracePoint)
+            )) {
                 j--
             }
             if (j == i) continue
@@ -148,7 +147,9 @@ internal class TraceReporter(
             newTrace.move(i, j)
 
             val remainingTracePoints = newTrace.subList(k, newTrace.size).filter { it.iThread == threadId }
-            if ((k == newTrace.size) || remainingTracePoints.all { it is MethodReturnTracePoint || it is SpinCycleStartTracePoint }) {
+            if ((k == newTrace.size) || remainingTracePoints.all {
+                    (it is MethodCallTracePoint && it.isActor) || it is MethodReturnTracePoint || it is SpinCycleStartTracePoint
+            }) {
                 // handle the case when the switch point is the last event in the thread
                 val methodCallTracePoints = newTrace.subList(j + 1, i + 1).filter { it is MethodCallTracePoint }
                 tracePointsToRemove.add(IntRange(j + 1, i + 1))
@@ -185,9 +186,8 @@ fun <T> MutableList<T>.move(from: IntRange, to: Int) {
     check(from.first < to && from.last <= to)
     val sublist = this.subList(from.first, from.last)
     val elements = sublist.toList()
-    val rangeSize = from.last - from.first + 1
     sublist.clear()
-    addAll(to - rangeSize, elements)
+    addAll(to - elements.size, elements)
 }
 
 // TODO support multiple root nodes in GPMC mode, needs discussion on how to deal with `result: ...`
