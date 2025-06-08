@@ -46,6 +46,57 @@ class TraceCollectingEventTracker(
     private val methodDesc: String,
     private val traceDumpPath: String?
 ) :  EventTracker {
+    /**
+     * This class contains all data needed to track events for one thread.
+     * It is not concurrent-safe, and each instance must be used strictly from one thread only.
+     * All this data replicate multiple arrays of [ManagedStrategy] indexed by thread id,
+     * but this class is intended to be stored in concurrent hash map keyed by [Thread].
+     *
+     * TODO: Unify this storage with [ManagedStrategy] and unify all code to track
+     *       method calls.
+     */
+    private class ThreadData(
+        /**
+         * ID of thread to use in trace, simply an increasing number.
+         */
+        val id: Int,
+        /**
+         * Collector to store all [TracePoint]s generated for this thread.
+         */
+        val collector: TraceCollector = TraceCollector(),
+        /**
+         * Current "tracked" stacktrace.
+         */
+        val stackTrace: MutableList<CallStackTraceElement> = arrayListOf(),
+        /**
+         * Additional stack information to resolve owner information for fields
+         * TODO: Unify with stackTrace
+         */
+        val shadowStack: MutableList<ShadowStackFrame> = arrayListOf(),
+        /**
+         * Tracks content of constants (i.e., static final fields).
+         * Stores a map `object -> fieldName`,
+         * mapping an object to a constant name referencing this object.
+         */
+        val constants: IdentityHashMap<Any, String> = IdentityHashMap<Any, String>(),
+        /**
+         * Stack of different analysis sections to filter-out unneeded events
+         */
+        val analysisSectionStack: MutableList<AnalysisSectionType> = arrayListOf(),
+        /**
+         * Last read constant name (i.e., static final field).
+         * We store it as we initialize read value after the trace point is created,
+         * so we have to store the trace point somewhere to get it later.
+         */
+        var lastReadConstantName: String? = null,
+        /**
+         * Last read trace point, occurred in the current thread.
+         * We store it as we initialize read value after the point is created,
+         * so we have to store the trace point somewhere to get it later.
+         */
+        var lastReadTracePoint: ReadTracePoint? = null
+    )
+
     private val invokeDynamicCallSites = ConcurrentHashMap<ConstantDynamic, CallSite>()
 
     private val analysisProfile: AnalysisProfile = AnalysisProfile(false)
@@ -865,14 +916,3 @@ class TraceCollectingEventTracker(
         }
     }
 }
-
-private class ThreadData(
-    val id: Int,
-    val collector: TraceCollector = TraceCollector(),
-    val stackTrace: MutableList<CallStackTraceElement> = arrayListOf(),
-    val shadowStack: MutableList<ShadowStackFrame> = arrayListOf(),
-    val constants: IdentityHashMap<Any, String> = IdentityHashMap<Any, String>(),
-    val analysisSectionStack: MutableList<AnalysisSectionType> = arrayListOf(),
-    var lastReadConstantName: String? = null,
-    var lastReadTracePoint: ReadTracePoint? = null
-)

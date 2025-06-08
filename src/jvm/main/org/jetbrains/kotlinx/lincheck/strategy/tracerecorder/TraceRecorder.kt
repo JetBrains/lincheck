@@ -11,7 +11,6 @@
 package org.jetbrains.kotlinx.lincheck.strategy.tracerecorder
 
 import org.jetbrains.kotlinx.lincheck.util.runInsideIgnoredSection
-import sun.nio.ch.lincheck.Injections
 import sun.nio.ch.lincheck.ThreadDescriptor
 
 object TraceRecorder {
