@@ -11,10 +11,8 @@
 package org.jetbrains.kotlinx.lincheck.transformation
 
 import net.bytebuddy.agent.ByteBuddyAgent
-import org.jetbrains.kotlinx.lincheck.dumpTransformedSources
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.MODEL_CHECKING
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.STRESS
-import org.jetbrains.kotlinx.lincheck.util.AnalysisSectionType
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.TRACE_RECORDING
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.isEagerlyInstrumentedClass
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.shouldTransform
@@ -44,6 +42,8 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.jar.JarFile
 
+private const val DUMP_TRANSFORMED_SOURCES_PROPERTY = "lincheck.dumpTransformedSources"
+val dumpTransformedSources by lazy { System.getProperty(DUMP_TRANSFORMED_SOURCES_PROPERTY, "false").toBoolean() }
 
 /**
  * Executes [block] with the Lincheck java agent for byte-code instrumentation.
@@ -71,7 +71,8 @@ internal enum class InstrumentationMode {
     MODEL_CHECKING,
 
     /**
-     * In this mode, lincheck adds only to track events
+     * In this mode, lincheck tracks and records events in configured method
+     * but don't enforce determinism or does any analysis.
      */
     TRACE_RECORDING
 }
