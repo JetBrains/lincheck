@@ -532,7 +532,7 @@ class TraceCollectingEventTracker(
         ))
     }
 
-    fun finishTrace() = runInsideIgnoredSection {
+    fun finishAndDumpTrace(humanReadableOutput: Boolean) = runInsideIgnoredSection {
         val tds = ArrayList(threads.values)
         threads.clear()
 
@@ -560,9 +560,17 @@ class TraceCollectingEventTracker(
         }
         val nodeList = graph.flattenNodes(VerboseTraceFlattenPolicy())
 
-        flattenedTraceGraphToCSV(nodeList).forEach {
-            printStream.println(it)
+
+        if (humanReadableOutput) {
+            val sb = StringBuilder()
+            sb.appendTraceTable("Trace started from $methodName", totalTrace, null, nodeList)
+            printStream.print(sb.toString())
+        } else {
+            flattenedTraceGraphToCSV(nodeList).forEach {
+                printStream.println(it)
+            }
         }
+
         printStream.close()
     }
 

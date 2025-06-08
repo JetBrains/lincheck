@@ -62,7 +62,7 @@ internal class TraceReporter(
         // Turn graph into chronological sequence of calls and events, for verbose and simple trace.
         val flattenedShort: SingleThreadedTable<TraceNode> = graph.flattenNodes(ShortTraceFlattenPolicy()).reorder()
         val flattenedVerbose: SingleThreadedTable<TraceNode> = graph.flattenNodes(VerboseTraceFlattenPolicy()).reorder()
-        appendTraceTable(TRACE_TITLE, flattenedShort)
+        appendTraceTable(TRACE_TITLE, trace, failure, flattenedShort)
         appendLine()
         
         if (!isGeneralPurposeModelCheckingScenario(failure.scenario)) {
@@ -70,33 +70,7 @@ internal class TraceReporter(
         }
         
         // if empty trace show only the first
-        if (flattenedVerbose.sumOf { it.size } != 1) appendTraceTable(DETAILED_TRACE_TITLE, flattenedVerbose)
-    }
-
-    /**
-     * Appends trace table to [StringBuilder]
-     */
-    private fun StringBuilder.appendTraceTable(title: String, graph: SingleThreadedTable<TraceNode>) {
-        appendLine(title)
-        val traceRepresentationSplitted = splitInColumns(trace.threadNames.size, graph)
-        val stringTable = traceNodeTableToString(traceRepresentationSplitted)
-        val layout = ExecutionLayout(
-            nThreads = trace.threadNames.size,
-            interleavingSections = stringTable,
-            threadNames = trace.threadNames,
-        )
-        with(layout) {
-            appendSeparatorLine()
-            appendHeader()
-            appendSeparatorLine()
-            stringTable.forEach { section ->
-                appendColumns(section)
-                appendSeparatorLine()
-            }
-        }
-        if (failure is ManagedDeadlockFailure || failure is TimeoutFailure) {
-            appendLine(ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE)
-        }
+        if (flattenedVerbose.sumOf { it.size } != 1) appendTraceTable(DETAILED_TRACE_TITLE, trace, failure, flattenedVerbose)
     }
 
     /**
@@ -113,6 +87,32 @@ internal class TraceReporter(
         if (failure is ValidationFailure) return this
         val newTrace = this.trace.takeWhile { !(it is SectionDelimiterTracePoint && it.executionPart == ExecutionPart.VALIDATION) }
         return Trace(newTrace, this.threadNames)
+    }
+}
+
+/**
+ * Appends trace table to [StringBuilder]
+ */
+internal fun StringBuilder.appendTraceTable(title: String, trace: Trace, failure: LincheckFailure?, graph: SingleThreadedTable<TraceNode>) {
+    appendLine(title)
+    val traceRepresentationSplitted = splitInColumns(trace.threadNames.size, graph)
+    val stringTable = traceNodeTableToString(traceRepresentationSplitted)
+    val layout = ExecutionLayout(
+        nThreads = trace.threadNames.size,
+        interleavingSections = stringTable,
+        threadNames = trace.threadNames,
+    )
+    with(layout) {
+        appendSeparatorLine()
+        appendHeader()
+        appendSeparatorLine()
+        stringTable.forEach { section ->
+            appendColumns(section)
+            appendSeparatorLine()
+        }
+    }
+    if (failure is ManagedDeadlockFailure || failure is TimeoutFailure) {
+        appendLine(ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE)
     }
 }
 
