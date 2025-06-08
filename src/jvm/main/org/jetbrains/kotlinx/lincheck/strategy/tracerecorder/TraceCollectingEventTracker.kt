@@ -20,13 +20,11 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceMethodType
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.adornedStringRepresentation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
-import org.jetbrains.kotlinx.lincheck.strategy.toAsmHandle
 import org.jetbrains.kotlinx.lincheck.trace.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.transformation.MethodIds
 import org.jetbrains.kotlinx.lincheck.transformation.toSimpleClassName
 import org.jetbrains.kotlinx.lincheck.util.*
-import org.objectweb.asm.ConstantDynamic
 import org.objectweb.asm.commons.Method.getMethod
 import sun.nio.ch.lincheck.*
 import java.io.File

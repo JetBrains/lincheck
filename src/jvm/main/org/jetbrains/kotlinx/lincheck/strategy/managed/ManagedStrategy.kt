@@ -9,12 +9,12 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import sun.nio.ch.lincheck.*
+import kotlinx.coroutines.CancellableContinuation
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.CancellationResult.*
+import org.jetbrains.kotlinx.lincheck.CancellationResult.CANCELLATION_FAILED
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.cleanObjectNumeration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
@@ -28,15 +28,16 @@ import org.jetbrains.kotlinx.lincheck.transformation.toCanonicalClassName
 import org.jetbrains.kotlinx.lincheck.beforeEvent as ideaPluginBeforeEvent
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.objectweb.asm.ConstantDynamic
+import org.objectweb.asm.Handle
+import sun.nio.ch.lincheck.*
 import java.lang.invoke.CallSite
-import java.lang.reflect.*
+import java.lang.reflect.Method
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.coroutines.Continuation
 import java.util.concurrent.TimeoutException
-import kotlinx.coroutines.CancellableContinuation
+import kotlin.coroutines.Continuation
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
-import kotlin.Result as KResult
 import org.objectweb.asm.commons.Method.getMethod as getAsmMethod
+import kotlin.Result as KResult
 
 /**
  * This is an abstraction for all managed strategies, which encapsulated
@@ -1391,6 +1392,9 @@ abstract class ManagedStrategy(
         val invokeDynamic = ConstantDynamic(name, descriptor, trueBootstrapMethodHandle, *bootstrapMethodArguments)
         invokeDynamicCallSites[invokeDynamic] = callSite
     }
+
+    private fun Injections.HandlePojo.toAsmHandle(): Handle =
+        Handle(tag, owner, name, desc, isInterface)
 
     override fun getNextTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker): TraceDebuggerEventId = runInsideIgnoredSection {
         traceDebuggerEventTrackers[tracker]?.getNextId() ?: 0
