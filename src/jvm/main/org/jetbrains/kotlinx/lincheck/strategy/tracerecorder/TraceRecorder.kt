@@ -13,25 +13,43 @@ package org.jetbrains.kotlinx.lincheck.strategy.tracerecorder
 import org.jetbrains.kotlinx.lincheck.util.runInsideIgnoredSection
 import sun.nio.ch.lincheck.ThreadDescriptor
 
+/**
+ * This object is glue between injections into method user wants to record trace of and real trace recording code.
+ *
+ * Call which leads to [installAndStartTrace] must be placed as first instruction of method in question.
+ *
+ * Call which leads to [finishTraceAndDumpResults] must be placed before each exit point (`return` or `throw`) in
+ * a method in question.
+ *
+ * This is effectively an implementation of such Java code:
+ *
+ * ```java
+ * methodInQuestion() {
+ *  TraceRecorder.installAndStartTrace(...);
+ *  try {
+ *    <original method code>
+ *  } finally {
+ *    TraceRecorder.finishTraceAndDumpResults();
+ *  }
+ * }
+ * ```
+ *
+ * This class is used to avoid coupling between instrumented code and `bootstrap.jar`, to enable very early
+ * instrumentation before `bootstrap.jar` is added to class
+ */
 object TraceRecorder {
-    fun install(className: String, methodName: String, methodDesc: String, traceFileName: String?) {
+    fun installAndStartTrace(className: String, methodName: String, methodDesc: String, traceFileName: String?) {
         val eventTracker = TraceCollectingEventTracker(className, methodName, methodDesc, traceFileName)
         val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: ThreadDescriptor(Thread.currentThread()).also {
             ThreadDescriptor.setCurrentThreadDescriptor(it)
         }
         desc.eventTracker = eventTracker
+
+        eventTracker.enableTrace()
+        desc.enableAnalysis()
     }
 
-    fun enableTrace() = runInsideIgnoredSection {
-        val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
-        val eventTracker = desc.eventTracker ?: return
-        if (eventTracker is TraceCollectingEventTracker) {
-            eventTracker.enableTrace()
-            desc.enableAnalysis()
-        }
-    }
-
-    fun finishTrace() = runInsideIgnoredSection {
+    fun finishTraceAndDumpResults() = runInsideIgnoredSection {
         val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val eventTracker = desc.eventTracker ?: return
         if (eventTracker is TraceCollectingEventTracker) {

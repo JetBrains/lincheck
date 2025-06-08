@@ -181,7 +181,9 @@ internal class LincheckClassVisitor(
         // (to filter static method calls inserted by coverage library)
         val coverageDelegateVisitor: MethodVisitor = mv
         mv = MethodCallTransformer(fileName, className, methodName, mv.newAdapter())
-        if (instrumentationMode != TRACE_RECORDING) {
+        // These transformers are useful only in model checking mode: they
+        // support thread scheduling and determinism, which is not needed in other modes.
+        if (instrumentationMode == MODEL_CHECKING) {
             mv = MonitorTransformer(fileName, className, methodName, mv.newAdapter())
             mv = WaitNotifyTransformer(fileName, className, methodName, mv.newAdapter())
             mv = ParkingTransformer(fileName, className, methodName, mv.newAdapter())

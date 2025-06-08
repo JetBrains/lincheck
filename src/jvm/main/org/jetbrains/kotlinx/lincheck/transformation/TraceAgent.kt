@@ -10,23 +10,34 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
-import org.jetbrains.kotlinx.lincheck.TraceDebuggerInjections
-import org.jetbrains.kotlinx.lincheck.TraceDebuggerInjections.classUnderTraceDebugging
-import org.jetbrains.kotlinx.lincheck.TraceDebuggerInjections.methodUnderTraceDebugging
+import org.jetbrains.kotlinx.lincheck.TraceAgentParameters
+import org.jetbrains.kotlinx.lincheck.TraceRecorderInjections
 import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.isInTraceRecorderMode
 import org.objectweb.asm.ClassReader
+import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.ClassWriter
+import org.objectweb.asm.MethodVisitor
+import org.objectweb.asm.commons.GeneratorAdapter
 import java.lang.instrument.ClassFileTransformer
 import java.lang.instrument.Instrumentation
 import java.security.ProtectionDomain
 
+
+typealias MethodVisitorProvider = (
+    adapter: GeneratorAdapter,
+    access: Int,
+    name: String,
+    descriptor: String
+) -> MethodVisitor
+
 /**
  * Agent that is set as `premain` entry class for fat trace debugger jar archive.
- * This archive when attached to the jvm process expects also a `-Dlincheck.traceDebuggerMode=true`
- * in order to enable trace debugging plugin functionality.
+ * This archive when attached to the jvm process expects also a `-Dlincheck.traceDebuggerMode=true` or
+ * `-Dlincheck.traceRecorderMode=true` in order to enable trace debugging plugin or trace recorder functionality
+ * accordingly.
  */
-internal object TraceDebuggerAgent {
+internal object TraceAgent {
     @JvmStatic
     fun premain(agentArgs: String?, inst: Instrumentation) {
         check(isInTraceDebuggerMode || isInTraceRecorderMode) {
@@ -39,20 +50,19 @@ internal object TraceDebuggerAgent {
             "Only one of VM parameters `lincheck.traceDebuggerMode` or `lincheck.traceRecorderMode` is expected to be true. " +
             "Remove one of -Dlincheck.traceDebuggerMode=true or -Dlincheck.traceRecorderMode=true."
         }
-        TraceDebuggerInjections.parseArgs(agentArgs)
+        TraceAgentParameters.parseArgs(agentArgs)
         if (isInTraceDebuggerMode) {
-            inst.addTransformer(TraceDebuggerTransformer, true)
+            inst.addTransformer(TraceAgentTransformer(::TraceDebuggerMethodTransformer), true)
         } else {
-            // This adds turn-on and turn-off of tracing to method in question
-            inst.addTransformer(TraceRecorderTransformer, true)
-            // This prepare instrumentation of all future classes
-            TraceDebuggerInjections.prepareTraceRecorder()
+            // This adds turn-on and turn-off of tracing to the method in question
+            inst.addTransformer(TraceAgentTransformer(::TraceRecorderMethodTransformer), true)
+            // This prepares instrumentation of all future classes
+            TraceRecorderInjections.prepareTraceRecorder()
         }
     }
 }
 
-internal object TraceDebuggerTransformer : ClassFileTransformer {
-
+private class TraceAgentTransformer(val methodTransformer: MethodVisitorProvider) : ClassFileTransformer {
     override fun transform(
         loader: ClassLoader?,
         internalClassName: String,
@@ -61,7 +71,7 @@ internal object TraceDebuggerTransformer : ClassFileTransformer {
         classBytes: ByteArray
     ): ByteArray? {
         // If the class should not be transformed, return immediately.
-        if (classUnderTraceDebugging != internalClassName.toCanonicalClassName()) {
+        if (TraceAgentParameters.classUnderTraceDebugging != internalClassName.toCanonicalClassName()) {
             return null
         }
         return transformImpl(loader, internalClassName, classBytes)
@@ -78,7 +88,7 @@ internal object TraceDebuggerTransformer : ClassFileTransformer {
             val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
 
             reader.accept(
-                TraceDebuggerClassVisitor(writer),
+                TraceAgentClassVisitor(writer, methodTransformer),
                 ClassReader.SKIP_FRAMES
             )
             bytes = writer.toByteArray()
@@ -91,43 +101,39 @@ internal object TraceDebuggerTransformer : ClassFileTransformer {
     }
 }
 
-internal object TraceRecorderTransformer : ClassFileTransformer {
+private class TraceAgentClassVisitor(
+    classVisitor: ClassVisitor,
+    val methodTransformer: MethodVisitorProvider
+): ClassVisitor(ASM_API, classVisitor) {
+    private lateinit var className: String
 
-    override fun transform(
-        loader: ClassLoader?,
-        internalClassName: String,
-        classBeingRedefined: Class<*>?,
-        protectionDomain: ProtectionDomain?,
-        classBytes: ByteArray
-    ): ByteArray? {
-        // If the class should not be transformed, return immediately.
-        if (classUnderTraceDebugging != internalClassName.toCanonicalClassName()) {
-            return null
-        }
-        return transformImpl(loader, internalClassName, classBytes)
+    override fun visit(
+        version: Int,
+        access: Int,
+        name: String,
+        signature: String?,
+        superName: String,
+        interfaces: Array<String>
+    ) {
+        super.visit(version, access, name, signature, superName, interfaces)
+        className = name.toCanonicalClassName()
     }
 
-    private fun transformImpl(
-        loader: ClassLoader?,
-        internalClassName: String,
-        classBytes: ByteArray
-    ): ByteArray {
-        try {
-            val bytes: ByteArray
-            val reader = ClassReader(classBytes)
-            val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
+    override fun visitMethod(
+        access: Int,
+        methodName: String,
+        desc: String,
+        signature: String?,
+        exceptions: Array<String>?
+    ): MethodVisitor {
+        fun MethodVisitor.newAdapter() = GeneratorAdapter(this, access, methodName, desc)
 
-            reader.accept(
-                TraceRecorderClassVisitor(writer),
-                ClassReader.EXPAND_FRAMES
-            )
-            bytes = writer.toByteArray()
-
-            return bytes
-        } catch (e: Throwable) {
-            System.err.println("Unable to transform '$internalClassName': $e")
-            return classBytes
+        var mv = super.visitMethod(access, methodName, desc, signature, exceptions)
+        if (className == TraceAgentParameters.classUnderTraceDebugging &&
+            methodName == TraceAgentParameters.methodUnderTraceDebugging) {
+            mv = methodTransformer(mv.newAdapter(), access, methodName, desc)
         }
+
+        return mv
     }
 }
-

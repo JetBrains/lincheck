@@ -20,7 +20,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceMethodType
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.adornedStringRepresentation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
-import org.jetbrains.kotlinx.lincheck.strategy.native_calls.DeterministicMethodDescriptor
 import org.jetbrains.kotlinx.lincheck.strategy.toAsmHandle
 import org.jetbrains.kotlinx.lincheck.trace.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
@@ -38,7 +37,12 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 
-private const val TRACE_OME_THREAD = true
+/**
+ * [TraceCollectingEventTracker] can trace all threads forked by method configured for tracing.
+ * This constant turns off (if set to `true`) this feature.
+ * It is turned off now, but can be turned on later.
+ */
+private const val TRACE_ONLY_ONE_THREAD = true
 
 class TraceCollectingEventTracker(
     private val className: String,
@@ -97,19 +101,19 @@ class TraceCollectingEventTracker(
         var lastReadTracePoint: ReadTracePoint? = null
     )
 
-    private val invokeDynamicCallSites = ConcurrentHashMap<ConstantDynamic, CallSite>()
-
+    // We don't want to re-create this object each time we need it
     private val analysisProfile: AnalysisProfile = AnalysisProfile(false)
 
-    private val randoms = ThreadLocal.withInitial { InjectedRandom() }
     // We don't use [ThreadDescriptor.eventTrackerData] because we need to list all descriptors in the end
     private val threads = ConcurrentHashMap<Thread, ThreadData>()
+    // ID generator for [TracePoint]s
     private val currentTracePointId = atomic(0)
+    // ID generator for [StackTraceElement]s
     private val currentCallId = atomic(0)
 
     override fun beforeThreadFork(thread: Thread, descriptor: ThreadDescriptor) = runInsideIgnoredSection {
         // Don't init new threads forked from initial one if it is not enabled
-        if (TRACE_OME_THREAD) {
+        if (TRACE_ONLY_ONE_THREAD) {
             return
         }
 
@@ -158,69 +162,39 @@ class TraceCollectingEventTracker(
     }
 
     override fun beforeLock(codeLocation: Int) = runInsideIgnoredSection {
-        val td = threads[Thread.currentThread()] ?: return
-        addTracePoint(MonitorEnterTracePoint(
-            iThread = td.id,
-            actorId = 0,
-            callStackTrace = td.stackTrace,
-            codeLocation = codeLocation
-        ))
+        error("Trace Recorder mode doesn't support lock and monitor instrumentation")
     }
 
-    override fun lock(monitor: Any) = Unit
+    override fun lock(monitor: Any) = runInsideIgnoredSection {
+        error("Trace Recorder mode doesn't support lock and monitor instrumentation")
+    }
 
     override fun unlock(monitor: Any, codeLocation: Int) = runInsideIgnoredSection {
-        val td = threads[Thread.currentThread()] ?: return
-        addTracePoint(MonitorExitTracePoint(
-            iThread = td.id,
-            actorId = 0,
-            callStackTrace = td.stackTrace,
-            codeLocation = codeLocation
-        ))
+        error("Trace Recorder mode doesn't support lock and monitor instrumentation")
     }
 
     override fun beforePark(codeLocation: Int) = runInsideIgnoredSection {
-        val td = threads[Thread.currentThread()] ?: return
-        addTracePoint(ParkTracePoint(
-            iThread = td.id,
-            actorId = 0,
-            callStackTrace = td.stackTrace,
-            codeLocation = codeLocation
-        ))
+        error("Trace Recorder mode doesn't support lock and monitor instrumentation")
     }
 
-    override fun park(codeLocation: Int) = Unit
+    override fun park(codeLocation: Int) = runInsideIgnoredSection {
+        error("Trace Recorder mode doesn't support lock and monitor instrumentation")
+    }
 
     override fun unpark(thread: Thread, codeLocation: Int) = runInsideIgnoredSection {
-        val td = threads[Thread.currentThread()] ?: return
-        addTracePoint(UnparkTracePoint(
-            iThread = td.id,
-            actorId = 0,
-            callStackTrace = td.stackTrace,
-            codeLocation = codeLocation
-        ))
+        error("Trace Recorder mode doesn't support lock and monitor instrumentation")
     }
 
     override fun beforeWait(codeLocation: Int) = runInsideIgnoredSection {
-        val td = threads[Thread.currentThread()] ?: return
-        addTracePoint(WaitTracePoint(
-            iThread = td.id,
-            actorId = 0,
-            callStackTrace = td.stackTrace,
-            codeLocation = codeLocation
-        ))
+        error("Trace Recorder mode doesn't support lock and monitor instrumentation")
     }
 
-    override fun wait(monitor: Any, withTimeout: Boolean) = Unit
+    override fun wait(monitor: Any, withTimeout: Boolean) = runInsideIgnoredSection {
+        error("Trace Recorder mode doesn't support lock and monitor instrumentation")
+    }
 
     override fun notify(monitor: Any, codeLocation: Int, notifyAll: Boolean) = runInsideIgnoredSection {
-        val td = threads[Thread.currentThread()] ?: return
-        addTracePoint(NotifyTracePoint(
-            iThread = td.id,
-            actorId = 0,
-            callStackTrace = td.stackTrace,
-            codeLocation = codeLocation
-        ))
+        error("Trace Recorder mode doesn't support lock and monitor instrumentation")
     }
 
     override fun beforeNewObjectCreation(className: String) = runInsideIgnoredSection {
@@ -229,9 +203,13 @@ class TraceCollectingEventTracker(
 
     override fun afterNewObjectCreation(obj: Any) = Unit
 
-    override fun getNextTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker): Long = 0
+    override fun getNextTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker): Long = runInsideIgnoredSection {
+        error("Trace Recorder mode doesn't support Trace Debugger-specific instrumentation")
+    }
 
-    override fun advanceCurrentTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker, oldId: Long) = Unit
+    override fun advanceCurrentTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker, oldId: Long) = runInsideIgnoredSection {
+        error("Trace Recorder mode doesn't support Trace Debugger-specific instrumentation")
+    }
 
     override fun getCachedInvokeDynamicCallSite(
         name: String,
@@ -239,10 +217,7 @@ class TraceCollectingEventTracker(
         bootstrapMethodHandle: Injections.HandlePojo,
         bootstrapMethodArguments: Array<out Any?>
     ): CallSite? = runInsideIgnoredSection {
-        // Nothing to do for now
-        val trueBootstrapMethodHandle = bootstrapMethodHandle.toAsmHandle()
-        val invokeDynamic = ConstantDynamic(name, descriptor, trueBootstrapMethodHandle, *bootstrapMethodArguments)
-        return invokeDynamicCallSites[invokeDynamic]
+        error("Trace Recorder mode doesn't support invoke dynamic instrumentation")
     }
 
     override fun cacheInvokeDynamicCallSite(
@@ -252,9 +227,7 @@ class TraceCollectingEventTracker(
         bootstrapMethodArguments: Array<out Any?>,
         callSite: CallSite
     ) = runInsideIgnoredSection {
-        val trueBootstrapMethodHandle = bootstrapMethodHandle.toAsmHandle()
-        val invokeDynamic = ConstantDynamic(name, descriptor, trueBootstrapMethodHandle, *bootstrapMethodArguments)
-        invokeDynamicCallSites[invokeDynamic] = callSite
+        error("Trace Recorder mode doesn't support invoke dynamic instrumentation")
     }
 
     override fun updateSnapshotBeforeConstructorCall(objs: Array<out Any?>) = Unit
@@ -514,21 +487,28 @@ class TraceCollectingEventTracker(
         params: Array<out Any?>
     ): BootstrapResult<*>? = null
 
-    override fun getThreadLocalRandom(): InjectedRandom = runInsideIgnoredSection {
-        randoms.get()
+    override fun getThreadLocalRandom(): InjectedRandom  = runInsideIgnoredSection {
+        error("Trace Recorder mode doesn't support Random calls determinism")
     }
 
     override fun randomNextInt(): Int = runInsideIgnoredSection {
-        randoms.get().nextInt()
+        error("Trace Recorder mode doesn't support Random calls determinism")
     }
 
-    override fun shouldInvokeBeforeEvent(): Boolean = false
+    override fun shouldInvokeBeforeEvent(): Boolean = runInsideIgnoredSection {
+        error("Trace Recorder mode doesn't support IDEA Plugin integration")
+    }
 
-    override fun beforeEvent(eventId: Int, type: String) = Unit
+    override fun beforeEvent(eventId: Int, type: String) = runInsideIgnoredSection {
+        error("Trace Recorder mode doesn't support IDEA Plugin integration")
+    }
+    override fun getEventId(): Int = runInsideIgnoredSection {
+        error("Trace Recorder mode doesn't support IDEA Plugin integration")
+    }
 
-    override fun getEventId(): Int = 0
-
-    override fun setLastMethodCallEventId() = Unit
+    override fun setLastMethodCallEventId() = runInsideIgnoredSection {
+        error("Trace Recorder mode doesn't support IDEA Plugin integration")
+    }
 
     fun enableTrace() {
         // Start tracing in this thread
