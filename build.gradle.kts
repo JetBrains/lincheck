@@ -38,7 +38,7 @@ sourceSets {
 
         // Tests that test classes from the bootstrap module `sun.nio.ch.lincheck` need to import these classes;
         // therefore, we need to add bootstrap to the compilation classpath.
-        compileClasspath += files("${project(":bootstrap").buildDir}/classes/java/main")
+        compileClasspath += files("${project(":bootstrap").layout.buildDirectory.get()}/classes/java/main")
 
         resources {
             srcDir("src/jvm/test/resources")
@@ -329,8 +329,8 @@ registerTraceDebuggerTasks()
 
 val bootstrapJar = tasks.register<Copy>("bootstrapJar") {
     dependsOn(":bootstrap:jar")
-    from(file("${project(":bootstrap").buildDir}/libs/bootstrap.jar"))
-    into(file("$buildDir/resources/main"))
+    from(file("${project(":bootstrap").layout.buildDirectory.get()}/libs/bootstrap.jar"))
+    into(file("${layout.buildDirectory.get()}/resources/main"))
 }
 
 val jar by tasks.getting(Jar::class) {
