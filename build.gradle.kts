@@ -207,10 +207,6 @@ tasks.withType<Test> {
 }
 
 tasks {
-    named("processResources").configure {
-        dependsOn(bootstrapJar)
-    }
-
     fun Test.configureJvmTestCommon() {
         maxParallelForks = 1
         maxHeapSize = "6g"
@@ -360,6 +356,10 @@ val sourcesJar = tasks.register<Jar>("sourcesJar") {
     from(project(":bootstrap").file("src"))
 }
 
+tasks.named("processResources").configure {
+    dependsOn(bootstrapJar)
+}
+
 publishing {
     publications {
         register("maven", MavenPublication::class) {
@@ -371,7 +371,10 @@ publishing {
             this.groupId = group
             this.version = version
 
-            artifact(sourcesJar.get())
+            from(components["java"])
+            artifact(sourcesJar.get()) {
+                classifier = "sources"
+            }
 
             pom {
                 this.name.set(name)
@@ -382,5 +385,5 @@ publishing {
 }
 
 tasks.named("generateMetadataFileForMavenPublication") {
-    dependsOn("sourcesJar")
+    dependsOn(sourcesJar)
 }
