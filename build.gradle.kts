@@ -1,5 +1,3 @@
-import groovy.util.*
-import kotlinx.team.infra.*
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
@@ -386,57 +384,3 @@ publishing {
 tasks.named("generateMetadataFileForMavenPublication") {
     dependsOn("sourcesJar")
 }
-
-// infra {
-//     teamcity {
-//         val name: String by project
-//         val version: String by project
-//         libraryStagingRepoDescription = "$name $version"
-//     }
-//     publishing {
-//         include(":")
-//
-//         libraryRepoUrl = "https://github.com/Kotlin/kotlinx-lincheck"
-//         sonatype {}
-//     }
-// }
-
-// publishing {
-//     project.establishSignDependencies()
-// }
-
-// fun Project.establishSignDependencies() {
-//     // Sign plugin issues and publication:
-//     // Establish dependency between 'sign' and 'publish*' tasks.
-//     tasks.withType<AbstractPublishToMaven>().configureEach {
-//         dependsOn(tasks.withType<Sign>())
-//     }
-// }
-
-// mavenPublicationsPom {
-//     description.set("Lincheck - Framework for testing concurrent data structures")
-//     val licenceName = "Mozilla Public License Version 2.0"
-//     licenses {
-//         license {
-//             name.set(licenceName)
-//             url.set("https://www.mozilla.org/en-US/MPL/2.0/")
-//             distribution.set("repo")
-//         }
-//     }
-//     withXml {
-//         removeAllLicencesExceptOne(licenceName)
-//     }
-// }
-
-// kotlinx.team.infra adds Apache License, Version 2.0, remove it manually
-// fun XmlProvider.removeAllLicencesExceptOne(licenceName: String) {
-//     val licenseList = (asNode()["licenses"] as NodeList)[0] as Node
-//     val licenses = licenseList["license"] as NodeList
-//     licenses.filterIsInstance<Node>().forEach { licence ->
-//         val name = (licence["name"] as NodeList)[0] as Node
-//         val nameValue = (name.value() as NodeList)[0] as String
-//         if (nameValue != licenceName) {
-//             licenseList.remove(licence)
-//         }
-//     }
-// }
