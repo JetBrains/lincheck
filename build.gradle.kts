@@ -380,7 +380,15 @@ publishing {
 
             pom {
                 this.name.set(name)
-                this.description.set("")
+                this.description.set("Lincheck - framework for testing concurrent data structures")
+
+                licenses {
+                    license {
+                        this.name.set("Mozilla Public License Version 2.0")
+                        this.url.set("https://www.mozilla.org/en-US/MPL/2.0/")
+                        this.distribution.set("repo")
+                    }
+                }
             }
         }
     }
