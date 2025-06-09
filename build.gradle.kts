@@ -373,7 +373,7 @@ publishing {
             this.groupId = group
             this.version = version
 
-            from(components["java"])
+            from(components["kotlin"])
             artifact(sourcesJar.get()) {
                 classifier = "sources"
             }
