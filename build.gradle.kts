@@ -405,6 +405,8 @@ publishing {
             artifact(sourcesJar.get()) {
                 classifier = "sources"
             }
+            // TODO: we probably will have to configure and add javadoc, as it seemingly required by Maven Central
+            // artifact(tasks.javadoc)
 
             pom {
                 this.name.set(name)
