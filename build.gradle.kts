@@ -2,10 +2,21 @@ import org.gradle.jvm.tasks.Jar
 import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
+buildscript {
+    repositories {
+        maven { url = uri("https://packages.jetbrains.team/maven/p/jcs/maven") }
+    }
+    dependencies {
+        classpath("com.jetbrains:jet-sign:45.47")
+        classpath("com.squareup.okhttp3:okhttp:4.12.0")
+    }
+}
+
 plugins {
     java
     kotlin("jvm")
     id("org.jetbrains.kotlinx.atomicfu")
+    id("signing")
     id("maven-publish")
     id("kotlinx.team.infra") version "0.4.0-dev-80"
 }
@@ -366,6 +377,15 @@ tasks.named("processResources").configure {
     dependsOn(bootstrapJar)
 }
 
+
+val isUnderTeamCity = System.getenv("TEAMCITY_VERSION") != null
+signing {
+    if (isUnderTeamCity) {
+        sign(publishing.publications)
+        signatories = jetbrains.sign.GpgSignSignatoryProvider()
+    }
+}
+
 publishing {
     publications {
         register("maven", MavenPublication::class) {
@@ -386,6 +406,22 @@ publishing {
                 this.name.set(name)
                 this.description.set("Lincheck - framework for testing concurrent data structures")
 
+                url.set("https://github.com/JetBrains/lincheck")
+                scm {
+                    connection.set("scm:git:https://github.com/JetBrains/lincheck.git")
+                    url.set("https://github.com/JetBrains/lincheck")
+                }
+
+                developers {
+                    developer {
+                        this.name.set("Nikita Koval")
+                        id.set("ndkoval")
+                        email.set("nikita.koval@jetbrains.com")
+                        organization.set("JetBrains")
+                        organizationUrl.set("https://www.jetbrains.com")
+                    }
+                }
+
                 licenses {
                     license {
                         this.name.set("Mozilla Public License Version 2.0")
@@ -394,6 +430,14 @@ publishing {
                     }
                 }
             }
+        }
+    }
+
+    // set up a local directory publishing for further signing and uploading to sonatype
+    repositories {
+        maven {
+            name = "artifacts"
+            url = uri(layout.buildDirectory.dir("artifacts/maven"))
         }
     }
 }
