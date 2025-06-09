@@ -187,12 +187,6 @@ atomicfu {
     transformJvm = false
 }
 
-val bootstrapJar = tasks.register<Copy>("bootstrapJar") {
-    dependsOn(":bootstrap:jar")
-    from(file("${project(":bootstrap").buildDir}/libs/bootstrap.jar"))
-    into(file("$buildDir/resources/main"))
-}
-
 tasks.withType<Test> {
     javaLauncher.set(
         javaToolchains.launcherFor {
@@ -329,31 +323,38 @@ tasks {
     check {
         dependsOn += testIsolated
     }
-
-    withType<Jar> {
-        dependsOn(bootstrapJar)
-
-        manifest {
-            val inceptionYear: String by project
-            val lastCopyrightYear: String by project
-            val version: String by project
-            attributes(
-                "Copyright" to
-                        "Copyright (C) 2015 - 2019 Devexperts, LLC\n                                " +
-                        "Copyright (C) $inceptionYear - $lastCopyrightYear JetBrains, s.r.o.",
-                // This attribute let us get the version from the code.
-                "Implementation-Version" to version
-            )
-        }
-    }
 }
 
 registerTraceDebuggerTasks()
+
+
+val bootstrapJar = tasks.register<Copy>("bootstrapJar") {
+    dependsOn(":bootstrap:jar")
+    from(file("${project(":bootstrap").buildDir}/libs/bootstrap.jar"))
+    into(file("$buildDir/resources/main"))
+}
 
 val sourcesJar = tasks.register<Jar>("sourcesJar") {
     from(sourceSets["main"].allSource)
     // Also collect sources for the injected classes to simplify debugging
     from(project(":bootstrap").file("src"))
+}
+
+tasks.withType<Jar> {
+    dependsOn(bootstrapJar)
+
+    manifest {
+        val inceptionYear: String by project
+        val lastCopyrightYear: String by project
+        val version: String by project
+        attributes(
+            "Copyright" to
+                    "Copyright (C) 2015 - 2019 Devexperts, LLC\n                                " +
+                    "Copyright (C) $inceptionYear - $lastCopyrightYear JetBrains, s.r.o.",
+            // This attribute let us get the version from the code.
+            "Implementation-Version" to version
+        )
+    }
 }
 
 tasks.named("processResources").configure {
