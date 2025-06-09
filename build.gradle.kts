@@ -1,6 +1,11 @@
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import okhttp3.MultipartBody
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.asRequestBody
+import java.util.*
 
 buildscript {
     repositories {
@@ -444,4 +449,57 @@ publishing {
 tasks.named("generateMetadataFileForMavenPublication") {
     dependsOn(jar)
     dependsOn(sourcesJar)
+}
+
+tasks {
+    val packSonatypeCentralBundle by registering(Zip::class) {
+        group = "publishing"
+
+        dependsOn(":publishMavenPublicationToArtifactsRepository")
+        // (this is the same generated task name)
+
+        from(layout.buildDirectory.dir("artifacts/maven"))
+        archiveFileName.set("bundle.zip")
+        destinationDirectory.set(layout.buildDirectory)
+    }
+
+    val publishMavenToCentralPortal by registering {
+        group = "publishing"
+
+        dependsOn(packSonatypeCentralBundle)
+
+        doLast {
+            val uriBase = "https://central.sonatype.com/api/v1/publisher/upload"
+            val publishingType = "USER_MANAGED"
+            val deploymentName = "${project.name}-$version"
+            val uri = "$uriBase?name=$deploymentName&publishingType=$publishingType"
+
+            val userName = rootProject.extra["centralPortalUserName"] as String
+            val token = rootProject.extra["centralPortalToken"] as String
+            val base64Auth = Base64.getEncoder().encode("$userName:$token".toByteArray()).toString(Charsets.UTF_8)
+            val bundleFile = packSonatypeCentralBundle.get().archiveFile.get().asFile
+
+            println("Sending request to $uri...")
+
+            val client = OkHttpClient()
+            val request = Request.Builder()
+                .url(uri)
+                .header("Authorization", "Bearer $base64Auth")
+                .post(
+                    MultipartBody.Builder()
+                        .setType(MultipartBody.FORM)
+                        .addFormDataPart("bundle", bundleFile.name, bundleFile.asRequestBody())
+                        .build()
+                )
+                .build()
+            client.newCall(request).execute().use { response ->
+              val statusCode = response.code
+              println("Upload status code: $statusCode")
+              println("Upload result: ${response.body!!.string()}")
+              if (statusCode != 201) {
+                  error("Upload error to Central repository. Status code $statusCode.")
+              }
+            }
+        }
+    }
 }
