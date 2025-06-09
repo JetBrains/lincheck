@@ -213,12 +213,6 @@ tasks {
         dependsOn(bootstrapJar)
     }
 
-    val sourcesJar = register<Jar>("sourcesJar") {
-        from(sourceSets["main"].allSource)
-        // Also collect sources for the injected classes to simplify debugging
-        from(project(":bootstrap").file("src"))
-    }
-
     fun Test.configureJvmTestCommon() {
         maxParallelForks = 1
         maxHeapSize = "6g"
@@ -362,56 +356,87 @@ tasks {
 
 registerTraceDebuggerTasks()
 
-infra {
-    teamcity {
-        val name: String by project
-        val version: String by project
-        libraryStagingRepoDescription = "$name $version"
-    }
-    publishing {
-        include(":")
-
-        libraryRepoUrl = "https://github.com/Kotlin/kotlinx-lincheck"
-        sonatype {}
-    }
+val sourcesJar = tasks.register<Jar>("sourcesJar") {
+    from(sourceSets["main"].allSource)
+    // Also collect sources for the injected classes to simplify debugging
+    from(project(":bootstrap").file("src"))
 }
 
 publishing {
-    project.establishSignDependencies()
-}
+    publications {
+        register("maven", MavenPublication::class) {
+            val name: String by project
+            val group: String by project
+            val version: String by project
 
-fun Project.establishSignDependencies() {
-    // Sign plugin issues and publication:
-    // Establish dependency between 'sign' and 'publish*' tasks.
-    tasks.withType<AbstractPublishToMaven>().configureEach {
-        dependsOn(tasks.withType<Sign>())
-    }
-}
+            this.artifactId = name
+            this.groupId = group
+            this.version = version
 
-mavenPublicationsPom {
-    description.set("Lincheck - Framework for testing concurrent data structures")
-    val licenceName = "Mozilla Public License Version 2.0"
-    licenses {
-        license {
-            name.set(licenceName)
-            url.set("https://www.mozilla.org/en-US/MPL/2.0/")
-            distribution.set("repo")
+            artifact(sourcesJar.get())
+
+            pom {
+                this.name.set(name)
+                this.description.set("")
+            }
         }
     }
-    withXml {
-        removeAllLicencesExceptOne(licenceName)
-    }
 }
+
+tasks.named("generateMetadataFileForMavenPublication") {
+    dependsOn("sourcesJar")
+}
+
+// infra {
+//     teamcity {
+//         val name: String by project
+//         val version: String by project
+//         libraryStagingRepoDescription = "$name $version"
+//     }
+//     publishing {
+//         include(":")
+//
+//         libraryRepoUrl = "https://github.com/Kotlin/kotlinx-lincheck"
+//         sonatype {}
+//     }
+// }
+
+// publishing {
+//     project.establishSignDependencies()
+// }
+
+// fun Project.establishSignDependencies() {
+//     // Sign plugin issues and publication:
+//     // Establish dependency between 'sign' and 'publish*' tasks.
+//     tasks.withType<AbstractPublishToMaven>().configureEach {
+//         dependsOn(tasks.withType<Sign>())
+//     }
+// }
+
+// mavenPublicationsPom {
+//     description.set("Lincheck - Framework for testing concurrent data structures")
+//     val licenceName = "Mozilla Public License Version 2.0"
+//     licenses {
+//         license {
+//             name.set(licenceName)
+//             url.set("https://www.mozilla.org/en-US/MPL/2.0/")
+//             distribution.set("repo")
+//         }
+//     }
+//     withXml {
+//         removeAllLicencesExceptOne(licenceName)
+//     }
+// }
 
 // kotlinx.team.infra adds Apache License, Version 2.0, remove it manually
-fun XmlProvider.removeAllLicencesExceptOne(licenceName: String) {
-    val licenseList = (asNode()["licenses"] as NodeList)[0] as Node
-    val licenses = licenseList["license"] as NodeList
-    licenses.filterIsInstance<Node>().forEach { licence ->
-        val name = (licence["name"] as NodeList)[0] as Node
-        val nameValue = (name.value() as NodeList)[0] as String
-        if (nameValue != licenceName) {
-            licenseList.remove(licence)
-        }
-    }
-}
+// fun XmlProvider.removeAllLicencesExceptOne(licenceName: String) {
+//     val licenseList = (asNode()["licenses"] as NodeList)[0] as Node
+//     val licenses = licenseList["license"] as NodeList
+//     licenses.filterIsInstance<Node>().forEach { licence ->
+//         val name = (licence["name"] as NodeList)[0] as Node
+//         val nameValue = (name.value() as NodeList)[0] as String
+//         if (nameValue != licenceName) {
+//             licenseList.remove(licence)
+//         }
+//     }
+// }
