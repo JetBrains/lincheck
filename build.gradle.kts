@@ -349,7 +349,8 @@ tasks.withType<Jar> {
         val version: String by project
         attributes(
             "Copyright" to
-                    "Copyright (C) 2015 - 2019 Devexperts, LLC\n                                " +
+                    "Copyright (C) 2015 - 2019 Devexperts, LLC\n"
+                    + " ".repeat(29) + // additional space to fill to the 72-character length of JAR manifest file
                     "Copyright (C) $inceptionYear - $lastCopyrightYear JetBrains, s.r.o.",
             // This attribute let us get the version from the code.
             "Implementation-Version" to version
