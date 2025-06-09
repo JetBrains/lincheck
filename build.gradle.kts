@@ -327,11 +327,14 @@ tasks {
 
 registerTraceDebuggerTasks()
 
-
 val bootstrapJar = tasks.register<Copy>("bootstrapJar") {
     dependsOn(":bootstrap:jar")
     from(file("${project(":bootstrap").buildDir}/libs/bootstrap.jar"))
     into(file("$buildDir/resources/main"))
+}
+
+val jar by tasks.getting(Jar::class) {
+    from(sourceSets["main"].output)
 }
 
 val sourcesJar = tasks.register<Jar>("sourcesJar") {
