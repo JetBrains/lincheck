@@ -292,9 +292,6 @@ internal class ThreadAnalysisHandle(val threadId: Int, val traceCollector: Trace
             result === COROUTINE_SUSPENDED -> {
                 tracePoint.initializeCoroutineSuspendedResult()
             }
-            result is Throwable && !tracePoint.isActor -> {
-                tracePoint.initializeThrownException(result)
-            }
             else -> {
                 tracePoint.initializeReturnedValue(
                     valueRepresentation = adornedStringRepresentation(result),
@@ -302,6 +299,12 @@ internal class ThreadAnalysisHandle(val threadId: Int, val traceCollector: Trace
                 )
             }
         }
+    }
+
+    fun setMethodCallTracePointExceptionResult(throwable: Throwable) {
+        val tracePoint = stackTrace.last().tracePoint
+        if (tracePoint.isActor) return
+        tracePoint.initializeThrownException(throwable)
     }
 
     fun createCallStackTraceElement(

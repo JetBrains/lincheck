@@ -1679,7 +1679,7 @@ abstract class ManagedStrategy(
             // we should probably refactor and fix that, because it is very inconvenient
             val threadHandle = threadsData[threadId]!!
             if (threadHandle.stackTrace.isEmpty()) return newThrowable
-            threadHandle.setMethodCallTracePointResult(throwable)
+            threadHandle.setMethodCallTracePointExceptionResult(throwable)
             afterMethodCall(threadId, wasSuspended = false)
             traceCollector?.addStateRepresentation()
         }
