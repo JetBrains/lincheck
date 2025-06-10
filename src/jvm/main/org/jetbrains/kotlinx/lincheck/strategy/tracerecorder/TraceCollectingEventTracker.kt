@@ -532,17 +532,19 @@ class TraceCollectingEventTracker(
         ))
     }
 
-    fun finishAndDumpTrace(humanReadableOutput: Boolean) = runInsideIgnoredSection {
+    fun finishAndDumpTrace() = runInsideIgnoredSection {
         val tds = ArrayList(threads.values)
         threads.clear()
 
-        val printStream = if (traceDumpPath == null) {
-            System.out
-        } else  {
-            val f = File(traceDumpPath)
-            f.parentFile?.mkdirs()
-            f.createNewFile()
-            PrintStream(f)
+        val createDumpFile: (String?) -> PrintStream = { dumpPath: String? ->
+            if (dumpPath == null) {
+                System.out
+            } else  {
+                val f = File(dumpPath)
+                f.parentFile?.mkdirs()
+                f.createNewFile()
+                PrintStream(f)
+            }
         }
 
         // Merge all traces. Mergesort is possible as optimization
@@ -560,18 +562,20 @@ class TraceCollectingEventTracker(
         }
         val nodeList = graph.flattenNodes(VerboseTraceFlattenPolicy())
 
-
-        if (humanReadableOutput) {
+        // saving human-readable format (use the file name specified by the user)
+        createDumpFile(traceDumpPath).use { printStream ->
             val sb = StringBuilder()
             sb.appendTraceTable("Trace started from $methodName", totalTrace, null, nodeList)
             printStream.print(sb.toString())
-        } else {
+        }
+
+        // saving csv format (same filename as 'traceDumpPath' but with '.csv' file extension)
+        val traceCsvDumpPath = traceDumpPath?.substringBeforeLast(".")?.let { "$it.csv" }
+        createDumpFile(traceCsvDumpPath).use { printStream ->
             flattenedTraceGraphToCSV(nodeList).forEach {
                 printStream.println(it)
             }
         }
-
-        printStream.close()
     }
 
     private fun addTracePoint(point: TracePoint) {

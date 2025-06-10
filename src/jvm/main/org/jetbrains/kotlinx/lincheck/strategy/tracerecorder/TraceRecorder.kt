@@ -49,12 +49,12 @@ object TraceRecorder {
         desc.enableAnalysis()
     }
 
-    fun finishTraceAndDumpResults(humanReadableOutput: Boolean) = runInsideIgnoredSection {
+    fun finishTraceAndDumpResults() = runInsideIgnoredSection {
         val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val eventTracker = desc.eventTracker ?: return
         if (eventTracker is TraceCollectingEventTracker) {
             desc.disableAnalysis()
-            eventTracker.finishAndDumpTrace(humanReadableOutput)
+            eventTracker.finishAndDumpTrace()
         }
     }
 }
