@@ -52,7 +52,9 @@ object TraceRecorder {
         desc.enableAnalysis()
     }
 
-    fun finishTraceAndDumpResults() = runInsideIgnoredSection {
+    fun finishTraceAndDumpResults() {
+        // this method does not need 'runInsideIgnoredSection' because we do not call instrumented code
+        // and 'eventTracker.finishAndDumpTrace()' is called after analysis is disabled
         val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val currentTracker = desc.eventTracker
         if (currentTracker == eventTracker) {
