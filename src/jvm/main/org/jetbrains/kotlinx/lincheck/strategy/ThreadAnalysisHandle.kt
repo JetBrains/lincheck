@@ -127,11 +127,6 @@ internal class ThreadAnalysisHandle(val threadId: Int, val traceCollector: Trace
         isStatic: Boolean,
         isFinal: Boolean
     ) {
-        // We need to ensure all the classes related to the reading object are instrumented.
-        // The following call checks all the static fields.
-        if (isStatic) {
-            LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
-        }
         if (collectTrace && isStatic && isFinal) {
             lastReadConstantName = fieldName
         }
