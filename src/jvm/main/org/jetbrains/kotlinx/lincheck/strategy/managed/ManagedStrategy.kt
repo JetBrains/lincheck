@@ -1210,7 +1210,13 @@ abstract class ManagedStrategy(
                                  isStatic: Boolean, isFinal: Boolean): Boolean = runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
         val threadHandle = threadsData[threadId]!!
+
         updateSnapshotOnFieldAccess(obj, className, fieldName)
+        // We need to ensure all the classes related to the reading object are instrumented.
+        // The following call checks all the static fields.
+        if (isStatic) {
+            LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
+        }
         threadHandle.beforeReadField(obj, className, fieldName, codeLocation, isStatic, isFinal)
         if (!shouldTrackFieldAccess(obj, fieldName, isFinal)) {
             return false
@@ -1234,6 +1240,7 @@ abstract class ManagedStrategy(
     override fun beforeReadArrayElement(array: Any, index: Int, codeLocation: Int): Boolean = runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
         val threadHandle = threadsData[threadId]!!
+
         updateSnapshotOnArrayElementAccess(array, index)
         if (!shouldTrackArrayAccess(array)) {
             return false
@@ -1266,11 +1273,6 @@ abstract class ManagedStrategy(
         if (!shouldTrackFieldAccess(obj, fieldName, isFinal)) {
             return false
         }
-        // Optimization: do not track final field writes
-        if (isFinal) {
-            return false
-        }
-
         val tracePoint = threadHandle.createWriteFieldTracepoint(
             obj = obj,
             className = className,
@@ -1287,14 +1289,14 @@ abstract class ManagedStrategy(
     }
 
     override fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int): Boolean = runInsideIgnoredSection {
+        val threadId = threadScheduler.getCurrentThreadId()
+        val threadHandle = threadsData[threadId]!!
+
         updateSnapshotOnArrayElementAccess(array, index)
         objectTracker?.registerObjectLink(fromObject = array, toObject = value)
-
         if (!shouldTrackArrayAccess(array)) {
             return false
         }
-        val threadId = threadScheduler.getCurrentThreadId()
-        val threadHandle = threadsData[threadId]!!
         val tracePoint = threadHandle.createWriteArrayElementTracePoint(
             array = array,
             index = index,
