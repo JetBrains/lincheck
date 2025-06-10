@@ -72,6 +72,8 @@ internal object TraceAgent {
         if (isInTraceDebuggerMode) {
             // We are in Trace debugger mode
             LincheckJavaAgent.instrumentation.addTransformer(TraceAgentTransformer(::TraceDebuggerMethodTransformer), true)
+            // Trace debugger uses regular lincheck MODEL_CHECKING mode
+            LincheckJavaAgent.install(MODEL_CHECKING)
         } else {
             // We are in Trace Recorder mode (by exclusion)
             // This adds turn-on and turn-off of tracing to the method in question
@@ -79,7 +81,6 @@ internal object TraceAgent {
             // This prepares instrumentation of all future classes
             TraceRecorderInjections.prepareTraceRecorder()
         }
-        LincheckJavaAgent.install(MODEL_CHECKING)
     }
 }
 
