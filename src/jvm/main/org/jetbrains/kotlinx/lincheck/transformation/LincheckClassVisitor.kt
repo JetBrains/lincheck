@@ -153,7 +153,8 @@ internal class LincheckClassVisitor(
                 )
             }
             mv = run {
-                val st = ConstructorArgumentsSnapshotTrackerTransformer(fileName, className, methodName, mv.newAdapter(), classVisitor::isInstanceOf)
+                val st = if (instrumentationMode == TRACE_RECORDING) mv
+                         else ConstructorArgumentsSnapshotTrackerTransformer(fileName, className, methodName, mv.newAdapter(), classVisitor::isInstanceOf)
                 val sv = SharedMemoryAccessTransformer(fileName, className, methodName, st.newAdapter())
                 val aa = AnalyzerAdapter(className, access, methodName, desc, sv)
                 sv.analyzer = aa
@@ -208,7 +209,8 @@ internal class LincheckClassVisitor(
         // which should be put in front of the byte-code transformer chain,
         // so that it can correctly analyze the byte-code and compute required type-information
         mv = run {
-            val st = ConstructorArgumentsSnapshotTrackerTransformer(fileName, className, methodName, mv.newAdapter(), classVisitor::isInstanceOf)
+            val st = if (instrumentationMode == TRACE_RECORDING) mv
+                     else ConstructorArgumentsSnapshotTrackerTransformer(fileName, className, methodName, mv.newAdapter(), classVisitor::isInstanceOf)
             val sv = SharedMemoryAccessTransformer(fileName, className, methodName, st.newAdapter())
             val aa = AnalyzerAdapter(className, access, methodName, desc, sv)
             sv.analyzer = aa
