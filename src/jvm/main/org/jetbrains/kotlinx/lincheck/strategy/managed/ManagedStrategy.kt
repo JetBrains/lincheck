@@ -16,12 +16,15 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.adornedStringRepresentation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.cleanObjectNumeration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
 import org.jetbrains.kotlinx.lincheck.strategy.native_calls.*
 import org.jetbrains.kotlinx.lincheck.trace.*
+import org.jetbrains.kotlinx.lincheck.transformation.CodeLocations
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
+import org.jetbrains.kotlinx.lincheck.transformation.MethodIds
+import org.jetbrains.kotlinx.lincheck.transformation.toCanonicalClassName
 import org.jetbrains.kotlinx.lincheck.beforeEvent as ideaPluginBeforeEvent
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.trace.*
@@ -1626,20 +1629,14 @@ abstract class ManagedStrategy(
             deterministicMethodDescriptor,
         )
         if (collectTrace) {
+            val threadHandle = threadsData[threadId]!!
             // an empty stack trace case is possible and can occur when we resume the coroutine,
             // and it results in a call to a top-level actor `suspend` function;
             // currently top-level actor functions are not represented in the `callStackTrace`,
             // we should probably refactor and fix that, because it is very inconvenient
-            val stackTrace = getStackTrace(threadId)
-            if (stackTrace.isNotEmpty()) {
-                val tracePoint = stackTrace.last().tracePoint
-                when (result) {
-                    Unit -> tracePoint.initializeVoidReturnedValue()
-                    Injections.VOID_RESULT -> tracePoint.initializeVoidReturnedValue()
-                    COROUTINE_SUSPENDED -> tracePoint.initializeCoroutineSuspendedResult()
-                    else -> tracePoint.initializeReturnedValue(adornedStringRepresentation(result), objectFqTypeName(result))
-                }
-                afterMethodCall(threadId, tracePoint)
+            if (threadHandle.stackTrace.isNotEmpty()) {
+                threadHandle.setMethodCallTracePointResult(result)
+                afterMethodCall(threadId, wasSuspended = (result == COROUTINE_SUSPENDED))
                 traceCollector?.addStateRepresentation()
             }
         }
@@ -1683,11 +1680,10 @@ abstract class ManagedStrategy(
             // and it results in a call to a top-level actor `suspend` function;
             // currently top-level actor functions are not represented in the `callStackTrace`,
             // we should probably refactor and fix that, because it is very inconvenient
-            val stackTrace = getStackTrace(threadId)
-            if (stackTrace.isEmpty()) return newThrowable
-            val tracePoint = stackTrace.last().tracePoint
-            if (!tracePoint.isActor) tracePoint.initializeThrownException(throwable)
-            afterMethodCall(threadId, tracePoint)
+            val threadHandle = threadsData[threadId]!!
+            if (threadHandle.stackTrace.isEmpty()) return newThrowable
+            threadHandle.setMethodCallTracePointResult(throwable)
+            afterMethodCall(threadId, wasSuspended = false)
             traceCollector?.addStateRepresentation()
         }
         // if the method has certain guarantees, leave the corresponding section
@@ -1734,9 +1730,9 @@ abstract class ManagedStrategy(
             // we should probably refactor and fix that, because it is very inconvenient
             val stackTrace = getStackTrace(threadId)
             if (stackTrace.isNotEmpty()) {
-                val tracePoint = stackTrace.last().tracePoint
-                tracePoint.initializeVoidReturnedValue()
-                afterMethodCall(threadId, tracePoint)
+                val threadHandle = threadsData[threadId]!!
+                threadHandle.setMethodCallTracePointResult(Unit)
+                afterMethodCall(threadId, wasSuspended = false)
                 traceCollector!!.addStateRepresentation()
             }
         }
@@ -1931,87 +1927,24 @@ abstract class ManagedStrategy(
         return tracePoint
     }
 
-    private fun objectFqTypeName(obj: Any?): String {
-        val typeName = obj?.javaClass?.name ?: "null"
-        // Note: `if` here is important for performance reasons.
-        // In common case we want to return just `typeName` without using string templates
-        // to avoid redundant string allocation.
-        if (obj?.javaClass?.isEnum == true) {
-            return "Enum:$typeName"
-        }
-        return typeName
-    }
-
-
     /**
-     * Returns string representation of the field owner based on the provided parameters.
+     * This method is invoked by a test thread after each method invocation.
+     *
+     * @param threadId id of the invoking thread.
+     * @param wasSuspended true if the method was suspended.
      */
-    @Suppress("UNUSED_PARAMETER")
-    private fun getFieldOwnerName(obj: Any?, className: String, fieldName: String, isStatic: Boolean): String? {
-        if (isStatic) {
-            val threadId = threadScheduler.getCurrentThreadId()
-            val stackTraceElement = getShadowStack(threadId).last()
-            if (stackTraceElement.instance?.javaClass?.name == className) {
-                return null
-            }
-            return className.toSimpleClassName()
-        }
-        return findOwnerName(obj!!)
-    }
-
-    /**
-     * Returns beautiful string representation of the [owner].
-     * If the [owner] is `this` of the current method, then returns `null`.
-     */
-    private fun findOwnerName(owner: Any): String? {
-        val threadId = threadScheduler.getCurrentThreadId()
-        // if the current owner is `this` - no owner needed
-        if (isCurrentStackFrameReceiver(owner)) return null
-        // do not prettify thread names
-        if (owner is Thread) {
-            return adornedStringRepresentation(owner)
-        }
-        val threadData = threadsData[threadId]!!
-        // lookup for the object in local variables and use the local variable name if found
-        val shadowStackFrame = threadData.shadowStack.last()
-        shadowStackFrame.getLastAccessVariable(owner)?.let { return it }
-        // lookup for a field name in the current stack frame `this`
-        shadowStackFrame.instance
-            ?.findInstanceFieldReferringTo(owner)
-            ?.let { return it.name }
-        // lookup for the constant referencing the object
-        threadData.constants[owner]?.let { return it }
-        // otherwise return object's string representation
-        return adornedStringRepresentation(owner)
-    }
-
-    /**
-     * Checks if [owner] is the `this` object (i.e., receiver) of the currently executed method call.
-     */
-    private fun isCurrentStackFrameReceiver(owner: Any): Boolean {
-        val currentThreadId = threadScheduler.getCurrentThreadId()
-        val stackTraceElement = getShadowStack(currentThreadId).last()
-        return (owner === stackTraceElement.instance)
-    }
-
-    /**
-     * This method is invoked by a test thread
-     * after each method invocation.
-     * @param iThread number of invoking thread
-     * @param tracePoint the corresponding trace point for the invocation
-     */
-    private fun afterMethodCall(iThread: Int, tracePoint: MethodCallTracePoint) {
-        val threadHandle = threadsData[iThread]!!
+    private fun afterMethodCall(threadId: Int, wasSuspended: Boolean) {
+        val threadHandle = threadsData[threadId]!!
         val callStackTrace = threadHandle.stackTrace
-        if (tracePoint.wasSuspended) {
+        if (wasSuspended) {
             // if a method call is suspended, save its call stack element to reuse for continuation resuming
-            suspendedFunctionsStack[iThread]!!.add(callStackTrace.last())
+            suspendedFunctionsStack[threadId]!!.add(callStackTrace.last())
             threadHandle.popShadowStackFrame()
             threadHandle.popStackTraceElement()
 
             // Hack to include actor
             if (callStackTrace.size == 1 && callStackTrace.first().tracePoint.isRootCall) {
-                suspendedFunctionsStack[iThread]!!.add(callStackTrace.first())
+                suspendedFunctionsStack[threadId]!!.add(callStackTrace.first())
 
                 threadHandle.popShadowStackFrame()
                 threadHandle.popStackTraceElement()
@@ -2026,10 +1959,6 @@ abstract class ManagedStrategy(
 
     private fun getStackTrace(threadId: ThreadId): MutableList<CallStackTraceElement> {
         return threadsData[threadId]!!.stackTrace
-    }
-
-    private fun getShadowStack(threadId: ThreadId): MutableList<ShadowStackFrame> {
-        return threadsData[threadId]!!.shadowStack
     }
 
     private fun getAnalysisSectionStack(threadId: ThreadId): MutableList<AnalysisSectionType> {
