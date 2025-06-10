@@ -1586,7 +1586,7 @@ abstract class ManagedStrategy(
             }
         }
         // if the method has certain guarantees, enter the corresponding section
-        enterAnalysisSection(threadId, methodSection)
+        threadsData[threadId]!!.enterAnalysisSection(methodSection)
         return deterministicMethodDescriptor
     }
 
@@ -1644,7 +1644,7 @@ abstract class ManagedStrategy(
             }
         }
         // if the method has certain guarantees, leave the corresponding section
-        leaveAnalysisSection(threadId, methodSection)
+        threadsData[threadId]!!.leaveAnalysisSection(methodSection)
         return newResult
     }
 
@@ -1691,7 +1691,7 @@ abstract class ManagedStrategy(
             traceCollector?.addStateRepresentation()
         }
         // if the method has certain guarantees, leave the corresponding section
-        leaveAnalysisSection(threadId, methodSection)
+        threadsData[threadId]!!.leaveAnalysisSection(methodSection)
         newThrowable
     }
 
@@ -1789,35 +1789,6 @@ abstract class ManagedStrategy(
             }
         }
         return section
-    }
-
-    private fun enterAnalysisSection(threadId: ThreadId, section: AnalysisSectionType) {
-        val analysisSectionStack = getAnalysisSectionStack(threadId)
-        val currentSection = analysisSectionStack.lastOrNull()
-        if (currentSection != null && currentSection.isCallStackPropagating() && section < currentSection) {
-            analysisSectionStack.add(currentSection)
-        } else {
-            analysisSectionStack.add(section)
-        }
-        if (section == AnalysisSectionType.IGNORED ||
-            // TODO: atomic should have different semantics compared to ignored
-            section == AnalysisSectionType.ATOMIC
-        ) {
-            enterIgnoredSection()
-        }
-    }
-
-    private fun leaveAnalysisSection(threadId: ThreadId, section: AnalysisSectionType) {
-        if (section == AnalysisSectionType.IGNORED ||
-            // TODO: atomic should have different semantics compared to ignored
-            section == AnalysisSectionType.ATOMIC
-        ) {
-            leaveIgnoredSection()
-        }
-        val analysisSectionStack = getAnalysisSectionStack(threadId)
-        analysisSectionStack.removeLast().ensure { currentSection ->
-            currentSection == section || (currentSection.isCallStackPropagating() && section < currentSection)
-        }
     }
 
     protected fun inSilentSection(threadId: ThreadId): Boolean {
