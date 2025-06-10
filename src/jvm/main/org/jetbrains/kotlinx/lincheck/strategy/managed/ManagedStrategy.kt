@@ -21,6 +21,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
 import org.jetbrains.kotlinx.lincheck.strategy.native_calls.*
 import org.jetbrains.kotlinx.lincheck.trace.*
+import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.transformation.CodeLocations
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.transformation.MethodIds
