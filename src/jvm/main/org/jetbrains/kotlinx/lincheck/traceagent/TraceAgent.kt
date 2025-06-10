@@ -14,7 +14,6 @@ import org.jetbrains.kotlinx.lincheck.transformation.ASM_API
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.MODEL_CHECKING
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.transformation.SafeClassWriter
-import org.jetbrains.kotlinx.lincheck.transformation.isInstrumentationInitialized
 import org.jetbrains.kotlinx.lincheck.transformation.isTraceJavaAgentAttached
 import org.jetbrains.kotlinx.lincheck.transformation.toCanonicalClassName
 import org.objectweb.asm.ClassReader
@@ -68,7 +67,6 @@ internal object TraceAgent {
         TraceAgentParameters.parseArgs(agentArgs)
         LincheckJavaAgent.instrumentation = inst
         isTraceJavaAgentAttached = true
-        isInstrumentationInitialized = true
         if (isInTraceDebuggerMode) {
             // We are in Trace debugger mode
             LincheckJavaAgent.instrumentation.addTransformer(TraceAgentTransformer(::TraceDebuggerMethodTransformer), true)

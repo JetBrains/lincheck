@@ -58,7 +58,7 @@ internal inline fun withLincheckJavaAgent(instrumentationMode: InstrumentationMo
         // Otherwise we perform instrumentation via ByteBuddy dynamic agent.
         // Initialize instrumentation with dynamic ByteBuddy agent
         // if no agent is attached yet.
-        if (!isInstrumentationInitialized) {
+        if (!LincheckJavaAgent.isInstrumentationInitialized) {
             /**
              * Dynamically attaches byte buddy instrumentation to this JVM instance.
              * Please note that the dynamic attach feature will be disabled in future JVM releases,
@@ -66,7 +66,6 @@ internal inline fun withLincheckJavaAgent(instrumentationMode: InstrumentationMo
              * to inject code in the user codebase when the `java.base` module also needs to be instrumented.
              */
             LincheckJavaAgent.instrumentation = ByteBuddyAgent.install()
-            isInstrumentationInitialized = true
         }
 
         // run the testing code with instrumentation
@@ -113,6 +112,12 @@ internal object LincheckJavaAgent {
      * [withLincheckJavaAgent] which will use [ByteBuddyAgent] dynamic agent instead.
      */
     internal lateinit var instrumentation: Instrumentation
+
+    /**
+     * Tells whether the [instrumentation] field is initialized.
+     */
+    internal val isInstrumentationInitialized: Boolean
+        get() = ::instrumentation.isInitialized
 
     /**
      * Determines how to transform classes;
@@ -535,4 +540,3 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
 }
 
 internal var isTraceJavaAgentAttached: Boolean = false
-internal var isInstrumentationInitialized: Boolean = false
