@@ -509,6 +509,9 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         if (instrumentationMode == STRESS) {
             if (className.startsWith("java.") || className.startsWith("kotlin.")) return false
         }
+        if (instrumentationMode == TRACE_RECORDING) {
+            if (className.startsWith("java.") || className.startsWith("kotlin.") || className.startsWith("jdk.")) return false
+        }
         if (isEagerlyInstrumentedClass(className)) return true
 
         return AnalysisProfile(analyzeStdLib = true).shouldTransform(className, "")
@@ -518,9 +521,9 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
     // We should always eagerly transform the following classes.
     internal fun isEagerlyInstrumentedClass(className: String): Boolean =
         // `ClassLoader` classes, to wrap `loadClass` methods in the ignored section.
-        isClassLoaderClassName(className) ||
+        (instrumentationMode != TRACE_RECORDING && isClassLoaderClassName(className)) ||
         // `MethodHandle` class, to wrap its methods (except `invoke` methods) in the ignored section.
-        isMethodHandleRelatedClass(className) ||
+        (instrumentationMode != TRACE_RECORDING && isMethodHandleRelatedClass(className)) ||
         // `StackTraceElement` class, to wrap all its methods into the ignored section.
         isStackTraceElementClass(className) ||
         // `ThreadContainer` classes, to detect threads started in the thread containers.
