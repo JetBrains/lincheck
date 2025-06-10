@@ -541,7 +541,7 @@ class TraceCollectingEventTracker(
         ))
     }
 
-    fun finishAndDumpTrace() = runInsideIgnoredSection {
+    fun finishAndDumpTrace() {
         val tds = ArrayList(threads.values)
         threads.clear()
 
