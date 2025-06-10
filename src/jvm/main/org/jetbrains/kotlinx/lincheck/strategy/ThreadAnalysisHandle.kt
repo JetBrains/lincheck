@@ -20,7 +20,12 @@ import org.jetbrains.kotlinx.lincheck.trace.WriteTracePoint
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.transformation.toSimpleClassName
 import org.jetbrains.kotlinx.lincheck.util.AnalysisSectionType
+import org.jetbrains.kotlinx.lincheck.util.ThreadId
+import org.jetbrains.kotlinx.lincheck.util.ensure
+import org.jetbrains.kotlinx.lincheck.util.enterIgnoredSection
 import org.jetbrains.kotlinx.lincheck.util.findInstanceFieldReferringTo
+import org.jetbrains.kotlinx.lincheck.util.isCallStackPropagating
+import org.jetbrains.kotlinx.lincheck.util.leaveIgnoredSection
 import java.util.IdentityHashMap
 
 @Suppress("UNUSED_PARAMETER")
@@ -229,6 +234,33 @@ internal class ThreadAnalysisHandle(val threadId: Int, val traceCollector: Trace
         isLocal = false
     ).apply {
         initializeWrittenValue(adornedStringRepresentation(value), objectFqTypeName(value))
+    }
+
+    fun enterAnalysisSection(section: AnalysisSectionType) {
+        val currentSection = analysisSectionStack.lastOrNull()
+        if (currentSection != null && currentSection.isCallStackPropagating() && section < currentSection) {
+            analysisSectionStack.add(currentSection)
+        } else {
+            analysisSectionStack.add(section)
+        }
+        if (section == AnalysisSectionType.IGNORED ||
+            // TODO: atomic should have different semantics compared to ignored
+            section == AnalysisSectionType.ATOMIC
+        ) {
+            enterIgnoredSection()
+        }
+    }
+
+    fun leaveAnalysisSection(section: AnalysisSectionType) {
+        if (section == AnalysisSectionType.IGNORED ||
+            // TODO: atomic should have different semantics compared to ignored
+            section == AnalysisSectionType.ATOMIC
+        ) {
+            leaveIgnoredSection()
+        }
+        analysisSectionStack.removeLast().ensure { currentSection ->
+            currentSection == section || (currentSection.isCallStackPropagating() && section < currentSection)
+        }
     }
 
     private fun objectFqTypeName(obj: Any?): String {
