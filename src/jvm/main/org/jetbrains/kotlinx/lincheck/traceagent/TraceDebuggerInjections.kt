@@ -83,12 +83,12 @@ internal object TraceDebuggerInjections {
         return firstRun
     }
 
-    private class FailingVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : Verifier {
+    class FailingVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : Verifier {
         override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?) = false
     }
 
 
-    private class TraceDebuggerStaticMethodWrapper {
+    class TraceDebuggerStaticMethodWrapper {
         fun callStaticMethod(clazz: Class<*>, method: Method) {
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(clazz.name)
             method.invoke(null)

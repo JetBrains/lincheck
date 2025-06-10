@@ -11,6 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.transformation
 
 import net.bytebuddy.agent.ByteBuddyAgent
+import org.jetbrains.kotlinx.lincheck.traceagent.TraceAgent
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.MODEL_CHECKING
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.STRESS
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.TRACE_RECORDING
@@ -45,15 +46,36 @@ import java.util.jar.JarFile
 private const val DUMP_TRANSFORMED_SOURCES_PROPERTY = "lincheck.dumpTransformedSources"
 val dumpTransformedSources by lazy { System.getProperty(DUMP_TRANSFORMED_SOURCES_PROPERTY, "false").toBoolean() }
 
+
 /**
  * Executes [block] with the Lincheck java agent for byte-code instrumentation.
  */
 internal inline fun withLincheckJavaAgent(instrumentationMode: InstrumentationMode, block: () -> Unit) {
-    LincheckJavaAgent.install(instrumentationMode)
-    return try {
+    if (isTraceJavaAgentAttached) {
+        // In case if trace agent is attached we don't do anything
         block()
-    } finally {
-        LincheckJavaAgent.uninstall()
+    } else {
+        // Otherwise we perform instrumentation via ByteBuddy dynamic agent.
+        // Initialize instrumentation with dynamic ByteBuddy agent
+        // if no agent is attached yet.
+        if (!isInstrumentationInitialized) {
+            /**
+             * Dynamically attaches byte buddy instrumentation to this JVM instance.
+             * Please note that the dynamic attach feature will be disabled in future JVM releases,
+             * but at the moment of implementing this logic (March 2024), it was the smoothest way
+             * to inject code in the user codebase when the `java.base` module also needs to be instrumented.
+             */
+            LincheckJavaAgent.instrumentation = ByteBuddyAgent.install()
+            isInstrumentationInitialized = true
+        }
+
+        // run the testing code with instrumentation
+        LincheckJavaAgent.install(instrumentationMode)
+        return try {
+            block()
+        } finally {
+            LincheckJavaAgent.uninstall()
+        }
     }
 }
 
@@ -86,8 +108,11 @@ internal enum class InstrumentationMode {
 internal object LincheckJavaAgent {
     /**
      * The [Instrumentation] instance is used to perform bytecode transformations during runtime.
+     *
+     * It is set either by [TraceAgent] static agent, or on the first call to
+     * [withLincheckJavaAgent] which will use [ByteBuddyAgent] dynamic agent instead.
      */
-    private val instrumentation = ByteBuddyAgent.install()
+    internal lateinit var instrumentation: Instrumentation
 
     /**
      * Determines how to transform classes;
@@ -108,10 +133,8 @@ internal object LincheckJavaAgent {
     val instrumentedClasses = HashSet<String>()
 
     /**
-     * Dynamically attaches [LincheckClassFileTransformer] to this JVM instance.
-     * Please note that the dynamic attach feature will be disabled in future JVM releases,
-     * but at the moment of implementing this logic (March 2024), it was the smoothest way
-     * to inject code in the user codebase when the `java.base` module also needs to be instrumented.
+     * Adds [LincheckClassFileTransformer] to this JVM instance.
+     * Also, retransforms already loaded classes.
      */
     fun install(instrumentationMode: InstrumentationMode) {
         this.instrumentationMode = instrumentationMode
@@ -516,3 +539,6 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         isCoroutineDispatcherInternalClass(className) ||
         isCoroutineConcurrentKtInternalClass(className)
 }
+
+internal var isTraceJavaAgentAttached: Boolean = false
+internal var isInstrumentationInitialized: Boolean = false
