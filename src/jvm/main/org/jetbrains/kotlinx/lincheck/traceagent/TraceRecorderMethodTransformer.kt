@@ -11,6 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.traceagent
 
 import org.jetbrains.kotlinx.lincheck.transformation.ASM_API
+import org.jetbrains.kotlinx.lincheck.transformation.invokeInsideIgnoredSection
 import org.jetbrains.kotlinx.lincheck.transformation.invokeStatic
 import org.objectweb.asm.commons.AdviceAdapter
 import org.objectweb.asm.commons.GeneratorAdapter
@@ -47,6 +48,8 @@ internal class TraceRecorderMethodTransformer(
      }
 
      override fun onMethodExit(opcode: Int) {
-         invokeStatic(TraceRecorderInjections::stopTraceRecorderAndDumpTrace)
+         invokeInsideIgnoredSection {
+             invokeStatic(TraceRecorderInjections::stopTraceRecorderAndDumpTrace)
+         }
      }
 }
