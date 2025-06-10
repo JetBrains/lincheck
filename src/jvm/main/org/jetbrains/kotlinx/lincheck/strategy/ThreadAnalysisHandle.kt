@@ -33,14 +33,12 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.Array
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.InstanceVarHandleMethod
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.StaticVarHandleMethod
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleNames
-import org.jetbrains.kotlinx.lincheck.strategy.native_calls.DeterministicMethodDescriptor
 import org.jetbrains.kotlinx.lincheck.trace.CallStackTraceElement
 import org.jetbrains.kotlinx.lincheck.trace.MethodCallTracePoint
 import org.jetbrains.kotlinx.lincheck.trace.ReadTracePoint
 import org.jetbrains.kotlinx.lincheck.trace.TraceCollector
 import org.jetbrains.kotlinx.lincheck.trace.TracePoint
 import org.jetbrains.kotlinx.lincheck.trace.WriteTracePoint
-import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.transformation.toSimpleClassName
 import org.jetbrains.kotlinx.lincheck.util.AnalysisSectionType
 import org.jetbrains.kotlinx.lincheck.util.AtomicMethodDescriptor
@@ -57,8 +55,10 @@ import org.jetbrains.kotlinx.lincheck.util.isVarHandle
 import sun.nio.ch.lincheck.MethodSignature
 import org.jetbrains.kotlinx.lincheck.util.isCallStackPropagating
 import org.jetbrains.kotlinx.lincheck.util.leaveIgnoredSection
+import sun.nio.ch.lincheck.Injections
 import java.util.IdentityHashMap
 import java.util.Objects
+import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 
 @Suppress("UNUSED_PARAMETER")
 
@@ -307,6 +307,27 @@ internal class ThreadAnalysisHandle(val threadId: Int, val traceCollector: Trace
             return initializeUnsafeMethodCallTracePoint(tracePoint, obj!!, params)
         }
         error("Unknown atomic method $className::$methodName")
+    }
+
+    fun setMethodCallTracePointResult(result: Any?) {
+        val tracePoint = stackTrace.last().tracePoint
+        when {
+            result === Unit || result === Injections.VOID_RESULT -> {
+                tracePoint.initializeVoidReturnedValue()
+            }
+            result === COROUTINE_SUSPENDED -> {
+                tracePoint.initializeCoroutineSuspendedResult()
+            }
+            result is Throwable && !tracePoint.isActor -> {
+                tracePoint.initializeThrownException(result)
+            }
+            else -> {
+                tracePoint.initializeReturnedValue(
+                    valueRepresentation = adornedStringRepresentation(result),
+                    valueType = objectFqTypeName(result)
+                )
+            }
+        }
     }
 
     fun pushMethodCallTracePointOnStack(
