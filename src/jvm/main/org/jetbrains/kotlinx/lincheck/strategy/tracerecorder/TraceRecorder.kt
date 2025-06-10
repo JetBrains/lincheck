@@ -10,7 +10,13 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.tracerecorder
 
-import org.jetbrains.kotlinx.lincheck.util.runInsideIgnoredSection
+import org.jetbrains.kotlinx.lincheck.strategy.tracerecorder.TraceRecorder.finishTraceAndDumpResults
+import org.jetbrains.kotlinx.lincheck.traceagent.TraceAgentParameters
+import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.ensureObjectIsTransformed
+import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
+import org.objectweb.asm.commons.Method
 import sun.nio.ch.lincheck.ThreadDescriptor
 
 /**
@@ -63,4 +69,35 @@ object TraceRecorder {
             eventTracker = null
         }
     }
+
+
+
+
+    /**
+     * WARNING: This is an internal function for testing purposes only.
+     * Records the execution trace from [block]
+     * The captured trace is written to [outputFile]
+     */
+    fun recordTraceInternal(outputFile: String, block: Runnable) {
+        check(outputFile.isNotBlank()) { "Output file name must not be blank" }
+        TraceAgentParameters.classUnderTraceDebugging = TraceRecordingWrapper::class.java.name
+        TraceAgentParameters.methodUnderTraceDebugging = "runTraceRecording"
+        TraceAgentParameters.traceDumpFilePath = outputFile
+
+        withLincheckJavaAgent(InstrumentationMode.TRACE_RECORDING) {
+            ensureObjectIsTransformed(block)
+            LincheckJavaAgent.ensureClassHierarchyIsTransformed(TraceAgentParameters.classUnderTraceDebugging)
+            val (_, testMethod) = TraceAgentParameters.getClassAndMethod()
+            val methodDescriptor = Method.getMethod(testMethod).descriptor
+            installAndStartTrace(TraceAgentParameters.classUnderTraceDebugging, TraceAgentParameters.methodUnderTraceDebugging, methodDescriptor, TraceAgentParameters.traceDumpFilePath)
+            TraceRecordingWrapper().runTraceRecording(block)
+
+        }
+        finishTraceAndDumpResults()
+    }
+}
+
+
+internal class TraceRecordingWrapper {
+    fun runTraceRecording(block: Runnable) = block.run()
 }
