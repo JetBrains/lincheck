@@ -371,34 +371,6 @@ internal class ThreadAnalysisHandle(val threadId: Int, val traceCollector: Trace
         }
     }
 
-    private fun methodAnalysisSectionType(
-        owner: Any?,
-        className: String,
-        methodName: String,
-        atomicMethodDescriptor: AtomicMethodDescriptor?,
-        deterministicMethodDescriptor: DeterministicMethodDescriptor<*, *>?,
-    ): AnalysisSectionType {
-        val ownerName = owner?.javaClass?.canonicalName ?: className
-        if (atomicMethodDescriptor != null) {
-            return AnalysisSectionType.ATOMIC
-        }
-        // TODO: decide if we need to introduce special `DETERMINISTIC` guarantee?
-        if (deterministicMethodDescriptor != null) {
-            return AnalysisSectionType.IGNORED
-        }
-        // Ignore methods called on standard I/O streams
-        when (owner) {
-            System.`in`, System.out, System.err -> return AnalysisSectionType.IGNORED
-        }
-        val section = analysisProfile.getAnalysisSectionFor(ownerName, methodName)
-        userDefinedGuarantees?.forEach { guarantee ->
-            if (guarantee.classPredicate(ownerName) && guarantee.methodPredicate(methodName)) {
-                return guarantee.type
-            }
-        }
-        return section
-    }
-
     fun enterAnalysisSection(section: AnalysisSectionType) {
         val currentSection = analysisSectionStack.lastOrNull()
         if (currentSection != null && currentSection.isCallStackPropagating() && section < currentSection) {
