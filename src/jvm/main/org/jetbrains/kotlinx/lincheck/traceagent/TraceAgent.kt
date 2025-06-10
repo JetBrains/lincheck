@@ -65,7 +65,6 @@ internal object TraceAgent {
             "`lincheck.traceRecorderMode`. Only one of them expected to be `true`. " +
             "Rerun with `-Dlincheck.traceDebuggerMode=true` or `-Dlincheck.traceRecorderMode=true` but not both."
         }
-        println("Running trace agent: debugger=$isInTraceDebuggerMode, recorder=$isInTraceRecorderMode")
         TraceAgentParameters.parseArgs(agentArgs)
         LincheckJavaAgent.instrumentation = inst
         isTraceJavaAgentAttached = true
