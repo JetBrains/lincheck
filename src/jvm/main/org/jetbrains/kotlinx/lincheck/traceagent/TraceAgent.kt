@@ -11,7 +11,11 @@
 package org.jetbrains.kotlinx.lincheck.traceagent
 
 import org.jetbrains.kotlinx.lincheck.transformation.ASM_API
+import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.MODEL_CHECKING
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.transformation.SafeClassWriter
+import org.jetbrains.kotlinx.lincheck.transformation.isInstrumentationInitialized
+import org.jetbrains.kotlinx.lincheck.transformation.isTraceJavaAgentAttached
 import org.jetbrains.kotlinx.lincheck.transformation.toCanonicalClassName
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
@@ -61,17 +65,22 @@ internal object TraceAgent {
             "`lincheck.traceRecorderMode`. Only one of them expected to be `true`. " +
             "Rerun with `-Dlincheck.traceDebuggerMode=true` or `-Dlincheck.traceRecorderMode=true` but not both."
         }
+        println("Running trace agent: debugger=$isInTraceDebuggerMode, recorder=$isInTraceRecorderMode")
         TraceAgentParameters.parseArgs(agentArgs)
+        LincheckJavaAgent.instrumentation = inst
+        isTraceJavaAgentAttached = true
+        isInstrumentationInitialized = true
         if (isInTraceDebuggerMode) {
             // We are in Trace debugger mode
-            inst.addTransformer(TraceAgentTransformer(::TraceDebuggerMethodTransformer), true)
+            LincheckJavaAgent.instrumentation.addTransformer(TraceAgentTransformer(::TraceDebuggerMethodTransformer), true)
         } else {
             // We are in Trace Recorder mode (by exclusion)
             // This adds turn-on and turn-off of tracing to the method in question
-            inst.addTransformer(TraceAgentTransformer(::TraceRecorderMethodTransformer), true)
+            LincheckJavaAgent.instrumentation.addTransformer(TraceAgentTransformer(::TraceRecorderMethodTransformer), true)
             // This prepares instrumentation of all future classes
             TraceRecorderInjections.prepareTraceRecorder()
         }
+        LincheckJavaAgent.install(MODEL_CHECKING)
     }
 }
 
