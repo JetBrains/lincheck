@@ -10,14 +10,14 @@
 
 package org.jetbrains.kotlinx.lincheck.util
 
-import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
-import org.jetbrains.kotlinx.lincheck.strategy.tracerecorder.TraceCollectingEventTracker
+import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.transformation.isThreadContainerClass
-import sun.nio.ch.lincheck.ThreadDescriptor
+import org.jetbrains.kotlinx.lincheck.util.AnalysisSectionType.*
 import sun.nio.ch.lincheck.Injections
+import sun.nio.ch.lincheck.ThreadDescriptor
 
 /**
  * Represents different types of analysis sections within the Lincheck framework.

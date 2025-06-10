@@ -324,15 +324,16 @@ class TraceCollectingEventTracker(
         receiver: Any?,
         params: Array<out Any?>,
         result: Any?
-    ) = runInsideIgnoredSection {
-        val threadHandle = threads[Thread.currentThread()] ?: return@runInsideIgnoredSection
+    ): Any? = runInsideIgnoredSection {
+        val threadHandle = threads[Thread.currentThread()] ?: return result
         if (threadHandle.stackTrace.isEmpty()) {
-            return
+            return result
         }
         threadHandle.setMethodCallTracePointResult(result)
         threadHandle.popStackFrame()
         val methodSection = methodAnalysisSectionType(receiver, className, methodName)
         threadHandle.leaveAnalysisSection(methodSection)
+        return result
     }
 
     override fun onMethodCallException(
