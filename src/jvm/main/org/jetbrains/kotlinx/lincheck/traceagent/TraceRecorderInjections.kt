@@ -16,13 +16,9 @@ import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.objectweb.asm.commons.Method
 
 internal object TraceRecorderInjections {
-    private var humanReadableOutput: Boolean = true
 
     @JvmStatic
     fun prepareTraceRecorder() {
-        // Check for the type of output: if 4th argument is "false" it means non-human-readable output (CSV)
-        humanReadableOutput = TraceAgentParameters.getRestOfArgs().firstOrNull() != "false"
-
         // Must be first or classes will not be found
         LincheckJavaAgent.install(InstrumentationMode.TRACE_RECORDING)
         // Retransform classes for event tracking
@@ -41,6 +37,6 @@ internal object TraceRecorderInjections {
     fun stopTraceRecorderAndDumpTrace() {
         LincheckJavaAgent.uninstall()
         // Determine
-        TraceRecorder.finishTraceAndDumpResults(humanReadableOutput)
+        TraceRecorder.finishTraceAndDumpResults()
     }
 }
