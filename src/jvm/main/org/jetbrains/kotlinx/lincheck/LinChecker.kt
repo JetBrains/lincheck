@@ -251,7 +251,7 @@ private fun ExecutionScenario.tryMinimize(checkScenario: (ExecutionScenario) -> 
                 } else {
                     ArrayList(it)
                 }
-            }
+            }.filter { it.isNotEmpty() }
             val newPostExecution = ArrayList(postExecution)
             val optimizedScenario = ExecutionScenario(
                 initExecution = newInitExecution,
@@ -274,7 +274,7 @@ private fun ExecutionScenario.tryMinimize(checkScenario: (ExecutionScenario) -> 
                 } else {
                     ArrayList(it)
                 }
-            }
+            }.filter { it.isNotEmpty() }
             val newPostExecution = listOf(actors.last()) + postExecution
             val optimizedScenario = ExecutionScenario(
                 initExecution = newInitExecution,
