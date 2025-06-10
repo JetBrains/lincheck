@@ -1248,7 +1248,8 @@ abstract class ManagedStrategy(
         val tracePoint = threadHandle.createReadArrayElementTracePoint(
             array = array,
             index = index,
-            codeLocation = codeLocation
+            codeLocation = codeLocation,
+            actorId = currentActorId[threadId]!!,
         )
         newSwitchPoint(threadId, codeLocation)
         traceCollector?.addTracePointInternal(tracePoint)
