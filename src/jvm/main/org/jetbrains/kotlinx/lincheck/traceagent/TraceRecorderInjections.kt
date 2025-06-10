@@ -35,8 +35,6 @@ internal object TraceRecorderInjections {
 
     @JvmStatic
     fun stopTraceRecorderAndDumpTrace() {
-        LincheckJavaAgent.uninstall()
-        // Determine
         TraceRecorder.finishTraceAndDumpResults()
     }
 }

@@ -48,8 +48,6 @@ internal class TraceRecorderMethodTransformer(
      }
 
      override fun onMethodExit(opcode: Int) {
-         invokeInsideIgnoredSection {
-             invokeStatic(TraceRecorderInjections::stopTraceRecorderAndDumpTrace)
-         }
+         invokeStatic(TraceRecorderInjections::stopTraceRecorderAndDumpTrace)
      }
 }
