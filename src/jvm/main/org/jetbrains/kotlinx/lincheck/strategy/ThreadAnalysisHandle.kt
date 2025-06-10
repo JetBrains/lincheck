@@ -75,23 +75,21 @@ internal class ThreadAnalysisHandle(val threadId: Int, val traceCollector: Trace
      * mapping an object to a constant name referencing this object.
      */
     // TODO: do not expose mutable map
-    val constants: IdentityHashMap<Any, String> = IdentityHashMap<Any, String>()
+    private val constants: IdentityHashMap<Any, String> = IdentityHashMap<Any, String>()
 
     /**
      * Last read constant name (i.e., static final field).
      * We store it as we initialize read value after the trace point is created,
      * so we have to store the trace point somewhere to get it later.
      */
-    var lastReadConstantName: String? = null
-        private set
+    private var lastReadConstantName: String? = null
 
     /**
      * Last read trace point, occurred in the current thread.
      * We store it as we initialize read value after the point is created,
      * so we have to store the trace point somewhere to get it later.
      */
-    var lastReadTracePoint: ReadTracePoint? = null
-        private set
+    private var lastReadTracePoint: ReadTracePoint? = null
 
     private val collectTrace = (traceCollector != null)
 
