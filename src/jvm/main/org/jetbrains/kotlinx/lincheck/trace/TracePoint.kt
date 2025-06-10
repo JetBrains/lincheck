@@ -592,6 +592,8 @@ internal class CallStackTraceElement(
     val id: Int,
     val tracePoint: MethodCallTracePoint,
     val instance: Any?,
+    // Method invocation id used to calculate spin cycle start label call depth.
+    // Two calls are considered equals if two same methods were called with the same parameters.
     val methodInvocationId: Int
 ) {
     fun deepCopy(copiedObjects: HashMap<Any, Any>): CallStackTraceElement =

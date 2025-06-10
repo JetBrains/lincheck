@@ -16,8 +16,6 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicFieldUpdaterNames.getAtomicFieldUpdaterDescriptor
-import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceMethodType.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.adornedStringRepresentation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.cleanObjectNumeration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
@@ -1869,7 +1867,8 @@ abstract class ManagedStrategy(
         atomicMethodDescriptor: AtomicMethodDescriptor?,
         callType: MethodCallTracePoint.CallType,
     ): MethodCallTracePoint? {
-        val callStackTrace = getStackTrace(threadId)
+        val threadHandle = threadsData[threadId]!!
+        // val callStackTrace = getStackTrace(threadId)
         if (isTestThread(threadId) && isResumptionMethodCall(threadId, className, methodName, methodParams, atomicMethodDescriptor)) {
             val suspendedMethodStack = suspendedFunctionsStack[threadId]!!
             // In case of resumption, we need to find a call stack frame corresponding to the resumed function
@@ -1896,88 +1895,38 @@ abstract class ManagedStrategy(
             suspendedMethodStack.subList(0, elementIndex + 1).clear()
             // we need to restore suspended stack trace elements
             // if they are not on the top of the current stack trace
-            if (!resumedStackTrace.isSuffixOf(callStackTrace)) {
+            if (!resumedStackTrace.isSuffixOf(threadHandle.stackTrace)) {
                 // restore resumed stack trace elements
-                callStackTrace.addAll(resumedStackTrace)
-                resumedStackTrace.forEach { pushShadowStackFrame(it.instance) }
+                resumedStackTrace.forEach { stackTraceElement ->
+                    threadHandle.pushStackTraceElement(stackTraceElement)
+                    threadHandle.pushShadowStackFrame(stackTraceElement.instance)
+                }
             }
             // since we are in resumption, skip the next ` beforeEvent ` call
             skipNextBeforeEvent = true
             return null
         }
-        val callId = callStackTraceElementId++
-        // The code location of the new method call is currently the last one
-        val tracePoint = createBeforeMethodCallTracePoint(
-            iThread = threadId,
-            owner = owner,
+
+        val tracePoint = threadHandle.createMethodCallTracePoint(
+            obj = owner,
             className = className,
             methodName = methodName,
             params = methodParams,
             codeLocation = codeLocation,
             atomicMethodDescriptor = atomicMethodDescriptor,
             callType = callType,
+            actorId = currentActorId[threadId]!!,
         )
-        // Method invocation id used to calculate spin cycle start label call depth.
-        // Two calls are considered equals if two same methods were called with the same parameters.
-        val methodInvocationId = Objects.hash(methodId,
-            methodParams.map { primitiveOrIdentityHashCode(it) }.toTypedArray().contentHashCode()
-        )
-        val stackTraceElement = CallStackTraceElement(
-            id = callId,
+        threadHandle.pushMethodCallTracePointOnStack(
+            obj = owner,
+            methodId = methodId,
+            methodParams = methodParams,
             tracePoint = tracePoint,
-            instance = owner,
-            methodInvocationId = methodInvocationId
+            callStackTraceElementId = callStackTraceElementId++,
         )
-        callStackTrace.add(stackTraceElement)
-        pushShadowStackFrame(owner)
-        return tracePoint
-    }
+        threadHandle.pushShadowStackFrame(owner)
 
-    private fun createBeforeMethodCallTracePoint(
-        iThread: Int,
-        owner: Any?,
-        className: String,
-        methodName: String,
-        params: Array<Any?>,
-        codeLocation: Int,
-        atomicMethodDescriptor: AtomicMethodDescriptor?,
-        callType: MethodCallTracePoint.CallType,
-    ): MethodCallTracePoint {
-        val callStackTrace = getStackTrace(iThread)
-        val tracePoint = MethodCallTracePoint(
-            iThread = iThread,
-            actorId = currentActorId[iThread]!!,
-            className = className,
-            methodName = methodName,
-            callStackTrace = callStackTrace,
-            codeLocation = codeLocation,
-            isStatic = (owner == null),
-            callType = callType,
-            isSuspend = isSuspendFunction(className, methodName, params)
-        )
-        // handle non-atomic methods
-        if (atomicMethodDescriptor == null) {
-            val ownerName = if (owner != null) findOwnerName(owner) else className.toSimpleClassName()
-            if (!ownerName.isNullOrEmpty()) {
-                tracePoint.initializeOwnerName(ownerName)
-            }
-            tracePoint.initializeParameters(params.toList())
-            return tracePoint
-        }
-        // handle atomic methods
-        if (isVarHandle(owner)) {
-            return initializeVarHandleMethodCallTracePoint(iThread, tracePoint, owner, params)
-        }
-        if (isAtomicFieldUpdater(owner)) {
-            return initializeAtomicUpdaterMethodCallTracePoint(tracePoint, owner!!, params)
-        }
-        if (isAtomic(owner) || isAtomicArray(owner)) {
-            return initializeAtomicReferenceMethodCallTracePoint(iThread, tracePoint, owner!!, params)
-        }
-        if (isUnsafe(owner)) {
-            return initializeUnsafeMethodCallTracePoint(tracePoint, owner!!, params)
-        }
-        error("Unknown atomic method $className::$methodName")
+        return tracePoint
     }
 
     private fun objectFqTypeName(obj: Any?): String {
@@ -1990,136 +1939,6 @@ abstract class ManagedStrategy(
         }
         return typeName
     }
-
-    private fun initializeUnsafeMethodCallTracePoint(
-        tracePoint: MethodCallTracePoint,
-        receiver: Any,
-        params: Array<Any?>
-    ): MethodCallTracePoint {
-        when (val unsafeMethodName = UnsafeNames.getMethodCallType(params)) {
-            is UnsafeArrayMethod -> {
-                val owner = "${adornedStringRepresentation(unsafeMethodName.array)}[${unsafeMethodName.index}]"
-                tracePoint.initializeOwnerName(owner)
-                tracePoint.initializeParameters(unsafeMethodName.parametersToPresent)
-            }
-            is UnsafeName.TreatAsDefaultMethod -> {
-                tracePoint.initializeOwnerName(adornedStringRepresentation(receiver))
-                tracePoint.initializeParameters(params.toList())
-            }
-            is UnsafeInstanceMethod -> {
-                val ownerName = findOwnerName(unsafeMethodName.owner)
-                val owner = ownerName?.let { "$ownerName.${unsafeMethodName.fieldName}" } ?: unsafeMethodName.fieldName
-                tracePoint.initializeOwnerName(owner)
-                tracePoint.initializeParameters(unsafeMethodName.parametersToPresent)
-            }
-            is UnsafeStaticMethod -> {
-                tracePoint.initializeOwnerName("${unsafeMethodName.clazz.simpleName}.${unsafeMethodName.fieldName}")
-                tracePoint.initializeParameters(unsafeMethodName.parametersToPresent)
-            }
-        }
-
-        return tracePoint
-    }
-
-    private fun initializeAtomicReferenceMethodCallTracePoint(
-        threadId: ThreadId,
-        tracePoint: MethodCallTracePoint,
-        receiver: Any,
-        params: Array<Any?>
-    ): MethodCallTracePoint {
-        val shadowStackFrame = getShadowStack(threadId).last()
-        val atomicReferenceInfo = AtomicReferenceNames.getMethodCallType(shadowStackFrame, receiver, params)
-        when (atomicReferenceInfo) {
-            is AtomicReferenceInstanceMethod -> {
-                val receiverName = findOwnerName(atomicReferenceInfo.owner)
-                tracePoint.initializeOwnerName(receiverName?.let { "$it.${atomicReferenceInfo.fieldName}" } ?: atomicReferenceInfo.fieldName)
-                tracePoint.initializeParameters(params.toList())
-            }
-            is AtomicReferenceStaticMethod -> {
-                val clazz = atomicReferenceInfo.ownerClass
-                val thisClassName = shadowStackFrame.instance?.javaClass?.name
-                val ownerName = if (thisClassName == clazz.name) "" else "${clazz.simpleName}."
-                tracePoint.initializeOwnerName("${ownerName}${atomicReferenceInfo.fieldName}")
-                tracePoint.initializeParameters(params.toList())
-            }
-            is AtomicReferenceInLocalVariable -> {
-                tracePoint.initializeOwnerName("${atomicReferenceInfo.localVariable}.${atomicReferenceInfo.fieldName}")
-                tracePoint.initializeParameters(params.toList())
-            }
-            is AtomicArrayMethod -> {
-                tracePoint.initializeOwnerName("${adornedStringRepresentation(atomicReferenceInfo.atomicArray)}[${atomicReferenceInfo.index}]")
-                tracePoint.initializeParameters(params.drop(1))
-            }
-            is InstanceFieldAtomicArrayMethod -> {
-                val receiverName = findOwnerName(atomicReferenceInfo.owner)
-                tracePoint.initializeOwnerName((receiverName?.let { "$it." } ?: "") + "${atomicReferenceInfo.fieldName}[${atomicReferenceInfo.index}]")
-                tracePoint.initializeParameters(params.drop(1))
-            }
-            is StaticFieldAtomicArrayMethod -> {
-                val clazz = atomicReferenceInfo.ownerClass
-                val thisClassName = shadowStackFrame.instance?.javaClass?.name
-                val ownerName = if (thisClassName == clazz.name) "" else "${clazz.simpleName}."
-                tracePoint.initializeOwnerName("${ownerName}${atomicReferenceInfo.fieldName}[${atomicReferenceInfo.index}]")
-                tracePoint.initializeParameters(params.drop(1))
-            }
-            is AtomicArrayInLocalVariable -> {
-                tracePoint.initializeOwnerName("${atomicReferenceInfo.localVariable}.${atomicReferenceInfo.fieldName}[${atomicReferenceInfo.index}]")
-                tracePoint.initializeParameters(params.drop(1))
-            }
-            is AtomicReferenceMethodType.TreatAsDefaultMethod -> {
-                tracePoint.initializeOwnerName(adornedStringRepresentation(receiver))
-                tracePoint.initializeParameters(params.toList())
-            }
-        }
-        return tracePoint
-    }
-
-    private fun initializeVarHandleMethodCallTracePoint(
-        threadId: Int,
-        tracePoint: MethodCallTracePoint,
-        varHandle: Any, // for Java 8, the VarHandle class does not exist
-        parameters: Array<Any?>,
-    ): MethodCallTracePoint {
-        val shadowStackFrame = getShadowStack(threadId).last()
-        val varHandleMethodType = VarHandleNames.varHandleMethodType(varHandle, parameters)
-        when (varHandleMethodType) {
-            is ArrayVarHandleMethod -> {
-                tracePoint.initializeOwnerName("${adornedStringRepresentation(varHandleMethodType.array)}[${varHandleMethodType.index}]")
-                tracePoint.initializeParameters(varHandleMethodType.parameters)
-            }
-            is InstanceVarHandleMethod -> {
-                val receiverName = findOwnerName(varHandleMethodType.owner)
-                tracePoint.initializeOwnerName(receiverName?.let { "$it.${varHandleMethodType.fieldName}" } ?: varHandleMethodType.fieldName)
-                tracePoint.initializeParameters(varHandleMethodType.parameters)
-            }
-            is StaticVarHandleMethod -> {
-                val clazz = varHandleMethodType.ownerClass
-                val thisClassName = shadowStackFrame.instance?.javaClass?.name
-                val ownerName = if (thisClassName == clazz.name) "" else "${clazz.simpleName}."
-                tracePoint.initializeOwnerName("${ownerName}${varHandleMethodType.fieldName}")
-                tracePoint.initializeParameters(varHandleMethodType.parameters)
-            }
-            VarHandleMethodType.TreatAsDefaultMethod -> {
-                tracePoint.initializeOwnerName(adornedStringRepresentation(varHandle))
-                tracePoint.initializeParameters(parameters.toList())
-            }
-        }
-
-        return tracePoint
-    }
-
-    private fun initializeAtomicUpdaterMethodCallTracePoint(
-        tracePoint: MethodCallTracePoint,
-        atomicUpdater: Any,
-        parameters: Array<Any?>,
-    ): MethodCallTracePoint {
-        getAtomicFieldUpdaterDescriptor(atomicUpdater)?.let { tracePoint.initializeOwnerName(it.fieldName) }
-        tracePoint.initializeParameters(parameters.drop(1))
-        return tracePoint
-    }
-
-    private fun MethodCallTracePoint.initializeParameters(parameters: List<Any?>) =
-        initializeParameters(parameters.map { adornedStringRepresentation(it) }, parameters.map { objectFqTypeName(it) })
 
 
     /**
@@ -2173,24 +1992,6 @@ abstract class ManagedStrategy(
         return (owner === stackTraceElement.instance)
     }
 
-    /* Methods to control the current call context. */
-
-    private fun pushShadowStackFrame(owner: Any?) {
-        val currentThreadId = threadScheduler.getCurrentThreadId()
-        val shadowStack = getShadowStack(currentThreadId)
-        val stackFrame = ShadowStackFrame(owner)
-        shadowStack.add(stackFrame)
-    }
-
-    private fun popShadowStackFrame() {
-        val currentThreadId = threadScheduler.getCurrentThreadId()
-        val shadowStack = getShadowStack(currentThreadId)
-        shadowStack.removeLast()
-        check(shadowStack.isNotEmpty()) {
-            "Shadow stack cannot be empty"
-        }
-    }
-
     /**
      * This method is invoked by a test thread
      * after each method invocation.
@@ -2198,25 +1999,27 @@ abstract class ManagedStrategy(
      * @param tracePoint the corresponding trace point for the invocation
      */
     private fun afterMethodCall(iThread: Int, tracePoint: MethodCallTracePoint) {
-        val callStackTrace = getStackTrace(iThread)
+        val threadHandle = threadsData[iThread]!!
+        val callStackTrace = threadHandle.stackTrace
         if (tracePoint.wasSuspended) {
             // if a method call is suspended, save its call stack element to reuse for continuation resuming
             suspendedFunctionsStack[iThread]!!.add(callStackTrace.last())
-            popShadowStackFrame()
-            callStackTrace.removeLast()
+            threadHandle.popShadowStackFrame()
+            threadHandle.popStackTraceElement()
 
             // Hack to include actor
             if (callStackTrace.size == 1 && callStackTrace.first().tracePoint.isRootCall) {
                 suspendedFunctionsStack[iThread]!!.add(callStackTrace.first())
-                popShadowStackFrame()
-                callStackTrace.removeLast()
+
+                threadHandle.popShadowStackFrame()
+                threadHandle.popStackTraceElement()
             }
 
             return
         }
 
-        popShadowStackFrame()
-        callStackTrace.removeLast()
+        threadHandle.popShadowStackFrame()
+        threadHandle.popStackTraceElement()
     }
 
     private fun getStackTrace(threadId: ThreadId): MutableList<CallStackTraceElement> {
