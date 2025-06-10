@@ -175,8 +175,10 @@ internal class LincheckClassVisitor(
             mv = IntrinsicCandidateMethodFilter(className, methodName, desc, intrinsicDelegateVisitor.newAdapter(), mv.newAdapter())
             return mv
         }
-        if (access and ACC_SYNCHRONIZED != 0) {
-            mv = SynchronizedMethodTransformer(fileName, className, methodName, mv.newAdapter(), classVersion)
+        if (instrumentationMode == MODEL_CHECKING) {
+            if (access and ACC_SYNCHRONIZED != 0) {
+                mv = SynchronizedMethodTransformer(fileName, className, methodName, mv.newAdapter(), classVersion)
+            }
         }
         // `coverageDelegateVisitor` must not capture `MethodCallTransformer`
         // (to filter static method calls inserted by coverage library)

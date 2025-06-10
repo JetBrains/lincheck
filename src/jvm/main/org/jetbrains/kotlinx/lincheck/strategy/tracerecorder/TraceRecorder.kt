@@ -38,23 +38,26 @@ import sun.nio.ch.lincheck.ThreadDescriptor
  * instrumentation before `bootstrap.jar` is added to class
  */
 object TraceRecorder {
+    private var eventTracker: TraceCollectingEventTracker? = null
+
     fun installAndStartTrace(className: String, methodName: String, methodDesc: String, traceFileName: String?,) {
-        val eventTracker = TraceCollectingEventTracker(className, methodName, methodDesc, traceFileName)
+        eventTracker = TraceCollectingEventTracker(className, methodName, methodDesc, traceFileName)
         val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: ThreadDescriptor(Thread.currentThread()).also {
             ThreadDescriptor.setCurrentThreadDescriptor(it)
         }
         desc.eventTracker = eventTracker
 
-        eventTracker.enableTrace()
+        eventTracker!!.enableTrace()
         desc.enableAnalysis()
     }
 
     fun finishTraceAndDumpResults() = runInsideIgnoredSection {
         val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
-        val eventTracker = desc.eventTracker ?: return
-        if (eventTracker is TraceCollectingEventTracker) {
+        val currentTracker = desc.eventTracker
+        if (currentTracker == eventTracker) {
             desc.disableAnalysis()
-            eventTracker.finishAndDumpTrace()
+            eventTracker?.finishAndDumpTrace()
+            eventTracker = null
         }
     }
 }
