@@ -26,19 +26,15 @@ import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.transformation.MethodIds
 import org.jetbrains.kotlinx.lincheck.transformation.toCanonicalClassName
 import org.jetbrains.kotlinx.lincheck.beforeEvent as ideaPluginBeforeEvent
-import org.jetbrains.kotlinx.lincheck.transformation.*
-import org.jetbrains.kotlinx.lincheck.trace.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.objectweb.asm.ConstantDynamic
 import org.objectweb.asm.Handle
 import java.lang.invoke.CallSite
 import java.lang.reflect.*
-import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.Continuation
 import java.util.concurrent.TimeoutException
 import kotlinx.coroutines.CancellableContinuation
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 import kotlin.Result as KResult
 import org.objectweb.asm.commons.Method.getMethod as getAsmMethod
@@ -1896,8 +1892,7 @@ abstract class ManagedStrategy(
             if (!resumedStackTrace.isSuffixOf(threadHandle.stackTrace)) {
                 // restore resumed stack trace elements
                 resumedStackTrace.forEach { stackTraceElement ->
-                    threadHandle.pushStackTraceElement(stackTraceElement)
-                    threadHandle.pushShadowStackFrame(stackTraceElement.instance)
+                    threadHandle.pushStackFrame(stackTraceElement)
                 }
             }
             // since we are in resumption, skip the next ` beforeEvent ` call
@@ -1915,14 +1910,14 @@ abstract class ManagedStrategy(
             callType = callType,
             actorId = currentActorId[threadId]!!,
         )
-        threadHandle.pushMethodCallTracePointOnStack(
+        val stackTraceElement = threadHandle.createCallStackTraceElement(
             obj = owner,
             methodId = methodId,
             methodParams = methodParams,
             tracePoint = tracePoint,
             callStackTraceElementId = callStackTraceElementId++,
         )
-        threadHandle.pushShadowStackFrame(owner)
+        threadHandle.pushStackFrame(stackTraceElement)
 
         return tracePoint
     }
@@ -1939,22 +1934,18 @@ abstract class ManagedStrategy(
         if (wasSuspended) {
             // if a method call is suspended, save its call stack element to reuse for continuation resuming
             suspendedFunctionsStack[threadId]!!.add(callStackTrace.last())
-            threadHandle.popShadowStackFrame()
-            threadHandle.popStackTraceElement()
+            threadHandle.popStackFrame()
 
             // Hack to include actor
             if (callStackTrace.size == 1 && callStackTrace.first().tracePoint.isRootCall) {
                 suspendedFunctionsStack[threadId]!!.add(callStackTrace.first())
-
-                threadHandle.popShadowStackFrame()
-                threadHandle.popStackTraceElement()
+                threadHandle.popStackFrame()
             }
 
             return
         }
 
-        threadHandle.popShadowStackFrame()
-        threadHandle.popStackTraceElement()
+        threadHandle.popStackFrame()
     }
 
     private fun getStackTrace(threadId: ThreadId): MutableList<CallStackTraceElement> {

@@ -304,45 +304,34 @@ internal class ThreadAnalysisHandle(val threadId: Int, val traceCollector: Trace
         }
     }
 
-    fun pushMethodCallTracePointOnStack(
+    fun createCallStackTraceElement(
         obj: Any?,
         methodId: Int,
         methodParams: Array<Any?>,
         tracePoint: MethodCallTracePoint,
         callStackTraceElementId: Int,
-    ) {
-        val methodInvocationId = Objects.hash(methodId,
-            methodParams.map { primitiveOrIdentityHashCode(it) }.toTypedArray().contentHashCode()
+    ) = CallStackTraceElement(
+        id = callStackTraceElementId,
+        instance = obj,
+        tracePoint = tracePoint,
+        methodInvocationId = Objects.hash(
+            methodId,
+            methodParams
+                .map { primitiveOrIdentityHashCode(it) }
+                .toTypedArray()
+                .contentHashCode()
         )
-        val stackTraceElement = CallStackTraceElement(
-            id = callStackTraceElementId,
-            instance = obj,
-            tracePoint = tracePoint,
-            methodInvocationId = methodInvocationId
-        )
-        stackTrace.add(stackTraceElement)
-    }
+    )
 
-    fun pushStackTraceElement(stackTraceElement: CallStackTraceElement) {
-        stackTrace.add(stackTraceElement)
-    }
-
-    fun popStackTraceElement() {
-        stackTrace.removeLast()
-    }
-
-    /* Methods to control the shadow stack. */
-
-    fun pushShadowStackFrame(owner: Any?) {
-        val stackFrame = ShadowStackFrame(owner)
+    fun pushStackFrame(stackTraceElement: CallStackTraceElement) {
+        val stackFrame = ShadowStackFrame(stackTraceElement.instance)
         shadowStack.add(stackFrame)
+        stackTrace.add(stackTraceElement)
     }
 
-    fun popShadowStackFrame() {
+    fun popStackFrame() {
         shadowStack.removeLast()
-        check(shadowStack.isNotEmpty()) {
-            "Shadow stack cannot be empty"
-        }
+        stackTrace.removeLast()
     }
 
     fun enterAnalysisSection(section: AnalysisSectionType) {
