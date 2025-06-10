@@ -175,9 +175,6 @@ internal class ReadTracePoint(
     fun initializeReadValue(value: String, type: String) {
         this.valueRepresentation = value
         this.valueType = type
-        if (value == "StubClass#19") {
-            Unit
-        }
     }
 
     override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
