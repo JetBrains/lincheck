@@ -16,6 +16,7 @@ import org.jetbrains.kotlinx.lincheck.trace.CallStackTraceElement
 import org.jetbrains.kotlinx.lincheck.trace.ReadTracePoint
 import org.jetbrains.kotlinx.lincheck.trace.TraceCollector
 import org.jetbrains.kotlinx.lincheck.trace.TracePoint
+import org.jetbrains.kotlinx.lincheck.trace.WriteTracePoint
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.transformation.toSimpleClassName
 import org.jetbrains.kotlinx.lincheck.util.AnalysisSectionType
@@ -111,6 +112,50 @@ internal class ThreadAnalysisHandle(val threadId: Int, val traceCollector: Trace
         lastReadConstantName = null
     }
 
+    fun afterLocalRead(variableName: String, value: Any?) {
+        if (!collectTrace) return
+        val shadowStackFrame = shadowStack.last()
+        shadowStackFrame.setLocalVariable(variableName, value)
+        // TODO: enable local vars tracking in the trace after further polishing
+        // TODO: add a flag to enable local vars tracking in the trace conditionally
+        // val tracePoint = if (collectTrace) {
+        //     ReadTracePoint(
+        //         ownerRepresentation = null,
+        //         iThread = iThread,
+        //         actorId = currentActorId[iThread]!!,
+        //         callStackTrace = callStackTrace[iThread]!!,
+        //         fieldName = variableName,
+        //         codeLocation = codeLocation,
+        //         isLocal = true,
+        //     ).also { it.initializeReadValue(adornedStringRepresentation(value), objectFqTypeName(value)) }
+        // } else {
+        //     null
+        // }
+        // traceCollector!!.passCodeLocation(tracePoint)
+    }
+
+    fun afterLocalWrite(variableName: String, value: Any?) {
+        if (!collectTrace) return
+        val shadowStackFrame = shadowStack.last()
+        shadowStackFrame.setLocalVariable(variableName, value)
+        // TODO: enable local vars tracking in the trace after further polishing
+        // TODO: add a flag to enable local vars tracking in the trace conditionally
+        // val tracePoint = if (collectTrace) {
+        //     WriteTracePoint(
+        //         ownerRepresentation = null,
+        //         iThread = iThread,
+        //         actorId = currentActorId[iThread]!!,
+        //         callStackTrace = callStackTrace[iThread]!!,
+        //         fieldName = variableName,
+        //         codeLocation = codeLocation,
+        //         isLocal = true,
+        //     ).also { it.initializeWrittenValue(adornedStringRepresentation(value), objectFqTypeName(value)) }
+        // } else {
+        //     null
+        // }
+        // traceCollector!!.passCodeLocation(tracePoint)
+    }
+
     fun createReadFieldTracePoint(
         obj: Any?,
         className: String,
@@ -146,6 +191,44 @@ internal class ThreadAnalysisHandle(val threadId: Int, val traceCollector: Trace
         isLocal = false,
     ).apply {
         lastReadTracePoint = this
+    }
+
+    fun createWriteArrayElementTracePoint(
+        array: Any,
+        index: Int,
+        value: Any?,
+        codeLocation: Int,
+        actorId: Int = 0,
+    ) : WriteTracePoint? = if (!collectTrace) null else WriteTracePoint(
+        ownerRepresentation = null,
+        iThread = threadId,
+        actorId = actorId,
+        callStackTrace = stackTrace,
+        fieldName = "${adornedStringRepresentation(array)}[$index]",
+        codeLocation = codeLocation,
+        isLocal = false,
+    ).apply {
+        initializeWrittenValue(adornedStringRepresentation(value), objectFqTypeName(value))
+    }
+
+    fun createWriteFieldTracepoint(
+        obj: Any?,
+        className: String,
+        fieldName: String,
+        value: Any?,
+        codeLocation: Int,
+        isStatic: Boolean,
+        actorId: Int = 0,
+    ): WriteTracePoint? = if (!collectTrace) null else WriteTracePoint(
+        ownerRepresentation = getFieldOwnerName(obj, className, fieldName, isStatic),
+        iThread = threadId,
+        actorId = actorId,
+        callStackTrace = stackTrace,
+        fieldName = fieldName,
+        codeLocation = codeLocation,
+        isLocal = false
+    ).apply {
+        initializeWrittenValue(adornedStringRepresentation(value), objectFqTypeName(value))
     }
 
     private fun objectFqTypeName(obj: Any?): String {
