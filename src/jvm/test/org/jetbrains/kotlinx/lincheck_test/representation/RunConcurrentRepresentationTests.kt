@@ -60,11 +60,11 @@ abstract class BaseRunConcurrentRepresentationTest<R>(private val outputFileName
             }
             val error = result.exceptionOrNull()!!
             check(error is LincheckAssertionError) {
-                """
+            """
             |The test should throw LincheckAssertionError, but instead it failed with:
             |${error.stackTraceToString()}
             """
-                    .trimMargin()
+            .trimMargin()
             }
             if (!isFlakyTest) {
                 error.failure.checkLincheckOutput(outputFileName)
