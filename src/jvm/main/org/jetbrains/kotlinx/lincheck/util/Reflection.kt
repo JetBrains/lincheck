@@ -11,8 +11,11 @@
 package org.jetbrains.kotlinx.lincheck.util
 
 import org.jetbrains.kotlinx.lincheck.isSuspendable
+import sun.nio.ch.lincheck.MethodSignature
+import java.lang.reflect.Executable
 import kotlin.coroutines.Continuation
 import java.lang.reflect.Method
+import java.lang.reflect.Modifier
 
 
 /**
@@ -83,3 +86,20 @@ private fun getCachedFilteredDeclaredMethods(className: String, methodName: Stri
         val declaredMethods = getCachedDeclaredMethods(className)
         declaredMethods.filter { it.name == methodName }
     }
+
+internal infix fun <T> ((T) -> Boolean).and(other: (T) -> Boolean): (T) -> Boolean = { this(it) && other(it) }
+internal infix fun <T> ((T) -> Boolean).or(other: (T) -> Boolean): (T) -> Boolean = { this(it) || other(it) }
+internal fun <T> not(predicate: (T) -> Boolean): (T) -> Boolean = { !predicate(it) }
+
+internal val isPublic: (Executable) -> Boolean = { it.modifiers and Modifier.PUBLIC != 0 }
+internal val isProtected: (Executable) -> Boolean = { it.modifiers and Modifier.PROTECTED != 0 }
+internal val isPrivate: (Executable) -> Boolean = { it.modifiers and Modifier.PRIVATE != 0 }
+internal val isPackagePrivate: (Executable) -> Boolean = not(isPublic or isProtected or isPrivate)
+internal val isStatic: (Method) -> Boolean = { it.modifiers and Modifier.STATIC != 0 }
+internal val isInstance: (Method) -> Boolean = { it.modifiers and Modifier.STATIC == 0 }
+
+internal fun Class<*>.getMethods(condition: (Method) -> Boolean): Set<MethodSignature> =
+    declaredMethods.filter(condition).mapTo(mutableSetOf()) { it.toMethodSignature() }
+
+internal inline fun <reified T> getMethods(noinline condition: (Method) -> Boolean = { true }): Set<MethodSignature> =
+    T::class.java.getMethods(condition)

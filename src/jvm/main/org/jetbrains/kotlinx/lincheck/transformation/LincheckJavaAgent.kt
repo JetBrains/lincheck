@@ -460,6 +460,12 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
             valueTransform = { m ->
                 mutableMapOf<Int, MutableList<LocalVariableInfo>>().also { map ->
                     m.localVariables?.forEach { local ->
+                        if (
+                            m.name == "<init>" &&
+                            isCoroutineStateMachineClass(classNode.name) &&
+                            local.name.isOuterReceiverName()
+                        ) return@forEach
+
                         val index = local.index
                         val type = Type.getType(local.desc)
                         val info = LocalVariableInfo(local.name, local.index, local.start.label to local.end.label, type)
@@ -469,6 +475,9 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
             }
         )
     }
+
+    private fun String.isOuterReceiverName() = this == "this$0"
+
 
     @Suppress("SpellCheckingInspection")
     fun shouldTransform(className: String, instrumentationMode: InstrumentationMode): Boolean {

@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.util
 
+import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
@@ -217,10 +218,20 @@ internal class AnalysisProfile(val analyzeStdLib: Boolean) {
             if (className == "java.lang.Thread") return true
             if (className.startsWith("java.util.concurrent.") && className.contains("Atomic")) return false
             if (className.startsWith("java.util.")) return true
+            if (isInTraceDebuggerMode) {
+                if (className.startsWith("java.io.")) return true
+                if (className.startsWith("java.nio.")) return true
+                if (className.startsWith("java.time.")) return true
+            }
             return false
         }
         if (className.startsWith("com.sun.")) return false
-        if (className.startsWith("sun.")) return false
+        if (className.startsWith("sun.")) {
+            // We should never instrument the Lincheck classes.
+            if (className.startsWith("sun.nio.ch.lincheck.")) return false
+            if (isInTraceDebuggerMode && className.startsWith("sun.nio.")) return true
+            return false
+        }
         if (className.startsWith("javax.")) return false
         if (className.startsWith("jdk.")) {
             // Transform `ThreadContainer.start` to detect thread forking.
@@ -238,6 +249,7 @@ internal class AnalysisProfile(val analyzeStdLib: Boolean) {
             if (className.startsWith("kotlin.random.")) return true
             if (className.startsWith("kotlin.coroutines.jvm.internal.")) return false
             if (className.startsWith("kotlin.coroutines.")) return true
+            if (isInTraceDebuggerMode && className.startsWith("kotlin.io.")) return true
             return false
         }
         // We do not instrument AtomicFU atomics.
@@ -267,7 +279,6 @@ internal class AnalysisProfile(val analyzeStdLib: Boolean) {
         if (className.startsWith("junit.framework.")) return false
         // Finally, we should never instrument the Lincheck classes.
         if (className.startsWith("org.jetbrains.kotlinx.lincheck.")) return false
-        if (className.startsWith("sun.nio.ch.lincheck.")) return false
         // All the classes that were not filtered out are eligible for transformation.
         return true
     }

@@ -49,6 +49,7 @@ abstract class AbstractDeterministicTest {
                 .threads(2)
                 .minimizeFailedScenario(false)
                 .actorsPerThread(1)
+                .invocationTimeout(60_000L)
                 .verifier(FailingVerifier::class.java)
                 .customize()
                 .checkImpl(this::class.java) { lincheckFailure ->

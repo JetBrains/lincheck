@@ -66,7 +66,7 @@ internal class MethodCallTransformer(
         return owner == "java/util/concurrent/ThreadLocalRandom" && methodName == "current"
     }
 
-    private fun processMethodCall(desc: String, opcode: Int, owner: String, name: String, itf: Boolean) = adapter.run {
+    private fun GeneratorAdapter.processMethodCall(desc: String, opcode: Int, owner: String, name: String, itf: Boolean) {
         val receiverType = Type.getType("L$owner;")
         val returnType = getReturnType(desc)
         // STACK: receiver?, arguments
@@ -84,10 +84,11 @@ internal class MethodCallTransformer(
         processMethodCallEnter(owner, name, desc, methodId, receiverLocal, argumentsArrayLocal)
         // STACK: deterministicCallDescriptor
         val deterministicMethodDescriptorLocal = newLocal(OBJECT_TYPE)
-        val deterministicCallIdLocal = newLocal(LONG_TYPE)
-        storeLocal(deterministicMethodDescriptorLocal)
+            .also { storeLocal(it) }
+        // STACK: <empty>
         pushDeterministicCallId(deterministicMethodDescriptorLocal)
-        storeLocal(deterministicCallIdLocal)
+        val deterministicCallIdLocal = newLocal(LONG_TYPE)
+            .also { storeLocal(it) }
         // STACK: <empty>
         tryCatchFinally(
             tryBlock = {
@@ -132,14 +133,14 @@ internal class MethodCallTransformer(
         )
     }
 
-    private fun processMethodCallEnter(
+    private fun GeneratorAdapter.processMethodCallEnter(
         className: String,
         methodName: String,
         desc: String,
         methodId: Int,
         receiverLocal: Int?,
         argumentsArrayLocal: Int
-    ) = adapter.run {
+    ) {
         // STACK: <empty>
         push(className.toCanonicalClassName())
         push(methodName)
@@ -156,7 +157,7 @@ internal class MethodCallTransformer(
         invokeBeforeEventIfPluginEnabled("method call ${this@MethodCallTransformer.methodName}", setMethodEventId = true)
     }
 
-    private fun pushDeterministicCallId(deterministicMethodDescriptorLocal: Int) = adapter.run {
+    private fun GeneratorAdapter.pushDeterministicCallId(deterministicMethodDescriptorLocal: Int) {
         if (!isInTraceDebuggerMode) {
             push(0L)
             return
@@ -173,14 +174,14 @@ internal class MethodCallTransformer(
         visitLabel(endIf)
     }
 
-    private fun invokeMethodOrDeterministicCall(
+    private fun GeneratorAdapter.invokeMethodOrDeterministicCall(
         returnType: Type,
         deterministicCallIdLocal: Int,
         deterministicMethodDescriptorLocal: Int,
         receiverLocal: Int?,
         argumentsArrayLocal: Int,
         invokeDefault: GeneratorAdapter.() -> Unit,
-    ) = adapter.run {
+    ) {
         val onDefaultMethodCallLabel = newLabel()
         val endIfLabel = newLabel()
         // STACK: <empty>
@@ -217,7 +218,7 @@ internal class MethodCallTransformer(
         visitLabel(endIfLabel)
     }
 
-    private fun processMethodCallReturn(
+    private fun GeneratorAdapter.processMethodCallReturn(
         className: String,
         methodName: String,
         returnType: Type,
@@ -226,7 +227,7 @@ internal class MethodCallTransformer(
         methodId: Int,
         receiverLocal: Int?,
         argumentsArrayLocal: Int
-    ) = adapter.run {
+    ) {
         // STACK: result?
         val resultLocal = when {
             (returnType == VOID_TYPE) -> null
@@ -243,23 +244,27 @@ internal class MethodCallTransformer(
             loadLocal(it)
             box(returnType)
         }
-        // STACK: className, methodName, deterministicCallId, deterministicMethodDescriptor, receiver, arguments, result?
+        // STACK: className, methodName, deterministicCallId, deterministicMethodDescriptor, methodId, receiver, arguments, result?
         when {
-            (returnType == VOID_TYPE) -> invokeStatic(Injections::onMethodCallReturnVoid)
-            else                      -> invokeStatic(Injections::onMethodCallReturn)
+            returnType == VOID_TYPE -> invokeStatic(Injections::onMethodCallReturnVoid)
+            else                    -> {
+                invokeStatic(Injections::onMethodCallReturn)
+                // STACK: boxedResult
+                unbox(returnType)
+                // STACK: result
+            }
         }
-        resultLocal?.let { loadLocal(it) }
         // STACK: result?
     }
 
-    private fun processMethodCallException(
+    private fun GeneratorAdapter.processMethodCallException(
         className: String,
         methodName: String,
         deterministicCallIdLocal: Int,
         deterministicMethodDescriptorLocal: Int,
         receiverLocal: Int?,
         argumentsArrayLocal: Int,
-    ) = adapter.run {
+    ) {
         // STACK: exception
         val exceptionLocal = newLocal(THROWABLE_TYPE)
         storeLocal(exceptionLocal)
@@ -273,12 +278,11 @@ internal class MethodCallTransformer(
         loadLocal(exceptionLocal)
         // STACK: className, methodName, deterministicCallId, deterministicMethodDescriptor, receiver, params, exception
         invokeStatic(Injections::onMethodCallException)
-        // STACK: <empty>
-        loadLocal(exceptionLocal)
+        // STACK: Throwable
         throwException()
     }
 
-    private fun pushReceiver(receiverLocal: Int?) = adapter.run {
+    private fun GeneratorAdapter.pushReceiver(receiverLocal: Int?) {
         // STACK: <empty>
         if (receiverLocal != null) {
             loadLocal(receiverLocal)

@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.native_calls
 
+import org.jetbrains.kotlinx.lincheck.strategy.native_calls.io.getDeterministicFileMethodDescriptorOrNull
 import sun.nio.ch.lincheck.MethodSignature
 import sun.nio.ch.lincheck.Types.*
 
@@ -37,7 +38,7 @@ internal abstract class DeterministicMethodDescriptor<State, T> {
     abstract val methodCallInfo: MethodCallInfo
     abstract fun replay(receiver: Any?, params: Array<Any?>, state: State): Result<T>
     abstract fun runFake(receiver: Any?, params: Array<Any?>): Result<T>
-    abstract fun saveFirstResult(receiver: Any?, params: Array<Any?>, result: Result<T>, saveState: (State) -> Unit)
+    abstract fun saveFirstResult(receiver: Any?, params: Array<Any?>, result: Result<T>, saveState: (State) -> Unit): Result<T>
 }
 
 @Suppress("UNCHECKED_CAST")
@@ -50,8 +51,9 @@ internal fun <State, T> DeterministicMethodDescriptor<State, T>.saveFirstResultW
     receiver: Any?, params: Array<Any?>, result: Result<Any?>, saveState: (State) -> Unit
 ) = saveFirstResult(receiver, params, result.map { it as T }, saveState)
 
-internal fun getDeterministicMethodDescriptorOrNull(methodCallInfo: MethodCallInfo): DeterministicMethodDescriptor<*, *>? {
+internal fun getDeterministicMethodDescriptorOrNull(receiver: Any?, params: Array<Any?>, methodCallInfo: MethodCallInfo): DeterministicMethodDescriptor<*, *>? {
     getDeterministicTimeMethodDescriptorOrNull(methodCallInfo)?.let { return it }
     getDeterministicRandomMethodDescriptorOrNull(methodCallInfo)?.let { return it }
+    getDeterministicFileMethodDescriptorOrNull(receiver, params, methodCallInfo)?.let { return it }
     return null
 }

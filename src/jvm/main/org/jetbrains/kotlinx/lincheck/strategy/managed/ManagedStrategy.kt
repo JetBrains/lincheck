@@ -1639,7 +1639,7 @@ abstract class ManagedStrategy(
             codeLocation = codeLocation,
             methodId = methodId,
         )
-        val deterministicMethodDescriptor = getDeterministicMethodDescriptorOrNull(methodCallInfo)
+        val deterministicMethodDescriptor = getDeterministicMethodDescriptorOrNull(receiver, params, methodCallInfo)
         // get method's analysis section type
         val methodSection = methodAnalysisSectionType(receiver, className, methodName,
             atomicMethodDescriptor,
@@ -1705,7 +1705,8 @@ abstract class ManagedStrategy(
         receiver: Any?,
         params: Array<Any?>,
         result: Any?
-    ) = runInsideIgnoredSection {
+    ): Any? = runInsideIgnoredSection {
+        var newResult = result
         if (deterministicMethodDescriptor != null) {
             Logger.debug { "On method return with descriptor $deterministicMethodDescriptor: $result" }
         }
@@ -1717,9 +1718,9 @@ abstract class ManagedStrategy(
         }
 
         if (isInTraceDebuggerMode && isFirstReplay && deterministicMethodDescriptor != null) {
-            deterministicMethodDescriptor.saveFirstResultWithCast(receiver, params, KResult.success(result)) {
+            newResult = deterministicMethodDescriptor.saveFirstResultWithCast(receiver, params, KResult.success(result)) {
                 nativeMethodCallStatesTracker.setState(descriptorId, deterministicMethodDescriptor.methodCallInfo, it)
-            }
+            }.getOrElse { error("Unexpected replacement success -> failure:\n$result\n${KResult.failure<Any?>(it)}") }
         }
         val threadId = threadScheduler.getCurrentThreadId()
         // check if the called method is an atomics API method
@@ -1749,6 +1750,7 @@ abstract class ManagedStrategy(
         }
         // if the method has certain guarantees, leave the corresponding section
         leaveAnalysisSection(threadId, methodSection)
+        return newResult
     }
 
     override fun onMethodCallException(
@@ -1759,14 +1761,17 @@ abstract class ManagedStrategy(
         receiver: Any?,
         params: Array<Any?>,
         throwable: Throwable
-    ) = runInsideIgnoredSection {
+    ): Throwable = runInsideIgnoredSection {
+        var newThrowable = throwable
         if (deterministicMethodDescriptor != null) {
             Logger.debug { "On method exception with descriptor $deterministicMethodDescriptor:\n${throwable.stackTraceToString()}" }
         }
         require(deterministicMethodDescriptor is DeterministicMethodDescriptor<*, *>?)
         if (isInTraceDebuggerMode && isFirstReplay && deterministicMethodDescriptor != null) {
-            deterministicMethodDescriptor.saveFirstResult(receiver, params, KResult.failure(throwable)) {
+            newThrowable = deterministicMethodDescriptor.saveFirstResult(receiver, params, KResult.failure(throwable)) {
                 nativeMethodCallStatesTracker.setState(descriptorId, deterministicMethodDescriptor.methodCallInfo, it)
+            }.let { newResult ->
+                newResult.exceptionOrNull() ?: error("Unexpected replacement failure -> success:\n$throwable\n$newResult")
             }
         }
         val threadId = threadScheduler.getCurrentThreadId()
@@ -1783,7 +1788,7 @@ abstract class ManagedStrategy(
             // and it results in a call to a top-level actor `suspend` function;
             // currently top-level actor functions are not represented in the `callStackTrace`,
             // we should probably refactor and fix that, because it is very inconvenient
-            if (callStackTrace[threadId]!!.isEmpty()) return
+            if (callStackTrace[threadId]!!.isEmpty()) return newThrowable
             val tracePoint = callStackTrace[threadId]!!.last().tracePoint
             if (!tracePoint.isActor) tracePoint.initializeThrownException(throwable)
             afterMethodCall(threadId, tracePoint)
@@ -1791,6 +1796,7 @@ abstract class ManagedStrategy(
         }
         // if the method has certain guarantees, leave the corresponding section
         leaveAnalysisSection(threadId, methodSection)
+        newThrowable
     }
 
     override fun onInlineMethodCall(

@@ -10,9 +10,9 @@ The following interleaving leads to the error:
 |       lock.lockInterruptibly() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:414)                                                             |
 |       count ➜ 0 at ArrayBlockingQueue.take(ArrayBlockingQueue.java:416)                                                                            |
 |       notEmpty.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:417)                                                                     |
-|         addConditionWaiter(): Node#1 at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2077)                     |
-|         this$0.fullyRelease(Node#1): 1 at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2078)                   |
-|         this$0.isOnSyncQueue(Node#1): false at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2080)              |
+|         addConditionWaiter(): Node#2 at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2077)                     |
+|         this$0.fullyRelease(Node#2): 1 at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2078)                   |
+|         this$0.isOnSyncQueue(Node#2): false at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2080)              |
 |         LockSupport.park(ConditionObject#1) at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2081)              |
 |           LockSupport.setBlocker(Thread#0, ConditionObject#1) at LockSupport.park(LockSupport.java:193)                                            |
 |           PARK at LockSupport.park(LockSupport.java:194)                                                                                           |
@@ -38,14 +38,16 @@ Detailed trace:
 |                 exclusiveOwnerThread = Thread#0 at AbstractOwnableSynchronizer.setExclusiveOwnerThread(AbstractOwnableSynchronizer.java:74)        |
 |       count ➜ 0 at ArrayBlockingQueue.take(ArrayBlockingQueue.java:416)                                                                            |
 |       notEmpty.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:417)                                                                     |
-|         addConditionWaiter(): Node#1 at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2077)                     |
+|         addConditionWaiter(): Node#2 at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2077)                     |
 |           this$0.isHeldExclusively(): true at AbstractQueuedSynchronizer$ConditionObject.addConditionWaiter(AbstractQueuedSynchronizer.java:1887)  |
 |             getExclusiveOwnerThread(): Thread#0 at ReentrantLock$Sync.isHeldExclusively(ReentrantLock.java:162)                                    |
 |               exclusiveOwnerThread ➜ Thread#0 at AbstractOwnableSynchronizer.getExclusiveOwnerThread(AbstractOwnableSynchronizer.java:84)          |
 |           lastWaiter ➜ null at AbstractQueuedSynchronizer$ConditionObject.addConditionWaiter(AbstractQueuedSynchronizer.java:1889)                 |
-|           firstWaiter = Node#1 at AbstractQueuedSynchronizer$ConditionObject.addConditionWaiter(AbstractQueuedSynchronizer.java:1899)              |
-|           lastWaiter = Node#1 at AbstractQueuedSynchronizer$ConditionObject.addConditionWaiter(AbstractQueuedSynchronizer.java:1902)               |
-|         this$0.fullyRelease(Node#1): 1 at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2078)                   |
+|           Node#1.waitStatus.set(-2) at AbstractQueuedSynchronizer$Node.<init>(AbstractQueuedSynchronizer.java:527)                                       |
+|           Node#1.thread.set(Thread#0) at AbstractQueuedSynchronizer$Node.<init>(AbstractQueuedSynchronizer.java:528)                                     |
+|           firstWaiter = Node#2 at AbstractQueuedSynchronizer$ConditionObject.addConditionWaiter(AbstractQueuedSynchronizer.java:1899)              |
+|           lastWaiter = Node#2 at AbstractQueuedSynchronizer$ConditionObject.addConditionWaiter(AbstractQueuedSynchronizer.java:1902)               |
+|         this$0.fullyRelease(Node#2): 1 at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2078)                   |
 |           getState(): 1 at AbstractQueuedSynchronizer.fullyRelease(AbstractQueuedSynchronizer.java:1764)                                           |
 |             state ➜ 1 at AbstractQueuedSynchronizer.getState(AbstractQueuedSynchronizer.java:588)                                                  |
 |           release(1): true at AbstractQueuedSynchronizer.fullyRelease(AbstractQueuedSynchronizer.java:1765)                                        |
@@ -59,7 +61,7 @@ Detailed trace:
 |               setState(0) at ReentrantLock$Sync.tryRelease(ReentrantLock.java:155)                                                                 |
 |                 state = 0 at AbstractQueuedSynchronizer.setState(AbstractQueuedSynchronizer.java:597)                                              |
 |             head ➜ null at AbstractQueuedSynchronizer.release(AbstractQueuedSynchronizer.java:1303)                                                |
-|         this$0.isOnSyncQueue(Node#1): false at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2080)              |
+|         this$0.isOnSyncQueue(Node#2): false at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2080)              |
 |           node.waitStatus ➜ -2 at AbstractQueuedSynchronizer.isOnSyncQueue(AbstractQueuedSynchronizer.java:1673)                                   |
 |         LockSupport.park(ConditionObject#1) at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2081)              |
 |           LockSupport.setBlocker(Thread#0, ConditionObject#1) at LockSupport.park(LockSupport.java:193)                                            |

@@ -140,7 +140,8 @@ internal class LincheckClassVisitor(
         // We need to disable breakpoints in such a case, as the numeration will break.
         // Breakpoints are disabled as we do not instrument toString and enter an ignored section,
         // so there are no beforeEvents inside.
-        if (methodName == "<init>" || ideaPluginEnabled && methodName == "toString" && desc == "()Ljava/lang/String;") {
+        // 
+        if ((methodName == "<init>" && !isInTraceDebuggerMode) || ideaPluginEnabled && methodName == "toString" && desc == "()Ljava/lang/String;") {
             mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
             if (isInTraceDebuggerMode) {
                 // Lincheck does not support true identity hash codes (it always uses zeroes),

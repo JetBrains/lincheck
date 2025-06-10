@@ -412,9 +412,10 @@ public class Injections {
      * @param descriptor Deterministic call descriptor or null.
      * @param descriptorId Deterministic call descriptor id when applicable, or any other value otherwise.
      * @param result The call result.
+     * @return The potentially modified {@code result}.
      */
-    public static void onMethodCallReturn(String className, String methodName, long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Object result) {
-        getEventTracker().onMethodCallReturn(className, methodName, descriptorId, descriptor, methodId, receiver, params, result);
+    public static Object onMethodCallReturn(String className, String methodName, long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Object result) {
+        return getEventTracker().onMethodCallReturn(className, methodName, descriptorId, descriptor, methodId, receiver, params, result);
     }
 
     /**
@@ -433,9 +434,10 @@ public class Injections {
      * @param descriptor Deterministic call descriptor or null.
      * @param descriptorId Deterministic call descriptor id when applicable, or any other value otherwise.
      * @param t Thrown exception.
+     * @return The potentially modified {@code t}.
      */
-    public static void onMethodCallException(String className, String methodName, long descriptorId, Object descriptor, Object receiver, Object[] params, Throwable t) {
-        getEventTracker().onMethodCallException(className, methodName, descriptorId, descriptor, receiver, params, t);
+    public static Throwable onMethodCallException(String className, String methodName, long descriptorId, Object descriptor, Object receiver, Object[] params, Throwable t) {
+        return getEventTracker().onMethodCallException(className, methodName, descriptorId, descriptor, receiver, params, t);
     }
 
     /**

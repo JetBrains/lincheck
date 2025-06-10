@@ -11,6 +11,7 @@
 package sun.nio.ch.lincheck;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
@@ -224,6 +225,10 @@ public class Types {
         public MethodType(List<Type> argumentTypes, Type returnType) {
             this.argumentTypes = argumentTypes;
             this.returnType = returnType;
+        }
+        
+        public MethodType(Type returnType, Type... argumentTypes) {
+            this(Arrays.asList(argumentTypes), returnType);
         }
 
         public List<Type> getArgumentTypes() {
