@@ -2466,7 +2466,7 @@ abstract class ManagedStrategy(
 
         addTracePoint(tracePoint)
 
-        if (!tracePoint.isActorMethodCallTracePoint()) {
+        if (!tracePoint.isActorMethodCallTracePoint() && tracePoint !is MethodReturnTracePoint) {
             setBeforeEventId(tracePoint)
         }
     }

@@ -45,11 +45,6 @@ internal class ThreadTransformer(
             // STACK: forkedThread
             invokeStatic(Injections::beforeThreadFork)
             // STACK: isTracePoint
-            ifStatement(
-                condition = {},
-                thenClause = { invokeBeforeEventIfPluginEnabled("thread fork") },
-                elseClause = {},
-            )
         }
         if (isThreadRunMethod(methodName, desc)) {
             // STACK: <empty>
@@ -126,11 +121,6 @@ internal class ThreadTransformer(
             // STACK: thread, thread
             invokeStatic(Injections::beforeThreadFork)
             // STACK: thread, isTracePoint
-            ifStatement(
-                condition = {},
-                thenClause = { invokeBeforeEventIfPluginEnabled("thread fork") },
-                elseClause = {},
-            )
             // STACK: thread
             loadLocal(threadContainerLocal)
             // STACK: thread, threadContainer
