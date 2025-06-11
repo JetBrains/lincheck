@@ -187,7 +187,9 @@ internal object LincheckJavaAgent {
                 val eagerlyTransformedClasses = getLoadedClassesToInstrument()
                     .filter { isEagerlyInstrumentedClass(it.name) }
                     .toTypedArray()
-                instrumentation.retransformClasses(*eagerlyTransformedClasses)
+
+                if (eagerlyTransformedClasses.isNotEmpty())
+                    instrumentation.retransformClasses(*eagerlyTransformedClasses)
                 instrumentedClasses.addAll(eagerlyTransformedClasses.map { it.name })
             }
         }
