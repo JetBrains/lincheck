@@ -127,15 +127,26 @@ internal class TraceReporter(
 
             // find a place where to move the switch point
             var j = i
-            while ((j - 1 >= 0) && (
-                    (newTrace[j - 1] is MethodCallTracePoint && !newTrace[j - 1].isThreadStart() && !newTrace[j - 1].isThreadJoin()) ||
-                    (newTrace[j - 1] is SpinCycleStartTracePoint)
-            )) {
-                j--
+
+            // in case of thread join, we just want to move switch out of the thread join method
+            val isThreadJoinSwitch = newTrace[i - 1].isThreadJoin()
+            if (isThreadJoinSwitch) {
+                j = i - 1
+            } else {
+                // otherwise, we want to move out of all entered method calls
+                while ((j - 1 >= 0) && (
+                            (newTrace[j - 1] is MethodCallTracePoint &&
+                                    // do not move the switch out of `Thread.start()`
+                                    !newTrace[j - 1].isThreadStart() /* && !newTrace[j - 1].isThreadJoin() */) ||
+                                    (newTrace[j - 1] is SpinCycleStartTracePoint)
+                            )
+                ) {
+                    j--
+                }
             }
             if (j == i) continue
 
-            // find the next section of the thread we are switching from,
+            // find the next section of the thread we are switching from
             // to move the remaining method call trace points there
             var k = i + 1
             val threadId = newTrace[i].iThread
@@ -146,12 +157,16 @@ internal class TraceReporter(
             // move switch point before method calls
             newTrace.move(i, j)
 
+            val movedTracePoints = newTrace.subList(j + 1, i + 1)
             val remainingTracePoints = newTrace.subList(k, newTrace.size).filter { it.iThread == threadId }
-            if ((k == newTrace.size) || remainingTracePoints.all {
-                    (it is MethodCallTracePoint && it.isActor) || it is MethodReturnTracePoint || it is SpinCycleStartTracePoint
-            }) {
+            val shouldRemoveRemainingTracePoints = remainingTracePoints.all {
+                    (it is MethodCallTracePoint && it.isActor) ||
+                    (it is MethodReturnTracePoint) ||
+                    it is SpinCycleStartTracePoint
+            }
+            if (k == newTrace.size || shouldRemoveRemainingTracePoints && !isThreadJoinSwitch) {
                 // handle the case when the switch point is the last event in the thread
-                val methodCallTracePoints = newTrace.subList(j + 1, i + 1).filter { it is MethodCallTracePoint }
+                val methodCallTracePoints = movedTracePoints.filter { it is MethodCallTracePoint }
                 tracePointsToRemove.add(IntRange(j + 1, i + 1))
                 tracePointsToRemove.add(IntRange(k, k + methodCallTracePoints.size))
             } else {
