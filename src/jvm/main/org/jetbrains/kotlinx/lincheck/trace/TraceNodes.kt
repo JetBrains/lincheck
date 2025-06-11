@@ -101,9 +101,11 @@ internal class CallNode(
 ): TraceNode(callDepth, eventNumber, tracePoint) {
     override val tracePoint: MethodCallTracePoint get() = super.tracePoint as MethodCallTracePoint
     val isRootCall get() = callDepth == 0
+    var returnEvetNumber: Int = -1
 
     override fun toString(): String = tracePoint.toString()
     override fun copy(): TraceNode = CallNode(callDepth, tracePoint, eventNumber)
+        .also { it.returnEvetNumber = returnEvetNumber}
     
     internal fun createResultNodeForEmptyActor() =
         ResultNode(callDepth + 1, tracePoint.returnedValue as ReturnedValueResult.ActorResult, eventNumber, tracePoint)
@@ -127,12 +129,12 @@ internal fun traceToGraph(trace: Trace): SingleThreadedTable<CallNode> {
     val sections = mutableListOf<List<CallNode>>()
     var currentSection = mutableListOf<CallNode>()
 
-    val threadMap = mutableMapOf<Int, CallNode?>()
+    val currentNodePerThread = mutableMapOf<Int, CallNode?>()
 
     // loop over events
     trace.trace.forEachIndexed { eventNumber, event ->
         val currentThreadId = event.iThread
-        val currentCallNode = threadMap[currentThreadId]
+        val currentCallNode = currentNodePerThread[currentThreadId]
 
         when {
             event is SectionDelimiterTracePoint -> {
@@ -140,8 +142,9 @@ internal fun traceToGraph(trace: Trace): SingleThreadedTable<CallNode> {
                 sections.add(currentSection)
             }
             event is MethodReturnTracePoint -> {
-                threadMap[currentThreadId] = currentCallNode?.parent as? CallNode
-                if (threadMap[currentThreadId] == null && currentCallNode?.isRootCall != true) {
+                currentCallNode?.returnEvetNumber = eventNumber
+                currentNodePerThread[currentThreadId] = currentCallNode?.parent as? CallNode
+                if (currentNodePerThread[currentThreadId] == null && currentCallNode?.isRootCall != true) {
                     // TODO re-enable later on when the problem with actors will be resolved
 //                    error("Return is not allowed here")
                 }
@@ -150,7 +153,7 @@ internal fun traceToGraph(trace: Trace): SingleThreadedTable<CallNode> {
                 val newNode = CallNode((currentCallNode?.callDepth ?: -1) + 1, event, eventNumber)
                 if (event.isRootCall) currentSection.add(newNode)
                 currentCallNode?.addChild(newNode)
-                threadMap[currentThreadId] = newNode
+                currentNodePerThread[currentThreadId] = newNode
             }
             currentCallNode != null -> {
                 val eventNode = EventNode(currentCallNode.callDepth + 1, event, eventNumber)

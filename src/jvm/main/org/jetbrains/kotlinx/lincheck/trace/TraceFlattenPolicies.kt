@@ -65,7 +65,7 @@ internal class VerboseTraceFlattenPolicy : TraceFlattenPolicy {
 
                 // Check if result node should be added
                 if (descendants.size > 1 && returnedValue is ReturnedValueResult.ActorResult && returnedValue.showAtEndOfActor) {
-                    return descendants + ResultNode(currentNode.callDepth + 1, returnedValue, descendants.last().eventNumber, currentNode.tracePoint)
+                    return descendants + ResultNode(currentNode.callDepth + 1, returnedValue, currentNode.returnEvetNumber, currentNode.tracePoint)
                 }
 
                 return descendants
@@ -116,7 +116,7 @@ internal class ShortTraceFlattenPolicy : TraceFlattenPolicy {
 
                 // Check if result node should be added
                 val nodesToReturn = if (descendants.size > 1 && returnedValue is ReturnedValueResult.ActorResult && returnedValue.showAtEndOfActor) {
-                    descendants + ResultNode(currentNode.callDepth + 1, returnedValue, descendants.last().eventNumber, currentNode.tracePoint)
+                    descendants + ResultNode(currentNode.callDepth + 1, returnedValue, currentNode.returnEvetNumber, currentNode.tracePoint)
                     // Or thread start root nodes
                 } else if (descendants.size == 1 && descendants.contains(currentNode) && currentNode.tracePoint.isThreadStart) {
                     descendants + currentNode.children

@@ -952,7 +952,7 @@ abstract class ManagedStrategy(
         throw exception
     }
 
-    override fun onActorStart(iThread: Int) {
+    override fun onActorStart(iThread: Int) = runInsideIgnoredSection {
         val actorId = 1 + currentActorId[iThread]!!
         currentActorId[iThread] = actorId
         callStackTrace[iThread]!!.clear()
@@ -979,7 +979,7 @@ abstract class ManagedStrategy(
         enableAnalysis()
     }
 
-    override fun onActorFinish() {
+    override fun onActorFinish() = runInsideIgnoredSection {
         val iThread = threadScheduler.getCurrentThreadId()
         val actorId = currentActorId[iThread]!!
 
@@ -989,23 +989,21 @@ abstract class ManagedStrategy(
 
         // TODO rewrite. This will create an additional return trace point if actor is a suspend function
         //  or if the actor is in the loop cycle.
-        runInsideIgnoredSection {
-            val className = actor.method.declaringClass.name
-            val methodName = actor.method.name
-            val callStackTrace = callStackTrace[iThread]!!
-            val tracePoint = MethodCallTracePoint(
-                iThread = iThread,
-                actorId = currentActorId[iThread]!!,
-                className = className,
-                methodName = methodName,
-                callStackTrace = callStackTrace,
-                codeLocation = UNKNOWN_CODE_LOCATION,
-                isStatic = false,
-                callType = MethodCallTracePoint.CallType.ACTOR,
-                isSuspend = isSuspendFunction(className, methodName, actor.arguments.toTypedArray())
-            )
-            traceCollector?.addTracePointInternal(MethodReturnTracePoint(tracePoint))
-        }
+        val className = actor.method.declaringClass.name
+        val methodName = actor.method.name
+        val callStackTrace = callStackTrace[iThread]!!
+        val tracePoint = MethodCallTracePoint(
+            iThread = iThread,
+            actorId = currentActorId[iThread]!!,
+            className = className,
+            methodName = methodName,
+            callStackTrace = callStackTrace,
+            codeLocation = UNKNOWN_CODE_LOCATION,
+            isStatic = false,
+            callType = MethodCallTracePoint.CallType.ACTOR,
+            isSuspend = isSuspendFunction(className, methodName, actor.arguments.toTypedArray())
+        )
+        traceCollector?.addTracePointInternal(MethodReturnTracePoint(tracePoint))
 
         // This is a hack to guarantee correct stepping in the plugin.
         // When stepping out to the TestThreadExecution class, stepping continues unproductively.
