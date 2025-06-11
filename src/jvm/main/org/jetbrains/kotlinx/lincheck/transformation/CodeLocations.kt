@@ -67,38 +67,7 @@ internal object CodeLocations {
  * Provides unique IDs for all the methods that are called from the instrumented code.
  * These IDs are used to detect the first recursive call in case of a recursive spin-cycle.
  */
-internal object MethodIds {
-
-    private val descriptorToId: MutableMap<MethodDescriptor, Int> = hashMapOf()
-    private val intrinsicMethods: MutableMap<Int, MethodDescriptor> = hashMapOf()
-
-    /**
-     * *Note*: this method expects [owner] name to be canonical.
-     */
-    @Synchronized
-    fun getMethodId(owner: String, name: String, desc: String): Int {
-        val methodDescriptor = MethodDescriptor(owner, name, desc)
-        return getMethodIdImpl(methodDescriptor)
-    }
-
-    @Synchronized
-    fun registerIntrinsicMethod(methodDescriptor: MethodDescriptor) {
-        val methodId = getMethodIdImpl(methodDescriptor)
-        intrinsicMethods[methodId] = methodDescriptor
-    }
-
-    @Synchronized
-    fun isIntrinsicMethod(methodId: Int): Boolean = intrinsicMethods.contains(methodId)
-
-    @Synchronized
-    fun getIntrinsicMethodDescriptor(methodId: Int): MethodDescriptor {
-        return intrinsicMethods[methodId] ?: error("Attempt to get intrinsic method descriptor for non registered method: methodId = $methodId")
-    }
-
-    private fun getMethodIdImpl(methodDescriptor: MethodDescriptor): Int {
-        return descriptorToId.computeIfAbsent(methodDescriptor) { descriptorToId.size + 1 }
-    }
-}
+internal val methodCache = Cache<MethodDescriptor>()
 
 /**
  * [FinalFields] object is used to track final fields across different classes.

@@ -412,8 +412,7 @@ internal fun GeneratorAdapter.invokeBeforeEvent(debugMessage: String, setMethodE
                     pop()
                 }
             )
-        },
-        elseClause = {}
+        }
     )
 }
 

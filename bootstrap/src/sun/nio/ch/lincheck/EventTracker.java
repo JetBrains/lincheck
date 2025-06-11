@@ -58,25 +58,23 @@ public interface EventTracker {
 
     void updateSnapshotBeforeConstructorCall(Object[] objs);
 
-    boolean beforeReadField(Object obj, String className, String fieldName, int codeLocation,
-                            boolean isStatic, boolean isFinal);
+    boolean beforeReadField(Object obj, int codeLocation, int fieldId);
     boolean beforeReadArrayElement(Object array, int index, int codeLocation);
     void afterRead(Object value);
 
-    boolean beforeWriteField(Object obj, String className, String fieldName, Object value, int codeLocation,
-                             boolean isStatic, boolean isFinal);
+    boolean beforeWriteField(Object obj, Object value, int codeLocation, int fieldId);
     boolean beforeWriteArrayElement(Object array, int index, Object value, int codeLocation);
     void afterWrite();
 
-    void afterLocalRead(int codeLocation, String name, Object value);
-    void afterLocalWrite(int codeLocation, String name, Object value);
+    void afterLocalRead(int codeLocation, int variableId, Object value);
+    void afterLocalWrite(int codeLocation, int variableId, Object value);
 
-    Object onMethodCall(String className, String methodName, int codeLocation, int methodId, MethodSignature methodSignature, Object receiver, Object[] params);
-    Object onMethodCallReturn(String className, String methodName, long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Object result);
-    Throwable onMethodCallException(String className, String methodName, long descriptorId, Object descriptor, Object receiver, Object[] params, Throwable t);
+    Object onMethodCall(int codeLocation, int methodId, Object receiver, Object[] params);
+    Object onMethodCallReturn(long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Object result);
+    Throwable onMethodCallException(long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Throwable t);
 
-    void onInlineMethodCall(String className, String methodName, int methodId, int codeLocation, Object owner);
-    void onInlineMethodCallReturn(String className, int methodId);
+    void onInlineMethodCall(int codeLocation, int methodId, Object owner);
+    void onInlineMethodCallReturn(int methodId);
 
     BootstrapResult<?> invokeDeterministicallyOrNull(long descriptorId, Object descriptor, Object receiver, Object[] params);
 
