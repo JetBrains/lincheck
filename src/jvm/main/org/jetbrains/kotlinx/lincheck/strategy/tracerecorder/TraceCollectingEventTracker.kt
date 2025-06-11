@@ -539,8 +539,8 @@ class TraceCollectingEventTracker(
     ): AnalysisSectionType {
         val ownerName = owner?.javaClass?.canonicalName ?: className
         // Ignore methods called on standard I/O streams
-        when (owner) {
-            System.`in`, System.out, System.err -> return AnalysisSectionType.IGNORED
+        if (owner === System.`in` || owner === System.out || owner === System.err) {
+            return AnalysisSectionType.IGNORED
         }
         return analysisProfile.getAnalysisSectionFor(ownerName, methodName)
     }
