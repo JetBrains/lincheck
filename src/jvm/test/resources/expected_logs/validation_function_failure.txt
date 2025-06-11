@@ -18,9 +18,9 @@ All operations above the horizontal line | ----- | happen before those below the
 
 java.lang.IllegalStateException: Validation works!
 	at org.jetbrains.kotlinx.lincheck_test.representation.ValidationFunctionCallTest.validateWithError(ValidationFunctionTests.kt:41)
-	at org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution1421.run(Unknown Source)
-	at org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.testThreadRunnable$lambda$10(FixedActiveThreadsExecutor.kt:172)
-	at java.lang.Thread.run(Thread.java:750)
+	at org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution4.run(Unknown Source)
+	at org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.testThreadRunnable$lambda$10(FixedActiveThreadsExecutor.kt:171)
+	at java.base/java.lang.Thread.run(Thread.java:840)
 
 
 The following interleaving leads to the error:
@@ -38,24 +38,24 @@ The following interleaving leads to the error:
 | -------------------------------------------------------- |
 
 Detailed trace:
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                               Thread 1                                               |                                           Thread 2                                           |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                          |                                                                                              |
-|   validateInvoked ➜ 0 at ValidationFunctionCallTest.operation(ValidationFunctionTests.kt:33)         |                                                                                              |
-|   result: void                                                                                       |                                                                                              |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                                      | operation()                                                                                  |
-|                                                                                                      |   validateInvoked ➜ 0 at ValidationFunctionCallTest.operation(ValidationFunctionTests.kt:33) |
-|                                                                                                      |   result: void                                                                               |
-| operation()                                                                                          |                                                                                              |
-|   validateInvoked ➜ 0 at ValidationFunctionCallTest.operation(ValidationFunctionTests.kt:33)         |                                                                                              |
-|   result: void                                                                                       |                                                                                              |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                          |                                                                                              |
-|   validateInvoked ➜ 0 at ValidationFunctionCallTest.operation(ValidationFunctionTests.kt:33)         |                                                                                              |
-|   result: void                                                                                       |                                                                                              |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                               Thread 1                                                               |                                           Thread 2                                           |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                          |                                                                                              |
+|   validateInvoked ➜ 0 at ValidationFunctionCallTest.operation(ValidationFunctionTests.kt:33)                                         |                                                                                              |
+|   result: void                                                                                                                       |                                                                                              |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                                                                      | operation()                                                                                  |
+|                                                                                                                                      |   validateInvoked ➜ 0 at ValidationFunctionCallTest.operation(ValidationFunctionTests.kt:33) |
+|                                                                                                                                      |   result: void                                                                               |
+| operation()                                                                                                                          |                                                                                              |
+|   validateInvoked ➜ 0 at ValidationFunctionCallTest.operation(ValidationFunctionTests.kt:33)                                         |                                                                                              |
+|   result: void                                                                                                                       |                                                                                              |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                          |                                                                                              |
+|   validateInvoked ➜ 0 at ValidationFunctionCallTest.operation(ValidationFunctionTests.kt:33)                                         |                                                                                              |
+|   result: void                                                                                                                       |                                                                                              |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | validateWithError(): IllegalStateException                                                                                           |                                                                                              |
 |   validateInvoked ➜ 0 at ValidationFunctionCallTest.validateWithError(ValidationFunctionTests.kt:40)                                 |                                                                                              |
 |   validateInvoked = 1 at ValidationFunctionCallTest.validateWithError(ValidationFunctionTests.kt:40)                                 |                                                                                              |
