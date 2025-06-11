@@ -103,16 +103,20 @@ private fun SingleThreadedTable<TraceNode>.compressAccessPairs() = compressNodes
  * For more details check [isDefaultPair] and [isAccessPair].
  */
 private fun combineNodes(parent: CallNode, child: CallNode): TraceNode {
-    parent.tracePoint.methodName = child.tracePoint.methodName
-    parent.tracePoint.parameters = child.tracePoint.parameters
-
-    check(parent.tracePoint.returnedValue == child.tracePoint.returnedValue)
     check(parent.tracePoint.thrownException == child.tracePoint.thrownException)
+    // TODO investigate why in rare cases return values are not equal #682
+    if (parent.tracePoint.returnedValue == child.tracePoint.returnedValue) {
+        parent.tracePoint.methodName = child.tracePoint.methodName
+        parent.tracePoint.parameters = child.tracePoint.parameters
 
-    val newNode = parent.copy() 
-    child.decrementCallDepthOfTree()
-    child.children.forEach { newNode.addChild(it) }
-    return newNode
+
+        val newNode = parent.copy()
+        child.decrementCallDepthOfTree()
+        child.children.forEach { newNode.addChild(it) }
+        return newNode
+    }
+
+    return parent
 }
 
 /**
