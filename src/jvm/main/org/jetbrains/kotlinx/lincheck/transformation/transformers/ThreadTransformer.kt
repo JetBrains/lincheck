@@ -48,7 +48,6 @@ internal class ThreadTransformer(
             ifStatement(
                 condition = {},
                 thenClause = { invokeBeforeEventIfPluginEnabled("thread fork") },
-                elseClause = {},
             )
         }
         if (isThreadRunMethod(methodName, desc)) {
@@ -129,7 +128,6 @@ internal class ThreadTransformer(
             ifStatement(
                 condition = {},
                 thenClause = { invokeBeforeEventIfPluginEnabled("thread fork") },
-                elseClause = {},
             )
             // STACK: thread
             loadLocal(threadContainerLocal)

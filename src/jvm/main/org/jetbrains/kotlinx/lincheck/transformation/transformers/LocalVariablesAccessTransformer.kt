@@ -78,10 +78,12 @@ internal class LocalVariablesAccessTransformer(
                 visitVarInsn(opcode, varIndex)
                 // STACK: <empty>
                 loadNewCodeLocationId()
-                push(localVariableInfo.name)
+                val variableDescriptor = VariableDescriptor(localVariableInfo.name)
+                val variableId = variableCache.getOrCreateId(variableDescriptor)
+                push(variableId)
                 loadLocal(local)
                 box(type)
-                // STACK: codeLocation, varName, boxedValue
+                // STACK: codeLocation, variableId, boxedValue
                 invokeStatic(Injections::afterLocalWrite)
                 // invokeBeforeEventIfPluginEnabled("write local")
                 // STACK: <empty>
@@ -104,10 +106,12 @@ internal class LocalVariablesAccessTransformer(
                 storeLocal(local)
                 // STACK: <empty>
                 loadNewCodeLocationId()
-                push(localVariableInfo.name)
+                val variableDescriptor = VariableDescriptor(localVariableInfo.name)
+                val variableId = variableCache.getOrCreateId(variableDescriptor)
+                push(variableId)
                 loadLocal(local)
                 box(type)
-                // STACK: codeLocation, varName, boxedValue
+                // STACK: codeLocation, variableId, boxedValue
                 invokeStatic(Injections::afterLocalRead)
                 // invokeBeforeEventIfPluginEnabled("read local")
                 // STACK: <empty>
