@@ -96,23 +96,39 @@ internal class ThreadTransformer(
             // so we do not instrument `join` class inside the `Thread` class itself.
             !isThreadClass(className.toCanonicalClassName())
         ) {
-            // STACK: joiningThread, timeout?, nanos?
+            // STACK: thread, millis?, nanos?
+            val threadLocal = newLocal(OBJECT_TYPE)
+            val millisLocal = newLocal(Type.LONG_TYPE)
+            val nanosLocal = newLocal(Type.INT_TYPE)
             val nArguments = Type.getArgumentTypes(desc).size
             val withTimeout = (nArguments > 0) // TODO: `join(0)` should be handled same as `join()`
-            if (nArguments >= 2) {
-                // int nanos
-                pop()
+            if (nArguments == 0) {
+                // STACK: thread
+                copyLocal(threadLocal)
+                // STACK: thread
             }
-            if (nArguments >= 1) {
-                // long timeout
-                pop2()
+            if (nArguments == 1) {
+                // STACK: thread, millis
+                storeLocal(millisLocal)
+                copyLocal(threadLocal)
+                loadLocal(millisLocal)
+                // STACK: thread, millis
             }
+            if (nArguments == 2) {
+                // STACK: thread, millis, nanos
+                storeLocal(nanosLocal)
+                storeLocal(millisLocal)
+                copyLocal(threadLocal)
+                loadLocal(millisLocal)
+                loadLocal(nanosLocal)
+                // STACK: thread, millis, nanos
+            }
+            loadLocal(threadLocal)
             push(withTimeout)
-            // STACK: joiningThread
+            // STACK: thread, millis?, nanos?, thread, withTimeout
             invokeStatic(Injections::threadJoin)
-            // STACK: <empty>
             invokeBeforeEventIfPluginEnabled("thread join")
-            return
+            // STACK: thread, millis?, nanos?
         }
         // In some newer versions of JDK, some of the java library classes
         // use internal API `JavaLangAccess.start` to start threads;

@@ -196,6 +196,13 @@ internal class LincheckClassVisitor(
         if (isCoroutineInternalClass(className.toCanonicalClassName())) {
             return mv
         }
+        // For `java.lang.Thread` class, we only apply `ThreadTransformer` and skip all other transformations
+        if (isThreadClass(className.toCanonicalClassName())) {
+            mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
+            // Must appear last in the code, to completely hide intrinsic candidate methods from all transformers
+            mv = IntrinsicCandidateMethodFilter(className, methodName, desc, intrinsicDelegateVisitor.newAdapter(), mv.newAdapter())
+            return mv
+        }
         // Debugger implicitly evaluates toString for variables rendering
         // We need to disable breakpoints in such a case, as the numeration will break.
         // Breakpoints are disabled as we do not instrument toString and enter an ignored section,
@@ -221,14 +228,6 @@ internal class LincheckClassVisitor(
         }
         mv = CoroutineCancellabilitySupportTransformer(mv, access, className, methodName, desc)
         mv = CoroutineDelaySupportTransformer(fileName, className, methodName, mv.newAdapter())
-        mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
-        // We can do further instrumentation in methods of the custom thread subclasses,
-        // but not in the `java.lang.Thread` itself.
-        if (isThreadClass(className.toCanonicalClassName())) {
-            // Must appear last in the code, to completely hide intrinsic candidate methods from all transformers
-            mv = IntrinsicCandidateMethodFilter(className, methodName, desc, intrinsicDelegateVisitor.newAdapter(), mv.newAdapter())
-            return mv
-        }
         if (instrumentationMode == MODEL_CHECKING) {
             if (access and ACC_SYNCHRONIZED != 0) {
                 mv = SynchronizedMethodTransformer(fileName, className, methodName, mv.newAdapter(), classVersion)
@@ -246,6 +245,7 @@ internal class LincheckClassVisitor(
             mv = ParkingTransformer(fileName, className, methodName, mv.newAdapter())
             mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
         }
+        mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
         // TODO: replace with proper instrumentation mode for debugger, don't use globals
         if (isInTraceDebuggerMode) {
             // Lincheck does not support true identity hash codes (it always uses zeroes),
