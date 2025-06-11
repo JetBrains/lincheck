@@ -53,7 +53,7 @@ internal class SharedMemoryAccessTransformer(
                     instrumented = {
                         val fieldDescriptor = FieldDescriptor(
                             className = owner.toCanonicalClassName(),
-                            name = fieldName,
+                            fieldName = fieldName,
                             isStatic = true,
                             isFinal = FinalFields.isFinalField(owner, fieldName)
                         )
@@ -89,7 +89,7 @@ internal class SharedMemoryAccessTransformer(
                     instrumented = {
                         val fieldDescriptor = FieldDescriptor(
                             className = owner.toCanonicalClassName(),
-                            name = fieldName,
+                            fieldName = fieldName,
                             isStatic = false,
                             isFinal = FinalFields.isFinalField(owner, fieldName)
                         )
@@ -127,7 +127,7 @@ internal class SharedMemoryAccessTransformer(
                         val valueType = getType(desc)
                         val fieldDescriptor = FieldDescriptor(
                             className = owner.toCanonicalClassName(),
-                            name = fieldName,
+                            fieldName = fieldName,
                             isStatic = true,
                             isFinal = FinalFields.isFinalField(owner, fieldName)
                         )
@@ -167,7 +167,7 @@ internal class SharedMemoryAccessTransformer(
                         val valueType = getType(desc)
                         val fieldDescriptor = FieldDescriptor(
                             className = owner.toCanonicalClassName(),
-                            name = fieldName,
+                            fieldName = fieldName,
                             isStatic = false,
                             isFinal = FinalFields.isFinalField(owner, fieldName),
                         )

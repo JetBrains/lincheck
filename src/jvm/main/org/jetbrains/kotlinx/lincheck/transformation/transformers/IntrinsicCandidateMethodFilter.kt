@@ -11,7 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.jetbrains.kotlinx.lincheck.transformation.ASM_API
-import org.jetbrains.kotlinx.lincheck.transformation.getOriginal
+import org.jetbrains.kotlinx.lincheck.transformation.getInterned
 import org.jetbrains.kotlinx.lincheck.transformation.methodCache
 import org.jetbrains.kotlinx.lincheck.transformation.toCanonicalClassName
 import org.jetbrains.kotlinx.lincheck.util.MethodDescriptor
@@ -35,7 +35,7 @@ internal class IntrinsicCandidateMethodFilter(
         // (such as Arrays.copyOf(...) methods).
         val methodDescriptor = MethodDescriptor(className.toCanonicalClassName(), methodName, methodDesc)
         if (methodDescriptor.isTrackedIntrinsic()) {
-            methodCache.getOriginal(methodDescriptor).isIntrinsic = true
+            methodCache.getInterned(methodDescriptor).isIntrinsic = true
             delegate()
         }
         return super.visitCode()
@@ -44,7 +44,7 @@ internal class IntrinsicCandidateMethodFilter(
     override fun visitAnnotation(desc: String, visible: Boolean): AnnotationVisitor? {
         val methodDescriptor = MethodDescriptor(className.toCanonicalClassName(), methodName, methodDesc)
         if (isIntrinsicCandidateAnnotation(desc)) {
-            methodCache.getOriginal(methodDescriptor).isIntrinsic = true
+            methodCache.getInterned(methodDescriptor).isIntrinsic = true
             delegate()
         }
         return super.visitAnnotation(desc, visible)

@@ -12,20 +12,20 @@ package org.jetbrains.kotlinx.lincheck.transformation
 
 internal data class FieldDescriptor(
     val className: String,
-    val name: String,
+    val fieldName: String,
     val isStatic: Boolean,
     val isFinal: Boolean,
 )
 
-internal val fieldCache = Cache<FieldDescriptor>()
+internal val fieldCache = IndexedPool<FieldDescriptor>()
 
 internal data class VariableDescriptor(
     val name: String,
 )
 
-internal val variableCache = Cache<VariableDescriptor>()
+internal val variableCache = IndexedPool<VariableDescriptor>()
 
-internal class Cache<T> {
+internal class IndexedPool<T> {
     private val items = mutableListOf<T>()
     private val index = hashMapOf<T, Int>()
 
@@ -39,4 +39,4 @@ internal class Cache<T> {
     }
 }
 
-internal fun <T> Cache<T>.getOriginal(item: T) = get(getOrCreateId(item))
+internal fun <T> IndexedPool<T>.getInterned(item: T) = get(getOrCreateId(item))
