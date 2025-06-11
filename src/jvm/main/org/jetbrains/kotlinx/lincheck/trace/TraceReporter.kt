@@ -127,22 +127,14 @@ internal class TraceReporter(
 
             // find a place where to move the switch point
             var j = i
-
-            // in case of thread join, we just want to move switch out of the thread join method
-            val isThreadJoinSwitch = newTrace[i - 1].isThreadJoin()
-            if (isThreadJoinSwitch) {
-                j = i - 1
-            } else {
-                // otherwise, we want to move out of all entered method calls
-                while ((j - 1 >= 0) && (
-                            (newTrace[j - 1] is MethodCallTracePoint &&
-                                    // do not move the switch out of `Thread.start()`
-                                    !newTrace[j - 1].isThreadStart() /* && !newTrace[j - 1].isThreadJoin() */) ||
-                                    (newTrace[j - 1] is SpinCycleStartTracePoint)
-                            )
-                ) {
-                    j--
-                }
+            while ((j - 1 >= 0) && (
+                    (newTrace[j - 1] is MethodCallTracePoint &&
+                            // do not move the switch out of `Thread.start()`
+                            !newTrace[j - 1].isThreadStart()) ||
+                            (newTrace[j - 1] is SpinCycleStartTracePoint)
+                    )
+            ) {
+                j--
             }
             if (j == i) continue
 
@@ -164,6 +156,7 @@ internal class TraceReporter(
                     (it is MethodReturnTracePoint) ||
                     it is SpinCycleStartTracePoint
             }
+            val isThreadJoinSwitch = (remainingTracePoints.firstOrNull()?.isThreadJoin() == true)
             if (k == newTrace.size || shouldRemoveRemainingTracePoints && !isThreadJoinSwitch) {
                 // handle the case when the switch point is the last event in the thread
                 val methodCallTracePoints = movedTracePoints.filter { it is MethodCallTracePoint }
