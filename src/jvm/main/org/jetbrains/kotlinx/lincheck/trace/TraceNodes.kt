@@ -101,11 +101,11 @@ internal class CallNode(
 ): TraceNode(callDepth, eventNumber, tracePoint) {
     override val tracePoint: MethodCallTracePoint get() = super.tracePoint as MethodCallTracePoint
     val isRootCall get() = callDepth == 0
-    var returnEvetNumber: Int = -1
+    var returnEventNumber: Int = -1
 
     override fun toString(): String = tracePoint.toString()
     override fun copy(): TraceNode = CallNode(callDepth, tracePoint, eventNumber)
-        .also { it.returnEvetNumber = returnEvetNumber}
+        .also { it.returnEventNumber = returnEventNumber}
     
     internal fun createResultNodeForEmptyActor() =
         ResultNode(callDepth + 1, tracePoint.returnedValue as ReturnedValueResult.ActorResult, eventNumber, tracePoint)
@@ -134,7 +134,19 @@ internal fun traceToGraph(trace: Trace): SingleThreadedTable<CallNode> {
     // loop over events
     trace.trace.forEachIndexed { eventNumber, event ->
         val currentThreadId = event.iThread
-        val currentCallNode = currentNodePerThread[currentThreadId]
+
+        // TODO this is hack to fix actor with suspension
+        val currentCallNode = if (
+            currentNodePerThread[currentThreadId] != null
+            && event is MethodReturnTracePoint
+            && event.methodTracePoint.isActor
+        ) {
+            var node = currentNodePerThread[currentThreadId]
+            while (node!!.parent != null) node = node.parent as CallNode
+            node
+        } else { currentNodePerThread[currentThreadId] }
+
+
 
         when {
             event is SectionDelimiterTracePoint -> {
@@ -142,7 +154,7 @@ internal fun traceToGraph(trace: Trace): SingleThreadedTable<CallNode> {
                 sections.add(currentSection)
             }
             event is MethodReturnTracePoint -> {
-                currentCallNode?.returnEvetNumber = eventNumber
+                currentCallNode?.returnEventNumber = eventNumber
                 currentNodePerThread[currentThreadId] = currentCallNode?.parent as? CallNode
                 if (currentNodePerThread[currentThreadId] == null && currentCallNode?.isRootCall != true) {
                     // TODO re-enable later on when the problem with actors will be resolved

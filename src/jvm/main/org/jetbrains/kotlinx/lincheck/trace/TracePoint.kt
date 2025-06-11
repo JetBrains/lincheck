@@ -529,7 +529,7 @@ internal class SpinCycleStartTracePoint(iThread: Int, actorId: Int, callStackTra
 }
 
 internal class MethodReturnTracePoint(
-    private val methodTracePoint: MethodCallTracePoint
+    internal val methodTracePoint: MethodCallTracePoint
 ): TracePoint(methodTracePoint.iThread, methodTracePoint.actorId, emptyList()) {
     override fun toStringImpl(withLocation: Boolean) =  "This trace point is temporary, it should not appear in the logs; method: ${methodTracePoint.methodName}"
     override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
