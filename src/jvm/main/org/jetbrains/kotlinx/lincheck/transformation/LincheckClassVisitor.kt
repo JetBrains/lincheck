@@ -75,6 +75,10 @@ internal class LincheckClassVisitor(
             Logger.debug { "Skipping transformation of the native method $className.$methodName" }
             return mv
         }
+
+        fun MethodVisitor.newAdapter() = GeneratorAdapter(this, access, methodName, desc)
+        fun MethodVisitor.newNonRemappingAdapter() = GeneratorAdapterWithoutLocals(this, access, methodName, desc)
+
         if (instrumentationMode == STRESS) {
             return if (methodName != "<clinit>" && methodName != "<init>") {
                 CoroutineCancellabilitySupportTransformer(mv, access, className, methodName, desc)
@@ -82,9 +86,39 @@ internal class LincheckClassVisitor(
                 mv
             }
         }
+
+        if (instrumentationMode == TRACE_RECORDING) {
+            if (methodName == "<clinit>" || methodName == "<init>") return mv
+
+            mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
+            mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
+
+            mv = MethodCallTransformer(fileName, className, methodName, mv.newAdapter())
+
+            // We need this in TRACE_RECORDING mode to register new threads
+            mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
+
+            // `SharedMemoryAccessTransformer` goes first because it relies on `AnalyzerAdapter`,
+            // which should be put in front of the byte-code transformer chain,
+            // so that it can correctly analyze the byte-code and compute required type-information
+            mv = run {
+                val sharedMemoryAccessTransformer = SharedMemoryAccessTransformer(fileName, className, methodName, mv.newAdapter())
+                val analyzerAdapter = AnalyzerAdapter(className, access, methodName, desc, sharedMemoryAccessTransformer)
+                sharedMemoryAccessTransformer.analyzer = analyzerAdapter
+                analyzerAdapter
+            }
+
+            val locals: Map<Int, List<LocalVariableInfo>> = methods[methodName + desc]?.variables ?: emptyMap()
+            mv = LocalVariablesAccessTransformer(fileName, className, methodName, mv.newAdapter(), locals)
+
+            // Inline method call transformer relies on the original variables' indices, so it should go before (in FIFO order)
+            // all transformers which can create local variables.
+            // All visitors created AFTER InlineMethodCallTransformer must use a non-remapping Generator adapter.
+            mv = InlineMethodCallTransformer(fileName, className, methodName, desc, mv.newNonRemappingAdapter(), methods[methodName + desc] ?: MethodVariables(), mv)
+            return mv
+        }
+
         val intrinsicDelegateVisitor = mv
-        fun MethodVisitor.newAdapter() = GeneratorAdapter(this, access, methodName, desc)
-        fun MethodVisitor.newNonRemappingAdapter() = GeneratorAdapterWithoutLocals(this, access, methodName, desc)
         if (methodName == "<clinit>") {
             mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
@@ -153,8 +187,7 @@ internal class LincheckClassVisitor(
                 )
             }
             mv = run {
-                val st = if (instrumentationMode == TRACE_RECORDING) mv
-                         else ConstructorArgumentsSnapshotTrackerTransformer(fileName, className, methodName, mv.newAdapter(), classVisitor::isInstanceOf)
+                val st = ConstructorArgumentsSnapshotTrackerTransformer(fileName, className, methodName, mv.newAdapter(), classVisitor::isInstanceOf)
                 val sv = SharedMemoryAccessTransformer(fileName, className, methodName, st.newAdapter())
                 val aa = AnalyzerAdapter(className, access, methodName, desc, sv)
                 sv.analyzer = aa
@@ -164,11 +197,8 @@ internal class LincheckClassVisitor(
         }
         mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
         mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
-        if (instrumentationMode != TRACE_RECORDING) {
-            mv = CoroutineCancellabilitySupportTransformer(mv, access, className, methodName, desc)
-            mv = CoroutineDelaySupportTransformer(fileName, className, methodName, mv.newAdapter())
-        }
-        // We need this in TRACE_RECORDING mode to register new threads
+        mv = CoroutineCancellabilitySupportTransformer(mv, access, className, methodName, desc)
+        mv = CoroutineDelaySupportTransformer(fileName, className, methodName, mv.newAdapter())
         mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
         // We can do further instrumentation in methods of the custom thread subclasses,
         // but not in the `java.lang.Thread` itself.
@@ -199,7 +229,7 @@ internal class LincheckClassVisitor(
             // Lincheck does not support true identity hash codes (it always uses zeroes),
             // so there is no need for the `DeterministicInvokeDynamicTransformer` there.
             mv = DeterministicInvokeDynamicTransformer(fileName, className, methodName, classVersion, mv.newAdapter())
-        } else if (instrumentationMode != TRACE_RECORDING) {
+        } else {
             // In trace debugger mode we record hash codes of tracked objects and substitute them on re-run,
             // otherwise, we track all hash code calls in the instrumented code
             // and substitute them with constant.
@@ -209,8 +239,7 @@ internal class LincheckClassVisitor(
         // which should be put in front of the byte-code transformer chain,
         // so that it can correctly analyze the byte-code and compute required type-information
         mv = run {
-            val st = if (instrumentationMode == TRACE_RECORDING) mv
-                     else ConstructorArgumentsSnapshotTrackerTransformer(fileName, className, methodName, mv.newAdapter(), classVisitor::isInstanceOf)
+            val st = ConstructorArgumentsSnapshotTrackerTransformer(fileName, className, methodName, mv.newAdapter(), classVisitor::isInstanceOf)
             val sv = SharedMemoryAccessTransformer(fileName, className, methodName, st.newAdapter())
             val aa = AnalyzerAdapter(className, access, methodName, desc, sv)
             sv.analyzer = aa
