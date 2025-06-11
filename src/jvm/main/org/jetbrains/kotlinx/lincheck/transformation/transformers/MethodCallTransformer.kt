@@ -81,7 +81,9 @@ internal class MethodCallTransformer(
         }
         val methodId = MethodIds.getMethodId(owner.toCanonicalClassName(), name, desc)
         // STACK: <empty>
-        processMethodCallEnter(owner, name, desc, methodId, receiverLocal, argumentsArrayLocal)
+        push(methodName)
+        invokeStatic(Injections::onMethodCall)
+//        processMethodCallEnter(owner, name, desc, methodId, receiverLocal, argumentsArrayLocal)
         // STACK: deterministicCallDescriptor
         val deterministicMethodDescriptorLocal = newLocal(OBJECT_TYPE)
         val deterministicCallIdLocal = newLocal(LONG_TYPE)
@@ -141,19 +143,19 @@ internal class MethodCallTransformer(
         argumentsArrayLocal: Int
     ) = adapter.run {
         // STACK: <empty>
-        push(className.toCanonicalClassName())
+//        push(className.toCanonicalClassName())
         push(methodName)
-        loadNewCodeLocationId()
+//        loadNewCodeLocationId()
         // STACK: className, methodName, codeLocation
-        push(desc)
+//        push(desc)
         // STACK: className, methodName, codeLocation, methodDesc
-        push(methodId)
-        pushReceiver(receiverLocal)
-        loadLocal(argumentsArrayLocal)
-        // STACK: className, methodName, codeLocation, methodDesc, methodId, receiver?, argumentsArray
+//        push(methodId)
+//        pushReceiver(receiverLocal)
+//        loadLocal(argumentsArrayLocal)
+        // STACK: className, methsodName, codeLocation, methodDesc, methodId, receiver?, argumentsArray
         invokeStatic(Injections::onMethodCall)
         // STACK: deterministicCallDescriptor
-        invokeBeforeEventIfPluginEnabled("method call ${this@MethodCallTransformer.methodName}", setMethodEventId = true)
+//        invokeBeforeEventIfPluginEnabled("method call ${this@MethodCallTransformer.methodName}", setMethodEventId = true)
     }
 
     private fun pushDeterministicCallId(deterministicMethodDescriptorLocal: Int) = adapter.run {
@@ -228,27 +230,27 @@ internal class MethodCallTransformer(
         argumentsArrayLocal: Int
     ) = adapter.run {
         // STACK: result?
-        val resultLocal = when {
-            (returnType == VOID_TYPE) -> null
-            else -> newLocal(returnType).also { storeLocal(it) }
-        }
-        push(className.toCanonicalClassName())
-        push(methodName)
-        loadLocal(deterministicCallIdLocal)
-        loadLocal(deterministicMethodDescriptorLocal)
-        push(methodId)
-        pushReceiver(receiverLocal)
-        loadLocal(argumentsArrayLocal)
-        resultLocal?.let {
-            loadLocal(it)
-            box(returnType)
-        }
+//        val resultLocal = when {
+//            (returnType == VOID_TYPE) -> null
+//            else -> newLocal(returnType).also { storeLocal(it) }
+//        }
+//        push(className.toCanonicalClassName())
+//        push(methodName)
+//        loadLocal(deterministicCallIdLocal)
+//        loadLocal(deterministicMethodDescriptorLocal)
+//        push(methodId)
+//        pushReceiver(receiverLocal)
+//        loadLocal(argumentsArrayLocal)
+//        resultLocal?.let {
+//            loadLocal(it)
+//            box(returnType)
+//        }
         // STACK: className, methodName, deterministicCallId, deterministicMethodDescriptor, receiver, arguments, result?
         when {
             (returnType == VOID_TYPE) -> invokeStatic(Injections::onMethodCallReturnVoid)
             else                      -> invokeStatic(Injections::onMethodCallReturn)
         }
-        resultLocal?.let { loadLocal(it) }
+//        resultLocal?.let { loadLocal(it) }
         // STACK: result?
     }
 
@@ -261,20 +263,20 @@ internal class MethodCallTransformer(
         argumentsArrayLocal: Int,
     ) = adapter.run {
         // STACK: exception
-        val exceptionLocal = newLocal(THROWABLE_TYPE)
-        storeLocal(exceptionLocal)
+//        val exceptionLocal = newLocal(THROWABLE_TYPE)
+//        storeLocal(exceptionLocal)
         // STACK: <empty>
-        push(className.toCanonicalClassName())
-        push(methodName)
-        loadLocal(deterministicCallIdLocal)
-        loadLocal(deterministicMethodDescriptorLocal)
-        pushReceiver(receiverLocal)
-        loadLocal(argumentsArrayLocal)
-        loadLocal(exceptionLocal)
+//        push(className.toCanonicalClassName())
+//        push(methodName)
+//        loadLocal(deterministicCallIdLocal)
+//        loadLocal(deterministicMethodDescriptorLocal)
+//        pushReceiver(receiverLocal)
+//        loadLocal(argumentsArrayLocal)
+//        loadLocal(exceptionLocal)
         // STACK: className, methodName, deterministicCallId, deterministicMethodDescriptor, receiver, params, exception
         invokeStatic(Injections::onMethodCallException)
         // STACK: <empty>
-        loadLocal(exceptionLocal)
+//        loadLocal(exceptionLocal)
         throwException()
     }
 

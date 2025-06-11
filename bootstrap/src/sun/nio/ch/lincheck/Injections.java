@@ -10,6 +10,9 @@
 
 package sun.nio.ch.lincheck;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.PrintStream;
 import java.lang.invoke.CallSite;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Constructor;
@@ -20,6 +23,10 @@ import static sun.nio.ch.lincheck.Types.convertAsmMethodType;
  * Methods of this object are called from the instrumented code.
  */
 public class Injections {
+    public static final StringBuilder sb = new StringBuilder();
+
+    private static int depth = 0;
+
 
     // Special object to represent void method call result.
     public static final Object VOID_RESULT = new Object();
@@ -51,6 +58,9 @@ public class Injections {
      */
     @SuppressWarnings({"FieldCanBeLocal", "unused"})
     private static int currentEventId = -1;
+
+    public Injections() throws FileNotFoundException {
+    }
 
     public static EventTracker getEventTracker() {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
@@ -390,52 +400,53 @@ public class Injections {
     /**
      * Called from the instrumented code before any method call.
      *
-     * @param receiver is `null` for public static methods.
      * @return Deterministic call descriptor or null.
      */
-    public static Object onMethodCall(String className, String methodName, int codeLocation, String methodDesc, int methodId, Object receiver, Object[] params) {
-        // to safely construct the method signature, we need to enter an ignored section
-        // because it internally calls code which can be instrumented
-        enterIgnoredSection();
-        MethodSignature methodSignature;
-        try {
-            methodSignature = new MethodSignature(methodName, convertAsmMethodType(methodDesc));
-        } finally {
-            leaveIgnoredSection();
+    public static Object onMethodCall(String methodName) {
+        for (int i = 0; i < depth; i++) {
+            sb.append(' ');
         }
-        return getEventTracker().onMethodCall(className, methodName, codeLocation, methodId, methodSignature, receiver, params);
+        sb.append(methodName);
+        sb.append("(..)");
+        sb.append('\n');
+        depth++;
+        return null;
     }
+
+    private static String repeat(String str, int times) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < times; i++) {
+            sb.append(str);
+        }
+        return sb.toString();
+    }
+
 
     /**
      * Called from the instrumented code after any method successful call, i.e., without any exception.
      *
-     * @param descriptor Deterministic call descriptor or null.
-     * @param descriptorId Deterministic call descriptor id when applicable, or any other value otherwise.
-     * @param result The call result.
+//     * @param descriptor Deterministic call descriptor or null.
+//     * @param descriptorId Deterministic call descriptor id when applicable, or any other value otherwise.
+//     * @param result The call result.
      */
-    public static void onMethodCallReturn(String className, String methodName, long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Object result) {
-        getEventTracker().onMethodCallReturn(className, methodName, descriptorId, descriptor, methodId, receiver, params, result);
+    public static void onMethodCallReturn() {
+        depth--;
     }
 
     /**
      * Called from the instrumented code after any method that returns void successful call, i.e., without any exception.
      *
-     * @param descriptor Deterministic call descriptor or null.
-     * @param descriptorId Deterministic call descriptor id when applicable, or any other value otherwise.
      */
-    public static void onMethodCallReturnVoid(String className, String methodName, long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params) {
-        getEventTracker().onMethodCallReturn(className, methodName, descriptorId, descriptor, methodId, receiver, params, VOID_RESULT);
+    public static void onMethodCallReturnVoid() {
+        depth--;
     }
 
     /**
      * Called from the instrumented code after any method call threw an exception
      *
-     * @param descriptor Deterministic call descriptor or null.
-     * @param descriptorId Deterministic call descriptor id when applicable, or any other value otherwise.
-     * @param t Thrown exception.
      */
-    public static void onMethodCallException(String className, String methodName, long descriptorId, Object descriptor, Object receiver, Object[] params, Throwable t) {
-        getEventTracker().onMethodCallException(className, methodName, descriptorId, descriptor, receiver, params, t);
+    public static void onMethodCallException() {
+        depth--;
     }
 
     /**
