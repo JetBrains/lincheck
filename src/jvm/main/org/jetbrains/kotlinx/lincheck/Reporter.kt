@@ -38,7 +38,7 @@ class Reporter(private val logLevel: LoggingLevel) {
         appendExecutionScenario(scenario)
     }
 
-    private inline fun log(logLevel: LoggingLevel, crossinline msg: StringBuilder.() -> Unit): Unit = synchronized(this) {
+    private inline fun log(logLevel: LoggingLevel, crossinline msg: Appendable.() -> Unit): Unit = synchronized(this) {
         if (this.logLevel > logLevel) return
         val sb = StringBuilder()
         msg(sb)
@@ -48,7 +48,7 @@ class Reporter(private val logLevel: LoggingLevel) {
 }
 
 /**
- * Creates a string representing list of columns as a table.
+ * Appends a string representing list of columns as a table.
  * The columns of the table are separated by the vertical bar symbol `|`.
  *
  * @param data list of columns of the table.
@@ -57,11 +57,11 @@ class Reporter(private val logLevel: LoggingLevel) {
  * @param transform a function to convert data elements to strings,
  *   [toString] method is used by default.
  */
-internal fun<T> columnsToString(
+internal fun <T> Appendable.appendColumns(
     data: List<List<T>>,
     columnWidths: List<Int>? = null,
     transform: ((T) -> String)? = null
-): String {
+) {
     require(columnWidths == null || columnWidths.size == data.size)
     val nCols = data.size
     val nRows = data.maxOfOrNull { it.size } ?: 0
@@ -74,26 +74,14 @@ internal fun<T> columnsToString(
     val table = (0 until nRows).map { iRow -> (0 until nCols).map { iCol ->
         strings[iCol].getOrNull(iRow).orEmpty().padEnd(colsWidth[iCol])
     }}
-    return table.joinToString(separator = "\n") {
-        it.joinToString(separator = " | ", prefix = "| ", postfix = " |")
+
+    table.forEach {
+        appendLine(it.joinToString(separator = " | ", prefix = "| ", postfix = " |"))
     }
 }
 
 /**
- * Appends a string representation of a list of columns as a table.
-
- * @see columnsToString
- */
-internal fun <T> StringBuilder.appendColumns(
-    data: List<List<T>>,
-    columnWidths: List<Int>? = null,
-    transform: ((T) -> String)? = null
-) {
-    appendLine(columnsToString(data, columnWidths, transform))
-}
-
-/**
- * A class representing tabular layout to append tabular data to [StringBuilder].
+ * A class representing tabular layout to append tabular data to [PrintStream].
  *
  * @param columnNames names of columns of the table.
  * @param columnWidths minimum widths of columns.
@@ -130,33 +118,29 @@ internal class TableLayout(
     /**
      * Appends a horizontal separating line of the format `| ----- |`.
      */
-    fun StringBuilder.appendSeparatorLine() = apply {
+    fun Appendable.appendSeparatorLine() = apply {
         appendLine(separator)
     }
 
     /**
      * Appends a single line wrapped by `|` symbols to fit into table borders.
      */
-    fun StringBuilder.appendWrappedLine(line: String) = apply {
+    fun Appendable.appendWrappedLine(line: String) = apply {
         appendLine("| " + line.padEnd(lineSize) + " |")
     }
 
     /**
      * Appends columns.
-     *
-     * @see columnsToString
      */
-    fun<T> StringBuilder.appendColumns(data: List<List<T>>, transform: ((T) -> String)? = null) = apply {
+    fun<T> Appendable.appendColumns(data: List<List<T>>, transform: ((T) -> String)? = null) = apply {
         require(data.size == nColumns)
         appendColumns(data, columnWidths, transform)
     }
 
     /**
      * Appends the first column.
-     *
-     * @see columnsToString
      */
-    fun <T> StringBuilder.appendToFirstColumn(data: T) = apply {
+    fun <T> Appendable.appendToFirstColumn(data: T) = apply {
         val columns = listOf(listOf(data)) + List(columnWidths.size - 1) { emptyList() }
         appendColumns(columns, columnWidths, transform = null)
     }
@@ -169,7 +153,7 @@ internal class TableLayout(
      * @param transform a function to convert data elements to strings,
      *   [toString] method is used by default.
      */
-    fun <T> StringBuilder.appendColumn(iCol: Int, data: List<T>, transform: ((T) -> String)? = null) = apply {
+    fun <T> Appendable.appendColumn(iCol: Int, data: List<T>, transform: ((T) -> String)? = null) = apply {
         val cols = (0 until nColumns).map { i ->
             if (i == iCol) data else listOf()
         }
@@ -183,7 +167,7 @@ internal class TableLayout(
      * @param transform a function to convert data elements to strings,
      *   [toString] method is used by default.
      */
-    fun<T> StringBuilder.appendRow(data: List<T>, transform: ((T) -> String)? = null) = apply {
+    fun<T> Appendable.appendRow(data: List<T>, transform: ((T) -> String)? = null) = apply {
         require(data.size == nColumns)
         val strings = data
             .map { transform?.invoke(it) ?: it.toString() }
@@ -194,7 +178,7 @@ internal class TableLayout(
     /**
      * Appends a header row containing names of columns.
      */
-    fun StringBuilder.appendHeader() = apply {
+    fun Appendable.appendHeader() = apply {
         appendRow(columnNames)
     }
 
@@ -249,10 +233,10 @@ internal fun ExecutionLayout(
     return TableLayout(threadHeaders, columnWidths)
 }
 
-internal fun StringBuilder.appendExecutionScenario(
+internal fun Appendable.appendExecutionScenario(
     scenario: ExecutionScenario,
     showValidationFunctions: Boolean = false
-): StringBuilder {
+): Appendable {
     val initPart = scenario.initExecution.map(Actor::toString)
     val postPart = scenario.postExecution.map(Actor::toString)
     val parallelPart = scenario.parallelExecution.map { it.map(Actor::toString) }
@@ -283,10 +267,10 @@ private fun<T, U> requireEqualSize(x: List<T>, y: List<U>, lazyMessage: () -> St
     require(x.size == y.size) { "${lazyMessage()} (${x.size} != ${y.size})" }
 }
 
-internal fun StringBuilder.appendExecutionScenarioWithResults(
+internal fun Appendable.appendExecutionScenarioWithResults(
     failure: LincheckFailure,
     exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>,
-): StringBuilder {
+): Appendable {
     val scenario = failure.scenario
     val executionResult = failure.results
     requireEqualSize(scenario.parallelExecution, executionResult.parallelResults) {
@@ -359,7 +343,7 @@ internal fun StringBuilder.appendExecutionScenarioWithResults(
     return this
 }
 
-internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilder {
+internal fun Appendable.appendFailure(failure: LincheckFailure): Appendable {
     val results: ExecutionResult = failure.results
     // If a result is present - collect exceptions stack traces to print them
     val exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace> = results.let {
@@ -520,7 +504,7 @@ private fun executionResultsRepresentation(results: List<ResultActorData>, failu
     return false to representation
 }
 
-internal fun StringBuilder.appendExceptionsStackTracesBlock(exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>) {
+internal fun Appendable.appendExceptionsStackTracesBlock(exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>) {
     if (exceptionStackTraces.isNotEmpty()) {
         appendLine(EXCEPTIONS_TRACES_TITLE)
         appendExceptionsStackTraces(exceptionStackTraces)
@@ -528,13 +512,13 @@ internal fun StringBuilder.appendExceptionsStackTracesBlock(exceptionStackTraces
     }
 }
 
-internal fun StringBuilder.appendExceptionStackTrace(exception: Throwable, stackTrace: List<StackTraceElement>): StringBuilder {
+internal fun Appendable.appendExceptionStackTrace(exception: Throwable, stackTrace: List<StackTraceElement>): Appendable {
     appendLine(exception::class.java.canonicalName + ": " + exception.message)
     stackTrace.forEach { appendLine("\tat $it") }
     return this
 }
 
-internal fun StringBuilder.appendExceptionsStackTraces(exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): StringBuilder {
+internal fun Appendable.appendExceptionsStackTraces(exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): Appendable {
     exceptionStackTraces.entries.sortedBy { (_, description) -> description.number }.forEach { (exception, description) ->
         append("#${description.number}: ")
 
@@ -547,7 +531,7 @@ internal fun StringBuilder.appendExceptionsStackTraces(exceptionStackTraces: Map
     return this
 }
 
-private fun StringBuilder.appendInternalLincheckBugFailure(
+private fun Appendable.appendInternalLincheckBugFailure(
     exception: Throwable,
 ) {
     appendLine(
@@ -653,10 +637,10 @@ private fun Throwable.isInternalLincheckBug(): Boolean {
     return lincheckStackFrames.isNotEmpty()
 }
 
-private fun StringBuilder.appendUnexpectedExceptionFailure(
+private fun Appendable.appendUnexpectedExceptionFailure(
     failure: UnexpectedExceptionFailure,
     exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
-): StringBuilder {
+): Appendable {
     appendLine("= The execution failed with an unexpected exception =")
     appendExecutionScenarioWithResults(failure, exceptionStackTraces)
     appendLine()
@@ -664,20 +648,20 @@ private fun StringBuilder.appendUnexpectedExceptionFailure(
     return this
 }
 
-private fun StringBuilder.appendManagedDeadlockWithDumpFailure(
+private fun Appendable.appendManagedDeadlockWithDumpFailure(
     failure: LincheckFailure,
     exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
-): StringBuilder {
+): Appendable {
     appendLine("= The execution has hung =")
     appendExecutionScenarioWithResults(failure, exceptionStackTraces)
     appendLine()
     return this
 }
 
-private fun StringBuilder.appendTimeoutDeadlockWithDumpFailure(
+private fun Appendable.appendTimeoutDeadlockWithDumpFailure(
     failure: TimeoutFailure,
     exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
-): StringBuilder {
+): Appendable {
     appendLine("= The execution has hung, see the thread dump =")
     appendExecutionScenarioWithResults(failure, exceptionStackTraces)
     appendLine()
@@ -710,25 +694,25 @@ private fun StringBuilder.appendTimeoutDeadlockWithDumpFailure(
 private val StackTraceElement.isLincheckInternals get() =
     this.className.startsWith("org.jetbrains.kotlinx.lincheck.")
 
-private fun StringBuilder.appendIncorrectResultsFailure(
+private fun Appendable.appendIncorrectResultsFailure(
     failure: IncorrectResultsFailure,
     exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>,
-): StringBuilder {
+): Appendable {
     appendLine("= Invalid execution results =")
     appendExecutionScenarioWithResults(failure, exceptionStackTraces)
     return this
 }
 
-private fun StringBuilder.appendHints(hints: List<String>) {
+private fun Appendable.appendHints(hints: List<String>) {
     if (hints.isNotEmpty()) {
         appendLine(hints.joinToString(prefix = "\n---\n", separator = "\n---\n", postfix = "\n---"))
     }
 }
 
-private fun StringBuilder.appendValidationFailure(
+private fun Appendable.appendValidationFailure(
     failure: ValidationFailure,
     exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
-): StringBuilder {
+): Appendable {
     appendLine("= Validation function ${failure.validationFunctionName} has failed =")
     appendExecutionScenarioWithResults(failure, exceptionStackTraces)
     appendLine()
@@ -737,16 +721,16 @@ private fun StringBuilder.appendValidationFailure(
     return this
 }
 
-private fun StringBuilder.appendObstructionFreedomViolationFailure(
+private fun Appendable.appendObstructionFreedomViolationFailure(
     failure: ObstructionFreedomViolationFailure,
     exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
-): StringBuilder {
+): Appendable {
     appendLine("= ${failure.reason} =")
     appendExecutionScenarioWithResults(failure, exceptionStackTraces)
     return this
 }
 
-private fun StringBuilder.appendException(t: Throwable) {
+private fun Appendable.appendException(t: Throwable) {
     val sw = StringWriter()
     t.printStackTrace(PrintWriter(sw))
     appendLine(sw.toString())

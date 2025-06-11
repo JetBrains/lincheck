@@ -25,7 +25,7 @@ internal typealias MultiThreadedSection<T> = List<Column<T>>
 internal typealias Column<T> = List<T>
 
 @Synchronized // we should avoid concurrent executions to keep `objectNumeration` consistent
-internal fun StringBuilder.appendTrace(
+internal fun Appendable.appendTrace(
     failure: LincheckFailure,
     results: ExecutionResult,
     trace: Trace,
@@ -35,7 +35,7 @@ internal fun StringBuilder.appendTrace(
 }
 
 /**
- * Appends [Trace] to [StringBuilder]
+ * Appends [Trace] to [Appendable]
  */
 internal class TraceReporter(
     private val failure: LincheckFailure,
@@ -58,7 +58,7 @@ internal class TraceReporter(
         graph = traceToCollapsedGraph(fixedTrace, failure.analysisProfile, failure.scenario)
     }
     
-    fun appendTrace(stringBuilder: StringBuilder) = with(stringBuilder) {
+    fun appendTrace(app: Appendable) = with(app) {
         // Turn graph into chronological sequence of calls and events, for verbose and simple trace.
         val flattenedShort: SingleThreadedTable<TraceNode> = graph.flattenNodes(ShortTraceFlattenPolicy()).reorder()
         val flattenedVerbose: SingleThreadedTable<TraceNode> = graph.flattenNodes(VerboseTraceFlattenPolicy()).reorder()
@@ -91,9 +91,9 @@ internal class TraceReporter(
 }
 
 /**
- * Appends trace table to [StringBuilder]
+ * Appends trace table to [Appendable]
  */
-internal fun StringBuilder.appendTraceTable(title: String, trace: Trace, failure: LincheckFailure?, graph: SingleThreadedTable<TraceNode>) {
+internal fun Appendable.appendTraceTable(title: String, trace: Trace, failure: LincheckFailure?, graph: SingleThreadedTable<TraceNode>) {
     appendLine(title)
     val traceRepresentationSplitted = splitInColumns(trace.threadNames.size, graph)
     val stringTable = traceNodeTableToString(traceRepresentationSplitted)

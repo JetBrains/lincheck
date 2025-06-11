@@ -477,9 +477,7 @@ class TraceCollectingEventTracker(
 
         // saving human-readable format (use the file name specified by the user)
         createDumpFile(traceDumpPath).use { printStream ->
-            val sb = StringBuilder()
-            sb.appendTraceTable("Trace started from $methodName", totalTrace, null, nodeList)
-            printStream.print(sb.toString())
+            printStream.appendTraceTable("Trace started from $methodName", totalTrace, null, nodeList)
         }
 
         // saving csv format (same filename as 'traceDumpPath' but with '.csv' file extension)
