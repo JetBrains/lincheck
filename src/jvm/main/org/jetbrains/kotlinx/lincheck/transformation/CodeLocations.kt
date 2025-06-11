@@ -18,7 +18,6 @@ import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.collectFieldInf
 import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.isFinalField
 import org.jetbrains.kotlinx.lincheck.util.MethodDescriptor
 import org.objectweb.asm.*
-import sun.nio.ch.lincheck.Types.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
@@ -67,8 +66,9 @@ internal object CodeLocations {
  * Provides unique IDs for all the methods that are called from the instrumented code.
  * These IDs are used to detect the first recursive call in case of a recursive spin-cycle.
  */
-internal val methodCache = Cache<MethodDescriptor>()
+internal val methodCache = IndexedPool<MethodDescriptor>()
 
+// TODO or create a ticket to refactor this and use FieldDescriptor and ClassNode visitor instead.
 /**
  * [FinalFields] object is used to track final fields across different classes.
  * It is used only during byte-code transformation to get information about fields

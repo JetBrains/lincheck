@@ -36,7 +36,6 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.Continuation
 import java.util.concurrent.TimeoutException
 import kotlinx.coroutines.CancellableContinuation
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 import kotlin.Result as KResult
 import org.objectweb.asm.commons.Method.getMethod as getAsmMethod
@@ -1246,21 +1245,21 @@ abstract class ManagedStrategy(
             // Ignore, NullPointerException will be thrown
             return false
         }
-        updateSnapshotOnFieldAccess(obj, fieldDescriptor.className, fieldDescriptor.name)
+        updateSnapshotOnFieldAccess(obj, fieldDescriptor.className, fieldDescriptor.fieldName)
         // We need to ensure all the classes related to the reading object are instrumented.
         // The following call checks all the static fields.
         if (fieldDescriptor.isStatic) {
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(fieldDescriptor.className)
         }
         if (collectTrace && fieldDescriptor.isStatic && fieldDescriptor.isFinal) {
-            lastReadConstantName = fieldDescriptor.name
+            lastReadConstantName = fieldDescriptor.fieldName
         }
         // Optimization: do not track final field reads
         if (fieldDescriptor.isFinal) {
             return false
         }
         // Do not track accesses to untracked objects
-        if (!shouldTrackFieldAccess(obj, fieldDescriptor.name)) {
+        if (!shouldTrackFieldAccess(obj, fieldDescriptor.fieldName)) {
             return false
         }
         val iThread = threadScheduler.getCurrentThreadId()
@@ -1270,7 +1269,7 @@ abstract class ManagedStrategy(
                 iThread = iThread,
                 actorId = currentActorId[iThread]!!,
                 callStackTrace = callStackTrace[iThread]!!,
-                fieldName = fieldDescriptor.name,
+                fieldName = fieldDescriptor.fieldName,
                 codeLocation = codeLocation,
                 isLocal = false,
             )
@@ -1336,9 +1335,9 @@ abstract class ManagedStrategy(
             // Ignore, NullPointerException will be thrown
             return false
         }
-        updateSnapshotOnFieldAccess(obj, fieldDescriptor.className, fieldDescriptor.name)
+        updateSnapshotOnFieldAccess(obj, fieldDescriptor.className, fieldDescriptor.fieldName)
         objectTracker?.registerObjectLink(fromObject = obj ?: StaticObject, toObject = value)
-        if (!shouldTrackFieldAccess(obj, fieldDescriptor.name)) {
+        if (!shouldTrackFieldAccess(obj, fieldDescriptor.fieldName)) {
             return false
         }
         // Optimization: do not track final field writes
@@ -1352,7 +1351,7 @@ abstract class ManagedStrategy(
                 iThread = iThread,
                 actorId = currentActorId[iThread]!!,
                 callStackTrace = callStackTrace[iThread]!!,
-                fieldName = fieldDescriptor.name,
+                fieldName = fieldDescriptor.fieldName,
                 codeLocation = codeLocation,
                 isLocal = false,
             ).also {
