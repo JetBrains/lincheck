@@ -177,10 +177,9 @@ internal fun traceToGraph(trace: Trace): SingleThreadedTable<TraceNode> {
     return sections
 }
 
-internal fun flattenTraceToGraph(trace: Trace): SingleThreadedTable<CallNode> {
+internal fun flattenTraceToGraph(trace: Trace): SingleThreadedTable<TraceNode> {
     val sections = mutableListOf<List<CallNode>>()
     var currentSection = mutableListOf<CallNode>()
-
     val threadMap = mutableMapOf<Int, CallNode?>()
 
     // loop over events
@@ -189,10 +188,6 @@ internal fun flattenTraceToGraph(trace: Trace): SingleThreadedTable<CallNode> {
         val currentCallNode = threadMap[currentThreadId]
 
         when {
-            event is SectionDelimiterTracePoint -> {
-                currentSection = mutableListOf()
-                sections.add(currentSection)
-            }
             event is MethodReturnTracePoint -> {
                 threadMap[currentThreadId] = currentCallNode?.parent as? CallNode
                 if (threadMap[currentThreadId] == null && currentCallNode?.isRootCall != true) {
@@ -202,7 +197,10 @@ internal fun flattenTraceToGraph(trace: Trace): SingleThreadedTable<CallNode> {
             }
             event is MethodCallTracePoint -> {
                 val newNode = CallNode((currentCallNode?.callDepth ?: -1) + 1, event, eventNumber)
-                if (event.isRootCall) currentSection.add(newNode)
+                if (sections.isEmpty()) {
+                    currentSection.add(newNode)
+                    sections.add(currentSection)
+                }
                 currentCallNode?.addChild(newNode)
                 threadMap[currentThreadId] = newNode
             }
@@ -213,6 +211,7 @@ internal fun flattenTraceToGraph(trace: Trace): SingleThreadedTable<CallNode> {
             else -> check(false) { "Event has no trace that leads to it" }
         }
     }
+
     return sections
 }
 
