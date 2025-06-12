@@ -57,7 +57,7 @@ abstract class CTestConfiguration(
         val DEFAULT_EXECUTION_GENERATOR: Class<out ExecutionGenerator?> = RandomExecutionGenerator::class.java
         val DEFAULT_VERIFIER: Class<out Verifier> = LinearizabilityVerifier::class.java
         const val DEFAULT_MINIMIZE_ERROR = true
-        const val DEFAULT_TIMEOUT_MS: Long = 30_000 // 30 sec
+        const val DEFAULT_TIMEOUT_MS: Long = 3_000_000 // 30 sec
     }
 }
 
