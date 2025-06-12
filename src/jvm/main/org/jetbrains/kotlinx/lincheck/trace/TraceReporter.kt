@@ -90,6 +90,26 @@ internal class TraceReporter(
     }
 }
 
+internal class FlattenTraceReporter(val trace: Trace) {
+    val graph: SingleThreadedTable<TraceNode>
+
+    init {
+        val profile = AnalysisProfile(analyzeStdLib = true)
+        graph = traceToGraph(trace)
+            .compressTrace()
+            .collapseLibraries(profile)
+    }
+
+    fun appendTrace(app: Appendable) = with(app) {
+        // Turn graph into chronological sequence of calls and events, for verbose and simple trace.
+        val flattenedShort: SingleThreadedTable<TraceNode> = graph.flattenNodes(ShortTraceFlattenPolicy()).reorder()
+        val flattenedVerbose: SingleThreadedTable<TraceNode> = graph.flattenNodes(VerboseTraceFlattenPolicy()).reorder()
+        appendTraceTableSimple(TRACE_TITLE, trace.threadNames, flattenedShort)
+        appendLine()
+        appendTraceTableSimple(DETAILED_TRACE_TITLE, trace.threadNames, flattenedVerbose)
+    }
+}
+
 /**
  * Appends trace table to [Appendable]
  */
@@ -113,6 +133,26 @@ internal fun Appendable.appendTraceTable(title: String, trace: Trace, failure: L
     }
     if (failure is ManagedDeadlockFailure || failure is TimeoutFailure) {
         appendLine(ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE)
+    }
+}
+
+internal fun Appendable.appendTraceTableSimple(title: String, threadNames: List<String>, graph: SingleThreadedTable<TraceNode>) {
+    appendLine(title)
+    val traceRepresentationSplitted = splitInColumns(threadNames.size, graph)
+    val stringTable = traceNodeTableToString(traceRepresentationSplitted)
+    val layout = ExecutionLayout(
+        nThreads = threadNames.size,
+        interleavingSections = stringTable,
+        threadNames = threadNames,
+    )
+    with(layout) {
+        appendSeparatorLine()
+        appendHeader()
+        appendSeparatorLine()
+        stringTable.forEach { section ->
+            appendColumns(section)
+            appendSeparatorLine()
+        }
     }
 }
 
