@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.jetbrains.kotlinx.lincheck.util.MethodDescriptor
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
 import org.objectweb.asm.Type.*
@@ -79,9 +80,9 @@ internal class MethodCallTransformer(
             (opcode != INVOKESTATIC) -> newLocal(receiverType).also { storeLocal(it) }
             else -> null
         }
-        val methodId = MethodIds.getMethodId(owner.toCanonicalClassName(), name, desc)
+        val methodId = methodCache.getOrCreateId(MethodDescriptor(owner.toCanonicalClassName(), name, desc))
         // STACK: <empty>
-        processMethodCallEnter(owner, name, desc, methodId, receiverLocal, argumentsArrayLocal)
+        processMethodCallEnter(methodId, receiverLocal, argumentsArrayLocal)
         // STACK: deterministicCallDescriptor
         val deterministicMethodDescriptorLocal = newLocal(OBJECT_TYPE)
             .also { storeLocal(it) }
@@ -108,8 +109,6 @@ internal class MethodCallTransformer(
                 }
                 // STACK: result?
                 processMethodCallReturn(
-                    owner,
-                    name,
                     returnType,
                     deterministicCallIdLocal,
                     deterministicMethodDescriptorLocal,
@@ -122,10 +121,9 @@ internal class MethodCallTransformer(
             catchBlock = {
                 // STACK: exception
                 processMethodCallException(
-                    owner,
-                    name,
                     deterministicCallIdLocal,
                     deterministicMethodDescriptorLocal,
+                    methodId,
                     receiverLocal,
                     argumentsArrayLocal,
                 )
@@ -134,24 +132,17 @@ internal class MethodCallTransformer(
     }
 
     private fun GeneratorAdapter.processMethodCallEnter(
-        className: String,
-        methodName: String,
-        desc: String,
         methodId: Int,
         receiverLocal: Int?,
         argumentsArrayLocal: Int
     ) {
         // STACK: <empty>
-        push(className.toCanonicalClassName())
-        push(methodName)
         loadNewCodeLocationId()
-        // STACK: className, methodName, codeLocation
-        push(desc)
-        // STACK: className, methodName, codeLocation, methodDesc
+        // STACK: codeLocation
         push(methodId)
         pushReceiver(receiverLocal)
         loadLocal(argumentsArrayLocal)
-        // STACK: className, methodName, codeLocation, methodDesc, methodId, receiver?, argumentsArray
+        // STACK: codeLocation, methodId, receiver?, argumentsArray
         invokeStatic(Injections::onMethodCall)
         // STACK: deterministicCallDescriptor
         invokeBeforeEventIfPluginEnabled("method call ${this@MethodCallTransformer.methodName}", setMethodEventId = true)
@@ -219,8 +210,6 @@ internal class MethodCallTransformer(
     }
 
     private fun GeneratorAdapter.processMethodCallReturn(
-        className: String,
-        methodName: String,
         returnType: Type,
         deterministicCallIdLocal: Int,
         deterministicMethodDescriptorLocal: Int,
@@ -233,8 +222,6 @@ internal class MethodCallTransformer(
             (returnType == VOID_TYPE) -> null
             else -> newLocal(returnType).also { storeLocal(it) }
         }
-        push(className.toCanonicalClassName())
-        push(methodName)
         loadLocal(deterministicCallIdLocal)
         loadLocal(deterministicMethodDescriptorLocal)
         push(methodId)
@@ -244,7 +231,7 @@ internal class MethodCallTransformer(
             loadLocal(it)
             box(returnType)
         }
-        // STACK: className, methodName, deterministicCallId, deterministicMethodDescriptor, methodId, receiver, arguments, result?
+        // STACK: deterministicCallId, deterministicMethodDescriptor, methodId, receiver, arguments, result?
         when {
             returnType == VOID_TYPE -> invokeStatic(Injections::onMethodCallReturnVoid)
             else                    -> {
@@ -258,10 +245,9 @@ internal class MethodCallTransformer(
     }
 
     private fun GeneratorAdapter.processMethodCallException(
-        className: String,
-        methodName: String,
         deterministicCallIdLocal: Int,
         deterministicMethodDescriptorLocal: Int,
+        methodId: Int,
         receiverLocal: Int?,
         argumentsArrayLocal: Int,
     ) {
@@ -269,14 +255,13 @@ internal class MethodCallTransformer(
         val exceptionLocal = newLocal(THROWABLE_TYPE)
         storeLocal(exceptionLocal)
         // STACK: <empty>
-        push(className.toCanonicalClassName())
-        push(methodName)
         loadLocal(deterministicCallIdLocal)
         loadLocal(deterministicMethodDescriptorLocal)
+        push(methodId)
         pushReceiver(receiverLocal)
         loadLocal(argumentsArrayLocal)
         loadLocal(exceptionLocal)
-        // STACK: className, methodName, deterministicCallId, deterministicMethodDescriptor, receiver, params, exception
+        // STACK: deterministicCallId, deterministicMethodDescriptor, methodId, receiver, params, exception
         invokeStatic(Injections::onMethodCallException)
         // STACK: Throwable
         throwException()

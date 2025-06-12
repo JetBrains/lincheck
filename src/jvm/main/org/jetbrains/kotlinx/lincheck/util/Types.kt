@@ -22,6 +22,8 @@ internal data class MethodDescriptor(
     val className: String,
     val methodSignature: MethodSignature
 ) {
+    var isIntrinsic: Boolean = false
+    
     constructor(className: String, methodName: String, desc: String) :
         this(className, MethodSignature(methodName, convertAsmMethodType(desc)))
 
