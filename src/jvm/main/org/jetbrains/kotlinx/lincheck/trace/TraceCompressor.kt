@@ -194,7 +194,9 @@ private fun SingleThreadedTable<TraceNode>.compressThreadStart() = compressNodes
     newNode
 }
 
-
+/**
+ * Remove $iv from owner names, due to inline functions.
+ */
 private fun SingleThreadedTable<TraceNode>.compressInlineIV() = compressNodes { node ->
     if (node !is CallNode || node.tracePoint.ownerName == null) return@compressNodes node
     node.tracePoint.ownerName = node.tracePoint.ownerName!!.removeSuffix("\$iv")
