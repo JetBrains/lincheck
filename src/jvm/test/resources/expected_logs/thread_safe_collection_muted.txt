@@ -20,8 +20,8 @@ Detailed trace:
 | $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48) |
 |   block(): threw IllegalStateException at ThreadSafeCollectionMutedRepresentationTest.block(StdLibRepresentationTests.kt:21)                                                    |
 |     concurrentMap.put(1, 1): 1 at ThreadSafeCollectionMutedRepresentationTest.block(StdLibRepresentationTests.kt:27)                                                            |
-|           Array<Node>#1[1].getReferenceAcquire(): Node#1 at ConcurrentHashMap.tabAt(ConcurrentHashMap.java:760)                                                                 |
-|           Array<Node>#1[1].getReferenceAcquire(): Node#1 at ConcurrentHashMap.tabAt(ConcurrentHashMap.java:760)                                                                 |
+|       Array<Node>#1[1].getReferenceAcquire(): Node#1 at ConcurrentHashMap.tabAt(ConcurrentHashMap.java:760)                                                                     |
+|       Array<Node>#1[1].getReferenceAcquire(): Node#1 at ConcurrentHashMap.tabAt(ConcurrentHashMap.java:760)                                                                     |
 |     a ➜ 2 at ThreadSafeCollectionMutedRepresentationTest.block(StdLibRepresentationTests.kt:28)                                                                                 |
 |     a = 3 at ThreadSafeCollectionMutedRepresentationTest.block(StdLibRepresentationTests.kt:28)                                                                                 |
 |   result: IllegalStateException #1                                                                                                                                              |
