@@ -64,6 +64,12 @@ internal class InlineMethodCallTransformer(
             val suffix = "\$iv".repeat(inlineStack.size)
             val inlineName = lvar.inlineMethodName!!
 
+            //TODO Find out what the exact problem is here
+            if (inlineName == "recoverStackTrace") {
+                super.visitLabel(label)
+                return
+            }
+
             // If an extension function was inlined, `this_$iv` will point to class where extension
             // function was defined and `$this$<func-name>$iv` will show to virtual `this`, with
             // which function should really work.
