@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import sun.nio.ch.lincheck.*
 import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.shouldTransform
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.commons.GeneratorAdapter
 
@@ -23,11 +24,10 @@ internal class ObjectCreationMinimalTransformer(
     fileName: String,
     className: String,
     methodName: String,
-    adapter: GeneratorAdapter,
-    private val classFilter: (String, String) -> Boolean
+    adapter: GeneratorAdapter
 ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
     override fun visitTypeInsn(opcode: Int, type: String) = adapter.run {
-        if (opcode == NEW && classFilter(className, methodName)) {
+        if (opcode == NEW && shouldTransform(type.toCanonicalClassName(), InstrumentationMode.TRACE_RECORDING)) {
             invokeIfInAnalyzedCode(
                 original = {},
                 instrumented = {

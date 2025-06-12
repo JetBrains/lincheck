@@ -94,8 +94,7 @@ internal class LincheckClassVisitor(
             mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
             mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
 
-            val ap = AnalysisProfile(false)
-            mv = ObjectCreationMinimalTransformer(fileName, className, methodName, mv.newAdapter(), ap::shouldTransform)
+            mv = ObjectCreationMinimalTransformer(fileName, className, methodName, mv.newAdapter())
             mv = MethodCallMinimalTransformer(fileName, className, methodName, mv.newAdapter())
 
             // We need this in TRACE_RECORDING mode to register new threads
