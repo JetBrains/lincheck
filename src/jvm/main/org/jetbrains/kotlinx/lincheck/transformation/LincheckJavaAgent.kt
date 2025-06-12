@@ -437,7 +437,7 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         // In the model checking mode, we transform classes lazily,
         // once they are used in the testing code.
         if (!INSTRUMENT_ALL_CLASSES &&
-            instrumentationMode == MODEL_CHECKING &&
+            (instrumentationMode == MODEL_CHECKING || instrumentationMode == TRACE_RECORDING) &&
             // do not re-transform already instrumented classes
             internalClassName.toCanonicalClassName() !in instrumentedClasses &&
             // always transform eagerly instrumented classes
