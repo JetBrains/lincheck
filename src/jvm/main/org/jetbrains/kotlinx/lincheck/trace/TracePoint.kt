@@ -360,13 +360,18 @@ internal class MethodCallTracePoint(
 }
 
 internal class MethodReturnTracePoint(
-    private val methodTracePoint: MethodCallTracePoint
-): TracePoint(methodTracePoint.iThread, methodTracePoint.actorId, emptyList()) {
-    override fun toStringImpl(withLocation: Boolean) =  "This trace point is temporary, it should not appear in the logs; method: ${methodTracePoint.methodName}"
+    iThread: Int,
+    actorId: Int,
+    val result: Any? = null,
+    val exception: Throwable? = null
+): TracePoint(iThread, actorId, emptyList()) {
+    override fun toStringImpl(withLocation: Boolean) =  "This trace point is temporary, it should not appear in the logs."
     override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
-        MethodReturnTracePoint(methodTracePoint)
+        MethodReturnTracePoint(iThread, actorId)
             .also { it.eventId = eventId }
     }
+
+    val isSuccess = exception == null
 }
 
 internal sealed interface ReturnedValueResult {

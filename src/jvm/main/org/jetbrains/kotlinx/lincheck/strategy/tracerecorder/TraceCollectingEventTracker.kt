@@ -10,13 +10,23 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.tracerecorder
 
+import org.jetbrains.kotlinx.lincheck.actor
 import org.jetbrains.kotlinx.lincheck.strategy.ThreadAnalysisHandle
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ShadowStackFrame
+import org.jetbrains.kotlinx.lincheck.trace.CallStackTrace
+import org.jetbrains.kotlinx.lincheck.trace.CallStackTraceElement
+import org.jetbrains.kotlinx.lincheck.trace.FlattenTraceReporter
+import org.jetbrains.kotlinx.lincheck.trace.MethodCallTracePoint
+import org.jetbrains.kotlinx.lincheck.trace.MethodReturnTracePoint
+import org.jetbrains.kotlinx.lincheck.trace.ReadTracePoint
+import org.jetbrains.kotlinx.lincheck.trace.Trace
 import org.jetbrains.kotlinx.lincheck.trace.TraceCollector
+import org.jetbrains.kotlinx.lincheck.trace.flattenTraceToGraph
 import org.jetbrains.kotlinx.lincheck.transformation.CodeLocations
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.util.AnalysisProfile
 import org.jetbrains.kotlinx.lincheck.util.AnalysisSectionType
+import org.jetbrains.kotlinx.lincheck.util.isSuspendFunction
 import org.jetbrains.kotlinx.lincheck.util.runInsideIgnoredSection
 import sun.nio.ch.lincheck.*
 import java.io.File
@@ -160,14 +170,44 @@ class TraceCollectingEventTracker(
         if (isStatic) {
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
         }
-        return true
+/*
+        val threadHandle = threads[Thread.currentThread()] ?: return false
+        val tracePoint = ReadTracePoint(
+            ownerRepresentation = if (obj == null) null else objectToString(obj),
+            iThread = threadHandle.threadId,
+            actorId = 0,
+            callStackTrace = EMPTY_CALL_STACK_TRACE,
+            fieldName = fieldName,
+            codeLocation = codeLocation,
+            isLocal = false
+        )
+        threadHandle.traceCollector?.addTracePoint(tracePoint)
+*/
+        return false
     }
 
     override fun beforeReadArrayElement(
         array: Any,
         index: Int,
         codeLocation: Int
-    ): Boolean = false
+    ): Boolean = runInsideIgnoredSection {
+/*
+        val threadHandle = threads[Thread.currentThread()] ?: return false
+
+        val tracePoint = ReadTracePoint(
+            ownerRepresentation = objectToString(array) + "[" + index + "]",
+            iThread = threadHandle.threadId,
+            actorId = 0,
+            callStackTrace = EMPTY_CALL_STACK_TRACE,
+            fieldName = fieldName,
+            codeLocation = codeLocation,
+            isLocal = false
+        )
+        threadHandle.traceCollector?.addTracePoint(tracePoint)
+*/
+
+        return false
+    }
 
     override fun afterRead(value: Any?) = Unit
 
@@ -194,6 +234,8 @@ class TraceCollectingEventTracker(
 
     override fun afterLocalWrite(codeLocation: Int, name: String, value: Any?) = Unit
 
+    private val EMPTY_CALL_STACK_TRACE = emptyList<CallStackTraceElement>()
+
     override fun onMethodCall(
         className: String,
         methodName: String,
@@ -206,11 +248,24 @@ class TraceCollectingEventTracker(
         val threadHandle = threads[Thread.currentThread()] ?: return null
 
         val methodSection = methodAnalysisSectionType(receiver, className, methodName)
-
         if (receiver == null && methodSection < AnalysisSectionType.ATOMIC) {
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
         }
 
+        val tracePoint = MethodCallTracePoint(
+            iThread = threadHandle.threadId,
+            actorId = 0,
+            className = className,
+            methodName = methodName,
+            callStackTrace = EMPTY_CALL_STACK_TRACE,
+            codeLocation = codeLocation,
+            isStatic = receiver == null,
+            callType = MethodCallTracePoint.CallType.NORMAL,
+            isSuspend = isSuspendFunction(className, methodName, params)
+        )
+        threadHandle.traceCollector?.addTracePoint(tracePoint)
+
+/*
         // Create method call string
         val receiverName = if (receiver == null) {
             className.substring(className.lastIndexOf('.') + 1);
@@ -240,8 +295,8 @@ class TraceCollectingEventTracker(
                 append(ste.lineNumber)
             }
         }
-
         depth++
+*/
 
         // if the method has certain guarantees, enter the corresponding section
         threadHandle.enterAnalysisSection(methodSection)
@@ -260,12 +315,20 @@ class TraceCollectingEventTracker(
     ): Any? = runInsideIgnoredSection {
         val threadHandle = threads[Thread.currentThread()] ?: return result
 
-        depth--
+        val tracePoint = MethodReturnTracePoint(
+            iThread = threadHandle.threadId,
+            actorId = 0,
+            result = result
+        )
+        threadHandle.traceCollector?.addTracePoint(tracePoint)
 
+/*
+        depth--
         appendLine {
             append("result = ")
             append(objectToString(result))
         }
+*/
 
         val methodSection = methodAnalysisSectionType(receiver, className, methodName)
         threadHandle.leaveAnalysisSection(methodSection)
@@ -286,14 +349,22 @@ class TraceCollectingEventTracker(
             return t
         }
 
-        depth--
+        val tracePoint = MethodReturnTracePoint(
+            iThread = threadHandle.threadId,
+            actorId = 0,
+            exception = t
+        )
+        threadHandle.traceCollector?.addTracePoint(tracePoint)
 
+/*
+        depth--
         appendLine {
             append("exception = ")
             append(objectToString(t))
             append(" ")
             append(t.message ?: "<no message>")
         }
+*/
 
         val methodSection = methodAnalysisSectionType(receiver, className, methodName)
         threadHandle.leaveAnalysisSection(methodSection)
@@ -306,7 +377,23 @@ class TraceCollectingEventTracker(
         methodId: Int,
         codeLocation: Int,
         owner: Any?
-    ) = runInsideIgnoredSection {
+    ): Unit = runInsideIgnoredSection {
+        val threadHandle = threads[Thread.currentThread()] ?: return
+
+        val tracePoint = MethodCallTracePoint(
+            iThread = threadHandle.threadId,
+            actorId = 0,
+            className = className,
+            methodName = methodName,
+            callStackTrace = EMPTY_CALL_STACK_TRACE,
+            codeLocation = codeLocation,
+            isStatic = false,
+            callType = MethodCallTracePoint.CallType.NORMAL,
+            isSuspend = false
+        )
+        threadHandle.traceCollector?.addTracePoint(tracePoint)
+
+/*
         // Create method call string
         val receiverName = if (owner == null) {
             className.substring(className.lastIndexOf('.') + 1);
@@ -322,12 +409,21 @@ class TraceCollectingEventTracker(
         }
 
         depth++
-        Unit
+*/
     }
 
-    override fun onInlineMethodCallReturn(className: String, methodId: Int) = runInsideIgnoredSection {
+    override fun onInlineMethodCallReturn(className: String, methodId: Int): Unit = runInsideIgnoredSection {
+        val threadHandle = threads[Thread.currentThread()] ?: return
+
+        val tracePoint = MethodReturnTracePoint(
+            iThread = threadHandle.threadId,
+            actorId = 0,
+            result = Unit
+        )
+        threadHandle.traceCollector?.addTracePoint(tracePoint)
+/*
         depth--
-        Unit
+*/
     }
 
     override fun invokeDeterministicallyOrNull(
@@ -374,6 +470,7 @@ class TraceCollectingEventTracker(
         threadHandle.shadowStack.add(ShadowStackFrame(Thread.currentThread()))
         threads[Thread.currentThread()] = threadHandle
 
+/*
         // Method in question was called
         appendLine {
             append(className)
@@ -382,11 +479,20 @@ class TraceCollectingEventTracker(
             append("()")
         }
         depth = 1
+*/
     }
 
     fun finishAndDumpTrace() {
+        val threadHandle = threads[Thread.currentThread()] ?: return
+
+        val reporter = FlattenTraceReporter(Trace(threadHandle.traceCollector!!.trace, listOf("Thread")))
+        reporter.appendTrace(output)
+        output.close()
+
+/*
         output.append(sb)
         output.close()
+*/
     }
 
 /*

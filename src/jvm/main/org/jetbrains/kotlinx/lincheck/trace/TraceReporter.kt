@@ -94,7 +94,7 @@ internal class FlattenTraceReporter(val trace: Trace) {
     val graph: SingleThreadedTable<TraceNode>
 
     init {
-        val profile = AnalysisProfile(analyzeStdLib = true)
+        val profile = AnalysisProfile(analyzeStdLib = false)
         graph = flattenTraceToGraph(trace)
             .compressTrace()
             .collapseLibraries(profile)
