@@ -47,10 +47,10 @@ internal abstract class TraceNode(var callDepth: Int, val eventNumber: Int, open
 
     abstract override fun toString(): String
 
-    // Shifts stackTrace to the left
-    fun decrementCallDepthOfTree() {
-        callDepth--
-        children.forEach { it.decrementCallDepthOfTree() }
+    // Sets call depth of this (sub)tree
+    fun setCallDepthOfTree(depth: Int) {
+        callDepth = depth
+        children.forEach { it.setCallDepthOfTree(depth + 1) }
     }
 
     fun lastOrNull(predicate: (TraceNode) -> Boolean): TraceNode? {

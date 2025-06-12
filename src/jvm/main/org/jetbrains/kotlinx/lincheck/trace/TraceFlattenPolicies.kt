@@ -153,7 +153,10 @@ internal fun TraceNode.flattenNodes(policy: TraceFlattenPolicy): List<TraceNode>
 }
 
 internal fun SingleThreadedTable<TraceNode>.flattenNodes(flattenPolicy: TraceFlattenPolicy): SingleThreadedTable<TraceNode> =
-    map { section -> section.flatMap { traceNode -> traceNode.flattenNodes(flattenPolicy) } }
+    map { section ->
+        section.forEach { it.setCallDepthOfTree(0) }
+        section.flatMap { traceNode -> traceNode.flattenNodes(flattenPolicy) }
+    }
 
 //for idea plugin
 internal fun SingleThreadedTable<TraceNode>.extractPreExpandedNodes(flattenPolicy: TraceFlattenPolicy): List<TraceNode> =
