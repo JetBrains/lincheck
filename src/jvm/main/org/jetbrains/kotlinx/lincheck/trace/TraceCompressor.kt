@@ -39,7 +39,6 @@ private fun SingleThreadedTable<TraceNode>.compressSuspendImpl() = compressNodes
         if (it.tracePoint is CodeLocationTracePoint) {
             (it.tracePoint as CodeLocationTracePoint).codeLocation = singleChild.tracePoint.codeLocation
         }
-        it.decrementCallDepthOfTree()
         newNode.addChild(it)
     }
     newNode
@@ -110,7 +109,6 @@ private fun combineNodes(parent: CallNode, child: CallNode): TraceNode {
     check(parent.tracePoint.thrownException == child.tracePoint.thrownException)
 
     val newNode = parent.copy() 
-    child.decrementCallDepthOfTree()
     child.children.forEach { newNode.addChild(it) }
     return newNode
 }
@@ -128,7 +126,6 @@ private fun SingleThreadedTable<TraceNode>.compressSyntheticFieldAccess() = comp
     if (point is ReadTracePoint) point.codeLocation = node.tracePoint.codeLocation
     if (point is WriteTracePoint) point.codeLocation = node.tracePoint.codeLocation
 
-    singleChild.decrementCallDepthOfTree()
     singleChild
 }
 
@@ -163,7 +160,6 @@ private fun SingleThreadedTable<TraceNode>.compressUserThreadRun() = compressNod
 
     val newNode = node.copy()
     node.children.getOrNull(0)?.children?.forEach {
-        it.decrementCallDepthOfTree()
         newNode.addChild(it)
     }
     newNode

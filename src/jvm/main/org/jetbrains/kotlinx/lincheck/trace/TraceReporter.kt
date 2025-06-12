@@ -206,7 +206,6 @@ private fun removeGPMCLambda(graph: SingleThreadedTable<TraceNode>): SingleThrea
         val first = section.first()
         if (first !is CallNode) return@map section
         if (first.children.isEmpty()) return@map listOf(first.createResultNodeForEmptyActor())
-        first.decrementCallDepthOfTree()
         if (first.children.firstOrNull() is CallNode) (first.children.first() as CallNode).tracePoint.returnedValue = first.tracePoint.returnedValue
         first.children + section.drop(1)
     }
