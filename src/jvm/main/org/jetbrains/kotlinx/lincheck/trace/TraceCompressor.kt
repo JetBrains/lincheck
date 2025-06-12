@@ -21,6 +21,7 @@ internal fun SingleThreadedTable<TraceNode>.compressTrace() = this
     .compressUserThreadRun()
     .compressThreadStart()
     .removeCoroutinesCoreSuffix()
+    .compressInlineIV()
 
 /**
  * Compresses `receive$suspendImpl` calls.
@@ -191,6 +192,13 @@ private fun SingleThreadedTable<TraceNode>.compressThreadStart() = compressNodes
     val newNode = node.copy()
     newNode.addChild(secondChild)
     newNode
+}
+
+
+private fun SingleThreadedTable<TraceNode>.compressInlineIV() = compressNodes { node ->
+    if (node !is CallNode || node.tracePoint.ownerName == null) return@compressNodes node
+    node.tracePoint.ownerName = node.tracePoint.ownerName!!.removeSuffix("\$iv")
+    node
 }
 
 internal fun SingleThreadedTable<TraceNode>.collapseLibraries(analysisProfile: AnalysisProfile) = compressNodes { node -> 
