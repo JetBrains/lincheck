@@ -57,7 +57,6 @@ class TraceCollectingEventTracker(
     private val output: PrintStream
     private var depth = 0
     private var indent = ""
-    private var afterNewLine = true
     private val simpleClassNames = HashMap<Class<*>, String>()
 
     init {
@@ -219,27 +218,28 @@ class TraceCollectingEventTracker(
             objectToString(receiver)
         }
 
-        appendOutput(receiverName)
-        appendOutput(".")
-        appendOutput(methodName)
-        appendOutput("(")
-        var first = true
-        for (p in params) {
-            if (!first) {
-                appendOutput(", ")
+        appendLine {
+            append(receiverName)
+            append(".")
+            append(methodName)
+            append("(")
+            var first = true
+            for (p in params) {
+                if (!first) {
+                    append(", ")
+                }
+                append(objectToString(p))
+                first = false
             }
-            appendOutput(objectToString(p))
-            first = false
+            append(")")
+            val ste = CodeLocations.stackTrace(codeLocation)
+            if (ste.fileName != null) {
+                append(" at ")
+                append(ste.fileName)
+                append(":")
+                append(ste.lineNumber)
+            }
         }
-        appendOutput(")")
-        val ste = CodeLocations.stackTrace(codeLocation)
-        if (ste.fileName != null) {
-            appendOutput(" at ")
-            appendOutput(ste.fileName)
-            appendOutput(":")
-            appendOutput(ste.lineNumber)
-        }
-        appendNewLine()
 
         depth++
         indent += " "
@@ -264,9 +264,10 @@ class TraceCollectingEventTracker(
         depth--
         indent = indent.substring(1)
 
-        appendOutput("result = ")
-        appendOutput(objectToString(result))
-        appendNewLine()
+        appendLine {
+            append("result = ")
+            append(objectToString(result))
+        }
 
         val methodSection = methodAnalysisSectionType(receiver, className, methodName)
         threadHandle.leaveAnalysisSection(methodSection)
@@ -290,11 +291,12 @@ class TraceCollectingEventTracker(
         depth--
         indent = indent.substring(1)
 
-        appendOutput("exception = ")
-        appendOutput(objectToString(t))
-        appendOutput(" ")
-        appendOutput(t.message ?: "<no message>")
-        appendNewLine()
+        appendLine {
+            append("exception = ")
+            append(objectToString(t))
+            append(" ")
+            append(t.message ?: "<no message>")
+        }
 
         val methodSection = methodAnalysisSectionType(receiver, className, methodName)
         threadHandle.leaveAnalysisSection(methodSection)
@@ -315,11 +317,12 @@ class TraceCollectingEventTracker(
             objectToString(owner)
         }
 
-        appendOutput(receiverName)
-        appendOutput(".")
-        appendOutput(methodName)
-        appendOutput("()")
-        appendNewLine()
+        appendLine {
+            append(receiverName)
+            append(".")
+            append(methodName)
+            append("()")
+        }
 
         depth++
         indent += " "
@@ -375,11 +378,12 @@ class TraceCollectingEventTracker(
         threads[Thread.currentThread()] = threadHandle
 
         // Method in question was called
-        appendOutput(className)
-        appendOutput(".")
-        appendOutput(methodName)
-        appendOutput("()")
-        appendNewLine()
+        appendLine {
+            append(className)
+            append(".")
+            append(methodName)
+            append("()")
+        }
         depth = 1
         indent = " "
     }
@@ -454,25 +458,10 @@ class TraceCollectingEventTracker(
         }
     }
 
-    private fun appendOutput(o: String) {
-        if (afterNewLine) {
-            sb.append(indent)
-            afterNewLine = false
-        }
-        sb.append(o)
-    }
-
-    private fun appendOutput(o: Int) {
-        if (afterNewLine) {
-            sb.append(indent)
-            afterNewLine = false
-        }
-        sb.append(o)
-    }
-
-    private fun appendNewLine() {
+    private inline fun appendLine(block: StringBuilder.() -> Unit) {
+        sb.append(indent)
+        sb.block()
         sb.append("\n")
-        afterNewLine = true
         // 1G
         if (sb.length > 1024 * 1024 * 1024) {
             output.append(sb)
