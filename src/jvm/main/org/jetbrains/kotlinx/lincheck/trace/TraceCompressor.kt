@@ -51,7 +51,6 @@ private fun SingleThreadedTable<TraceNode>.compressSuspendImpl() = compressNodes
         if (it.tracePoint is CodeLocationTracePoint) {
             (it.tracePoint as CodeLocationTracePoint).codeLocation = singleChild.tracePoint.codeLocation
         }
-        it.decrementCallDepthOfTree()
         newNode.addChild(it)
     }
     newNode
@@ -118,16 +117,15 @@ private fun combineNodes(parent: CallNode, child: CallNode): TraceNode {
     // TODO investigate why in rare cases return values are not equal #682
     if (parent.tracePoint.returnedValue == child.tracePoint.returnedValue
         && parent.tracePoint.thrownException == child.tracePoint.thrownException) {
-        
+
         parent.tracePoint.methodName = child.tracePoint.methodName
         parent.tracePoint.parameters = child.tracePoint.parameters
 
 
         val newNode = parent.copy()
-        child.decrementCallDepthOfTree()
         child.children.forEach { newNode.addChild(it) }
-        return newNode
-    }
+    return newNode
+}
 
     return parent
 }
@@ -164,7 +162,6 @@ private fun SingleThreadedTable<TraceNode>.compressSyntheticFieldAccess() = comp
     if (point is ReadTracePoint) point.codeLocation = node.tracePoint.codeLocation
     if (point is WriteTracePoint) point.codeLocation = node.tracePoint.codeLocation
 
-    singleChild.decrementCallDepthOfTree()
     singleChild
 }
 
@@ -217,7 +214,6 @@ private fun SingleThreadedTable<TraceNode>.compressUserThreadRun() = compressNod
 
     val newNode = node.copy()
     node.children.getOrNull(0)?.children?.forEach {
-        it.decrementCallDepthOfTree()
         newNode.addChild(it)
     }
     newNode
@@ -337,7 +333,7 @@ private fun SingleThreadedTable<TraceNode>.replaceNestedClassDollar() = compress
  * ```
  */
 private fun SingleThreadedTable<TraceNode>.compressLambdaCaptureSyntheticField() = compressNodes { node ->
-    if (node is EventNode 
+    if (node is EventNode
         && node.tracePoint is ReadTracePoint
         && node.tracePoint.ownerRepresentation?.startsWith("$") == true
         && node.tracePoint.fieldName == "element"
@@ -346,7 +342,7 @@ private fun SingleThreadedTable<TraceNode>.compressLambdaCaptureSyntheticField()
         node.tracePoint.updateOwnerRepresentation(null)
     }
 
-    if (node is EventNode 
+    if (node is EventNode
         && node.tracePoint is WriteTracePoint
         && node.tracePoint.ownerRepresentation?.startsWith("$") == true
         && node.tracePoint.fieldName == "element"
@@ -382,7 +378,7 @@ private fun SingleThreadedTable<TraceNode>.compressVolatileDollar() = compressNo
         node.tracePoint.updateOwnerName(node.tracePoint.ownerName!!.removeSuffix("\$volatile"))
     }
 
-    // TODO this can be removed after IJTD-151 is merged. 
+    // TODO this can be removed after IJTD-151 is merged.
     //  Could also be fixed in TraceNodes.kt but would cause unnecessary conflicts.
     if (node is EventNode && node.tracePoint is MethodCallTracePoint && node.tracePoint.ownerName != null) {
         node.tracePoint.updateOwnerName(node.tracePoint.ownerName!!.removeSuffix("\$volatile"))
@@ -424,7 +420,7 @@ private fun fixNestedClassDollar(nestedClassRepresentation: String): String {
     return firstPart + fixNestedClassDollar(after)
 }
 
-internal fun SingleThreadedTable<TraceNode>.collapseLibraries(analysisProfile: AnalysisProfile) = compressNodes { node -> 
+internal fun SingleThreadedTable<TraceNode>.collapseLibraries(analysisProfile: AnalysisProfile) = compressNodes { node ->
     // if should not be hidden
     if (node !is CallNode || !analysisProfile.shouldBeHidden(node)) return@compressNodes node
 

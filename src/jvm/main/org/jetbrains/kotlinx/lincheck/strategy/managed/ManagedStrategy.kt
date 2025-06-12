@@ -758,6 +758,10 @@ internal abstract class ManagedStrategy(
         if (currentThreadId < 0) return
         // scenario threads are handled separately by the runner itself
         if (isTestThread(currentThreadId)) return
+
+        val threadRunTracePoint = callStackTrace[currentThreadId]?.firstOrNull()?.tracePoint
+        val threadEndTracePoint = threadRunTracePoint?.let { MethodReturnTracePoint(it) }
+        if (threadEndTracePoint != null) traceCollector?.addTracePoint(threadEndTracePoint)
         disableAnalysis()
         onThreadFinish(currentThreadId)
     }
@@ -990,23 +994,29 @@ internal abstract class ManagedStrategy(
         else validationFunction
         check(actor != null) { "Could not find current actor" }
 
-        // TODO rewrite. This will create an additional return trace point if actor is a suspend function
-        //  or if the actor is in the loop cycle.
-        val className = actor.method.declaringClass.name
-        val methodName = actor.method.name
-        val callStackTrace = callStackTrace[iThread]!!
-        val tracePoint = MethodCallTracePoint(
-            iThread = iThread,
-            actorId = currentActorId[iThread]!!,
-            className = className,
-            methodName = methodName,
-            callStackTrace = callStackTrace,
-            codeLocation = UNKNOWN_CODE_LOCATION,
-            isStatic = false,
-            callType = MethodCallTracePoint.CallType.ACTOR,
-            isSuspend = isSuspendFunction(className, methodName, actor.arguments.toTypedArray())
-        )
-        traceCollector?.addTracePointInternal(MethodReturnTracePoint(tracePoint))
+        val lastTracePoint = traceCollector?.trace?.lastOrNull()
+
+        if (lastTracePoint !is MethodReturnTracePoint
+            || lastTracePoint.methodTracePoint.methodName != actor.method.name
+            || lastTracePoint.methodTracePoint.className != actor.method.declaringClass.name) {
+            // TODO rewrite. This will create an additional return trace point if actor is a suspend function
+            //  or if the actor is in the loop cycle.
+            val className = actor.method.declaringClass.name
+            val methodName = actor.method.name
+            val callStackTrace = callStackTrace[iThread]!!
+            val tracePoint = MethodCallTracePoint(
+                iThread = iThread,
+                actorId = currentActorId[iThread]!!,
+                className = className,
+                methodName = methodName,
+                callStackTrace = callStackTrace,
+                codeLocation = UNKNOWN_CODE_LOCATION,
+                isStatic = false,
+                callType = MethodCallTracePoint.CallType.ACTOR,
+                isSuspend = isSuspendFunction(className, methodName, actor.arguments.toTypedArray())
+            )
+            traceCollector?.addTracePointInternal(MethodReturnTracePoint(tracePoint))
+        }
 
         // This is a hack to guarantee correct stepping in the plugin.
         // When stepping out to the TestThreadExecution class, stepping continues unproductively.
@@ -2040,6 +2050,10 @@ internal abstract class ManagedStrategy(
             // we assume that all methods lying below the resumed one in stack trace
             // have empty resumption part or were already resumed before,
             // so we remove them from the suspended methods stack.
+            suspendedMethodStack.subList(0, elementIndex).forEach { element ->
+                val returnTracePoint = MethodReturnTracePoint(element.tracePoint)
+                traceCollector?.addTracePointInternal(returnTracePoint)
+            }
             suspendedMethodStack.subList(0, elementIndex + 1).clear()
             // we need to restore suspended stack trace elements
             // if they are not on the top of the current stack trace
