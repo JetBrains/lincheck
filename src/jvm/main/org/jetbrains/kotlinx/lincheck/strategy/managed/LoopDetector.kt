@@ -13,6 +13,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import org.jetbrains.kotlinx.lincheck.primitiveOrIdentityHashCode
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import org.jetbrains.kotlinx.lincheck.strategy.managed.LoopDetector.CodeIdentity.RegularCodeLocationIdentity
+import org.jetbrains.kotlinx.lincheck.trace.CallStackTrace
 import org.jetbrains.kotlinx.lincheck.trace.CallStackTraceElement
 import org.jetbrains.kotlinx.lincheck.trace.SpinCycleStartTracePoint
 import org.jetbrains.kotlinx.lincheck.trace.SwitchEventTracePoint
@@ -972,6 +973,25 @@ internal fun afterSpinCycleTraceCollected(
         getCommonMinStackTrace(spinLockTracePoints, spinCycleMethodCallsStackTraces)
             .dropLast(currentCallStackTrace.size - spinCycleFirstTracePointCallStackTrace.size)
     }
+
+    println("callStackTrace:")
+    callStackTrace.forEach {
+        println("    ${it.tracePoint}")
+    }
+
+    println("spinCycleStartStackTrace:")
+    spinCycleStartStackTrace.forEach {
+        println("    ${it.tracePoint}")
+    }
+
+    println("spinCycleMethodCallsStackTraces:")
+    for (i in spinCycleMethodCallsStackTraces.indices) {
+        println("    ${spinLockTracePoints[i]}")
+        spinCycleMethodCallsStackTraces[i].forEach {
+            println("        ${it.tracePoint}")
+        }
+    }
+
     (trace[cycleStartTracePointIndex] as SpinCycleStartTracePoint).callStackTrace = spinCycleStartStackTrace
 }
 
