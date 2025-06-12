@@ -19,6 +19,7 @@ import org.jetbrains.kotlinx.lincheck.trace.MethodReturnTracePoint
 import org.jetbrains.kotlinx.lincheck.trace.SpinCycleStartTracePoint
 import org.jetbrains.kotlinx.lincheck.trace.SwitchEventTracePoint
 import org.jetbrains.kotlinx.lincheck.trace.TracePoint
+import org.jetbrains.kotlinx.lincheck.trace.isEqualStackTrace
 import org.jetbrains.kotlinx.lincheck.transformation.MethodIds
 import org.jetbrains.kotlinx.lincheck.transformation.CodeLocations
 import java.util.ArrayList
@@ -982,6 +983,10 @@ internal fun afterSpinCycleTraceCollected(
         spinLockTracePoints[i].callStackTrace.forEach {
             println("        ${it.tracePoint}")
         }
+    }
+
+    if (!trace[cycleStartTracePointIndex].callStackTrace.isEqualStackTrace(spinCycleStartStackTrace)) {
+        (trace[cycleStartTracePointIndex] as SpinCycleStartTracePoint).shouldBePatched = true
     }
 
     (trace[cycleStartTracePointIndex] as SpinCycleStartTracePoint).callStackTrace = spinCycleStartStackTrace

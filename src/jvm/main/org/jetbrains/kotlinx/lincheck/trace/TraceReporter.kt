@@ -192,10 +192,16 @@ internal class TraceReporter(
             if (j == i) continue
 
             val beforeSpinStartTracePoints = newTrace.subList(j + 1, i + 1)
-            // val isSpinCycleStartAtMethodBeginning = newTrace[i - 1] is MethodCallTracePoint
+
+            val isSpinCycleStartAtMethodBeginning = newTrace[i - 1] is MethodCallTracePoint
             val spinCycleStartLastTracePoint = tracePoint.callStackTrace.lastOrNull()?.tracePoint
-            // val lastMethodCallTracePoint = beforeSpinStartTracePoints.lastOrNull { it is MethodCallTracePoint }
-            if (tracePoint.isRecursive) {
+            val lastMethodCallTracePoint = beforeSpinStartTracePoints.lastOrNull { it is MethodCallTracePoint }
+
+            var nextEvent = newTrace[i + 1]
+            val shouldBeMoved = !nextEvent.callStackTrace.isEqualStackTrace(tracePoint.callStackTrace)
+
+            // if (tracePoint.isRecursive || tracePoint.shouldBePatched) {
+            if (tracePoint.isRecursive || shouldBeMoved) {
                 var k = i - 1
                 var spinStackTrace = tracePoint.callStackTrace
                 if (tracePoint.callStackTrace.size > newTrace[k].callStackTrace.size) {
