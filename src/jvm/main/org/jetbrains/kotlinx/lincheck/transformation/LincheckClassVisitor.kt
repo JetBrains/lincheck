@@ -17,6 +17,7 @@ import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.commons.*
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
 import org.jetbrains.kotlinx.lincheck.transformation.transformers.*
+import org.jetbrains.kotlinx.lincheck.util.AnalysisProfile
 import org.jetbrains.kotlinx.lincheck.util.Logger
 import sun.nio.ch.lincheck.*
 
@@ -93,6 +94,8 @@ internal class LincheckClassVisitor(
             mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
             mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
 
+            val ap = AnalysisProfile(false)
+            mv = ObjectCreationMinimalTransformer(fileName, className, methodName, mv.newAdapter(), ap::shouldTransform)
             mv = MethodCallMinimalTransformer(fileName, className, methodName, mv.newAdapter())
 
             // We need this in TRACE_RECORDING mode to register new threads
@@ -108,13 +111,10 @@ internal class LincheckClassVisitor(
                 analyzerAdapter
             }
 
-            val locals: Map<Int, List<LocalVariableInfo>> = methods[methodName + desc]?.variables ?: emptyMap()
-            mv = LocalVariablesAccessTransformer(fileName, className, methodName, mv.newAdapter(), locals)
-
             // Inline method call transformer relies on the original variables' indices, so it should go before (in FIFO order)
             // all transformers which can create local variables.
             // All visitors created AFTER InlineMethodCallTransformer must use a non-remapping Generator adapter.
-            mv = InlineMethodCallTransformer(fileName, className, methodName, desc, mv.newNonRemappingAdapter(), methods[methodName + desc] ?: MethodVariables(), mv)
+            mv = InlineMethodCallTransformer(fileName, className, methodName, desc, mv.newNonRemappingAdapter(), methods[methodName + desc] ?: MethodVariables(), null)
             return mv
         }
 
