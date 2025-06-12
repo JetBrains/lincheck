@@ -967,24 +967,6 @@ internal fun afterSpinCycleTraceCollected(
             .dropLast(count)
     }
 
-    println("callStackTrace:")
-    callStackTrace.forEach {
-        println("    ${it.tracePoint}")
-    }
-
-    println("spinCycleStartStackTrace:")
-    spinCycleStartStackTrace.forEach {
-        println("    ${it.tracePoint}")
-    }
-
-    println("spinLockTracePoints:")
-    for (i in spinLockTracePoints.indices) {
-        println("    ${spinLockTracePoints[i]}")
-        spinLockTracePoints[i].callStackTrace.forEach {
-            println("        ${it.tracePoint}")
-        }
-    }
-
     if (!trace[cycleStartTracePointIndex].callStackTrace.isEqualStackTrace(spinCycleStartStackTrace)) {
         (trace[cycleStartTracePointIndex] as SpinCycleStartTracePoint).shouldBePatched = true
     }
