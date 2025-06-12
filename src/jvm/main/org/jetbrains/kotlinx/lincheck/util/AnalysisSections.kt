@@ -314,7 +314,7 @@ internal class AnalysisProfile(val analyzeStdLib: Boolean) {
         !analyzeStdLib && (isConcurrentCollectionsLibrary(className) || isCollectionsLibrary(className))
 }
 
-internal fun isCollectionsLibrary(className: String) = className in setOf(
+private val COLLECTION_LIBRARIES = setOf(
     // Interfaces
     "java.lang.Iterable",
     "java.util.Collection",
@@ -327,7 +327,7 @@ internal fun isCollectionsLibrary(className: String) = className in setOf(
     "java.util.Map",
     "java.util.SortedMap",
     "java.util.NavigableMap",
-    
+
 
     // Abstract implementations
     "java.util.AbstractCollection",
@@ -355,7 +355,9 @@ internal fun isCollectionsLibrary(className: String) = className in setOf(
     "java.util.TreeMap",
 )
 
-internal fun isConcurrentCollectionsLibrary(className: String) = className in setOf(
+internal fun isCollectionsLibrary(className: String) = className in COLLECTION_LIBRARIES
+
+private val CONCURRENT_COLLECTION_LIBRARIES = setOf(
     // Interfaces
     "java.util.concurrent.BlockingDeque",
     "java.util.concurrent.BlockingQueue",
@@ -387,6 +389,8 @@ internal fun isConcurrentCollectionsLibrary(className: String) = className in se
     // Inner class view
     "java.util.concurrent.ConcurrentHashMap\$KeySetView"
 )
+
+internal fun isConcurrentCollectionsLibrary(className: String) = className in CONCURRENT_COLLECTION_LIBRARIES
 
 private fun isJavaExecutorService(className: String) =
     className.startsWith("java.util.concurrent.AbstractExecutorService") 
