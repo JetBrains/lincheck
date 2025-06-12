@@ -56,7 +56,7 @@ class TraceCollectingEventTracker(
     private val sb = StringBuilder()
     private val output: PrintStream
     private var depth = 0
-    private var indent = ""
+    private var indent = CharArray(1024, { _ -> ' ' })
     private val simpleClassNames = HashMap<Class<*>, String>()
 
     init {
@@ -242,7 +242,6 @@ class TraceCollectingEventTracker(
         }
 
         depth++
-        indent += " "
 
         // if the method has certain guarantees, enter the corresponding section
         threadHandle.enterAnalysisSection(methodSection)
@@ -262,7 +261,6 @@ class TraceCollectingEventTracker(
         val threadHandle = threads[Thread.currentThread()] ?: return result
 
         depth--
-        indent = indent.substring(1)
 
         appendLine {
             append("result = ")
@@ -289,7 +287,6 @@ class TraceCollectingEventTracker(
         }
 
         depth--
-        indent = indent.substring(1)
 
         appendLine {
             append("exception = ")
@@ -325,12 +322,12 @@ class TraceCollectingEventTracker(
         }
 
         depth++
-        indent += " "
+        Unit
     }
 
     override fun onInlineMethodCallReturn(className: String, methodId: Int) = runInsideIgnoredSection {
         depth--
-        indent = indent.substring(1)
+        Unit
     }
 
     override fun invokeDeterministicallyOrNull(
@@ -385,7 +382,6 @@ class TraceCollectingEventTracker(
             append("()")
         }
         depth = 1
-        indent = " "
     }
 
     fun finishAndDumpTrace() {
@@ -458,9 +454,9 @@ class TraceCollectingEventTracker(
         }
     }
 
-    private inline fun appendLine(block: StringBuilder.() -> Unit) {
-        sb.append(indent)
-        sb.block()
+    private inline fun appendLine(lineGenerator: StringBuilder.() -> Unit) {
+        sb.append(indent, 0, depth)
+        sb.lineGenerator()
         sb.append("\n")
         // 1G
         if (sb.length > 1024 * 1024 * 1024) {
