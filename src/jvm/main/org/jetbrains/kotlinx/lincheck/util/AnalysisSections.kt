@@ -151,15 +151,11 @@ internal fun leaveIgnoredSection() {
  * @return result of the [block] invocation.
  */
 internal inline fun <R> runInsideIgnoredSection(block: () -> R): R {
-    val descriptor = ThreadDescriptor.getCurrentThreadDescriptor()
-    if (descriptor == null || descriptor.eventTracker == null) {
-        return block()
-    }
-    descriptor.enterIgnoredSection()
+    enterIgnoredSection()
     try {
         return block()
     } finally {
-        descriptor.leaveIgnoredSection()
+        leaveIgnoredSection()
     }
 }
 
