@@ -197,12 +197,14 @@ internal class TraceReporter(
             // val lastMethodCallTracePoint = beforeSpinStartTracePoints.lastOrNull { it is MethodCallTracePoint }
             if (tracePoint.isRecursive) {
                 var k = i - 1
-                while (k >= j && !newTrace[k].callStackTrace.isEqualStackTrace(tracePoint.callStackTrace.dropLast(1))) {
+                var spinStackTrace = tracePoint.callStackTrace
+                if (tracePoint.callStackTrace.size > newTrace[k].callStackTrace.size) {
+                    val diff = tracePoint.callStackTrace.size - newTrace[k].callStackTrace.size
+                    spinStackTrace = tracePoint.callStackTrace.dropLast(diff)
+                }
+                while (k >= j && !newTrace[k].callStackTrace.isEqualStackTrace(spinStackTrace)) {
                     k--
                 }
-                // if (newTrace[k] is MethodCallTracePoint) {
-                //     k--
-                // }
 
                 // val currentCallStack = mutableListOf<Pair<TracePoint, Int>>()
                 // for (m in beforeSpinStartTracePoints.indices) {
