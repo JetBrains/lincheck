@@ -10,25 +10,19 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.tracerecorder
 
-import kotlinx.atomicfu.atomic
-import org.jetbrains.kotlinx.lincheck.flattenedTraceGraphToCSV
-import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import org.jetbrains.kotlinx.lincheck.strategy.ThreadAnalysisHandle
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ShadowStackFrame
-import org.jetbrains.kotlinx.lincheck.strategy.managed.UNKNOWN_CODE_LOCATION
-import org.jetbrains.kotlinx.lincheck.trace.*
+import org.jetbrains.kotlinx.lincheck.trace.TraceCollector
+import org.jetbrains.kotlinx.lincheck.transformation.CodeLocations
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
-import org.jetbrains.kotlinx.lincheck.transformation.MethodIds
 import org.jetbrains.kotlinx.lincheck.util.AnalysisProfile
 import org.jetbrains.kotlinx.lincheck.util.AnalysisSectionType
 import org.jetbrains.kotlinx.lincheck.util.runInsideIgnoredSection
-import org.objectweb.asm.commons.Method.getMethod
 import sun.nio.ch.lincheck.*
 import java.io.File
 import java.io.PrintStream
 import java.lang.invoke.CallSite
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.coroutines.Continuation
 
 /**
  * [TraceCollectingEventTracker] can trace all threads forked by method configured for tracing.
@@ -48,21 +42,23 @@ class TraceCollectingEventTracker(
 
     // We don't use [ThreadDescriptor.eventTrackerData] because we need to list all descriptors in the end
     private val threads = ConcurrentHashMap<Thread, ThreadAnalysisHandle>()
+
+/*
     // ID generator for [TracePoint]s
     private val currentTracePointId = atomic(0)
     // ID generator for [StackTraceElement]s
     private val currentCallId = atomic(0)
+*/
 
+    /////////////////////////////////////////////////
+    // Single-threaded "Optimal" implementation
     // String builder for all data
     private val sb = StringBuilder()
-
-    // Print stream for output
     private val output: PrintStream
-
-    // Single-threaded depth
     private var depth = 0
     private var indent = ""
     private var afterNewLine = true
+    private val simpleClassNames = HashMap<Class<*>, String>()
 
     init {
         check(TRACE_ONLY_ONE_THREAD) { "Multiple threads recording is not supported" }
@@ -193,7 +189,6 @@ class TraceCollectingEventTracker(
         codeLocation: Int
     ): Boolean = false
 
-    // TODO: do we need StateRepresentationTracePoint here?
     override fun afterWrite() = Unit
 
     override fun afterLocalRead(codeLocation: Int, name: String, value: Any?) = Unit
@@ -237,6 +232,13 @@ class TraceCollectingEventTracker(
             first = false
         }
         appendOutput(")")
+        val ste = CodeLocations.stackTrace(codeLocation)
+        if (ste.fileName != null) {
+            appendOutput(" at ")
+            appendOutput(ste.fileName)
+            appendOutput(":")
+            appendOutput(ste.lineNumber)
+        }
         appendNewLine()
 
         depth++
@@ -460,6 +462,14 @@ class TraceCollectingEventTracker(
         sb.append(o)
     }
 
+    private fun appendOutput(o: Int) {
+        if (afterNewLine) {
+            sb.append(indent)
+            afterNewLine = false
+        }
+        sb.append(o)
+    }
+
     private fun appendNewLine() {
         sb.append("\n")
         afterNewLine = true
@@ -470,5 +480,3 @@ class TraceCollectingEventTracker(
         }
     }
 }
-
-private val simpleClassNames = HashMap<Class<*>, String>()

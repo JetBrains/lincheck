@@ -29,44 +29,8 @@ internal class MethodCallTransformer(
     className: String,
     methodName: String,
     adapter: GeneratorAdapter,
-) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
-
-    override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
-        // TODO: do not ignore <init>
-        if (name == "<init>" || isIgnoredMethod(className = owner)) {
-            visitMethodInsn(opcode, owner, name, desc, itf)
-            return
-        }
-        if (isCoroutineInternalClass(owner.toCanonicalClassName())) {
-            invokeInsideIgnoredSection {
-                visitMethodInsn(opcode, owner, name, desc, itf)
-            }
-            return
-        }
-        if (isCoroutineResumptionSyntheticAccessor(owner, name)) {
-            visitMethodInsn(opcode, owner, name, desc, itf)
-            return
-        }
-        // It is useless for the user, and it depends on static initialization which is not instrumented.
-        if (isThreadLocalRandomCurrent(owner, name)) {
-            visitMethodInsn(opcode, owner, name, desc, itf)
-            return
-        }
-        invokeIfInAnalyzedCode(
-            original = {
-                visitMethodInsn(opcode, owner, name, desc, itf)
-            },
-            instrumented = {
-                processMethodCall(desc, opcode, owner, name, itf)
-            }
-        )
-    }
-
-    private fun isThreadLocalRandomCurrent(owner: String, methodName: String): Boolean {
-        return owner == "java/util/concurrent/ThreadLocalRandom" && methodName == "current"
-    }
-
-    private fun GeneratorAdapter.processMethodCall(desc: String, opcode: Int, owner: String, name: String, itf: Boolean) {
+) : MethodCallTransformerBase(fileName, className, methodName, adapter) {
+    override fun processMethodCall(desc: String, opcode: Int, owner: String, name: String, itf: Boolean) = adapter.run {
         val receiverType = Type.getType("L$owner;")
         val returnType = getReturnType(desc)
         // STACK: receiver?, arguments
@@ -111,11 +75,11 @@ internal class MethodCallTransformer(
                     owner,
                     name,
                     returnType,
-                    deterministicCallIdLocal,
-                    deterministicMethodDescriptorLocal,
                     methodId,
                     receiverLocal,
                     argumentsArrayLocal,
+                    deterministicCallIdLocal,
+                    deterministicMethodDescriptorLocal,
                 )
                 // STACK: result?
             },
@@ -124,10 +88,10 @@ internal class MethodCallTransformer(
                 processMethodCallException(
                     owner,
                     name,
-                    deterministicCallIdLocal,
-                    deterministicMethodDescriptorLocal,
                     receiverLocal,
                     argumentsArrayLocal,
+                    deterministicCallIdLocal,
+                    deterministicMethodDescriptorLocal,
                 )
             }
         )
@@ -217,102 +181,6 @@ internal class MethodCallTransformer(
         // STACK: result?
         visitLabel(endIfLabel)
     }
-
-    private fun GeneratorAdapter.processMethodCallReturn(
-        className: String,
-        methodName: String,
-        returnType: Type,
-        deterministicCallIdLocal: Int,
-        deterministicMethodDescriptorLocal: Int,
-        methodId: Int,
-        receiverLocal: Int?,
-        argumentsArrayLocal: Int
-    ) {
-        // STACK: result?
-        val resultLocal = when {
-            (returnType == VOID_TYPE) -> null
-            else -> newLocal(returnType).also { storeLocal(it) }
-        }
-        push(className.toCanonicalClassName())
-        push(methodName)
-        loadLocal(deterministicCallIdLocal)
-        loadLocal(deterministicMethodDescriptorLocal)
-        push(methodId)
-        pushReceiver(receiverLocal)
-        loadLocal(argumentsArrayLocal)
-        resultLocal?.let {
-            loadLocal(it)
-            box(returnType)
-        }
-        // STACK: className, methodName, deterministicCallId, deterministicMethodDescriptor, methodId, receiver, arguments, result?
-        when {
-            returnType == VOID_TYPE -> invokeStatic(Injections::onMethodCallReturnVoid)
-            else                    -> {
-                invokeStatic(Injections::onMethodCallReturn)
-                // STACK: boxedResult
-                unbox(returnType)
-                // STACK: result
-            }
-        }
-        // STACK: result?
-    }
-
-    private fun GeneratorAdapter.processMethodCallException(
-        className: String,
-        methodName: String,
-        deterministicCallIdLocal: Int,
-        deterministicMethodDescriptorLocal: Int,
-        receiverLocal: Int?,
-        argumentsArrayLocal: Int,
-    ) {
-        // STACK: exception
-        val exceptionLocal = newLocal(THROWABLE_TYPE)
-        storeLocal(exceptionLocal)
-        // STACK: <empty>
-        push(className.toCanonicalClassName())
-        push(methodName)
-        loadLocal(deterministicCallIdLocal)
-        loadLocal(deterministicMethodDescriptorLocal)
-        pushReceiver(receiverLocal)
-        loadLocal(argumentsArrayLocal)
-        loadLocal(exceptionLocal)
-        // STACK: className, methodName, deterministicCallId, deterministicMethodDescriptor, receiver, params, exception
-        invokeStatic(Injections::onMethodCallException)
-        // STACK: Throwable
-        throwException()
-    }
-
-    private fun GeneratorAdapter.pushReceiver(receiverLocal: Int?) {
-        // STACK: <empty>
-        if (receiverLocal != null) {
-            loadLocal(receiverLocal)
-        } else {
-            pushNull()
-        }
-        // STACK: receiver?
-    }
-
-    private fun isIgnoredMethod(className: String) =
-        className.startsWith("sun/nio/ch/lincheck/") ||
-        className.startsWith("org/jetbrains/kotlinx/lincheck/") ||
-        className == "kotlin/jvm/internal/Intrinsics" ||
-        className == "java/util/Objects" ||
-        className == "java/lang/String" ||
-        className == "java/lang/Boolean" ||
-        className == "java/lang/Long" ||
-        className == "java/lang/Integer" ||
-        className == "java/lang/Short" ||
-        className == "java/lang/Byte" ||
-        className == "java/lang/Double" ||
-        className == "java/lang/Float" ||
-        className == "java/util/Locale" ||
-        className == "org/slf4j/helpers/Util" ||
-        className == "java/util/Properties" ||
-        className == "java/lang/invoke/MethodHandles"
-
-    @Suppress("UNUSED_PARAMETER")
-    private fun isCoroutineResumptionSyntheticAccessor(className: String, methodName: String): Boolean =
-        (this.methodName == "invokeSuspend") && methodName.startsWith("access\$")
 
     companion object {
         private val traceDebuggerTrackerEnumType: Type = getType(TraceDebuggerTracker::class.java)

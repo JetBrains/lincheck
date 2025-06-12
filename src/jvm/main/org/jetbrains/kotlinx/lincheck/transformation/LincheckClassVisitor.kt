@@ -93,7 +93,7 @@ internal class LincheckClassVisitor(
             mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
             mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
 
-            mv = MethodCallTransformer(fileName, className, methodName, mv.newAdapter())
+            mv = MethodCallMinimalTransformer(fileName, className, methodName, mv.newAdapter())
 
             // We need this in TRACE_RECORDING mode to register new threads
             mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
