@@ -31,6 +31,7 @@ import org.jetbrains.kotlinx.lincheck.util.*
 import org.objectweb.asm.ConstantDynamic
 import org.objectweb.asm.Handle
 import sun.nio.ch.lincheck.*
+import sun.nio.ch.lincheck.Types.convertAsmMethodType
 import java.lang.invoke.CallSite
 import java.lang.reflect.Method
 import java.util.concurrent.ConcurrentHashMap
@@ -1513,7 +1514,7 @@ abstract class ManagedStrategy(
         methodName: String,
         codeLocation: Int,
         methodId: Int,
-        methodSignature: MethodSignature,
+        methodDescriptor: String,
         receiver: Any?,
         params: Array<Any?>
     ): Any? = runInsideIgnoredSection {
@@ -1528,6 +1529,7 @@ abstract class ManagedStrategy(
         // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
         val atomicMethodDescriptor = getAtomicMethodDescriptor(receiver, methodName)
         // obtain deterministic method descriptor if required
+        val methodSignature = MethodSignature(methodName, convertAsmMethodType(methodDescriptor));
         val methodCallInfo = MethodCallInfo(
             ownerType = Types.ObjectType(className),
             methodSignature = methodSignature,
