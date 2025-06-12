@@ -11,6 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.tracerecorder
 
 import org.jetbrains.kotlinx.lincheck.util.runInsideIgnoredSection
+import sun.nio.ch.lincheck.Injections
 import sun.nio.ch.lincheck.ThreadDescriptor
 
 /**
@@ -50,6 +51,7 @@ object TraceRecorder {
 
         eventTracker!!.enableTrace()
         desc.enableAnalysis()
+        Injections.enableGlobalEventTracker(eventTracker!!)
     }
 
     fun finishTraceAndDumpResults() {
@@ -59,6 +61,7 @@ object TraceRecorder {
         val currentTracker = desc.eventTracker
         if (currentTracker == eventTracker) {
             desc.disableAnalysis()
+            Injections.disableGlobalEventTracker()
             eventTracker?.finishAndDumpTrace()
             eventTracker = null
         }
