@@ -27,7 +27,7 @@ internal class InlineMethodCallTransformer(
     desc: String,
     adapter: GeneratorAdapter,
     val locals: MethodVariables,
-    val localsTracker: LocalVariablesAccessTransformer
+    val localsTracker: LocalVariablesAccessTransformer?
 ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
     private companion object {
         val objectType = getObjectType("java/lang/Object").className
@@ -115,7 +115,7 @@ internal class InlineMethodCallTransformer(
         }
         else {
             val asmType = getLocalType(owner)
-            localsTracker.runWithoutLocalVariablesTracking {
+            runWithoutLocalVariablesTracking {
                 if (asmType == null) {
                     loadLocal(owner, ownerType)
                 } else if (asmType.sort == ownerType?.sort) {
@@ -130,6 +130,16 @@ internal class InlineMethodCallTransformer(
         }
         invokeStatic(Injections::onInlineMethodCall)
         invokeBeforeEventIfPluginEnabled("inline method call $inlineMethodName in $methodName", setMethodEventId = true)
+    }
+
+    private fun runWithoutLocalVariablesTracking(block: GeneratorAdapter.() -> Unit) {
+        if (localsTracker == null) {
+            adapter.block()
+            return
+        }
+        localsTracker.runWithoutLocalVariablesTracking {
+            adapter.block()
+        }
     }
 
     private fun processInlineMethodCallReturn(inlineMethodName: String, startLabel: Label) = adapter.run {
