@@ -53,6 +53,7 @@ internal class TraceReporter(
         val fixedTrace = trace
             .removeValidationIfNeeded()
             .moveStartingSwitchPointsOutOfMethodCalls()
+            .moveSpinCycleStartTracePoints()
             .addResultsToActors()
 
         // Turn trace into graph which is List of sections. Where a section is a list of rootNodes (actors).
@@ -150,6 +151,7 @@ internal class TraceReporter(
             newTrace.move(i, j)
 
             val movedTracePoints = newTrace.subList(j + 1, i + 1)
+            val methodCallTracePoints = movedTracePoints.filter { it is MethodCallTracePoint }
             val remainingTracePoints = newTrace.subList(k, newTrace.size).filter { it.iThread == threadId }
             val shouldRemoveRemainingTracePoints = remainingTracePoints.all {
                     (it is MethodCallTracePoint && it.isActor) ||
@@ -159,7 +161,6 @@ internal class TraceReporter(
             val isThreadJoinSwitch = (remainingTracePoints.firstOrNull()?.isThreadJoin() == true)
             if (k == newTrace.size || shouldRemoveRemainingTracePoints && !isThreadJoinSwitch) {
                 // handle the case when the switch point is the last event in the thread
-                val methodCallTracePoints = movedTracePoints.filter { it is MethodCallTracePoint }
                 tracePointsToRemove.add(IntRange(j + 1, i + 1))
                 tracePointsToRemove.add(IntRange(k, k + methodCallTracePoints.size))
             } else {
@@ -175,12 +176,54 @@ internal class TraceReporter(
 
         return Trace(newTrace, this.threadNames)
     }
+
+    private fun Trace.moveSpinCycleStartTracePoints(): Trace {
+        val newTrace = this.trace.toMutableList()
+
+        for (i in newTrace.indices) {
+            val tracePoint = newTrace[i]
+            if (tracePoint !is SpinCycleStartTracePoint) continue
+
+            // find a beginning of the current thread section
+            var j = i
+            while ((j - 1 >= 0) && (newTrace[j - 1].iThread == tracePoint.iThread)) {
+                j--
+            }
+            if (j == i) continue
+
+            val beforeSpinStartTracePoints = newTrace.subList(j + 1, i + 1)
+            val lastMethodCallTracePoint = beforeSpinStartTracePoints.lastOrNull { it is MethodCallTracePoint }
+            val spinCycleStartLastTracePoint = tracePoint.callStackTrace.lastOrNull()?.tracePoint
+            val isSpinCycleStartAtMethodBeginning = newTrace[i - 1] is MethodCallTracePoint
+
+            if (isSpinCycleStartAtMethodBeginning && lastMethodCallTracePoint != spinCycleStartLastTracePoint) {
+                var k = i - 1
+                while (k >= j && !newTrace[k].callStackTrace.isEqualStackTrace(tracePoint.callStackTrace)) {
+                    k--
+                }
+                if (newTrace[k] is MethodCallTracePoint) {
+                    k--
+                }
+                newTrace.move(i, k)
+            }
+        }
+
+        return Trace(newTrace, this.threadNames)
+    }
     
     private fun Trace.removeValidationIfNeeded(): Trace {
         if (failure is ValidationFailure) return this
         val newTrace = this.trace.takeWhile { !(it is SectionDelimiterTracePoint && it.executionPart == ExecutionPart.VALIDATION) }
         return Trace(newTrace, this.threadNames)
     }
+}
+
+internal fun CallStackTrace.isEqualStackTrace(other: CallStackTrace): Boolean {
+    if (this.size != other.size) return false
+    for (i in this.indices) {
+        if (this[i].id != other[i].id) return false
+    }
+    return true
 }
 
 fun <T> MutableList<T>.move(from: Int, to: Int) {
@@ -255,7 +298,7 @@ private fun traceNodeTableToString(table: MultiThreadedTable<TraceNode?>): Multi
             // If begin of spin cycle
             if (spinCycleDepth == START_SPIN_CYCLE) {
                 spinCycleDepth = node.callDepth
-                return@map "  ".repeat(virtualCallDepth - 2) + "┌╶> " + node.toString()
+                return@map "  ".repeat((virtualCallDepth - 2).coerceAtLeast(0)) + "┌╶> " + node.toString()
             }
             
             // If spinc cycle detected change state. Next iteration will start visualization
@@ -265,13 +308,13 @@ private fun traceNodeTableToString(table: MultiThreadedTable<TraceNode?>): Multi
             if (spinCycleDepth >= 0 && node is EventNode
                 && (node.tracePoint is ObstructionFreedomViolationExecutionAbortTracePoint || node.tracePoint is SwitchEventTracePoint)) {
                 spinCycleDepth = NO_SPIN_CYCLE
-                val prefix = "  ".repeat(virtualSpinCycleDepth - 2) + "└╶╶╶" + "╶╶".repeat(max(virtualCallDepth - virtualSpinCycleDepth, 0)) 
+                val prefix = "  ".repeat((virtualSpinCycleDepth - 2).coerceAtLeast(0)) + "└╶╶╶" + "╶╶".repeat(max(virtualCallDepth - virtualSpinCycleDepth, 0))
                 return@map  prefix.dropLast(1) + " " + node.toString()
             }
             
             // If during spin cycle
             if (spinCycleDepth >= 0) {
-                return@map "  ".repeat(virtualSpinCycleDepth - 2) + "|   " + "  ".repeat(max(virtualCallDepth - virtualSpinCycleDepth, 0)) + node.toString()
+                return@map "  ".repeat((virtualSpinCycleDepth - 2).coerceAtLeast(0)) + "|   " + "  ".repeat(max(virtualCallDepth - virtualSpinCycleDepth, 0)) + node.toString()
             }
             
             // Default
