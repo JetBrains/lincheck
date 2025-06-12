@@ -1762,10 +1762,11 @@ internal abstract class ManagedStrategy(
             // we should probably refactor and fix that, because it is very inconvenient
             if (callStackTrace[threadId]!!.isNotEmpty()) {
                 val tracePoint = callStackTrace[threadId]!!.last().tracePoint
-                when (result) {
-                    Unit -> tracePoint.initializeVoidReturnedValue()
-                    Injections.VOID_RESULT -> tracePoint.initializeVoidReturnedValue()
-                    COROUTINE_SUSPENDED -> tracePoint.initializeCoroutineSuspendedResult()
+                when  {
+                    result == Unit -> tracePoint.initializeVoidReturnedValue()
+                    result == Injections.VOID_RESULT -> tracePoint.initializeVoidReturnedValue()
+                    result == COROUTINE_SUSPENDED && isSuspendFunction(className, methodName, params) ->
+                        tracePoint.initializeCoroutineSuspendedResult()
                     else -> tracePoint.initializeReturnedValue(objectTracker.getObjectRepresentation(result), objectFqTypeName(result))
                 }
                 afterMethodCall(threadId, tracePoint)
