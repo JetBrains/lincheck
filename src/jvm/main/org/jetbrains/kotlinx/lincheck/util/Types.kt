@@ -10,6 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck.util
 
+import org.jetbrains.kotlinx.lincheck.transformation.OptimizedString
+import org.jetbrains.kotlinx.lincheck.transformation.optimized
 import org.objectweb.asm.commons.Method
 import sun.nio.ch.lincheck.MethodSignature
 import sun.nio.ch.lincheck.Types.*
@@ -19,9 +21,12 @@ internal fun Method.toMethodSignature() = MethodSignature(this.name, convertAsmM
 internal fun java.lang.reflect.Method.toMethodSignature() = Method.getMethod(this).toMethodSignature()
 
 internal data class MethodDescriptor(
-    val className: String,
+    val optimizedClassName: OptimizedString,
     val methodSignature: MethodSignature
 ) {
+    constructor(className: String, methodSignature: MethodSignature) : this(className.optimized(), methodSignature)
+    val className: String get() = optimizedClassName.toString()
+
     var isIntrinsic: Boolean = false
     
     constructor(className: String, methodName: String, desc: String) :
