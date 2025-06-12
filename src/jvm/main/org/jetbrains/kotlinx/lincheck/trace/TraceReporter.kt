@@ -202,7 +202,7 @@ internal class TraceReporter(
                     val diff = tracePoint.callStackTrace.size - newTrace[k].callStackTrace.size
                     spinStackTrace = tracePoint.callStackTrace.dropLast(diff)
                 }
-                while (k >= j && !newTrace[k].callStackTrace.isEqualStackTrace(spinStackTrace)) {
+                while (k > j && !newTrace[k].callStackTrace.isEqualStackTrace(spinStackTrace)) {
                     k--
                 }
 
