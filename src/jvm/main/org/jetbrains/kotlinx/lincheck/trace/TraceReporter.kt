@@ -169,9 +169,9 @@ internal class TraceReporter(
                 while (k >= j && !newTrace[k].callStackTrace.isEqualStackTrace(tracePoint.callStackTrace)) {
                     k--
                 }
-                if (newTrace[k] is MethodCallTracePoint) {
-                    k--
-                }
+                // if (newTrace[k] is MethodCallTracePoint) {
+                //     k--
+                // }
                 newTrace.move(i, k)
             }
         }
