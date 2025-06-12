@@ -733,7 +733,7 @@ internal abstract class ManagedStrategy(
         onThreadStart(currentThreadId)
 
         val methodDescriptor = getAsmMethod("void run()").descriptor
-        addBeforeMethodCallTracePoint(
+        val tracePoint = addBeforeMethodCallTracePoint(
             owner = runner.testInstance,
             className = "java.lang.Thread",
             methodName = "run",
@@ -748,6 +748,7 @@ internal abstract class ManagedStrategy(
             atomicMethodDescriptor = null,
             callType = MethodCallTracePoint.CallType.THREAD_RUN
         )
+        traceCollector?.addTracePointInternal(tracePoint)
 
         enableAnalysis()
     }
@@ -967,7 +968,7 @@ internal abstract class ManagedStrategy(
         check(actor != null) { "Could not find current actor" }
 
         val methodDescriptor = getAsmMethod(actor.method).descriptor
-        addBeforeMethodCallTracePoint(
+        val tracePoint = addBeforeMethodCallTracePoint(
             owner = runner.testInstance,
             // TODO Setting this to "" somehow fixes failing MulitpleSpension....TraceRepresentationTest
             className = actor.method.declaringClass.name,
@@ -983,6 +984,7 @@ internal abstract class ManagedStrategy(
             atomicMethodDescriptor = null,
             callType = MethodCallTracePoint.CallType.ACTOR,
         )
+        traceCollector?.addTracePointInternal(tracePoint)
         enableAnalysis()
     }
 
@@ -1685,16 +1687,16 @@ internal abstract class ManagedStrategy(
             !isResumptionMethodCall(threadId, methodDescriptor.className,
                 methodDescriptor.methodName, params, atomicMethodDescriptor)
         ) {
-            // create a switch point
-            newSwitchPoint(threadId, codeLocation, beforeMethodCallSwitch = false)
             // create a trace point
-            if (collectTrace) {
-                addBeforeMethodCallTracePoint(
-                    threadId, receiver, codeLocation, methodId, methodDescriptor.className, methodDescriptor.methodName, params,
-                    atomicMethodDescriptor,
-                    MethodCallTracePoint.CallType.NORMAL,
-                )
-            }
+            val tracePoint = addBeforeMethodCallTracePoint(
+                threadId, receiver, codeLocation, methodId, methodDescriptor.className, methodDescriptor.methodName, params,
+                atomicMethodDescriptor,
+                MethodCallTracePoint.CallType.NORMAL,
+            )
+            // create a switch point
+            newSwitchPoint(threadId, codeLocation, beforeMethodCallSwitch = true)
+            // add trace point to the trace
+            traceCollector?.addTracePointInternal(tracePoint)
             // notify loop detector
             loopDetector.beforeAtomicMethodCall(codeLocation, params)
         } else {
@@ -1702,11 +1704,12 @@ internal abstract class ManagedStrategy(
             if (collectTrace) {
                 // check for livelock and create the method call trace point
                 traceCollector?.checkActiveLockDetected()
-                addBeforeMethodCallTracePoint(threadId, receiver, codeLocation, methodId,
+                val tracePoint = addBeforeMethodCallTracePoint(threadId, receiver, codeLocation, methodId,
                     methodDescriptor.className, methodDescriptor.methodName, params,
                     atomicMethodDescriptor,
                     MethodCallTracePoint.CallType.NORMAL,
                 )
+                traceCollector?.addTracePointInternal(tracePoint)
             }
             // notify loop detector about the method call
             if (methodSection < AnalysisSectionType.ATOMIC) {
@@ -1839,7 +1842,7 @@ internal abstract class ManagedStrategy(
         }
         if (collectTrace) {
             traceCollector!!.checkActiveLockDetected()
-            addBeforeMethodCallTracePoint(
+            val tracePoint = addBeforeMethodCallTracePoint(
                 threadId = threadId,
                 owner = owner,
                 codeLocation = codeLocation,
@@ -1850,6 +1853,7 @@ internal abstract class ManagedStrategy(
                 atomicMethodDescriptor = null,
                 callType = MethodCallTracePoint.CallType.NORMAL
             )
+            traceCollector?.addTracePointInternal(tracePoint)
         }
     }
 
@@ -2027,6 +2031,7 @@ internal abstract class ManagedStrategy(
         atomicMethodDescriptor: AtomicMethodDescriptor?,
         callType: MethodCallTracePoint.CallType,
     ): MethodCallTracePoint? {
+        if (!collectTrace) return null
         val callStackTrace = callStackTrace[threadId]!!
         if (isTestThread(threadId) && isResumptionMethodCall(threadId, className, methodName, methodParams, atomicMethodDescriptor)) {
             val suspendedMethodStack = suspendedFunctionsStack[threadId]!!
@@ -2079,7 +2084,6 @@ internal abstract class ManagedStrategy(
             atomicMethodDescriptor = atomicMethodDescriptor,
             callType = callType,
         )
-        traceCollector?.addTracePointInternal(tracePoint)
         // Method invocation id used to calculate spin cycle start label call depth.
         // Two calls are considered equals if two same methods were called with the same parameters.
         val methodInvocationId = Objects.hash(methodId,

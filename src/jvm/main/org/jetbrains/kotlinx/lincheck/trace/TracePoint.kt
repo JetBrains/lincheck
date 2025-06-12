@@ -521,6 +521,10 @@ internal class SectionDelimiterTracePoint(val executionPart: ExecutionPart): Tra
 }
 
 internal class SpinCycleStartTracePoint(iThread: Int, actorId: Int, callStackTrace: CallStackTrace): TracePoint(iThread, actorId, callStackTrace) {
+    var dropSpinCycleStackFrames: Int = 0
+    var isRecursive: Boolean = false
+    var shouldBePatched: Boolean = false
+
     override fun toStringImpl(withLocation: Boolean) =  "/* The following events repeat infinitely: */"
     override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) { 
         SpinCycleStartTracePoint(iThread, actorId, callStackTrace.deepCopy(copiedObjects))

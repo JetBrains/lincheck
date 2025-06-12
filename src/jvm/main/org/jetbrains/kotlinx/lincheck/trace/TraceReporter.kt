@@ -160,18 +160,39 @@ internal class TraceReporter(
             if (j == i) continue
 
             val beforeSpinStartTracePoints = newTrace.subList(j + 1, i + 1)
-            val lastMethodCallTracePoint = beforeSpinStartTracePoints.lastOrNull { it is MethodCallTracePoint }
-            val spinCycleStartLastTracePoint = tracePoint.callStackTrace.lastOrNull()?.tracePoint
-            val isSpinCycleStartAtMethodBeginning = newTrace[i - 1] is MethodCallTracePoint
 
-            if (isSpinCycleStartAtMethodBeginning && lastMethodCallTracePoint != spinCycleStartLastTracePoint) {
+            val isSpinCycleStartAtMethodBeginning = newTrace[i - 1] is MethodCallTracePoint
+            val spinCycleStartLastTracePoint = tracePoint.callStackTrace.lastOrNull()?.tracePoint
+            val lastMethodCallTracePoint = beforeSpinStartTracePoints.lastOrNull { it is MethodCallTracePoint }
+
+            var nextEvent = newTrace[i + 1]
+            val shouldBeMoved = !nextEvent.callStackTrace.isEqualStackTrace(tracePoint.callStackTrace)
+
+            // if (tracePoint.isRecursive || tracePoint.shouldBePatched) {
+            if (tracePoint.isRecursive || shouldBeMoved) {
                 var k = i - 1
-                while (k >= j && !newTrace[k].callStackTrace.isEqualStackTrace(tracePoint.callStackTrace)) {
+                var spinStackTrace = tracePoint.callStackTrace
+                if (tracePoint.callStackTrace.size > newTrace[k].callStackTrace.size) {
+                    val diff = tracePoint.callStackTrace.size - newTrace[k].callStackTrace.size
+                    spinStackTrace = tracePoint.callStackTrace.dropLast(diff)
+                }
+                while (k > j && !newTrace[k].callStackTrace.isEqualStackTrace(spinStackTrace)) {
                     k--
                 }
-                // if (newTrace[k] is MethodCallTracePoint) {
-                //     k--
+
+                // val currentCallStack = mutableListOf<Pair<TracePoint, Int>>()
+                // for (m in beforeSpinStartTracePoints.indices) {
+                //     if (beforeSpinStartTracePoints[i + m] is MethodCallTracePoint) {
+                //         currentCallStack.add(beforeSpinStartTracePoints[i + m] to i + m)
+                //     }
+                //     if (beforeSpinStartTracePoints[i + m] is MethodReturnTracePoint) {
+                //         currentCallStack.removeLast()
+                //     }
                 // }
+                // currentCallStack.drop(tracePoint.dropSpinCycleStackFrames)
+                // var k = currentCallStack.lastOrNull()?.second
+                //     ?: error("No method call trace points found")
+
                 newTrace.move(i, k)
             }
         }
