@@ -200,7 +200,7 @@ class TraceCollectingEventTracker(
         methodName: String,
         codeLocation: Int,
         methodId: Int,
-        methodSignature: MethodSignature?,
+        methodDescriptor: String,
         receiver: Any?,
         params: Array<Any?>
     ): Any? = runInsideIgnoredSection {

@@ -71,7 +71,7 @@ public interface EventTracker {
     void afterLocalRead(int codeLocation, String name, Object value);
     void afterLocalWrite(int codeLocation, String name, Object value);
 
-    Object onMethodCall(String className, String methodName, int codeLocation, int methodId, MethodSignature methodSignature, Object receiver, Object[] params);
+    Object onMethodCall(String className, String methodName, int codeLocation, int methodId, String methodDescriptor, Object receiver, Object[] params);
     Object onMethodCallReturn(String className, String methodName, long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Object result);
     Throwable onMethodCallException(String className, String methodName, long descriptorId, Object descriptor, Object receiver, Object[] params, Throwable t);
 
