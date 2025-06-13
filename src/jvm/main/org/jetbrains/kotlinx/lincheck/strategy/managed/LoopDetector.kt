@@ -979,9 +979,7 @@ internal fun afterSpinCycleTraceCollected(
         spinCycleFirstTracePointCallStackTrace.dropLast(count)
     } else {
         // See above the description of the algorithm for iterative spin lock.
-        val count = currentCallStackTrace.size - spinCycleFirstTracePointCallStackTrace.size
         getCommonMinStackTrace(spinLockTracePoints, spinCycleMethodCallsStackTraces)
-            .dropLast(count)
     }
 
     if (!trace[cycleStartTracePointIndex].callStackTrace.isEqualStackTrace(spinCycleStartStackTrace)) {
