@@ -49,6 +49,11 @@ import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 // TODO: better name?
 internal class ThreadAnalysisHandle(val threadId: Int, val traceCollector: TraceCollector?) {
     /**
+     * Current tracked stacktrace for trace recorder.
+     */
+    val tracePointStackTrace: MutableList<MethodCallTracePoint> = arrayListOf()
+
+    /**
      * Current tracked stacktrace.
      */
     // TODO: Unify with shadowStack
@@ -335,6 +340,24 @@ internal class ThreadAnalysisHandle(val threadId: Int, val traceCollector: Trace
     fun popStackFrame() {
         shadowStack.removeLast()
         stackTrace.removeLast()
+    }
+
+    fun pushTracepointStackFrame(tracePoint: MethodCallTracePoint, instance: Any?) {
+        val stackFrame = ShadowStackFrame(instance)
+        tracePointStackTrace.add(tracePoint)
+        shadowStack.add(stackFrame)
+    }
+
+    fun popTracepointStackFrame(): MethodCallTracePoint {
+        shadowStack.removeLast()
+        return tracePointStackTrace.removeLast()
+    }
+
+    fun currentMethodCall(): MethodCallTracePoint = tracePointStackTrace.last()
+
+    fun addTracepointToCurrentCall(tracePoint: TracePoint?) {
+        if (tracePoint == null) return
+        currentMethodCall().addChild(tracePoint)
     }
 
     fun enterAnalysisSection(section: AnalysisSectionType) {
