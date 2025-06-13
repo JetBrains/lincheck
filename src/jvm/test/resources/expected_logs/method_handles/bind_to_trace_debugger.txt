@@ -1,38 +1,37 @@
 = Concurrent test failed =
 
 java.lang.IllegalStateException: Check failed.
-	at org.jetbrains.kotlinx.lincheck_test.representation.BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:58)
-	at org.jetbrains.kotlinx.lincheck_test.representation.BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:46)
-	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:47)
+	at org.jetbrains.kotlinx.lincheck_test.representation.BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:56)
+	at org.jetbrains.kotlinx.lincheck_test.representation.BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:44)
+	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48)
 	at java.base/java.lang.Thread.run(Thread.java:840)
 
 The following interleaving leads to the error:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                                   Main Thread                                                                                   |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:47) |
+| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48) |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 
 Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                                   Main Thread                                                                                   |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:47) |
-|   block(): threw IllegalStateException at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:46)                                                        |
-|     ensureConcurrentHashMapIsInstrumented() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:52)                                                   |
-|     doTest() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:55)                                                                                  |
-|       Companion.create(): Counter#1 at MethodHandlesBindToRepresentationTest.doTest(MethodHandlesLookupTests.kt:133)                                                            |
-|         Counter.shared = Counter#1 at Counter$Companion.create(MethodHandlesLookupTests.kt:167)                                                                                 |
-|       MethodType.methodType(Class#1): MethodType#1 at MethodHandlesBindToRepresentationTest.doTest(MethodHandlesLookupTests.kt:136)                                             |
-|       Lookup#1.findVirtual(Class#2, "increment", MethodType#1): DirectMethodHandle#1 at MethodHandlesBindToRepresentationTest.doTest(MethodHandlesLookupTests.kt:135)           |
-|       DirectMethodHandle#1.bindTo(Counter#1): BoundMethodHandle$Species_LL#1 at MethodHandlesBindToRepresentationTest.doTest(MethodHandlesLookupTests.kt:138)                   |
-|       methodHandle.invoke() at MethodHandlesBindToRepresentationTest.doTest(MethodHandlesLookupTests.kt:139)                                                                    |
-|         argL1.value ➜ 0 at Counter.increment(MethodHandlesLookupTests.kt:158)                                                                                                   |
-|         argL1.value = 1 at Counter.increment(MethodHandlesLookupTests.kt:158)                                                                                                   |
-|       methodHandle.invokeExact() at MethodHandlesBindToRepresentationTest.doTest(MethodHandlesLookupTests.kt:140)                                                               |
-|         argL1.value ➜ 1 at Counter.increment(MethodHandlesLookupTests.kt:158)                                                                                                   |
-|         argL1.value = 2 at Counter.increment(MethodHandlesLookupTests.kt:158)                                                                                                   |
-|       counter.value ➜ 2 at MethodHandlesBindToRepresentationTest.doTest(MethodHandlesLookupTests.kt:141)                                                                        |
-|     "Check failed.".toString(): "Check failed." at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:58)                                               |
+| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48) |
+|   block(): threw IllegalStateException at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:44)                                                        |
+|     ensureConcurrentHashMapIsInstrumented() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:50)                                                   |
+|     doTest() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:53)                                                                                  |
+|       Companion.create(): Counter#1 at MethodHandlesBindToRepresentationTest.doTest(MethodHandlesLookupTests.kt:131)                                                            |
+|         Counter.shared = Counter#1 at Counter$Companion.create(MethodHandlesLookupTests.kt:165)                                                                                 |
+|       MethodType.methodType(Class#1): MethodType#1 at MethodHandlesBindToRepresentationTest.doTest(MethodHandlesLookupTests.kt:134)                                             |
+|       Lookup#1.findVirtual(Class#2, "increment", MethodType#1): DirectMethodHandle#1 at MethodHandlesBindToRepresentationTest.doTest(MethodHandlesLookupTests.kt:133)           |
+|       DirectMethodHandle#1.bindTo(Counter#1): BoundMethodHandle$Species_LL#1 at MethodHandlesBindToRepresentationTest.doTest(MethodHandlesLookupTests.kt:136)                   |
+|       methodHandle.invoke() at MethodHandlesBindToRepresentationTest.doTest(MethodHandlesLookupTests.kt:137)                                                                    |
+|         argL1.value ➜ 0 at Counter.increment(MethodHandlesLookupTests.kt:156)                                                                                                   |
+|         argL1.value = 1 at Counter.increment(MethodHandlesLookupTests.kt:156)                                                                                                   |
+|       methodHandle.invokeExact() at MethodHandlesBindToRepresentationTest.doTest(MethodHandlesLookupTests.kt:138)                                                               |
+|         argL1.value ➜ 1 at Counter.increment(MethodHandlesLookupTests.kt:156)                                                                                                   |
+|         argL1.value = 2 at Counter.increment(MethodHandlesLookupTests.kt:156)                                                                                                   |
+|       counter.value ➜ 2 at MethodHandlesBindToRepresentationTest.doTest(MethodHandlesLookupTests.kt:139)                                                                        |
 |   result: IllegalStateException #1                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

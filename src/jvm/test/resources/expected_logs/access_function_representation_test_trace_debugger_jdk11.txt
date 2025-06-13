@@ -4,7 +4,7 @@ java.lang.IllegalStateException: Check failed.
 	at org.jetbrains.kotlinx.lincheck_test.representation.AccessFunctionRepresentationTest.block(AccessFunctionRepresentationTest.kt:20)
 	at org.jetbrains.kotlinx.lincheck_test.representation.AccessFunctionRepresentationTest.block(AccessFunctionRepresentationTest.kt:13)
 	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48)
-	at java.lang.Thread.run(Thread.java:750)
+	at java.base/java.lang.Thread.run(Thread.java:829)
 
 The following interleaving leads to the error:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -19,6 +19,9 @@ Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48) |
 |   block(): threw IllegalStateException at AccessFunctionRepresentationTest.block(AccessFunctionRepresentationTest.kt:13)                                                        |
+|     DirectMethodHandle#1.invokeExact(AccessFunctionRepresentationTest#1): Lambda#2 at AccessFunctionRepresentationTest.block(AccessFunctionRepresentationTest.kt:19)            |
+|       DirectMethodHandle.internalMemberName(DirectMethodHandle#1): MemberName#1 at DirectMethodHandle$Holder.invokeStatic(DirectMethodHandle$Holder:0)                          |
+|       MethodHandle.linkToStatic(AccessFunctionRepresentationTest#1, MemberName#1): Lambda#2 at DirectMethodHandle$Holder.invokeStatic(DirectMethodHandle$Holder:0)              |
 |     AccessFunctionRepresentationTestKt.runLambda(Lambda#2) at AccessFunctionRepresentationTest.block(AccessFunctionRepresentationTest.kt:19)                                    |
 |       r.invoke() at AccessFunctionRepresentationTestKt.runLambda(AccessFunctionRepresentationTest.kt:40)                                                                        |
 |         this$0.inc1() at AccessFunctionRepresentationTest.block$lambda$0(AccessFunctionRepresentationTest.kt:19)                                                                |

@@ -1,10 +1,10 @@
 = Concurrent test failed =
 
 java.lang.IllegalStateException: Check failed.
-	at org.jetbrains.kotlinx.lincheck_test.representation.AccessFunctionRepresentationTest.block(AccessFunctionRepresentationTest.kt:20)
-	at org.jetbrains.kotlinx.lincheck_test.representation.AccessFunctionRepresentationTest.block(AccessFunctionRepresentationTest.kt:13)
+	at org.jetbrains.kotlinx.lincheck_test.representation.ThreadSafeCollectionMutedRepresentationTest.block(StdLibRepresentationTests.kt:29)
+	at org.jetbrains.kotlinx.lincheck_test.representation.ThreadSafeCollectionMutedRepresentationTest.block(StdLibRepresentationTests.kt:21)
 	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48)
-	at java.lang.Thread.run(Thread.java:750)
+	at java.base/java.lang.Thread.run(Thread.java:829)
 
 The following interleaving leads to the error:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -18,13 +18,11 @@ Detailed trace:
 |                                                                                   Main Thread                                                                                   |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48) |
-|   block(): threw IllegalStateException at AccessFunctionRepresentationTest.block(AccessFunctionRepresentationTest.kt:13)                                                        |
-|     AccessFunctionRepresentationTestKt.runLambda(Lambda#2) at AccessFunctionRepresentationTest.block(AccessFunctionRepresentationTest.kt:19)                                    |
-|       r.invoke() at AccessFunctionRepresentationTestKt.runLambda(AccessFunctionRepresentationTest.kt:40)                                                                        |
-|         this$0.inc1() at AccessFunctionRepresentationTest.block$lambda$0(AccessFunctionRepresentationTest.kt:19)                                                                |
-|           Nested#1.inc2() at AccessFunctionRepresentationTest.inc1(AccessFunctionRepresentationTest.kt:24)                                                                      |
-|             AccessFunctionRepresentationTest.inc3() at AccessFunctionRepresentationTest$Nested.inc2(AccessFunctionRepresentationTest.kt:33)                                     |
-|               a ➜ 1 at AccessFunctionRepresentationTest.inc3(AccessFunctionRepresentationTest.kt:28)                                                                            |
-|               a = 2 at AccessFunctionRepresentationTest.inc3(AccessFunctionRepresentationTest.kt:28)                                                                            |
+|   block(): threw IllegalStateException at ThreadSafeCollectionMutedRepresentationTest.block(StdLibRepresentationTests.kt:21)                                                    |
+|     concurrentMap.put(1, 1): 1 at ThreadSafeCollectionMutedRepresentationTest.block(StdLibRepresentationTests.kt:27)                                                            |
+|       Array<Node>#1[1].getObjectAcquire(): Node#1 at ConcurrentHashMap.tabAt(ConcurrentHashMap.java:760)                                                                        |
+|       Array<Node>#1[1].getObjectAcquire(): Node#1 at ConcurrentHashMap.tabAt(ConcurrentHashMap.java:760)                                                                        |
+|     a ➜ 2 at ThreadSafeCollectionMutedRepresentationTest.block(StdLibRepresentationTests.kt:28)                                                                                 |
+|     a = 3 at ThreadSafeCollectionMutedRepresentationTest.block(StdLibRepresentationTests.kt:28)                                                                                 |
 |   result: IllegalStateException #1                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
