@@ -1,0 +1,38 @@
+= Concurrent test failed =
+
+java.lang.IllegalStateException: Check failed.
+	at org.jetbrains.kotlinx.lincheck_test.representation.ThreadSafeCollectionUnmutedRepresentationTest.block(StdLibRepresentationTests.kt:41)
+	at org.jetbrains.kotlinx.lincheck_test.representation.ThreadSafeCollectionUnmutedRepresentationTest.block(StdLibRepresentationTests.kt:34)
+	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48)
+	at java.base/java.lang.Thread.run(Thread.java:840)
+
+The following interleaving leads to the error:
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                   Main Thread                                                                                   |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48) |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+
+Detailed trace:
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                   Main Thread                                                                                   |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48) |
+|   block(): threw IllegalStateException at ThreadSafeCollectionUnmutedRepresentationTest.block(StdLibRepresentationTests.kt:34)                                                  |
+|     concurrentMap.put(1, 1): 1 at ThreadSafeCollectionUnmutedRepresentationTest.block(StdLibRepresentationTests.kt:39)                                                          |
+|       putVal(1, 1, false): 1 at ConcurrentHashMap.put(ConcurrentHashMap.java:1006)                                                                                              |
+|         key.hashCode(): 1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1012)                                                                                              |
+|         ConcurrentHashMap.spread(1): 1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1012)                                                                                 |
+|         table ➜ Array<Node>#1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1014)                                                                                          |
+|         ConcurrentHashMap.tabAt(Array<Node>#1, 1): Node#1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1018)                                                              |
+|           Array<Node>#1[1].getReferenceAcquire(): Node#1 at ConcurrentHashMap.tabAt(ConcurrentHashMap.java:760)                                                                 |
+|         MONITORENTER at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1031)                                                                                                   |
+|         ConcurrentHashMap.tabAt(Array<Node>#1, 1): Node#1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1032)                                                              |
+|           Array<Node>#1[1].getReferenceAcquire(): Node#1 at ConcurrentHashMap.tabAt(ConcurrentHashMap.java:760)                                                                 |
+|         f.val ➜ 1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1040)                                                                                                      |
+|         f.val = 1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1042)                                                                                                      |
+|         MONITOREXIT at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1065)                                                                                                    |
+|     a ➜ 2 at ThreadSafeCollectionUnmutedRepresentationTest.block(StdLibRepresentationTests.kt:40)                                                                               |
+|     a = 3 at ThreadSafeCollectionUnmutedRepresentationTest.block(StdLibRepresentationTests.kt:40)                                                                               |
+|   result: IllegalStateException #1                                                                                                                                              |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
