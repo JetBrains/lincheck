@@ -99,9 +99,11 @@ internal class TraceReporter(
             while ((j - 1 >= 0) && (
                     (newTrace[j - 1] is MethodCallTracePoint &&
                             // do not move the switch out of `Thread.start()`
-                            !newTrace[j - 1].isThreadStart()) ||
-                            (newTrace[j - 1] is SpinCycleStartTracePoint)
-                    )
+                            !newTrace[j - 1].isThreadStart() &&
+                            // do not move the switch out of suspend method calls
+                            !(newTrace[j - 1] as MethodCallTracePoint).isSuspend)
+                    || (newTrace[j - 1] is SpinCycleStartTracePoint)
+                )
             ) {
                 j--
             }
