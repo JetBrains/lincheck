@@ -452,7 +452,7 @@ class TraceCollectingEventTracker(
                     if (st.size > 1) {
                         output.println("# Thread ${thread.threadId + 1}: Stack is not empty, contains ${st.size} elements, report bug")
                     } else {
-                        output.println("# Thread ${thread.threadId + 1}: Stack underflow, report bug")
+                        output.println("# Thread ${thread.threadId + 1}")
                     }
                     printNode(output, st.first(), 0)
                 }
