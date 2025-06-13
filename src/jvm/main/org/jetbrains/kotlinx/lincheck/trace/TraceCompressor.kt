@@ -22,6 +22,7 @@ internal fun SingleThreadedTable<TraceNode>.compressTrace() = this
     .compressThreadStart()
     .removeCoroutinesCoreSuffix()
     .compressInlineIV()
+    .compressDollarThis()
     .removeNestedClassDollar()
 
 /**
@@ -201,6 +202,15 @@ private fun SingleThreadedTable<TraceNode>.compressThreadStart() = compressNodes
 private fun SingleThreadedTable<TraceNode>.compressInlineIV() = compressNodes { node ->
     if (node !is CallNode || node.tracePoint.ownerName == null) return@compressNodes node
     node.tracePoint.ownerName = node.tracePoint.ownerName!!.removeSuffix("\$iv")
+    node
+}
+
+/**
+ * Removes $this. owner names.
+ */
+private fun SingleThreadedTable<TraceNode>.compressDollarThis() = compressNodes { node ->
+    if (node !is CallNode || node.tracePoint.ownerName == null) return@compressNodes node
+    if (node.tracePoint.ownerName == "\$this") node.tracePoint.ownerName = null
     node
 }
 
