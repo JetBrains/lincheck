@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.jetbrains.kotlinx.lincheck.util.MethodDescriptor
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
 import org.objectweb.asm.Type.*
@@ -78,23 +79,36 @@ internal abstract class MethodCallTransformerBase(
         // STACK: receiver?
     }
 
-    protected fun GeneratorAdapter.processMethodCallReturn(
-        className: String,
-        methodName: String,
-        returnType: Type,
+    protected fun GeneratorAdapter.processMethodCallEnter(
         methodId: Int,
         receiverLocal: Int?,
-        argumentsArrayLocal: Int,
-        deterministicCallIdLocal: Int? = null,
-        deterministicMethodDescriptorLocal: Int? = null
+        argumentsArrayLocal: Int
+    ) {
+        // STACK: <empty>
+        loadNewCodeLocationId()
+        // STACK: codeLocation
+        push(methodId)
+        pushReceiver(receiverLocal)
+        loadLocal(argumentsArrayLocal)
+        // STACK: codeLocation, methodId, receiver?, argumentsArray
+        invokeStatic(Injections::onMethodCall)
+        // STACK: deterministicCallDescriptor
+        invokeBeforeEventIfPluginEnabled("method call ${this@MethodCallTransformerBase.methodName}", setMethodEventId = true)
+    }
+
+    protected fun GeneratorAdapter.processMethodCallReturn(
+        returnType: Type,
+        deterministicCallIdLocal: Int?,
+        deterministicMethodDescriptorLocal: Int?,
+        methodId: Int,
+        receiverLocal: Int?,
+        argumentsArrayLocal: Int
     ) {
         // STACK: result?
         val resultLocal = when {
             (returnType == VOID_TYPE) -> null
             else -> newLocal(returnType).also { storeLocal(it) }
         }
-        push(className.toCanonicalClassName())
-        push(methodName)
         if (deterministicCallIdLocal != null) {
             loadLocal(deterministicCallIdLocal)
         } else {
@@ -112,7 +126,7 @@ internal abstract class MethodCallTransformerBase(
             loadLocal(it)
             box(returnType)
         }
-        // STACK: className, methodName, deterministicCallId, deterministicMethodDescriptor, methodId, receiver, arguments, result?
+        // STACK: deterministicCallId, deterministicMethodDescriptor, methodId, receiver, arguments, result?
         when {
             returnType == VOID_TYPE -> invokeStatic(Injections::onMethodCallReturnVoid)
             else                    -> {
@@ -126,19 +140,16 @@ internal abstract class MethodCallTransformerBase(
     }
 
     protected fun GeneratorAdapter.processMethodCallException(
-        className: String,
-        methodName: String,
+        deterministicCallIdLocal: Int?,
+        deterministicMethodDescriptorLocal: Int?,
+        methodId: Int,
         receiverLocal: Int?,
         argumentsArrayLocal: Int,
-        deterministicCallIdLocal: Int? = null,
-        deterministicMethodDescriptorLocal: Int? = null
     ) {
         // STACK: exception
         val exceptionLocal = newLocal(THROWABLE_TYPE)
         storeLocal(exceptionLocal)
         // STACK: <empty>
-        push(className.toCanonicalClassName())
-        push(methodName)
         if (deterministicCallIdLocal != null) {
             loadLocal(deterministicCallIdLocal)
         } else {
@@ -149,10 +160,11 @@ internal abstract class MethodCallTransformerBase(
         } else {
             pushNull()
         }
+        push(methodId)
         pushReceiver(receiverLocal)
         loadLocal(argumentsArrayLocal)
         loadLocal(exceptionLocal)
-        // STACK: className, methodName, deterministicCallId, deterministicMethodDescriptor, receiver, params, exception
+        // STACK: deterministicCallId, deterministicMethodDescriptor, methodId, receiver, params, exception
         invokeStatic(Injections::onMethodCallException)
         // STACK: Throwable
         throwException()

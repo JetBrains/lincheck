@@ -17,6 +17,9 @@ import org.jetbrains.kotlinx.lincheck.trace.MethodCallTracePoint
 import org.jetbrains.kotlinx.lincheck.trace.TraceCollector
 import org.jetbrains.kotlinx.lincheck.trace.TracePoint
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
+import org.jetbrains.kotlinx.lincheck.transformation.fieldCache
+import org.jetbrains.kotlinx.lincheck.transformation.methodCache
+import org.jetbrains.kotlinx.lincheck.transformation.variableCache
 import org.jetbrains.kotlinx.lincheck.util.AnalysisProfile
 import org.jetbrains.kotlinx.lincheck.util.AnalysisSectionType
 import org.jetbrains.kotlinx.lincheck.util.isSuspendFunction
@@ -147,25 +150,28 @@ class TraceCollectingEventTracker(
 
     override fun beforeReadField(
         obj: Any?,
-        className: String,
-        fieldName: String,
         codeLocation: Int,
-        isStatic: Boolean,
-        isFinal: Boolean
+        fieldId: Int
     ): Boolean  = runInsideIgnoredSection {
-        if (isStatic) {
+        val fieldDescriptor = fieldCache.get(fieldId)
+        if (fieldDescriptor.isStatic) {
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
         }
+        if (!fieldDescriptor.isStatic && obj == null) {
+            // Ignore, NullPointerException will be thrown
+            return false
+        }
+
 
         val threadHandle = threads[Thread.currentThread()] ?: return false
         // TODO: Should we call ReadTracePoint() which is cheaper?
         val tracePoint = threadHandle.createReadFieldTracePoint(
             obj = obj,
-            className = className,
-            fieldName = fieldName,
+            className = fieldDescriptor.className,
+            fieldName = fieldDescriptor.fieldName,
             codeLocation = codeLocation,
-            isStatic = isStatic,
-            isFinal = isFinal,
+            isStatic = fieldDescriptor.isStatic,
+            isFinal = fieldDescriptor.isFinal,
             actorId = 0,
             ownerRepresentation = ""
         )
@@ -199,21 +205,24 @@ class TraceCollectingEventTracker(
 
     override fun beforeWriteField(
         obj: Any?,
-        className: String,
-        fieldName: String,
         value: Any?,
         codeLocation: Int,
-        isStatic: Boolean,
-        isFinal: Boolean
+        fieldId: Int
     ): Boolean = runInsideIgnoredSection {
+        val fieldDescriptor = fieldCache.get(fieldId)
+        if (!fieldDescriptor.isStatic && obj == null) {
+            // Ignore, NullPointerException will be thrown
+            return false
+        }
+
         val threadHandle = threads[Thread.currentThread()] ?: return false
         val tracePoint = threadHandle.createWriteFieldTracepoint(
             obj = obj,
-            className = className,
-            fieldName = fieldName,
+            className = fieldDescriptor.className,
+            fieldName = fieldDescriptor.fieldName,
             value = value,
             codeLocation = codeLocation,
-            isStatic = isStatic,
+            isStatic = fieldDescriptor.isStatic,
             actorId = 0,
             ownerRepresentation = ""
         )
@@ -243,43 +252,43 @@ class TraceCollectingEventTracker(
 
     override fun afterWrite() = Unit
 
-    override fun afterLocalRead(codeLocation: Int, name: String, value: Any?) = runInsideIgnoredSection {
+    override fun afterLocalRead(codeLocation: Int, variableId: Int, value: Any?) = runInsideIgnoredSection {
         val threadHandle = threads[Thread.currentThread()] ?: return
-        threadHandle.afterLocalRead(name, value)
+        val variableDescriptor = variableCache[variableId]
+        threadHandle.afterLocalRead(variableDescriptor.name, value)
     }
 
-    override fun afterLocalWrite(codeLocation: Int, name: String, value: Any?) = runInsideIgnoredSection {
+    override fun afterLocalWrite(codeLocation: Int, variableId: Int, value: Any?) = runInsideIgnoredSection {
         val threadHandle = threads[Thread.currentThread()] ?: return
-        threadHandle.afterLocalWrite(name, value)
+        val variableDescriptor = variableCache[variableId]
+        threadHandle.afterLocalWrite(variableDescriptor.name, value)
     }
 
     override fun onMethodCall(
-        className: String,
-        methodName: String,
         codeLocation: Int,
         methodId: Int,
-        methodDescriptor: String,
         receiver: Any?,
         params: Array<Any?>
     ): Any? = runInsideIgnoredSection {
         val threadHandle = threads[Thread.currentThread()] ?: return null
+        val methodDescriptor = methodCache[methodId]
 
-        val methodSection = methodAnalysisSectionType(receiver, className, methodName)
+        val methodSection = methodAnalysisSectionType(receiver, methodDescriptor.className, methodDescriptor.methodName)
         if (receiver == null && methodSection < AnalysisSectionType.ATOMIC) {
-            LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
+            LincheckJavaAgent.ensureClassHierarchyIsTransformed(methodDescriptor.className)
         }
 
         // TODO: Should we call threadHandle.createMethodCallTracePoint() which is expensive?
         val tracePoint = MethodCallTracePoint(
             iThread = threadHandle.threadId,
             actorId = methodId,
-            className = className,
-            methodName = methodName,
+            className = methodDescriptor.className,
+            methodName = methodDescriptor.methodName,
             callStackTrace = EMPTY_CALL_STACK_TRACE,
             codeLocation = codeLocation,
             isStatic = receiver == null,
             callType = MethodCallTracePoint.CallType.NORMAL,
-            isSuspend = isSuspendFunction(className, methodName, params)
+            isSuspend = isSuspendFunction(methodDescriptor.className, methodDescriptor.methodName, params)
         )
         threadHandle.addTracepointToCurrentCall(tracePoint)
         threadHandle.pushTracepointStackFrame(tracePoint, receiver)
@@ -290,60 +299,58 @@ class TraceCollectingEventTracker(
     }
 
     override fun onMethodCallReturn(
-        className: String,
-        methodName: String,
         descriptorId: Long,
-        determenisticDescriptor: Any?,
+        deterministicMethodDescriptor: Any?,
         methodId: Int,
         receiver: Any?,
-        params: Array<out Any?>,
+        params: Array<Any?>,
         result: Any?
     ): Any? = runInsideIgnoredSection {
         val threadHandle = threads[Thread.currentThread()] ?: return result
+        val methodDescriptor = methodCache[methodId]
 
         val tracePoint = threadHandle.popTracepointStackFrame()
         // TODO: add returned value
         // tracePoint.returnedValue
 
-        val methodSection = methodAnalysisSectionType(receiver, className, methodName)
+        val methodSection = methodAnalysisSectionType(receiver, methodDescriptor.className, methodDescriptor.methodName)
         threadHandle.leaveAnalysisSection(methodSection)
         return result
     }
 
     override fun onMethodCallException(
-        className: String,
-        methodName: String,
         descriptorId: Long,
-        destermenisticDescriptor: Any?,
+        deterministicMethodDescriptor: Any?,
+        methodId: Int,
         receiver: Any?,
-        params: Array<out Any?>,
+        params: Array<Any?>,
         t: Throwable
     ): Throwable = runInsideIgnoredSection {
         val threadHandle = threads[Thread.currentThread()] ?: return t
+        val methodDescriptor = methodCache[methodId]
 
         val tracePoint = threadHandle.popTracepointStackFrame()
         // TODO: add returned value
         // tracePoint.returnedValue
 
-        val methodSection = methodAnalysisSectionType(receiver, className, methodName)
+        val methodSection = methodAnalysisSectionType(receiver, methodDescriptor.className, methodDescriptor.methodName)
         threadHandle.leaveAnalysisSection(methodSection)
         return t
     }
 
     override fun onInlineMethodCall(
-        className: String,
-        methodName: String,
         methodId: Int,
         codeLocation: Int,
-        owner: Any?
+        owner: Any?,
     ): Unit = runInsideIgnoredSection {
         val threadHandle = threads[Thread.currentThread()] ?: return
+        val methodDescriptor = methodCache[methodId]
 
         val tracePoint = MethodCallTracePoint(
             iThread = threadHandle.threadId,
             actorId = 0,
-            className = className,
-            methodName = methodName,
+            className = methodDescriptor.className,
+            methodName = methodDescriptor.methodName,
             callStackTrace = EMPTY_CALL_STACK_TRACE,
             codeLocation = codeLocation,
             isStatic = false,
@@ -354,7 +361,7 @@ class TraceCollectingEventTracker(
         threadHandle.pushTracepointStackFrame(tracePoint, owner)
     }
 
-    override fun onInlineMethodCallReturn(className: String, methodId: Int): Unit = runInsideIgnoredSection {
+    override fun onInlineMethodCallReturn(methodId: Int): Unit = runInsideIgnoredSection {
         val threadHandle = threads[Thread.currentThread()] ?: return
         val tracePoint = threadHandle.popTracepointStackFrame()
         // TODO: add returned value
@@ -437,11 +444,18 @@ class TraceCollectingEventTracker(
             PrintStream(File(traceDumpPath).outputStream().buffered(1024*1024*1024), false)
         }
         try {
-            var id = 1
             for (thread in allThreads) {
-                output.println("# Thread ${id}")
-                id++
-                printNode(output, thread.tracePointStackTrace.first(), 0)
+                val st = thread.tracePointStackTrace
+                if (st.size == 0) {
+                    output.println("# Thread ${thread.threadId + 1}: Stack underflow, report bug")
+                } else {
+                    if (st.size > 1) {
+                        output.println("# Thread ${thread.threadId + 1}: Stack is not empty, contains ${st.size} elements, report bug")
+                    } else {
+                        output.println("# Thread ${thread.threadId + 1}: Stack underflow, report bug")
+                    }
+                    printNode(output, st.first(), 0)
+                }
             }
         } finally {
             output.close()
@@ -472,15 +486,5 @@ class TraceCollectingEventTracker(
             return AnalysisSectionType.IGNORED
         }
         return analysisProfile.getAnalysisSectionFor(ownerName, methodName)
-    }
-
-    private fun objectToString(obj: Any?): String {
-        return when (obj) {
-            null -> "null"
-            is Character -> "'$obj'"
-            is String -> "\"$obj\""
-            is Number -> obj.toString()
-            else -> "${simpleClassNames.computeIfAbsent(obj.javaClass) { it.simpleName }}@${System.identityHashCode(obj)}"
-        }
     }
 }

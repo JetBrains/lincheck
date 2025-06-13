@@ -24,19 +24,20 @@ import org.jetbrains.kotlinx.lincheck.trace.*
 import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.transformation.CodeLocations
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
-import org.jetbrains.kotlinx.lincheck.transformation.MethodIds
+import org.jetbrains.kotlinx.lincheck.transformation.fieldCache
+import org.jetbrains.kotlinx.lincheck.transformation.methodCache
 import org.jetbrains.kotlinx.lincheck.transformation.toCanonicalClassName
+import org.jetbrains.kotlinx.lincheck.transformation.variableCache
 import org.jetbrains.kotlinx.lincheck.beforeEvent as ideaPluginBeforeEvent
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.objectweb.asm.ConstantDynamic
 import org.objectweb.asm.Handle
 import sun.nio.ch.lincheck.*
-import sun.nio.ch.lincheck.Types.convertAsmMethodType
 import java.lang.invoke.CallSite
 import java.lang.reflect.Method
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeoutException
-import kotlinx.coroutines.CancellableContinuation
+import kotlin.coroutines.Continuation
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 import org.objectweb.asm.commons.Method.getMethod as getAsmMethod
 import kotlin.Result as KResult
@@ -1223,7 +1224,7 @@ abstract class ManagedStrategy(
         if (fieldDescriptor.isStatic) {
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(fieldDescriptor.className)
         }
-        threadHandle.beforeReadField(obj, fieldDescriptor.className, fieldDescriptor.fieldName, codeLocation, isStatic, isFinal)
+        threadHandle.beforeReadField(obj, fieldDescriptor.className, fieldDescriptor.fieldName, codeLocation, fieldDescriptor.isStatic, fieldDescriptor.isFinal)
         if (!shouldTrackFieldAccess(obj, fieldDescriptor.fieldName, fieldDescriptor.isFinal)) {
             return false
         }
@@ -1290,7 +1291,7 @@ abstract class ManagedStrategy(
             fieldName = fieldDescriptor.fieldName,
             value = value,
             codeLocation = codeLocation,
-            isStatic = isStatic,
+            isStatic = fieldDescriptor.isStatic,
             actorId = currentActorId[threadId]!!
         )
         newSwitchPoint(threadId, codeLocation)
@@ -1335,7 +1336,7 @@ abstract class ManagedStrategy(
         val variableDescriptor = variableCache[variableId]
         val threadId = threadScheduler.getCurrentThreadId()
         val threadHandle = threadsData[threadId]!!
-        threadHandle.afterLocalRead(variableDescriptor.variableName, value)
+        threadHandle.afterLocalRead(variableDescriptor.name, value)
     }
 
     override fun afterLocalWrite(codeLocation: Int, variableId: Int, value: Any?) = runInsideIgnoredSection {
@@ -1343,7 +1344,7 @@ abstract class ManagedStrategy(
         val variableDescriptor = variableCache[variableId]
         val threadId = threadScheduler.getCurrentThreadId()
         val threadHandle = threadsData[threadId]!!
-        threadHandle.afterLocalWrite(variableDescriptor.variableName, value)
+        threadHandle.afterLocalWrite(variableDescriptor.name, value)
     }
 
     override fun beforeNewObjectCreation(className: String) = runInsideIgnoredSection {
@@ -1942,53 +1943,6 @@ abstract class ManagedStrategy(
         return tracePoint
     }
 
-    private fun createBeforeMethodCallTracePoint(
-        iThread: Int,
-        owner: Any?,
-        className: String,
-        methodName: String,
-        params: Array<Any?>,
-        codeLocation: Int,
-        atomicMethodDescriptor: AtomicMethodDescriptor?,
-        callType: MethodCallTracePoint.CallType,
-    ): MethodCallTracePoint {
-        val callStackTrace = callStackTrace[iThread]!!
-        val tracePoint = MethodCallTracePoint(
-            iThread = iThread,
-            actorId = currentActorId[iThread]!!,
-            className = className,
-            methodName = methodName,
-            callStackTrace = callStackTrace,
-            codeLocation = codeLocation,
-            isStatic = (owner == null),
-            callType = callType,
-            isSuspend = isSuspendFunction(className, methodName, params)
-        )
-        // handle non-atomic methods
-        if (atomicMethodDescriptor == null) {
-            val ownerName = if (owner != null) findOwnerName(owner) else className.toSimpleClassName()
-            if (!ownerName.isNullOrEmpty()) {
-                tracePoint.initializeOwnerName(ownerName)
-            }
-            tracePoint.initializeParameters(params.toList())
-            return tracePoint
-        }
-        // handle atomic methods
-        if (isVarHandle(owner)) {
-            return initializeVarHandleMethodCallTracePoint(iThread, tracePoint, owner, params)
-        }
-        if (isAtomicFieldUpdater(owner)) {
-            return initializeAtomicUpdaterMethodCallTracePoint(tracePoint, owner!!, params)
-        }
-        if (isAtomic(owner) || isAtomicArray(owner)) {
-            return initializeAtomicReferenceMethodCallTracePoint(iThread, tracePoint, owner!!, params)
-        }
-        if (isUnsafe(owner)) {
-            return initializeUnsafeMethodCallTracePoint(tracePoint, owner!!, params)
-        }
-        error("Unknown atomic method $className::$methodName")
-    }
-
     private fun objectFqTypeName(obj: Any?): String {
         val typeName = obj?.javaClass?.name ?: "null"
         // Note: `if` here is important for performance reasons.
@@ -1998,178 +1952,6 @@ abstract class ManagedStrategy(
             return "Enum:$typeName"
         }
         return typeName
-    }
-
-    private fun initializeUnsafeMethodCallTracePoint(
-        tracePoint: MethodCallTracePoint,
-        receiver: Any,
-        params: Array<Any?>
-    ): MethodCallTracePoint {
-        when (val unsafeMethodName = UnsafeNames.getMethodCallType(params)) {
-            is UnsafeArrayMethod -> {
-                val owner = "${adornedStringRepresentation(unsafeMethodName.array)}[${unsafeMethodName.index}]"
-                tracePoint.initializeOwnerName(owner)
-                tracePoint.initializeParameters(unsafeMethodName.parametersToPresent)
-            }
-            is UnsafeName.TreatAsDefaultMethod -> {
-                tracePoint.initializeOwnerName(adornedStringRepresentation(receiver))
-                tracePoint.initializeParameters(params.toList())
-            }
-            is UnsafeInstanceMethod -> {
-                val ownerName = findOwnerName(unsafeMethodName.owner)
-                val owner = ownerName?.let { "$ownerName.${unsafeMethodName.fieldName}" } ?: unsafeMethodName.fieldName
-                tracePoint.initializeOwnerName(owner)
-                tracePoint.initializeParameters(unsafeMethodName.parametersToPresent)
-            }
-            is UnsafeStaticMethod -> {
-                tracePoint.initializeOwnerName("${unsafeMethodName.clazz.simpleName}.${unsafeMethodName.fieldName}")
-                tracePoint.initializeParameters(unsafeMethodName.parametersToPresent)
-            }
-        }
-
-        return tracePoint
-    }
-
-    private fun initializeAtomicReferenceMethodCallTracePoint(
-        threadId: ThreadId,
-        tracePoint: MethodCallTracePoint,
-        receiver: Any,
-        params: Array<Any?>
-    ): MethodCallTracePoint {
-        val shadowStackFrame = shadowStack[threadId]!!.last()
-        val atomicReferenceInfo = AtomicReferenceNames.getMethodCallType(shadowStackFrame, receiver, params)
-        when (atomicReferenceInfo) {
-            is AtomicReferenceInstanceMethod -> {
-                val receiverName = findOwnerName(atomicReferenceInfo.owner)
-                tracePoint.initializeOwnerName(receiverName?.let { "$it.${atomicReferenceInfo.fieldName}" } ?: atomicReferenceInfo.fieldName)
-                tracePoint.initializeParameters(params.toList())
-            }
-            is AtomicReferenceStaticMethod -> {
-                val clazz = atomicReferenceInfo.ownerClass
-                val thisClassName = shadowStackFrame.instance?.javaClass?.name
-                val ownerName = if (thisClassName == clazz.name) "" else "${clazz.simpleName}."
-                tracePoint.initializeOwnerName("${ownerName}${atomicReferenceInfo.fieldName}")
-                tracePoint.initializeParameters(params.toList())
-            }
-            is AtomicReferenceInLocalVariable -> {
-                tracePoint.initializeOwnerName("${atomicReferenceInfo.localVariable}.${atomicReferenceInfo.fieldName}")
-                tracePoint.initializeParameters(params.toList())
-            }
-            is AtomicArrayMethod -> {
-                tracePoint.initializeOwnerName("${adornedStringRepresentation(atomicReferenceInfo.atomicArray)}[${atomicReferenceInfo.index}]")
-                tracePoint.initializeParameters(params.drop(1))
-            }
-            is InstanceFieldAtomicArrayMethod -> {
-                val receiverName = findOwnerName(atomicReferenceInfo.owner)
-                tracePoint.initializeOwnerName((receiverName?.let { "$it." } ?: "") + "${atomicReferenceInfo.fieldName}[${atomicReferenceInfo.index}]")
-                tracePoint.initializeParameters(params.drop(1))
-            }
-            is StaticFieldAtomicArrayMethod -> {
-                val clazz = atomicReferenceInfo.ownerClass
-                val thisClassName = shadowStackFrame.instance?.javaClass?.name
-                val ownerName = if (thisClassName == clazz.name) "" else "${clazz.simpleName}."
-                tracePoint.initializeOwnerName("${ownerName}${atomicReferenceInfo.fieldName}[${atomicReferenceInfo.index}]")
-                tracePoint.initializeParameters(params.drop(1))
-            }
-            is AtomicArrayInLocalVariable -> {
-                tracePoint.initializeOwnerName("${atomicReferenceInfo.localVariable}.${atomicReferenceInfo.fieldName}[${atomicReferenceInfo.index}]")
-                tracePoint.initializeParameters(params.drop(1))
-            }
-            is AtomicReferenceMethodType.TreatAsDefaultMethod -> {
-                tracePoint.initializeOwnerName(adornedStringRepresentation(receiver))
-                tracePoint.initializeParameters(params.toList())
-            }
-        }
-        return tracePoint
-    }
-
-    private fun initializeVarHandleMethodCallTracePoint(
-        threadId: Int,
-        tracePoint: MethodCallTracePoint,
-        varHandle: Any, // for Java 8, the VarHandle class does not exist
-        parameters: Array<Any?>,
-    ): MethodCallTracePoint {
-        val shadowStackFrame = shadowStack[threadId]!!.last()
-        val varHandleMethodType = VarHandleNames.varHandleMethodType(varHandle, parameters)
-        when (varHandleMethodType) {
-            is ArrayVarHandleMethod -> {
-                tracePoint.initializeOwnerName("${adornedStringRepresentation(varHandleMethodType.array)}[${varHandleMethodType.index}]")
-                tracePoint.initializeParameters(varHandleMethodType.parameters)
-            }
-            is InstanceVarHandleMethod -> {
-                val receiverName = findOwnerName(varHandleMethodType.owner)
-                tracePoint.initializeOwnerName(receiverName?.let { "$it.${varHandleMethodType.fieldName}" } ?: varHandleMethodType.fieldName)
-                tracePoint.initializeParameters(varHandleMethodType.parameters)
-            }
-            is StaticVarHandleMethod -> {
-                val clazz = varHandleMethodType.ownerClass
-                val thisClassName = shadowStackFrame.instance?.javaClass?.name
-                val ownerName = if (thisClassName == clazz.name) "" else "${clazz.simpleName}."
-                tracePoint.initializeOwnerName("${ownerName}${varHandleMethodType.fieldName}")
-                tracePoint.initializeParameters(varHandleMethodType.parameters)
-            }
-            VarHandleMethodType.TreatAsDefaultMethod -> {
-                tracePoint.initializeOwnerName(adornedStringRepresentation(varHandle))
-                tracePoint.initializeParameters(parameters.toList())
-            }
-        }
-
-        return tracePoint
-    }
-
-    private fun initializeAtomicUpdaterMethodCallTracePoint(
-        tracePoint: MethodCallTracePoint,
-        atomicUpdater: Any,
-        parameters: Array<Any?>,
-    ): MethodCallTracePoint {
-        getAtomicFieldUpdaterDescriptor(atomicUpdater)?.let { tracePoint.initializeOwnerName(it.fieldName) }
-        tracePoint.initializeParameters(parameters.drop(1))
-        return tracePoint
-    }
-
-    private fun MethodCallTracePoint.initializeParameters(parameters: List<Any?>) =
-        initializeParameters(parameters.map { adornedStringRepresentation(it) }, parameters.map { objectFqTypeName(it) })
-
-
-    /**
-     * Returns string representation of the field owner based on the provided parameters.
-     */
-    @Suppress("UNUSED_PARAMETER")
-    private fun getFieldOwnerName(obj: Any?, fieldDescriptor: FieldDescriptor): String? {
-        if (fieldDescriptor.isStatic) {
-            val threadId = threadScheduler.getCurrentThreadId()
-            val stackTraceElement = shadowStack[threadId]!!.last()
-            if (stackTraceElement.instance?.javaClass?.name == fieldDescriptor.className) {
-                return null
-            }
-            return fieldDescriptor.className.toSimpleClassName()
-        }
-        return findOwnerName(obj!!)
-    }
-
-    /**
-     * Returns beautiful string representation of the [owner].
-     * If the [owner] is `this` of the current method, then returns `null`.
-     */
-    private fun findOwnerName(owner: Any): String? {
-        val threadId = threadScheduler.getCurrentThreadId()
-        // if the current owner is `this` - no owner needed
-        if (isCurrentStackFrameReceiver(owner)) return null
-        // do not prettify thread names
-        if (owner is Thread) {
-            return adornedStringRepresentation(owner)
-        }
-        // lookup for the object in local variables and use the local variable name if found
-        val shadowStackFrame = shadowStack[threadId]!!.last()
-        shadowStackFrame.getLastAccessVariable(owner)?.let { return it }
-        // lookup for a field name in the current stack frame `this`
-        shadowStackFrame.instance
-            ?.findInstanceFieldReferringTo(owner)
-            ?.let { return it.name }
-        // lookup for the constant referencing the object
-        constants[owner]?.let { return it }
-        // otherwise return object's string representation
-        return adornedStringRepresentation(owner)
     }
 
     /**

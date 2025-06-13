@@ -79,8 +79,6 @@ internal class MethodCallTransformer(
                     methodId,
                     receiverLocal,
                     argumentsArrayLocal,
-                    deterministicCallIdLocal,
-                    deterministicMethodDescriptorLocal,
                 )
                 // STACK: result?
             },
@@ -90,32 +88,11 @@ internal class MethodCallTransformer(
                     deterministicCallIdLocal,
                     deterministicMethodDescriptorLocal,
                     methodId,
-                    owner,
-                    name,
                     receiverLocal,
                     argumentsArrayLocal,
-                    deterministicCallIdLocal,
-                    deterministicMethodDescriptorLocal,
                 )
             }
         )
-    }
-
-    private fun GeneratorAdapter.processMethodCallEnter(
-        methodId: Int,
-        receiverLocal: Int?,
-        argumentsArrayLocal: Int
-    ) {
-        // STACK: <empty>
-        loadNewCodeLocationId()
-        // STACK: codeLocation
-        push(methodId)
-        pushReceiver(receiverLocal)
-        loadLocal(argumentsArrayLocal)
-        // STACK: codeLocation, methodId, receiver?, argumentsArray
-        invokeStatic(Injections::onMethodCall)
-        // STACK: deterministicCallDescriptor
-        invokeBeforeEventIfPluginEnabled("method call ${this@MethodCallTransformer.methodName}", setMethodEventId = true)
     }
 
     private fun GeneratorAdapter.pushDeterministicCallId(deterministicMethodDescriptorLocal: Int) {
@@ -178,96 +155,6 @@ internal class MethodCallTransformer(
         // STACK: result?
         visitLabel(endIfLabel)
     }
-
-    private fun GeneratorAdapter.processMethodCallReturn(
-        returnType: Type,
-        deterministicCallIdLocal: Int,
-        deterministicMethodDescriptorLocal: Int,
-        methodId: Int,
-        receiverLocal: Int?,
-        argumentsArrayLocal: Int
-    ) {
-        // STACK: result?
-        val resultLocal = when {
-            (returnType == VOID_TYPE) -> null
-            else -> newLocal(returnType).also { storeLocal(it) }
-        }
-        loadLocal(deterministicCallIdLocal)
-        loadLocal(deterministicMethodDescriptorLocal)
-        push(methodId)
-        pushReceiver(receiverLocal)
-        loadLocal(argumentsArrayLocal)
-        resultLocal?.let {
-            loadLocal(it)
-            box(returnType)
-        }
-        // STACK: deterministicCallId, deterministicMethodDescriptor, methodId, receiver, arguments, result?
-        when {
-            returnType == VOID_TYPE -> invokeStatic(Injections::onMethodCallReturnVoid)
-            else                    -> {
-                invokeStatic(Injections::onMethodCallReturn)
-                // STACK: boxedResult
-                unbox(returnType)
-                // STACK: result
-            }
-        }
-        // STACK: result?
-    }
-
-    private fun GeneratorAdapter.processMethodCallException(
-        deterministicCallIdLocal: Int,
-        deterministicMethodDescriptorLocal: Int,
-        methodId: Int,
-        receiverLocal: Int?,
-        argumentsArrayLocal: Int,
-    ) {
-        // STACK: exception
-        val exceptionLocal = newLocal(THROWABLE_TYPE)
-        storeLocal(exceptionLocal)
-        // STACK: <empty>
-        loadLocal(deterministicCallIdLocal)
-        loadLocal(deterministicMethodDescriptorLocal)
-        push(methodId)
-        pushReceiver(receiverLocal)
-        loadLocal(argumentsArrayLocal)
-        loadLocal(exceptionLocal)
-        // STACK: deterministicCallId, deterministicMethodDescriptor, methodId, receiver, params, exception
-        invokeStatic(Injections::onMethodCallException)
-        // STACK: Throwable
-        throwException()
-    }
-
-    private fun GeneratorAdapter.pushReceiver(receiverLocal: Int?) {
-        // STACK: <empty>
-        if (receiverLocal != null) {
-            loadLocal(receiverLocal)
-        } else {
-            pushNull()
-        }
-        // STACK: receiver?
-    }
-
-    private fun isIgnoredMethod(className: String) =
-        className.startsWith("sun/nio/ch/lincheck/") ||
-        className.startsWith("org/jetbrains/kotlinx/lincheck/") ||
-        className == "kotlin/jvm/internal/Intrinsics" ||
-        className == "java/util/Objects" ||
-        className == "java/lang/String" ||
-        className == "java/lang/Boolean" ||
-        className == "java/lang/Long" ||
-        className == "java/lang/Integer" ||
-        className == "java/lang/Short" ||
-        className == "java/lang/Byte" ||
-        className == "java/lang/Double" ||
-        className == "java/lang/Float" ||
-        className == "java/util/Locale" ||
-        className == "org/slf4j/helpers/Util" ||
-        className == "java/util/Properties" ||
-        className == "java/lang/invoke/MethodHandles"
-
-    @Suppress("UNUSED_PARAMETER")
-    private fun isCoroutineResumptionSyntheticAccessor(className: String, methodName: String): Boolean =
-        (this.methodName == "invokeSuspend") && methodName.startsWith("access\$")
 
     companion object {
         private val traceDebuggerTrackerEnumType: Type = getType(TraceDebuggerTracker::class.java)

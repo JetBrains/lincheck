@@ -11,6 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.jetbrains.kotlinx.lincheck.util.MethodDescriptor
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
 import org.objectweb.asm.Type.*
@@ -41,10 +42,12 @@ internal class MethodCallMinimalTransformer(
             (opcode != INVOKESTATIC) -> newLocal(receiverType).also { storeLocal(it) }
             else -> null
         }
-        val methodId = MethodIds.getMethodId(owner.toCanonicalClassName(), name, desc)
+        val methodId = methodCache.getOrCreateId(MethodDescriptor(owner.toCanonicalClassName(), name, desc))
         // STACK: <empty>
-        processMethodCallEnter(owner, name, desc, methodId, receiverLocal, argumentsArrayLocal)
-        // STACK: <empty>>
+        processMethodCallEnter(methodId, receiverLocal, argumentsArrayLocal)
+        // STACK: deterministicCallDescriptor
+        pop()
+        // STACK: <empty>
         tryCatchFinally(
             tryBlock = {
                 // STACK: <empty>
@@ -54,9 +57,9 @@ internal class MethodCallMinimalTransformer(
                 visitMethodInsn(opcode, owner, name, desc, itf)
                 // STACK: result?
                 processMethodCallReturn(
-                    owner,
-                    name,
                     returnType,
+                    null,
+                    null,
                     methodId,
                     receiverLocal,
                     argumentsArrayLocal,
@@ -66,37 +69,13 @@ internal class MethodCallMinimalTransformer(
             catchBlock = {
                 // STACK: exception
                 processMethodCallException(
-                    owner,
-                    name,
+                    null,
+                    null,
+                    methodId,
                     receiverLocal,
                     argumentsArrayLocal
                 )
             }
         )
-    }
-
-    private fun GeneratorAdapter.processMethodCallEnter(
-        className: String,
-        methodName: String,
-        desc: String,
-        methodId: Int,
-        receiverLocal: Int?,
-        argumentsArrayLocal: Int
-    ) {
-        // STACK: <empty>
-        push(className.toCanonicalClassName())
-        push(methodName)
-        loadNewCodeLocationId()
-        // STACK: className, methodName, codeLocation
-        push(desc)
-        // STACK: className, methodName, codeLocation, methodDesc
-        push(methodId)
-        pushReceiver(receiverLocal)
-        loadLocal(argumentsArrayLocal)
-        // STACK: className, methodName, codeLocation, methodDesc, methodId, receiver?, argumentsArray
-        invokeStatic(Injections::onMethodCall)
-        // STACK: deterministicCallDescriptor
-        pop()
-        // STACK: <empty>>
     }
 }
