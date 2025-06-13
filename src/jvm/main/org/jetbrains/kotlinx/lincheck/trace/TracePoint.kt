@@ -237,7 +237,8 @@ internal class MethodCallTracePoint(
     var parameters: List<String>? = null
     var parameterTypes: List<String>? = null
     private var ownerName: String? = null
-    
+    private var children: ArrayList<TracePoint>? = null
+
     val isRootCall get() = callType != CallType.NORMAL
     val isActor get() = callType == CallType.ACTOR
     val isThreadStart get() = callType == CallType.THREAD_RUN
@@ -255,6 +256,17 @@ internal class MethodCallTracePoint(
 
     override fun toStringImpl(withLocation: Boolean): String {
         return super.toStringImpl(withLocation && !isRootCall)
+    }
+
+    fun addChild(tracePoint: TracePoint) {
+        if (children == null) {
+            children = ArrayList()
+        }
+        children?.add(tracePoint)
+    }
+
+    fun getChildren(): List<TracePoint> {
+        return if (children == null) { emptyList() } else { children!! }
     }
     
     private fun StringBuilder.appendThreadCreation() {

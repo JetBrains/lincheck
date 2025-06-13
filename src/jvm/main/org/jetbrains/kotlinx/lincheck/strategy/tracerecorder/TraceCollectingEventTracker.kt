@@ -10,35 +10,28 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.tracerecorder
 
-import org.jetbrains.kotlinx.lincheck.actor
 import org.jetbrains.kotlinx.lincheck.strategy.ThreadAnalysisHandle
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ShadowStackFrame
-import org.jetbrains.kotlinx.lincheck.trace.CallStackTrace
+import org.jetbrains.kotlinx.lincheck.strategy.managed.afterSpinCycleTraceCollected
 import org.jetbrains.kotlinx.lincheck.trace.CallStackTraceElement
-import org.jetbrains.kotlinx.lincheck.trace.FlattenTraceReporter
 import org.jetbrains.kotlinx.lincheck.trace.MethodCallTracePoint
 import org.jetbrains.kotlinx.lincheck.trace.MethodReturnTracePoint
-import org.jetbrains.kotlinx.lincheck.trace.ReadTracePoint
 import org.jetbrains.kotlinx.lincheck.trace.Trace
 import org.jetbrains.kotlinx.lincheck.trace.TraceCollector
 import org.jetbrains.kotlinx.lincheck.trace.TraceNode
+import org.jetbrains.kotlinx.lincheck.trace.TracePoint
 import org.jetbrains.kotlinx.lincheck.trace.collapseLibraries
 import org.jetbrains.kotlinx.lincheck.trace.compressTrace
 import org.jetbrains.kotlinx.lincheck.trace.flattenTraceToGraph
-import org.jetbrains.kotlinx.lincheck.transformation.CodeLocations
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.util.AnalysisProfile
 import org.jetbrains.kotlinx.lincheck.util.AnalysisSectionType
 import org.jetbrains.kotlinx.lincheck.util.isSuspendFunction
 import org.jetbrains.kotlinx.lincheck.util.runInsideIgnoredSection
 import sun.nio.ch.lincheck.*
-import java.io.BufferedWriter
 import java.io.File
-import java.io.FileOutputStream
-import java.io.OutputStreamWriter
 import java.io.PrintStream
 import java.lang.invoke.CallSite
-import java.lang.management.ThreadInfo
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -70,11 +63,11 @@ class TraceCollectingEventTracker(
     /////////////////////////////////////////////////
     // Single-threaded "Optimal" implementation
     // String builder for all data
-    private val sb = StringBuilder()
     private val output: PrintStream
-    private var depth = 0
     private var indent: CharSequence = " ".repeat(1024)
     private val simpleClassNames = HashMap<Class<*>, String>()
+
+    private val stackTrace = arrayListOf<MethodCallTracePoint>()
 
     init {
         check(TRACE_ONLY_ONE_THREAD) { "Multiple threads recording is not supported" }
@@ -261,7 +254,7 @@ class TraceCollectingEventTracker(
 
         val tracePoint = MethodCallTracePoint(
             iThread = threadHandle.threadId,
-            actorId = 0,
+            actorId = methodId,
             className = className,
             methodName = methodName,
             callStackTrace = EMPTY_CALL_STACK_TRACE,
@@ -270,40 +263,8 @@ class TraceCollectingEventTracker(
             callType = MethodCallTracePoint.CallType.NORMAL,
             isSuspend = isSuspendFunction(className, methodName, params)
         )
-        threadHandle.traceCollector?.addTracePoint(tracePoint)
-
-/*
-        // Create method call string
-        val receiverName = if (receiver == null) {
-            className.substring(className.lastIndexOf('.') + 1);
-        } else {
-            objectToString(receiver)
-        }
-
-        appendLine {
-            append(receiverName)
-            append(".")
-            append(methodName)
-            append("(")
-            var first = true
-            for (p in params) {
-                if (!first) {
-                    append(", ")
-                }
-                append(objectToString(p))
-                first = false
-            }
-            append(")")
-            val ste = CodeLocations.stackTrace(codeLocation)
-            if (ste.fileName != null) {
-                append(" at ")
-                append(ste.fileName)
-                append(":")
-                append(ste.lineNumber)
-            }
-        }
-        depth++
-*/
+        stackTrace.last().addChild(tracePoint)
+        stackTrace.add(tracePoint)
 
         // if the method has certain guarantees, enter the corresponding section
         threadHandle.enterAnalysisSection(methodSection)
@@ -322,20 +283,9 @@ class TraceCollectingEventTracker(
     ): Any? = runInsideIgnoredSection {
         val threadHandle = threads[Thread.currentThread()] ?: return result
 
-        val tracePoint = MethodReturnTracePoint(
-            iThread = threadHandle.threadId,
-            actorId = 0,
-            result = result
-        )
-        threadHandle.traceCollector?.addTracePoint(tracePoint)
-
-/*
-        depth--
-        appendLine {
-            append("result = ")
-            append(objectToString(result))
-        }
-*/
+        val tracePoint = stackTrace.removeLast()
+        // TODO: add returned value
+        // tracePoint.returnedValue
 
         val methodSection = methodAnalysisSectionType(receiver, className, methodName)
         threadHandle.leaveAnalysisSection(methodSection)
@@ -352,26 +302,10 @@ class TraceCollectingEventTracker(
         t: Throwable
     ): Throwable = runInsideIgnoredSection {
         val threadHandle = threads[Thread.currentThread()] ?: return t
-        if (threadHandle.stackTrace.isEmpty()) {
-            return t
-        }
 
-        val tracePoint = MethodReturnTracePoint(
-            iThread = threadHandle.threadId,
-            actorId = 0,
-            exception = t
-        )
-        threadHandle.traceCollector?.addTracePoint(tracePoint)
-
-/*
-        depth--
-        appendLine {
-            append("exception = ")
-            append(objectToString(t))
-            append(" ")
-            append(t.message ?: "<no message>")
-        }
-*/
+        val tracePoint = stackTrace.removeLast()
+        // TODO: add returned value
+        // tracePoint.returnedValue
 
         val methodSection = methodAnalysisSectionType(receiver, className, methodName)
         threadHandle.leaveAnalysisSection(methodSection)
@@ -398,39 +332,15 @@ class TraceCollectingEventTracker(
             callType = MethodCallTracePoint.CallType.NORMAL,
             isSuspend = false
         )
-        threadHandle.traceCollector?.addTracePoint(tracePoint)
-
-/*
-        // Create method call string
-        val receiverName = if (owner == null) {
-            className.substring(className.lastIndexOf('.') + 1);
-        } else {
-            objectToString(owner)
-        }
-
-        appendLine {
-            append(receiverName)
-            append(".")
-            append(methodName)
-            append("()")
-        }
-
-        depth++
-*/
+        stackTrace.last().addChild(tracePoint)
+        stackTrace.add(tracePoint)
     }
 
     override fun onInlineMethodCallReturn(className: String, methodId: Int): Unit = runInsideIgnoredSection {
         val threadHandle = threads[Thread.currentThread()] ?: return
-
-        val tracePoint = MethodReturnTracePoint(
-            iThread = threadHandle.threadId,
-            actorId = 0,
-            result = Unit
-        )
-        threadHandle.traceCollector?.addTracePoint(tracePoint)
-/*
-        depth--
-*/
+        val tracePoint = stackTrace.removeLast()
+        // TODO: add returned value
+        // tracePoint.returnedValue
     }
 
     override fun invokeDeterministicallyOrNull(
@@ -490,62 +400,40 @@ class TraceCollectingEventTracker(
             callType = MethodCallTracePoint.CallType.ACTOR,
             isSuspend = false
         )
-        threadHandle.traceCollector?.addTracePoint(tracePoint)
+        stackTrace.add(tracePoint)
 
         startTime = System.currentTimeMillis();
-
-/*
-        // Method in question was called
-        appendLine {
-            append(className)
-            append(".")
-            append(methodName)
-            append("()")
-        }
-        depth = 1
-
-*/
     }
 
     fun finishAndDumpTrace() {
         val threadHandle = threads[Thread.currentThread()] ?: return
 
-        threadHandle.traceCollector?.addTracePoint(MethodReturnTracePoint(
-            iThread = threadHandle.threadId,
-            actorId = 0
-        ))
-
         System.err.println("Trace record time: ${System.currentTimeMillis() - startTime}")
         startTime = System.currentTimeMillis()
 
-        /*
-        val reporter = FlattenTraceReporter(Trace(threadHandle.traceCollector!!.trace, listOf("Thread")))
-        reporter.appendTrace(output)
-        */
-        // Get verbose graph
-        val graph = flattenTraceToGraph(Trace(threadHandle.traceCollector!!.trace, listOf("Thread")))
-            .compressTrace()
-            .collapseLibraries(AnalysisProfile(analyzeStdLib = false))
-
-        System.err.println("Trace transformation time: ${System.currentTimeMillis() - startTime}")
-        startTime = System.currentTimeMillis()
-
-        // Print graph per-thread
-        for (thr in graph) {
-            printOneThread(thr, 0)
+        if (stackTrace.size != 1) {
+            System.err.println("--- PROBLEMS WITH STACK TRACE")
+            for (tp in stackTrace) {
+                System.err.println(tp.toString())
+            }
+            output.close()
+            return
         }
+
+
+        printOneThread(stackTrace.first(), 0)
 
         output.close()
         System.err.println("Output time: ${System.currentTimeMillis() - startTime}")
     }
 
-    private fun printOneThread(graph: List<TraceNode>, depth: Int) {
-        for (node in graph) {
-            output.append(indent, 0, depth)
-            output.append(node.tracePoint.toStringImpl(false))
-            output.append("\n")
-            if (!node.children.isEmpty()) {
-                printOneThread(node.children, depth + 1)
+    private fun printOneThread(node: TracePoint, depth: Int) {
+        output.append(indent, 0, depth)
+        output.append(node.toStringImpl(false))
+        output.append("\n")
+        if (node is MethodCallTracePoint) {
+            for (c in node.getChildren()) {
+                printOneThread(c, depth + 1)
             }
         }
     }
@@ -612,17 +500,6 @@ class TraceCollectingEventTracker(
             is String -> "\"$obj\""
             is Number -> obj.toString()
             else -> "${simpleClassNames.computeIfAbsent(obj.javaClass) { it.simpleName }}@${System.identityHashCode(obj)}"
-        }
-    }
-
-    private inline fun appendLine(lineGenerator: StringBuilder.() -> Unit) {
-        sb.append(indent, 0, depth)
-        sb.lineGenerator()
-        sb.append("\n")
-        // 1G
-        if (sb.length > 1024 * 1024 * 1024) {
-            output.append(sb)
-            sb.setLength(0)
         }
     }
 }
