@@ -175,8 +175,9 @@ internal class ThreadAnalysisHandle(val threadId: Int, val traceCollector: Trace
         isStatic: Boolean,
         isFinal: Boolean,
         actorId: Int = 0,
+        ownerRepresentation: String? = getFieldOwnerName(obj, className, fieldName, isStatic)
     ) : ReadTracePoint? = if (!collectTrace) null else ReadTracePoint(
-        ownerRepresentation = getFieldOwnerName(obj, className, fieldName, isStatic),
+        ownerRepresentation = ownerRepresentation,
         iThread = threadId,
         actorId = actorId,
         callStackTrace = stackTrace,
@@ -230,8 +231,9 @@ internal class ThreadAnalysisHandle(val threadId: Int, val traceCollector: Trace
         codeLocation: Int,
         isStatic: Boolean,
         actorId: Int = 0,
+        ownerRepresentation: String? = getFieldOwnerName(obj, className, fieldName, isStatic)
     ): WriteTracePoint? = if (!collectTrace) null else WriteTracePoint(
-        ownerRepresentation = getFieldOwnerName(obj, className, fieldName, isStatic),
+        ownerRepresentation = ownerRepresentation,
         iThread = threadId,
         actorId = actorId,
         callStackTrace = stackTrace,

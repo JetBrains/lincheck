@@ -167,6 +167,7 @@ class TraceCollectingEventTracker(
             isStatic = isStatic,
             isFinal = isFinal,
             actorId = 0,
+            ownerRepresentation = ""
         )
         threadHandle.addTracepointToCurrentCall(tracePoint)
 
@@ -213,7 +214,8 @@ class TraceCollectingEventTracker(
             value = value,
             codeLocation = codeLocation,
             isStatic = isStatic,
-            actorId = 0
+            actorId = 0,
+            ownerRepresentation = ""
         )
         threadHandle.addTracepointToCurrentCall(tracePoint)
 
