@@ -23,7 +23,16 @@ internal fun SingleThreadedTable<TraceNode>.compressTrace() = this
     .removeCoroutinesCoreSuffix()
     .compressInlineIV()
     .compressDollarThis()
-    .removeNestedClassDollar()
+    .replaceNestedClassDollar()
+    .compressSyntheticParameterNumbers()
+
+/**
+ * Optimize stack trace element string representation
+ */
+internal fun StackTraceElement.compress(): String = this.toString()
+    .removePackages()
+    .removeStackTraceNestedClassDollarSigns()
+    .removeSyntheticParameterNameNumbers()
 
 /**
  * Compresses `receive$suspendImpl` calls.
@@ -217,54 +226,60 @@ private fun SingleThreadedTable<TraceNode>.compressDollarThis() = compressNodes 
 /**
  * Removes nested class dollars from owner names.
  */
-private fun SingleThreadedTable<TraceNode>.removeNestedClassDollar() = compressNodes { node ->
+private fun SingleThreadedTable<TraceNode>.replaceNestedClassDollar() = compressNodes { node ->
     if (node is CallNode && node.tracePoint.ownerName != null) {
-        val newOwner = fixeNestedClassDollar(node.tracePoint.ownerName!!)
+        val newOwner = fixNestedClassDollar(node.tracePoint.ownerName!!)
         node.tracePoint.ownerName = newOwner
     }
     node
 }
 
 
-/**
-* Optimize stack trace element string representation
-*/
-internal fun StackTraceElement.shorten(): String {
-    val elementWithoutPackage = removePackages(this.toString())
-    val noNestedClassDollars = removeStackTraceNestedClassDollarSigns(elementWithoutPackage)
-    return noNestedClassDollars
-}
 
 /**
  * Removes package info in the stack trace element representation.
  */
-private fun removePackages(stackTraceElement: String): String {
-    for (i in stackTraceElement.indices.reversed())
-        if (stackTraceElement[i] == '/')
-            return stackTraceElement.substring(i + 1 until stackTraceElement.length)
-    return stackTraceElement
+private fun String.removePackages(): String {
+    for (i in this.indices.reversed())
+        if (this[i] == '/')
+            return this.substring(i + 1 until this.length)
+    return this
 }
 
 /**
  * Removes nested class dollar signs from stackTraceElement string representation.
  */
-private fun removeStackTraceNestedClassDollarSigns(stackTraceElement: String): String {
-    val before = stackTraceElement.substringBefore('.')
-    val after = stackTraceElement.substringAfter('.', "")
+private fun String.removeStackTraceNestedClassDollarSigns(): String {
+    val before = this.substringBefore('.')
+    val after = this.substringAfter('.', "")
     if (after.isEmpty()) return before
 
-    return "${fixeNestedClassDollar(before)}.$after"
+    return "${fixNestedClassDollar(before)}.$after"
 }
 
-private fun fixeNestedClassDollar(nestedClassRepresentation: String): String {
+private fun String.removeSyntheticParameterNameNumbers(): String =
+    replace("\\$\\d+".toRegex(), "")
+
+/**
+ * Remove nested class dollars from string (if present).
+ */
+private fun fixNestedClassDollar(nestedClassRepresentation: String): String {
     val before = nestedClassRepresentation.substringBefore('$')
     val after = nestedClassRepresentation.substringAfter('$', "")
     if (after.isEmpty()) return nestedClassRepresentation
     val firstPart = if (before.isNotEmpty() && before[0].isUpperCase() && after[0].isUpperCase()) "$before."
     else "$before$"
-    return firstPart + fixeNestedClassDollar(after)
+    return firstPart + fixNestedClassDollar(after)
 }
 
+private fun SingleThreadedTable<TraceNode>.compressSyntheticParameterNumbers() = compressNodes { node ->
+    if (node is CallNode) {
+        if (node.tracePoint.ownerName != null)
+            node.tracePoint.ownerName = node.tracePoint.ownerName!!.removeSyntheticParameterNameNumbers()
+        node.tracePoint.parameters = node.tracePoint.parameters?.map { it.removeSyntheticParameterNameNumbers() }
+    }
+    node
+}
 
 internal fun SingleThreadedTable<TraceNode>.collapseLibraries(analysisProfile: AnalysisProfile) = compressNodes { node -> 
     // if should not be hidden

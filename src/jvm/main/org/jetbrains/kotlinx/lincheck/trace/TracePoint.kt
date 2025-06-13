@@ -121,7 +121,7 @@ internal abstract class CodeLocationTracePoint(
 
     protected abstract fun toStringCompact(): String
     override fun toStringImpl(withLocation: Boolean): String {
-        return toStringCompact() + if (withLocation) " at ${stackTraceElement.shorten()}" else ""
+        return toStringCompact() + if (withLocation) " at ${stackTraceElement.compress()}" else ""
     }
 }
 
