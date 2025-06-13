@@ -21,6 +21,9 @@ import org.jetbrains.kotlinx.lincheck.trace.MethodReturnTracePoint
 import org.jetbrains.kotlinx.lincheck.trace.ReadTracePoint
 import org.jetbrains.kotlinx.lincheck.trace.Trace
 import org.jetbrains.kotlinx.lincheck.trace.TraceCollector
+import org.jetbrains.kotlinx.lincheck.trace.TraceNode
+import org.jetbrains.kotlinx.lincheck.trace.collapseLibraries
+import org.jetbrains.kotlinx.lincheck.trace.compressTrace
 import org.jetbrains.kotlinx.lincheck.trace.flattenTraceToGraph
 import org.jetbrains.kotlinx.lincheck.transformation.CodeLocations
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
@@ -29,9 +32,13 @@ import org.jetbrains.kotlinx.lincheck.util.AnalysisSectionType
 import org.jetbrains.kotlinx.lincheck.util.isSuspendFunction
 import org.jetbrains.kotlinx.lincheck.util.runInsideIgnoredSection
 import sun.nio.ch.lincheck.*
+import java.io.BufferedWriter
 import java.io.File
+import java.io.FileOutputStream
+import java.io.OutputStreamWriter
 import java.io.PrintStream
 import java.lang.invoke.CallSite
+import java.lang.management.ThreadInfo
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -66,12 +73,12 @@ class TraceCollectingEventTracker(
     private val sb = StringBuilder()
     private val output: PrintStream
     private var depth = 0
-    private var indent = CharArray(1024, { _ -> ' ' })
+    private var indent: CharSequence = " ".repeat(1024)
     private val simpleClassNames = HashMap<Class<*>, String>()
 
     init {
         check(TRACE_ONLY_ONE_THREAD) { "Multiple threads recording is not supported" }
-        output = if (traceDumpPath == null) System.out else PrintStream(File(traceDumpPath))
+        output = if (traceDumpPath == null) System.out else PrintStream(File(traceDumpPath).outputStream().buffered(1024*1024*1024), false)
     }
 
     override fun beforeThreadFork(thread: Thread, descriptor: ThreadDescriptor) = Unit
@@ -463,12 +470,29 @@ class TraceCollectingEventTracker(
         System.err.println("Trace Recorder mode doesn't support IDEA Plugin integration")
     }
 
+    private var startTime = 0L
+
     fun enableTrace() {
         // Start tracing in this thread
         val threadHandle = ThreadAnalysisHandle(threads.size, TraceCollector())
         // Shadow stack cannot be empty
         threadHandle.shadowStack.add(ShadowStackFrame(Thread.currentThread()))
         threads[Thread.currentThread()] = threadHandle
+
+        val tracePoint = MethodCallTracePoint(
+            iThread = threadHandle.threadId,
+            actorId = 0,
+            className = className,
+            methodName = methodName,
+            callStackTrace = EMPTY_CALL_STACK_TRACE,
+            codeLocation = -1,
+            isStatic = false,
+            callType = MethodCallTracePoint.CallType.ACTOR,
+            isSuspend = false
+        )
+        threadHandle.traceCollector?.addTracePoint(tracePoint)
+
+        startTime = System.currentTimeMillis();
 
 /*
         // Method in question was called
@@ -479,20 +503,51 @@ class TraceCollectingEventTracker(
             append("()")
         }
         depth = 1
+
 */
     }
 
     fun finishAndDumpTrace() {
         val threadHandle = threads[Thread.currentThread()] ?: return
 
+        threadHandle.traceCollector?.addTracePoint(MethodReturnTracePoint(
+            iThread = threadHandle.threadId,
+            actorId = 0
+        ))
+
+        System.err.println("Trace record time: ${System.currentTimeMillis() - startTime}")
+        startTime = System.currentTimeMillis()
+
+        /*
         val reporter = FlattenTraceReporter(Trace(threadHandle.traceCollector!!.trace, listOf("Thread")))
         reporter.appendTrace(output)
-        output.close()
+        */
+        // Get verbose graph
+        val graph = flattenTraceToGraph(Trace(threadHandle.traceCollector!!.trace, listOf("Thread")))
+            .compressTrace()
+            .collapseLibraries(AnalysisProfile(analyzeStdLib = false))
 
-/*
-        output.append(sb)
+        System.err.println("Trace transformation time: ${System.currentTimeMillis() - startTime}")
+        startTime = System.currentTimeMillis()
+
+        // Print graph per-thread
+        for (thr in graph) {
+            printOneThread(thr, 0)
+        }
+
         output.close()
-*/
+        System.err.println("Output time: ${System.currentTimeMillis() - startTime}")
+    }
+
+    private fun printOneThread(graph: List<TraceNode>, depth: Int) {
+        for (node in graph) {
+            output.append(indent, 0, depth)
+            output.append(node.tracePoint.toStringImpl(false))
+            output.append("\n")
+            if (!node.children.isEmpty()) {
+                printOneThread(node.children, depth + 1)
+            }
+        }
     }
 
 /*

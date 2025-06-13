@@ -102,10 +102,7 @@ internal class FlattenTraceReporter(val trace: Trace) {
 
     fun appendTrace(app: Appendable) = with(app) {
         // Turn graph into chronological sequence of calls and events, for verbose and simple trace.
-        val flattenedShort: SingleThreadedTable<TraceNode> = graph.flattenNodes(ShortTraceFlattenPolicy()).reorder()
         val flattenedVerbose: SingleThreadedTable<TraceNode> = graph.flattenNodes(VerboseTraceFlattenPolicy()).reorder()
-        appendTraceTableSimple(TRACE_TITLE, trace.threadNames, flattenedShort)
-        appendLine()
         appendTraceTableSimple(DETAILED_TRACE_TITLE, trace.threadNames, flattenedVerbose)
     }
 }
@@ -145,6 +142,7 @@ internal fun Appendable.appendTraceTableSimple(title: String, threadNames: List<
         interleavingSections = stringTable,
         threadNames = threadNames,
     )
+/*
     with(layout) {
         appendSeparatorLine()
         appendHeader()
@@ -154,6 +152,7 @@ internal fun Appendable.appendTraceTableSimple(title: String, threadNames: List<
             appendSeparatorLine()
         }
     }
+*/
 }
 
 // TODO support multiple root nodes in GPMC mode, needs discussion on how to deal with `result: ...`
