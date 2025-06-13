@@ -30,7 +30,7 @@ abstract class AbstractLincheckTest(
             }
         } else {
             checkFailureIsNotLincheckInternalBug(failure)
-            failure.trace?.let { checkTraceHasNoLincheckEvents(it.toString()) }
+            checkTraceHasNoLincheckEvents(failure.toString())
             assert(expectedFailures.contains(failure::class)) {
                 "This test has failed with an unexpected error: \n $failure"
             }
