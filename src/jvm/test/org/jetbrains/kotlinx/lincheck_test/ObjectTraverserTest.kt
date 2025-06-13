@@ -11,11 +11,12 @@
 package org.jetbrains.kotlinx.lincheck_test
 
 import org.jetbrains.kotlinx.lincheck.enumerateObjects
-import org.junit.Assert
-import org.junit.Test
 import java.util.Optional
 import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.atomic.AtomicReferenceArray
+import kotlinx.atomicfu.AtomicIntArray
+import org.junit.Assert
+import org.junit.Test
 
 /**
  * Checks invariants and restrictions on [enumerateObjects] method.
@@ -83,10 +84,11 @@ class ObjectTraverserTest {
 
     @Test
     fun `should traverse array elements for atomicfu arrays`() {
+        val arraySize = 3
         val myObject = object : Any() {
-            val array = kotlinx.atomicfu.AtomicIntArray(3)
+            val array = AtomicIntArray(arraySize)
             init {
-                for (i in 0 until array.size) {
+                for (i in 0 until arraySize) {
                     array[i].value = i + 1
                 }
             }
@@ -98,9 +100,9 @@ class ObjectTraverserTest {
             objectEnumeration.keys.containsAll(
                 listOf(
                     myObject,
-                    // atomicfu transformers [are insane and] don't allow to compile direct reference to `myObject.array`
-                    myObject.javaClass.getDeclaredField("array").get(myObject),
-                    1, 2, 3
+                    // atomicfu transformers are insane and don't allow compile direct reference to `myObject.array`
+                    myObject.javaClass.getDeclaredField("array").apply { setAccessible(true) }.get(myObject),
+                    1, 2, 3,
                 )
             )
         )
