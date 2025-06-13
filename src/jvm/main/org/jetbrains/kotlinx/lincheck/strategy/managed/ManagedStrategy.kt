@@ -2510,7 +2510,6 @@ internal abstract class ManagedStrategy(
             afterSpinCycleTraceCollected(
                 trace = trace,
                 callStackTrace = callStackTrace[threadId]!!,
-                spinCycleMethodCallsStackTraces = spinCycleMethodCallsStackTraces,
                 iThread = threadId,
                 beforeMethodCallSwitch = beforeMethodCallSwitch
             )
@@ -2537,9 +2536,7 @@ internal abstract class ManagedStrategy(
         if (!loopDetector.replayModeCurrentlyInSpinCycle) return
 
         val threadId = threadScheduler.getCurrentThreadId()
-        if (spinCycleStartAdded) {
-            spinCycleMethodCallsStackTraces += callStackTrace[threadId]!!.toList()
-        } else {
+        if (!spinCycleStartAdded) {
             addTracePoint(
                 SpinCycleStartTracePoint(
                     iThread = threadId,
@@ -2548,7 +2545,6 @@ internal abstract class ManagedStrategy(
                 )
             )
             spinCycleStartAdded = true
-            spinCycleMethodCallsStackTraces.clear()
         }
     }
 
@@ -2571,7 +2567,6 @@ internal abstract class ManagedStrategy(
         afterSpinCycleTraceCollected(
             trace = trace,
             callStackTrace = callStackTrace[threadId]!!,
-            spinCycleMethodCallsStackTraces = spinCycleMethodCallsStackTraces,
             iThread = threadId,
             beforeMethodCallSwitch = beforeMethodCall
         )
