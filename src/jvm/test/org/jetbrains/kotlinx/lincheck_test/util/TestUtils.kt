@@ -209,9 +209,9 @@ private val TRAILING_STACKTRACE_SPACES = Regex(" +\\|")
 private val REPEATING_HYPHENS = Regex(" -+ ")
 
 fun checkTraceHasNoLincheckEvents(trace: String) {
-    val testPackageOccurrences = trace.split("org.jetbrains.kotlinx.lincheck_test.").size - 1
-    val lincheckPackageOccurrences = trace.split("org.jetbrains.kotlinx.lincheck.").size - 1
-    check(testPackageOccurrences == lincheckPackageOccurrences) { "Internal Lincheck events were found in the trace" }
+    check(!trace.contains("at org.jetbrains.kotlinx.lincheck.")) {
+        "Internal Lincheck events were found in the trace"
+    }
 }
 
 fun checkFailureIsNotLincheckInternalBug(failure: LincheckFailure) {
