@@ -475,9 +475,8 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
             }
         )
     }
-
+    
     private fun String.isOuterReceiverName() = this == "this$0"
-
 
     @Suppress("SpellCheckingInspection")
     fun shouldTransform(className: String, instrumentationMode: InstrumentationMode): Boolean {

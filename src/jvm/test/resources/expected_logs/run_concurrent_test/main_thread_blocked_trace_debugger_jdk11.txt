@@ -43,8 +43,8 @@ Detailed trace:
 |             getExclusiveOwnerThread(): Thread#0 at ReentrantLock$Sync.isHeldExclusively(ReentrantLock.java:162)                                    |
 |               exclusiveOwnerThread ➜ Thread#0 at AbstractOwnableSynchronizer.getExclusiveOwnerThread(AbstractOwnableSynchronizer.java:84)          |
 |           lastWaiter ➜ null at AbstractQueuedSynchronizer$ConditionObject.addConditionWaiter(AbstractQueuedSynchronizer.java:1889)                 |
-|           Node#1.waitStatus.set(-2) at AbstractQueuedSynchronizer$Node.<init>(AbstractQueuedSynchronizer.java:527)                                       |
-|           Node#1.thread.set(Thread#0) at AbstractQueuedSynchronizer$Node.<init>(AbstractQueuedSynchronizer.java:528)                                     |
+|           Node#1.waitStatus.set(-2) at AbstractQueuedSynchronizer$Node.<init>(AbstractQueuedSynchronizer.java:527)                                 |
+|           Node#1.thread.set(Thread#0) at AbstractQueuedSynchronizer$Node.<init>(AbstractQueuedSynchronizer.java:528)                               |
 |           firstWaiter = Node#2 at AbstractQueuedSynchronizer$ConditionObject.addConditionWaiter(AbstractQueuedSynchronizer.java:1899)              |
 |           lastWaiter = Node#2 at AbstractQueuedSynchronizer$ConditionObject.addConditionWaiter(AbstractQueuedSynchronizer.java:1902)               |
 |         this$0.fullyRelease(Node#2): 1 at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2078)                   |
