@@ -928,7 +928,6 @@ private class ReplayModeLoopDetectorHelper(
 internal fun afterSpinCycleTraceCollected(
     trace: List<TracePoint>,
     callStackTrace: List<CallStackTraceElement>,
-    spinCycleMethodCallsStackTraces: List<List<CallStackTraceElement>>,
     iThread: Int,
     beforeMethodCallSwitch: Boolean
 ) {
@@ -978,7 +977,7 @@ internal fun afterSpinCycleTraceCollected(
         spinCycleFirstTracePointCallStackTrace.dropLast(count)
     } else {
         // See above the description of the algorithm for iterative spin lock.
-        getCommonMinStackTrace(spinLockTracePoints, spinCycleMethodCallsStackTraces)
+        getCommonMinStackTrace(spinLockTracePoints)
     }
 
     if (!trace[cycleStartTracePointIndex].callStackTrace.isEqualStackTrace(spinCycleStartStackTrace)) {
@@ -991,8 +990,8 @@ internal fun afterSpinCycleTraceCollected(
 /**
  * @return Max common prefix of the [StackTraceElement] of the provided [spinCycleTracePoints]
  */
-private fun getCommonMinStackTrace(spinCycleTracePoints: List<TracePoint>, spinCycleMethodCallsStackTraces: List<List<CallStackTraceElement>>): List<CallStackTraceElement> {
-    val callStackTraces = spinCycleTracePoints.map { it.callStackTrace } + spinCycleMethodCallsStackTraces
+private fun getCommonMinStackTrace(spinCycleTracePoints: List<TracePoint>): List<CallStackTraceElement> {
+    val callStackTraces = spinCycleTracePoints.map { it.callStackTrace }
     var count = 0
     outer@while (true) {
         if (count == callStackTraces[0].size) break
