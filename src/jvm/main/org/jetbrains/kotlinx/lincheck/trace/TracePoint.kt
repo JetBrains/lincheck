@@ -159,9 +159,9 @@ internal class ReadTracePoint(
     private val fieldName: String,
     codeLocation: Int,
     val isLocal: Boolean,
+    private val valueRepresentation: String,
+    val valueType: String,
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, codeLocation) {
-    private lateinit var valueRepresentation: String
-    lateinit var valueType: String
 
     override fun toStringCompact(): String = StringBuilder().apply {
         if (ownerRepresentation != null) {
@@ -172,18 +172,9 @@ internal class ReadTracePoint(
         append(" ➜ $valueRepresentation")
     }.toString()
 
-    fun initializeReadValue(value: String, type: String) {
-        this.valueRepresentation = value
-        this.valueType = type
-    }
-
     override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
-        ReadTracePoint(ownerRepresentation, iThread, actorId, callStackTrace.deepCopy(copiedObjects), fieldName, codeLocation, isLocal)
-            .also {
-                it.valueType = valueType
-                it.eventId = eventId
-                if (::valueRepresentation.isInitialized) it.valueRepresentation = valueRepresentation
-            }
+        ReadTracePoint(ownerRepresentation, iThread, actorId, callStackTrace.deepCopy(copiedObjects), fieldName, codeLocation, isLocal, valueRepresentation, valueType)
+            .also { it.eventId = eventId }
     }
 }
 

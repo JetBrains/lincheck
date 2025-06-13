@@ -140,16 +140,6 @@ abstract class ManagedStrategy(
     // i.e., the first element is the top stack trace element.
     private val suspendedFunctionsStack = mutableThreadMapOf<MutableList<CallStackTraceElement>>()
 
-    // Last read trace point, occurred in the current thread.
-    // We store it as we initialize read value after the point is created,
-    // so we have to store the trace point somewhere to obtain it later.
-    private var lastReadTracePoint = mutableThreadMapOf<ReadTracePoint?>()
-
-    // Last read constant name (i.e., static final field).
-    // We store it as we initialize read value after the trace point is created,
-    // so we have to store the trace point somewhere to obtain it later.
-    private var lastReadConstantName: String? = null
-
     // Random instances with fixed seeds to replace random calls in instrumented code.
     private var randoms = mutableThreadMapOf<InjectedRandom>()
 
@@ -825,7 +815,6 @@ abstract class ManagedStrategy(
         suspendedFunctionsStack[threadId] = mutableListOf()
         shadowStack[threadId] = arrayListOf(ShadowStackFrame(runner.testInstance))
         analysisSectionStack[threadId] = arrayListOf()
-        lastReadTracePoint[threadId] = null
         randoms[threadId] = InjectedRandom(threadId + 239L)
         objectTracker?.registerThread(threadId, thread)
         monitorTracker.registerThread(threadId)
@@ -1251,36 +1240,12 @@ abstract class ManagedStrategy(
         if (fieldDescriptor.isStatic) {
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(fieldDescriptor.className)
         }
-        if (collectTrace && fieldDescriptor.isStatic && fieldDescriptor.isFinal) {
-            lastReadConstantName = fieldDescriptor.fieldName
-        }
-        // Optimization: do not track final field reads
-        if (fieldDescriptor.isFinal) {
-            return false
-        }
         // Do not track accesses to untracked objects
-        if (!shouldTrackFieldAccess(obj, fieldDescriptor.fieldName)) {
+        if (!shouldTrackFieldAccess(obj, fieldDescriptor)) {
             return false
         }
         val iThread = threadScheduler.getCurrentThreadId()
-        val tracePoint = if (collectTrace) {
-            ReadTracePoint(
-                ownerRepresentation = getFieldOwnerName(obj, fieldDescriptor),
-                iThread = iThread,
-                actorId = currentActorId[iThread]!!,
-                callStackTrace = callStackTrace[iThread]!!,
-                fieldName = fieldDescriptor.fieldName,
-                codeLocation = codeLocation,
-                isLocal = false,
-            )
-        } else {
-            null
-        }
-        if (tracePoint != null) {
-            lastReadTracePoint[iThread] = tracePoint
-        }
         newSwitchPoint(iThread, codeLocation)
-        traceCollector?.addTracePointInternal(tracePoint)
         loopDetector.beforeReadField(obj)
         return true
     }
@@ -1292,39 +1257,57 @@ abstract class ManagedStrategy(
             return false
         }
         val iThread = threadScheduler.getCurrentThreadId()
-        val tracePoint = if (collectTrace) {
-            ReadTracePoint(
-                ownerRepresentation = null,
-                iThread = iThread,
-                actorId = currentActorId[iThread]!!,
-                callStackTrace = callStackTrace[iThread]!!,
-                fieldName = "${adornedStringRepresentation(array)}[$index]",
-                codeLocation = codeLocation,
-                isLocal = false,
-            )
-        } else {
-            null
-        }
-        if (tracePoint != null) {
-            lastReadTracePoint[iThread] = tracePoint
-        }
         newSwitchPoint(iThread, codeLocation)
-        traceCollector?.addTracePointInternal(tracePoint)
         loopDetector.beforeReadArrayElement(array, index)
         return true
     }
 
-    override fun afterRead(value: Any?) = runInsideIgnoredSection {
+    override fun afterReadField(obj: Any?, codeLocation: Int, fieldId: Int, value: Any?) = runInsideIgnoredSection {
         if (collectTrace) {
             val iThread = threadScheduler.getCurrentThreadId()
-            if (lastReadConstantName != null && value != null) {
-                constants[value] = lastReadConstantName
+            val fieldDescriptor = fieldCache[fieldId]
+            if (value != null) {
+                constants[value] = fieldDescriptor.fieldName
             }
             val valueRepresentation = adornedStringRepresentation(value)
             val typeRepresentation = objectFqTypeName(value)
-            lastReadTracePoint[iThread]?.initializeReadValue(valueRepresentation, typeRepresentation)
-            lastReadTracePoint[iThread] = null
-            lastReadConstantName = null
+            if (shouldTrackFieldAccess(obj, fieldDescriptor)) {
+                val tracePoint = ReadTracePoint(
+                    ownerRepresentation = getFieldOwnerName(obj, fieldDescriptor),
+                    iThread = iThread,
+                    actorId = currentActorId[iThread]!!,
+                    callStackTrace = callStackTrace[iThread]!!,
+                    fieldName = fieldDescriptor.fieldName,
+                    codeLocation = codeLocation,
+                    isLocal = false,
+                    valueRepresentation = valueRepresentation,
+                    valueType = typeRepresentation,
+                )
+                traceCollector?.addTracePointInternal(tracePoint)
+            }
+        }
+        loopDetector.afterRead(value)
+    }
+
+    override fun afterReadArrayElement(array: Any, index: Int, codeLocation: Int, value: Any?) = runInsideIgnoredSection {
+        if (collectTrace) {
+            val iThread = threadScheduler.getCurrentThreadId()
+            val valueRepresentation = adornedStringRepresentation(value)
+            val typeRepresentation = objectFqTypeName(value)
+            if (shouldTrackArrayAccess(array)) {
+                val tracePoint = ReadTracePoint(
+                    ownerRepresentation = null,
+                    iThread = iThread,
+                    actorId = currentActorId[iThread]!!,
+                    callStackTrace = callStackTrace[iThread]!!,
+                    fieldName = "${adornedStringRepresentation(array)}[$index]",
+                    codeLocation = codeLocation,
+                    isLocal = false,
+                    valueRepresentation = valueRepresentation,
+                    valueType = typeRepresentation,
+                )
+                traceCollector?.addTracePointInternal(tracePoint)
+            }
         }
         loopDetector.afterRead(value)
     }
@@ -1337,11 +1320,7 @@ abstract class ManagedStrategy(
         }
         updateSnapshotOnFieldAccess(obj, fieldDescriptor.className, fieldDescriptor.fieldName)
         objectTracker?.registerObjectLink(fromObject = obj ?: StaticObject, toObject = value)
-        if (!shouldTrackFieldAccess(obj, fieldDescriptor.fieldName)) {
-            return false
-        }
-        // Optimization: do not track final field writes
-        if (fieldDescriptor.isFinal) {
+        if (!shouldTrackFieldAccess(obj, fieldDescriptor)) {
             return false
         }
         val iThread = threadScheduler.getCurrentThreadId()
@@ -1465,8 +1444,8 @@ abstract class ManagedStrategy(
 
     private fun shouldTrackArrayAccess(obj: Any?): Boolean = shouldTrackObjectAccess(obj)
 
-    private fun shouldTrackFieldAccess(obj: Any?, fieldName: String): Boolean =
-      shouldTrackObjectAccess(obj) && !isStackRecoveryFieldAccess(obj, fieldName)
+    private fun shouldTrackFieldAccess(obj: Any?, fieldDescriptor: FieldDescriptor): Boolean =
+      shouldTrackObjectAccess(obj) && !isStackRecoveryFieldAccess(obj, fieldDescriptor.fieldName) && !fieldDescriptor.isFinal
 
     private fun shouldTrackObjectAccess(obj: Any?): Boolean {
         // by default, we track accesses to all objects

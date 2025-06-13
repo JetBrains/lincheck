@@ -60,7 +60,8 @@ public interface EventTracker {
 
     boolean beforeReadField(Object obj, int codeLocation, int fieldId);
     boolean beforeReadArrayElement(Object array, int index, int codeLocation);
-    void afterRead(Object value);
+    void afterReadField(Object obj, int codeLocation, int fieldId, Object value);
+    void afterReadArrayElement(Object array, int index, int codeLocation, Object value);
 
     boolean beforeWriteField(Object obj, Object value, int codeLocation, int fieldId);
     boolean beforeWriteArrayElement(Object array, int index, Object value, int codeLocation);

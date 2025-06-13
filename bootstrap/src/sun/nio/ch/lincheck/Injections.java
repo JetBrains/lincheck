@@ -351,8 +351,15 @@ public class Injections {
     /**
      * Called from the instrumented code after each field read (final field reads can be ignored here).
      */
-    public static void afterRead(Object value) {
-        getEventTracker().afterRead(value);
+    public static void afterReadField(Object obj, int codeLocation, int fieldId, Object value) {
+        getEventTracker().afterReadField(obj, codeLocation, fieldId, value);
+    }
+
+    /**
+     * Called from the instrumented code after each array read.
+     */
+    public static void afterReadArray(Object array, int index, int codeLocation, Object value) {
+        getEventTracker().afterReadArrayElement(array, index, codeLocation, value);
     }
 
     /**
