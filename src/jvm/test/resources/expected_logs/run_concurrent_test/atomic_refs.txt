@@ -1,52 +1,52 @@
 = Concurrent test failed =
 
 java.lang.IllegalStateException: Check failed.
-	at org.jetbrains.kotlinx.lincheck_test.representation.AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:161)
-	at org.jetbrains.kotlinx.lincheck_test.representation.AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:124)
-	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:47)
+	at org.jetbrains.kotlinx.lincheck_test.representation.AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:164)
+	at org.jetbrains.kotlinx.lincheck_test.representation.AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:127)
+	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48)
 	at java.base/java.lang.Thread.run(Thread.java:840)
 
 The following interleaving leads to the error:
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                   Main Thread                                                                                   |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:47) |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                 Main Thread                                                                                 |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$lambda(RunConcurrentRepresentationTests.kt:48) |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 
 Detailed trace:
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                   Main Thread                                                                                   |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:47) |
-|   block(): threw IllegalStateException at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:124)                                   |
-|     atomicReference.get(): Node#1 at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:129)                                        |
-|     atomicReference.compareAndSet(Node#1, Node#2): true at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:129)                  |
-|     atomicReference.set(Node#3) at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:130)                                          |
-|     atomicInteger.get(): 0 at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:132)                                               |
-|     atomicInteger.compareAndSet(0, 2): true at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:132)                              |
-|     atomicInteger.set(3) at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:133)                                                 |
-|     atomicLong.get(): 0 at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:135)                                                  |
-|     atomicLong.compareAndSet(0, 2): true at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:135)                                 |
-|     atomicLong.set(3) at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:136)                                                    |
-|     atomicBoolean.get(): true at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:138)                                            |
-|     atomicBoolean.compareAndSet(true, true): true at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:138)                        |
-|     atomicBoolean.set(false) at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:139)                                             |
-|     atomicReferenceArray[0].get(): Node#4 at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:141)                                |
-|     atomicReferenceArray[0].compareAndSet(Node#4, Node#5): true at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:141)          |
-|     atomicReferenceArray[0].set(Node#6) at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:142)                                  |
-|     atomicIntegerArray[0].get(): 0 at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:144)                                       |
-|     atomicIntegerArray[0].compareAndSet(0, 1): true at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:144)                      |
-|     atomicIntegerArray[0].set(2) at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:145)                                         |
-|     atomicLongArray[0].get(): 0 at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:147)                                          |
-|     atomicLongArray[0].compareAndSet(0, 1): true at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:147)                         |
-|     atomicLongArray[0].set(2) at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:148)                                            |
-|     AtomicReference#2.set(Node#7) at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:150)                                        |
-|     AtomicIntegerArray#2[0].compareAndSet(1, 2): false at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:151)                   |
-|     staticValue.compareAndSet(0, 2): true at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:153)                                |
-|     staticValue.set(0) at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:154)                                                   |
-|     AtomicInteger#3.compareAndSet(1, 2): true at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:156)                            |
-|     AtomicInteger#3.set(3) at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:157)                                               |
-|     staticArray[1].compareAndSet(0, 1): true at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:159)                             |
-|     AtomicIntegerArray#4[1].compareAndSet(0, 1): true at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:160)                    |
-|   result: IllegalStateException #1                                                                                                                                              |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                 Main Thread                                                                                 |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$lambda(RunConcurrentRepresentationTests.kt:48) |
+|   block(): threw IllegalStateException at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:127)                               |
+|     atomicReference.get(): Node#1 at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:132)                                    |
+|     atomicReference.compareAndSet(Node#1, Node#2): true at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:132)              |
+|     atomicReference.set(Node#3) at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:133)                                      |
+|     atomicInteger.get(): 0 at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:135)                                           |
+|     atomicInteger.compareAndSet(0, 2): true at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:135)                          |
+|     atomicInteger.set(3) at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:136)                                             |
+|     atomicLong.get(): 0 at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:138)                                              |
+|     atomicLong.compareAndSet(0, 2): true at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:138)                             |
+|     atomicLong.set(3) at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:139)                                                |
+|     atomicBoolean.get(): true at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:141)                                        |
+|     atomicBoolean.compareAndSet(true, true): true at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:141)                    |
+|     atomicBoolean.set(false) at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:142)                                         |
+|     atomicReferenceArray[0].get(): Node#4 at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:144)                            |
+|     atomicReferenceArray[0].compareAndSet(Node#4, Node#5): true at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:144)      |
+|     atomicReferenceArray[0].set(Node#6) at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:145)                              |
+|     atomicIntegerArray[0].get(): 0 at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:147)                                   |
+|     atomicIntegerArray[0].compareAndSet(0, 1): true at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:147)                  |
+|     atomicIntegerArray[0].set(2) at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:148)                                     |
+|     atomicLongArray[0].get(): 0 at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:150)                                      |
+|     atomicLongArray[0].compareAndSet(0, 1): true at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:150)                     |
+|     atomicLongArray[0].set(2) at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:151)                                        |
+|     AtomicReference#2.set(Node#7) at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:153)                                    |
+|     AtomicIntegerArray#2[0].compareAndSet(1, 2): false at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:154)               |
+|     staticValue.compareAndSet(0, 2): true at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:156)                            |
+|     staticValue.set(0) at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:157)                                               |
+|     AtomicInteger#3.compareAndSet(1, 2): true at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:159)                        |
+|     AtomicInteger#3.set(3) at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:160)                                           |
+|     staticArray[1].compareAndSet(0, 1): true at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:162)                         |
+|     AtomicIntegerArray#4[1].compareAndSet(0, 1): true at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:163)                |
+|   result: IllegalStateException #1                                                                                                                                          |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -7,22 +7,22 @@ java.lang.IllegalStateException: Check failed.
 	at java.base/java.lang.Thread.run(Thread.java:829)
 
 The following interleaving leads to the error:
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                   Main Thread                                                                                   |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48) |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                 Main Thread                                                                                 |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$lambda(RunConcurrentRepresentationTests.kt:48) |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 
 Detailed trace:
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                   Main Thread                                                                                   |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48) |
-|   block(): threw IllegalStateException at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:238)                                         |
-|     runnable = test$1 at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:257)                                                          |
-|     runnable ➜ test$1 at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:258)                                                          |
-|     runnable.run() at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:258)                                                             |
-|       AnonymousObjectRunConcurrentRepresentationTest.x ➜ 0 at AnonymousObjectRunConcurrentRepresentationTest.I$test$1.run(RunConcurrentRepresentationTests.kt:250)              |
-|       AnonymousObjectRunConcurrentRepresentationTest.x = 1 at AnonymousObjectRunConcurrentRepresentationTest.I$test$1.run(RunConcurrentRepresentationTests.kt:250)              |
-|   result: IllegalStateException #1                                                                                                                                              |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                 Main Thread                                                                                 |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$lambda(RunConcurrentRepresentationTests.kt:48) |
+|   block(): threw IllegalStateException at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:238)                                     |
+|     runnable = test$1 at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:257)                                                      |
+|     runnable ➜ test$1 at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:258)                                                      |
+|     runnable.run() at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:258)                                                         |
+|       AnonymousObjectRunConcurrentRepresentationTest.x ➜ 0 at AnonymousObjectRunConcurrentRepresentationTest.I$test.run(RunConcurrentRepresentationTests.kt:250)            |
+|       AnonymousObjectRunConcurrentRepresentationTest.x = 1 at AnonymousObjectRunConcurrentRepresentationTest.I$test.run(RunConcurrentRepresentationTests.kt:250)            |
+|   result: IllegalStateException #1                                                                                                                                          |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

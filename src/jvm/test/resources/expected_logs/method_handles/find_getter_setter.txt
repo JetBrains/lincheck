@@ -7,21 +7,21 @@ java.lang.IllegalStateException: Check failed.
 	at java.base/java.lang.Thread.run(Thread.java:840)
 
 The following interleaving leads to the error:
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                   Main Thread                                                                                   |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48) |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                 Main Thread                                                                                 |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$lambda(RunConcurrentRepresentationTests.kt:48) |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 
 Detailed trace:
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                   Main Thread                                                                                   |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48) |
-|   block(): threw IllegalStateException at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:44)                                                        |
-|     doTest() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:53)                                                                                  |
-|       Companion.create(): Counter#1 at MethodHandlesFindGetterSetterRepresentationTest.doTest(MethodHandlesLookupTests.kt:116)                                                  |
-|         Counter.shared = Counter#1 at Counter.Companion.create(MethodHandlesLookupTests.kt:165)                                                                                 |
-|       counter.value ➜ 42 at MethodHandlesFindGetterSetterRepresentationTest.doTest(MethodHandlesLookupTests.kt:123)                                                             |
-|   result: IllegalStateException #1                                                                                                                                              |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                 Main Thread                                                                                 |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$lambda(RunConcurrentRepresentationTests.kt:48) |
+|   block(): threw IllegalStateException at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:44)                                                    |
+|     doTest() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:53)                                                                              |
+|       Companion.create(): Counter#1 at MethodHandlesFindGetterSetterRepresentationTest.doTest(MethodHandlesLookupTests.kt:116)                                              |
+|         Counter.shared = Counter#1 at Counter.Companion.create(MethodHandlesLookupTests.kt:165)                                                                             |
+|       counter.value ➜ 42 at MethodHandlesFindGetterSetterRepresentationTest.doTest(MethodHandlesLookupTests.kt:123)                                                         |
+|   result: IllegalStateException #1                                                                                                                                          |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

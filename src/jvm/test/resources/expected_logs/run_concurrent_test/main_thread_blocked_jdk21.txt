@@ -4,7 +4,7 @@ The following interleaving leads to the error:
 | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                    Main Thread                                                                     |
 | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| $this_runCatching.block() at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48) |
+| $this_runCatching.block() at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$lambda(RunConcurrentRepresentationTests.kt:48)     |
 |   block() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:99)                                        |
 |     q.take() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:104)                                    |
 |       lock.lockInterruptibly() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:417)                                                             |
@@ -28,7 +28,7 @@ Detailed trace:
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                                   Main Thread                                                                                    |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| $this_runCatching.block() at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48)                               |
+| $this_runCatching.block() at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$lambda(RunConcurrentRepresentationTests.kt:48)                                   |
 |   block() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:99)                                                                      |
 |     q.take() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:104)                                                                  |
 |       lock.lockInterruptibly() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:417)                                                                                           |
@@ -38,7 +38,7 @@ Detailed trace:
 |               Unsafe#1.compareAndSetInt(NonfairSync#1, 16, 0, 1): true at AbstractQueuedSynchronizer.compareAndSetState(AbstractQueuedSynchronizer.java:569)                     |
 |       notEmpty.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:420)                                                                                                   |
 |         newConditionNode(): ConditionNode#1 at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:1697)                                            |
-|           this$0.tryInitializeHead(): ExclusiveNode#1 at AbstractQueuedSynchronizer.ConditionObject.newConditionNode(AbstractQueuedSynchronizer.java:1625)                       |
+|           this.tryInitializeHead(): ExclusiveNode#1 at AbstractQueuedSynchronizer.ConditionObject.newConditionNode(AbstractQueuedSynchronizer.java:1625)                         |
 |             Unsafe#1.compareAndSetReference(NonfairSync#1, 20, null, ExclusiveNode#1): true at AbstractQueuedSynchronizer.tryInitializeHead(AbstractQueuedSynchronizer.java:596) |
 |         enableWait(ConditionNode#1): 1 at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:1700)                                                 |
 |           node.setStatusRelaxed(3) at AbstractQueuedSynchronizer.ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1567)                                                |
