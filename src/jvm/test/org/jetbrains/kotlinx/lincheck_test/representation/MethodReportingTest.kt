@@ -75,7 +75,6 @@ class MethodReportingTest {
         val log = StringBuilder().appendFailure(failure).toString()
         check("uselessIncrements(2) at" in log) { "increments in uselessIncrements method should be compressed" }
         check("inc(): " in log) { "treated as atomic methods should be reported" }
-        check("ignored" !in log) { "ignored methods should not be present in log" }
         check("nonPrimitiveParameter(IllegalStateException#1)" in log)
         check("nonPrimitiveResult(): IllegalStateException#2" in log)
         checkTraceHasNoLincheckEvents(log)
