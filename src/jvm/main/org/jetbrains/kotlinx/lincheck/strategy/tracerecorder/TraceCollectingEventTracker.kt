@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.tracerecorder
 
+import kotlinx.atomicfu.atomic
 import org.jetbrains.kotlinx.lincheck.strategy.ThreadAnalysisHandle
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ShadowStackFrame
 import org.jetbrains.kotlinx.lincheck.strategy.managed.afterSpinCycleTraceCollected
@@ -47,23 +48,17 @@ class TraceCollectingEventTracker(
     private val methodDesc: String,
     private val traceDumpPath: String?
 ) :  EventTracker {
+    private val EMPTY_CALL_STACK_TRACE = emptyList<CallStackTraceElement>()
+
     // We don't want to re-create this object each time we need it
     private val analysisProfile: AnalysisProfile = AnalysisProfile(false)
 
     // We don't use [ThreadDescriptor.eventTrackerData] because we need to list all descriptors in the end
     private val threads = ConcurrentHashMap<Thread, ThreadAnalysisHandle>()
 
-/*
     // ID generator for [TracePoint]s
     private val currentTracePointId = atomic(0)
-    // ID generator for [StackTraceElement]s
-    private val currentCallId = atomic(0)
-*/
 
-    /////////////////////////////////////////////////
-    // Single-threaded "Optimal" implementation
-    // String builder for all data
-    private val output: PrintStream
     private var indent: CharSequence = " ".repeat(1024)
     private val simpleClassNames = HashMap<Class<*>, String>()
 
@@ -71,7 +66,6 @@ class TraceCollectingEventTracker(
 
     init {
         check(TRACE_ONLY_ONE_THREAD) { "Multiple threads recording is not supported" }
-        output = if (traceDumpPath == null) System.out else PrintStream(File(traceDumpPath).outputStream().buffered(1024*1024*1024), false)
     }
 
     override fun beforeThreadFork(thread: Thread, descriptor: ThreadDescriptor) = Unit
@@ -170,19 +164,22 @@ class TraceCollectingEventTracker(
         if (isStatic) {
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
         }
-/*
+
         val threadHandle = threads[Thread.currentThread()] ?: return false
-        val tracePoint = ReadTracePoint(
-            ownerRepresentation = if (obj == null) null else objectToString(obj),
-            iThread = threadHandle.threadId,
-            actorId = 0,
-            callStackTrace = EMPTY_CALL_STACK_TRACE,
+        // TODO: Should we call ReadTracePoint() which is cheaper?
+        val tracePoint = threadHandle.createReadFieldTracePoint(
+            obj = obj,
+            className = className,
             fieldName = fieldName,
             codeLocation = codeLocation,
-            isLocal = false
+            isStatic = isStatic,
+            isFinal = isFinal,
+            actorId = 0,
         )
-        threadHandle.traceCollector?.addTracePoint(tracePoint)
-*/
+        if (tracePoint != null) {
+            stackTrace.last().addChild(tracePoint)
+        }
+
         return false
     }
 
@@ -191,25 +188,25 @@ class TraceCollectingEventTracker(
         index: Int,
         codeLocation: Int
     ): Boolean = runInsideIgnoredSection {
-/*
         val threadHandle = threads[Thread.currentThread()] ?: return false
 
-        val tracePoint = ReadTracePoint(
-            ownerRepresentation = objectToString(array) + "[" + index + "]",
-            iThread = threadHandle.threadId,
-            actorId = 0,
-            callStackTrace = EMPTY_CALL_STACK_TRACE,
-            fieldName = fieldName,
+        val tracePoint = threadHandle.createReadArrayElementTracePoint(
+            array = array,
+            index = index,
             codeLocation = codeLocation,
-            isLocal = false
+            actorId = 0,
         )
-        threadHandle.traceCollector?.addTracePoint(tracePoint)
-*/
+        if (tracePoint != null) {
+            stackTrace.last().addChild(tracePoint)
+        }
 
         return false
     }
 
-    override fun afterRead(value: Any?) = Unit
+    override fun afterRead(value: Any?) = runInsideIgnoredSection {
+        val threadHandle = threads[Thread.currentThread()] ?: return
+        threadHandle.afterRead(value)
+    }
 
     override fun beforeWriteField(
         obj: Any?,
@@ -219,22 +216,56 @@ class TraceCollectingEventTracker(
         codeLocation: Int,
         isStatic: Boolean,
         isFinal: Boolean
-    ): Boolean = false
+    ): Boolean = runInsideIgnoredSection {
+        val threadHandle = threads[Thread.currentThread()] ?: return false
+        val tracePoint = threadHandle.createWriteFieldTracepoint(
+            obj = obj,
+            className = className,
+            fieldName = fieldName,
+            value = value,
+            codeLocation = codeLocation,
+            isStatic = isStatic,
+            actorId = 0
+        )
+        if (tracePoint != null) {
+            stackTrace.last().addChild(tracePoint)
+        }
+
+        return false
+    }
 
     override fun beforeWriteArrayElement(
         array: Any,
         index: Int,
         value: Any?,
         codeLocation: Int
-    ): Boolean = false
+    ): Boolean = runInsideIgnoredSection {
+        val threadHandle = threads[Thread.currentThread()] ?: return false
+        val tracePoint = threadHandle.createWriteArrayElementTracePoint(
+            array = array,
+            index = index,
+            value = value,
+            codeLocation = codeLocation,
+            actorId = 0
+        )
+        if (tracePoint != null) {
+            stackTrace.last().addChild(tracePoint)
+        }
+
+        return false
+    }
 
     override fun afterWrite() = Unit
 
-    override fun afterLocalRead(codeLocation: Int, name: String, value: Any?) = Unit
+    override fun afterLocalRead(codeLocation: Int, name: String, value: Any?) = runInsideIgnoredSection {
+        val threadHandle = threads[Thread.currentThread()] ?: return
+        threadHandle.afterLocalRead(name, value)
+    }
 
-    override fun afterLocalWrite(codeLocation: Int, name: String, value: Any?) = Unit
-
-    private val EMPTY_CALL_STACK_TRACE = emptyList<CallStackTraceElement>()
+    override fun afterLocalWrite(codeLocation: Int, name: String, value: Any?) = runInsideIgnoredSection {
+        val threadHandle = threads[Thread.currentThread()] ?: return
+        threadHandle.afterLocalWrite(name, value)
+    }
 
     override fun onMethodCall(
         className: String,
@@ -252,6 +283,7 @@ class TraceCollectingEventTracker(
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
         }
 
+        // TODO: Should we call threadHandle.createMethodCallTracePoint() which is expensive?
         val tracePoint = MethodCallTracePoint(
             iThread = threadHandle.threadId,
             actorId = methodId,
@@ -411,29 +443,27 @@ class TraceCollectingEventTracker(
         System.err.println("Trace record time: ${System.currentTimeMillis() - startTime}")
         startTime = System.currentTimeMillis()
 
-        if (stackTrace.size != 1) {
-            System.err.println("--- PROBLEMS WITH STACK TRACE")
-            for (tp in stackTrace) {
-                System.err.println(tp.toString())
-            }
+        val output = if (traceDumpPath == null) {
+            System.out
+        } else {
+            PrintStream(File(traceDumpPath).outputStream().buffered(1024*1024*1024), false)
+        }
+        try {
+            printOneThread(output, stackTrace.first(), 0)
+        } finally {
             output.close()
-            return
         }
 
-
-        printOneThread(stackTrace.first(), 0)
-
-        output.close()
         System.err.println("Output time: ${System.currentTimeMillis() - startTime}")
     }
 
-    private fun printOneThread(node: TracePoint, depth: Int) {
+    private fun printOneThread(output: PrintStream, node: TracePoint, depth: Int) {
         output.append(indent, 0, depth)
         output.append(node.toStringImpl(false))
         output.append("\n")
         if (node is MethodCallTracePoint) {
             for (c in node.getChildren()) {
-                printOneThread(c, depth + 1)
+                printOneThread(output, c, depth + 1)
             }
         }
     }
