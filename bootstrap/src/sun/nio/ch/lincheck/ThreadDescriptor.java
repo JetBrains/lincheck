@@ -97,6 +97,31 @@ public class ThreadDescriptor {
         this.eventTrackerData = new WeakReference<>(eventTrackerData);
     }
 
+    public void setAsRootDescriptor() {
+        if (rootThread != null) {
+            throw new IllegalStateException("Root Thread Descriptor is already set");
+        }
+        if (Thread.currentThread() instanceof TestThread) {
+            throw new IllegalStateException("Root Thread cannot be TestThread");
+        }
+        rootThread = Thread.currentThread();
+        rootDescriptor = this;
+    }
+
+    public void removeAsRootDescriptor() {
+        if (rootThread == null) {
+            throw new IllegalStateException("Root Thread Descriptor is not set");
+        }
+        if (rootThread != Thread.currentThread()) {
+            throw new IllegalStateException("Root Thread Descriptor was set from other thread");
+        }
+        if (rootDescriptor != this) {
+            throw new IllegalStateException("Root Thread Descriptor was set to oher descriptor");
+        }
+        rootThread = null;
+        rootDescriptor = null;
+    }
+
     /**
      * Determines whether the thread is currently within an analyzed code section,
      * that is analysis was enabled and the thread is not currently within an ignored section.
@@ -206,6 +231,15 @@ public class ThreadDescriptor {
         Collections.synchronizedMap(new WeakIdentityHashMap<>());
 
     /**
+     * Store fast-path descriptor for "main" thread
+     */
+    private static ThreadDescriptor rootDescriptor = null;
+    /**
+     * Store "main" thread for
+     */
+    private static Thread rootThread = null;
+
+    /**
      * Retrieves the current thread's {@code ThreadDescriptor}.
      *
      * @return the {@code ThreadDescriptor} associated with the current thread
@@ -213,6 +247,9 @@ public class ThreadDescriptor {
      */
     public static ThreadDescriptor getCurrentThreadDescriptor() {
         Thread thread = Thread.currentThread();
+        if (thread == rootThread) {
+            return rootDescriptor;
+        }
         if (thread instanceof TestThread) {
             return ((TestThread) thread).descriptor;
         }

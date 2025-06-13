@@ -47,21 +47,21 @@ object TraceRecorder {
         val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: ThreadDescriptor(Thread.currentThread()).also {
             ThreadDescriptor.setCurrentThreadDescriptor(it)
         }
+        desc.setAsRootDescriptor()
         desc.eventTracker = eventTracker
 
         eventTracker!!.enableTrace()
         desc.enableAnalysis()
-        Injections.enableGlobalEventTracker(eventTracker!!)
     }
 
     fun finishTraceAndDumpResults() {
         // this method does not need 'runInsideIgnoredSection' because we do not call instrumented code
         // and 'eventTracker.finishAndDumpTrace()' is called after analysis is disabled
         val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
+        desc.removeAsRootDescriptor()
         val currentTracker = desc.eventTracker
         if (currentTracker == eventTracker) {
             desc.disableAnalysis()
-            Injections.disableGlobalEventTracker()
             eventTracker?.finishAndDumpTrace()
             eventTracker = null
         }

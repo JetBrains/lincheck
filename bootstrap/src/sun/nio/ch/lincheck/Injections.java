@@ -52,25 +52,7 @@ public class Injections {
     @SuppressWarnings({"FieldCanBeLocal", "unused"})
     private static int currentEventId = -1;
 
-    private static EventTracker globalEventTracker = null;
-    private static Thread threadOfGlobalEventTracker = null;
-    private static int ignoredDepth = 0;
-
-    public static void enableGlobalEventTracker(EventTracker tracker) {
-        globalEventTracker = tracker;
-        threadOfGlobalEventTracker = Thread.currentThread();
-    }
-
-    public static void disableGlobalEventTracker() {
-        threadOfGlobalEventTracker = null;
-        globalEventTracker = null;
-    }
-
     public static EventTracker getEventTracker() {
-        if (threadOfGlobalEventTracker == Thread.currentThread()) {
-            return globalEventTracker;
-        }
-
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) {
             throw new RuntimeException("No event tracker set by Lincheck");
@@ -115,10 +97,6 @@ public class Injections {
      * (e.g. not registered in the Lincheck strategy).
      */
     public static void enterIgnoredSection() {
-        if (threadOfGlobalEventTracker == Thread.currentThread()) {
-            ignoredDepth++;
-            return;
-        }
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) return;
         descriptor.enterIgnoredSection();
@@ -132,10 +110,6 @@ public class Injections {
      * (e.g. not registered in the Lincheck strategy).
      */
     public static void leaveIgnoredSection() {
-        if (threadOfGlobalEventTracker == Thread.currentThread()) {
-            ignoredDepth--;
-            return;
-        }
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) return;
         descriptor.leaveIgnoredSection();
@@ -147,9 +121,6 @@ public class Injections {
      * @return true if the current thread is inside an ignored section, false otherwise.
      */
     public static boolean inAnalyzedCode() {
-        if (threadOfGlobalEventTracker == Thread.currentThread()) {
-            return ignoredDepth == 0;
-        }
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) return false;
         return descriptor.inAnalyzedCode();
