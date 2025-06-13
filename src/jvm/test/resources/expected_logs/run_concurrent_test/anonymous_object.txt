@@ -1,28 +1,28 @@
 = Concurrent test failed =
 
 java.lang.IllegalStateException: Check failed.
-	at org.jetbrains.kotlinx.lincheck_test.representation.AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:256)
-	at org.jetbrains.kotlinx.lincheck_test.representation.AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:235)
-	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:47)
+	at org.jetbrains.kotlinx.lincheck_test.representation.AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:259)
+	at org.jetbrains.kotlinx.lincheck_test.representation.AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:238)
+	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48)
 	at java.base/java.lang.Thread.run(Thread.java:840)
 
 The following interleaving leads to the error:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                                   Main Thread                                                                                   |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:47) |
+| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48) |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 
 Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                                   Main Thread                                                                                   |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:47) |
-|   block(): threw IllegalStateException at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:235)                                         |
-|     runnable = test$1 at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:254)                                                          |
-|     runnable ➜ test$1 at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:255)                                                          |
-|     runnable.run() at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:255)                                                             |
-|       AnonymousObjectRunConcurrentRepresentationTest.x ➜ 0 at AnonymousObjectRunConcurrentRepresentationTest$I$test$1.run(RunConcurrentRepresentationTests.kt:247)              |
-|       AnonymousObjectRunConcurrentRepresentationTest.x = 1 at AnonymousObjectRunConcurrentRepresentationTest$I$test$1.run(RunConcurrentRepresentationTests.kt:247)              |
+| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48) |
+|   block(): threw IllegalStateException at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:238)                                         |
+|     runnable = test$1 at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:257)                                                          |
+|     runnable ➜ test$1 at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:258)                                                          |
+|     runnable.run() at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:258)                                                             |
+|       AnonymousObjectRunConcurrentRepresentationTest.x ➜ 0 at AnonymousObjectRunConcurrentRepresentationTest.I$test$1.run(RunConcurrentRepresentationTests.kt:250)              |
+|       AnonymousObjectRunConcurrentRepresentationTest.x = 1 at AnonymousObjectRunConcurrentRepresentationTest.I$test$1.run(RunConcurrentRepresentationTests.kt:250)              |
 |   result: IllegalStateException #1                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

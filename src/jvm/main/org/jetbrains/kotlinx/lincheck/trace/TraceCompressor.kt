@@ -22,6 +22,7 @@ internal fun SingleThreadedTable<TraceNode>.compressTrace() = this
     .compressThreadStart()
     .removeCoroutinesCoreSuffix()
     .compressInlineIV()
+    .removeNestedClassDollar()
 
 /**
  * Compresses `receive$suspendImpl` calls.
@@ -202,6 +203,58 @@ private fun SingleThreadedTable<TraceNode>.compressInlineIV() = compressNodes { 
     node.tracePoint.ownerName = node.tracePoint.ownerName!!.removeSuffix("\$iv")
     node
 }
+
+/**
+ * Removes nested class dollars from owner names.
+ */
+private fun SingleThreadedTable<TraceNode>.removeNestedClassDollar() = compressNodes { node ->
+    if (node is CallNode && node.tracePoint.ownerName != null) {
+        val newOwner = fixeNestedClassDollar(node.tracePoint.ownerName!!)
+        node.tracePoint.ownerName = newOwner
+    }
+    node
+}
+
+
+/**
+* Optimize stack trace element string representation
+*/
+internal fun StackTraceElement.shorten(): String {
+    val elementWithoutPackage = removePackages(this.toString())
+    val noNestedClassDollars = removeStackTraceNestedClassDollarSigns(elementWithoutPackage)
+    return noNestedClassDollars
+}
+
+/**
+ * Removes package info in the stack trace element representation.
+ */
+private fun removePackages(stackTraceElement: String): String {
+    for (i in stackTraceElement.indices.reversed())
+        if (stackTraceElement[i] == '/')
+            return stackTraceElement.substring(i + 1 until stackTraceElement.length)
+    return stackTraceElement
+}
+
+/**
+ * Removes nested class dollar signs from stackTraceElement string representation.
+ */
+private fun removeStackTraceNestedClassDollarSigns(stackTraceElement: String): String {
+    val before = stackTraceElement.substringBefore('.')
+    val after = stackTraceElement.substringAfter('.', "")
+    if (after.isEmpty()) return before
+
+    return "${fixeNestedClassDollar(before)}.$after"
+}
+
+private fun fixeNestedClassDollar(nestedClassRepresentation: String): String {
+    val before = nestedClassRepresentation.substringBefore('$')
+    val after = nestedClassRepresentation.substringAfter('$', "")
+    if (after.isEmpty()) return nestedClassRepresentation
+    val firstPart = if (before.isNotEmpty() && before[0].isUpperCase() && after[0].isUpperCase()) "$before."
+    else "$before$"
+    return firstPart + fixeNestedClassDollar(after)
+}
+
 
 internal fun SingleThreadedTable<TraceNode>.collapseLibraries(analysisProfile: AnalysisProfile) = compressNodes { node -> 
     // if should not be hidden

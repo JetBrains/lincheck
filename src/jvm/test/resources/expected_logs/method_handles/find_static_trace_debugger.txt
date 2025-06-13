@@ -1,35 +1,35 @@
 = Concurrent test failed =
 
 java.lang.IllegalStateException: Check failed.
-	at org.jetbrains.kotlinx.lincheck_test.representation.BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:58)
-	at org.jetbrains.kotlinx.lincheck_test.representation.BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:46)
-	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:47)
+	at org.jetbrains.kotlinx.lincheck_test.representation.BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:56)
+	at org.jetbrains.kotlinx.lincheck_test.representation.BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:44)
+	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48)
 	at java.base/java.lang.Thread.run(Thread.java:840)
 
 The following interleaving leads to the error:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                                   Main Thread                                                                                   |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:47) |
+| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48) |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 
 Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                                   Main Thread                                                                                   |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:47) |
-|   block(): threw IllegalStateException at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:46)                                                        |
-|     doTest() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:55)                                                                                  |
-|       Companion.create(): Counter#1 at MethodHandlesFindStaticRepresentationTest.doTest(MethodHandlesLookupTests.kt:103)                                                        |
-|         Counter.shared = Counter#1 at Counter$Companion.create(MethodHandlesLookupTests.kt:167)                                                                                 |
-|       methodHandle.invoke(Counter#1) at MethodHandlesFindStaticRepresentationTest.doTest(MethodHandlesLookupTests.kt:108)                                                       |
+| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48) |
+|   block(): threw IllegalStateException at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:44)                                                        |
+|     doTest() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:53)                                                                                  |
+|       Companion.create(): Counter#1 at MethodHandlesFindStaticRepresentationTest.doTest(MethodHandlesLookupTests.kt:101)                                                        |
+|         Counter.shared = Counter#1 at Counter.Companion.create(MethodHandlesLookupTests.kt:165)                                                                                 |
+|       methodHandle.invoke(Counter#1) at MethodHandlesFindStaticRepresentationTest.doTest(MethodHandlesLookupTests.kt:106)                                                       |
 |         Companion.increment(Counter#1) at Counter.increment(MethodHandlesLookupTests.kt:0)                                                                                      |
-|           counter.value ➜ 0 at Counter$Companion.increment(MethodHandlesLookupTests.kt:171)                                                                                     |
-|           counter.value = 1 at Counter$Companion.increment(MethodHandlesLookupTests.kt:171)                                                                                     |
-|       methodHandle.invokeExact(Counter#1) at MethodHandlesFindStaticRepresentationTest.doTest(MethodHandlesLookupTests.kt:109)                                                  |
+|           counter.value ➜ 0 at Counter.Companion.increment(MethodHandlesLookupTests.kt:169)                                                                                     |
+|           counter.value = 1 at Counter.Companion.increment(MethodHandlesLookupTests.kt:169)                                                                                     |
+|       methodHandle.invokeExact(Counter#1) at MethodHandlesFindStaticRepresentationTest.doTest(MethodHandlesLookupTests.kt:107)                                                  |
 |         Companion.increment(Counter#1) at Counter.increment(MethodHandlesLookupTests.kt:0)                                                                                      |
-|           counter.value ➜ 1 at Counter$Companion.increment(MethodHandlesLookupTests.kt:171)                                                                                     |
-|           counter.value = 2 at Counter$Companion.increment(MethodHandlesLookupTests.kt:171)                                                                                     |
-|       counter.value ➜ 2 at MethodHandlesFindStaticRepresentationTest.doTest(MethodHandlesLookupTests.kt:110)                                                                    |
+|           counter.value ➜ 1 at Counter.Companion.increment(MethodHandlesLookupTests.kt:169)                                                                                     |
+|           counter.value = 2 at Counter.Companion.increment(MethodHandlesLookupTests.kt:169)                                                                                     |
+|       counter.value ➜ 2 at MethodHandlesFindStaticRepresentationTest.doTest(MethodHandlesLookupTests.kt:108)                                                                    |
 |   result: IllegalStateException #1                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

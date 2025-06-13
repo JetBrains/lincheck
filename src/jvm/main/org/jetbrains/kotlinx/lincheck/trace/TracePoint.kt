@@ -526,17 +526,6 @@ internal class SpinCycleStartTracePoint(iThread: Int, actorId: Int, callStackTra
     }
 }
 
-/**
- * Removes package info in the stack trace element representation.
- */
-private fun StackTraceElement.shorten(): String {
-    val stackTraceElement = this.toString()
-    for (i in stackTraceElement.indices.reversed())
-        if (stackTraceElement[i] == '/')
-            return stackTraceElement.substring(i + 1 until stackTraceElement.length)
-    return stackTraceElement
-}
-
 internal sealed class SwitchReason(private val reason: String) {
     // strategy switch decision
     object StrategySwitch : SwitchReason("")
