@@ -113,7 +113,7 @@ internal class LincheckClassVisitor(
             // Inline method call transformer relies on the original variables' indices, so it should go before (in FIFO order)
             // all transformers which can create local variables.
             // All visitors created AFTER InlineMethodCallTransformer must use a non-remapping Generator adapter.
-            mv = InlineMethodCallTransformer(fileName, className, methodName, desc, mv.newNonRemappingAdapter(), methods[methodName + desc] ?: MethodVariables(), null)
+            // mv = InlineMethodCallTransformer(fileName, className, methodName, desc, mv.newNonRemappingAdapter(), methods[methodName + desc] ?: MethodVariables(), null)
             return mv
         }
 
