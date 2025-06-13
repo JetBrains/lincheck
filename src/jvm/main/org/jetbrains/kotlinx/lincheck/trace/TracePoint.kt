@@ -609,7 +609,7 @@ internal fun BlockingReason?.toSwitchReason(iThreadToDisplayNumber: (Int) -> Int
  * @property methodInvocationId identifier of the method invocation;
  *   encompasses the id of the method itself and ids of its parameters (i.e., their hash codes).
  *
- * @see [org.jetbrains.kotlinx.lincheck.transformation.MethodIds].
+ * @see [org.jetbrains.kotlinx.lincheck.transformation.methodCache].
  */
 internal class CallStackTraceElement(
     val id: Int,

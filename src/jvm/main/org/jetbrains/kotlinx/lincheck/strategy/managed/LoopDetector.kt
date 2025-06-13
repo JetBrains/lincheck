@@ -17,7 +17,7 @@ import org.jetbrains.kotlinx.lincheck.trace.CallStackTraceElement
 import org.jetbrains.kotlinx.lincheck.trace.SpinCycleStartTracePoint
 import org.jetbrains.kotlinx.lincheck.trace.SwitchEventTracePoint
 import org.jetbrains.kotlinx.lincheck.trace.TracePoint
-import org.jetbrains.kotlinx.lincheck.transformation.MethodIds
+import org.jetbrains.kotlinx.lincheck.transformation.methodCache
 import org.jetbrains.kotlinx.lincheck.transformation.CodeLocations
 import java.util.ArrayList
 
@@ -865,7 +865,7 @@ private class ReplayModeLoopDetectorHelper(
  * Due to the recursive nature of a spin cycle, the second and the third trace points must have common
  * method call suffix.
  * It's important how to compare method calls in the suffixes. We consider method calls identical if
- * they have the same ids produced by [MethodIds] and the same parameters. That means we don't care
+ * they have the same ids produced by [methodCache] and the same parameters. That means we don't care
  * here where this method is called - it's more convenient to see as short version of the spin cycle as possible.
  *
  * But this approach may produce a wrong result in case when we switch from the spin lock and then occur

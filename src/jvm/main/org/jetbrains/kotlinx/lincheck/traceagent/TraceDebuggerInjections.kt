@@ -83,7 +83,7 @@ internal object TraceDebuggerInjections {
         return firstRun
     }
 
-    class FailingVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : Verifier {
+    internal class FailingVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : Verifier {
         override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?) = false
     }
 

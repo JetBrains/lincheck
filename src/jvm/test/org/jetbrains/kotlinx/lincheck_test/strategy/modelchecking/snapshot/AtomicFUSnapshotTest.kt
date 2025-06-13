@@ -18,6 +18,7 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedOptions
 import kotlin.random.Random
+import kotlin.ranges.until
 
 class AtomicFUSnapshotTest : AbstractSnapshotTest() {
     companion object {
@@ -30,17 +31,19 @@ class AtomicFUSnapshotTest : AbstractSnapshotTest() {
         //  If eager traversal does not help/not possible to reach `value` field, then such indirect methods should be handled separately,
         //  the same way as reflexivity, var-handles, and unsafe by tracking the creation of java afu and retrieving the name of the associated field.
         private val atomicFUInt = atomic(1)
-        private val atomicFURef = atomic<Wrapper>(Wrapper(1))
+        private val atomicFURef = atomic(Wrapper(1))
 
-        private val atomicFUIntArray = AtomicIntArray(3)
-        private val atomicFURefArray = atomicArrayOfNulls<Wrapper>(3)
+        private const val ARRAY_SIZE = 3
+
+        private val atomicFUIntArray = AtomicIntArray(ARRAY_SIZE)
+        private val atomicFURefArray = atomicArrayOfNulls<Wrapper>(ARRAY_SIZE)
 
         init {
-            for (i in 0..atomicFUIntArray.size - 1) {
+            for (i in 0 until ARRAY_SIZE) {
                 atomicFUIntArray[i].value = i + 1
             }
 
-            for (i in 0..atomicFURefArray.size - 1) {
+            for (i in 0 until ARRAY_SIZE) {
                 atomicFURefArray[i].value = Wrapper(i + 1)
             }
         }
@@ -48,12 +51,12 @@ class AtomicFUSnapshotTest : AbstractSnapshotTest() {
         // remember values to restore
         private val atomicFURefValue = atomicFURef.value
         private val atomicFUIntValues: List<Int> = mutableListOf<Int>().apply {
-            for (i in 0..atomicFUIntArray.size - 1) {
+            for (i in 0 until ARRAY_SIZE) {
                 add(atomicFUIntArray[i].value)
             }
         }
         private val atomicFURefArrayValues: List<Wrapper> = mutableListOf<Wrapper>().apply {
-            for (i in 0..atomicFURefArray.size - 1) {
+            for (i in 0 until ARRAY_SIZE) {
                 add(atomicFURefArray[i].value!!)
             }
         }
@@ -68,11 +71,11 @@ class AtomicFUSnapshotTest : AbstractSnapshotTest() {
             check(atomicFURef.value == atomicFURefValue)
             check(atomicFURef.value.x == 1)
 
-            for (i in 0..atomicFUIntArray.size - 1) {
+            for (i in 0 until ARRAY_SIZE) {
                 check(atomicFUIntArray[i].value == atomicFUIntValues[i])
             }
 
-            for (i in 0..atomicFURefArray.size - 1) {
+            for (i in 0 until ARRAY_SIZE) {
                 check(atomicFURefArray[i].value == atomicFURefArrayValues[i])
                 check(atomicFURefArray[i].value!!.x == i + 1)
             }
@@ -107,17 +110,17 @@ class AtomicFUSnapshotTest : AbstractSnapshotTest() {
 
     @Operation
     fun modifyAtomicFUIntArray() {
-        atomicFUIntArray[Random.nextInt(0, atomicFUIntArray.size)].value = Random.nextInt()
+        atomicFUIntArray[Random.nextInt(0, ARRAY_SIZE)].value = Random.nextInt()
     }
 
     @Operation
     fun modifyAtomicFURefArray() {
-        atomicFURefArray[Random.nextInt(0, atomicFURefArray.size)].value = Wrapper(Random.nextInt())
+        atomicFURefArray[Random.nextInt(0, ARRAY_SIZE)].value = Wrapper(Random.nextInt())
     }
 
     @Operation
     fun modifyAtomicFURefArrayValues() {
-        atomicFURefArray[Random.nextInt(0, atomicFURefArray.size)].value!!.x = Random.nextInt()
+        atomicFURefArray[Random.nextInt(0, ARRAY_SIZE)].value!!.x = Random.nextInt()
     }
 }
 
@@ -128,15 +131,17 @@ class ImplicitAtomicFUSnapshotTest : AbstractSnapshotTest() {
         private val atomicFUInt = kotlinx.atomicfu.atomic(1)
         private val atomicFURef = kotlinx.atomicfu.atomic<Wrapper>(Wrapper(1))
 
-        private val atomicFUIntArray = kotlinx.atomicfu.AtomicIntArray(3)
-        private val atomicFURefArray = kotlinx.atomicfu.atomicArrayOfNulls<Wrapper>(3)
+        private const val ARRAY_SIZE = 3
+
+        private val atomicFUIntArray = kotlinx.atomicfu.AtomicIntArray(ARRAY_SIZE)
+        private val atomicFURefArray = kotlinx.atomicfu.atomicArrayOfNulls<Wrapper>(ARRAY_SIZE)
 
         init {
-            for (i in 0..atomicFUIntArray.size - 1) {
+            for (i in 0 until ARRAY_SIZE) {
                 atomicFUIntArray[i].value = i + 1
             }
 
-            for (i in 0..atomicFURefArray.size - 1) {
+            for (i in 0 until ARRAY_SIZE) {
                 atomicFURefArray[i].value = Wrapper(i + 1)
             }
         }
@@ -144,12 +149,12 @@ class ImplicitAtomicFUSnapshotTest : AbstractSnapshotTest() {
         // remember values to restore
         private val atomicFURefValue = atomicFURef.value
         private val atomicFUIntValues: List<Int> = mutableListOf<Int>().apply {
-            for (i in 0..atomicFUIntArray.size - 1) {
+            for (i in 0 until ARRAY_SIZE) {
                 add(atomicFUIntArray[i].value)
             }
         }
         private val atomicFURefArrayValues: List<Wrapper> = mutableListOf<Wrapper>().apply {
-            for (i in 0..atomicFURefArray.size - 1) {
+            for (i in 0 until ARRAY_SIZE) {
                 add(atomicFURefArray[i].value!!)
             }
         }
@@ -164,11 +169,11 @@ class ImplicitAtomicFUSnapshotTest : AbstractSnapshotTest() {
             check(atomicFURef.value == atomicFURefValue)
             check(atomicFURef.value.x == 1)
 
-            for (i in 0..atomicFUIntArray.size - 1) {
+            for (i in 0 until ARRAY_SIZE) {
                 check(atomicFUIntArray[i].value == atomicFUIntValues[i])
             }
 
-            for (i in 0..atomicFURefArray.size - 1) {
+            for (i in 0 until ARRAY_SIZE) {
                 check(atomicFURefArray[i].value == atomicFURefArrayValues[i])
                 check(atomicFURefArray[i].value!!.x == i + 1)
             }
@@ -212,28 +217,28 @@ class ImplicitAtomicFUSnapshotTest : AbstractSnapshotTest() {
 
     @Operation
     fun incrementAndGetAtomicFUIntArray() {
-        atomicFUIntArray[Random.nextInt(0, atomicFUIntArray.size)].incrementAndGet()
+        atomicFUIntArray[Random.nextInt(0, ARRAY_SIZE)].incrementAndGet()
     }
 
     @Operation
     fun decrementAndGetAtomicFUIntArray() {
-        atomicFUIntArray[Random.nextInt(0, atomicFUIntArray.size)].decrementAndGet()
+        atomicFUIntArray[Random.nextInt(0, ARRAY_SIZE)].decrementAndGet()
     }
 
     @Operation
     fun compareAndSetAtomicFUIntArray() {
-        val idx = Random.nextInt(0, atomicFUIntArray.size)
+        val idx = Random.nextInt(0, ARRAY_SIZE)
         atomicFUIntArray[idx].compareAndSet(atomicFUIntArray[idx].value, Random.nextInt())
     }
 
     @Operation
     fun getAndSetAtomicFURefArray() {
-        atomicFURefArray[Random.nextInt(0, atomicFURefArray.size)].getAndSet(Wrapper(Random.nextInt()))
+        atomicFURefArray[Random.nextInt(0, ARRAY_SIZE)].getAndSet(Wrapper(Random.nextInt()))
     }
 
     @Operation
     fun compareAndSetAtomicFURefArray() {
-        val idx = Random.nextInt(0, atomicFURefArray.size)
+        val idx = Random.nextInt(0, ARRAY_SIZE)
         atomicFURefArray[idx].compareAndSet(atomicFURefArray[idx].value, Wrapper(Random.nextInt()))
     }
 }

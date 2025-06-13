@@ -51,22 +51,26 @@ internal class SharedMemoryAccessTransformer(
                         visitFieldInsn(opcode, owner, fieldName, desc)
                     },
                     instrumented = {
+                        val fieldDescriptor = FieldDescriptor(
+                            className = owner.toCanonicalClassName(),
+                            fieldName = fieldName,
+                            isStatic = true,
+                            isFinal = FinalFields.isFinalField(owner, fieldName)
+                        )
+                        val fieldId = fieldCache.getOrCreateId(fieldDescriptor)
                         // STACK: <empty>
                         pushNull()
-                        push(owner.toCanonicalClassName())
-                        push(fieldName)
                         loadNewCodeLocationId()
-                        push(true) // isStatic
-                        push(FinalFields.isFinalField(owner, fieldName)) // isFinal
-                        // STACK: null, className, fieldName, codeLocation, isStatic, isFinal
+                        push(fieldId)
+                        // STACK: null, codeLocation, fieldId
                         invokeStatic(Injections::beforeReadField)
                         // STACK: isTracePointCreated
                         ifStatement(
                             condition = { /* already on stack */ },
                             thenClause = {
                                 invokeBeforeEventIfPluginEnabled("read static field")
-                            },
-                            elseClause = {})
+                            }
+                        )
                         // STACK: <empty>
                         visitFieldInsn(opcode, owner, fieldName, desc)
                         // STACK: value
@@ -83,15 +87,19 @@ internal class SharedMemoryAccessTransformer(
                         visitFieldInsn(opcode, owner, fieldName, desc)
                     },
                     instrumented = {
+                        val fieldDescriptor = FieldDescriptor(
+                            className = owner.toCanonicalClassName(),
+                            fieldName = fieldName,
+                            isStatic = false,
+                            isFinal = FinalFields.isFinalField(owner, fieldName)
+                        )
+                        val fieldId = fieldCache.getOrCreateId(fieldDescriptor)
                         // STACK: obj
                         dup()
                         // STACK: obj, obj
-                        push(owner.toCanonicalClassName())
-                        push(fieldName)
                         loadNewCodeLocationId()
-                        push(false) // isStatic
-                        push(FinalFields.isFinalField(owner, fieldName)) // isFinal
-                        // STACK: obj, obj, className, fieldName, codeLocation, isStatic, isFinal
+                        push(fieldId)
+                        // STACK: obj, obj, codeLocation, fieldId
                         invokeStatic(Injections::beforeReadField)
                         // STACK: obj, isTracePointCreated
                         ifStatement(
@@ -99,7 +107,6 @@ internal class SharedMemoryAccessTransformer(
                             thenClause = {
                                 invokeBeforeEventIfPluginEnabled("read field")
                             },
-                            elseClause = {}
                         )
                         // STACK: obj
                         visitFieldInsn(opcode, owner, fieldName, desc)
@@ -118,26 +125,29 @@ internal class SharedMemoryAccessTransformer(
                     },
                     instrumented = {
                         val valueType = getType(desc)
+                        val fieldDescriptor = FieldDescriptor(
+                            className = owner.toCanonicalClassName(),
+                            fieldName = fieldName,
+                            isStatic = true,
+                            isFinal = FinalFields.isFinalField(owner, fieldName)
+                        )
+                        val fieldId = fieldCache.getOrCreateId(fieldDescriptor)
                         val valueLocal = newLocal(valueType) // we cannot use DUP as long/double require DUP2
                         copyLocal(valueLocal)
                         // STACK: value
                         pushNull()
-                        push(owner.toCanonicalClassName())
-                        push(fieldName)
                         loadLocal(valueLocal)
                         box(valueType)
                         loadNewCodeLocationId()
-                        push(true) // isStatic
-                        push(FinalFields.isFinalField(owner, fieldName)) // isFinal
-                        // STACK: value, null, className, fieldName, value, codeLocation, isStatic, isFinal
+                        push(fieldId)
+                        // STACK: value, null, value, codeLocation, fieldId
                         invokeStatic(Injections::beforeWriteField)
-                        // STACK: isTracePointCreated
+                        // STACK: value, isTracePointCreated
                         ifStatement(
                             condition = { /* already on stack */ },
                             thenClause = {
                                 invokeBeforeEventIfPluginEnabled("write static field")
-                            },
-                            elseClause = {}
+                            }
                         )
                         // STACK: value
                         visitFieldInsn(opcode, owner, fieldName, desc)
@@ -155,27 +165,30 @@ internal class SharedMemoryAccessTransformer(
                     },
                     instrumented = {
                         val valueType = getType(desc)
+                        val fieldDescriptor = FieldDescriptor(
+                            className = owner.toCanonicalClassName(),
+                            fieldName = fieldName,
+                            isStatic = false,
+                            isFinal = FinalFields.isFinalField(owner, fieldName),
+                        )
+                        val fieldId = fieldCache.getOrCreateId(fieldDescriptor)
                         val valueLocal = newLocal(valueType) // we cannot use DUP as long/double require DUP2
                         storeLocal(valueLocal)
                         // STACK: obj
                         dup()
                         // STACK: obj, obj
-                        push(owner.toCanonicalClassName())
-                        push(fieldName)
                         loadLocal(valueLocal)
                         box(valueType)
                         loadNewCodeLocationId()
-                        push(false) // isStatic
-                        push(FinalFields.isFinalField(owner, fieldName)) // isFinal
-                        // STACK: obj, obj, className, fieldName, value, codeLocation, isStatic, isFinal
+                        push(fieldId)
+                        // STACK: obj, obj, value, codeLocation, fieldId
                         invokeStatic(Injections::beforeWriteField)
-                        // STACK: isTracePointCreated
+                        // STACK: obj, isTracePointCreated
                         ifStatement(
                             condition = { /* already on stack */ },
                             thenClause = {
                                 invokeBeforeEventIfPluginEnabled("write field")
-                            },
-                            elseClause = {}
+                            }
                         )
                         // STACK: obj
                         loadLocal(valueLocal)
@@ -213,8 +226,7 @@ internal class SharedMemoryAccessTransformer(
                             condition = { /* already on stack */ },
                             thenClause = {
                                 invokeBeforeEventIfPluginEnabled("read array")
-                            },
-                            elseClause = {}
+                            }
                         )
                         // STACK: array: Array, index: Int
                         visitInsn(opcode)
@@ -247,8 +259,7 @@ internal class SharedMemoryAccessTransformer(
                             condition = { /* already on stack */ },
                             thenClause = {
                                 invokeBeforeEventIfPluginEnabled("write array")
-                            },
-                            elseClause = {}
+                            }
                         )
                         // STACK: array: Array, index: Int
                         loadLocal(valueLocal)

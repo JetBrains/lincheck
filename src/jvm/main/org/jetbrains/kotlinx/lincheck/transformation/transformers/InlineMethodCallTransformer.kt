@@ -11,6 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.jetbrains.kotlinx.lincheck.util.MethodDescriptor
 import org.objectweb.asm.Label
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
@@ -105,9 +106,7 @@ internal class InlineMethodCallTransformer(
     @Suppress("UNUSED_PARAMETER")
     private fun processInlineMethodCall(className: String, inlineMethodName: String, ownerType: org.objectweb.asm.Type?, owner: Int?, startLabel: Label) = adapter.run {
         // Create a fake method descriptor
-        val methodId = getPseudoMethodId(startLabel, inlineMethodName)
-        push(className)
-        push(inlineMethodName)
+        val methodId = getPseudoMethodId(className, startLabel, inlineMethodName)
         push(methodId)
         loadNewCodeLocationId()
         if (owner == null) {
@@ -144,14 +143,13 @@ internal class InlineMethodCallTransformer(
 
     private fun processInlineMethodCallReturn(inlineMethodName: String, startLabel: Label) = adapter.run {
         // Create a fake method descriptor
-        val methodId = getPseudoMethodId(startLabel, inlineMethodName)
-        push(inlineMethodName)
+        val methodId = getPseudoMethodId(null, startLabel, inlineMethodName)
         push(methodId)
         invokeStatic(Injections::onInlineMethodCallReturn)
     }
 
-    private fun getPseudoMethodId(startLabel: Label, inlineMethodName: String): Int =
-        MethodIds.getMethodId("$className\$$methodName\$$startLabel\$inlineCall", inlineMethodName, "()V")
+    private fun getPseudoMethodId(possibleClassName: String?, startLabel: Label, inlineMethodName: String): Int =
+        methodCache.getOrCreateId(MethodDescriptor(possibleClassName ?: "$className\$$methodName\$$startLabel\$inlineCall", inlineMethodName, "()V"))
 
     // Don't support atomicfu for now, it is messed with stack
     // Maybe we will need to expand it later

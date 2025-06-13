@@ -27,7 +27,7 @@ import org.jetbrains.kotlinx.lincheck_test.util.StringPoolGenerator
 import kotlinx.atomicfu.*
 
 class AtomicFUBooleanTest : AbstractLincheckTest() {
-    val bool = atomic(false)
+    private val bool = atomic(false)
 
     @Operation
     fun get() = bool.value
@@ -48,7 +48,7 @@ class AtomicFUBooleanTest : AbstractLincheckTest() {
 }
 
 class AtomicFUIntegerTest : AbstractLincheckTest() {
-    val int = atomic(0)
+    private val int = atomic(0)
 
     @Operation
     fun get() = int.value
@@ -84,19 +84,25 @@ class AtomicFUIntegerTest : AbstractLincheckTest() {
     @Operation
     fun decrementAndGet() = int.decrementAndGet()
 
-    @Operation
-    fun plusAssign(delta: Int) {
-        int += delta
-    }
+    /*
+     * `plusAssign` and `minusAssign` operators are not supported
+     * in atomicfu Kotlin-JVM IR compiler plugin:
+     * https://github.com/Kotlin/kotlinx-atomicfu/issues/414
+     */
 
-    @Operation
-    fun minusAssign(delta: Int) {
-        int -= delta
-    }
+    // @Operation
+    // fun plusAssign(delta: Int) {
+    //     int += delta
+    // }
+    //
+    // @Operation
+    // fun minusAssign(delta: Int) {
+    //     int -= delta
+    // }
 }
 
 class AtomicFULongTest : AbstractLincheckTest() {
-    val long = atomic(0L)
+    private val long = atomic(0L)
 
     @Operation
     fun get() = long.value
@@ -132,21 +138,27 @@ class AtomicFULongTest : AbstractLincheckTest() {
     @Operation
     fun decrementAndGet() = long.decrementAndGet()
 
-    @Operation
-    fun plusAssign(delta: Long) {
-        long += delta
-    }
+    /*
+     * `plusAssign` and `minusAssign` operators are not supported
+     * in atomicfu Kotlin-JVM IR compiler plugin:
+     * https://github.com/Kotlin/kotlinx-atomicfu/issues/414
+     */
 
-    @Operation
-    fun minusAssign(delta: Long) {
-        long -= delta
-    }
+    // @Operation
+    // fun plusAssign(delta: Long) {
+    //     long += delta
+    // }
+    //
+    // @Operation
+    // fun minusAssign(delta: Long) {
+    //     long -= delta
+    // }
 }
 
 // see comment on `AtomicReferenceTest` explaining usage of custom parameter generator here
 @Param(name = "string", gen = StringPoolGenerator::class)
 class AtomicFUReferenceTest : AbstractLincheckTest() {
-    val ref = atomic("")
+    private val ref = atomic("")
 
     @Operation
     fun get() = ref.value

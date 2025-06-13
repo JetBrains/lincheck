@@ -14,8 +14,6 @@ import java.lang.invoke.CallSite;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Constructor;
 
-import static sun.nio.ch.lincheck.Types.convertAsmMethodType;
-
 /**
  * Methods of this object are called from the instrumented code.
  */
@@ -328,10 +326,8 @@ public class Injections {
      *
      * @return whether the trace point was created
      */
-    public static boolean beforeReadField(Object obj, String className, String fieldName, int codeLocation,
-                                          boolean isStatic, boolean isFinal) {
-        if (!isStatic && obj == null) return false; // Ignore, NullPointerException will be thrown
-        return getEventTracker().beforeReadField(obj, className, fieldName, codeLocation, isStatic, isFinal);
+    public static boolean beforeReadField(Object obj, int codeLocation, int fieldId) {
+        return getEventTracker().beforeReadField(obj, codeLocation, fieldId);
     }
 
     /**
@@ -344,12 +340,12 @@ public class Injections {
         return getEventTracker().beforeReadArrayElement(array, index, codeLocation);
     }
 
-    public static void afterLocalRead(int codeLocation, String variableName, Object value) {
-        getEventTracker().afterLocalRead(codeLocation, variableName, value);
+    public static void afterLocalRead(int codeLocation, int variableId, Object value) {
+        getEventTracker().afterLocalRead(codeLocation, variableId, value);
     }
 
-    public static void afterLocalWrite(int codeLocation, String variableName, Object value) {
-        getEventTracker().afterLocalWrite(codeLocation, variableName, value);
+    public static void afterLocalWrite(int codeLocation, int variableId, Object value) {
+        getEventTracker().afterLocalWrite(codeLocation, variableId, value);
     }
 
     /**
@@ -364,10 +360,8 @@ public class Injections {
      *
      * @return whether the trace point was created
      */
-    public static boolean beforeWriteField(Object obj, String className, String fieldName, Object value, int codeLocation,
-                                           boolean isStatic, boolean isFinal) {
-        if (!isStatic && obj == null) return false; // Ignore, NullPointerException will be thrown
-        return getEventTracker().beforeWriteField(obj, className, fieldName, value, codeLocation, isStatic, isFinal);
+    public static boolean beforeWriteField(Object obj, Object value, int codeLocation, int fieldId) {
+        return getEventTracker().beforeWriteField(obj, value, codeLocation, fieldId);
     }
 
     /**
@@ -393,8 +387,8 @@ public class Injections {
      * @param receiver is `null` for public static methods.
      * @return Deterministic call descriptor or null.
      */
-    public static Object onMethodCall(String className, String methodName, int codeLocation, String methodDesc, int methodId, Object receiver, Object[] params) {
-        return getEventTracker().onMethodCall(className, methodName, codeLocation, methodId, methodDesc, receiver, params);
+    public static Object onMethodCall(int codeLocation, int methodId, Object receiver, Object[] params) {
+        return getEventTracker().onMethodCall(codeLocation, methodId, receiver, params);
     }
 
     /**
@@ -405,8 +399,8 @@ public class Injections {
      * @param result The call result.
      * @return The potentially modified {@code result}.
      */
-    public static Object onMethodCallReturn(String className, String methodName, long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Object result) {
-        return getEventTracker().onMethodCallReturn(className, methodName, descriptorId, descriptor, methodId, receiver, params, result);
+    public static Object onMethodCallReturn(long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Object result) {
+        return getEventTracker().onMethodCallReturn(descriptorId, descriptor, methodId, receiver, params, result);
     }
 
     /**
@@ -415,8 +409,8 @@ public class Injections {
      * @param descriptor Deterministic call descriptor or null.
      * @param descriptorId Deterministic call descriptor id when applicable, or any other value otherwise.
      */
-    public static void onMethodCallReturnVoid(String className, String methodName, long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params) {
-        getEventTracker().onMethodCallReturn(className, methodName, descriptorId, descriptor, methodId, receiver, params, VOID_RESULT);
+    public static void onMethodCallReturnVoid(long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params) {
+        getEventTracker().onMethodCallReturn(descriptorId, descriptor, methodId, receiver, params, VOID_RESULT);
     }
 
     /**
@@ -427,8 +421,8 @@ public class Injections {
      * @param t Thrown exception.
      * @return The potentially modified {@code t}.
      */
-    public static Throwable onMethodCallException(String className, String methodName, long descriptorId, Object descriptor, Object receiver, Object[] params, Throwable t) {
-        return getEventTracker().onMethodCallException(className, methodName, descriptorId, descriptor, receiver, params, t);
+    public static Throwable onMethodCallException(long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Throwable t) {
+        return getEventTracker().onMethodCallException(descriptorId, descriptor, methodId, receiver, params, t);
     }
 
     /**
@@ -605,15 +599,15 @@ public class Injections {
     /**
      * Called from the instrumented code before any kotlin inlined method call.
      */
-    public static void onInlineMethodCall(String className, String methodName, int methodId, int codeLocation, Object owner) {
-        getEventTracker().onInlineMethodCall(className, methodName, methodId, codeLocation, owner);
+    public static void onInlineMethodCall(int methodId, int codeLocation, Object owner) {
+        getEventTracker().onInlineMethodCall(methodId, codeLocation, owner);
     }
 
     /**
      * Called from the instrumented code after any kotlin inline method successful call, i.e., without any exception.
      */
-    public static void onInlineMethodCallReturn(String methodName, int methodId) {
-        getEventTracker().onInlineMethodCallReturn(methodName, methodId);
+    public static void onInlineMethodCallReturn(int methodId) {
+        getEventTracker().onInlineMethodCallReturn(methodId);
     }
 
     // == Methods required for the IDEA Plugin integration ==

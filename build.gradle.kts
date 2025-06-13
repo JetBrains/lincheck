@@ -1,25 +1,11 @@
-import groovy.util.*
-import kotlinx.team.infra.*
 import org.gradle.jvm.tasks.Jar
-import org.jetbrains.kotlin.gradle.*
+import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
-// atomicfu
-buildscript {
-    val atomicfuVersion: String by project
-    val asmVersion: String by project
-    dependencies {
-        classpath("org.jetbrains.kotlinx:atomicfu-gradle-plugin:$atomicfuVersion") {
-            classpath("org.ow2.asm:asm-commons:$asmVersion")
-            classpath("org.ow2.asm:asm-util:$asmVersion")
-        }
-    }
-}
-apply(plugin = "kotlinx-atomicfu")
 
 plugins {
     java
-    kotlin("multiplatform")
+    kotlin("jvm")
+    id("org.jetbrains.kotlinx.atomicfu")
     id("maven-publish")
     id("kotlinx.team.infra") version "0.4.0-dev-80"
 }
@@ -29,96 +15,99 @@ repositories {
     maven { url = uri("https://repo.gradle.org/gradle/libs-releases/") }
 }
 
-fun SourceDirectorySet.configureTestSources() {
-    srcDir("src/jvm/test")
-    srcDir("src/jvm/test-trace-debugger-integration")
-
-    val jdkToolchainVersion: String by project
-    if (jdkToolchainVersion.toInt() >= 11) {
-        srcDir("src/jvm/test-jdk11")
-    } else {
-        srcDir("src/jvm/test-jdk8")
-    }
-}
-
 kotlin {
-    @OptIn(ExperimentalKotlinGradlePluginApi::class)
     compilerOptions {
         allWarningsAsErrors = true
     }
+}
 
-    jvm {
-        withJava()
+sourceSets {
+    main {
+        java.srcDirs("src/jvm/main")
+    }
 
-        val main by compilations.getting
-        val test by compilations.getting
-        val integrationTest by compilations.creating {
-            defaultSourceSet {
-                associateWith(main)
-                associateWith(test)
-            }
+    test {
+        val jdkToolchainVersion: String by project
+
+        java.srcDir("src/jvm/test")
+        if (jdkToolchainVersion.toInt() >= 11) {
+            java.srcDir("src/jvm/test-jdk11")
+        } else {
+            java.srcDir("src/jvm/test-jdk8")
+        }
+
+        // Tests that test classes from the bootstrap module `sun.nio.ch.lincheck` need to import these classes;
+        // therefore, we need to add bootstrap to the compilation classpath.
+        compileClasspath += files("${project(":bootstrap").layout.buildDirectory.get()}/classes/java/main")
+
+        resources {
+            srcDir("src/jvm/test/resources")
         }
     }
 
-    sourceSets {
-        val jvmMain by getting {
-            kotlin.srcDir("src/jvm/main")
+    create("integrationTest") {
+        java.srcDir("src/jvm/test-integration")
+        configureClasspath()
+    }
 
-            val kotlinVersion: String by project
-            val kotlinxCoroutinesVersion: String by project
-            val asmVersion: String by project
-            val byteBuddyVersion: String by project
-            val atomicfuVersion: String by project
-            dependencies {
-                compileOnly(project(":bootstrap"))
-                api("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
-                api("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion")
-                api("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
-                api("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinxCoroutinesVersion")
-                api("org.ow2.asm:asm-commons:$asmVersion")
-                api("org.ow2.asm:asm-util:$asmVersion")
-                api("net.bytebuddy:byte-buddy:$byteBuddyVersion")
-                api("net.bytebuddy:byte-buddy-agent:$byteBuddyVersion")
-                api("org.jetbrains.kotlinx:atomicfu:$atomicfuVersion")
-            }
-        }
+    create("traceDebuggerTest") {
+        java.srcDir("src/jvm/test-trace-debugger-integration")
+        configureClasspath()
 
-        val jvmTest by getting {
-            kotlin.configureTestSources()
-
-            val junitVersion: String by project
-            val jctoolsVersion: String by project
-            val mockkVersion: String by project
-            dependencies {
-                implementation("junit:junit:$junitVersion")
-                implementation("org.jctools:jctools-core:$jctoolsVersion")
-                implementation("io.mockk:mockk:${mockkVersion}")
-            }
-        }
-
-        val jvmIntegrationTest by getting {
-            kotlin.srcDir("src/jvm/test-integration")
-
-            val junitVersion: String by project
-            dependencies {
-                implementation(rootProject)
-                implementation("junit:junit:$junitVersion")
-            }
-        }
-
-        create("traceDebuggerTest") {
-            kotlin.configureTestSources()
-        }
-
-        dependencies {
-            sourceSets.named("traceDebuggerTest") {
-                val gradleToolingApiVersion: String by project
-
-                implementation("org.gradle:gradle-tooling-api:${gradleToolingApiVersion}")
-                runtimeOnly("org.slf4j:slf4j-simple:1.7.10")
-            }
+        resources {
+            srcDir("src/jvm/test-trace-debugger-integration/resources")
         }
     }
+
+    dependencies {
+        // main
+        val kotlinVersion: String by project
+        val kotlinxCoroutinesVersion: String by project
+        val asmVersion: String by project
+        val byteBuddyVersion: String by project
+        val atomicfuVersion: String by project
+
+        compileOnly(project(":bootstrap"))
+        api("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
+        api("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion")
+        api("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
+        api("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinxCoroutinesVersion")
+        api("org.ow2.asm:asm-commons:$asmVersion")
+        api("org.ow2.asm:asm-util:$asmVersion")
+        api("net.bytebuddy:byte-buddy:$byteBuddyVersion")
+        api("net.bytebuddy:byte-buddy-agent:$byteBuddyVersion")
+        api("org.jetbrains.kotlinx:atomicfu:$atomicfuVersion")
+
+        // test
+        val junitVersion: String by project
+        val jctoolsVersion: String by project
+        val mockkVersion: String by project
+
+        testImplementation("junit:junit:$junitVersion")
+        testImplementation("org.jctools:jctools-core:$jctoolsVersion")
+        testImplementation("io.mockk:mockk:${mockkVersion}")
+
+        // integrationTest
+        val integrationTestImplementation by configurations
+
+        integrationTestImplementation(rootProject)
+        integrationTestImplementation("junit:junit:$junitVersion")
+        integrationTestImplementation("org.jctools:jctools-core:$jctoolsVersion")
+
+        // traceDebuggerTest
+        val gradleToolingApiVersion: String by project
+        val traceDebuggerTestImplementation by configurations
+        val traceDebuggerTestRuntimeOnly by configurations
+
+        traceDebuggerTestImplementation("junit:junit:$junitVersion")
+        traceDebuggerTestImplementation("org.gradle:gradle-tooling-api:${gradleToolingApiVersion}")
+        traceDebuggerTestRuntimeOnly("org.slf4j:slf4j-simple:1.7.10")
+    }
+}
+
+fun SourceSet.configureClasspath() {
+    compileClasspath += sourceSets.main.get().output + sourceSets.test.get().output
+    runtimeClasspath += sourceSets.main.get().output + sourceSets.test.get().output
 }
 
 java {
@@ -127,54 +116,75 @@ java {
     }
 }
 
+tasks {
+    named<JavaCompile>("compileTestJava") {
+        setupJavaToolchain()
+    }
+    named<KotlinCompile>("compileTestKotlin") {
+        setupKotlinToolchain()
+    }
+
+    named<JavaCompile>("compileIntegrationTestJava") {
+        setupJavaToolchain()
+    }
+    named<KotlinCompile>("compileIntegrationTestKotlin") {
+        setupKotlinToolchain()
+    }
+
+    named<JavaCompile>("compileTraceDebuggerTestJava") {
+        setupJavaToolchain()
+    }
+    named<KotlinCompile>("compileTraceDebuggerTestKotlin") {
+        setupKotlinToolchain()
+    }
+}
+
 fun JavaCompile.setupJavaToolchain() {
     val jdkToolchainVersion: String by project
     javaToolchains {
-        javaCompiler = compilerFor { languageVersion.set(JavaLanguageVersion.of(jdkToolchainVersion)) }
+        javaCompiler = compilerFor {
+            languageVersion.set(JavaLanguageVersion.of(jdkToolchainVersion))
+        }
     }
 }
 
 fun KotlinCompile.setupKotlinToolchain() {
     val jdkToolchainVersion: String by project
-    kotlinJavaToolchain.toolchain.use(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(jdkToolchainVersion)) })
+    kotlinJavaToolchain.toolchain.use(javaToolchains.launcherFor {
+        languageVersion.set(JavaLanguageVersion.of(jdkToolchainVersion))
+    })
 }
 
-tasks {
-    named<JavaCompile>("compileTestJava") {
-        setupJavaToolchain()
+// add an association to main and test modules to enable access to `internal` APIs inside integration tests:
+// https://kotlinlang.org/docs/gradle-configure-project.html#associate-compiler-tasks
+kotlin {
+    target.compilations.named("integrationTest") {
+        configureAssociation()
     }
-    named<JavaCompile>("compileIntegrationTestJava") {
-        setupJavaToolchain()
-    }
-
-    named<KotlinCompile>("compileTestKotlinJvm") {
-        setupKotlinToolchain()
-    }
-    named<KotlinCompile>("compileIntegrationTestKotlinJvm") {
-        setupKotlinToolchain()
+    target.compilations.named("traceDebuggerTest") {
+        configureAssociation()
     }
 }
 
-sourceSets.main {
-    java.srcDirs("src/jvm/main")
+fun KotlinCompilation<*>.configureAssociation() {
+    val main by target.compilations.getting
+    val test by target.compilations.getting
+    associateWith(main)
+    associateWith(test)
 }
 
-sourceSets.test {
-    java.configureTestSources()
-    resources {
-        srcDir("src/jvm/test/resources")
-        srcDir("src/jvm/test-trace-debugger-integration/resources")
-    }
-}
-
-sourceSets.named("integrationTest") {
-    java.srcDirs("src/jvm/test-integration")
-}
-
-val bootstrapJar = tasks.register<Copy>("bootstrapJar") {
-    dependsOn(":bootstrap:jar")
-    from(file("${project(":bootstrap").buildDir}/libs/bootstrap.jar"))
-    into(file("$buildDir/processedResources/jvm/main"))
+/*
+ * Unfortunately, Lincheck was affected by the following bug in atomicfu
+ * (at the latest version 0.27.0 at the time when this comment was written):
+ * https://github.com/Kotlin/kotlinx-atomicfu/issues/525.
+ *
+ * To bypass the bug, the solution is to disable post-compilation JVM bytecode transformation
+ * and enable only the JVM-IR transformation at the Kotlin compilation stage.
+ *
+ * See also https://github.com/JetBrains/lincheck/issues/668 for a more detailed description of the bug.
+ */
+atomicfu {
+    transformJvm = false
 }
 
 tasks.withType<Test> {
@@ -191,19 +201,10 @@ tasks.withType<Test> {
 }
 
 tasks {
-    named("processResources").configure {
-        dependsOn(bootstrapJar)
-    }
-
-    replace("jvmSourcesJar", Jar::class).run {
-        from(sourceSets["main"].allSource)
-        // Also collect sources for the injected classes to simplify debugging
-        from(project(":bootstrap").file("src"))
-    }
-
     fun Test.configureJvmTestCommon() {
         maxParallelForks = 1
         maxHeapSize = "6g"
+
         val instrumentAllClasses: String by project
         if (instrumentAllClasses.toBoolean()) {
             systemProperty("lincheck.instrumentAllClasses", "true")
@@ -237,15 +238,16 @@ tasks {
             extraArgs.add("-Dlincheck.dumpTransformedSources=true")
         }
         extraArgs.add("-Dlincheck.version=$version")
+
         findProperty("lincheck.logFile")?.let { extraArgs.add("-Dlincheck.logFile=${it as String}") }
         findProperty("lincheck.logLevel")?.let { extraArgs.add("-Dlincheck.logLevel=${it as String}") }
+
         jvmArgs(extraArgs)
     }
 
-    registerIntegrationTestsPrerequisites()
+    test {
+        configureJvmTestCommon()
 
-    val jvmTest = named<Test>("jvmTest") {
-        dependsOn(traceDebuggerIntegrationTestsPrerequisites)
         val ideaActive = System.getProperty("idea.active") == "true"
         if (!ideaActive) {
             // We need to be able to run these tests in IntelliJ IDEA.
@@ -260,7 +262,6 @@ tasks {
         if (jdkToolchainVersion.toInt() < 13) {
             exclude("**/*JdkUnsafeTraceRepresentationTest*")
         }
-        configureJvmTestCommon()
         val runAllTestsInSeparateJVMs: String by project
         forkEvery = when {
             runAllTestsInSeparateJVMs.toBoolean() -> 1
@@ -277,109 +278,125 @@ tasks {
         }
     }
 
-    val jvmTestIsolated = register<Test>("jvmTestIsolated") {
+    val testIsolated = register<Test>("testIsolated") {
         group = "verification"
-        testClassesDirs = jvmTest.get().testClassesDirs
-        classpath = jvmTest.get().classpath
+        include("**/*IsolatedTest*")
+
+        testClassesDirs = test.get().testClassesDirs
+        classpath = test.get().classpath
+
+        configureJvmTestCommon()
+
         enableAssertions = true
         testLogging.showStandardStreams = true
         outputs.upToDateWhen { false } // Always run tests when called
-        include("**/*IsolatedTest*")
-        configureJvmTestCommon()
+
         forkEvery = 1
     }
 
-    val jvmIntegrationTest = register<Test>("jvmIntegrationTest") {
-        val compilation = kotlin.targets["jvm"].compilations["integrationTest"]
+    val integrationTest = register<Test>("integrationTest") {
         group = "verification"
-        testClassesDirs = compilation.output.classesDirs
-        classpath = compilation.runtimeDependencyFiles!! + compilation.output.allOutputs
+
+        testClassesDirs = sourceSets["integrationTest"].output.classesDirs
+        classpath = sourceSets["integrationTest"].runtimeClasspath
+
+        configureJvmTestCommon()
+
         enableAssertions = true
         testLogging.showStandardStreams = true
         outputs.upToDateWhen { false } // Always run tests when called
-        configureJvmTestCommon()
     }
 
+    registerTraceDebuggerIntegrationTestsPrerequisites()
+
     val traceDebuggerIntegrationTest = register<Test>("traceDebuggerIntegrationTest") {
-        dependsOn(traceDebuggerIntegrationTestsPrerequisites)
-        outputs.upToDateWhen { false } // Always run tests when called
+        group = "verification"
         include("org/jetbrains/kotlinx/trace_debugger/integration/*")
+
+        testClassesDirs = sourceSets["traceDebuggerTest"].output.classesDirs
+        classpath = sourceSets["traceDebuggerTest"].runtimeClasspath
+
+        outputs.upToDateWhen { false } // Always run tests when called
+        dependsOn(traceDebuggerIntegrationTestsPrerequisites)
     }
 
     check {
-        dependsOn += jvmTestIsolated
-        setDependsOn(dependsOn.filter { it != jvmIntegrationTest })
-    }
-
-    withType<Jar> {
-        dependsOn(bootstrapJar)
-        manifest {
-            val inceptionYear: String by project
-            val lastCopyrightYear: String by project
-            val version: String by project
-            attributes(
-                "Copyright" to
-                        "Copyright (C) 2015 - 2019 Devexperts, LLC\n                                " +
-                        "Copyright (C) $inceptionYear - $lastCopyrightYear JetBrains, s.r.o.",
-                // This attribute let us get the version from the code.
-                "Implementation-Version" to version
-            )
-        }
-    }
-}
-
-infra {
-    teamcity {
-        val name: String by project
-        val version: String by project
-        libraryStagingRepoDescription = "$name $version"
-    }
-    publishing {
-        include(":")
-
-        libraryRepoUrl = "https://github.com/Kotlin/kotlinx-lincheck"
-        sonatype {}
-    }
-}
-
-publishing {
-    project.establishSignDependencies()
-}
-
-fun Project.establishSignDependencies() {
-    // Sign plugin issues and publication:
-    // Establish dependency between 'sign' and 'publish*' tasks.
-    tasks.withType<AbstractPublishToMaven>().configureEach {
-        dependsOn(tasks.withType<Sign>())
-    }
-}
-
-mavenPublicationsPom {
-    description.set("Lincheck - Framework for testing concurrent data structures")
-    val licenceName = "Mozilla Public License Version 2.0"
-    licenses {
-        license {
-            name.set(licenceName)
-            url.set("https://www.mozilla.org/en-US/MPL/2.0/")
-            distribution.set("repo")
-        }
-    }
-    withXml {
-        removeAllLicencesExceptOne(licenceName)
-    }
-}
-
-// kotlinx.team.infra adds Apache License, Version 2.0, remove it manually
-fun XmlProvider.removeAllLicencesExceptOne(licenceName: String) {
-    val licenseList = (asNode()["licenses"] as NodeList)[0] as Node
-    val licenses = licenseList["license"] as NodeList
-    licenses.filterIsInstance<Node>().forEach { licence ->
-        val name = (licence["name"] as NodeList)[0] as Node
-        val nameValue = (name.value() as NodeList)[0] as String
-        if (nameValue != licenceName) {
-            licenseList.remove(licence)
-        }
+        dependsOn += testIsolated
     }
 }
 
 registerTraceDebuggerTasks()
+
+val bootstrapJar = tasks.register<Copy>("bootstrapJar") {
+    dependsOn(":bootstrap:jar")
+    from(file("${project(":bootstrap").layout.buildDirectory.get()}/libs/bootstrap.jar"))
+    into(file("${layout.buildDirectory.get()}/resources/main"))
+}
+
+val jar by tasks.getting(Jar::class) {
+    from(sourceSets["main"].output)
+}
+
+val sourcesJar = tasks.register<Jar>("sourcesJar") {
+    from(sourceSets["main"].allSource)
+    // Also collect sources for the injected classes to simplify debugging
+    from(project(":bootstrap").file("src"))
+}
+
+tasks.withType<Jar> {
+    dependsOn(bootstrapJar)
+
+    manifest {
+        val inceptionYear: String by project
+        val lastCopyrightYear: String by project
+        val version: String by project
+        attributes(
+            "Copyright" to
+                    "Copyright (C) 2015 - 2019 Devexperts, LLC\n"
+                    + " ".repeat(29) + // additional space to fill to the 72-character length of JAR manifest file
+                    "Copyright (C) $inceptionYear - $lastCopyrightYear JetBrains, s.r.o.",
+            // This attribute let us get the version from the code.
+            "Implementation-Version" to version
+        )
+    }
+}
+
+tasks.named("processResources").configure {
+    dependsOn(bootstrapJar)
+}
+
+publishing {
+    publications {
+        register("maven", MavenPublication::class) {
+            val name: String by project
+            val group: String by project
+            val version: String by project
+
+            this.artifactId = name
+            this.groupId = group
+            this.version = version
+
+            from(components["kotlin"])
+            artifact(sourcesJar.get()) {
+                classifier = "sources"
+            }
+
+            pom {
+                this.name.set(name)
+                this.description.set("Lincheck - framework for testing concurrent data structures")
+
+                licenses {
+                    license {
+                        this.name.set("Mozilla Public License Version 2.0")
+                        this.url.set("https://www.mozilla.org/en-US/MPL/2.0/")
+                        this.distribution.set("repo")
+                    }
+                }
+            }
+        }
+    }
+}
+
+tasks.named("generateMetadataFileForMavenPublication") {
+    dependsOn(sourcesJar)
+}
