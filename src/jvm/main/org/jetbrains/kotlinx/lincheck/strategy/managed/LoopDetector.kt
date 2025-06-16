@@ -15,11 +15,8 @@ import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import org.jetbrains.kotlinx.lincheck.strategy.managed.LoopDetector.CodeIdentity.RegularCodeLocationIdentity
 import org.jetbrains.kotlinx.lincheck.trace.CallStackTrace
 import org.jetbrains.kotlinx.lincheck.trace.CallStackTraceElement
-import org.jetbrains.kotlinx.lincheck.trace.MethodReturnTracePoint
 import org.jetbrains.kotlinx.lincheck.trace.SpinCycleStartTracePoint
-import org.jetbrains.kotlinx.lincheck.trace.SwitchEventTracePoint
 import org.jetbrains.kotlinx.lincheck.trace.TracePoint
-import org.jetbrains.kotlinx.lincheck.trace.isEqualStackTrace
 import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.tracedata.CodeLocations
 import org.jetbrains.kotlinx.lincheck.tracedata.UNKNOWN_CODE_LOCATION_ID
@@ -924,62 +921,36 @@ private class ReplayModeLoopDetectorHelper(
  * node to get the correct spin cycle start trace point depth.
  */
 internal fun afterSpinCycleTraceCollected(
-    iThread: Int,
-    trace: List<TracePoint>,
-    callStackTrace: List<CallStackTraceElement>,
-) {
-    // Obtaining spin cycle trace points.
-    var spinLockTracePointsSize = 0
-    val spinLockTracePoints = trace
-        .takeLastWhile { it.iThread == iThread && it !is SpinCycleStartTracePoint }
-        .also { spinLockTracePointsSize = it.size }
-        .filter { it !is MethodReturnTracePoint }
-    // Nothing to do in this case (seems unreal).
-    if (spinLockTracePoints.isEmpty()) return
+    spinLockTracePoints: List<TracePoint>,
+    spinLockTracePointsCallStacks: List<CallStackTrace>,
+) : Pair<CallStackTrace, Boolean> {
+    check(!spinLockTracePoints.isEmpty())
 
-    val currentCallStackTrace = callStackTrace
-    val cycleStartTracePointIndex = trace.size - spinLockTracePointsSize - 1
-    if (cycleStartTracePointIndex < 0 || trace[cycleStartTracePointIndex] !is SpinCycleStartTracePoint) return
+    val spinCycleFirstTracePointCallStackTrace = spinLockTracePointsCallStacks.first()
+    val spinCycleLastTracePointCallStackTrace = spinLockTracePointsCallStacks.last()
+    val isRecursive = spinCycleLastTracePointCallStackTrace.size != spinCycleFirstTracePointCallStackTrace.size
 
-    val spinCycleFirstTracePointCallStackTrace = spinLockTracePoints.first().callStackTrace
-    val isRecursive = currentCallStackTrace.size != spinCycleFirstTracePointCallStackTrace.size
-    val spinCycleStartStackTrace = if (isRecursive) {
+    if (isRecursive) {
         // See above the description of the algorithm for recursive spin lock.
-        val prevIndex = trace.lastIndex - spinLockTracePoints.size - 1
-        val tracePointBeforeCycle = if (prevIndex >= 0) (prevIndex downTo 0)
-            .firstOrNull { trace[it] !is SwitchEventTracePoint && trace[it].iThread == iThread }?.let { trace[it] }
-        else null
-
-        var currentI = currentCallStackTrace.lastIndex
+        var currentI = spinCycleLastTracePointCallStackTrace.lastIndex
         var firstI = spinCycleFirstTracePointCallStackTrace.lastIndex
         var count = 0
         while (firstI >= 0) {
-            val identifier = spinCycleFirstTracePointCallStackTrace[firstI].methodInvocationId
+            val firstIdentifier = spinCycleFirstTracePointCallStackTrace.getOrNull(firstI)?.methodInvocationId
+            val lastIdentifier = spinCycleLastTracePointCallStackTrace.getOrNull(currentI)?.methodInvocationId
+
             // Comparing corresponding calls.
-            if (identifier != currentCallStackTrace[currentI].methodInvocationId) break
-            // Check for the last trace point before the cycle.
-            if (tracePointBeforeCycle != null &&
-                tracePointBeforeCycle.callStackTrace.lastIndex >= firstI &&
-                tracePointBeforeCycle.callStackTrace[firstI].methodInvocationId == identifier
-            ) break
+            if (firstIdentifier == null || lastIdentifier == null || firstIdentifier != lastIdentifier) break
 
             currentI--
             firstI--
             count++
         }
-        (trace[cycleStartTracePointIndex] as SpinCycleStartTracePoint).dropSpinCycleStackFrames = count
-        (trace[cycleStartTracePointIndex] as SpinCycleStartTracePoint).isRecursive = true
-        spinCycleFirstTracePointCallStackTrace.dropLast(count)
-    } else {
-        // See above the description of the algorithm for iterative spin lock.
-        getCommonMinStackTrace(spinLockTracePoints)
+        return spinCycleFirstTracePointCallStackTrace.dropLast(count) to true
     }
 
-    if (!trace[cycleStartTracePointIndex].callStackTrace.isEqualStackTrace(spinCycleStartStackTrace)) {
-        (trace[cycleStartTracePointIndex] as SpinCycleStartTracePoint).shouldBePatched = true
-    }
-
-    (trace[cycleStartTracePointIndex] as SpinCycleStartTracePoint).callStackTrace = spinCycleStartStackTrace
+    // See above the description of the algorithm for iterative spin lock.
+    return getCommonMinStackTrace(spinLockTracePoints) to false
 }
 
 /**
