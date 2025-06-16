@@ -9,14 +9,10 @@
  */
 package org.jetbrains.lincheck
 
-import org.jetbrains.kotlinx.lincheck.Actor
-import org.jetbrains.kotlinx.lincheck.ExceptionResult
-import org.jetbrains.kotlinx.lincheck.createVerifier
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
-import org.jetbrains.kotlinx.lincheck.ideaPluginEnabled
-import org.jetbrains.kotlinx.lincheck.runPluginReplay
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.runIteration
@@ -47,15 +43,15 @@ object Lincheck {
      * searching for the first raised exception.
      *
      * @param invocations number of different interleavings of code in the [block] that should be explored.
-     * @param lincheckSettings advanced settings that determine Lincheck behavior.
+     * @param settings advanced settings that determine Lincheck behavior.
      * @param block lambda which body will be a target for the interleavings exploration.
      *
      * @throws LincheckAssertionError in case if some exception was discovered.
      */
     @JvmStatic
     internal fun runConcurrentTestInternal(
-        invocations: Int,
-        lincheckSettings: LincheckSettings,
+        invocations: Int = DEFAULT_INVOCATIONS,
+        settings: LincheckSettings,
         block: Runnable
     ) {
         val scenario = ExecutionScenario(
@@ -73,7 +69,7 @@ object Lincheck {
             .iterations(0)
             .addCustomScenario(scenario)
             .invocationsPerIteration(invocations)
-            .analyzeStdLib(lincheckSettings.analyzeStdLib)
+            .analyzeStdLib(settings.analyzeStdLib)
             .verifier(NoExceptionVerifier::class.java)
 
         val testCfg = options.createTestConfigurations(GeneralPurposeModelCheckingWrapper::class.java)

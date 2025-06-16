@@ -45,10 +45,7 @@ abstract class BaseRunConcurrentRepresentationTest<R>(private val outputFileName
     fun testRunWithModelChecker() {
         val result = runCatching {
             val settings = LincheckSettings(analyzeStdLib = analyzeStdLib)
-            runConcurrentTestInternal(
-                invocations = Lincheck.DEFAULT_INVOCATIONS,
-                lincheckSettings = settings
-            ) {
+            runConcurrentTestInternal(settings = settings) {
                 block()
             }
         }
