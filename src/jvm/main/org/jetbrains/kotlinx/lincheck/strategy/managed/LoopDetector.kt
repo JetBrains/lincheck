@@ -15,6 +15,7 @@ import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import org.jetbrains.kotlinx.lincheck.strategy.managed.LoopDetector.CodeIdentity.RegularCodeLocationIdentity
 import org.jetbrains.kotlinx.lincheck.trace.CallStackTrace
 import org.jetbrains.kotlinx.lincheck.trace.CallStackTraceElement
+import org.jetbrains.kotlinx.lincheck.trace.MethodCallTracePoint
 import org.jetbrains.kotlinx.lincheck.trace.SpinCycleStartTracePoint
 import org.jetbrains.kotlinx.lincheck.trace.TracePoint
 import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
@@ -936,11 +937,11 @@ internal fun afterSpinCycleTraceCollected(
         var firstI = spinCycleFirstTracePointCallStackTrace.lastIndex
         var count = 0
         while (firstI >= 0) {
-            val firstIdentifier = spinCycleFirstTracePointCallStackTrace.getOrNull(firstI)?.methodInvocationId
-            val lastIdentifier = spinCycleLastTracePointCallStackTrace.getOrNull(currentI)?.methodInvocationId
+            val firstTracePoint = spinCycleFirstTracePointCallStackTrace.getOrNull(firstI)?.tracePoint
+            val lastTracePoint = spinCycleLastTracePointCallStackTrace.getOrNull(currentI)?.tracePoint
 
             // Comparing corresponding calls.
-            if (firstIdentifier == null || lastIdentifier == null || firstIdentifier != lastIdentifier) break
+            if (firstTracePoint == null || lastTracePoint == null || !firstTracePoint.isEqualInvocation(lastTracePoint)) break
 
             currentI--
             firstI--
@@ -971,3 +972,9 @@ private fun getCommonMinStackTrace(spinCycleTracePoints: List<TracePoint>): List
     }
     return spinCycleTracePoints.first().callStackTrace.take(count)
 }
+
+private fun MethodCallTracePoint.isEqualInvocation(other: MethodCallTracePoint): Boolean =
+    this.className == other.className &&
+    this.methodName == other.methodName &&
+    this.parameters?.size == other.parameters?.size &&
+    this.parameters == other.parameters
