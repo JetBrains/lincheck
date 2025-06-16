@@ -26,6 +26,7 @@ internal fun SingleThreadedTable<TraceNode>.compressTrace() = this
     .replaceNestedClassDollar()
     .compressSyntheticParameterNumbers()
     .compressLambdaCaptureSyntheticField()
+    .compressVolatileDollar()
 
 /**
  * Optimize stack trace element string representation
@@ -259,6 +260,19 @@ private fun SingleThreadedTable<TraceNode>.compressLambdaCaptureSyntheticField()
     node
 }
 
+private fun SingleThreadedTable<TraceNode>.compressVolatileDollar() = compressNodes { node ->
+    if (node is CallNode && node.tracePoint.ownerName != null) {
+        node.tracePoint.ownerName = node.tracePoint.ownerName!!.removeSuffix("\$volatile")
+    }
+    
+    // TODO this can be removed after IJTD-151 is merged. 
+    //  Could also be fixed in TraceNodes.kt but would cause unnecessary conflicts.
+    if (node is EventNode && node.tracePoint is MethodCallTracePoint && node.tracePoint.ownerName != null) {
+        node.tracePoint.ownerName = node.tracePoint.ownerName!!.removeSuffix("\$volatile")
+    }
+    
+    node
+}
 
 /**
  * Removes package info in the stack trace element representation.
@@ -296,6 +310,9 @@ private fun fixNestedClassDollar(nestedClassRepresentation: String): String {
     return firstPart + fixNestedClassDollar(after)
 }
 
+/**
+ * Removes $0 $1 etc.. These are the result of kotlin compiler dealing with overshadowing variables in lambdas.
+ */
 private fun SingleThreadedTable<TraceNode>.compressSyntheticParameterNumbers() = compressNodes { node ->
     if (node is CallNode) {
         if (node.tracePoint.ownerName != null)
