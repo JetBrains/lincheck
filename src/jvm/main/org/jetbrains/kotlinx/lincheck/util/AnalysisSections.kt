@@ -294,8 +294,9 @@ internal class AnalysisProfile(val analyzeStdLib: Boolean) {
     fun getAnalysisSectionFor(className: String,  methodName: String): AnalysisSectionType = when {
         isJavaExecutorService(className) && methodName == "submit" -> AnalysisSectionType.SILENT_PROPAGATING
         isJavaExecutorService(className) -> AnalysisSectionType.SILENT
-        className.startsWith("java.util.concurrent.") && !analyzeStdLib -> AnalysisSectionType.SILENT
         className.startsWith("java.util.concurrent.locks.AbstractQueuedSynchronizer") -> AnalysisSectionType.SILENT
+        className.startsWith("java.util.concurrent.locks") -> AnalysisSectionType.NORMAL
+        !analyzeStdLib && className.startsWith("java.util.concurrent.") -> AnalysisSectionType.SILENT
         className == "java.util.concurrent.FutureTask" -> AnalysisSectionType.SILENT
         
         else -> AnalysisSectionType.NORMAL
