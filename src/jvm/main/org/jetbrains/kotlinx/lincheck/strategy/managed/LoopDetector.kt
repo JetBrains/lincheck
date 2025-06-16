@@ -245,7 +245,7 @@ internal class LoopDetector(
         // Increase the total number of happened operations for live-lock detection
         totalExecutionsCount++
         // Ignore unknown code locations.
-        if (codeLocation == UNKNOWN_CODE_LOCATION) {
+        if (codeLocation == UNKNOWN_CODE_LOCATION_ID) {
             return Decision.Idle
         }
         // Update code location visit counter
@@ -323,7 +323,7 @@ internal class LoopDetector(
      *         or -1 if the `codeLocation` is unknown
      */
     private fun updateCodeLocationVisitCounter(codeLocation: Int) {
-        require(codeLocation != UNKNOWN_CODE_LOCATION)
+        require(codeLocation != UNKNOWN_CODE_LOCATION_ID)
         replayModeLoopDetectorHelper?.let {
             it.visitCodeLocation(codeLocation)
             return
@@ -457,7 +457,7 @@ internal class LoopDetector(
 
     fun onThreadFinish(iThread: Int) {
         check(iThread == currentThreadId)
-        afterCodeLocation(codeLocation = UNKNOWN_CODE_LOCATION)
+        afterCodeLocation(codeLocation = UNKNOWN_CODE_LOCATION_ID)
     }
 
     /**
@@ -486,7 +486,7 @@ internal class LoopDetector(
      * Is called after a thread switch back to a thread.
      */
     fun afterThreadSwitch(codeLocation: Int) {
-        if (codeLocation == UNKNOWN_CODE_LOCATION) return
+        if (codeLocation == UNKNOWN_CODE_LOCATION_ID) return
         // After we switch back to the thread, no `visitCodeLocations` will be called
         // before the next switch point as it was called earlier.
         // But we need to track that this point is going to be executed after the switch,

@@ -24,6 +24,7 @@ import org.jetbrains.kotlinx.lincheck.trace.*
 import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.transformation.CodeLocations
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
+import org.jetbrains.kotlinx.lincheck.transformation.UNKNOWN_CODE_LOCATION_ID
 import org.jetbrains.kotlinx.lincheck.transformation.fieldCache
 import org.jetbrains.kotlinx.lincheck.transformation.methodCache
 import org.jetbrains.kotlinx.lincheck.transformation.toCanonicalClassName
@@ -714,7 +715,7 @@ abstract class ManagedStrategy(
             owner = runner.testInstance,
             className = "java.lang.Thread",
             methodName = "run",
-            codeLocation = UNKNOWN_CODE_LOCATION,
+            codeLocation = UNKNOWN_CODE_LOCATION_ID,
             methodId = methodCache.getOrCreateId(MethodDescriptor("java.lang.Thread", "run", methodDescriptor)),
             threadId = currentThreadId,
             methodParams = emptyArray(),
@@ -954,7 +955,7 @@ abstract class ManagedStrategy(
             // TODO Setting this to "" somehow fixes failing MulitpleSpension....TraceRepresentationTest
             className = actor.method.declaringClass.name,
             methodName = actor.method.name,
-            codeLocation = UNKNOWN_CODE_LOCATION,
+            codeLocation = UNKNOWN_CODE_LOCATION_ID,
             methodId = methodCache.getOrCreateId(MethodDescriptor(actor.method.declaringClass.name.toCanonicalClassName(), actor.method.name, methodDescriptor)),
             threadId = iThread,
             methodParams = actor.arguments.toTypedArray(),
@@ -1837,7 +1838,7 @@ abstract class ManagedStrategy(
         isSuspended[iThread] = true
         if (runner.isCoroutineResumed(iThread, currentActorId[iThread]!!)) {
             // `UNKNOWN_CODE_LOCATION`, because we do not know the actual code location
-            newSwitchPoint(iThread, UNKNOWN_CODE_LOCATION)
+            newSwitchPoint(iThread, UNKNOWN_CODE_LOCATION_ID)
         } else {
             onSwitchPoint(iThread)
             // coroutine suspension does not violate obstruction-freedom
@@ -2315,9 +2316,6 @@ internal class ManagedStrategyRunner(
 
 private fun TracePoint.isActorMethodCallTracePoint() =
     (this is MethodCallTracePoint && this.isRootCall)
-
-// represents an unknown code location
-internal const val UNKNOWN_CODE_LOCATION = -1
 
 private val BlockingReason.obstructionFreedomViolationMessage: String get() = when (this) {
     is BlockingReason.Locked       -> OBSTRUCTION_FREEDOM_LOCK_VIOLATION_MESSAGE
