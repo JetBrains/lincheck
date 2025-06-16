@@ -16,7 +16,8 @@ import org.junit.Test
 import kotlin.concurrent.thread
 
 class CounterTest {
-    @Test // JUnit test
+    // @Test // TODO: Please, uncomment me and comment the line below to run the test and get the output
+    @Test(expected = AssertionError::class)
     fun test() = Lincheck.runConcurrentTest {
         var counter = 0
         // Increment the counter concurrently
