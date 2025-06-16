@@ -13,6 +13,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.runIteration
@@ -98,7 +99,7 @@ object Lincheck {
         }
     }
 
-    internal const val DEFAULT_INVOCATIONS = 50_000
+    internal const val DEFAULT_INVOCATIONS = ManagedCTestConfiguration.DEFAULT_INVOCATIONS
 }
 
 internal class GeneralPurposeModelCheckingWrapper {
