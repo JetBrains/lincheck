@@ -460,8 +460,7 @@ internal abstract class ManagedStrategy(
      * @param threadId the current thread id.
      * @param codeLocation the byte-code location identifier of the point in code.
      */
-    // TODO drop beforeMethodCallSwitch
-    private fun newSwitchPoint(threadId: Int, codeLocation: Int, beforeMethodCallSwitch: Boolean = false) {
+    private fun newSwitchPoint(threadId: Int, codeLocation: Int) {
         // re-throw abort error if the thread was aborted
         if (threadScheduler.isAborted(threadId)) {
             threadScheduler.abortCurrentThread()
@@ -471,7 +470,7 @@ internal abstract class ManagedStrategy(
         // check if live-lock is detected
         val decision = loopDetector.visitCodeLocation(threadId, codeLocation)
         if (decision != LoopDetector.Decision.Idle) {
-            processLoopDetectorDecision(threadId, codeLocation, decision, beforeMethodCallSwitch = beforeMethodCallSwitch)
+            processLoopDetectorDecision(threadId, codeLocation, decision)
             loopDetector.afterCodeLocation(codeLocation)
             return
         }
@@ -490,7 +489,7 @@ internal abstract class ManagedStrategy(
         }
         // if strategy requested thread switch, then do it
         if (shouldSwitch) {
-            val switchHappened = switchCurrentThread(threadId, beforeMethodCallSwitch = beforeMethodCallSwitch)
+            val switchHappened = switchCurrentThread(threadId)
             if (switchHappened) {
                 loopDetector.afterThreadSwitch(codeLocation)
             }
@@ -502,7 +501,6 @@ internal abstract class ManagedStrategy(
         iThread: Int,
         codeLocation: Int,
         decision: LoopDetector.Decision,
-        beforeMethodCallSwitch: Boolean = false,
     ) {
         check(decision != LoopDetector.Decision.Idle)
         // if we reached maximum number of events threshold, then fail immediately
@@ -512,18 +510,13 @@ internal abstract class ManagedStrategy(
         // if any kind of live-lock was detected, check for obstruction-freedom violation
         if (decision.isLivelockDetected) {
             failIfObstructionFreedomIsRequired {
-                traceCollector?.passObstructionFreedomViolationTracePoint(
-                    beforeMethodCall = beforeMethodCallSwitch
-                )
+                traceCollector?.passObstructionFreedomViolationTracePoint()
                 OBSTRUCTION_FREEDOM_SPINLOCK_VIOLATION_MESSAGE
             }
         }
         // if live-lock failure was detected, then fail immediately
         if (decision is LoopDetector.Decision.LivelockFailureDetected) {
-            traceCollector?.newSwitch(
-                SwitchReason.ActiveLock,
-                beforeMethodCallSwitch = beforeMethodCallSwitch
-            )
+            traceCollector?.newSwitch(SwitchReason.ActiveLock)
             failDueToDeadlock()
         }
         // if live-lock was detected, and replay was requested,
@@ -536,9 +529,7 @@ internal abstract class ManagedStrategy(
             // in case of live-lock, try to abort execution
             tryAbortingUserThreads(iThread, BlockingReason.LiveLocked)
             onSwitchPoint(iThread)
-            val switchHappened = switchCurrentThread(iThread, BlockingReason.LiveLocked,
-                beforeMethodCallSwitch = beforeMethodCallSwitch
-            )
+            val switchHappened = switchCurrentThread(iThread, BlockingReason.LiveLocked)
             if (switchHappened) {
                 loopDetector.afterThreadSwitch(codeLocation)
             }
@@ -571,7 +562,6 @@ internal abstract class ManagedStrategy(
     private fun switchCurrentThread(
         iThread: Int,
         blockingReason: BlockingReason? = null,
-        beforeMethodCallSwitch: Boolean = false,
     ): Boolean {
         val switchReason = blockingReason.toSwitchReason(::getThreadDisplayNumber)
         // we create switch point on detected live-locks,
@@ -586,10 +576,7 @@ internal abstract class ManagedStrategy(
             ) {
                 blockThread(iThread, blockingReason)
             }
-            traceCollector?.newSwitch(
-                switchReason,
-                beforeMethodCallSwitch
-            )
+            traceCollector?.newSwitch(switchReason)
             setCurrentThread(nextThread)
         }
         threadScheduler.awaitTurn(iThread)
@@ -1687,14 +1674,14 @@ internal abstract class ManagedStrategy(
             !isResumptionMethodCall(threadId, methodDescriptor.className,
                 methodDescriptor.methodName, params, atomicMethodDescriptor)
         ) {
+            // create a switch point
+            newSwitchPoint(threadId, codeLocation)
             // create a trace point
             val tracePoint = addBeforeMethodCallTracePoint(
                 threadId, receiver, codeLocation, methodId, methodDescriptor.className, methodDescriptor.methodName, params,
                 atomicMethodDescriptor,
                 MethodCallTracePoint.CallType.NORMAL,
             )
-            // create a switch point
-            newSwitchPoint(threadId, codeLocation, beforeMethodCallSwitch = true)
             // add trace point to the trace
             traceCollector?.addTracePointInternal(tracePoint)
             // notify loop detector
@@ -2504,14 +2491,13 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    private fun TraceCollector.newSwitch(reason: SwitchReason, beforeMethodCallSwitch: Boolean) {
+    private fun TraceCollector.newSwitch(reason: SwitchReason) {
         val threadId = threadScheduler.getCurrentThreadId()
         if (reason == SwitchReason.ActiveLock) {
             afterSpinCycleTraceCollected(
+                iThread = threadId,
                 trace = trace,
                 callStackTrace = callStackTrace[threadId]!!,
-                iThread = threadId,
-                beforeMethodCallSwitch = beforeMethodCallSwitch
             )
         }
         addTracePoint(
@@ -2562,13 +2548,12 @@ internal abstract class ManagedStrategy(
         )
     }
 
-    private fun TraceCollector.passObstructionFreedomViolationTracePoint(beforeMethodCall: Boolean) {
+    private fun TraceCollector.passObstructionFreedomViolationTracePoint() {
         val threadId = threadScheduler.getCurrentThreadId()
         afterSpinCycleTraceCollected(
+            iThread = threadId,
             trace = trace,
             callStackTrace = callStackTrace[threadId]!!,
-            iThread = threadId,
-            beforeMethodCallSwitch = beforeMethodCall
         )
         addTracePoint(
             ObstructionFreedomViolationExecutionAbortTracePoint(

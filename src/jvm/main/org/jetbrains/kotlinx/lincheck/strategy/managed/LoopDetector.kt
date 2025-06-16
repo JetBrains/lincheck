@@ -922,15 +922,11 @@ private class ReplayModeLoopDetectorHelper(
  * is the same as a call from the stack B. But it also equals the call from the call C, then we need to stop.
  * The count of the call passed the condition above equals to the call we need to lift from the first spin cycle
  * node to get the correct spin cycle start trace point depth.
- *
- * @param beforeMethodCallSwitch flag if this method invoked right after [org.jetbrains.kotlinx.lincheck.trace.MethodCallTracePoint] is added to a trace,
- * before the corresponding method is called.
  */
 internal fun afterSpinCycleTraceCollected(
+    iThread: Int,
     trace: List<TracePoint>,
     callStackTrace: List<CallStackTraceElement>,
-    iThread: Int,
-    beforeMethodCallSwitch: Boolean
 ) {
     // Obtaining spin cycle trace points.
     var spinLockTracePointsSize = 0
@@ -940,10 +936,8 @@ internal fun afterSpinCycleTraceCollected(
         .filter { it !is MethodReturnTracePoint }
     // Nothing to do in this case (seems unreal).
     if (spinLockTracePoints.isEmpty()) return
-    // If this method is invoked after beforeMethodCall or beforeAtomicMethodCall
-    // than MethodCallTracePoint is already added, correct it by altering current stack trace
-    val currentCallStackTrace = if (beforeMethodCallSwitch) callStackTrace.dropLast(1) else callStackTrace
 
+    val currentCallStackTrace = callStackTrace
     val cycleStartTracePointIndex = trace.size - spinLockTracePointsSize - 1
     if (cycleStartTracePointIndex < 0 || trace[cycleStartTracePointIndex] !is SpinCycleStartTracePoint) return
 
