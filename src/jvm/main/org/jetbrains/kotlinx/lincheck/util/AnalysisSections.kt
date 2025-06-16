@@ -298,7 +298,7 @@ internal class AnalysisProfile(val analyzeStdLib: Boolean) {
         
         // This DS is non linearizable
         className.startsWith("java.util.concurrent.ConcurrentLinkedDeque") -> AnalysisSectionType.NORMAL
-        
+        className.startsWith("java.util.concurrent.atomic") -> AnalysisSectionType.NORMAL
         className.startsWith("java.util.concurrent.locks") -> AnalysisSectionType.NORMAL
         !analyzeStdLib && className.startsWith("java.util.concurrent.") -> AnalysisSectionType.SILENT
         className == "java.util.concurrent.FutureTask" -> AnalysisSectionType.SILENT
