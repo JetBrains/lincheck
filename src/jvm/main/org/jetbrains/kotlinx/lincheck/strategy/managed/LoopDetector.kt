@@ -964,7 +964,7 @@ private fun getCommonMinStackTrace(spinCycleCallStacks: List<List<MethodCallTrac
         for (i in 1 until spinCycleCallStacks.size) {
             val traceElements = spinCycleCallStacks[i]
             if (count == traceElements.size) break@outer
-            if (stackTraceElement != traceElements[count]) break@outer
+            if (stackTraceElement !== traceElements[count]) break@outer
         }
         count++
     }
