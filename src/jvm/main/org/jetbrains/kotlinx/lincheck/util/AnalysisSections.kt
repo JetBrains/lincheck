@@ -295,6 +295,10 @@ internal class AnalysisProfile(val analyzeStdLib: Boolean) {
         isJavaExecutorService(className) && methodName == "submit" -> AnalysisSectionType.SILENT_PROPAGATING
         isJavaExecutorService(className) -> AnalysisSectionType.SILENT
         className.startsWith("java.util.concurrent.locks.AbstractQueuedSynchronizer") -> AnalysisSectionType.SILENT
+        
+        // This DS is non linearizable
+        className.startsWith("java.util.concurrent.ConcurrentLinkedDeque") -> AnalysisSectionType.NORMAL
+        
         className.startsWith("java.util.concurrent.locks") -> AnalysisSectionType.NORMAL
         !analyzeStdLib && className.startsWith("java.util.concurrent.") -> AnalysisSectionType.SILENT
         className == "java.util.concurrent.FutureTask" -> AnalysisSectionType.SILENT
