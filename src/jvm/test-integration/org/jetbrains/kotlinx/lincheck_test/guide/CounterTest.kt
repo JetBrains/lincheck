@@ -10,43 +10,23 @@
 
 package org.jetbrains.kotlinx.lincheck_test.guide
 
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*
-import org.junit.*
+import junit.framework.TestCase.assertEquals
+import org.jetbrains.kotlinx.lincheck.Lincheck
+import org.junit.Test
+import kotlin.concurrent.thread
 
 class CounterTest {
-    private val c = Counter()
-
-    @Operation
-    fun inc() = c.inc()
-
-    @Operation
-    fun get() = c.get()
-
-    @StateRepresentation
-    fun stateRepresentation() = c.get().toString()
-
-    //@Test // TODO: Please, uncomment me and comment the line below to run the test and get the output
+    // @Test // TODO: Please, uncomment me and comment the line below to run the test and get the output
     @Test(expected = AssertionError::class)
-    fun stressTest() = StressOptions() // stress testing options
-        .actorsBefore(2) // number of operations before the parallel part
-        .threads(2) // number of threads in the parallel part
-        .actorsPerThread(2) // number of operations in each thread of the parallel part
-        .actorsAfter(1) // number of operations after the parallel part
-        .iterations(100) // generate 100 random concurrent scenarios
-        .invocationsPerIteration(1000) // run each generated scenario 1000 times
-        .check(this::class) // run the test
-
-    //@Test // TODO: Please, uncomment me and comment the line below to run the test and get the output
-    @Test(expected = AssertionError::class)
-    fun modelCheckingTest() = ModelCheckingOptions()
-        .actorsBefore(2) // number of operations before the parallel part
-        .threads(2) // number of threads in the parallel part
-        .actorsPerThread(2) // number of operations in each thread of the parallel part
-        .actorsAfter(1) // number of operations after the parallel part
-        .iterations(100) // generate 100 random concurrent scenarios
-        .invocationsPerIteration(1000) // run each generated scenario 1000 times
-        .check(this::class)
+    fun test() = Lincheck.runConcurrentTest {
+        var counter = 0
+        // Increment the counter concurrently
+        val t1 = thread { counter++ }
+        val t2 = thread { counter++ }
+        // Wait for the thread completions
+        t1.join()
+        t2.join()
+        // Check both increments have been applied
+        assertEquals(2, counter)
+    }
 }
