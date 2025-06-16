@@ -960,13 +960,12 @@ internal fun afterSpinCycleTraceCollected(
 private fun getCommonMinStackTrace(spinCycleTracePoints: List<TracePoint>): List<CallStackTraceElement> {
     val callStackTraces = spinCycleTracePoints.map { it.callStackTrace }
     var count = 0
-    outer@while (true) {
-        if (count == callStackTraces[0].size) break
-        val stackTraceElement = callStackTraces[0][count].tracePoint.stackTraceElement
+    outer@while (count < callStackTraces[0].size) {
+        val stackTraceElement = callStackTraces[0][count].tracePoint
         for (i in 1 until callStackTraces.size) {
             val traceElements = callStackTraces[i]
             if (count == traceElements.size) break@outer
-            if (stackTraceElement != traceElements[count].tracePoint.stackTraceElement) break@outer
+            if (stackTraceElement != traceElements[count].tracePoint) break@outer
         }
         count++
     }
