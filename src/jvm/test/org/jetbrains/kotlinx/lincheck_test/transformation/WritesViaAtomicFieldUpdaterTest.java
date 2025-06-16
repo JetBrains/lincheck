@@ -11,6 +11,7 @@ package org.jetbrains.kotlinx.lincheck_test.transformation;
 
 import org.jetbrains.annotations.*;
 import org.jetbrains.kotlinx.lincheck.*;
+import org.jetbrains.lincheck.LincheckAssertionError;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*;
 import org.jetbrains.kotlinx.lincheck.verifier.*;
