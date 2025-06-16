@@ -521,6 +521,7 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
             if (className.startsWith("java.") || className.startsWith("kotlin.")) return false
         }
         if (instrumentationMode == TRACE_RECORDING) {
+            if (className == "java.lang.Thread") return true
             if (className.startsWith("java.") || className.startsWith("kotlin.") || className.startsWith("jdk.")) return false
         }
         if (isEagerlyInstrumentedClass(className)) return true

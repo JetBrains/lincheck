@@ -30,13 +30,6 @@ import java.io.PrintStream
 import java.lang.invoke.CallSite
 import java.util.concurrent.ConcurrentHashMap
 
-/**
- * [TraceCollectingEventTracker] can trace all threads forked by method configured for tracing.
- * This constant turns off (if set to `true`) this feature.
- * It is turned off now, but can be turned on later.
- */
-private const val TRACE_ONLY_ONE_THREAD = true
-
 class TraceCollectingEventTracker(
     private val className: String,
     private val methodName: String,
@@ -53,10 +46,6 @@ class TraceCollectingEventTracker(
     // We don't use [ThreadDescriptor.eventTrackerData] because we need to list all descriptors in the end
     private val threads = ConcurrentHashMap<Thread, ThreadAnalysisHandle>()
 
-    init {
-        check(TRACE_ONLY_ONE_THREAD) { "Multiple threads recording is not supported" }
-    }
-
     override fun beforeThreadFork(thread: Thread, descriptor: ThreadDescriptor) = runInsideIgnoredSection {
         val threadHandle = threads[Thread.currentThread()] ?: return
         // Create new thread handle
@@ -65,7 +54,22 @@ class TraceCollectingEventTracker(
         // We are ready to use this
     }
 
-    override fun beforeThreadStart() = Unit
+    override fun beforeThreadStart() = runInsideIgnoredSection {
+        val threadHandle = threads[Thread.currentThread()] ?: return
+        // TODO: Should we call threadHandle.createMethodCallTracePoint() which is expensive?
+        val tracePoint = MethodCallTracePoint(
+            iThread = threadHandle.threadId,
+            actorId = 0,
+            className = Thread::class.java.name,
+            methodName = "run",
+            callStackTrace = EMPTY_CALL_STACK_TRACE,
+            codeLocation = -1,
+            isStatic = false,
+            callType = MethodCallTracePoint.CallType.THREAD_RUN,
+            isSuspend = false
+        )
+        threadHandle.pushTracepointStackFrame(tracePoint, Thread.currentThread())
+    }
 
     override fun afterThreadFinish() = Unit
 
@@ -281,7 +285,7 @@ class TraceCollectingEventTracker(
         // TODO: Should we call threadHandle.createMethodCallTracePoint() which is expensive?
         val tracePoint = MethodCallTracePoint(
             iThread = threadHandle.threadId,
-            actorId = methodId,
+            actorId = 0,
             className = methodDescriptor.className,
             methodName = methodDescriptor.methodName,
             callStackTrace = EMPTY_CALL_STACK_TRACE,
@@ -444,6 +448,7 @@ class TraceCollectingEventTracker(
             PrintStream(File(traceDumpPath).outputStream().buffered(1024*1024*1024), false)
         }
         try {
+            allThreads.sortBy { it.threadId }
             for (thread in allThreads) {
                 val st = thread.tracePointStackTrace
                 if (st.size == 0) {
