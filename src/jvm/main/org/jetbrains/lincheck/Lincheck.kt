@@ -30,7 +30,7 @@ object Lincheck {
      * @param invocations number of different interleavings of code in the [block] that should be explored.
      * @param block lambda which body will be a target for the interleavings exploration.
      *
-     * @throws LincheckAssertionError in case when some exception was discovered.
+     * @throws LincheckAssertionError if the tets block finished with error in one of the interleavings.
      */
     @JvmStatic
     @JvmOverloads
