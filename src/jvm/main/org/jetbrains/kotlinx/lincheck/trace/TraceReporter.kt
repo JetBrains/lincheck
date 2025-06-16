@@ -18,6 +18,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
 import org.jetbrains.kotlinx.lincheck.util.AnalysisProfile
 import org.jetbrains.kotlinx.lincheck.strategy.managed.afterSpinCycleTraceCollected
 import org.jetbrains.kotlinx.lincheck.util.ensure
+import java.lang.reflect.Method
 import kotlin.math.max
 
 internal typealias SingleThreadedTable<T> = List<SingleThreadedSection<T>>
@@ -185,11 +186,13 @@ internal class TraceReporter(
             check(i > 0)
             val (patchedStackTrace, isRecursive) = afterSpinCycleTraceCollected(
                 spinLockTracePoints = spinLockTracePoints,
-                spinLockTracePointsCallStacks = spinLockTracePoints.map { it.callStackTrace },
+                spinLockTracePointsCallStacks = spinLockTracePoints.map { tracePoint ->
+                    tracePoint.callStackTrace.map { it.tracePoint }
+                },
             )
 
             var nextEvent = newTrace[i + 1]
-            val shouldBeMoved = !nextEvent.callStackTrace.isEqualStackTrace(patchedStackTrace)
+            val shouldBeMoved = !nextEvent.callStackTrace.map { it.tracePoint }.isEqualStackTrace(patchedStackTrace)
 
             if (isRecursive || shouldBeMoved) {
                 var m = i - 1
@@ -198,7 +201,7 @@ internal class TraceReporter(
                     val diff = patchedStackTrace.size - newTrace[m].callStackTrace.size
                     spinStackTrace = patchedStackTrace.dropLast(diff)
                 }
-                while (m > j && !newTrace[m].callStackTrace.isEqualStackTrace(spinStackTrace)) {
+                while (m > j && !newTrace[m].callStackTrace.map { it.tracePoint }.isEqualStackTrace(spinStackTrace)) {
                     m--
                 }
 
@@ -253,10 +256,10 @@ internal fun Appendable.appendTraceTableSimple(title: String, threadNames: List<
     )
 }
 
-internal fun CallStackTrace.isEqualStackTrace(other: CallStackTrace): Boolean {
+internal fun List<MethodCallTracePoint>.isEqualStackTrace(other: List<MethodCallTracePoint>): Boolean {
     if (this.size != other.size) return false
     for (i in this.indices) {
-        if (this[i].id != other[i].id) return false
+        if (this[i] != other[i]) return false
     }
     return true
 }

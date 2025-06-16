@@ -923,8 +923,8 @@ private class ReplayModeLoopDetectorHelper(
  */
 internal fun afterSpinCycleTraceCollected(
     spinLockTracePoints: List<TracePoint>,
-    spinLockTracePointsCallStacks: List<CallStackTrace>,
-) : Pair<CallStackTrace, Boolean> {
+    spinLockTracePointsCallStacks: List<List<MethodCallTracePoint>>,
+) : Pair<List<MethodCallTracePoint>, Boolean> {
     check(!spinLockTracePoints.isEmpty())
 
     val spinCycleFirstTracePointCallStackTrace = spinLockTracePointsCallStacks.first()
@@ -937,8 +937,8 @@ internal fun afterSpinCycleTraceCollected(
         var firstI = spinCycleFirstTracePointCallStackTrace.lastIndex
         var count = 0
         while (firstI >= 0) {
-            val firstTracePoint = spinCycleFirstTracePointCallStackTrace.getOrNull(firstI)?.tracePoint
-            val lastTracePoint = spinCycleLastTracePointCallStackTrace.getOrNull(currentI)?.tracePoint
+            val firstTracePoint = spinCycleFirstTracePointCallStackTrace.getOrNull(firstI)
+            val lastTracePoint = spinCycleLastTracePointCallStackTrace.getOrNull(currentI)
 
             // Comparing corresponding calls.
             if (firstTracePoint == null || lastTracePoint == null || !firstTracePoint.isEqualInvocation(lastTracePoint)) break
@@ -951,25 +951,24 @@ internal fun afterSpinCycleTraceCollected(
     }
 
     // See above the description of the algorithm for iterative spin lock.
-    return getCommonMinStackTrace(spinLockTracePoints) to false
+    return getCommonMinStackTrace(spinLockTracePointsCallStacks) to false
 }
 
 /**
- * @return Max common prefix of the [StackTraceElement] of the provided [spinCycleTracePoints]
+ * @return Max common prefix of the [StackTraceElement] of the provided [spinCycleCallStacks].
  */
-private fun getCommonMinStackTrace(spinCycleTracePoints: List<TracePoint>): List<CallStackTraceElement> {
-    val callStackTraces = spinCycleTracePoints.map { it.callStackTrace }
+private fun getCommonMinStackTrace(spinCycleCallStacks: List<List<MethodCallTracePoint>>): List<MethodCallTracePoint> {
     var count = 0
-    outer@while (count < callStackTraces[0].size) {
-        val stackTraceElement = callStackTraces[0][count].tracePoint
-        for (i in 1 until callStackTraces.size) {
-            val traceElements = callStackTraces[i]
+    outer@while (count < spinCycleCallStacks[0].size) {
+        val stackTraceElement = spinCycleCallStacks[0][count]
+        for (i in 1 until spinCycleCallStacks.size) {
+            val traceElements = spinCycleCallStacks[i]
             if (count == traceElements.size) break@outer
-            if (stackTraceElement != traceElements[count].tracePoint) break@outer
+            if (stackTraceElement != traceElements[count]) break@outer
         }
         count++
     }
-    return spinCycleTracePoints.first().callStackTrace.take(count)
+    return spinCycleCallStacks.first().take(count)
 }
 
 private fun MethodCallTracePoint.isEqualInvocation(other: MethodCallTracePoint): Boolean =
