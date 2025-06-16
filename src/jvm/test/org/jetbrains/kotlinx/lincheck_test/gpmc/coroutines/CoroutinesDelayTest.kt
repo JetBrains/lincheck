@@ -15,7 +15,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import org.jetbrains.kotlinx.lincheck.Lincheck
+import org.jetbrains.lincheck.Lincheck
 import org.junit.Test
 import java.util.concurrent.Executors
 import kotlin.time.DurationUnit

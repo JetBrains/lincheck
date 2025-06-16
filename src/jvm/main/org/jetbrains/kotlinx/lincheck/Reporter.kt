@@ -16,6 +16,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.trace.appendTrace
 import org.jetbrains.kotlinx.lincheck.util.LoggingLevel
 import org.jetbrains.kotlinx.lincheck.util.LoggingLevel.*
+import org.jetbrains.lincheck.GeneralPurposeModelCheckingWrapper
 import java.io.*
 import kotlin.math.max
 import kotlin.reflect.jvm.javaMethod
@@ -706,9 +707,6 @@ private fun StringBuilder.appendTimeoutDeadlockWithDumpFailure(
     }
     return this
 }
-
-private val StackTraceElement.isLincheckInternals get() =
-    this.className.startsWith("org.jetbrains.kotlinx.lincheck.")
 
 private fun StringBuilder.appendIncorrectResultsFailure(
     failure: IncorrectResultsFailure,

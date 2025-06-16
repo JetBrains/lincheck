@@ -10,11 +10,11 @@
 
 package org.jetbrains.kotlinx.lincheck_test.gpmc
 
-import org.jetbrains.kotlinx.lincheck.Lincheck.runConcurrentTest
-import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
-import kotlin.concurrent.thread
+import org.jetbrains.lincheck.Lincheck.runConcurrentTest
+import org.jetbrains.lincheck.LincheckAssertionError
 import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.concurrent.thread
 import org.junit.Assert
 import org.junit.Test
 

@@ -10,7 +10,6 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
 import org.jetbrains.kotlinx.lincheck_test.gpmc.*
@@ -19,10 +18,12 @@ import java.util.concurrent.*
 import java.util.concurrent.atomic.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import org.jetbrains.kotlinx.lincheck.Lincheck.runConcurrentTestInternal
-import org.jetbrains.kotlinx.lincheck.LincheckSettings
+import org.jetbrains.lincheck.Lincheck.runConcurrentTestInternal
+import org.jetbrains.lincheck.LincheckAssertionError
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.kotlinx.lincheck.util.JdkVersion
 import org.jetbrains.kotlinx.lincheck.util.jdkVersion
+import org.jetbrains.lincheck.Lincheck
 import kotlin.concurrent.thread
 import org.junit.*
 import org.junit.Assume.assumeFalse
@@ -44,7 +45,7 @@ abstract class BaseRunConcurrentRepresentationTest<R>(private val outputFileName
     fun testRunWithModelChecker() {
         val result = runCatching {
             val settings = LincheckSettings(analyzeStdLib = analyzeStdLib)
-            runConcurrentTestInternal(settings) {
+            runConcurrentTestInternal(settings = settings) {
                 block()
             }
         }
