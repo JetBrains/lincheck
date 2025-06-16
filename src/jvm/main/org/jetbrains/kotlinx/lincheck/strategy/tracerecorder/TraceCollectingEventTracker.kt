@@ -16,6 +16,13 @@ import org.jetbrains.kotlinx.lincheck.trace.CallStackTraceElement
 import org.jetbrains.kotlinx.lincheck.trace.MethodCallTracePoint
 import org.jetbrains.kotlinx.lincheck.trace.TraceCollector
 import org.jetbrains.kotlinx.lincheck.trace.TracePoint
+import org.jetbrains.kotlinx.lincheck.traceagent.TRMethodCallTracePoint
+import org.jetbrains.kotlinx.lincheck.traceagent.TRObject
+import org.jetbrains.kotlinx.lincheck.traceagent.TRReadArrayTracePoint
+import org.jetbrains.kotlinx.lincheck.traceagent.TRReadTracePoint
+import org.jetbrains.kotlinx.lincheck.traceagent.TRWriteArrayTracePoint
+import org.jetbrains.kotlinx.lincheck.traceagent.TRWriteTracePoint
+import org.jetbrains.kotlinx.lincheck.transformation.CodeLocations
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.transformation.fieldCache
 import org.jetbrains.kotlinx.lincheck.transformation.methodCache
@@ -33,12 +40,10 @@ import java.util.concurrent.ConcurrentHashMap
 class TraceCollectingEventTracker(
     private val className: String,
     private val methodName: String,
-    private val methodDesc: String,
     private val traceDumpPath: String?
 ) :  EventTracker {
     private val EMPTY_CALL_STACK_TRACE = emptyList<CallStackTraceElement>()
     private var indent: CharSequence = " ".repeat(1024)
-    private val simpleClassNames = HashMap<Class<*>, String>()
 
     // We don't want to re-create this object each time we need it
     private val analysisProfile: AnalysisProfile = AnalysisProfile(false)
@@ -168,18 +173,15 @@ class TraceCollectingEventTracker(
 
 
         val threadHandle = threads[Thread.currentThread()] ?: return false
-        // TODO: Should we call ReadTracePoint() which is cheaper?
-        val tracePoint = threadHandle.createReadFieldTracePoint(
-            obj = obj,
-            className = fieldDescriptor.className,
-            fieldName = fieldDescriptor.fieldName,
-            codeLocation = codeLocation,
-            isStatic = fieldDescriptor.isStatic,
-            isFinal = fieldDescriptor.isFinal,
-            actorId = 0,
-            ownerRepresentation = ""
+
+        val tracePoint = TRReadTracePoint(
+            threadId = threadHandle.threadId,
+            codeLocationId = codeLocation,
+            fieldId = fieldId,
+            obj = obj?.let { TRObject(obj.javaClass.name, System.identityHashCode(obj)) },
+            value = null // todo
         )
-        threadHandle.addTracepointToCurrentCall(tracePoint)
+        threadHandle.currentMethodCallTracePoint().events.add(tracePoint)
 
         return false
     }
@@ -191,13 +193,14 @@ class TraceCollectingEventTracker(
     ): Boolean = runInsideIgnoredSection {
         val threadHandle = threads[Thread.currentThread()] ?: return false
 
-        val tracePoint = threadHandle.createReadArrayElementTracePoint(
-            array = array,
+        val tracePoint = TRReadArrayTracePoint(
+            threadId = threadHandle.threadId,
+            codeLocationId = codeLocation,
+            array = TRObject(array),
             index = index,
-            codeLocation = codeLocation,
-            actorId = 0,
+            value = null // todo
         )
-        threadHandle.addTracepointToCurrentCall(tracePoint)
+        threadHandle.currentMethodCallTracePoint().events.add(tracePoint)
 
         return false
     }
@@ -220,17 +223,15 @@ class TraceCollectingEventTracker(
         }
 
         val threadHandle = threads[Thread.currentThread()] ?: return false
-        val tracePoint = threadHandle.createWriteFieldTracepoint(
-            obj = obj,
-            className = fieldDescriptor.className,
-            fieldName = fieldDescriptor.fieldName,
-            value = value,
-            codeLocation = codeLocation,
-            isStatic = fieldDescriptor.isStatic,
-            actorId = 0,
-            ownerRepresentation = ""
+
+        val tracePoint = TRWriteTracePoint(
+            threadId = threadHandle.threadId,
+            codeLocationId = codeLocation,
+            fieldId = fieldId,
+            obj = TRObject(obj),
+            value = TRObject(value)
         )
-        threadHandle.addTracepointToCurrentCall(tracePoint)
+        threadHandle.currentMethodCallTracePoint().events.add(tracePoint)
 
         return false
     }
@@ -242,14 +243,15 @@ class TraceCollectingEventTracker(
         codeLocation: Int
     ): Boolean = runInsideIgnoredSection {
         val threadHandle = threads[Thread.currentThread()] ?: return false
-        val tracePoint = threadHandle.createWriteArrayElementTracePoint(
-            array = array,
+
+        val tracePoint = TRWriteArrayTracePoint(
+            threadId = threadHandle.threadId,
+            codeLocationId = codeLocation,
+            array = TRObject(array),
             index = index,
-            value = value,
-            codeLocation = codeLocation,
-            actorId = 0
+            value = TRObject(value)
         )
-        threadHandle.addTracepointToCurrentCall(tracePoint)
+        threadHandle.currentMethodCallTracePoint().events.add(tracePoint)
 
         return false
     }
@@ -282,20 +284,14 @@ class TraceCollectingEventTracker(
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(methodDescriptor.className)
         }
 
-        // TODO: Should we call threadHandle.createMethodCallTracePoint() which is expensive?
-        val tracePoint = MethodCallTracePoint(
-            iThread = threadHandle.threadId,
-            actorId = 0,
-            className = methodDescriptor.className,
-            methodName = methodDescriptor.methodName,
-            callStackTrace = EMPTY_CALL_STACK_TRACE,
-            codeLocation = codeLocation,
-            isStatic = receiver == null,
-            callType = MethodCallTracePoint.CallType.NORMAL,
-            isSuspend = isSuspendFunction(methodDescriptor.className, methodDescriptor.methodName, params)
+        val tracePoint = TRMethodCallTracePoint(
+            threadId = threadHandle.threadId,
+            codeLocationId = codeLocation,
+            obj = TRObject(receiver),
+            parameters = params.map { TRObject(it) }
         )
-        threadHandle.addTracepointToCurrentCall(tracePoint)
-        threadHandle.pushTracepointStackFrame(tracePoint, receiver)
+        threadHandle.currentMethodCallTracePoint().events.add(tracePoint)
+        threadHandle.pushTracepointStackFrameNew(tracePoint, receiver)
 
         // if the method has certain guarantees, enter the corresponding section
         threadHandle.enterAnalysisSection(methodSection)
@@ -313,9 +309,8 @@ class TraceCollectingEventTracker(
         val threadHandle = threads[Thread.currentThread()] ?: return result
         val methodDescriptor = methodCache[methodId]
 
-        val tracePoint = threadHandle.popTracepointStackFrame()
-        // TODO: add returned value
-        // tracePoint.returnedValue
+        val tracePoint = threadHandle.popTracepointStackFrameNew()
+        tracePoint.result = TRObject(result)
 
         val methodSection = methodAnalysisSectionType(receiver, methodDescriptor.className, methodDescriptor.methodName)
         threadHandle.leaveAnalysisSection(methodSection)
@@ -333,9 +328,8 @@ class TraceCollectingEventTracker(
         val threadHandle = threads[Thread.currentThread()] ?: return t
         val methodDescriptor = methodCache[methodId]
 
-        val tracePoint = threadHandle.popTracepointStackFrame()
-        // TODO: add returned value
-        // tracePoint.returnedValue
+        val tracePoint = threadHandle.popTracepointStackFrameNew()
+        tracePoint.exceptionClassName = t.javaClass.name
 
         val methodSection = methodAnalysisSectionType(receiver, methodDescriptor.className, methodDescriptor.methodName)
         threadHandle.leaveAnalysisSection(methodSection)
@@ -350,19 +344,19 @@ class TraceCollectingEventTracker(
         val threadHandle = threads[Thread.currentThread()] ?: return
         val methodDescriptor = methodCache[methodId]
 
-        val tracePoint = MethodCallTracePoint(
-            iThread = threadHandle.threadId,
-            actorId = 0,
-            className = methodDescriptor.className,
-            methodName = methodDescriptor.methodName,
-            callStackTrace = EMPTY_CALL_STACK_TRACE,
-            codeLocation = codeLocation,
-            isStatic = false,
-            callType = MethodCallTracePoint.CallType.NORMAL,
-            isSuspend = false
-        )
-        threadHandle.addTracepointToCurrentCall(tracePoint)
-        threadHandle.pushTracepointStackFrame(tracePoint, owner)
+//        val tracePoint = MethodCallTracePoint(
+//            iThread = threadHandle.threadId,
+//            actorId = 0,
+//            className = methodDescriptor.className,
+//            methodName = methodDescriptor.methodName,
+//            callStackTrace = EMPTY_CALL_STACK_TRACE,
+//            codeLocation = codeLocation,
+//            isStatic = false,
+//            callType = MethodCallTracePoint.CallType.NORMAL,
+//            isSuspend = false
+//        )
+//        threadHandle.addTracepointToCurrentCall(tracePoint)
+//        threadHandle.pushTracepointStackFrame(tracePoint, owner)
     }
 
     override fun onInlineMethodCallReturn(methodId: Int): Unit = runInsideIgnoredSection {
@@ -418,18 +412,13 @@ class TraceCollectingEventTracker(
         threadHandle.shadowStack.add(ShadowStackFrame(Thread.currentThread()))
         threads[Thread.currentThread()] = threadHandle
 
-        val tracePoint = MethodCallTracePoint(
-            iThread = threadHandle.threadId,
-            actorId = 0,
-            className = className,
-            methodName = methodName,
-            callStackTrace = EMPTY_CALL_STACK_TRACE,
-            codeLocation = -1,
-            isStatic = false,
-            callType = MethodCallTracePoint.CallType.ACTOR,
-            isSuspend = false
+        val tracePoint = TRMethodCallTracePoint(
+            threadId = threadHandle.threadId,
+            codeLocationId = -1,
+            obj = null,
+            parameters = emptyList()
         )
-        threadHandle.pushTracepointStackFrame(tracePoint, null)
+        threadHandle.pushTracepointStackFrameNew(tracePoint, null)
 
         startTime = System.currentTimeMillis();
     }

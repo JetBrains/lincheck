@@ -27,10 +27,11 @@ internal object TraceRecorderInjections {
 
     @JvmStatic
     fun startTraceRecorder() {
-        val (_, testMethod) = TraceAgentParameters.getClassAndMethod()
-        val methodDescriptor = Method.getMethod(testMethod).descriptor
-        // Init it, but not enable (yet)
-        TraceRecorder.installAndStartTrace(TraceAgentParameters.classUnderTraceDebugging, TraceAgentParameters.methodUnderTraceDebugging, methodDescriptor, TraceAgentParameters.traceDumpFilePath)
+        TraceRecorder.installAndStartTrace(
+            className = TraceAgentParameters.classUnderTraceDebugging,
+            methodName = TraceAgentParameters.methodUnderTraceDebugging,
+            traceFileName = TraceAgentParameters.traceDumpFilePath
+        )
     }
 
     @JvmStatic

@@ -41,9 +41,9 @@ import sun.nio.ch.lincheck.ThreadDescriptor
 object TraceRecorder {
     private var eventTracker: TraceCollectingEventTracker? = null
 
-    fun installAndStartTrace(className: String, methodName: String, methodDesc: String, traceFileName: String?) {
+    fun installAndStartTrace(className: String, methodName: String, traceFileName: String?) {
         // this method does need 'runInsideIgnoredSection' because analysis is not enabled until its completion
-        eventTracker = TraceCollectingEventTracker(className, methodName, methodDesc, traceFileName)
+        eventTracker = TraceCollectingEventTracker(className, methodName, traceFileName)
         val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: ThreadDescriptor(Thread.currentThread()).also {
             ThreadDescriptor.setCurrentThreadDescriptor(it)
         }

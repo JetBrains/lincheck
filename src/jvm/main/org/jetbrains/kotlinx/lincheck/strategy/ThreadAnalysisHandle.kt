@@ -29,6 +29,7 @@ import org.jetbrains.kotlinx.lincheck.trace.ReadTracePoint
 import org.jetbrains.kotlinx.lincheck.trace.TraceCollector
 import org.jetbrains.kotlinx.lincheck.trace.TracePoint
 import org.jetbrains.kotlinx.lincheck.trace.WriteTracePoint
+import org.jetbrains.kotlinx.lincheck.traceagent.TRMethodCallTracePoint
 import org.jetbrains.kotlinx.lincheck.transformation.toSimpleClassName
 import org.jetbrains.kotlinx.lincheck.util.*
 import sun.nio.ch.lincheck.Injections
@@ -52,6 +53,7 @@ internal class ThreadAnalysisHandle(val threadId: Int, val traceCollector: Trace
      * Current tracked stacktrace for trace recorder.
      */
     val tracePointStackTrace: MutableList<MethodCallTracePoint> = arrayListOf()
+    val callStack: MutableList<TRMethodCallTracePoint> = arrayListOf()
 
     /**
      * Current tracked stacktrace.
@@ -350,12 +352,25 @@ internal class ThreadAnalysisHandle(val threadId: Int, val traceCollector: Trace
         shadowStack.add(stackFrame)
     }
 
+    fun pushTracepointStackFrameNew(tracePoint: TRMethodCallTracePoint, instance: Any?) {
+        val stackFrame = ShadowStackFrame(instance)
+        callStack.add(tracePoint)
+        shadowStack.add(stackFrame)
+    }
+
     fun popTracepointStackFrame(): MethodCallTracePoint {
         shadowStack.removeLast()
         return tracePointStackTrace.removeLast()
     }
 
+    fun popTracepointStackFrameNew(): TRMethodCallTracePoint {
+        shadowStack.removeLast()
+        return callStack.removeLast()
+    }
+
     fun currentMethodCall(): MethodCallTracePoint = tracePointStackTrace.last()
+
+    fun currentMethodCallTracePoint(): TRMethodCallTracePoint = callStack.last()
 
     fun addTracepointToCurrentCall(tracePoint: TracePoint?) {
         if (tracePoint == null) return
