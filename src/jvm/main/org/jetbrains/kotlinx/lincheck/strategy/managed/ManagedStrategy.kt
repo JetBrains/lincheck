@@ -2493,13 +2493,6 @@ internal abstract class ManagedStrategy(
 
     private fun TraceCollector.newSwitch(reason: SwitchReason) {
         val threadId = threadScheduler.getCurrentThreadId()
-        if (reason == SwitchReason.ActiveLock) {
-            afterSpinCycleTraceCollected(
-                iThread = threadId,
-                trace = trace,
-                callStackTrace = callStackTrace[threadId]!!,
-            )
-        }
         addTracePoint(
             SwitchEventTracePoint(
                 iThread = threadId,
@@ -2550,16 +2543,11 @@ internal abstract class ManagedStrategy(
 
     private fun TraceCollector.passObstructionFreedomViolationTracePoint() {
         val threadId = threadScheduler.getCurrentThreadId()
-        afterSpinCycleTraceCollected(
-            iThread = threadId,
-            trace = trace,
-            callStackTrace = callStackTrace[threadId]!!,
-        )
         addTracePoint(
             ObstructionFreedomViolationExecutionAbortTracePoint(
                 iThread = threadId,
                 actorId = currentActorId[threadId]!!,
-                callStackTrace = trace.last().callStackTrace
+                callStackTrace = callStackTrace[threadId]!!
             )
         )
     }

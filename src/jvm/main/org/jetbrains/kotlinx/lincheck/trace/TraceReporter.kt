@@ -16,6 +16,8 @@ import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
 import org.jetbrains.kotlinx.lincheck.util.AnalysisProfile
+import org.jetbrains.kotlinx.lincheck.strategy.managed.afterSpinCycleTraceCollected
+import org.jetbrains.kotlinx.lincheck.util.ensure
 import kotlin.math.max
 
 internal typealias SingleThreadedTable<T> = List<SingleThreadedSection<T>>
@@ -164,23 +166,43 @@ internal class TraceReporter(
             while ((j - 1 >= 0) && (newTrace[j - 1].iThread == tracePoint.iThread)) {
                 j--
             }
-            if (j == i) continue
+
+            // find the next thread switch
+            var k = i + 1
+            while (k < newTrace.size &&
+                   newTrace[k] !is SwitchEventTracePoint &&
+                   newTrace[k] !is ObstructionFreedomViolationExecutionAbortTracePoint)
+            {
+                k++
+            }
+            if (k == i + 1) continue
+
+            val spinLockTracePoints = newTrace
+                .subList(i + 1, k + 1)
+                .filter { it !is MethodReturnTracePoint }
+                .ensure { it.all { tracePoint -> tracePoint !is SpinCycleStartTracePoint } }
+
+            check(i > 0)
+            val (patchedStackTrace, isRecursive) = afterSpinCycleTraceCollected(
+                spinLockTracePoints = spinLockTracePoints,
+                spinLockTracePointsCallStacks = spinLockTracePoints.map { it.callStackTrace },
+            )
 
             var nextEvent = newTrace[i + 1]
-            val shouldBeMoved = !nextEvent.callStackTrace.isEqualStackTrace(tracePoint.callStackTrace)
+            val shouldBeMoved = !nextEvent.callStackTrace.isEqualStackTrace(patchedStackTrace)
 
-            if (tracePoint.isRecursive || shouldBeMoved) {
-                var k = i - 1
-                var spinStackTrace = tracePoint.callStackTrace
-                if (tracePoint.callStackTrace.size > newTrace[k].callStackTrace.size) {
-                    val diff = tracePoint.callStackTrace.size - newTrace[k].callStackTrace.size
-                    spinStackTrace = tracePoint.callStackTrace.dropLast(diff)
+            if (isRecursive || shouldBeMoved) {
+                var m = i - 1
+                var spinStackTrace = patchedStackTrace
+                if (patchedStackTrace.size > newTrace[m].callStackTrace.size) {
+                    val diff = patchedStackTrace.size - newTrace[m].callStackTrace.size
+                    spinStackTrace = patchedStackTrace.dropLast(diff)
                 }
-                while (k > j && !newTrace[k].callStackTrace.isEqualStackTrace(spinStackTrace)) {
-                    k--
+                while (m > j && !newTrace[m].callStackTrace.isEqualStackTrace(spinStackTrace)) {
+                    m--
                 }
 
-                newTrace.move(i, k)
+                newTrace.move(i, m)
             }
         }
 
