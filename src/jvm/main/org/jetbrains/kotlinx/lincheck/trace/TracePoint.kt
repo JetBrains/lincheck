@@ -153,10 +153,10 @@ internal class ObstructionFreedomViolationExecutionAbortTracePoint(
 }
 
 internal class ReadTracePoint(
-    private val ownerRepresentation: String?,
+    var ownerRepresentation: String?,
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
-    private val fieldName: String,
+    var fieldName: String,
     codeLocation: Int,
     val isLocal: Boolean,
     private val valueRepresentation: String,
@@ -179,10 +179,10 @@ internal class ReadTracePoint(
 }
 
 internal class WriteTracePoint(
-    private val ownerRepresentation: String?,
+    var ownerRepresentation: String?,
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
-    private val fieldName: String,
+    var fieldName: String,
     codeLocation: Int,
     val isLocal: Boolean,
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, codeLocation) {

@@ -25,6 +25,7 @@ internal fun SingleThreadedTable<TraceNode>.compressTrace() = this
     .compressDollarThis()
     .replaceNestedClassDollar()
     .compressSyntheticParameterNumbers()
+    .compressLambdaCaptureSyntheticField()
 
 /**
  * Optimize stack trace element string representation
@@ -234,6 +235,29 @@ private fun SingleThreadedTable<TraceNode>.replaceNestedClassDollar() = compress
     node
 }
 
+/**
+ * Removes synthetic field due to lambda capture. $fieldName.element -> fieldName
+ */
+private fun SingleThreadedTable<TraceNode>.compressLambdaCaptureSyntheticField() = compressNodes { node ->
+    if (node is EventNode 
+        && node.tracePoint is ReadTracePoint
+        && node.tracePoint.ownerRepresentation?.startsWith("$") == true
+        && node.tracePoint.fieldName == "element"
+    ) {
+        node.tracePoint.fieldName = node.tracePoint.ownerRepresentation!!.removePrefix("$")
+        node.tracePoint.ownerRepresentation = null
+    }
+    
+    if (node is EventNode 
+        && node.tracePoint is WriteTracePoint
+        && node.tracePoint.ownerRepresentation?.startsWith("$") == true
+        && node.tracePoint.fieldName == "element"
+    ) {
+        node.tracePoint.fieldName = node.tracePoint.ownerRepresentation!!.removePrefix("$")
+        node.tracePoint.ownerRepresentation = null
+    }
+    node
+}
 
 
 /**
