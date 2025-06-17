@@ -14,7 +14,6 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.encodeToByteArray
 import kotlinx.serialization.protobuf.ProtoBuf
-import org.jetbrains.kotlinx.lincheck.transformation.methodCache
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.InputStream

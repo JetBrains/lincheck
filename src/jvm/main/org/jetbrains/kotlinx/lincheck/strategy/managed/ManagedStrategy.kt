@@ -44,6 +44,7 @@ import org.jetbrains.kotlinx.lincheck.tracedata.Types
 import org.jetbrains.kotlinx.lincheck.tracedata.fieldCache
 import org.jetbrains.kotlinx.lincheck.tracedata.isArraysCopyOfIntrinsic
 import org.jetbrains.kotlinx.lincheck.tracedata.isArraysCopyOfRangeIntrinsic
+import org.jetbrains.kotlinx.lincheck.tracedata.methodCache
 import org.jetbrains.kotlinx.lincheck.tracedata.variableCache
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 import kotlin.Result as KResult

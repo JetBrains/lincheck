@@ -11,18 +11,11 @@
 package org.jetbrains.kotlinx.lincheck.strategy.tracerecorder
 
 import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.decodeFromByteArray
-import kotlinx.serialization.encodeToByteArray
-import kotlinx.serialization.protobuf.ProtoBuf
-import kotlinx.serialization.protobuf.schema.ProtoBufSchemaGenerator
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ShadowStackFrame
 import org.jetbrains.kotlinx.lincheck.tracedata.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
-import org.jetbrains.kotlinx.lincheck.transformation.methodCache
 import org.jetbrains.kotlinx.lincheck.util.*
 import sun.nio.ch.lincheck.*
-import java.io.DataInputStream
-import java.io.DataOutputStream
 import java.io.File
 import java.lang.invoke.CallSite
 import java.util.concurrent.ConcurrentHashMap
@@ -199,7 +192,7 @@ class TraceCollectingEventTracker(
         codeLocation: Int,
         fieldId: Int
     ): Boolean  = runInsideIgnoredSection {
-        val fieldDescriptor = fieldCache.get(fieldId)
+        val fieldDescriptor = fieldCache[fieldId]
         if (fieldDescriptor.isStatic) {
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
         }
@@ -243,7 +236,7 @@ class TraceCollectingEventTracker(
         codeLocation: Int,
         fieldId: Int
     ): Boolean = runInsideIgnoredSection {
-        val fieldDescriptor = fieldCache.get(fieldId)
+        val fieldDescriptor = fieldCache[fieldId]
         if (!fieldDescriptor.isStatic && obj == null) {
             // Ignore, NullPointerException will be thrown
             return false
@@ -495,7 +488,7 @@ class TraceCollectingEventTracker(
             val roots = mutableListOf<TRTracePoint>()
             allThreads.forEach { thread ->
                 val st = thread.callStack
-                if (st.size == 0) {
+                if (st.isEmpty()) {
                     System.err.println("Trace Recorder: Thread ${thread.threadId + 1}: Stack underflow, report bug")
                 } else {
                     if (st.size > 1) {

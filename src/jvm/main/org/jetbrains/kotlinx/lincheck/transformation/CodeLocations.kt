@@ -10,13 +10,11 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
-import org.jetbrains.kotlinx.lincheck.tracedata.IndexedPool
 import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.FieldInfo.*
 import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.addFinalField
 import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.addMutableField
 import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.collectFieldInformation
 import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.isFinalField
-import org.jetbrains.kotlinx.lincheck.tracedata.MethodDescriptor
 import org.objectweb.asm.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.collections.ArrayList
@@ -63,12 +61,6 @@ internal object CodeLocations {
 
 internal const val UNKNOWN_CODE_LOCATION_ID = -1
 private val EMPTY_STACK_TRACE = StackTraceElement("", "", "", 0)
-
-/**
- * Provides unique IDs for all the methods that are called from the instrumented code.
- * These IDs are used to detect the first recursive call in case of a recursive spin-cycle.
- */
-internal val methodCache = IndexedPool<MethodDescriptor>()
 
 // TODO or create a ticket to refactor this and use FieldDescriptor and ClassNode visitor instead.
 /**

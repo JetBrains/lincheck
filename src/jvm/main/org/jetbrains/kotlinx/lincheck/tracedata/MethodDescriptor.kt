@@ -16,6 +16,12 @@ import org.objectweb.asm.commons.Method
 internal fun Method.toMethodSignature() = MethodSignature(this.name, Types.convertAsmMethodType(this.descriptor))
 internal fun java.lang.reflect.Method.toMethodSignature() = Method.getMethod(this).toMethodSignature()
 
+/**
+ * Provides unique IDs for all the methods that are called from the instrumented code.
+ * These IDs are used to detect the first recursive call in case of a recursive spin-cycle.
+ */
+internal val methodCache = IndexedPool<MethodDescriptor>()
+
 @Serializable
 internal data class MethodDescriptor(
     val className: String,
