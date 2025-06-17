@@ -178,27 +178,32 @@ internal class TraceReporter(
             }
             if (k == i + 1) continue
 
-            val (patchedStackTrace, isRecursive) = afterSpinCycleTraceCollected(
+            // compute call stack traces
+            val currentStackTrace = mutableListOf<MethodCallTracePoint>()
+            val stackTraces = mutableListOf<List<MethodCallTracePoint>>()
+            for (n in j .. i) {
+                stackTraces.add(currentStackTrace.toList())
+                if (newTrace[n] is MethodCallTracePoint) {
+                    currentStackTrace.add(newTrace[n] as MethodCallTracePoint)
+                } else if (newTrace[n] is MethodReturnTracePoint) {
+                    currentStackTrace.removeLastOrNull()
+                }
+            }
+
+            val (patchedStackTrace, stackTraceElementsDropCount) = afterSpinCycleTraceCollected(
                 spinCycleStartTracePoint = newTrace[i],
                 spinCycleEndTracePoint = newTrace[k],
             )
 
-            var nextEvent = newTrace[i + 1]
-            val shouldBeMoved = !nextEvent.callStackTrace.map { it.tracePoint }.isEqualStackTrace(patchedStackTrace)
+            val spinCycleStartStackTraceSize = stackTraces.lastOrNull()?.size ?: 0
+            val callStackSize = (spinCycleStartStackTraceSize - stackTraceElementsDropCount).coerceAtLeast(0)
 
-            if (isRecursive || shouldBeMoved) {
-                var m = i - 1
-                var spinStackTrace = patchedStackTrace
-                if (patchedStackTrace.size > newTrace[m].callStackTrace.size) {
-                    val diff = patchedStackTrace.size - newTrace[m].callStackTrace.size
-                    spinStackTrace = patchedStackTrace.dropLast(diff)
-                }
-                while (m > j && !newTrace[m].callStackTrace.map { it.tracePoint }.isEqualStackTrace(spinStackTrace)) {
-                    m--
-                }
-
-                newTrace.move(i, m)
+            var m = i
+            while (m >= j && stackTraces[m - j].size > callStackSize) {
+                --m
             }
+
+            newTrace.move(i, m)
         }
 
         return Trace(newTrace, this.threadNames)
@@ -260,7 +265,8 @@ fun <T> MutableList<T>.subList(range: IntRange): MutableList<T> =
     subList(range.first, range.last + 1)
 
 fun <T> MutableList<T>.move(from: Int, to: Int) {
-    check(from > to)
+    check(from >= to)
+    if (from == to) return
     val element = this[from]
     removeAt(from)
     add(to, element)
