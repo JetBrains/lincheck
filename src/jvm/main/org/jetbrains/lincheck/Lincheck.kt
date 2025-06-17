@@ -106,12 +106,6 @@ internal class GeneralPurposeModelCheckingWrapper {
     fun runGPMCTest(block: Runnable) = block.run()
 }
 
-internal data class LincheckSettings(val analyzeStdLib: Boolean) {
-    companion object {
-        val default =  LincheckSettings(analyzeStdLib = false)
-    }
-}
-
 private val runGPMCTestMethod =
     GeneralPurposeModelCheckingWrapper::class.java.getDeclaredMethod("runGPMCTest", Runnable::class.java)
 
