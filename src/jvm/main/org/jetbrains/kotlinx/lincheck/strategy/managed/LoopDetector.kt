@@ -16,7 +16,9 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.LoopDetector.CodeIdentity
 import org.jetbrains.kotlinx.lincheck.trace.CallStackTrace
 import org.jetbrains.kotlinx.lincheck.trace.CallStackTraceElement
 import org.jetbrains.kotlinx.lincheck.trace.MethodCallTracePoint
+import org.jetbrains.kotlinx.lincheck.trace.ObstructionFreedomViolationExecutionAbortTracePoint
 import org.jetbrains.kotlinx.lincheck.trace.SpinCycleStartTracePoint
+import org.jetbrains.kotlinx.lincheck.trace.SwitchEventTracePoint
 import org.jetbrains.kotlinx.lincheck.trace.TracePoint
 import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.tracedata.CodeLocations
@@ -922,13 +924,15 @@ private class ReplayModeLoopDetectorHelper(
  * node to get the correct spin cycle start trace point depth.
  */
 internal fun afterSpinCycleTraceCollected(
-    spinLockTracePoints: List<TracePoint>,
-    spinLockTracePointsCallStacks: List<List<MethodCallTracePoint>>,
+    spinCycleStartTracePoint: TracePoint,
+    spinCycleEndTracePoint: TracePoint,
 ) : Pair<List<MethodCallTracePoint>, Boolean> {
-    check(!spinLockTracePoints.isEmpty())
+    check(spinCycleStartTracePoint is SpinCycleStartTracePoint)
+    check(spinCycleEndTracePoint is SwitchEventTracePoint ||
+          spinCycleEndTracePoint is ObstructionFreedomViolationExecutionAbortTracePoint)
 
-    val spinCycleFirstTracePointCallStackTrace = spinLockTracePointsCallStacks.first()
-    val spinCycleLastTracePointCallStackTrace = spinLockTracePointsCallStacks.last()
+    val spinCycleFirstTracePointCallStackTrace = spinCycleStartTracePoint.callStackTrace.map { it.tracePoint }
+    val spinCycleLastTracePointCallStackTrace = spinCycleEndTracePoint.callStackTrace.map { it.tracePoint }
     val isRecursive = spinCycleLastTracePointCallStackTrace.size != spinCycleFirstTracePointCallStackTrace.size
 
     if (isRecursive) {

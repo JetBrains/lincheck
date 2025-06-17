@@ -17,8 +17,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
 import org.jetbrains.kotlinx.lincheck.util.AnalysisProfile
 import org.jetbrains.kotlinx.lincheck.strategy.managed.afterSpinCycleTraceCollected
-import org.jetbrains.kotlinx.lincheck.util.ensure
-import java.lang.reflect.Method
 import kotlin.math.max
 
 internal typealias SingleThreadedTable<T> = List<SingleThreadedSection<T>>
@@ -185,10 +183,8 @@ internal class TraceReporter(
 
             check(i > 0)
             val (patchedStackTrace, isRecursive) = afterSpinCycleTraceCollected(
-                spinLockTracePoints = spinLockTracePoints,
-                spinLockTracePointsCallStacks = spinLockTracePoints.map { tracePoint ->
-                    tracePoint.callStackTrace.map { it.tracePoint }
-                },
+                spinCycleStartTracePoint = newTrace[i],
+                spinCycleEndTracePoint = newTrace[k],
             )
 
             var nextEvent = newTrace[i + 1]
