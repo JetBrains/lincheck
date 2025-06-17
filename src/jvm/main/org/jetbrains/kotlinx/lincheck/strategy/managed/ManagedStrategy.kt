@@ -36,6 +36,7 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.Continuation
 import java.util.concurrent.TimeoutException
 import kotlinx.coroutines.CancellableContinuation
+import org.jetbrains.lincheck.GeneralPurposeModelCheckingWrapper
 import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 import kotlin.Result as KResult

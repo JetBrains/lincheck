@@ -17,6 +17,9 @@ import kotlinx.coroutines.sync.Mutex
 import org.jetbrains.kotlinx.lincheck.Lincheck.runConcurrentTest
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
+import org.jetbrains.lincheck.Lincheck.runConcurrentTest
+import org.jetbrains.lincheck.LincheckAssertionError
+import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.junit.Assume.assumeFalse
 import org.junit.Before
 import org.junit.Test

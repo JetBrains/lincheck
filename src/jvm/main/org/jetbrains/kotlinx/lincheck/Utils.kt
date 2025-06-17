@@ -227,11 +227,18 @@ internal fun Class<*>.findField(fieldName: String): Field {
 internal class LincheckInternalBugException(cause: Throwable): Exception(cause)
 
 internal fun isInLincheckPackage(className: String) =
-    className.startsWith(LINCHECK_PACKAGE_NAME) || className.startsWith(LINCHECK_BOOTSTRAP_PACKAGE_NAME)
+    className.startsWith(LINCHECK_PACKAGE_NAME) ||
+    className.startsWith(LINCHECK_KOTLINX_PACKAGE_NAME) ||
+    className.startsWith(LINCHECK_BOOTSTRAP_PACKAGE_NAME)
 
-internal const val LINCHECK_PACKAGE_NAME = "org.jetbrains.kotlinx.lincheck."
-internal const val LINCHECK_RUNNER_PACKAGE_NAME = "org.jetbrains.kotlinx.lincheck.runner."
-internal const val LINCHECK_BOOTSTRAP_PACKAGE_NAME = "sun.nio.ch.lincheck."
+internal val StackTraceElement.isLincheckInternals get() =
+    this.className.startsWith(LINCHECK_PACKAGE_NAME) ||
+    this.className.startsWith(LINCHECK_KOTLINX_PACKAGE_NAME)
+
+internal const val LINCHECK_PACKAGE_NAME            = "org.jetbrains.lincheck."
+internal const val LINCHECK_KOTLINX_PACKAGE_NAME    = "org.jetbrains.kotlinx.lincheck."
+internal const val LINCHECK_RUNNER_PACKAGE_NAME     = "org.jetbrains.kotlinx.lincheck.runner."
+internal const val LINCHECK_BOOTSTRAP_PACKAGE_NAME  = "sun.nio.ch.lincheck."
 
 internal fun <T> Class<T>.newDefaultInstance(): T {
     @Suppress("UNCHECKED_CAST")

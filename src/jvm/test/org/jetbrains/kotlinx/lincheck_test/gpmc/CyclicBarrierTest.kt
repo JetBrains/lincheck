@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.gpmc
 
-import org.jetbrains.kotlinx.lincheck.Lincheck.runConcurrentTest
+import org.jetbrains.lincheck.Lincheck.runConcurrentTest
 import org.junit.Test
 import java.util.concurrent.CyclicBarrier
 import kotlin.concurrent.thread

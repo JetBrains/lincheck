@@ -276,6 +276,7 @@ internal class AnalysisProfile(val analyzeStdLib: Boolean) {
         if (className.startsWith("org.junit.")) return false
         if (className.startsWith("junit.framework.")) return false
         // Finally, we should never instrument the Lincheck classes.
+        if (className.startsWith("org.jetbrains.lincheck.")) return false
         if (className.startsWith("org.jetbrains.kotlinx.lincheck.")) return false
         // All the classes that were not filtered out are eligible for transformation.
         return true
@@ -390,6 +391,6 @@ private val CONCURRENT_COLLECTION_LIBRARIES = setOf(
 internal fun isConcurrentCollectionsLibrary(className: String) = className in CONCURRENT_COLLECTION_LIBRARIES
 
 private fun isJavaExecutorService(className: String) =
-    className.startsWith("java.util.concurrent.AbstractExecutorService") 
-    || className.startsWith("java.util.concurrent.ThreadPoolExecutor") 
-    || className.startsWith("java.util.concurrent.ForkJoinPool")
+    className.startsWith("java.util.concurrent.AbstractExecutorService") ||
+    className.startsWith("java.util.concurrent.ThreadPoolExecutor") ||
+    className.startsWith("java.util.concurrent.ForkJoinPool")

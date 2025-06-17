@@ -12,8 +12,8 @@ package org.jetbrains.kotlinx.lincheck_test.gpmc;
 
 import java.util.concurrent.ConcurrentLinkedDeque;
 
-import org.jetbrains.kotlinx.lincheck.Lincheck;
-import org.jetbrains.kotlinx.lincheck.LincheckAssertionError;
+import org.jetbrains.lincheck.Lincheck;
+import org.jetbrains.lincheck.LincheckAssertionError;
 import org.junit.Test;
 
 import static org.junit.Assert.assertFalse;

@@ -16,6 +16,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.trace.appendTrace
 import org.jetbrains.kotlinx.lincheck.util.LoggingLevel
 import org.jetbrains.kotlinx.lincheck.util.LoggingLevel.*
+import org.jetbrains.lincheck.GeneralPurposeModelCheckingWrapper
 import java.io.*
 import kotlin.math.max
 import kotlin.reflect.jvm.javaMethod

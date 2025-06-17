@@ -7,11 +7,10 @@
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.jetbrains.kotlinx.lincheck
+package org.jetbrains.lincheck
 
-import org.jetbrains.kotlinx.lincheck.strategy.*
-import java.lang.AssertionError
+import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 
 class LincheckAssertionError(
-    val failure: LincheckFailure
+    internal val failure: LincheckFailure
 ) : AssertionError("\n" + failure)

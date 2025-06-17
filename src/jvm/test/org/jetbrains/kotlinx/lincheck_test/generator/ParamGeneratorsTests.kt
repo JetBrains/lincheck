@@ -12,6 +12,7 @@
 package org.jetbrains.kotlinx.lincheck_test.generator
 
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.execution.*
