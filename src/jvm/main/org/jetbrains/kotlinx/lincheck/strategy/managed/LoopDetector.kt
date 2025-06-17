@@ -951,7 +951,7 @@ internal fun afterSpinCycleTraceCollected(
     }
 
     // See above the description of the algorithm for iterative spin lock.
-    return getCommonMinStackTrace(spinLockTracePointsCallStacks) to false
+    return getCommonMinStackTrace(listOf(spinCycleFirstTracePointCallStackTrace, spinCycleLastTracePointCallStackTrace)) to false
 }
 
 /**
