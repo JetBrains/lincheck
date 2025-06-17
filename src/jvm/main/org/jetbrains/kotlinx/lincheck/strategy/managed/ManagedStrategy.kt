@@ -1676,6 +1676,8 @@ internal abstract class ManagedStrategy(
         ) {
             // create a switch point
             newSwitchPoint(threadId, codeLocation)
+            // check for livelock and create the method call trace point
+            traceCollector?.checkActiveLockDetected()
             // create a trace point
             val tracePoint = addBeforeMethodCallTracePoint(
                 threadId, receiver, codeLocation, methodId, methodDescriptor.className, methodDescriptor.methodName, params,
@@ -1691,11 +1693,14 @@ internal abstract class ManagedStrategy(
             if (collectTrace) {
                 // check for livelock and create the method call trace point
                 traceCollector?.checkActiveLockDetected()
-                val tracePoint = addBeforeMethodCallTracePoint(threadId, receiver, codeLocation, methodId,
+                // create a trace point
+                val tracePoint = addBeforeMethodCallTracePoint(
+                    threadId, receiver, codeLocation, methodId,
                     methodDescriptor.className, methodDescriptor.methodName, params,
                     atomicMethodDescriptor,
                     MethodCallTracePoint.CallType.NORMAL,
                 )
+                // add trace point to the trace
                 traceCollector?.addTracePointInternal(tracePoint)
             }
             // notify loop detector about the method call
@@ -2480,7 +2485,9 @@ internal abstract class ManagedStrategy(
         // tracePoint can be null here if trace is not available, e.g. in case of suspension
         if (tracePoint == null) return
 
-        if (tracePoint !is SectionDelimiterTracePoint && !tracePoint.isActorMethodCallTracePoint() && tracePoint !is MethodReturnTracePoint) {
+        if (tracePoint !is SectionDelimiterTracePoint && !tracePoint.isActorMethodCallTracePoint() &&
+            tracePoint !is MethodCallTracePoint && tracePoint !is MethodReturnTracePoint)
+        {
             checkActiveLockDetected()
         }
 

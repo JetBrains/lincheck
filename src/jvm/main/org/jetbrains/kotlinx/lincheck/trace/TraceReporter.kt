@@ -179,9 +179,9 @@ internal class TraceReporter(
             if (k == i + 1) continue
 
             val spinLockTracePoints = newTrace
-                .subList(i + 1, k + 1)
+                .subList(i, k + 1)
                 .filter { it !is MethodReturnTracePoint }
-                .ensure { it.all { tracePoint -> tracePoint !is SpinCycleStartTracePoint } }
+                // .ensure { it.all { tracePoint -> tracePoint !is SpinCycleStartTracePoint } }
 
             check(i > 0)
             val (patchedStackTrace, isRecursive) = afterSpinCycleTraceCollected(
