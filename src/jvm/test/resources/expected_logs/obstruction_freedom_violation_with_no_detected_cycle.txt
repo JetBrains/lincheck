@@ -9,7 +9,7 @@ The following interleaving leads to the error:
 | --------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                Thread 1                                                                 |
 | --------------------------------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                                             |
+| operation(): <hung>                                                                                                                     |
 |   incrementManyTimes() at ObstructionFreedomActiveLockRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:37)          |
 |   incrementManyTimes() at ObstructionFreedomActiveLockRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:40)          |
 |     counter.get(): 101 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:44) |
@@ -20,7 +20,7 @@ Detailed trace:
 | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                      Thread 1                                                                       |
 | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                                                         |
+| operation(): <hung>                                                                                                                                 |
 |   incrementManyTimes() at ObstructionFreedomActiveLockRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:37)                      |
 |     counter.get(): 0 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:44)               |
 |     counter.incrementAndGet(): 1 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:47)   |
