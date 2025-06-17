@@ -117,8 +117,8 @@ internal abstract class ManagedStrategy(
     // Tracker of the thread parking.
     protected abstract val parkingTracker: ParkingTracker
 
-    // Snapshot of the memory, reachable from static fields
-    protected val staticMemorySnapshot = SnapshotTracker()
+    // Snapshot of the memory, which will be restored between invocations
+    protected val memorySnapshot = SnapshotTracker()
 
     // Tracks content of constants (i.e., static final fields).
     // Stores a map `object -> fieldName`,
@@ -288,10 +288,19 @@ internal abstract class ManagedStrategy(
     }
 
     /**
-     * Restores recorded values of all memory reachable from static state.
+     * Restores recorded values of memory snapshot.
      */
-    fun restoreStaticMemorySnapshot() {
-        staticMemorySnapshot.restoreValues()
+    internal fun restoreMemorySnapshot() {
+        memorySnapshot.restoreValues()
+    }
+
+    /**
+     * Tracks [obj] as a root object in memory snapshot.
+     *
+     * For details see [SnapshotTracker.trackObjectAsRoot].
+     */
+    internal fun updateSnapshotWithRootObject(obj: Any) {
+        memorySnapshot.trackObjectAsRoot(obj)
     }
 
     /**
@@ -302,7 +311,7 @@ internal abstract class ManagedStrategy(
         val result: InvocationResult = try {
             runner.run()
         } finally {
-            restoreStaticMemorySnapshot()
+            restoreMemorySnapshot()
         }
         // In case the runner detects a deadlock, some threads can still manipulate the current strategy,
         // so we're not interested in suddenInvocationResult in this case
@@ -1524,7 +1533,7 @@ internal abstract class ManagedStrategy(
      * *Must be called from [runInsideIgnoredSection].*
      */
     private fun updateSnapshotOnFieldAccess(obj: Any?, className: String, fieldName: String) {
-        staticMemorySnapshot.trackField(obj, className, fieldName)
+        memorySnapshot.trackField(obj, className, fieldName)
     }
 
     /**
@@ -1533,7 +1542,7 @@ internal abstract class ManagedStrategy(
      * *Must be called from [runInsideIgnoredSection].*
      */
     private fun updateSnapshotOnArrayElementAccess(array: Any, index: Int) {
-        staticMemorySnapshot.trackArrayCell(array, index)
+        memorySnapshot.trackArrayCell(array, index)
     }
 
     /**
@@ -1541,7 +1550,7 @@ internal abstract class ManagedStrategy(
      * Required as a trick to overcome issue with leaking this in constructors, see https://github.com/JetBrains/lincheck/issues/424.
      */
     override fun updateSnapshotBeforeConstructorCall(objs: Array<Any?>) = runInsideIgnoredSection {
-        staticMemorySnapshot.trackObjects(objs)
+        memorySnapshot.trackObjects(objs)
     }
 
     /**
@@ -1559,13 +1568,13 @@ internal abstract class ManagedStrategy(
                 val methodType: UnsafeName = UnsafeNames.getMethodCallType(params)
                 when (methodType) {
                     is UnsafeInstanceMethod -> {
-                        staticMemorySnapshot.trackField(methodType.owner, methodType.owner.javaClass, methodType.fieldName)
+                        memorySnapshot.trackField(methodType.owner, methodType.owner.javaClass, methodType.fieldName)
                     }
                     is UnsafeStaticMethod -> {
-                        staticMemorySnapshot.trackField(null, methodType.clazz, methodType.fieldName)
+                        memorySnapshot.trackField(null, methodType.clazz, methodType.fieldName)
                     }
                     is UnsafeArrayMethod -> {
-                        staticMemorySnapshot.trackArrayCell(methodType.array, methodType.index)
+                        memorySnapshot.trackArrayCell(methodType.array, methodType.index)
                     }
                     else -> {}
                 }
@@ -1575,13 +1584,13 @@ internal abstract class ManagedStrategy(
                 val methodType: VarHandleMethodType = VarHandleNames.varHandleMethodType(owner, params)
                 when (methodType) {
                     is InstanceVarHandleMethod -> {
-                        staticMemorySnapshot.trackField(methodType.owner, methodType.owner.javaClass, methodType.fieldName)
+                        memorySnapshot.trackField(methodType.owner, methodType.owner.javaClass, methodType.fieldName)
                     }
                     is StaticVarHandleMethod -> {
-                        staticMemorySnapshot.trackField(null, methodType.ownerClass, methodType.fieldName)
+                        memorySnapshot.trackField(null, methodType.ownerClass, methodType.fieldName)
                     }
                     is ArrayVarHandleMethod -> {
-                        staticMemorySnapshot.trackArrayCell(methodType.array, methodType.index)
+                        memorySnapshot.trackArrayCell(methodType.array, methodType.index)
                     }
                     else -> {}
                 }
@@ -1592,7 +1601,7 @@ internal abstract class ManagedStrategy(
                 val afuDesc: AtomicFieldUpdaterDescriptor? = AtomicFieldUpdaterNames.getAtomicFieldUpdaterDescriptor(owner!!)
                 check(afuDesc != null) { "Cannot extract field name referenced by Java AFU object $owner" }
 
-                staticMemorySnapshot.trackField(obj, afuDesc.targetType, afuDesc.fieldName)
+                memorySnapshot.trackField(obj, afuDesc.targetType, afuDesc.fieldName)
             }
             // TODO: System.arraycopy
             // TODO: reflection
