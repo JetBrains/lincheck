@@ -14,6 +14,7 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.encodeToByteArray
 import kotlinx.serialization.protobuf.ProtoBuf
+import kotlinx.serialization.protobuf.schema.ProtoBufSchemaGenerator
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ShadowStackFrame
 import org.jetbrains.kotlinx.lincheck.tracedata.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
@@ -25,10 +26,6 @@ import java.io.DataOutputStream
 import java.io.File
 import java.lang.invoke.CallSite
 import java.util.concurrent.ConcurrentHashMap
-
-const val OUTPUT_BUFFER_SIZE: Int = 16*1024*1024
-const val TRACE_MAGIC : Long = 0x706e547124ee5f70L
-const val TRACE_VERSION : Long = 1
 
 private class ThreadData(
     val threadId: Int
@@ -487,22 +484,15 @@ class TraceCollectingEventTracker(
             val f = File(traceDumpPath)
             f.parentFile?.mkdirs()
             f.createNewFile()
-            DataOutputStream(f.outputStream().buffered(OUTPUT_BUFFER_SIZE))
+            f.outputStream()
         } catch (t: Throwable) {
             System.err.println("TraceRecorder: Cannot create output file $traceDumpPath: ${t.message}")
             return
         }
 
         try {
-            output.writeLong(TRACE_MAGIC)
-            output.writeLong(TRACE_VERSION)
-
-            saveCache(output, methodCache)
-            saveCache(output, fieldCache)
-            saveCache(output, variableCache)
-
-            output.writeInt(allThreads.size)
             allThreads.sortBy { it.threadId }
+            val roots = mutableListOf<TRTracePoint>()
             allThreads.forEach { thread ->
                 val st = thread.callStack
                 if (st.size == 0) {
@@ -511,11 +501,10 @@ class TraceCollectingEventTracker(
                     if (st.size > 1) {
                         System.err.println("Trace Recorder: Thread ${thread.threadId + 1}: Stack is not empty, contains ${st.size} elements, report bug")
                     }
-                    val root = st.first()
-                    // We cannot use "internal" recursive serialization, as it is limited to 2GB (ByteArray)
-                    encodeTRTracePoint(output, root)
+                    roots.add(st.first())
                 }
             }
+            saveRecorderTrace(output, roots)
         } catch (t: Throwable) {
             System.err.println("TraceRecorder: Cannot write output file $traceDumpPath: ${t.message}")
             return
@@ -523,28 +512,6 @@ class TraceCollectingEventTracker(
             output.close()
             // System.err.println("Trace dumped in ${System.currentTimeMillis() - startTime} ms")
         }
-    }
-
-    private inline fun <reified  V> saveCache(output: DataOutputStream, cache: IndexedPool<V>) {
-        output.writeInt(cache.content.size)
-        cache.content.forEach {
-            saveProtoBuf(output, it)
-        }
-    }
-
-    private fun encodeTRTracePoint(output: DataOutputStream, node: TRTracePoint) {
-        saveProtoBuf(output, node)
-        if (node is TRMethodCallTracePoint) {
-            output.writeInt(node.events.size)
-            node.events.forEach { encodeTRTracePoint(output, it) }
-        }
-    }
-
-   @OptIn(ExperimentalSerializationApi::class)
-    private inline fun <reified  V> saveProtoBuf(output: DataOutputStream, value: V) {
-       val ba = ProtoBuf.encodeToByteArray(value)
-       output.writeInt(ba.size)
-       output.write(ba)
     }
 
     private fun methodAnalysisSectionType(
@@ -558,67 +525,5 @@ class TraceCollectingEventTracker(
             return AnalysisSectionType.IGNORED
         }
         return analysisProfile.getAnalysisSectionFor(ownerName, methodName)
-    }
-
-    /*
-     * Example of trace loading
-     */
-    fun exampleTraceReading(fileName: String): List<TRMethodCallTracePoint> {
-        val input = DataInputStream(File(fileName).inputStream())
-
-        try {
-            val magic = input.readLong()
-            if (magic != TRACE_MAGIC) {
-                System.err.println("Wrong magic")
-                return emptyList()
-            }
-
-            val version = input.readLong()
-            if (version != TRACE_VERSION) {
-                System.err.println("Wrong version")
-                return emptyList()
-            }
-
-            loadCache(input, methodCache)
-            loadCache(input, fieldCache)
-            loadCache(input, variableCache)
-
-            val threadNum = input.readInt()
-            val threads = mutableListOf<TRMethodCallTracePoint>()
-            repeat(threadNum) {
-                threads.add(loadTracePoint(input) as TRMethodCallTracePoint)
-            }
-            return threads
-        } finally {
-            input.close()
-        }
-    }
-
-    private inline fun <reified  V> loadCache(input: DataInputStream, cache: IndexedPool<V>) {
-        val count = input.readInt()
-        repeat(count) {
-            val value = loadProtoBuf<V>(input)
-            cache.getOrCreateId(value)
-        }
-    }
-
-    private fun loadTracePoint(input: DataInputStream): TRTracePoint {
-        val value = loadProtoBuf<TRTracePoint>(input)
-        if (value is TRMethodCallTracePoint) {
-            val count = input.readInt()
-            repeat(count) {
-                val child = loadTracePoint(input)
-                value.events.add(child)
-            }
-        }
-        return value
-    }
-
-    @OptIn(ExperimentalSerializationApi::class)
-    private inline fun <reified  V> loadProtoBuf(input: DataInputStream): V {
-        val size = input.readInt()
-        val ba = ByteArray(size)
-        input.read(ba)
-        return ProtoBuf.decodeFromByteArray<V>(ba)
     }
 }
