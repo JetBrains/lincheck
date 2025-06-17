@@ -9,7 +9,6 @@
  */
 package org.jetbrains.kotlinx.lincheck.tracedata
 
-import kotlinx.serialization.Serializable
 import java.util.*
 import kotlin.math.max
 
@@ -85,10 +84,8 @@ object Types {
     val SHORT_TYPE: ShortType = ShortType()
     val CHAR_TYPE: CharType = CharType()
 
-    @Serializable
     sealed class Type
 
-    @Serializable
     class ObjectType(val className: String) : Type() {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -106,7 +103,6 @@ object Types {
         }
     }
 
-    @Serializable
     class ArrayType(val elementType: Type) : Type() {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -124,70 +120,60 @@ object Types {
         }
     }
 
-    @Serializable
     class VoidType : Type() {
         override fun toString(): String {
             return "void"
         }
     }
 
-    @Serializable
     class IntType : Type() {
         override fun toString(): String {
             return "int"
         }
     }
 
-    @Serializable
     class LongType : Type() {
         override fun toString(): String {
             return "long"
         }
     }
 
-    @Serializable
     class DoubleType : Type() {
         override fun toString(): String {
             return "double"
         }
     }
 
-    @Serializable
     class FloatType : Type() {
         override fun toString(): String {
             return "float"
         }
     }
 
-    @Serializable
     class BooleanType : Type() {
         override fun toString(): String {
             return "boolean"
         }
     }
 
-    @Serializable
     class ByteType : Type() {
         override fun toString(): String {
             return "byte"
         }
     }
 
-    @Serializable
     class ShortType : Type() {
         override fun toString(): String {
             return "short"
         }
     }
 
-    @Serializable
     class CharType : Type() {
         override fun toString(): String {
             return "char"
         }
     }
 
-    @Serializable
     class MethodType(val argumentTypes: MutableList<Type>, val returnType: Type) {
         constructor(returnType: Type, vararg argumentTypes: Type) : this(
             mutableListOf<Type>(*argumentTypes),

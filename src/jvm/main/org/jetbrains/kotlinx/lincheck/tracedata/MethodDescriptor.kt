@@ -10,7 +10,6 @@
 
 package org.jetbrains.kotlinx.lincheck.tracedata
 
-import kotlinx.serialization.Serializable
 import org.objectweb.asm.commons.Method
 
 internal fun Method.toMethodSignature() = MethodSignature(this.name, Types.convertAsmMethodType(this.descriptor))
@@ -22,7 +21,6 @@ internal fun java.lang.reflect.Method.toMethodSignature() = Method.getMethod(thi
  */
 internal val methodCache = IndexedPool<MethodDescriptor>()
 
-@Serializable
 internal data class MethodDescriptor(
     val className: String,
     val methodSignature: MethodSignature

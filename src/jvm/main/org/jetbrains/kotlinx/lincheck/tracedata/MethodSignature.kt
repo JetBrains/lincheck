@@ -9,10 +9,8 @@
  */
 package org.jetbrains.kotlinx.lincheck.tracedata
 
-import kotlinx.serialization.Serializable
 import java.util.*
 
-@Serializable
 class MethodSignature(val name: String, val methodType: Types.MethodType) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

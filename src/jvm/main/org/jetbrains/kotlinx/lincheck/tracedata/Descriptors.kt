@@ -10,9 +10,6 @@
 
 package org.jetbrains.kotlinx.lincheck.tracedata
 
-import kotlinx.serialization.Serializable
-
-@Serializable
 internal data class FieldDescriptor(
     val className: String,
     val fieldName: String,
@@ -22,7 +19,6 @@ internal data class FieldDescriptor(
 
 internal val fieldCache = IndexedPool<FieldDescriptor>()
 
-@Serializable
 internal data class VariableDescriptor(
     val name: String,
 )

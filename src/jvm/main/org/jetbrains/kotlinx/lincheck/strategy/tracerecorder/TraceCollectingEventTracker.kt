@@ -10,7 +10,6 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.tracerecorder
 
-import kotlinx.serialization.ExperimentalSerializationApi
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ShadowStackFrame
 import org.jetbrains.kotlinx.lincheck.tracedata.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
@@ -323,7 +322,7 @@ class TraceCollectingEventTracker(
             codeLocationId = codeLocation,
             methodId = methodId,
             obj = TRObject(receiver),
-            parameters = params.map { TRObjectNotNull(it) }
+            parameters = params.map { TRObject(it) }
         )
         threadHandle.currentMethodCallTracePoint().events.add(tracePoint)
         threadHandle.pushStackFrame(tracePoint, receiver)
@@ -460,7 +459,6 @@ class TraceCollectingEventTracker(
         startTime = System.currentTimeMillis()
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
     fun finishAndDumpTrace() {
         val allThreads = mutableListOf<ThreadData>()
         allThreads.addAll(threads.values)
