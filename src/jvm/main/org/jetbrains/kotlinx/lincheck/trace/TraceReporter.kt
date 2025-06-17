@@ -160,6 +160,8 @@ internal class TraceReporter(
             val tracePoint = newTrace[i]
             if (tracePoint !is SpinCycleStartTracePoint) continue
 
+            check(i > 0)
+
             // find a beginning of the current thread section
             var j = i
             while ((j - 1 >= 0) && (newTrace[j - 1].iThread == tracePoint.iThread)) {
@@ -176,12 +178,6 @@ internal class TraceReporter(
             }
             if (k == i + 1) continue
 
-            val spinLockTracePoints = newTrace
-                .subList(i, k + 1)
-                .filter { it !is MethodReturnTracePoint }
-                // .ensure { it.all { tracePoint -> tracePoint !is SpinCycleStartTracePoint } }
-
-            check(i > 0)
             val (patchedStackTrace, isRecursive) = afterSpinCycleTraceCollected(
                 spinCycleStartTracePoint = newTrace[i],
                 spinCycleEndTracePoint = newTrace[k],
