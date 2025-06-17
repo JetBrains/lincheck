@@ -16,20 +16,13 @@ import org.jetbrains.kotlinx.lincheck.trace.CallStackTraceElement
 import org.jetbrains.kotlinx.lincheck.trace.MethodCallTracePoint
 import org.jetbrains.kotlinx.lincheck.trace.TraceCollector
 import org.jetbrains.kotlinx.lincheck.trace.TracePoint
-import org.jetbrains.kotlinx.lincheck.traceagent.TRMethodCallTracePoint
-import org.jetbrains.kotlinx.lincheck.traceagent.TRObject
-import org.jetbrains.kotlinx.lincheck.traceagent.TRReadArrayTracePoint
-import org.jetbrains.kotlinx.lincheck.traceagent.TRReadTracePoint
-import org.jetbrains.kotlinx.lincheck.traceagent.TRWriteArrayTracePoint
-import org.jetbrains.kotlinx.lincheck.traceagent.TRWriteTracePoint
-import org.jetbrains.kotlinx.lincheck.transformation.CodeLocations
+import org.jetbrains.kotlinx.lincheck.traceagent.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.transformation.fieldCache
 import org.jetbrains.kotlinx.lincheck.transformation.methodCache
 import org.jetbrains.kotlinx.lincheck.transformation.variableCache
 import org.jetbrains.kotlinx.lincheck.util.AnalysisProfile
 import org.jetbrains.kotlinx.lincheck.util.AnalysisSectionType
-import org.jetbrains.kotlinx.lincheck.util.isSuspendFunction
 import org.jetbrains.kotlinx.lincheck.util.runInsideIgnoredSection
 import sun.nio.ch.lincheck.*
 import java.io.File
@@ -43,7 +36,6 @@ class TraceCollectingEventTracker(
     private val traceDumpPath: String?
 ) :  EventTracker {
     private val EMPTY_CALL_STACK_TRACE = emptyList<CallStackTraceElement>()
-    private var indent: CharSequence = " ".repeat(1024)
 
     // We don't want to re-create this object each time we need it
     private val analysisProfile: AnalysisProfile = AnalysisProfile(false)
@@ -52,7 +44,7 @@ class TraceCollectingEventTracker(
     private val threads = ConcurrentHashMap<Thread, ThreadAnalysisHandle>()
 
     override fun beforeThreadFork(thread: Thread, descriptor: ThreadDescriptor) = runInsideIgnoredSection {
-        val threadHandle = threads[Thread.currentThread()] ?: return
+        threads[Thread.currentThread()] ?: return
         // Create new thread handle
         val forkedThreadHandle = ThreadAnalysisHandle(threads.size, TraceCollector())
         threads[thread] = forkedThreadHandle
@@ -166,23 +158,6 @@ class TraceCollectingEventTracker(
         if (fieldDescriptor.isStatic) {
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
         }
-        if (!fieldDescriptor.isStatic && obj == null) {
-            // Ignore, NullPointerException will be thrown
-            return false
-        }
-
-
-        val threadHandle = threads[Thread.currentThread()] ?: return false
-
-        val tracePoint = TRReadTracePoint(
-            threadId = threadHandle.threadId,
-            codeLocationId = codeLocation,
-            fieldId = fieldId,
-            obj = obj?.let { TRObject(obj.javaClass.name, System.identityHashCode(obj)) },
-            value = null // todo
-        )
-        threadHandle.currentMethodCallTracePoint().events.add(tracePoint)
-
         return false
     }
 
@@ -190,8 +165,22 @@ class TraceCollectingEventTracker(
         array: Any,
         index: Int,
         codeLocation: Int
-    ): Boolean = runInsideIgnoredSection {
-        val threadHandle = threads[Thread.currentThread()] ?: return false
+    ): Boolean = false
+
+    override fun afterReadField(obj: Any?, codeLocation: Int, fieldId: Int, value: Any?) {
+        val threadHandle = threads[Thread.currentThread()] ?: return
+        val tracePoint = TRReadTracePoint(
+            threadId = threadHandle.threadId,
+            codeLocationId = codeLocation,
+            fieldId = fieldId,
+            obj = TRObject(obj),
+            value = TRObject(value)
+        )
+        threadHandle.currentMethodCallTracePoint().events.add(tracePoint)
+    }
+
+    override fun afterReadArrayElement(array: Any?, index: Int, codeLocation: Int, value: Any?) {
+        val threadHandle = threads[Thread.currentThread()] ?: return
 
         val tracePoint = TRReadArrayTracePoint(
             threadId = threadHandle.threadId,
@@ -201,13 +190,6 @@ class TraceCollectingEventTracker(
             value = null // todo
         )
         threadHandle.currentMethodCallTracePoint().events.add(tracePoint)
-
-        return false
-    }
-
-    override fun afterRead(value: Any?) = runInsideIgnoredSection {
-        val threadHandle = threads[Thread.currentThread()] ?: return
-        threadHandle.afterRead(value)
     }
 
     override fun beforeWriteField(
@@ -223,7 +205,6 @@ class TraceCollectingEventTracker(
         }
 
         val threadHandle = threads[Thread.currentThread()] ?: return false
-
         val tracePoint = TRWriteTracePoint(
             threadId = threadHandle.threadId,
             codeLocationId = codeLocation,
@@ -232,7 +213,6 @@ class TraceCollectingEventTracker(
             value = TRObject(value)
         )
         threadHandle.currentMethodCallTracePoint().events.add(tracePoint)
-
         return false
     }
 
@@ -243,7 +223,6 @@ class TraceCollectingEventTracker(
         codeLocation: Int
     ): Boolean = runInsideIgnoredSection {
         val threadHandle = threads[Thread.currentThread()] ?: return false
-
         val tracePoint = TRWriteArrayTracePoint(
             threadId = threadHandle.threadId,
             codeLocationId = codeLocation,
@@ -252,7 +231,6 @@ class TraceCollectingEventTracker(
             value = TRObject(value)
         )
         threadHandle.currentMethodCallTracePoint().events.add(tracePoint)
-
         return false
     }
 
@@ -340,9 +318,9 @@ class TraceCollectingEventTracker(
         methodId: Int,
         codeLocation: Int,
         owner: Any?,
-    ): Unit = runInsideIgnoredSection {
-        val threadHandle = threads[Thread.currentThread()] ?: return
-        val methodDescriptor = methodCache[methodId]
+    ): Unit = Unit // runInsideIgnoredSection {
+//        val threadHandle = threads[Thread.currentThread()] ?: return
+//        val methodDescriptor = methodCache[methodId]
 
 //        val tracePoint = MethodCallTracePoint(
 //            iThread = threadHandle.threadId,
@@ -357,14 +335,14 @@ class TraceCollectingEventTracker(
 //        )
 //        threadHandle.addTracepointToCurrentCall(tracePoint)
 //        threadHandle.pushTracepointStackFrame(tracePoint, owner)
-    }
+//    }
 
-    override fun onInlineMethodCallReturn(methodId: Int): Unit = runInsideIgnoredSection {
-        val threadHandle = threads[Thread.currentThread()] ?: return
-        val tracePoint = threadHandle.popTracepointStackFrame()
-        // TODO: add returned value
-        // tracePoint.returnedValue
-    }
+    override fun onInlineMethodCallReturn(methodId: Int): Unit = Unit // runInsideIgnoredSection {
+//        val threadHandle = threads[Thread.currentThread()] ?: return
+//        val tracePoint = threadHandle.popTracepointStackFrame()
+//        // TODO: add returned value
+//        // tracePoint.returnedValue
+//    }
 
     override fun invokeDeterministicallyOrNull(
         descriptorId: Long,
@@ -403,8 +381,6 @@ class TraceCollectingEventTracker(
         System.err.println("Trace Recorder mode doesn't support IDEA Plugin integration")
     }
 
-    private var startTime = 0L
-
     fun enableTrace() {
         // Start tracing in this thread
         val threadHandle = ThreadAnalysisHandle(threads.size, TraceCollector())
@@ -419,17 +395,12 @@ class TraceCollectingEventTracker(
             parameters = emptyList()
         )
         threadHandle.pushTracepointStackFrameNew(tracePoint, null)
-
-        startTime = System.currentTimeMillis();
     }
 
     fun finishAndDumpTrace() {
         val allThreads = mutableListOf<ThreadAnalysisHandle>()
         allThreads.addAll(threads.values)
         threads.clear()
-
-        System.err.println("Trace record time: ${System.currentTimeMillis() - startTime}")
-        startTime = System.currentTimeMillis()
 
         val output = if (traceDumpPath == null) {
             System.out
@@ -454,19 +425,9 @@ class TraceCollectingEventTracker(
         } finally {
             output.close()
         }
-
-        System.err.println("Output time: ${System.currentTimeMillis() - startTime}")
     }
 
     private fun printNode(output: Appendable, node: TracePoint, depth: Int) {
-        output.append(indent, 0, depth)
-        output.append(node.toStringImpl(false))
-        output.append("\n")
-        if (node is MethodCallTracePoint) {
-            for (c in node.getChildren()) {
-                printNode(output, c, depth + 1)
-            }
-        }
     }
 
     private fun methodAnalysisSectionType(
