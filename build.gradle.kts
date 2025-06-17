@@ -5,6 +5,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     java
     kotlin("jvm")
+    kotlin("plugin.serialization") version "2.1.20"
     id("org.jetbrains.kotlinx.atomicfu")
     id("maven-publish")
     id("kotlinx.team.infra") version "0.4.0-dev-80"
@@ -63,6 +64,7 @@ sourceSets {
         // main
         val kotlinVersion: String by project
         val kotlinxCoroutinesVersion: String by project
+        val kotlinxSerializationVersion: String by project
         val asmVersion: String by project
         val byteBuddyVersion: String by project
         val atomicfuVersion: String by project
@@ -78,6 +80,7 @@ sourceSets {
         api("net.bytebuddy:byte-buddy-agent:$byteBuddyVersion")
         api("org.jetbrains.kotlinx:atomicfu:$atomicfuVersion")
 
+        implementation("org.jetbrains.kotlinx:kotlinx-serialization-protobuf:$kotlinxSerializationVersion")
         // test
         val junitVersion: String by project
         val jctoolsVersion: String by project

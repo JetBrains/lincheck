@@ -10,75 +10,84 @@
 
 package org.jetbrains.kotlinx.lincheck.traceagent
 
+import kotlinx.serialization.Serializable
 import java.util.concurrent.atomic.AtomicInteger
 
 private val EVENT_ID_GENERATOR = AtomicInteger(0)
 
-sealed class TRTracePoint(
-    val threadId: Int,
-    val codeLocationId: Int,
-) {
+@Serializable
+sealed class TRTracePoint {
+    abstract val codeLocationId: Int
+    abstract val threadId: Int
     val eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
 }
 
+@Serializable
 class TRMethodCallTracePoint(
-    threadId: Int,
-    codeLocationId: Int,
+    override val threadId: Int,
+    override val codeLocationId: Int,
     val methodId: Int,
     val obj: TRObject?,
     val parameters: List<TRObject?>,
-) : TRTracePoint(threadId, codeLocationId) {
+) : TRTracePoint() {
     var result: TRObject? = null
     var exceptionClassName: String? = null
     val events: MutableList<TRTracePoint> = mutableListOf()
 }
 
+@Serializable
 class TRReadTracePoint(
-    threadId: Int,
-    codeLocationId: Int,
+    override val threadId: Int,
+    override val codeLocationId: Int,
     val fieldId: Int,
     val obj: TRObject?,
     val value: TRObject?
-) : TRTracePoint(threadId, codeLocationId)
+) : TRTracePoint()
 
+@Serializable
 class TRWriteTracePoint(
-    threadId: Int,
-    codeLocationId: Int,
+    override val threadId: Int,
+    override val codeLocationId: Int,
     val fieldId: Int,
     val obj: TRObject?,
     val value: TRObject?
-) : TRTracePoint(threadId, codeLocationId)
+) : TRTracePoint()
 
+@Serializable
 class TRReadLocalVariableTracePoint(
-    threadId: Int,
-    codeLocationId: Int,
+    override val threadId: Int,
+    override val codeLocationId: Int,
     val localVariableId: Int,
     val value: TRObject?
-) : TRTracePoint(threadId, codeLocationId)
+) : TRTracePoint()
 
+@Serializable
 class TRWriteLocalVariableTracePoint(
-    threadId: Int,
-    codeLocationId: Int,
+    override val threadId: Int,
+    override val codeLocationId: Int,
     val localVariableId: Int,
     val value: TRObject?
-) : TRTracePoint(threadId, codeLocationId)
+) : TRTracePoint()
 
+@Serializable
 class TRReadArrayTracePoint(
-    threadId: Int,
-    codeLocationId: Int,
+    override val threadId: Int,
+    override val codeLocationId: Int,
     val array: TRObject?,
     val index: Int,
     val value: TRObject?
-) : TRTracePoint(threadId, codeLocationId)
+) : TRTracePoint()
 
+@Serializable
 class TRWriteArrayTracePoint(
-    threadId: Int,
-    codeLocationId: Int,
+    override val threadId: Int,
+    override val codeLocationId: Int,
     val array: TRObject?,
     val index: Int,
     val value: TRObject?
-) : TRTracePoint(threadId, codeLocationId)
+) : TRTracePoint()
 
+@Serializable
 class TRObject(
     val className: String,
     val hashCodeId: Int,
