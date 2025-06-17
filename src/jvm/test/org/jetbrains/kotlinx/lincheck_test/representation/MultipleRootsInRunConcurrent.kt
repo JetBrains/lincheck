@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.Lincheck
+import org.jetbrains.lincheck.Lincheck
 import org.junit.Test
 import kotlin.concurrent.thread
 
