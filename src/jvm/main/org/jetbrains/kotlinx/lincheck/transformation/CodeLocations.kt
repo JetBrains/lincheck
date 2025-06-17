@@ -10,12 +10,13 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
+import org.jetbrains.kotlinx.lincheck.tracedata.IndexedPool
 import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.FieldInfo.*
 import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.addFinalField
 import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.addMutableField
 import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.collectFieldInformation
 import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.isFinalField
-import org.jetbrains.kotlinx.lincheck.util.MethodDescriptor
+import org.jetbrains.kotlinx.lincheck.tracedata.MethodDescriptor
 import org.objectweb.asm.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.collections.ArrayList

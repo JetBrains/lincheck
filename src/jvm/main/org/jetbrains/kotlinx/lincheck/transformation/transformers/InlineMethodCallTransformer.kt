@@ -11,7 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.jetbrains.kotlinx.lincheck.transformation.*
-import org.jetbrains.kotlinx.lincheck.util.MethodDescriptor
+import org.jetbrains.kotlinx.lincheck.tracedata.MethodDescriptor
 import org.objectweb.asm.Label
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*

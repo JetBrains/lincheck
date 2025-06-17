@@ -38,6 +38,13 @@ import java.util.concurrent.TimeoutException
 import kotlinx.coroutines.CancellableContinuation
 import org.jetbrains.lincheck.GeneralPurposeModelCheckingWrapper
 import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
+import org.jetbrains.kotlinx.lincheck.tracedata.FieldDescriptor
+import org.jetbrains.kotlinx.lincheck.tracedata.MethodDescriptor
+import org.jetbrains.kotlinx.lincheck.tracedata.Types
+import org.jetbrains.kotlinx.lincheck.tracedata.fieldCache
+import org.jetbrains.kotlinx.lincheck.tracedata.isArraysCopyOfIntrinsic
+import org.jetbrains.kotlinx.lincheck.tracedata.isArraysCopyOfRangeIntrinsic
+import org.jetbrains.kotlinx.lincheck.tracedata.variableCache
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 import kotlin.Result as KResult
 import org.objectweb.asm.commons.Method.getMethod as getAsmMethod
@@ -976,7 +983,13 @@ abstract class ManagedStrategy(
             className = actor.method.declaringClass.name,
             methodName = actor.method.name,
             codeLocation = UNKNOWN_CODE_LOCATION,
-            methodId = methodCache.getOrCreateId(MethodDescriptor(actor.method.declaringClass.name.toCanonicalClassName(), actor.method.name, methodDescriptor)),
+            methodId = methodCache.getOrCreateId(
+                MethodDescriptor(
+                    actor.method.declaringClass.name.toCanonicalClassName(),
+                    actor.method.name,
+                    methodDescriptor
+                )
+            ),
             threadId = iThread,
             methodParams = actor.arguments.toTypedArray(),
             atomicMethodDescriptor = null,

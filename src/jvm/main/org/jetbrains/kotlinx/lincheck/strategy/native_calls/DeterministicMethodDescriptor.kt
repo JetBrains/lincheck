@@ -11,11 +11,11 @@
 package org.jetbrains.kotlinx.lincheck.strategy.native_calls
 
 import org.jetbrains.kotlinx.lincheck.strategy.native_calls.io.getDeterministicFileMethodDescriptorOrNull
-import sun.nio.ch.lincheck.MethodSignature
-import sun.nio.ch.lincheck.Types.*
+import org.jetbrains.kotlinx.lincheck.tracedata.MethodSignature
+import org.jetbrains.kotlinx.lincheck.tracedata.Types
 
 internal data class MethodCallInfo(
-    val ownerType: ObjectType,
+    val ownerType: Types.ObjectType,
     val methodSignature: MethodSignature,
     val codeLocation: Int,
     val methodId: Int,

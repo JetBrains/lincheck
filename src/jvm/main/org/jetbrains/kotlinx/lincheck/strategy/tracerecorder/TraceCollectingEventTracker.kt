@@ -11,12 +11,19 @@
 package org.jetbrains.kotlinx.lincheck.strategy.tracerecorder
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ShadowStackFrame
-import org.jetbrains.kotlinx.lincheck.trace.CallStackTraceElement
-import org.jetbrains.kotlinx.lincheck.traceagent.*
+import org.jetbrains.kotlinx.lincheck.tracedata.MethodDescriptor
+import org.jetbrains.kotlinx.lincheck.tracedata.TRMethodCallTracePoint
+import org.jetbrains.kotlinx.lincheck.tracedata.TRObject
+import org.jetbrains.kotlinx.lincheck.tracedata.TRReadArrayTracePoint
+import org.jetbrains.kotlinx.lincheck.tracedata.TRReadLocalVariableTracePoint
+import org.jetbrains.kotlinx.lincheck.tracedata.TRReadTracePoint
+import org.jetbrains.kotlinx.lincheck.tracedata.TRWriteArrayTracePoint
+import org.jetbrains.kotlinx.lincheck.tracedata.TRWriteLocalVariableTracePoint
+import org.jetbrains.kotlinx.lincheck.tracedata.TRWriteTracePoint
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
-import org.jetbrains.kotlinx.lincheck.transformation.fieldCache
+import org.jetbrains.kotlinx.lincheck.tracedata.fieldCache
 import org.jetbrains.kotlinx.lincheck.transformation.methodCache
-import org.jetbrains.kotlinx.lincheck.transformation.variableCache
+import org.jetbrains.kotlinx.lincheck.tracedata.variableCache
 import org.jetbrains.kotlinx.lincheck.util.*
 import sun.nio.ch.lincheck.*
 import java.io.File
@@ -453,7 +460,7 @@ class TraceCollectingEventTracker(
         val tracePoint = TRMethodCallTracePoint(
             threadId = threadHandle.threadId,
             codeLocationId = -1,
-            methodId =methodCache.getOrCreateId(MethodDescriptor(className, methodName, "()V")),
+            methodId = methodCache.getOrCreateId(MethodDescriptor(className, methodName, "()V")),
             obj = null,
             parameters = emptyList()
         )
