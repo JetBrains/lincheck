@@ -11,19 +11,24 @@
 package org.jetbrains.kotlinx.lincheck.strategy.tracerecorder
 
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.encodeToByteArray
 import kotlinx.serialization.protobuf.ProtoBuf
-import org.jetbrains.kotlinx.lincheck.classCache
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ShadowStackFrame
 import org.jetbrains.kotlinx.lincheck.tracedata.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.transformation.methodCache
 import org.jetbrains.kotlinx.lincheck.util.*
 import sun.nio.ch.lincheck.*
+import java.io.DataInputStream
+import java.io.DataOutputStream
 import java.io.File
-import java.io.OutputStream
 import java.lang.invoke.CallSite
 import java.util.concurrent.ConcurrentHashMap
+
+const val OUTPUT_BUFFER_SIZE: Int = 16*1024*1024
+const val TRACE_MAGIC : Long = 0x706e547124ee5f70L
+const val TRACE_VERSION : Long = 1
 
 private class ThreadData(
     val threadId: Int
@@ -478,13 +483,25 @@ class TraceCollectingEventTracker(
         // System.err.println("Trace collected in ${System.currentTimeMillis() - startTime} ms")
         startTime = System.currentTimeMillis()
 
-        val output = File(traceDumpPath).outputStream().buffered(1024*1024*1024)
+        val output = try {
+            val f = File(traceDumpPath)
+            f.parentFile?.mkdirs()
+            f.createNewFile()
+            DataOutputStream(f.outputStream().buffered(OUTPUT_BUFFER_SIZE))
+        } catch (t: Throwable) {
+            System.err.println("TraceRecorder: Cannot create output file $traceDumpPath: ${t.message}")
+            return
+        }
+
         try {
+            output.writeLong(TRACE_MAGIC)
+            output.writeLong(TRACE_VERSION)
+
             saveCache(output, methodCache)
             saveCache(output, fieldCache)
             saveCache(output, variableCache)
 
-            output.write(allThreads.size)
+            output.writeInt(allThreads.size)
             allThreads.sortBy { it.threadId }
             allThreads.forEach { thread ->
                 val st = thread.callStack
@@ -499,28 +516,35 @@ class TraceCollectingEventTracker(
                     encodeTRTracePoint(output, root)
                 }
             }
+        } catch (t: Throwable) {
+            System.err.println("TraceRecorder: Cannot write output file $traceDumpPath: ${t.message}")
+            return
         } finally {
             output.close()
             // System.err.println("Trace dumped in ${System.currentTimeMillis() - startTime} ms")
         }
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
-    private inline fun <reified  V> saveCache(output: OutputStream, cache: IndexedPool<V>) {
-        output.write(cache.content.size)
+    private inline fun <reified  V> saveCache(output: DataOutputStream, cache: IndexedPool<V>) {
+        output.writeInt(cache.content.size)
         cache.content.forEach {
-            val ba = ProtoBuf.encodeToByteArray(it)
+            saveProtoBuf(output, it)
         }
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
-    private fun encodeTRTracePoint(output: OutputStream, node: TRTracePoint) {
-        val ba = ProtoBuf.encodeToByteArray(node)
-        output.write(ba)
+    private fun encodeTRTracePoint(output: DataOutputStream, node: TRTracePoint) {
+        saveProtoBuf(output, node)
         if (node is TRMethodCallTracePoint) {
-            output.write(node.events.size)
+            output.writeInt(node.events.size)
             node.events.forEach { encodeTRTracePoint(output, it) }
         }
+    }
+
+   @OptIn(ExperimentalSerializationApi::class)
+    private inline fun <reified  V> saveProtoBuf(output: DataOutputStream, value: V) {
+       val ba = ProtoBuf.encodeToByteArray(value)
+       output.writeInt(ba.size)
+       output.write(ba)
     }
 
     private fun methodAnalysisSectionType(
@@ -534,5 +558,67 @@ class TraceCollectingEventTracker(
             return AnalysisSectionType.IGNORED
         }
         return analysisProfile.getAnalysisSectionFor(ownerName, methodName)
+    }
+
+    /*
+     * Example of trace loading
+     */
+    fun exampleTraceReading(fileName: String): List<TRMethodCallTracePoint> {
+        val input = DataInputStream(File(fileName).inputStream())
+
+        try {
+            val magic = input.readLong()
+            if (magic != TRACE_MAGIC) {
+                System.err.println("Wrong magic")
+                return emptyList()
+            }
+
+            val version = input.readLong()
+            if (version != TRACE_VERSION) {
+                System.err.println("Wrong version")
+                return emptyList()
+            }
+
+            loadCache(input, methodCache)
+            loadCache(input, fieldCache)
+            loadCache(input, variableCache)
+
+            val threadNum = input.readInt()
+            val threads = mutableListOf<TRMethodCallTracePoint>()
+            repeat(threadNum) {
+                threads.add(loadTracePoint(input) as TRMethodCallTracePoint)
+            }
+            return threads
+        } finally {
+            input.close()
+        }
+    }
+
+    private inline fun <reified  V> loadCache(input: DataInputStream, cache: IndexedPool<V>) {
+        val count = input.readInt()
+        repeat(count) {
+            val value = loadProtoBuf<V>(input)
+            cache.getOrCreateId(value)
+        }
+    }
+
+    private fun loadTracePoint(input: DataInputStream): TRTracePoint {
+        val value = loadProtoBuf<TRTracePoint>(input)
+        if (value is TRMethodCallTracePoint) {
+            val count = input.readInt()
+            repeat(count) {
+                val child = loadTracePoint(input)
+                value.events.add(child)
+            }
+        }
+        return value
+    }
+
+    @OptIn(ExperimentalSerializationApi::class)
+    private inline fun <reified  V> loadProtoBuf(input: DataInputStream): V {
+        val size = input.readInt()
+        val ba = ByteArray(size)
+        input.read(ba)
+        return ProtoBuf.decodeFromByteArray<V>(ba)
     }
 }
