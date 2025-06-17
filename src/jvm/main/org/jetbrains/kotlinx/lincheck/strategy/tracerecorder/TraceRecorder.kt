@@ -43,7 +43,7 @@ object TraceRecorder {
 
     fun installAndStartTrace(className: String, methodName: String, traceFileName: String?) {
         // this method does need 'runInsideIgnoredSection' because analysis is not enabled until its completion
-        eventTracker = TraceCollectingEventTracker(className, methodName, traceFileName)
+        eventTracker = TraceCollectingEventTracker(className, traceFileName)
         val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: ThreadDescriptor(Thread.currentThread()).also {
             ThreadDescriptor.setCurrentThreadDescriptor(it)
         }

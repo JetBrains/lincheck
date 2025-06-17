@@ -90,23 +90,6 @@ internal class TraceReporter(
     }
 }
 
-internal class FlattenTraceReporter(val trace: Trace) {
-    val graph: SingleThreadedTable<TraceNode>
-
-    init {
-        val profile = AnalysisProfile(analyzeStdLib = false)
-        graph = flattenTraceToGraph(trace)
-            .compressTrace()
-            .collapseLibraries(profile)
-    }
-
-    fun appendTrace(app: Appendable) = with(app) {
-        // Turn graph into chronological sequence of calls and events, for verbose and simple trace.
-        val flattenedVerbose: SingleThreadedTable<TraceNode> = graph.flattenNodes(VerboseTraceFlattenPolicy()).reorder()
-        appendTraceTableSimple(DETAILED_TRACE_TITLE, trace.threadNames, flattenedVerbose)
-    }
-}
-
 /**
  * Appends trace table to [Appendable]
  */

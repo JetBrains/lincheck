@@ -19,6 +19,7 @@ import org.jetbrains.kotlinx.lincheck.trace.SwitchEventTracePoint
 import org.jetbrains.kotlinx.lincheck.trace.TracePoint
 import org.jetbrains.kotlinx.lincheck.transformation.methodCache
 import org.jetbrains.kotlinx.lincheck.transformation.CodeLocations
+import org.jetbrains.kotlinx.lincheck.transformation.UNKNOWN_CODE_LOCATION_ID
 import java.util.ArrayList
 
 /**

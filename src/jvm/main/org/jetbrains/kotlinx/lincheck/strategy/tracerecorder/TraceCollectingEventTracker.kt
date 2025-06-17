@@ -10,43 +10,93 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.tracerecorder
 
-import org.jetbrains.kotlinx.lincheck.strategy.ThreadAnalysisHandle
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ShadowStackFrame
 import org.jetbrains.kotlinx.lincheck.trace.CallStackTraceElement
-import org.jetbrains.kotlinx.lincheck.trace.MethodCallTracePoint
-import org.jetbrains.kotlinx.lincheck.trace.TraceCollector
-import org.jetbrains.kotlinx.lincheck.trace.TracePoint
 import org.jetbrains.kotlinx.lincheck.traceagent.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.transformation.fieldCache
 import org.jetbrains.kotlinx.lincheck.transformation.methodCache
 import org.jetbrains.kotlinx.lincheck.transformation.variableCache
-import org.jetbrains.kotlinx.lincheck.util.AnalysisProfile
-import org.jetbrains.kotlinx.lincheck.util.AnalysisSectionType
-import org.jetbrains.kotlinx.lincheck.util.runInsideIgnoredSection
+import org.jetbrains.kotlinx.lincheck.util.*
 import sun.nio.ch.lincheck.*
 import java.io.File
 import java.io.PrintStream
 import java.lang.invoke.CallSite
 import java.util.concurrent.ConcurrentHashMap
 
+private class ThreadData(
+    val threadId: Int
+) {
+    val callStack: MutableList<TRMethodCallTracePoint> = arrayListOf()
+    val shadowStack: MutableList<ShadowStackFrame> = arrayListOf()
+    private val analysisSectionStack: MutableList<AnalysisSectionType> = arrayListOf()
+
+    fun currentMethodCallTracePoint(): TRMethodCallTracePoint = callStack.last()
+
+    fun pushStackFrame(tracePoint: TRMethodCallTracePoint, instance: Any?) {
+        val stackFrame = ShadowStackFrame(instance)
+        callStack.add(tracePoint)
+        shadowStack.add(stackFrame)
+    }
+
+    fun popStackFrame(): TRMethodCallTracePoint {
+        shadowStack.removeLast()
+        return callStack.removeLast()
+    }
+
+    fun afterLocalRead(variableName: String, value: Any?) {
+        val shadowStackFrame = shadowStack.last()
+        shadowStackFrame.setLocalVariable(variableName, value)
+    }
+
+    fun afterLocalWrite(variableName: String, value: Any?) {
+        val shadowStackFrame = shadowStack.last()
+        shadowStackFrame.setLocalVariable(variableName, value)
+    }
+
+    fun enterAnalysisSection(section: AnalysisSectionType) {
+        val currentSection = analysisSectionStack.lastOrNull()
+        if (currentSection != null && currentSection.isCallStackPropagating() && section < currentSection) {
+            analysisSectionStack.add(currentSection)
+        } else {
+            analysisSectionStack.add(section)
+        }
+        if (section == AnalysisSectionType.IGNORED || section == AnalysisSectionType.ATOMIC) {
+            enterIgnoredSection()
+        }
+    }
+
+    fun leaveAnalysisSection(section: AnalysisSectionType) {
+        if (section == AnalysisSectionType.IGNORED ||
+            // TODO: atomic should have different semantics compared to ignored
+            section == AnalysisSectionType.ATOMIC
+        ) {
+            leaveIgnoredSection()
+        }
+        analysisSectionStack.removeLast().ensure { currentSection ->
+            currentSection == section || (currentSection.isCallStackPropagating() && section < currentSection)
+        }
+    }
+}
+
 class TraceCollectingEventTracker(
     private val className: String,
-    private val methodName: String,
     private val traceDumpPath: String?
 ) :  EventTracker {
+
+
     private val EMPTY_CALL_STACK_TRACE = emptyList<CallStackTraceElement>()
 
     // We don't want to re-create this object each time we need it
     private val analysisProfile: AnalysisProfile = AnalysisProfile(false)
 
     // We don't use [ThreadDescriptor.eventTrackerData] because we need to list all descriptors in the end
-    private val threads = ConcurrentHashMap<Thread, ThreadAnalysisHandle>()
+    private val threads = ConcurrentHashMap<Thread, ThreadData>()
 
     override fun beforeThreadFork(thread: Thread, descriptor: ThreadDescriptor) = runInsideIgnoredSection {
         threads[Thread.currentThread()] ?: return
         // Create new thread handle
-        val forkedThreadHandle = ThreadAnalysisHandle(threads.size, TraceCollector())
+        val forkedThreadHandle = ThreadData(threads.size)
         threads[thread] = forkedThreadHandle
         // We are ready to use this
     }
@@ -54,18 +104,13 @@ class TraceCollectingEventTracker(
     override fun beforeThreadStart() = runInsideIgnoredSection {
         val threadHandle = threads[Thread.currentThread()] ?: return
         // TODO: Should we call threadHandle.createMethodCallTracePoint() which is expensive?
-        val tracePoint = MethodCallTracePoint(
-            iThread = threadHandle.threadId,
-            actorId = 0,
-            className = Thread::class.java.name,
-            methodName = "run",
-            callStackTrace = EMPTY_CALL_STACK_TRACE,
-            codeLocation = -1,
-            isStatic = false,
-            callType = MethodCallTracePoint.CallType.THREAD_RUN,
-            isSuspend = false
+        val tracePoint = TRMethodCallTracePoint(
+            threadId = threadHandle.threadId,
+            codeLocationId = -1,
+            obj = TRObject(Thread.currentThread()),
+            parameters = emptyList()
         )
-        threadHandle.pushTracepointStackFrame(tracePoint, Thread.currentThread())
+        threadHandle.pushStackFrame(tracePoint, Thread.currentThread())
     }
 
     override fun afterThreadFinish() = Unit
@@ -269,7 +314,7 @@ class TraceCollectingEventTracker(
             parameters = params.map { TRObject(it) }
         )
         threadHandle.currentMethodCallTracePoint().events.add(tracePoint)
-        threadHandle.pushTracepointStackFrameNew(tracePoint, receiver)
+        threadHandle.pushStackFrame(tracePoint, receiver)
 
         // if the method has certain guarantees, enter the corresponding section
         threadHandle.enterAnalysisSection(methodSection)
@@ -287,7 +332,7 @@ class TraceCollectingEventTracker(
         val threadHandle = threads[Thread.currentThread()] ?: return result
         val methodDescriptor = methodCache[methodId]
 
-        val tracePoint = threadHandle.popTracepointStackFrameNew()
+        val tracePoint = threadHandle.popStackFrame()
         tracePoint.result = TRObject(result)
 
         val methodSection = methodAnalysisSectionType(receiver, methodDescriptor.className, methodDescriptor.methodName)
@@ -306,7 +351,7 @@ class TraceCollectingEventTracker(
         val threadHandle = threads[Thread.currentThread()] ?: return t
         val methodDescriptor = methodCache[methodId]
 
-        val tracePoint = threadHandle.popTracepointStackFrameNew()
+        val tracePoint = threadHandle.popStackFrame()
         tracePoint.exceptionClassName = t.javaClass.name
 
         val methodSection = methodAnalysisSectionType(receiver, methodDescriptor.className, methodDescriptor.methodName)
@@ -318,10 +363,10 @@ class TraceCollectingEventTracker(
         methodId: Int,
         codeLocation: Int,
         owner: Any?,
-    ): Unit = Unit // runInsideIgnoredSection {
+    ): Unit = Unit
+// runInsideIgnoredSection {
 //        val threadHandle = threads[Thread.currentThread()] ?: return
 //        val methodDescriptor = methodCache[methodId]
-
 //        val tracePoint = MethodCallTracePoint(
 //            iThread = threadHandle.threadId,
 //            actorId = 0,
@@ -337,7 +382,8 @@ class TraceCollectingEventTracker(
 //        threadHandle.pushTracepointStackFrame(tracePoint, owner)
 //    }
 
-    override fun onInlineMethodCallReturn(methodId: Int): Unit = Unit // runInsideIgnoredSection {
+    override fun onInlineMethodCallReturn(methodId: Int): Unit = Unit
+// runInsideIgnoredSection {
 //        val threadHandle = threads[Thread.currentThread()] ?: return
 //        val tracePoint = threadHandle.popTracepointStackFrame()
 //        // TODO: add returned value
@@ -383,7 +429,7 @@ class TraceCollectingEventTracker(
 
     fun enableTrace() {
         // Start tracing in this thread
-        val threadHandle = ThreadAnalysisHandle(threads.size, TraceCollector())
+        val threadHandle = ThreadData(threads.size)
         // Shadow stack cannot be empty
         threadHandle.shadowStack.add(ShadowStackFrame(Thread.currentThread()))
         threads[Thread.currentThread()] = threadHandle
@@ -394,11 +440,11 @@ class TraceCollectingEventTracker(
             obj = null,
             parameters = emptyList()
         )
-        threadHandle.pushTracepointStackFrameNew(tracePoint, null)
+        threadHandle.pushStackFrame(tracePoint, null)
     }
 
     fun finishAndDumpTrace() {
-        val allThreads = mutableListOf<ThreadAnalysisHandle>()
+        val allThreads = mutableListOf<ThreadData>()
         allThreads.addAll(threads.values)
         threads.clear()
 
@@ -410,7 +456,7 @@ class TraceCollectingEventTracker(
         try {
             allThreads.sortBy { it.threadId }
             for (thread in allThreads) {
-                val st = thread.tracePointStackTrace
+                val st = thread.callStack
                 if (st.size == 0) {
                     output.println("# Thread ${thread.threadId + 1}: Stack underflow, report bug")
                 } else {
@@ -419,17 +465,12 @@ class TraceCollectingEventTracker(
                     } else {
                         output.println("# Thread ${thread.threadId + 1}")
                     }
-                    printNode(output, st.first(), 0)
                 }
             }
         } finally {
             output.close()
         }
     }
-
-    private fun printNode(output: Appendable, node: TracePoint, depth: Int) {
-    }
-
     private fun methodAnalysisSectionType(
         owner: Any?,
         className: String,
