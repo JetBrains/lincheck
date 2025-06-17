@@ -159,9 +159,9 @@ internal class ReadTracePoint(
     private val fieldName: String,
     codeLocation: Int,
     val isLocal: Boolean,
+    private val valueRepresentation: String,
+    val valueType: String,
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, codeLocation) {
-    private lateinit var valueRepresentation: String
-    lateinit var valueType: String
 
     override fun toStringCompact(): String = StringBuilder().apply {
         if (ownerRepresentation != null) {
@@ -172,18 +172,9 @@ internal class ReadTracePoint(
         append(" ➜ $valueRepresentation")
     }.toString()
 
-    fun initializeReadValue(value: String, type: String) {
-        this.valueRepresentation = value
-        this.valueType = type
-    }
-
     override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
-        ReadTracePoint(ownerRepresentation, iThread, actorId, callStackTrace.deepCopy(copiedObjects), fieldName, codeLocation, isLocal)
-            .also {
-                it.valueType = valueType
-                it.eventId = eventId
-                if (::valueRepresentation.isInitialized) it.valueRepresentation = valueRepresentation
-            }
+        ReadTracePoint(ownerRepresentation, iThread, actorId, callStackTrace.deepCopy(copiedObjects), fieldName, codeLocation, isLocal, valueRepresentation, valueType)
+            .also { it.eventId = eventId }
     }
 }
 
@@ -237,7 +228,6 @@ internal class MethodCallTracePoint(
     var parameters: List<String>? = null
     var parameterTypes: List<String>? = null
     private var ownerName: String? = null
-    private var children: ArrayList<TracePoint>? = null
 
     val isRootCall get() = callType != CallType.NORMAL
     val isActor get() = callType == CallType.ACTOR
@@ -256,17 +246,6 @@ internal class MethodCallTracePoint(
 
     override fun toStringImpl(withLocation: Boolean): String {
         return super.toStringImpl(withLocation && !isRootCall)
-    }
-
-    fun addChild(tracePoint: TracePoint) {
-        if (children == null) {
-            children = ArrayList()
-        }
-        children?.add(tracePoint)
-    }
-
-    fun getChildren(): List<TracePoint> {
-        return if (children == null) { emptyList() } else { children!! }
     }
     
     private fun StringBuilder.appendThreadCreation() {
@@ -371,20 +350,6 @@ internal class MethodCallTracePoint(
     }
 }
 
-internal class MethodReturnTracePoint(
-    iThread: Int,
-    actorId: Int,
-    val result: Any? = null,
-    val exception: Throwable? = null
-): TracePoint(iThread, actorId, emptyList()) {
-    override fun toStringImpl(withLocation: Boolean) =  "This trace point is temporary, it should not appear in the logs."
-    override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
-        MethodReturnTracePoint(iThread, actorId)
-            .also { it.eventId = eventId }
-    }
-
-    val isSuccess = exception == null
-}
 
 internal sealed interface ReturnedValueResult {
     data object NoValue: ReturnedValueResult
@@ -615,8 +580,6 @@ internal class CallStackTraceElement(
     val id: Int,
     val tracePoint: MethodCallTracePoint,
     val instance: Any?,
-    // Method invocation id used to calculate spin cycle start label call depth.
-    // Two calls are considered equals if two same methods were called with the same parameters.
     val methodInvocationId: Int
 ) {
     fun deepCopy(copiedObjects: HashMap<Any, Any>): CallStackTraceElement =
