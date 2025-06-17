@@ -171,7 +171,9 @@ internal fun traceToGraph(trace: Trace): SingleThreadedTable<CallNode> {
                 val eventNode = EventNode(currentCallNode.callDepth + 1, event, eventNumber)
                 currentCallNode.addChild(eventNode)
             }
-            else -> check(false) { "Event has no trace that leads to it" }
+            else -> check(false) {
+                "Event has no trace that leads to it"
+            }
         }
     }
     return sections
