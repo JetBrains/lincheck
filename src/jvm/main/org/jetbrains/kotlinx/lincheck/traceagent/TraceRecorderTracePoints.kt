@@ -10,21 +10,25 @@
 
 package org.jetbrains.kotlinx.lincheck.traceagent
 
-import org.jetbrains.kotlinx.lincheck.trace.MethodCallTracePoint
-import org.jetbrains.kotlinx.lincheck.transformation.CodeLocations
+import java.util.concurrent.atomic.AtomicInteger
+
+private val EVENT_ID_GENERATOR = AtomicInteger(0)
 
 sealed class TRTracePoint(
     val threadId: Int,
-    val codeLocationId: Int
-)
+    val codeLocationId: Int,
+) {
+    val eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
+}
 
 class TRMethodCallTracePoint(
     threadId: Int,
     codeLocationId: Int,
+    val methodId: Int,
     val obj: TRObject?,
     val parameters: List<TRObject?>,
 ) : TRTracePoint(threadId, codeLocationId) {
-    var result: TRObject? = null // todo: fix
+    var result: TRObject? = null
     var exceptionClassName: String? = null
     val events: MutableList<TRTracePoint> = mutableListOf()
 }
@@ -49,14 +53,14 @@ class TRReadLocalVariableTracePoint(
     threadId: Int,
     codeLocationId: Int,
     val localVariableId: Int,
-    val value: TRObject
+    val value: TRObject?
 ) : TRTracePoint(threadId, codeLocationId)
 
 class TRWriteLocalVariableTracePoint(
     threadId: Int,
     codeLocationId: Int,
     val localVariableId: Int,
-    val value: TRObject
+    val value: TRObject?
 ) : TRTracePoint(threadId, codeLocationId)
 
 class TRReadArrayTracePoint(

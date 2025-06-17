@@ -81,12 +81,9 @@ private class ThreadData(
 
 class TraceCollectingEventTracker(
     private val className: String,
+    private val methodName: String,
     private val traceDumpPath: String?
 ) :  EventTracker {
-
-
-    private val EMPTY_CALL_STACK_TRACE = emptyList<CallStackTraceElement>()
-
     // We don't want to re-create this object each time we need it
     private val analysisProfile: AnalysisProfile = AnalysisProfile(false)
 
@@ -103,10 +100,10 @@ class TraceCollectingEventTracker(
 
     override fun beforeThreadStart() = runInsideIgnoredSection {
         val threadHandle = threads[Thread.currentThread()] ?: return
-        // TODO: Should we call threadHandle.createMethodCallTracePoint() which is expensive?
         val tracePoint = TRMethodCallTracePoint(
             threadId = threadHandle.threadId,
             codeLocationId = -1,
+            methodId = methodCache.getOrCreateId(MethodDescriptor("Thread", "run", "()V")),
             obj = TRObject(Thread.currentThread()),
             parameters = emptyList()
         )
@@ -283,12 +280,30 @@ class TraceCollectingEventTracker(
 
     override fun afterLocalRead(codeLocation: Int, variableId: Int, value: Any?) = runInsideIgnoredSection {
         val threadHandle = threads[Thread.currentThread()] ?: return
+
+        val tracePoint = TRReadLocalVariableTracePoint(
+            threadId = threadHandle.threadId,
+            codeLocationId = codeLocation,
+            localVariableId = variableId,
+            value = TRObject(value)
+        )
+        threadHandle.currentMethodCallTracePoint().events.add(tracePoint)
+
         val variableDescriptor = variableCache[variableId]
         threadHandle.afterLocalRead(variableDescriptor.name, value)
     }
 
     override fun afterLocalWrite(codeLocation: Int, variableId: Int, value: Any?) = runInsideIgnoredSection {
         val threadHandle = threads[Thread.currentThread()] ?: return
+
+        val tracePoint = TRWriteLocalVariableTracePoint(
+            threadId = threadHandle.threadId,
+            codeLocationId = codeLocation,
+            localVariableId = variableId,
+            value = TRObject(value)
+        )
+        threadHandle.currentMethodCallTracePoint().events.add(tracePoint)
+
         val variableDescriptor = variableCache[variableId]
         threadHandle.afterLocalWrite(variableDescriptor.name, value)
     }
@@ -310,6 +325,7 @@ class TraceCollectingEventTracker(
         val tracePoint = TRMethodCallTracePoint(
             threadId = threadHandle.threadId,
             codeLocationId = codeLocation,
+            methodId = methodId,
             obj = TRObject(receiver),
             parameters = params.map { TRObject(it) }
         )
@@ -437,6 +453,7 @@ class TraceCollectingEventTracker(
         val tracePoint = TRMethodCallTracePoint(
             threadId = threadHandle.threadId,
             codeLocationId = -1,
+            methodId =methodCache.getOrCreateId(MethodDescriptor(className, methodName, "()V")),
             obj = null,
             parameters = emptyList()
         )
