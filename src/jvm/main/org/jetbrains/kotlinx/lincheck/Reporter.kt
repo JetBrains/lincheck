@@ -692,9 +692,6 @@ private fun Appendable.appendTimeoutDeadlockWithDumpFailure(
     return this
 }
 
-private val StackTraceElement.isLincheckInternals get() =
-    this.className.startsWith("org.jetbrains.kotlinx.lincheck.")
-
 private fun Appendable.appendIncorrectResultsFailure(
     failure: IncorrectResultsFailure,
     exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>,
