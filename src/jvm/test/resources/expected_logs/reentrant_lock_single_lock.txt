@@ -1,0 +1,27 @@
+= Concurrent test failed =
+
+java.lang.IllegalStateException: Check failed.
+	at org.jetbrains.kotlinx.lincheck_test.representation.ReentrantLockSingleLockRepresentationTest.block(ReentrantLockRepresentationTests.kt:25)
+	at org.jetbrains.kotlinx.lincheck_test.representation.ReentrantLockSingleLockRepresentationTest.block(ReentrantLockRepresentationTests.kt:17)
+	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48)
+	at java.base/java.lang.Thread.run(Unknown Source)
+
+The following interleaving leads to the error:
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                   Main Thread                                                                                   |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48) |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+
+Detailed trace:
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                   Main Thread                                                                                   |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48) |
+|   block(): threw IllegalStateException at ReentrantLockSingleLockRepresentationTest.block(ReentrantLockRepresentationTests.kt:17)                                               |
+|     lock.lock() at ReentrantLockSingleLockRepresentationTest.block(ReentrantLockRepresentationTests.kt:22)                                                                      |
+|     a ➜ 1 at ReentrantLockSingleLockRepresentationTest.block(ReentrantLockRepresentationTests.kt:23)                                                                            |
+|     a = 2 at ReentrantLockSingleLockRepresentationTest.block(ReentrantLockRepresentationTests.kt:23)                                                                            |
+|     lock.unlock() at ReentrantLockSingleLockRepresentationTest.block(ReentrantLockRepresentationTests.kt:24)                                                                    |
+|   result: IllegalStateException #1                                                                                                                                              |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

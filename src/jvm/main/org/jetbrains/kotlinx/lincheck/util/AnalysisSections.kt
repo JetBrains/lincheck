@@ -295,8 +295,13 @@ internal class AnalysisProfile(val analyzeStdLib: Boolean) {
         isJavaExecutorService(className) && methodName == "submit" -> AnalysisSectionType.SILENT_PROPAGATING
         isJavaExecutorService(className) -> AnalysisSectionType.SILENT
         className.startsWith("java.util.concurrent.locks.AbstractQueuedSynchronizer") -> AnalysisSectionType.SILENT
+        
+        // This DS is non linearizable
+        className.startsWith("java.util.concurrent.ConcurrentLinkedDeque") -> AnalysisSectionType.NORMAL
+        className.startsWith("java.util.concurrent.atomic") -> AnalysisSectionType.NORMAL
+        className.startsWith("java.util.concurrent.locks") -> AnalysisSectionType.NORMAL
+        !analyzeStdLib && className.startsWith("java.util.concurrent.") -> AnalysisSectionType.SILENT
         className == "java.util.concurrent.FutureTask" -> AnalysisSectionType.SILENT
-        isConcurrentCollectionsLibrary(className) && !analyzeStdLib -> AnalysisSectionType.SILENT
         
         else -> AnalysisSectionType.NORMAL
     }
@@ -311,7 +316,7 @@ internal class AnalysisProfile(val analyzeStdLib: Boolean) {
      */
     @Suppress("UNUSED_PARAMETER") // methodName is here for uniformity and might become useful in the future
     fun shouldBeHidden(className: String, methodName: String): Boolean = 
-        !analyzeStdLib && (isConcurrentCollectionsLibrary(className) || isCollectionsLibrary(className))
+        !analyzeStdLib && (isCollectionsLibrary(className) || className.startsWith("java.util.concurrent."))
 }
 
 internal fun isCollectionsLibrary(className: String) = className in setOf(
@@ -353,39 +358,6 @@ internal fun isCollectionsLibrary(className: String) = className in setOf(
     "java.util.LinkedHashMap",
     "java.util.WeakHashMap",
     "java.util.TreeMap",
-)
-
-internal fun isConcurrentCollectionsLibrary(className: String) = className in setOf(
-    // Interfaces
-    "java.util.concurrent.BlockingDeque",
-    "java.util.concurrent.BlockingQueue",
-    "java.util.concurrent.TransferQueue",
-    "java.util.concurrent.ConcurrentMap",
-    "java.util.concurrent.ConcurrentNavigableMap",
-
-    // Concrete implementations
-    // Concurrent collections
-    "java.util.concurrent.ConcurrentHashMap",
-    "java.util.concurrent.ConcurrentLinkedDeque",
-    "java.util.concurrent.ConcurrentLinkedQueue",
-    "java.util.concurrent.ConcurrentSkipListMap",
-    "java.util.concurrent.ConcurrentSkipListSet",
-
-    // Blocking queues
-    "java.util.concurrent.ArrayBlockingQueue",
-    "java.util.concurrent.LinkedBlockingDeque",
-    "java.util.concurrent.LinkedBlockingQueue",
-    "java.util.concurrent.DelayQueue",
-    "java.util.concurrent.PriorityBlockingQueue",
-    "java.util.concurrent.SynchronousQueue",
-    "java.util.concurrent.LinkedTransferQueue",
-
-    // Copy-on-write collections
-    "java.util.concurrent.CopyOnWriteArrayList",
-    "java.util.concurrent.CopyOnWriteArraySet",
-
-    // Inner class view
-    "java.util.concurrent.ConcurrentHashMap\$KeySetView"
 )
 
 private fun isJavaExecutorService(className: String) =
