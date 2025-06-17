@@ -41,6 +41,8 @@ internal class IndexedPool<T> {
         items.add(item)
         items.lastIndex
     }
+
+    val content: List<T> = items
 }
 
 internal fun <T> IndexedPool<T>.getInterned(item: T) = get(getOrCreateId(item))

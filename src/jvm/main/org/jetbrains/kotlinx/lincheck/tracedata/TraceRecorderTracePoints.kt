@@ -11,6 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.tracedata
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import java.util.concurrent.atomic.AtomicInteger
 
 private val EVENT_ID_GENERATOR = AtomicInteger(0)
@@ -28,10 +29,11 @@ class TRMethodCallTracePoint(
     override val codeLocationId: Int,
     val methodId: Int,
     val obj: TRObject?,
-    val parameters: List<TRObject?>,
+    val parameters: List<TRObject>,
 ) : TRTracePoint() {
     var result: TRObject? = null
     var exceptionClassName: String? = null
+    @Transient
     val events: MutableList<TRTracePoint> = mutableListOf()
 }
 
@@ -95,6 +97,10 @@ class TRObject(
 
 fun TRObject(obj: Any?): TRObject? =
     obj?.let { TRObject(it::class.java.name, System.identityHashCode(obj)) }
+
+fun TRObjectNotNull(obj: Any?): TRObject = TRObject(obj) ?: NULL_TROBJECT
+
+val NULL_TROBJECT = TRObject("NULL", 0)
 
 class Trace(
     val rootTraceNode: TRMethodCallTracePoint,

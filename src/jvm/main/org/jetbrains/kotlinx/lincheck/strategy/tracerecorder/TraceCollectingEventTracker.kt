@@ -10,24 +10,18 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.tracerecorder
 
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.encodeToByteArray
+import kotlinx.serialization.protobuf.ProtoBuf
+import org.jetbrains.kotlinx.lincheck.classCache
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ShadowStackFrame
-import org.jetbrains.kotlinx.lincheck.tracedata.MethodDescriptor
-import org.jetbrains.kotlinx.lincheck.tracedata.TRMethodCallTracePoint
-import org.jetbrains.kotlinx.lincheck.tracedata.TRObject
-import org.jetbrains.kotlinx.lincheck.tracedata.TRReadArrayTracePoint
-import org.jetbrains.kotlinx.lincheck.tracedata.TRReadLocalVariableTracePoint
-import org.jetbrains.kotlinx.lincheck.tracedata.TRReadTracePoint
-import org.jetbrains.kotlinx.lincheck.tracedata.TRWriteArrayTracePoint
-import org.jetbrains.kotlinx.lincheck.tracedata.TRWriteLocalVariableTracePoint
-import org.jetbrains.kotlinx.lincheck.tracedata.TRWriteTracePoint
+import org.jetbrains.kotlinx.lincheck.tracedata.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
-import org.jetbrains.kotlinx.lincheck.tracedata.fieldCache
 import org.jetbrains.kotlinx.lincheck.transformation.methodCache
-import org.jetbrains.kotlinx.lincheck.tracedata.variableCache
 import org.jetbrains.kotlinx.lincheck.util.*
 import sun.nio.ch.lincheck.*
 import java.io.File
-import java.io.PrintStream
+import java.io.OutputStream
 import java.lang.invoke.CallSite
 import java.util.concurrent.ConcurrentHashMap
 
@@ -334,7 +328,7 @@ class TraceCollectingEventTracker(
             codeLocationId = codeLocation,
             methodId = methodId,
             obj = TRObject(receiver),
-            parameters = params.map { TRObject(it) }
+            parameters = params.map { TRObjectNotNull(it) }
         )
         threadHandle.currentMethodCallTracePoint().events.add(tracePoint)
         threadHandle.pushStackFrame(tracePoint, receiver)
@@ -450,6 +444,8 @@ class TraceCollectingEventTracker(
         System.err.println("Trace Recorder mode doesn't support IDEA Plugin integration")
     }
 
+    private var startTime = System.currentTimeMillis()
+
     fun enableTrace() {
         // Start tracing in this thread
         val threadHandle = ThreadData(threads.size)
@@ -465,36 +461,68 @@ class TraceCollectingEventTracker(
             parameters = emptyList()
         )
         threadHandle.pushStackFrame(tracePoint, null)
+
+        startTime = System.currentTimeMillis()
     }
 
+    @OptIn(ExperimentalSerializationApi::class)
     fun finishAndDumpTrace() {
         val allThreads = mutableListOf<ThreadData>()
         allThreads.addAll(threads.values)
         threads.clear()
 
-        val output = if (traceDumpPath == null) {
-            System.out
-        } else {
-            PrintStream(File(traceDumpPath).outputStream().buffered(1024*1024*1024), false)
+        if (traceDumpPath == null) {
+            return
         }
+
+        // System.err.println("Trace collected in ${System.currentTimeMillis() - startTime} ms")
+        startTime = System.currentTimeMillis()
+
+        val output = File(traceDumpPath).outputStream().buffered(1024*1024*1024)
         try {
+            saveCache(output, methodCache)
+            saveCache(output, fieldCache)
+            saveCache(output, variableCache)
+
+            output.write(allThreads.size)
             allThreads.sortBy { it.threadId }
-            for (thread in allThreads) {
+            allThreads.forEach { thread ->
                 val st = thread.callStack
                 if (st.size == 0) {
-                    output.println("# Thread ${thread.threadId + 1}: Stack underflow, report bug")
+                    System.err.println("Trace Recorder: Thread ${thread.threadId + 1}: Stack underflow, report bug")
                 } else {
                     if (st.size > 1) {
-                        output.println("# Thread ${thread.threadId + 1}: Stack is not empty, contains ${st.size} elements, report bug")
-                    } else {
-                        output.println("# Thread ${thread.threadId + 1}")
+                        System.err.println("Trace Recorder: Thread ${thread.threadId + 1}: Stack is not empty, contains ${st.size} elements, report bug")
                     }
+                    val root = st.first()
+                    // We cannot use "internal" recursive serialization, as it is limited to 2GB (ByteArray)
+                    encodeTRTracePoint(output, root)
                 }
             }
         } finally {
             output.close()
+            // System.err.println("Trace dumped in ${System.currentTimeMillis() - startTime} ms")
         }
     }
+
+    @OptIn(ExperimentalSerializationApi::class)
+    private inline fun <reified  V> saveCache(output: OutputStream, cache: IndexedPool<V>) {
+        output.write(cache.content.size)
+        cache.content.forEach {
+            val ba = ProtoBuf.encodeToByteArray(it)
+        }
+    }
+
+    @OptIn(ExperimentalSerializationApi::class)
+    private fun encodeTRTracePoint(output: OutputStream, node: TRTracePoint) {
+        val ba = ProtoBuf.encodeToByteArray(node)
+        output.write(ba)
+        if (node is TRMethodCallTracePoint) {
+            output.write(node.events.size)
+            node.events.forEach { encodeTRTracePoint(output, it) }
+        }
+    }
+
     private fun methodAnalysisSectionType(
         owner: Any?,
         className: String,
