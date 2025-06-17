@@ -109,11 +109,13 @@ internal class LincheckClassVisitor(
                 sharedMemoryAccessTransformer.analyzer = analyzerAdapter
                 analyzerAdapter
             }
+            val locals: Map<Int, List<LocalVariableInfo>> = methods[methodName + desc]?.variables ?: emptyMap()
+            mv = LocalVariablesAccessTransformer(fileName, className, methodName, mv.newAdapter(), locals)
 
             // Inline method call transformer relies on the original variables' indices, so it should go before (in FIFO order)
             // all transformers which can create local variables.
             // All visitors created AFTER InlineMethodCallTransformer must use a non-remapping Generator adapter.
-            // mv = InlineMethodCallTransformer(fileName, className, methodName, desc, mv.newNonRemappingAdapter(), methods[methodName + desc] ?: MethodVariables(), null)
+            // mv = InlineMethodCallTransformer(fileName, className, methodName, desc, mv.newNonRemappingAdapter(), methods[methodName + desc] ?: MethodVariables(), mv)
             return mv
         }
 
