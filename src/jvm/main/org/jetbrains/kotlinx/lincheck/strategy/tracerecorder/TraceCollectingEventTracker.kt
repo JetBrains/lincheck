@@ -357,7 +357,7 @@ class TraceCollectingEventTracker(
         val methodDescriptor = methodCache[methodId]
 
         val tracePoint = threadHandle.popStackFrame()
-        tracePoint.result = TRObjectOrNull(result)
+        tracePoint.result = TRObjectOrVoid(result)
 
         val methodSection = methodAnalysisSectionType(receiver, methodDescriptor.className, methodDescriptor.methodName)
         threadHandle.leaveAnalysisSection(methodSection)

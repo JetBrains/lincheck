@@ -16,6 +16,8 @@ import java.util.concurrent.atomic.AtomicInteger
 
 private val EVENT_ID_GENERATOR = AtomicInteger(0)
 
+var INJECTIONS_VOID_OBJECT: Any? = null
+
 sealed class TRTracePoint(
     val codeLocationId: Int,
     val threadId: Int,
@@ -84,7 +86,7 @@ class TRMethodCallTracePoint(
         if (exceptionClassName != null) {
             sb.append(": THROWS EXCEPTION")
                 .append(exceptionClassName)
-        } else {
+        } else if (result != TR_OBJECT_VOID) {
             sb.append(": ")
             sb.append(result.toShortString())
         }
@@ -331,7 +333,7 @@ class TRReadArrayTracePoint(
             return TRReadArrayTracePoint(
                 threadId = threadId,
                 codeLocationId = codeLocationId,
-                array = inp.readTRObject() ?: NULL_TR_OBJECT,
+                array = inp.readTRObject() ?: TR_OBJECT_NULL,
                 index = inp.readInt(),
                 value = inp.readTRObject(),
                 eventId = eventId,
@@ -374,7 +376,7 @@ class TRWriteArrayTracePoint(
             return TRWriteArrayTracePoint(
                 threadId = threadId,
                 codeLocationId = codeLocationId,
-                array = inp.readTRObject() ?: NULL_TR_OBJECT,
+                array = inp.readTRObject() ?: TR_OBJECT_NULL,
                 index = inp.readInt(),
                 value = inp.readTRObject(),
                 eventId = eventId,
@@ -403,13 +405,20 @@ data class TRObject(
     val className get() = classNameCache[classNameId]
 }
 
-private val NULL_TR_OBJECT = TRObject(-1, 0)
+private const val TR_OBJECT_NULL_CLASSNAME = -1
+val TR_OBJECT_NULL = TRObject(TR_OBJECT_NULL_CLASSNAME, 0)
+
+private const val TR_OBJECT_VOID_CLASSNAME = -2
+val TR_OBJECT_VOID = TRObject(TR_OBJECT_VOID_CLASSNAME, 0)
 
 fun TRObjectOrNull(obj: Any?): TRObject? =
-    obj?.let { TRObject(it::class.java.name, System.identityHashCode(obj)) }
+    obj?.let { TRObject(it) }
 
-fun TRObject(obj: Any): TRObject =
-    TRObject(obj::class.java.name, System.identityHashCode(obj))
+fun TRObjectOrVoid(obj: Any?): TRObject? =
+    if (obj == INJECTIONS_VOID_OBJECT) TR_OBJECT_VOID
+    else TRObjectOrNull(obj)
+
+fun TRObject(obj: Any): TRObject = TRObject(obj::class.java.name, System.identityHashCode(obj))
 
 fun TRObject?.toShortString(): String {
     if (this == null || classNameId < 0) return "null"
@@ -417,21 +426,21 @@ fun TRObject?.toShortString(): String {
 }
 
 private fun DataOutput.writeTRObject(value: TRObject?) {
-    if (value == null) {
-        writeInt(-1)
-        return
+    val cnid = value?.classNameId ?: -1
+    if (cnid < 0) {
+        writeInt(cnid)
+    } else {
+        writeInt(value!!.classNameId)
+        writeInt(value.identityHashCode)
     }
-    writeInt(value.classNameId)
-    writeInt(value.identityHashCode)
 }
 
 private fun DataInput.readTRObject(): TRObject? {
-    val classNameId = readInt()
-    if (classNameId < 0) {
-        return null
+    return when (val classNameId = readInt()) {
+        TR_OBJECT_NULL_CLASSNAME -> null
+        TR_OBJECT_VOID_CLASSNAME -> TR_OBJECT_VOID
+        else -> TRObject(classNameCache[classNameId], readInt())
     }
-    val hashCodeId = readInt()
-    return TRObject(classNameCache[classNameId], hashCodeId)
 }
 
 private fun <V: Appendable> V.append(codeLocationId: Int, verbose: Boolean): V {

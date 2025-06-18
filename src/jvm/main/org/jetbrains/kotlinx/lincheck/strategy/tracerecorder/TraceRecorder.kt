@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.tracerecorder
 
-import org.jetbrains.kotlinx.lincheck.util.runInsideIgnoredSection
+import org.jetbrains.kotlinx.lincheck.tracedata.INJECTIONS_VOID_OBJECT
 import sun.nio.ch.lincheck.Injections
 import sun.nio.ch.lincheck.ThreadDescriptor
 
@@ -42,6 +42,9 @@ object TraceRecorder {
     private var eventTracker: TraceCollectingEventTracker? = null
 
     fun installAndStartTrace(className: String, methodName: String, traceFileName: String?, outputMode: String?) {
+        // Set signal "void" object from Injections for better text output
+        INJECTIONS_VOID_OBJECT = Injections.VOID_RESULT
+
         // this method does need 'runInsideIgnoredSection' because analysis is not enabled until its completion
         eventTracker = TraceCollectingEventTracker(className, methodName, traceFileName, outputMode.toTraceCollectorOutputType())
         val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: ThreadDescriptor(Thread.currentThread()).also {
