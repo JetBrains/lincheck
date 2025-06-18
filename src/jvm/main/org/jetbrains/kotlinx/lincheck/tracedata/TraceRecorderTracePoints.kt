@@ -437,7 +437,7 @@ private fun DataInput.readTRObject(): TRObject? {
 private fun <V: Appendable> V.append(codeLocationId: Int, verbose: Boolean): V {
     if (!verbose) return this
     val cl = CodeLocations.stackTrace(codeLocationId)
-    append(" at [$codeLocationId] ").append(cl.fileName).append(':').append(cl.lineNumber.toString())
+    append(" at ").append(cl.fileName).append(':').append(cl.lineNumber.toString())
     return this
 }
 
