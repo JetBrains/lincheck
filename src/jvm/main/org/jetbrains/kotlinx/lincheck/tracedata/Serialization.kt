@@ -24,43 +24,44 @@ const val TRACE_MAGIC : Long = 0x706e547124ee5f70L
 const val TRACE_VERSION : Long = 1
 
 fun saveRecorderTrace(out: OutputStream, rootCallsPerThread: List<TRTracePoint>) {
-    val output = DataOutputStream(out.buffered(OUTPUT_BUFFER_SIZE))
+    DataOutputStream(out.buffered(OUTPUT_BUFFER_SIZE)).use { output ->
+        output.writeLong(TRACE_MAGIC)
+        output.writeLong(TRACE_VERSION)
 
-    output.writeLong(TRACE_MAGIC)
-    output.writeLong(TRACE_VERSION)
+        saveCache(output, methodCache, DataOutput::writeMethodDescriptor)
+        saveCache(output, fieldCache, DataOutput::writeFieldDescriptor)
+        saveCache(output, variableCache, DataOutput::writeVariableDescriptor)
 
-    saveCache(output, methodCache, DataOutput::writeMethodDescriptor)
-    saveCache(output, fieldCache, DataOutput::writeFieldDescriptor)
-    saveCache(output, variableCache, DataOutput::writeVariableDescriptor)
-
-    output.writeInt(rootCallsPerThread.size)
-    rootCallsPerThread.forEach { root ->
-        root.save(output)
+        output.writeInt(rootCallsPerThread.size)
+        rootCallsPerThread.forEach { root ->
+            root.save(output)
+        }
     }
 }
 
 fun loadRecordedTrace(inp: InputStream): List<TRTracePoint> {
-    val input = DataInputStream(inp.buffered(OUTPUT_BUFFER_SIZE))
-    val magic = input.readLong()
-    if (magic != TRACE_MAGIC) {
-        error("Wrong magic 0x${(magic.toString(16))}, expected ${TRACE_MAGIC.toString(16)}")
-    }
+    DataInputStream(inp.buffered(OUTPUT_BUFFER_SIZE)).use { input ->
+        val magic = input.readLong()
+        if (magic != TRACE_MAGIC) {
+            error("Wrong magic 0x${(magic.toString(16))}, expected ${TRACE_MAGIC.toString(16)}")
+        }
 
-    val version = input.readLong()
-    if (version != TRACE_VERSION) {
-        error("Wrong version $version (expected $TRACE_VERSION)")
-    }
+        val version = input.readLong()
+        if (version != TRACE_VERSION) {
+            error("Wrong version $version (expected $TRACE_VERSION)")
+        }
 
-    loadCache(input, methodCache, DataInput::readMethodDescriptor)
-    loadCache(input, fieldCache, DataInput::readFieldDescriptor)
-    loadCache(input, variableCache, DataInput::readVariableDescriptor)
+        loadCache(input, methodCache, DataInput::readMethodDescriptor)
+        loadCache(input, fieldCache, DataInput::readFieldDescriptor)
+        loadCache(input, variableCache, DataInput::readVariableDescriptor)
 
-    val threadNum = input.readInt()
-    val roots = mutableListOf<TRMethodCallTracePoint>()
-    repeat(threadNum) {
-        roots.add(loadTRTracePoint(input) as TRMethodCallTracePoint)
+        val threadNum = input.readInt()
+        val roots = mutableListOf<TRMethodCallTracePoint>()
+        repeat(threadNum) {
+            roots.add(loadTRTracePoint(input) as TRMethodCallTracePoint)
+        }
+        return roots
     }
-    return roots
 }
 
 private fun <V> saveCache(output: DataOutput, cache: IndexedPool<V>, writer: DataOutput.(V) -> Unit) {
