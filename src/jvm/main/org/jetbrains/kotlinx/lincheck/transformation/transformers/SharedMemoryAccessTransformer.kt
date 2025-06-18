@@ -11,6 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.jetbrains.kotlinx.lincheck.tracedata.FieldDescriptor
+import org.jetbrains.kotlinx.lincheck.tracedata.FinalFields
 import org.jetbrains.kotlinx.lincheck.tracedata.fieldCache
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type

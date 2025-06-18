@@ -10,18 +10,11 @@
 
 package org.jetbrains.kotlinx.lincheck.tracedata
 
-import java.io.DataInput
-import java.io.DataInputStream
-import java.io.DataOutput
-import java.io.DataOutputStream
-import java.io.File
-import java.io.FileInputStream
-import java.io.InputStream
-import java.io.OutputStream
+import java.io.*
 
 const val OUTPUT_BUFFER_SIZE: Int = 16*1024*1024
 const val TRACE_MAGIC : Long = 0x706e547124ee5f70L
-const val TRACE_VERSION : Long = 2
+const val TRACE_VERSION : Long = 4
 
 fun saveRecorderTrace(out: OutputStream, rootCallsPerThread: List<TRTracePoint>) {
     DataOutputStream(out.buffered(OUTPUT_BUFFER_SIZE)).use { output ->
@@ -33,10 +26,14 @@ fun saveRecorderTrace(out: OutputStream, rootCallsPerThread: List<TRTracePoint>)
         saveCache(output, variableCache, DataOutput::writeVariableDescriptor)
         saveCache(output, classNameCache, DataOutput::writeUTF)
 
-        output.writeInt(rootCallsPerThread.size)
-        rootCallsPerThread.forEach { root ->
-            root.save(output)
-        }
+    // Save all CodeLocations's strings
+    val codeLocationsStringPool = internalizeCodeLocationStrings()
+    saveCache(output, codeLocationsStringPool, DataOutput::writeUTF)
+    saveCodeLocations(output, codeLocationsStringPool)
+
+    output.writeInt(rootCallsPerThread.size)
+    rootCallsPerThread.forEach { root ->
+        root.save(output)
     }
 }
 
@@ -57,13 +54,17 @@ fun loadRecordedTrace(inp: InputStream): List<TRTracePoint> {
     loadCache(input, variableCache, DataInput::readVariableDescriptor)
     loadCache(input, classNameCache, DataInput::readUTF)
 
-        val threadNum = input.readInt()
-        val roots = mutableListOf<TRMethodCallTracePoint>()
-        repeat(threadNum) {
-            roots.add(loadTRTracePoint(input) as TRMethodCallTracePoint)
-        }
-        return roots
+    val codeLocationsStringPool = IndexedPool<String>()
+    loadCache(input, codeLocationsStringPool, DataInput::readUTF)
+    loadCodeLocations(input, codeLocationsStringPool)
+
+
+    val threadNum = input.readInt()
+    val roots = mutableListOf<TRMethodCallTracePoint>()
+    repeat(threadNum) {
+        roots.add(loadTRTracePoint(input) as TRMethodCallTracePoint)
     }
+    return roots
 }
 
 private fun <V> saveCache(output: DataOutput, cache: IndexedPool<V>, writer: DataOutput.(V) -> Unit) {
@@ -78,6 +79,32 @@ private fun <V> loadCache(input: DataInput, cache: IndexedPool<V>, reader: DataI
     val count = input.readInt()
     repeat(count) {
         cache.getOrCreateId(input.reader())
+    }
+}
+
+private fun internalizeCodeLocationStrings(): IndexedPool<String> {
+    val pool = IndexedPool<String>()
+    CodeLocations.content.forEach {
+        pool.getOrCreateId(it.methodName)
+        val fn = it.fileName
+        if (fn != null) {
+            pool.getOrCreateId(fn)
+        }
+    }
+    return pool
+}
+
+private fun saveCodeLocations(output: DataOutput, stringCache: IndexedPool<String>) {
+    output.writeInt(CodeLocations.content.size)
+    CodeLocations.content.forEach {
+        output.writeStackTraceElement(it, stringCache)
+    }
+}
+
+private fun loadCodeLocations(input: DataInput, stringCache: IndexedPool<String>) {
+    val count = input.readInt()
+    repeat(count) {
+        CodeLocations.newCodeLocation(input.readStackTraceElement(stringCache))
     }
 }
 
@@ -179,4 +206,36 @@ private fun DataOutput.writeVariableDescriptor(value: VariableDescriptor) {
 
 private fun DataInput.readVariableDescriptor(): VariableDescriptor {
     return VariableDescriptor(readUTF())
+}
+
+private fun DataOutput.writeStackTraceElement(value: StackTraceElement, stringCache: IndexedPool<String>) {
+    writeInternalizedString(value.className, classNameCache::getOrCreateId)
+    writeInternalizedString(value.methodName, stringCache::getOrCreateId)
+    writeInternalizedString(value.fileName, stringCache::getOrCreateId)
+    writeInt(value.lineNumber)
+}
+
+private fun DataInput.readStackTraceElement(stringCache: IndexedPool<String>): StackTraceElement {
+    val className = readInternalizedString(classNameCache::get)
+    val methodName = readInternalizedString(stringCache::get)
+    val fileName = readInternalizedString(stringCache::get)
+    val lineNumber = readInt()
+    return StackTraceElement(className, methodName, fileName, lineNumber)
+}
+
+private fun DataOutput.writeInternalizedString(value: String?, internalizer: (String) -> Int?) {
+    if (value == null) {
+        writeInt(-1)
+    } else {
+        writeInt(internalizer(value) ?: -1)
+    }
+}
+
+private fun DataInput.readInternalizedString(internalizer: (Int) -> String?): String? {
+    val id = readInt()
+    if (id < 0) {
+        return null
+    } else {
+        return internalizer(id)
+    }
 }

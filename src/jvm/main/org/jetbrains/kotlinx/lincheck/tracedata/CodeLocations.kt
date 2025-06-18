@@ -1,20 +1,21 @@
 /*
  * Lincheck
  *
- * Copyright (C) 2019 - 2024 JetBrains s.r.o.
+ * Copyright (C) 2019 - 2025 JetBrains s.r.o.
  *
  * This Source Code Form is subject to the terms of the
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.transformation
+package org.jetbrains.kotlinx.lincheck.tracedata
 
-import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.FieldInfo.*
-import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.addFinalField
-import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.addMutableField
-import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.collectFieldInformation
-import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.isFinalField
+import org.jetbrains.kotlinx.lincheck.tracedata.FinalFields.FieldInfo.*
+import org.jetbrains.kotlinx.lincheck.tracedata.FinalFields.addFinalField
+import org.jetbrains.kotlinx.lincheck.tracedata.FinalFields.addMutableField
+import org.jetbrains.kotlinx.lincheck.tracedata.FinalFields.collectFieldInformation
+import org.jetbrains.kotlinx.lincheck.tracedata.FinalFields.isFinalField
+import org.jetbrains.kotlinx.lincheck.transformation.ASM_API
 import org.objectweb.asm.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.collections.ArrayList
@@ -57,6 +58,8 @@ internal object CodeLocations {
         if (codeLocationId == UNKNOWN_CODE_LOCATION_ID) return EMPTY_STACK_TRACE
         return codeLocations[codeLocationId]
     }
+
+    val content: List<StackTraceElement> get() = codeLocations
 }
 
 internal const val UNKNOWN_CODE_LOCATION_ID = -1
