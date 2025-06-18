@@ -26,14 +26,15 @@ fun saveRecorderTrace(out: OutputStream, rootCallsPerThread: List<TRTracePoint>)
         saveCache(output, variableCache, DataOutput::writeVariableDescriptor)
         saveCache(output, classNameCache, DataOutput::writeUTF)
 
-    // Save all CodeLocations's strings
-    val codeLocationsStringPool = internalizeCodeLocationStrings()
-    saveCache(output, codeLocationsStringPool, DataOutput::writeUTF)
-    saveCodeLocations(output, codeLocationsStringPool)
+        // Save all CodeLocations's strings
+        val codeLocationsStringPool = internalizeCodeLocationStrings()
+        saveCache(output, codeLocationsStringPool, DataOutput::writeUTF)
+        saveCodeLocations(output, codeLocationsStringPool)
 
-    output.writeInt(rootCallsPerThread.size)
-    rootCallsPerThread.forEach { root ->
-        root.save(output)
+        output.writeInt(rootCallsPerThread.size)
+        rootCallsPerThread.forEach { root ->
+            root.save(output)
+        }
     }
 }
 
@@ -49,22 +50,23 @@ fun loadRecordedTrace(inp: InputStream): List<TRTracePoint> {
             error("Wrong version $version (expected $TRACE_VERSION)")
         }
 
-    loadCache(input, methodCache, DataInput::readMethodDescriptor)
-    loadCache(input, fieldCache, DataInput::readFieldDescriptor)
-    loadCache(input, variableCache, DataInput::readVariableDescriptor)
-    loadCache(input, classNameCache, DataInput::readUTF)
+        loadCache(input, methodCache, DataInput::readMethodDescriptor)
+        loadCache(input, fieldCache, DataInput::readFieldDescriptor)
+        loadCache(input, variableCache, DataInput::readVariableDescriptor)
+        loadCache(input, classNameCache, DataInput::readUTF)
 
-    val codeLocationsStringPool = IndexedPool<String>()
-    loadCache(input, codeLocationsStringPool, DataInput::readUTF)
-    loadCodeLocations(input, codeLocationsStringPool)
+        val codeLocationsStringPool = IndexedPool<String>()
+        loadCache(input, codeLocationsStringPool, DataInput::readUTF)
+        loadCodeLocations(input, codeLocationsStringPool)
 
 
-    val threadNum = input.readInt()
-    val roots = mutableListOf<TRMethodCallTracePoint>()
-    repeat(threadNum) {
-        roots.add(loadTRTracePoint(input) as TRMethodCallTracePoint)
+        val threadNum = input.readInt()
+        val roots = mutableListOf<TRMethodCallTracePoint>()
+        repeat(threadNum) {
+            roots.add(loadTRTracePoint(input) as TRMethodCallTracePoint)
+        }
+        return roots
     }
-    return roots
 }
 
 private fun <V> saveCache(output: DataOutput, cache: IndexedPool<V>, writer: DataOutput.(V) -> Unit) {
