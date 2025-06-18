@@ -115,6 +115,7 @@ class TraceCollectingEventTracker(
             obj = TRObject(Thread.currentThread()),
             parameters = emptyList()
         )
+        tracePoint.result = TR_OBJECT_VOID
         threadHandle.pushStackFrame(tracePoint, Thread.currentThread())
     }
 
@@ -467,6 +468,7 @@ class TraceCollectingEventTracker(
             obj = null,
             parameters = emptyList()
         )
+        tracePoint.result = TR_OBJECT_VOID
         threadHandle.pushStackFrame(tracePoint, null)
 
         startTime = System.currentTimeMillis()
