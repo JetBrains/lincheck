@@ -931,7 +931,11 @@ internal fun afterSpinCycleTraceCollected(
           spinCycleEndTracePoint is ObstructionFreedomViolationExecutionAbortTracePoint)
 
     val spinCycleFirstTracePointCallStackTrace = spinCycleStartTracePoint.callStackTrace.map { it.tracePoint }
-    val spinCycleLastTracePointCallStackTrace = spinCycleEndTracePoint.callStackTrace.map { it.tracePoint }
+    val spinCycleLastTracePointCallStackTrace = when (spinCycleEndTracePoint) {
+        is SwitchEventTracePoint -> spinCycleEndTracePoint.callStackTrace.map { it.tracePoint }
+        is ObstructionFreedomViolationExecutionAbortTracePoint -> spinCycleEndTracePoint.callStackTrace.map { it.tracePoint }
+        else -> error("Unreachable code")
+    }
     val isRecursive = spinCycleLastTracePointCallStackTrace.size != spinCycleFirstTracePointCallStackTrace.size
 
     if (isRecursive) {
