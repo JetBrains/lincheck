@@ -21,7 +21,7 @@ import java.io.OutputStream
 
 const val OUTPUT_BUFFER_SIZE: Int = 16*1024*1024
 const val TRACE_MAGIC : Long = 0x706e547124ee5f70L
-const val TRACE_VERSION : Long = 1
+const val TRACE_VERSION : Long = 2
 
 fun saveRecorderTrace(out: OutputStream, rootCallsPerThread: List<TRTracePoint>) {
     DataOutputStream(out.buffered(OUTPUT_BUFFER_SIZE)).use { output ->
@@ -31,6 +31,7 @@ fun saveRecorderTrace(out: OutputStream, rootCallsPerThread: List<TRTracePoint>)
         saveCache(output, methodCache, DataOutput::writeMethodDescriptor)
         saveCache(output, fieldCache, DataOutput::writeFieldDescriptor)
         saveCache(output, variableCache, DataOutput::writeVariableDescriptor)
+        saveCache(output, classNameCache, DataOutput::writeUTF)
 
         output.writeInt(rootCallsPerThread.size)
         rootCallsPerThread.forEach { root ->
@@ -51,9 +52,10 @@ fun loadRecordedTrace(inp: InputStream): List<TRTracePoint> {
             error("Wrong version $version (expected $TRACE_VERSION)")
         }
 
-        loadCache(input, methodCache, DataInput::readMethodDescriptor)
-        loadCache(input, fieldCache, DataInput::readFieldDescriptor)
-        loadCache(input, variableCache, DataInput::readVariableDescriptor)
+    loadCache(input, methodCache, DataInput::readMethodDescriptor)
+    loadCache(input, fieldCache, DataInput::readFieldDescriptor)
+    loadCache(input, variableCache, DataInput::readVariableDescriptor)
+    loadCache(input, classNameCache, DataInput::readUTF)
 
         val threadNum = input.readInt()
         val roots = mutableListOf<TRMethodCallTracePoint>()
@@ -111,18 +113,18 @@ private fun DataOutput.writeMethodType(value: Types.MethodType) {
 
 private fun DataInput.readType(): Types.Type {
     val type = readByte()
-    when (type.toInt()) {
-        0 -> return Types.ArrayType(readType())
-        1 -> return Types.BooleanType()
-        2 -> return Types.ByteType()
-        3 -> return Types.CharType()
-        4 -> return Types.DoubleType()
-        5 -> return Types.FloatType()
-        6 -> return Types.IntType()
-        7 -> return Types.LongType()
-        8 -> return Types.ObjectType(readUTF())
-        9 -> return Types.ShortType()
-        10 -> return Types.VoidType()
+    return when (type.toInt()) {
+        0 -> Types.ArrayType(readType())
+        1 -> Types.BooleanType()
+        2 -> Types.ByteType()
+        3 -> Types.CharType()
+        4 -> Types.DoubleType()
+        5 -> Types.FloatType()
+        6 -> Types.IntType()
+        7 -> Types.LongType()
+        8 -> Types.ObjectType(readUTF())
+        9 -> Types.ShortType()
+        10 -> Types.VoidType()
         else -> error("Unknown Type id $type")
     }
 }

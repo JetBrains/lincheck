@@ -270,30 +270,36 @@ fun loadTRTracePoint(inp: DataInput): TRTracePoint {
     return loader(inp, threadId, codeLocationId, eventId)
 }
 
-data class TRObject(
-    val className: String,
+internal val classNameCache = IndexedPool<String>()
+
+class TRObject(
+    className: String,
     val hashCodeId: Int,
-)
+) {
+    internal val classNameId = classNameCache.getOrCreateId(className)
+
+    val className = classNameCache[classNameId]
+}
 
 fun TRObject(obj: Any?): TRObject? =
     obj?.let { TRObject(it::class.java.name, System.identityHashCode(obj)) }
 
 private fun DataOutput.writeTRObject(value: TRObject?) {
     if (value == null) {
-        writeUTF("")
+        writeInt(-1)
         return
     }
-    writeUTF(value.className)
+    writeInt(value.classNameId)
     writeInt(value.hashCodeId)
 }
 
 private fun DataInput.readTRObject(): TRObject? {
-    val className = readUTF()
-    if (className.isEmpty()) {
+    val classNameId = readInt()
+    if (classNameId < 0) {
         return null
     }
     val hashCodeId = readInt()
-    return TRObject(className, hashCodeId)
+    return TRObject(classNameCache[classNameId], hashCodeId)
 }
 
 private typealias TRLoader = (DataInput, Int, Int, Int) -> TRTracePoint
