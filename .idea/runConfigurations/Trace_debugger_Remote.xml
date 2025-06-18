@@ -1,17 +1,13 @@
-<!--
-This file set-ups a remote debug configuration to add a possibility to debug Lincheck code
-when its JVM agent is attached to another application.
--->
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Trace-debugger Remote" type="Remote">
     <option name="USE_SOCKET_TRANSPORT" value="true" />
-    <option name="SERVER_MODE" value="true" />
+    <option name="SERVER_MODE" value="false" />
     <option name="SHMEM_ADDRESS" />
     <option name="HOST" value="localhost" />
-    <option name="PORT" value="5005" />
-    <option name="AUTO_RESTART" value="true" />
+    <option name="PORT" value="8000" />
+    <option name="AUTO_RESTART" value="false" />
     <RunnerSettings RunnerId="Debug">
-      <option name="DEBUG_PORT" value="5005" />
+      <option name="DEBUG_PORT" value="8000" />
       <option name="LOCAL" value="false" />
     </RunnerSettings>
     <method v="2" />

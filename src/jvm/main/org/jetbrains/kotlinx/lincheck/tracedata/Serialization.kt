@@ -12,7 +12,8 @@ package org.jetbrains.kotlinx.lincheck.tracedata
 
 import java.io.*
 
-const val OUTPUT_BUFFER_SIZE: Int = 16*1024*1024
+private const val OUTPUT_BUFFER_SIZE: Int = 16*1024*1024
+
 const val TRACE_MAGIC : Long = 0x706e547124ee5f70L
 const val TRACE_VERSION : Long = 4
 
