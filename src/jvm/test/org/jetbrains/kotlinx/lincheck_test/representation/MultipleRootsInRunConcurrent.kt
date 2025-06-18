@@ -16,6 +16,11 @@ import kotlin.concurrent.thread
 
 class MultipleRootsInRunConcurrent {
 
+    /**
+     * Almost all runConcurrentTests are passed a `block` function which is the only (root)call from the 
+     * runConcurrentTest lambda.
+     * This test tests for correct behaviour in return values etc when multiple things happen in the root of the lambda.
+     */
     @Test
     fun multipleRootsTest() {
         val result = runCatching {
