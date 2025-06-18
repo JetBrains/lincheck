@@ -11,7 +11,7 @@
 package org.jetbrains.kotlinx.lincheck_test
 
 import junit.framework.TestCase.assertEquals
-import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
+import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.util.JdkVersion
 import org.jetbrains.kotlinx.lincheck.util.isJdk8
 import org.jetbrains.kotlinx.lincheck.util.jdkVersion

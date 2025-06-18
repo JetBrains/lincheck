@@ -8,7 +8,7 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.transformation
+package org.jetbrains.kotlinx.lincheck.tracedata
 
 internal data class FieldDescriptor(
     val className: String,
@@ -37,6 +37,8 @@ internal class IndexedPool<T> {
         items.add(item)
         items.lastIndex
     }
+
+    val content: List<T> = items
 }
 
 internal fun <T> IndexedPool<T>.getInterned(item: T) = get(getOrCreateId(item))

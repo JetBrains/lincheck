@@ -209,9 +209,13 @@ internal fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Ar
     val results = failure.results
     val graph = TraceReporter(failure, results, trace, collectExceptionsOrEmpty(failure)).graph
     val nodeList = graph.flattenNodes(VerboseTraceFlattenPolicy()).reorder()
-    val preExpandedNodeSet = graph.extractPreExpandedNodes(ShortTraceFlattenPolicy()).toHashSet()
-    
-    return nodeList.flatMap { section -> 
+
+    return flattenedTraceGraphToCSV(nodeList)
+}
+
+internal fun flattenedTraceGraphToCSV(nodeList: SingleThreadedTable<TraceNode>): Array<String> {
+    val preExpandedNodeSet = nodeList.extractPreExpandedNodes(ShortTraceFlattenPolicy()).toHashSet()
+    return nodeList.flatMap { section ->
         section.mapNotNull { node ->
             when (node) {
                 is EventNode -> {
@@ -221,8 +225,7 @@ internal fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Ar
                     val (location, locationId) = if (event is CodeLocationTracePoint) {
                         val ste = event.stackTraceElement
                         "${ste.className}:${ste.methodName}:${ste.fileName}:${ste.lineNumber}" to event.codeLocation
-                    }
-                    else {
+                    } else {
                         "null" to -1
                     }
                     val type = when {
@@ -256,7 +259,7 @@ internal fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Ar
                     "${type.ordinal};${node.iThread};${node.callDepth};${preExpandedNodeSet.contains(node)};${beforeEventId};${representation};null;-1;[];false"
                 } else {
                     val beforeEventId = node.tracePoint.eventId
-                    val representation = node.tracePoint.toStringImpl(withLocation = false) 
+                    val representation = node.tracePoint.toStringImpl(withLocation = false)
                     val ste = node.tracePoint.stackTraceElement
                     val location = "${ste.className}:${ste.methodName}:${ste.fileName}:${ste.lineNumber}"
                     val type = TracePointType.REGULAR
@@ -350,7 +353,7 @@ private fun collectExceptionsForPlugin(failure: LincheckFailure): ExceptionProce
     }
 }
 
-private fun collectExceptionsOrEmpty(failure: LincheckFailure): Map<Throwable, ExceptionNumberAndStacktrace> {
+internal fun collectExceptionsOrEmpty(failure: LincheckFailure?): Map<Throwable, ExceptionNumberAndStacktrace> {
     if (failure is ValidationFailure) {
         return mapOf(failure.exception to ExceptionNumberAndStacktrace(1, failure.exception.stackTrace.toList()))
     }

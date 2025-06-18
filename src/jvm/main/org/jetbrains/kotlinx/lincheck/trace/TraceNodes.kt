@@ -176,4 +176,3 @@ internal fun traceToGraph(trace: Trace): SingleThreadedTable<TraceNode> {
     }
     return sections
 }
-

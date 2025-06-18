@@ -11,11 +11,13 @@
 package org.jetbrains.kotlinx.lincheck.transformation
 
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.commons.*
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
 import org.jetbrains.kotlinx.lincheck.transformation.transformers.*
+import org.jetbrains.kotlinx.lincheck.util.AnalysisProfile
 import org.jetbrains.kotlinx.lincheck.util.Logger
 import sun.nio.ch.lincheck.*
 
@@ -74,6 +76,10 @@ internal class LincheckClassVisitor(
             Logger.debug { "Skipping transformation of the native method $className.$methodName" }
             return mv
         }
+
+        fun MethodVisitor.newAdapter() = GeneratorAdapter(this, access, methodName, desc)
+        fun MethodVisitor.newNonRemappingAdapter() = GeneratorAdapterWithoutLocals(this, access, methodName, desc)
+
         if (instrumentationMode == STRESS) {
             return if (methodName != "<clinit>" && methodName != "<init>") {
                 CoroutineCancellabilitySupportTransformer(mv, access, className, methodName, desc)
@@ -81,9 +87,41 @@ internal class LincheckClassVisitor(
                 mv
             }
         }
+
+        if (instrumentationMode == TRACE_RECORDING) {
+            if (methodName == "<clinit>" || methodName == "<init>") return mv
+
+            mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
+            mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
+
+            mv = ObjectCreationMinimalTransformer(fileName, className, methodName, mv.newAdapter())
+            mv = MethodCallMinimalTransformer(fileName, className, methodName, mv.newAdapter())
+
+            // We need this in TRACE_RECORDING mode to register new threads
+            mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
+
+            // `SharedMemoryAccessTransformer` goes first because it relies on `AnalyzerAdapter`,
+            // which should be put in front of the byte-code transformer chain,
+            // so that it can correctly analyze the byte-code and compute required type-information
+            mv = run {
+                val sharedMemoryAccessTransformer = SharedMemoryAccessTransformer(fileName, className, methodName, mv.newAdapter())
+                val analyzerAdapter = AnalyzerAdapter(className, access, methodName, desc, sharedMemoryAccessTransformer)
+                sharedMemoryAccessTransformer.analyzer = analyzerAdapter
+                analyzerAdapter
+            }
+            val locals: Map<Int, List<LocalVariableInfo>> = methods[methodName + desc]?.variables ?: emptyMap()
+            mv = LocalVariablesAccessTransformer(fileName, className, methodName, mv.newAdapter(), locals)
+
+            // Inline method call transformer relies on the original variables' indices, so it should go before (in FIFO order)
+            // all transformers which can create local variables.
+            // All visitors created AFTER InlineMethodCallTransformer must use a non-remapping Generator adapter.
+            // mv = InlineMethodCallTransformer(fileName, className, methodName, desc, mv.newNonRemappingAdapter(), methods[methodName + desc] ?: MethodVariables(), mv)
+            return mv
+        }
+
         val intrinsicDelegateVisitor = mv
-        fun MethodVisitor.newAdapter() = GeneratorAdapter(this, access, methodName, desc)
-        fun MethodVisitor.newNonRemappingAdapter() = GeneratorAdapterWithoutLocals(this, access, methodName, desc)
+        mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
+        mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
         if (methodName == "<clinit>") {
             mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
@@ -140,9 +178,9 @@ internal class LincheckClassVisitor(
         // We need to disable breakpoints in such a case, as the numeration will break.
         // Breakpoints are disabled as we do not instrument toString and enter an ignored section,
         // so there are no beforeEvents inside.
-        // 
         if ((methodName == "<init>" && !isInTraceDebuggerMode) || ideaPluginEnabled && methodName == "toString" && desc == "()Ljava/lang/String;") {
             mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
+            // TODO: replace with proper instrumentation mode for debugger, don't use globals
             if (isInTraceDebuggerMode) {
                 // Lincheck does not support true identity hash codes (it always uses zeroes),
                 // so there is no need for the `DeterministicInvokeDynamicTransformer` there.
@@ -159,8 +197,6 @@ internal class LincheckClassVisitor(
             }
             return mv
         }
-        mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
-        mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
         mv = CoroutineCancellabilitySupportTransformer(mv, access, className, methodName, desc)
         mv = CoroutineDelaySupportTransformer(fileName, className, methodName, mv.newAdapter())
         mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
@@ -171,17 +207,24 @@ internal class LincheckClassVisitor(
             mv = IntrinsicCandidateMethodFilter(className, methodName, desc, intrinsicDelegateVisitor.newAdapter(), mv.newAdapter())
             return mv
         }
-        if (access and ACC_SYNCHRONIZED != 0) {
-            mv = SynchronizedMethodTransformer(fileName, className, methodName, mv.newAdapter(), classVersion)
+        if (instrumentationMode == MODEL_CHECKING) {
+            if (access and ACC_SYNCHRONIZED != 0) {
+                mv = SynchronizedMethodTransformer(fileName, className, methodName, mv.newAdapter(), classVersion)
+            }
         }
         // `coverageDelegateVisitor` must not capture `MethodCallTransformer`
         // (to filter static method calls inserted by coverage library)
         val coverageDelegateVisitor: MethodVisitor = mv
         mv = MethodCallTransformer(fileName, className, methodName, mv.newAdapter())
-        mv = MonitorTransformer(fileName, className, methodName, mv.newAdapter())
-        mv = WaitNotifyTransformer(fileName, className, methodName, mv.newAdapter())
-        mv = ParkingTransformer(fileName, className, methodName, mv.newAdapter())
-        mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
+        // These transformers are useful only in model checking mode: they
+        // support thread scheduling and determinism, which is not needed in other modes.
+        if (instrumentationMode == MODEL_CHECKING) {
+            mv = MonitorTransformer(fileName, className, methodName, mv.newAdapter())
+            mv = WaitNotifyTransformer(fileName, className, methodName, mv.newAdapter())
+            mv = ParkingTransformer(fileName, className, methodName, mv.newAdapter())
+            mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
+        }
+        // TODO: replace with proper instrumentation mode for debugger, don't use globals
         if (isInTraceDebuggerMode) {
             // Lincheck does not support true identity hash codes (it always uses zeroes),
             // so there is no need for the `DeterministicInvokeDynamicTransformer` there.

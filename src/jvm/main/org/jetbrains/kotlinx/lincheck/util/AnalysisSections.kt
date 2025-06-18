@@ -10,13 +10,14 @@
 
 package org.jetbrains.kotlinx.lincheck.util
 
-import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.transformation.isThreadContainerClass
-import sun.nio.ch.lincheck.ThreadDescriptor
+import org.jetbrains.kotlinx.lincheck.util.AnalysisSectionType.*
 import sun.nio.ch.lincheck.Injections
+import sun.nio.ch.lincheck.ThreadDescriptor
 
 /**
  * Represents different types of analysis sections within the Lincheck framework.
@@ -150,15 +151,12 @@ internal fun leaveIgnoredSection() {
  * @return result of the [block] invocation.
  */
 internal inline fun <R> runInsideIgnoredSection(block: () -> R): R {
-    val descriptor = ThreadDescriptor.getCurrentThreadDescriptor()
-    if (descriptor == null || descriptor.eventTracker !is ManagedStrategy) {
-        return block()
-    }
-    descriptor.enterIgnoredSection()
+    val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: return block()
+    desc.enterIgnoredSection()
     try {
         return block()
     } finally {
-        descriptor.leaveIgnoredSection()
+        desc.leaveIgnoredSection()
     }
 }
 
@@ -314,7 +312,7 @@ internal class AnalysisProfile(val analyzeStdLib: Boolean) {
         !analyzeStdLib && (isConcurrentCollectionsLibrary(className) || isCollectionsLibrary(className))
 }
 
-internal fun isCollectionsLibrary(className: String) = className in setOf(
+private val COLLECTION_LIBRARIES = setOf(
     // Interfaces
     "java.lang.Iterable",
     "java.util.Collection",
@@ -327,7 +325,7 @@ internal fun isCollectionsLibrary(className: String) = className in setOf(
     "java.util.Map",
     "java.util.SortedMap",
     "java.util.NavigableMap",
-    
+
 
     // Abstract implementations
     "java.util.AbstractCollection",
@@ -355,7 +353,9 @@ internal fun isCollectionsLibrary(className: String) = className in setOf(
     "java.util.TreeMap",
 )
 
-internal fun isConcurrentCollectionsLibrary(className: String) = className in setOf(
+internal fun isCollectionsLibrary(className: String) = className in COLLECTION_LIBRARIES
+
+private val CONCURRENT_COLLECTION_LIBRARIES = setOf(
     // Interfaces
     "java.util.concurrent.BlockingDeque",
     "java.util.concurrent.BlockingQueue",
@@ -387,6 +387,8 @@ internal fun isConcurrentCollectionsLibrary(className: String) = className in se
     // Inner class view
     "java.util.concurrent.ConcurrentHashMap\$KeySetView"
 )
+
+internal fun isConcurrentCollectionsLibrary(className: String) = className in CONCURRENT_COLLECTION_LIBRARIES
 
 private fun isJavaExecutorService(className: String) =
     className.startsWith("java.util.concurrent.AbstractExecutorService") ||

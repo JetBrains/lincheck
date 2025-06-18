@@ -10,6 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
+import org.jetbrains.kotlinx.lincheck.tracedata.VariableDescriptor
+import org.jetbrains.kotlinx.lincheck.tracedata.variableCache
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.objectweb.asm.*
 import org.objectweb.asm.commons.GeneratorAdapter

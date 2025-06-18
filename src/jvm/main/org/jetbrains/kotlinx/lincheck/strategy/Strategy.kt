@@ -152,7 +152,7 @@ fun Strategy.verify(result: InvocationResult, verifier: Verifier): LincheckFailu
             if (!verifier.verifyResults(scenario, result.results)) {
                 IncorrectResultsFailure(scenario, result.results, tryCollectTrace(result), AnalysisProfile(testCfg))
             } else null
-        else -> 
+        else ->
             result.toLincheckFailure(scenario, tryCollectTrace(result), AnalysisProfile(testCfg))
     }
 }

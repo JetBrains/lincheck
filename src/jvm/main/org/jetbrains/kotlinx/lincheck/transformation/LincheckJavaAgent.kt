@@ -11,10 +11,10 @@
 package org.jetbrains.kotlinx.lincheck.transformation
 
 import net.bytebuddy.agent.ByteBuddyAgent
-import org.jetbrains.kotlinx.lincheck.dumpTransformedSources
+import org.jetbrains.kotlinx.lincheck.traceagent.TraceAgent
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.MODEL_CHECKING
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.STRESS
-import org.jetbrains.kotlinx.lincheck.util.AnalysisSectionType
+import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.TRACE_RECORDING
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.isEagerlyInstrumentedClass
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.shouldTransform
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.transformedClassesStress
@@ -43,16 +43,39 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.jar.JarFile
 
+private const val DUMP_TRANSFORMED_SOURCES_PROPERTY = "lincheck.dumpTransformedSources"
+val dumpTransformedSources by lazy { System.getProperty(DUMP_TRANSFORMED_SOURCES_PROPERTY, "false").toBoolean() }
+
 
 /**
  * Executes [block] with the Lincheck java agent for byte-code instrumentation.
  */
 internal inline fun withLincheckJavaAgent(instrumentationMode: InstrumentationMode, block: () -> Unit) {
-    LincheckJavaAgent.install(instrumentationMode)
-    return try {
+    if (isTraceJavaAgentAttached) {
+        // In case if trace agent is attached we don't do anything
         block()
-    } finally {
-        LincheckJavaAgent.uninstall()
+    } else {
+        // Otherwise we perform instrumentation via ByteBuddy dynamic agent.
+        // Initialize instrumentation with dynamic ByteBuddy agent
+        // if no agent is attached yet.
+        if (!isInstrumentationInitialized) {
+            /**
+             * Dynamically attaches byte buddy instrumentation to this JVM instance.
+             * Please note that the dynamic attach feature will be disabled in future JVM releases,
+             * but at the moment of implementing this logic (March 2024), it was the smoothest way
+             * to inject code in the user codebase when the `java.base` module also needs to be instrumented.
+             */
+            LincheckJavaAgent.instrumentation = ByteBuddyAgent.install()
+            isInstrumentationInitialized = true
+        }
+
+        // run the testing code with instrumentation
+        LincheckJavaAgent.install(instrumentationMode)
+        return try {
+            block()
+        } finally {
+            LincheckJavaAgent.uninstall()
+        }
     }
 }
 
@@ -67,7 +90,13 @@ internal enum class InstrumentationMode {
      * In this mode, Lincheck tracks
      * all shared memory manipulations.
      */
-    MODEL_CHECKING
+    MODEL_CHECKING,
+
+    /**
+     * In this mode, lincheck tracks and records events in configured method
+     * but don't enforce determinism or does any analysis.
+     */
+    TRACE_RECORDING
 }
 
 /**
@@ -79,8 +108,11 @@ internal enum class InstrumentationMode {
 internal object LincheckJavaAgent {
     /**
      * The [Instrumentation] instance is used to perform bytecode transformations during runtime.
+     *
+     * It is set either by [TraceAgent] static agent, or on the first call to
+     * [withLincheckJavaAgent] which will use [ByteBuddyAgent] dynamic agent instead.
      */
-    private val instrumentation = ByteBuddyAgent.install()
+    internal lateinit var instrumentation: Instrumentation
 
     /**
      * Determines how to transform classes;
@@ -101,10 +133,8 @@ internal object LincheckJavaAgent {
     val instrumentedClasses = HashSet<String>()
 
     /**
-     * Dynamically attaches [LincheckClassFileTransformer] to this JVM instance.
-     * Please note that the dynamic attach feature will be disabled in future JVM releases,
-     * but at the moment of implementing this logic (March 2024), it was the smoothest way
-     * to inject code in the user codebase when the `java.base` module also needs to be instrumented.
+     * Adds [LincheckClassFileTransformer] to this JVM instance.
+     * Also, retransforms already loaded classes.
      */
     fun install(instrumentationMode: InstrumentationMode) {
         this.instrumentationMode = instrumentationMode
@@ -150,14 +180,16 @@ internal object LincheckJavaAgent {
             }
 
             // In the model checking mode, Lincheck processes classes lazily, only when they are used.
-            instrumentationMode == MODEL_CHECKING -> {
+            instrumentationMode == MODEL_CHECKING || instrumentationMode == TRACE_RECORDING -> {
                 check(instrumentedClasses.isEmpty())
                 // Transform some predefined classes eagerly on start,
                 // because often it's the only place when we can do it
                 val eagerlyTransformedClasses = getLoadedClassesToInstrument()
                     .filter { isEagerlyInstrumentedClass(it.name) }
                     .toTypedArray()
-                instrumentation.retransformClasses(*eagerlyTransformedClasses)
+
+                if (eagerlyTransformedClasses.isNotEmpty())
+                    instrumentation.retransformClasses(*eagerlyTransformedClasses)
                 instrumentedClasses.addAll(eagerlyTransformedClasses.map { it.name })
             }
         }
@@ -373,11 +405,13 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
      */
     val transformedClassesModelChecking = ConcurrentHashMap<String, ByteArray>()
     val transformedClassesStress = ConcurrentHashMap<String, ByteArray>()
+    val transformedClassesTraceRecroding = ConcurrentHashMap<String, ByteArray>()
 
     private val transformedClassesCache
         get() = when (instrumentationMode) {
             STRESS -> transformedClassesStress
             MODEL_CHECKING -> transformedClassesModelChecking
+            TRACE_RECORDING -> transformedClassesTraceRecroding
         }
 
     override fun transform(
@@ -403,7 +437,7 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         // In the model checking mode, we transform classes lazily,
         // once they are used in the testing code.
         if (!INSTRUMENT_ALL_CLASSES &&
-            instrumentationMode == MODEL_CHECKING &&
+            (instrumentationMode == MODEL_CHECKING || instrumentationMode == TRACE_RECORDING) &&
             // do not re-transform already instrumented classes
             internalClassName.toCanonicalClassName() !in instrumentedClasses &&
             // always transform eagerly instrumented classes
@@ -486,6 +520,10 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         if (instrumentationMode == STRESS) {
             if (className.startsWith("java.") || className.startsWith("kotlin.")) return false
         }
+        if (instrumentationMode == TRACE_RECORDING) {
+            if (className == "java.lang.Thread") return true
+            if (className.startsWith("java.") || className.startsWith("kotlin.") || className.startsWith("jdk.")) return false
+        }
         if (isEagerlyInstrumentedClass(className)) return true
 
         return AnalysisProfile(analyzeStdLib = true).shouldTransform(className, "")
@@ -495,9 +533,9 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
     // We should always eagerly transform the following classes.
     internal fun isEagerlyInstrumentedClass(className: String): Boolean =
         // `ClassLoader` classes, to wrap `loadClass` methods in the ignored section.
-        isClassLoaderClassName(className) ||
+        (instrumentationMode != TRACE_RECORDING && isClassLoaderClassName(className)) ||
         // `MethodHandle` class, to wrap its methods (except `invoke` methods) in the ignored section.
-        isMethodHandleRelatedClass(className) ||
+        (instrumentationMode != TRACE_RECORDING && isMethodHandleRelatedClass(className)) ||
         // `StackTraceElement` class, to wrap all its methods into the ignored section.
         isStackTraceElementClass(className) ||
         // `ThreadContainer` classes, to detect threads started in the thread containers.
@@ -507,3 +545,6 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         isCoroutineDispatcherInternalClass(className) ||
         isCoroutineConcurrentKtInternalClass(className)
 }
+
+internal var isTraceJavaAgentAttached: Boolean = false
+internal var isInstrumentationInitialized: Boolean = false

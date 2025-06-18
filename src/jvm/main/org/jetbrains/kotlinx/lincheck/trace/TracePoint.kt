@@ -228,7 +228,7 @@ internal class MethodCallTracePoint(
     var parameters: List<String>? = null
     var parameterTypes: List<String>? = null
     private var ownerName: String? = null
-    
+
     val isRootCall get() = callType != CallType.NORMAL
     val isActor get() = callType == CallType.ACTOR
     val isThreadStart get() = callType == CallType.THREAD_RUN

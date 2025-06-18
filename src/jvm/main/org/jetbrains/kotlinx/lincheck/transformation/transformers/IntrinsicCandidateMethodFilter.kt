@@ -10,12 +10,12 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
+import org.jetbrains.kotlinx.lincheck.tracedata.MethodDescriptor
+import org.jetbrains.kotlinx.lincheck.tracedata.getInterned
+import org.jetbrains.kotlinx.lincheck.tracedata.isTrackedIntrinsic
+import org.jetbrains.kotlinx.lincheck.tracedata.methodCache
 import org.jetbrains.kotlinx.lincheck.transformation.ASM_API
-import org.jetbrains.kotlinx.lincheck.transformation.getInterned
-import org.jetbrains.kotlinx.lincheck.transformation.methodCache
 import org.jetbrains.kotlinx.lincheck.transformation.toCanonicalClassName
-import org.jetbrains.kotlinx.lincheck.util.MethodDescriptor
-import org.jetbrains.kotlinx.lincheck.util.isTrackedIntrinsic
 import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.MethodVisitor
 

@@ -16,6 +16,7 @@ import sun.nio.ch.lincheck.TestThread
 import java.io.*
 import java.lang.*
 import java.util.concurrent.*
+import java.util.concurrent.atomic.AtomicReferenceArray
 import java.util.concurrent.locks.*
 
 /**
@@ -28,7 +29,7 @@ internal class FixedActiveThreadsExecutor(private val testName: String, private 
     /**
      * null, waiting TestThread, Runnable task, or SHUTDOWN
      */
-    private val tasks = atomicArrayOfNulls<Any>(nThreads)
+    private val tasks = AtomicReferenceArray<Any>(nThreads)
 
     /**
      * Spinners for spin-wait on tasks.
@@ -40,7 +41,7 @@ internal class FixedActiveThreadsExecutor(private val testName: String, private 
     /**
      * null, waiting in [submitAndAwait] thread, DONE, or exception
      */
-    private val results = atomicArrayOfNulls<Any>(nThreads)
+    private val results = AtomicReferenceArray<Any>(nThreads)
 
     /**
      * Spinner for spin-wait on results.
@@ -56,7 +57,7 @@ internal class FixedActiveThreadsExecutor(private val testName: String, private 
 
     /**
      * This flag is set to `true` when [await] detects a hang.
-     * In this case, when this executor is closed, [Thread.stop]
+     * In this case, when this executor is closed, Thread.stop()
      * is called on all the internal threads.
      */
     private var hangDetected = false
@@ -108,8 +109,8 @@ internal class FixedActiveThreadsExecutor(private val testName: String, private 
     }
 
     private fun submitTask(iThread: Int, task: Any) {
-        results[iThread].value = null
-        val old = tasks[iThread].getAndSet(task)
+        results[iThread] = null
+        val old = tasks.getAndSet(iThread, task)
         if (old is TestThread) {
             LockSupport.unpark(old)
         }
@@ -141,12 +142,12 @@ internal class FixedActiveThreadsExecutor(private val testName: String, private 
 
     private fun getResult(iThread: Int, deadline: Long): Any {
         // Active wait for a result during the limited number of loop cycles.
-        val result = resultSpinner.spinWaitBoundedFor { results[iThread].value }
+        val result = resultSpinner.spinWaitBoundedFor { results[iThread] }
         if (result != null) return result
         // Park with timeout until the result is set or the timeout is passed.
         val currentThread = Thread.currentThread()
-        if (results[iThread].compareAndSet(null, currentThread)) {
-            while (results[iThread].value === currentThread) {
+        if (results.compareAndSet(iThread, null, currentThread)) {
+            while (results[iThread] === currentThread) {
                 val timeLeft = deadline - System.nanoTime()
                 if (timeLeft <= 0) {
                     hangDetected = true
@@ -155,7 +156,7 @@ internal class FixedActiveThreadsExecutor(private val testName: String, private 
                 LockSupport.parkNanos(timeLeft)
             }
         }
-        return results[iThread].value!!
+        return results[iThread]
     }
 
     private fun testThreadRunnable(iThread: Int) = Runnable {
@@ -163,7 +164,7 @@ internal class FixedActiveThreadsExecutor(private val testName: String, private 
             val task = runInsideIgnoredSection {
                 val task = getTask(iThread)
                 if (task === Shutdown) return@Runnable
-                tasks[iThread].value = null // reset task
+                tasks[iThread] = null // reset task
                 task as TestThreadExecution
             }
             check(task.iThread == iThread)
@@ -179,24 +180,24 @@ internal class FixedActiveThreadsExecutor(private val testName: String, private 
 
     private fun getTask(iThread: Int): Any {
         // Active wait for a task for the limited number of loop cycles.
-        val task = taskSpinners[iThread].spinWaitBoundedFor { tasks[iThread].value }
+        val task = taskSpinners[iThread].spinWaitBoundedFor { tasks[iThread] }
         if (task != null) return task
         // Park until a task is stored into `tasks[iThread]`.
         val currentThread = Thread.currentThread()
-        if (tasks[iThread].compareAndSet(null, currentThread)) {
-            while (tasks[iThread].value === currentThread) {
+        if (tasks.compareAndSet(iThread, null, currentThread)) {
+            while (tasks[iThread] === currentThread) {
                 LockSupport.park()
             }
         }
-        return tasks[iThread].value!!
+        return tasks[iThread]
     }
 
     private fun setResult(iThread: Int, any: Any) {
-        if (results[iThread].compareAndSet(null, any)) return
+        if (results.compareAndSet(iThread, null, any)) return
         // CAS failed => a test thread is parked.
         // Set the result and unpark the waiting thread.
-        val thread = results[iThread].value as Thread
-        results[iThread].value = any
+        val thread = results[iThread] as Thread
+        results[iThread] = any
         LockSupport.unpark(thread)
     }
 
@@ -205,8 +206,10 @@ internal class FixedActiveThreadsExecutor(private val testName: String, private 
         // Thread.stop() throws UnsupportedOperationException
         // starting from Java 20.
         if (hangDetected && majorJavaVersion < 20) {
-            @Suppress("DEPRECATION")
-            threads.forEach { it.stop() }
+            @Suppress("DEPRECATION", "removal")
+            threads.forEach {
+                it.stop()
+            }
         }
     }
 

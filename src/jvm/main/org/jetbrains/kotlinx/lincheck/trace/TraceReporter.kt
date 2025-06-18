@@ -14,7 +14,7 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.util.AnalysisProfile
 import kotlin.math.max
 
 internal typealias SingleThreadedTable<T> = List<SingleThreadedSection<T>>
@@ -25,7 +25,7 @@ internal typealias MultiThreadedSection<T> = List<Column<T>>
 internal typealias Column<T> = List<T>
 
 @Synchronized // we should avoid concurrent executions to keep `objectNumeration` consistent
-internal fun StringBuilder.appendTrace(
+internal fun Appendable.appendTrace(
     failure: LincheckFailure,
     results: ExecutionResult,
     trace: Trace,
@@ -35,7 +35,7 @@ internal fun StringBuilder.appendTrace(
 }
 
 /**
- * Appends [Trace] to [StringBuilder]
+ * Appends [Trace] to [Appendable]
  */
 internal class TraceReporter(
     private val failure: LincheckFailure,
@@ -55,23 +55,14 @@ internal class TraceReporter(
             .removeValidationIfNeeded()
             .addResultsToActors()
 
-
-        // Turn trace into graph which is List of sections. Where a section is a list of rootNodes (actors).
-        val traceGraph = traceToGraph(fixedTrace)
-
-        // Optimizes trace by combining trace points for synthetic field accesses etc..
-        val compressedTraceGraph = traceGraph
-            .compressTrace()
-            .collapseLibraries(failure.analysisProfile)
-        
-        graph = if (isGeneralPurposeModelCheckingScenario(failure.scenario)) removeGPMCLambda(compressedTraceGraph) else compressedTraceGraph
+        graph = traceToCollapsedGraph(fixedTrace, failure.analysisProfile, failure.scenario)
     }
     
-    fun appendTrace(stringBuilder: StringBuilder) = with(stringBuilder) {
+    fun appendTrace(app: Appendable) = with(app) {
         // Turn graph into chronological sequence of calls and events, for verbose and simple trace.
         val flattenedShort: SingleThreadedTable<TraceNode> = graph.flattenNodes(ShortTraceFlattenPolicy()).reorder()
         val flattenedVerbose: SingleThreadedTable<TraceNode> = graph.flattenNodes(VerboseTraceFlattenPolicy()).reorder()
-        appendTraceTable(TRACE_TITLE, flattenedShort)
+        appendTraceTable(TRACE_TITLE, trace, failure, flattenedShort)
         appendLine()
         
         if (!isGeneralPurposeModelCheckingScenario(failure.scenario)) {
@@ -79,33 +70,7 @@ internal class TraceReporter(
         }
         
         // if empty trace show only the first
-        if (flattenedVerbose.sumOf { it.size } != 1) appendTraceTable(DETAILED_TRACE_TITLE, flattenedVerbose)
-    }
-
-    /**
-     * Appends trace table to [StringBuilder]
-     */
-    private fun StringBuilder.appendTraceTable(title: String, graph: SingleThreadedTable<TraceNode>) {
-        appendLine(title)
-        val traceRepresentationSplitted = splitInColumns(trace.threadNames.size, graph)
-        val stringTable = traceNodeTableToString(traceRepresentationSplitted)
-        val layout = ExecutionLayout(
-            nThreads = trace.threadNames.size,
-            interleavingSections = stringTable,
-            threadNames = trace.threadNames,
-        )
-        with(layout) {
-            appendSeparatorLine()
-            appendHeader()
-            appendSeparatorLine()
-            stringTable.forEach { section ->
-                appendColumns(section)
-                appendSeparatorLine()
-            }
-        }
-        if (failure is ManagedDeadlockFailure || failure is TimeoutFailure) {
-            appendLine(ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE)
-        }
+        if (flattenedVerbose.sumOf { it.size } != 1) appendTraceTable(DETAILED_TRACE_TITLE, trace, failure, flattenedVerbose)
     }
 
     /**
@@ -123,6 +88,54 @@ internal class TraceReporter(
         val newTrace = this.trace.takeWhile { !(it is SectionDelimiterTracePoint && it.executionPart == ExecutionPart.VALIDATION) }
         return Trace(newTrace, this.threadNames)
     }
+}
+
+/**
+ * Appends trace table to [Appendable]
+ */
+internal fun Appendable.appendTraceTable(title: String, trace: Trace, failure: LincheckFailure?, graph: SingleThreadedTable<TraceNode>) {
+    appendLine(title)
+    val traceRepresentationSplitted = splitInColumns(trace.threadNames.size, graph)
+    val stringTable = traceNodeTableToString(traceRepresentationSplitted)
+    val layout = ExecutionLayout(
+        nThreads = trace.threadNames.size,
+        interleavingSections = stringTable,
+        threadNames = trace.threadNames,
+    )
+    with(layout) {
+        appendSeparatorLine()
+        appendHeader()
+        appendSeparatorLine()
+        stringTable.forEach { section ->
+            appendColumns(section)
+            appendSeparatorLine()
+        }
+    }
+    if (failure is ManagedDeadlockFailure || failure is TimeoutFailure) {
+        appendLine(ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE)
+    }
+}
+
+internal fun Appendable.appendTraceTableSimple(title: String, threadNames: List<String>, graph: SingleThreadedTable<TraceNode>) {
+    appendLine(title)
+    val traceRepresentationSplitted = splitInColumns(threadNames.size, graph)
+    val stringTable = traceNodeTableToString(traceRepresentationSplitted)
+    val layout = ExecutionLayout(
+        nThreads = threadNames.size,
+        interleavingSections = stringTable,
+        threadNames = threadNames,
+    )
+/*
+    with(layout) {
+        appendSeparatorLine()
+        appendHeader()
+        appendSeparatorLine()
+        stringTable.forEach { section ->
+            appendColumns(section)
+            appendSeparatorLine()
+        }
+    }
+*/
 }
 
 // TODO support multiple root nodes in GPMC mode, needs discussion on how to deal with `result: ...`
@@ -262,6 +275,18 @@ private class ExecutionResultsProvider(
         }
     }
 
+}
+
+internal fun traceToCollapsedGraph(trace: Trace, analysisProfile: AnalysisProfile, scenario: ExecutionScenario?): SingleThreadedTable<TraceNode> {
+    // Turn trace into graph which is List of sections. Where a section is a list of rootNodes (actors).
+    val traceGraph = traceToGraph(trace)
+
+    // Optimizes trace by combining trace points for synthetic field accesses etc..
+    val compressedTraceGraph = traceGraph
+        .compressTrace()
+        .collapseLibraries(analysisProfile)
+
+    return if (scenario != null && isGeneralPurposeModelCheckingScenario(scenario)) removeGPMCLambda(compressedTraceGraph) else compressedTraceGraph
 }
 
 internal const val ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE = "All unfinished threads are in deadlock"

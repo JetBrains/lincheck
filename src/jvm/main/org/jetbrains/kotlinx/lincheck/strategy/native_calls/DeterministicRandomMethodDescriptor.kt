@@ -10,14 +10,13 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.native_calls
 
-import org.jetbrains.kotlinx.lincheck.util.toMethodSignature
+import org.jetbrains.kotlinx.lincheck.tracedata.MethodSignature
+import org.jetbrains.kotlinx.lincheck.tracedata.Types
+import org.jetbrains.kotlinx.lincheck.tracedata.toMethodSignature
 import sun.nio.ch.lincheck.InjectedRandom
 import sun.nio.ch.lincheck.Injections
-import sun.nio.ch.lincheck.MethodSignature
-import sun.nio.ch.lincheck.Types
 import java.lang.reflect.Modifier
 import java.util.concurrent.ConcurrentHashMap
-import sun.nio.ch.lincheck.Types.*
 
 internal fun getDeterministicRandomMethodDescriptorOrNull(
     methodCallInfo: MethodCallInfo,
@@ -42,7 +41,7 @@ internal fun getDeterministicRandomMethodDescriptorOrNull(
 
         else -> {
             require(currentMethodType.argumentTypes.all {
-                Types.isPrimitive(it) || it == ArrayType(Types.BYTE_TYPE)
+                Types.isPrimitive(it) || it == Types.ArrayType(Types.BYTE_TYPE)
             }) {
                 "Only primitive arguments and ByteArrays are supported for default deterministic random: $methodCallInfo"
             }
@@ -55,7 +54,7 @@ internal fun getDeterministicRandomMethodDescriptorOrNull(
 
 // Other random classes are expected to delegate to this ThreadLocalRandom.
 // They may have arbitrary other methods that should not be handled here.
-private fun ObjectType.isRandom() = when (className) {
+private fun Types.ObjectType.isRandom() = when (className) {
     "java.util.Random", "java.util.random.RandomGenerator", "java.util.concurrent.ThreadLocalRandom",
     "java.security.SecureRandom" -> true
 
@@ -70,22 +69,22 @@ private fun MethodSignature.isSecureRandomMethodToSkip() = when (name) {
     else -> false
 }
 
-private fun ObjectType.isSecureRandom() = className == "java.security.SecureRandom"
+private fun Types.ObjectType.isSecureRandom() = className == "java.security.SecureRandom"
 
 private val byteArrayMethodType = Types.MethodType(
     Types.VOID_TYPE,
-    ArrayType(Types.BYTE_TYPE),
+    Types.ArrayType(Types.BYTE_TYPE),
 )
 
 private val secureByteArrayMethodType = Types.MethodType(
     Types.VOID_TYPE,
-    ArrayType(Types.BYTE_TYPE),
-    ObjectType("java.security.SecureRandomParameters"),
+    Types.ArrayType(Types.BYTE_TYPE),
+    Types.ObjectType("java.security.SecureRandomParameters"),
 )
 
 private val classMethodsImpl: MutableMap<Class<*>, Set<MethodSignature>> = ConcurrentHashMap()
 
-private fun getPublicOrProtectedClassMethods(objectArgumentType: ObjectType): Set<MethodSignature> =
+private fun getPublicOrProtectedClassMethods(objectArgumentType: Types.ObjectType): Set<MethodSignature> =
     getPublicOrProtectedClassMethods(Class.forName(objectArgumentType.className))
 
 private fun getPublicOrProtectedClassMethods(clazz: Class<*>): Set<MethodSignature> =
