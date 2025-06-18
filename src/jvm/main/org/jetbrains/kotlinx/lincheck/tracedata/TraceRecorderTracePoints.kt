@@ -272,13 +272,14 @@ fun loadTRTracePoint(inp: DataInput): TRTracePoint {
 
 internal val classNameCache = IndexedPool<String>()
 
-class TRObject(
-    className: String,
+data class TRObject(
+    internal val classNameId: Int,
     val hashCodeId: Int,
 ) {
-    internal val classNameId = classNameCache.getOrCreateId(className)
+    constructor(className: String, hashCodeId: Int):
+            this(classNameCache.getOrCreateId(className), hashCodeId)
 
-    val className = classNameCache[classNameId]
+    val className get() = classNameCache[classNameId]
 }
 
 fun TRObject(obj: Any?): TRObject? =
