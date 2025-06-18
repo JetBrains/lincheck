@@ -17,8 +17,8 @@ import org.jetbrains.kotlinx.lincheck.trace.SpinCycleStartTracePoint
 import org.jetbrains.kotlinx.lincheck.trace.SwitchEventTracePoint
 import org.jetbrains.kotlinx.lincheck.trace.TracePoint
 import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
-import org.jetbrains.kotlinx.lincheck.transformation.CodeLocations
-import org.jetbrains.kotlinx.lincheck.transformation.UNKNOWN_CODE_LOCATION_ID
+import org.jetbrains.kotlinx.lincheck.tracedata.CodeLocations
+import org.jetbrains.kotlinx.lincheck.tracedata.UNKNOWN_CODE_LOCATION_ID
 
 /**
  * The LoopDetector class identifies loops, active locks, and live locks by monitoring the frequency of visits to the same code location.
