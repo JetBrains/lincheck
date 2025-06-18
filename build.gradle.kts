@@ -1,6 +1,7 @@
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.dokka.gradle.DokkaTask
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -23,6 +24,7 @@ plugins {
     id("org.jetbrains.kotlinx.atomicfu")
     id("signing")
     id("maven-publish")
+    id("org.jetbrains.dokka")
     id("kotlinx.team.infra") version "0.4.0-dev-80"
 }
 
@@ -360,6 +362,22 @@ val sourcesJar = tasks.register<Jar>("sourcesJar") {
     from(project(":bootstrap").file("src"))
 }
 
+val dokkaHtml by tasks.named<DokkaTask>("dokkaHtml") {
+    outputDirectory.set(file("${layout.buildDirectory.get()}/javadoc"))
+    dokkaSourceSets {
+        named("main") {
+            sourceRoots.from(file("src/jvm/main"))
+            reportUndocumented.set(false)
+        }
+    }
+}
+
+val javadocJar by tasks.creating(Jar::class) {
+    dependsOn(dokkaHtml)
+    from("${layout.buildDirectory.get()}/javadoc")
+}
+
+
 tasks.withType<Jar> {
     dependsOn(bootstrapJar)
 
@@ -405,8 +423,9 @@ publishing {
             artifact(sourcesJar.get()) {
                 classifier = "sources"
             }
-            // TODO: we probably will have to configure and add javadoc, as it seemingly required by Maven Central
-            // artifact(tasks.javadoc)
+            artifact(javadocJar) {
+                classifier = "javadoc"
+            }
 
             pom {
                 this.name.set(name)
@@ -451,6 +470,7 @@ publishing {
 tasks.named("generateMetadataFileForMavenPublication") {
     dependsOn(jar)
     dependsOn(sourcesJar)
+    dependsOn(javadocJar)
 }
 
 tasks {
