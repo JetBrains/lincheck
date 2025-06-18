@@ -46,7 +46,7 @@ internal object TraceAgentParameters {
     }
 
     @JvmStatic
-    fun getResatOfArgs(): List<String> = restOfArgs
+    fun getRestOfArgs(): List<String> = restOfArgs
 
     @JvmStatic
     fun getClassAndMethod(): Pair<Class<*>, Method> {
