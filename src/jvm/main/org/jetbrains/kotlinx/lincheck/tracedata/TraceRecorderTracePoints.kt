@@ -38,7 +38,7 @@ class TRMethodCallTracePoint(
     val obj: TRObject?,
     val parameters: List<TRObject?>,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRTracePoint(threadId, codeLocationId, eventId) {
+) : TRTracePoint(codeLocationId, threadId, eventId) {
     var result: TRObject? = null
     var exceptionClassName: String? = null
     @Transient
@@ -93,7 +93,7 @@ class TRMethodCallTracePoint(
     }
 
     internal companion object {
-        fun load(inp: DataInput, threadId: Int, codeLocationId: Int, eventId: Int): TRMethodCallTracePoint {
+        fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRMethodCallTracePoint {
             val methodId = inp.readInt()
             val obj = inp.readTRObject()
             val pcount = inp.readInt()
@@ -134,7 +134,7 @@ class TRReadTracePoint(
     val obj: TRObject?,
     val value: TRObject?,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRTracePoint(threadId, codeLocationId, eventId) {
+) : TRTracePoint(codeLocationId, threadId, eventId) {
     override fun save(out: DataOutput) {
         super.save(out)
         out.writeInt(fieldId)
@@ -162,7 +162,7 @@ class TRReadTracePoint(
     }
 
     internal companion object {
-        fun load(inp: DataInput, threadId: Int, codeLocationId: Int, eventId: Int): TRReadTracePoint {
+        fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRReadTracePoint {
             return TRReadTracePoint(
                 threadId = threadId,
                 codeLocationId = codeLocationId,
@@ -182,7 +182,7 @@ class TRWriteTracePoint(
     val obj: TRObject?,
     val value: TRObject?,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRTracePoint(threadId, codeLocationId, eventId) {
+) : TRTracePoint(codeLocationId, threadId, eventId) {
     override fun save(out: DataOutput) {
         super.save(out)
         out.writeInt(fieldId)
@@ -210,7 +210,7 @@ class TRWriteTracePoint(
     }
 
     internal companion object {
-        fun load(inp: DataInput, threadId: Int, codeLocationId: Int, eventId: Int): TRWriteTracePoint {
+        fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRWriteTracePoint {
             return TRWriteTracePoint(
                 threadId = threadId,
                 codeLocationId = codeLocationId,
@@ -229,7 +229,7 @@ class TRReadLocalVariableTracePoint(
     val localVariableId: Int,
     val value: TRObject?,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRTracePoint(threadId, codeLocationId, eventId) {
+) : TRTracePoint(codeLocationId, threadId, eventId) {
     override fun save(out: DataOutput) {
         super.save(out)
         out.writeInt(localVariableId)
@@ -248,7 +248,7 @@ class TRReadLocalVariableTracePoint(
     }
 
     internal companion object {
-        fun load(inp: DataInput, threadId: Int, codeLocationId: Int, eventId: Int): TRReadLocalVariableTracePoint {
+        fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRReadLocalVariableTracePoint {
             return TRReadLocalVariableTracePoint(
                 threadId = threadId,
                 codeLocationId = codeLocationId,
@@ -266,7 +266,7 @@ class TRWriteLocalVariableTracePoint(
     val localVariableId: Int,
     val value: TRObject?,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRTracePoint(threadId, codeLocationId, eventId) {
+) : TRTracePoint(codeLocationId, threadId, eventId) {
     override fun save(out: DataOutput) {
         super.save(out)
         out.writeInt(localVariableId)
@@ -285,7 +285,7 @@ class TRWriteLocalVariableTracePoint(
     }
 
     internal companion object {
-        fun load(inp: DataInput, threadId: Int, codeLocationId: Int, eventId: Int): TRWriteLocalVariableTracePoint {
+        fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRWriteLocalVariableTracePoint {
             return TRWriteLocalVariableTracePoint(
                 threadId = threadId,
                 codeLocationId = codeLocationId,
@@ -304,7 +304,7 @@ class TRReadArrayTracePoint(
     val index: Int,
     val value: TRObject?,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRTracePoint(threadId, codeLocationId, eventId) {
+) : TRTracePoint(codeLocationId, threadId, eventId) {
     override fun save(out: DataOutput) {
         super.save(out)
         out.writeTRObject(array)
@@ -327,7 +327,7 @@ class TRReadArrayTracePoint(
     }
 
     internal companion object {
-        fun load(inp: DataInput, threadId: Int, codeLocationId: Int, eventId: Int): TRReadArrayTracePoint {
+        fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRReadArrayTracePoint {
             return TRReadArrayTracePoint(
                 threadId = threadId,
                 codeLocationId = codeLocationId,
@@ -347,7 +347,7 @@ class TRWriteArrayTracePoint(
     val index: Int,
     val value: TRObject?,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRTracePoint(threadId, codeLocationId, eventId) {
+) : TRTracePoint(codeLocationId, threadId, eventId) {
     override fun save(out: DataOutput) {
         super.save(out)
         out.writeTRObject(array)
@@ -370,7 +370,7 @@ class TRWriteArrayTracePoint(
     }
 
     internal companion object {
-        fun load(inp: DataInput, threadId: Int, codeLocationId: Int, eventId: Int): TRWriteArrayTracePoint {
+        fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRWriteArrayTracePoint {
             return TRWriteArrayTracePoint(
                 threadId = threadId,
                 codeLocationId = codeLocationId,
@@ -384,11 +384,11 @@ class TRWriteArrayTracePoint(
 }
 
 fun loadTRTracePoint(inp: DataInput): TRTracePoint {
-    val loader = getLoaderBy(inp.readByte())
-    val threadId = inp.readInt()
+    val loader = getLoaderByClassId(inp.readByte())
     val codeLocationId = inp.readInt()
+    val threadId = inp.readInt()
     val eventId = inp.readInt()
-    return loader(inp, threadId, codeLocationId, eventId)
+    return loader(inp, codeLocationId, threadId, eventId)
 }
 
 internal val classNameCache = IndexedPool<String>()
@@ -455,7 +455,7 @@ private fun getClassId(point: TRTracePoint): Int {
     }
 }
 
-private fun getLoaderBy(id: Byte): TRLoader {
+private fun getLoaderByClassId(id: Byte): TRLoader {
     return when (id.toInt()) {
         0 -> TRMethodCallTracePoint::load
         1 -> TRReadArrayTracePoint::load
