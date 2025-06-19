@@ -232,6 +232,7 @@ tasks {
         val testInTraceDebuggerMode: String by project
         if (testInTraceDebuggerMode.toBoolean()) {
             extraArgs.add("-Dlincheck.traceDebuggerMode=true")
+            exclude("**/lincheck_test/guide/*")
         }
         val dumpTransformedSources: String by project
         if (dumpTransformedSources.toBoolean()) {
@@ -398,5 +399,6 @@ publishing {
 }
 
 tasks.named("generateMetadataFileForMavenPublication") {
+    dependsOn(jar)
     dependsOn(sourcesJar)
 }

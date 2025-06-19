@@ -10,12 +10,12 @@
 
 package org.jetbrains.lincheck_test.guide
 
+import org.jetbrains.kotlinx.lincheck_test.datastructures.*
 import org.jetbrains.lincheck.*
 import org.jetbrains.lincheck.datastructures.*
-import org.jetbrains.kotlinx.lincheck_test.datastructures.MSQueueBlocking
 import org.junit.*
 
-class ObstructionFreedomViolationTest  {
+class ObstructionFreedomViolationTest {
     private val q = MSQueueBlocking()
 
     @Operation

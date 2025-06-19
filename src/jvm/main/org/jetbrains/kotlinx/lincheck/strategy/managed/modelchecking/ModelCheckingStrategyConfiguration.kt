@@ -77,7 +77,7 @@ class ModelCheckingCTestConfiguration(
     sequentialSpecification: Class<*>,
     timeoutMs: Long,
     customScenarios: List<ExecutionScenario>,
-    internal val stdLibAnalysisEnabled: Boolean,
+    stdLibAnalysisEnabled: Boolean,
 ) : ManagedCTestConfiguration(
     testClass = testClass,
     iterations = iterations,
@@ -94,7 +94,8 @@ class ModelCheckingCTestConfiguration(
     minimizeFailedScenario = minimizeFailedScenario,
     sequentialSpecification = sequentialSpecification,
     timeoutMs = timeoutMs,
-    customScenarios = customScenarios
+    customScenarios = customScenarios,
+    stdLibAnalysisEnabled = stdLibAnalysisEnabled,
 ) {
 
     override val instrumentationMode: InstrumentationMode get() = MODEL_CHECKING
@@ -111,13 +112,4 @@ class ModelCheckingCTestConfiguration(
         stateRepresentationMethod,
         createSettings()
     )
-
-    internal fun createSettings(): ManagedStrategySettings =
-        ManagedStrategySettings(
-            timeoutMs = this.timeoutMs,
-            hangingDetectionThreshold = this.hangingDetectionThreshold,
-            checkObstructionFreedom = this.checkObstructionFreedom,
-            analyzeStdLib = this.stdLibAnalysisEnabled,
-            guarantees = this.guarantees.ifEmpty { null },
-        )
 }

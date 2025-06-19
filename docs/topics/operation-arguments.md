@@ -44,7 +44,6 @@ For this, configure the generator for a `key: Int` parameter:
    import java.util.concurrent.*
    import org.jetbrains.lincheck.check
    import org.jetbrains.lincheck.datastructures.*
-   import org.jetbrains.kotlinx.lincheck.paramgen.*
    import org.junit.*
    
    class MultiMap<K, V> {

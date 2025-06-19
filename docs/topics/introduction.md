@@ -24,7 +24,7 @@ When creating a project, use the Gradle build system.
    
    dependencies {
        // Lincheck dependency
-       testImplementation("org.jetbrains.kotlinx:lincheck:%lincheckVersion%")
+       testImplementation("org.jetbrains.lincheck:lincheck:%lincheckVersion%")
        // This dependency allows you to work with kotlin.test and JUnit:
        testImplementation("junit:junit:4.13")
    }
@@ -40,7 +40,7 @@ When creating a project, use the Gradle build system.
    
    dependencies {
        // Lincheck dependency
-       testImplementation "org.jetbrains.kotlinx:lincheck:%lincheckVersion%"
+       testImplementation "org.jetbrains.lincheck:lincheck:%lincheckVersion%"
        // This dependency allows you to work with kotlin.test and JUnit:
        testImplementation "junit:junit:4.13"
    }

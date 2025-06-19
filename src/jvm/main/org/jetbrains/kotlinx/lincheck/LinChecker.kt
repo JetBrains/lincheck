@@ -12,6 +12,8 @@ package org.jetbrains.kotlinx.lincheck
 import org.jetbrains.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategySettings
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
@@ -131,7 +133,7 @@ constructor(private val testClass: Class<*>, options: Options<*, *>?) {
      * as the failing scenario might need to be minimized first.
      */
     private fun CTestConfiguration.runReplayForPlugin(failure: LincheckFailure, verifier: Verifier) {
-        if (ideaPluginEnabled && this is ModelCheckingCTestConfiguration) {
+        if (ideaPluginEnabled && this is ManagedCTestConfiguration) {
             runPluginReplay(
                 settings = this.createSettings(),
                 testClass = testClass,
