@@ -438,9 +438,11 @@ private fun visualizeTrace(): Array<Any>? = runCatching {
  *
  * The Debugger uses this information to enumerate objects.
  */
+@Suppress("UNUSED")
 private fun ObjectTracker.createObjectToNumberMapAsArray(testObject: Any?): Array<Any> {
     val resultArray = arrayListOf<Any>()
-    val numbersMap = if (testObject != null) enumerateReachableObjects(testObject) else enumerateAllObjects()
+    // val numbersMap = if (testObject != null) enumerateReachableObjects(testObject) else enumerateAllObjects()
+    val numbersMap = enumerateAllObjects()
     numbersMap.forEach { (any, objectNumber) ->
         resultArray.add(any)
         resultArray.add(objectNumber)
