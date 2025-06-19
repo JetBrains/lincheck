@@ -105,7 +105,8 @@ abstract class ManagedCTestConfiguration(
     minimizeFailedScenario: Boolean,
     sequentialSpecification: Class<*>,
     timeoutMs: Long,
-    customScenarios: List<ExecutionScenario>
+    customScenarios: List<ExecutionScenario>,
+    internal val stdLibAnalysisEnabled: Boolean,
 ) : CTestConfiguration(
     testClass = testClass,
     iterations = iterations,
@@ -121,6 +122,15 @@ abstract class ManagedCTestConfiguration(
     timeoutMs = timeoutMs,
     customScenarios = customScenarios
 ) {
+    internal fun createSettings(): ManagedStrategySettings =
+        ManagedStrategySettings(
+            timeoutMs = this.timeoutMs,
+            hangingDetectionThreshold = this.hangingDetectionThreshold,
+            checkObstructionFreedom = this.checkObstructionFreedom,
+            analyzeStdLib = this.stdLibAnalysisEnabled,
+            guarantees = this.guarantees.ifEmpty { null },
+        )
+
     companion object {
         const val DEFAULT_CHECK_OBSTRUCTION_FREEDOM = false
 
