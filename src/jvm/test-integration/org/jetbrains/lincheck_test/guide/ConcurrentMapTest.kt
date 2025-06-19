@@ -10,20 +10,12 @@
 
 package org.jetbrains.lincheck_test.guide
 
-import java.util.concurrent.*
 import org.jetbrains.lincheck.*
 import org.jetbrains.lincheck.datastructures.*
-import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
-import org.junit.Assume.assumeFalse
 import org.junit.*
-
+import java.util.concurrent.*
 
 class ConcurrentHashMapTest {
-    @Before
-    fun setUp() {
-        assumeFalse(isInTraceDebuggerMode) // .invocationsPerIteration must be 1 for the trace debugger
-    }
-    
     private val map = ConcurrentHashMap<Int, Int>()
 
     @Operation
@@ -37,16 +29,10 @@ class ConcurrentHashMapTest {
         .actorsAfter(0)
         .minimizeFailedScenario(false)
         .checkObstructionFreedom(true)
-        .analyzeStdLib(true)
         .check(this::class)
 }
 
 class ConcurrentSkipListMapTest {
-    @Before
-    fun setUp() {
-        assumeFalse(isInTraceDebuggerMode) // .invocationsPerIteration must be 1 for the trace debugger
-    }
-    
     private val map = ConcurrentSkipListMap<Int, Int>()
 
     @Operation

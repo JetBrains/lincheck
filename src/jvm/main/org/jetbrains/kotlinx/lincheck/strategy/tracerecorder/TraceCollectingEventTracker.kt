@@ -74,10 +74,23 @@ private class ThreadData(
     }
 }
 
+enum class TraceCollectorOutputType {
+    BINARY, TEXT, VERBOSE
+}
+
+fun String?.toTraceCollectorOutputType(): TraceCollectorOutputType {
+    if (this == null) return TraceCollectorOutputType.BINARY
+    for (v in TraceCollectorOutputType.entries) {
+        if (this.equals(v.name, ignoreCase = true)) return v
+    }
+    return TraceCollectorOutputType.BINARY
+}
+
 class TraceCollectingEventTracker(
     private val className: String,
     private val methodName: String,
-    private val traceDumpPath: String?
+    private val traceDumpPath: String?,
+    private val outputType: TraceCollectorOutputType
 ) :  EventTracker {
     // We don't want to re-create this object each time we need it
     private val analysisProfile: AnalysisProfile = AnalysisProfile(false)
@@ -102,6 +115,7 @@ class TraceCollectingEventTracker(
             obj = TRObject(Thread.currentThread()),
             parameters = emptyList()
         )
+        tracePoint.result = TR_OBJECT_VOID
         threadHandle.pushStackFrame(tracePoint, Thread.currentThread())
     }
 
@@ -210,13 +224,13 @@ class TraceCollectingEventTracker(
             threadId = threadHandle.threadId,
             codeLocationId = codeLocation,
             fieldId = fieldId,
-            obj = TRObject(obj),
-            value = TRObject(value)
+            obj = TRObjectOrNull(obj),
+            value = TRObjectOrNull(value)
         )
         threadHandle.currentMethodCallTracePoint().events.add(tracePoint)
     }
 
-    override fun afterReadArrayElement(array: Any?, index: Int, codeLocation: Int, value: Any?) {
+    override fun afterReadArrayElement(array: Any, index: Int, codeLocation: Int, value: Any?) {
         val threadHandle = threads[Thread.currentThread()] ?: return
 
         val tracePoint = TRReadArrayTracePoint(
@@ -246,8 +260,8 @@ class TraceCollectingEventTracker(
             threadId = threadHandle.threadId,
             codeLocationId = codeLocation,
             fieldId = fieldId,
-            obj = TRObject(obj),
-            value = TRObject(value)
+            obj = TRObjectOrNull(obj),
+            value = TRObjectOrNull(value)
         )
         threadHandle.currentMethodCallTracePoint().events.add(tracePoint)
         return false
@@ -265,7 +279,7 @@ class TraceCollectingEventTracker(
             codeLocationId = codeLocation,
             array = TRObject(array),
             index = index,
-            value = TRObject(value)
+            value = TRObjectOrNull(value)
         )
         threadHandle.currentMethodCallTracePoint().events.add(tracePoint)
         return false
@@ -280,7 +294,7 @@ class TraceCollectingEventTracker(
             threadId = threadHandle.threadId,
             codeLocationId = codeLocation,
             localVariableId = variableId,
-            value = TRObject(value)
+            value = TRObjectOrNull(value)
         )
         threadHandle.currentMethodCallTracePoint().events.add(tracePoint)
 
@@ -295,7 +309,7 @@ class TraceCollectingEventTracker(
             threadId = threadHandle.threadId,
             codeLocationId = codeLocation,
             localVariableId = variableId,
-            value = TRObject(value)
+            value = TRObjectOrNull(value)
         )
         threadHandle.currentMethodCallTracePoint().events.add(tracePoint)
 
@@ -321,8 +335,8 @@ class TraceCollectingEventTracker(
             threadId = threadHandle.threadId,
             codeLocationId = codeLocation,
             methodId = methodId,
-            obj = TRObject(receiver),
-            parameters = params.map { TRObject(it) }
+            obj = TRObjectOrNull(receiver),
+            parameters = params.map { TRObjectOrNull(it) }
         )
         threadHandle.currentMethodCallTracePoint().events.add(tracePoint)
         threadHandle.pushStackFrame(tracePoint, receiver)
@@ -344,7 +358,7 @@ class TraceCollectingEventTracker(
         val methodDescriptor = methodCache[methodId]
 
         val tracePoint = threadHandle.popStackFrame()
-        tracePoint.result = TRObject(result)
+        tracePoint.result = TRObjectOrVoid(result)
 
         val methodSection = methodAnalysisSectionType(receiver, methodDescriptor.className, methodDescriptor.methodName)
         threadHandle.leaveAnalysisSection(methodSection)
@@ -454,6 +468,7 @@ class TraceCollectingEventTracker(
             obj = null,
             parameters = emptyList()
         )
+        tracePoint.result = TR_OBJECT_VOID
         threadHandle.pushStackFrame(tracePoint, null)
 
         startTime = System.currentTimeMillis()
@@ -495,7 +510,11 @@ class TraceCollectingEventTracker(
                     roots.add(st.first())
                 }
             }
-            saveRecorderTrace(output, roots)
+            when (outputType) {
+                TraceCollectorOutputType.BINARY -> saveRecorderTrace(output, roots)
+                TraceCollectorOutputType.TEXT -> printRecorderTrace(output, roots, false)
+                TraceCollectorOutputType.VERBOSE -> printRecorderTrace(output, roots, true)
+            }
         } catch (t: Throwable) {
             System.err.println("TraceRecorder: Cannot write output file $traceDumpPath: ${t.message}")
             return

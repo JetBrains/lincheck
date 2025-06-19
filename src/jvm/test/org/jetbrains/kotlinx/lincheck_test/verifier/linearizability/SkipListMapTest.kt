@@ -26,7 +26,7 @@ class SkipListMapTest : AbstractLincheckTest() {
         }
         if (this is ModelCheckingOptions) analyzeStdLib(true)
     }
-    
+
     private val skiplistMap = ConcurrentSkipListMap<Int, Int>()
 
     @Operation

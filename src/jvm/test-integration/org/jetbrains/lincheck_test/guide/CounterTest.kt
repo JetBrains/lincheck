@@ -10,10 +10,10 @@
 
 package org.jetbrains.lincheck_test.guide
 
-import kotlin.concurrent.thread
-import org.jetbrains.lincheck.Lincheck
-import junit.framework.TestCase.assertEquals
-import org.junit.Test
+import junit.framework.TestCase.*
+import org.jetbrains.lincheck.*
+import org.junit.*
+import kotlin.concurrent.*
 
 
 class CounterTest {

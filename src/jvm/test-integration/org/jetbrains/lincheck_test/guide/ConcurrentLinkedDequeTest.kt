@@ -15,7 +15,6 @@ import org.jetbrains.lincheck.datastructures.*
 import java.util.concurrent.*
 import org.junit.*
 
-
 class ConcurrentLinkedDequeTest {
     private val deque = ConcurrentLinkedDeque<Int>()
 
@@ -40,6 +39,5 @@ class ConcurrentLinkedDequeTest {
     //@Test // TODO: Please, uncomment me and comment the line below to run the test and get the output
     @Test(expected = AssertionError::class)
     fun modelCheckingTest() = ModelCheckingOptions()
-        .analyzeStdLib(true)
         .check(this::class)
 }

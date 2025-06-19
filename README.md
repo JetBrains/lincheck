@@ -25,7 +25,7 @@ repositories {
 
 dependencies {
    // Lincheck dependency
-   testImplementation("org.jetbrains.kotlinx:lincheck:2.39")
+   testImplementation("org.jetbrains.lincheck:lincheck:2.39")
 }
 ```
 
@@ -105,13 +105,7 @@ verifies that the results of each invocation satisfy the required correctness pr
 The following Lincheck test easily finds a bug in the standard Java's `ConcurrentLinkedDeque`:
 
 ```kotlin
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.junit.*
-import java.util.concurrent.*
-
-class ConcurrentDequeTest {
+class ConcurrentLinkedDequeTest {
     private val deque = ConcurrentLinkedDeque<Int>()
 
     @Operation
