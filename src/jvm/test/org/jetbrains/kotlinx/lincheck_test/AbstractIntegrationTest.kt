@@ -74,7 +74,7 @@ abstract class AbstractIntegrationTest {
         checkRepresentation: Boolean = true,
     )
 
-    fun runGradleTest(
+    fun runGradleTests(
         testClassNamePrefix: String,
         extraJvmArgs: List<String> = emptyList(),
         extraAgentArgs: List<String> = emptyList(),

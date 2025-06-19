@@ -10,18 +10,15 @@
 
 package org.jetbrains.kotlinx.trace_recorder.integration
 
+import org.junit.Ignore
 import org.junit.Test
 
-class TraceRecorderDumbTest : AbstractTraceRecorderIntegrationTest() {
+class KotlinImmutableCollectionsTraceRecorderIntegrationTest : AbstractTraceRecorderIntegrationTest() {
     override val projectPath: String = "build/integrationTestProjects/kotlinx.collections.immutable"
 
+    @Ignore("Lambdas memory addresses differ between invocation. Trace should get rid of them.")
     @Test
-    fun dumbTest() {
-        println("Dumb trace recorder test!")
-    }
-
-    @Test
-    fun test() {
+    fun `tests_contract_list_ImmutableListTest empty`() {
         runGradleTest(
             testClassName = "tests.contract.list.ImmutableListTest",
             testMethodName = "empty",
@@ -29,6 +26,19 @@ class TraceRecorderDumbTest : AbstractTraceRecorderIntegrationTest() {
                 ":kotlinx-collections-immutable:cleanJvmTest",
                 ":kotlinx-collections-immutable:jvmTest",
             )
+        )
+    }
+
+    @Test
+    fun `tests_contract_list_ImmutableListTest`() {
+        runGradleTests(
+            testClassNamePrefix = "tests.contract.list.ImmutableListTest",
+            gradleBuildCommands = listOf("compileTestKotlinJvm"),
+            gradleTestCommands = listOf(
+                ":kotlinx-collections-immutable:cleanJvmTest",
+                ":kotlinx-collections-immutable:jvmTest",
+            ),
+            checkRepresentation = false
         )
     }
 }
