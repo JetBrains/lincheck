@@ -118,7 +118,16 @@ internal abstract class ManagedStrategy(
     protected abstract val parkingTracker: ParkingTracker
 
     // Snapshot of the memory, which will be restored between invocations
-    protected val memorySnapshot = SnapshotTracker()
+    protected val memorySnapshot = SnapshotTracker().apply {
+        if (isGeneralPurposeModelCheckingScenario(scenario)) {
+            // save fields referenced by lambda for restoring by the snapshot tracker
+            val actor = scenario.parallelExecution.getOrNull(0)?.getOrNull(0)
+            val lambdaBlock = actor?.arguments?.firstOrNull()
+            lambdaBlock?.javaClass?.declaredFields
+                ?.mapNotNull { readFieldSafely(lambdaBlock, it).getOrNull() }
+                ?.forEach(::trackObjectAsRoot)
+        }
+    }
 
     // Tracks content of constants (i.e., static final fields).
     // Stores a map `object -> fieldName`,
@@ -292,15 +301,6 @@ internal abstract class ManagedStrategy(
      */
     internal fun restoreMemorySnapshot() {
         memorySnapshot.restoreValues()
-    }
-
-    /**
-     * Tracks [obj] as a root object in memory snapshot.
-     *
-     * For details see [SnapshotTracker.trackObjectAsRoot].
-     */
-    internal fun updateSnapshotWithRootObject(obj: Any) {
-        memorySnapshot.trackObjectAsRoot(obj)
     }
 
     /**

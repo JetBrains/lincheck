@@ -38,11 +38,6 @@ import java.util.concurrent.atomic.AtomicReferenceArray
 class SnapshotTracker {
     private val trackedObjects = IdentityHashMap<Any, MutableList<MemoryNode>>()
 
-    /**
-     * Stores manually saved root objects, which will be the starting objects during the traversal when restoring snapshot.
-     */
-    private val rootObjects = Collections.newSetFromMap(IdentityHashMap<Any, Boolean>())
-
     private sealed class MemoryNode(
         val initialValue: Any?
     ) {
@@ -103,14 +98,15 @@ class SnapshotTracker {
     }
 
     /**
-     * Puts [obj] to the [rootObjects] set, elements of which will be used as starting
-     * objects during [restoreValues] invocation.
+     * Starts tracking provided [obj], fields of which later will be restored.
      */
     fun trackObjectAsRoot(obj: Any) {
-        rootObjects.add(obj)
         trackedObjects.putIfAbsent(obj, mutableListOf())
     }
 
+    /**
+     * Tracks all objects reachable from [objs], but only for those which are already tracked.
+     */
     fun trackObjects(objs: Array<Any?>) {
         // in case this works too slowly, an optimization could be used
         // see https://github.com/JetBrains/lincheck/pull/418/commits/eb9a9a25f0c57e5b5bdf55dac8f38273ffc7dd8a#diff-a684b1d7deeda94bbf907418b743ae2c0ec0a129760d3b87d00cdf5adfab56c4R146-R199
@@ -121,16 +117,7 @@ class SnapshotTracker {
 
     fun restoreValues() {
         val visitedObjects = Collections.newSetFromMap(IdentityHashMap<Any, Boolean>())
-        getRootObjects().forEach { restoreValues(it, visitedObjects) }
-    }
-
-    /**
-     * Returns all `Class<*>` instances and manually saved root objects from [rootObjects].
-     */
-    private fun getRootObjects(): List<Any> {
-        return trackedObjects.keys
-            .filterIsInstance<Class<*>>()
-            .plus(rootObjects)
+        trackedObjects.keys.forEach { restoreValues(it, visitedObjects) }
     }
 
     private fun isTracked(obj: Any): Boolean = obj in trackedObjects

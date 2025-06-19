@@ -25,7 +25,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelChecki
 import org.jetbrains.kotlinx.lincheck.strategy.runIteration
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.ensureObjectIsTransformed
 import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
-import org.jetbrains.kotlinx.lincheck.util.readFieldSafely
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import kotlin.reflect.KClass
 
@@ -87,15 +86,9 @@ object Lincheck {
             val verifier = testCfg.createVerifier()
             val wrapperClass = GeneralPurposeModelCheckingWrapper::class.java
             testCfg.createStrategy(wrapperClass, scenario, null, null).use { strategy ->
-                check(strategy is ModelCheckingStrategy)
-
-                // save fields referenced by lambda for restoring by the snapshot tracker
-                block.javaClass.declaredFields
-                    .mapNotNull { readFieldSafely(block, it).getOrNull() }
-                    .forEach(strategy::updateSnapshotWithRootObject)
-
                 val failure = strategy.runIteration(invocations, verifier)
                 if (failure != null) {
+                    check(strategy is ModelCheckingStrategy)
                     if (ideaPluginEnabled) {
                         runPluginReplay(
                             settings = testCfg.createSettings(),
