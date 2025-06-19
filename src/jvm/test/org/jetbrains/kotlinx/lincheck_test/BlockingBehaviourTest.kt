@@ -33,12 +33,12 @@ class BlockingOperationTest {
 class CausesBlockingOperationTest {
     private val counter = atomic(0)
 
-    @Operation
+    @Operation(blocking = true)
     fun operation() {
         while (counter.value % 2 != 0) {}
     }
 
-    @Operation(causesBlocking = true)
+    @Operation
     fun causesBlocking() {
         counter.incrementAndGet()
         counter.incrementAndGet()

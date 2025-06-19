@@ -506,13 +506,13 @@ public class CTestStructure {
         return new OperationConfig(
             opAnn.params(),
             opAnn.runOnce(),
-            opAnn.group(),
+            "",
             opAnn.nonParallelGroup(),
-            opAnn.handleExceptionsAsResult(),
+            new Class[0],
             opAnn.cancellableOnSuspension(),
-            opAnn.allowExtraSuspension(),
+            true,
             opAnn.blocking(),
-            opAnn.causesBlocking(),
+            false,
             opAnn.promptCancellation()
         );
     }
