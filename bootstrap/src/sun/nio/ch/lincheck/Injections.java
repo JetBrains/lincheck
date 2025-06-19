@@ -39,10 +39,10 @@ public class Injections {
     /**
      * This field is updated from the debugger to request a specific ID.
      * <p>
-     * The default value is calling always for compatibility with old plugin versions.
+     * Initially not triggered, then it is updated from the debugger to the desired ID.
      */
     @SuppressWarnings({"FieldMayBeFinal", "FieldCanBeLocal"})
-    private static int requestedBeforeEventId = STOP_AT_NEXT_EVENT_ID;
+    private static int requestedBeforeEventId = DO_NOT_TRIGGER_BEFORE_EVENT;
 
     /**
      * This field is used by the debugger to have a fast source of current ID.
