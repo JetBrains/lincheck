@@ -21,7 +21,7 @@ internal fun java.lang.reflect.Method.toMethodSignature() = Method.getMethod(thi
  */
 internal val methodCache = IndexedPool<MethodDescriptor>()
 
-internal data class MethodDescriptor(
+data class MethodDescriptor(
     val className: String,
     val methodSignature: MethodSignature
 ) {
