@@ -4,7 +4,7 @@ java.lang.IllegalStateException: Check failed.
 	at org.jetbrains.kotlinx.lincheck_test.representation.ThreadSafeCollectionMutedLambdaRepresentationTest.block(StdLibRepresentationTests.kt:59)
 	at org.jetbrains.kotlinx.lincheck_test.representation.ThreadSafeCollectionMutedLambdaRepresentationTest.block(StdLibRepresentationTests.kt:46)
 	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:49)
-	at java.base/java.lang.Thread.run(Thread.java:840)
+	at java.lang.Thread.run(Thread.java:750)
 
 The following interleaving leads to the error:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -20,11 +20,11 @@ Detailed trace:
 | $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:49) |
 |   block(): threw IllegalStateException at ThreadSafeCollectionMutedLambdaRepresentationTest.block(StdLibRepresentationTests.kt:46)                                              |
 |     concurrentMap.computeIfAbsent(1, Lambda#2): 7 at ThreadSafeCollectionMutedLambdaRepresentationTest.block(StdLibRepresentationTests.kt:53)                                   |
-|       mappingFunction.apply(1): 7 at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1708)                                                                             |
+|       Lambda#2.apply(1): 7 at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1660)                                                                                    |
 |         $tmp0.invoke(1): 7 at ThreadSafeCollectionMutedLambdaRepresentationTest.block$lambda$3(StdLibRepresentationTests.kt:53)                                                 |
 |           this$0.a = 5 at ThreadSafeCollectionMutedLambdaRepresentationTest.block$lambda$2(StdLibRepresentationTests.kt:54)                                                     |
 |           innerConcurrentMap.computeIfAbsent(1, Lambda#3): 6 at ThreadSafeCollectionMutedLambdaRepresentationTest.block$lambda$2(StdLibRepresentationTests.kt:55)               |
-|             mappingFunction.apply(1): 6 at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1708)                                                                       |
+|             Lambda#3.apply(1): 6 at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1660)                                                                              |
 |               $tmp0.invoke(1): 6 at ThreadSafeCollectionMutedLambdaRepresentationTest.block$lambda$2$lambda$1(StdLibRepresentationTests.kt:55)                                  |
 |                 this$0.a ➜ 5 at ThreadSafeCollectionMutedLambdaRepresentationTest.block$lambda$2$lambda$0(StdLibRepresentationTests.kt:55)                                      |
 |                 this$0.a = 6 at ThreadSafeCollectionMutedLambdaRepresentationTest.block$lambda$2$lambda$0(StdLibRepresentationTests.kt:55)                                      |

@@ -27,11 +27,13 @@ import java.util.concurrent.atomic.AtomicReferenceArray
 
 
 /**
- * Manages a snapshot of the global static state.
+ * Manages a snapshot of the global static state or manually added *root*-objects.
  *
- * This class only tracks static memory and memory reachable from it,
+ * This class tracks static memory and memory reachable from it,
  * referenced from the test code. So the whole static state is not recorded, but only a subset of that,
  * which is named *snapshot*.
+ *
+ * Also, manual addition of required to restore objects is possible.
  */
 class SnapshotTracker {
     private val trackedObjects = IdentityHashMap<Any, MutableList<MemoryNode>>()
@@ -95,6 +97,16 @@ class SnapshotTracker {
         }
     }
 
+    /**
+     * Starts tracking provided [obj], fields of which later will be restored.
+     */
+    fun trackObjectAsRoot(obj: Any) {
+        trackedObjects.putIfAbsent(obj, mutableListOf())
+    }
+
+    /**
+     * Tracks all objects reachable from [objs], but only for those which are already tracked.
+     */
     fun trackObjects(objs: Array<Any?>) {
         // in case this works too slowly, an optimization could be used
         // see https://github.com/JetBrains/lincheck/pull/418/commits/eb9a9a25f0c57e5b5bdf55dac8f38273ffc7dd8a#diff-a684b1d7deeda94bbf907418b743ae2c0ec0a129760d3b87d00cdf5adfab56c4R146-R199
@@ -105,9 +117,7 @@ class SnapshotTracker {
 
     fun restoreValues() {
         val visitedObjects = Collections.newSetFromMap(IdentityHashMap<Any, Boolean>())
-        trackedObjects.keys
-            .filterIsInstance<Class<*>>()
-            .forEach { restoreValues(it, visitedObjects) }
+        trackedObjects.keys.forEach { restoreValues(it, visitedObjects) }
     }
 
     private fun isTracked(obj: Any): Boolean = obj in trackedObjects
