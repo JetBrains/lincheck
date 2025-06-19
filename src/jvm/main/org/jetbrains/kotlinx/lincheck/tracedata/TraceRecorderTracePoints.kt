@@ -91,7 +91,7 @@ class TRMethodCallTracePoint(
             if (i != 0) {
                 sb.append(", ")
             }
-            sb.append(it.toShortString())
+            sb.append(it.toString())
         }
         sb.append(')')
         if (exceptionClassName != null) {
@@ -99,13 +99,15 @@ class TRMethodCallTracePoint(
                 .append(exceptionClassName)
         } else if (result != TR_OBJECT_VOID) {
             sb.append(": ")
-            sb.append(result.toShortString())
+            sb.append(result.toString())
         }
         sb.append(codeLocationId, verbose)
         return sb.toString()
     }
 
     internal companion object {
+        const val id = 0
+
         fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRMethodCallTracePoint {
             val methodId = inp.readInt()
             val obj = inp.readTRObject()
@@ -178,7 +180,7 @@ sealed class TRFieldTracePoint(
         sb.append('.')
             .append(fd.fieldName)
             .append(directionSymbol)
-            .append(value.toShortString())
+            .append(value.toString())
 
         sb.append(codeLocationId, verbose)
         return sb.toString()
@@ -256,7 +258,7 @@ sealed class TRLocalVariableTracePoint(
         val sb = StringBuilder()
         sb.append(vd.name)
             .append(directionSymbol)
-            .append(value.toShortString())
+            .append(value.toString())
 
         sb.append(codeLocationId, verbose)
         return sb.toString()
@@ -333,7 +335,7 @@ sealed class TRArrayTracePoint(
             .append(index)
             .append("]")
             .append(directionSymbol)
-            .append(value.toShortString())
+            .append(value.toString())
 
         sb.append(codeLocationId, verbose)
         return sb.toString()
@@ -382,7 +384,7 @@ class TRWriteArrayTracePoint(
             .append('[')
             .append(index)
             .append("] ← ")
-            .append(value.toShortString())
+            .append(value.toString())
 
         sb.append(codeLocationId, verbose)
         return sb.toString()
@@ -412,21 +414,53 @@ fun loadTRTracePoint(inp: DataInput): TRTracePoint {
 
 internal val classNameCache = IndexedPool<String>()
 
-data class TRObject(
+@ConsistentCopyVisibility
+data class TRObject internal constructor (
     internal val classNameId: Int,
     val identityHashCode: Int,
+    internal val primitiveValue: Any?
 ) {
-    constructor(className: String, identityHashCode: Int):
-            this(classNameCache.getOrCreateId(className), identityHashCode)
+    val className: String  get() = primitiveValue?.javaClass?.name ?: classNameCache[classNameId]
+    val isPrimitive: Boolean get() = primitiveValue != null
+    val value: Any? get() = primitiveValue
 
-    val className get() = classNameCache[classNameId]
+    override fun toString(): String {
+        return if (primitiveValue != null) {
+            when (primitiveValue) {
+                is String -> {
+                    // Max 1KB of text and no more than 1 line (till CR and/or LF)
+                    val v = primitiveValue.take(1024).takeWhile({ it != '\r' && it != '\n' })
+                    "\"$v${if (v != primitiveValue) " (...)" else ""}\""
+                }
+                is Char -> "'$primitiveValue'"
+                is Unit -> "Unit"
+                else -> primitiveValue.toString()
+            }
+        } else if (classNameId == TR_OBJECT_NULL_CLASSNAME) {
+            "null"
+        } else if (classNameId == TR_OBJECT_VOID_CLASSNAME) {
+            "void"
+        } else {
+            className.substringAfterLast(".") + "@" + identityHashCode
+        }
+    }
 }
 
 private const val TR_OBJECT_NULL_CLASSNAME = -1
-val TR_OBJECT_NULL = TRObject(TR_OBJECT_NULL_CLASSNAME, 0)
+val TR_OBJECT_NULL = TRObject(TR_OBJECT_NULL_CLASSNAME, 0, null)
 
 private const val TR_OBJECT_VOID_CLASSNAME = -2
-val TR_OBJECT_VOID = TRObject(TR_OBJECT_VOID_CLASSNAME, 0)
+val TR_OBJECT_VOID = TRObject(TR_OBJECT_VOID_CLASSNAME, 0, null)
+
+private const val TR_OBJECT_P_BYTE = TR_OBJECT_VOID_CLASSNAME - 1
+private const val TR_OBJECT_P_SHORT = TR_OBJECT_P_BYTE - 1
+private const val TR_OBJECT_P_INT = TR_OBJECT_P_SHORT - 1
+private const val TR_OBJECT_P_LONG = TR_OBJECT_P_INT - 1
+private const val TR_OBJECT_P_FLOAT = TR_OBJECT_P_LONG - 1
+private const val TR_OBJECT_P_DOUBLE = TR_OBJECT_P_FLOAT - 1
+private const val TR_OBJECT_P_CHAR = TR_OBJECT_P_DOUBLE - 1
+private const val TR_OBJECT_P_STRING = TR_OBJECT_P_CHAR - 1
+private const val TR_OBJECT_P_UNIT = TR_OBJECT_P_STRING - 1
 
 fun TRObjectOrNull(obj: Any?): TRObject? =
     obj?.let { TRObject(it) }
@@ -435,20 +469,48 @@ fun TRObjectOrVoid(obj: Any?): TRObject? =
     if (obj == INJECTIONS_VOID_OBJECT) TR_OBJECT_VOID
     else TRObjectOrNull(obj)
 
-fun TRObject(obj: Any): TRObject = TRObject(obj::class.java.name, System.identityHashCode(obj))
-
-fun TRObject?.toShortString(): String {
-    if (this == null || classNameId < 0) return "null"
-    return classNameCache[classNameId].substringAfterLast(".") + "@" + identityHashCode
+fun TRObject(obj: Any): TRObject {
+    return when (obj) {
+        is Byte -> TRObject(TR_OBJECT_P_BYTE, 0, obj)
+        is Short -> TRObject(TR_OBJECT_P_SHORT, 0, obj)
+        is Int -> TRObject(TR_OBJECT_P_INT, 0, obj)
+        is Long -> TRObject(TR_OBJECT_P_LONG, 0, obj)
+        is Float -> TRObject(TR_OBJECT_P_FLOAT, 0, obj)
+        is Double -> TRObject(TR_OBJECT_P_DOUBLE, 0, obj)
+        is Char -> TRObject(TR_OBJECT_P_CHAR, 0, obj)
+        is String -> TRObject(TR_OBJECT_P_STRING, 0, obj)
+        is CharSequence -> TRObject(TR_OBJECT_P_STRING, 0, obj.toString())
+        is Unit -> TRObject(TR_OBJECT_P_UNIT, 0, obj)
+        else -> TRObject(classNameCache.getOrCreateId(obj.javaClass.name), System.identityHashCode(obj), null)
+    }
 }
 
 private fun DataOutput.writeTRObject(value: TRObject?) {
-    val cnid = value?.classNameId ?: -1
-    if (cnid < 0) {
-        writeInt(cnid)
-    } else {
-        writeInt(value!!.classNameId)
+    // null
+    if (value == null) {
+        writeInt(TR_OBJECT_NULL_CLASSNAME)
+        return
+    }
+    // Negatives are special markers
+    writeInt(value.classNameId)
+    if (value.classNameId >= 0) {
         writeInt(value.identityHashCode)
+        return
+    }
+    if (value.classNameId > TR_OBJECT_P_BYTE) {
+        return
+    }
+    when (value.primitiveValue) {
+        is Byte -> writeByte(value.primitiveValue.toInt())
+        is Short -> writeShort(value.primitiveValue.toInt())
+        is Int -> writeInt(value.primitiveValue)
+        is Long -> writeLong(value.primitiveValue)
+        is Float -> writeFloat(value.primitiveValue)
+        is Double -> writeDouble(value.primitiveValue)
+        is Char -> writeChar(value.primitiveValue.code)
+        is String -> writeUTF(value.primitiveValue)
+        is Unit -> {}
+        else -> error("Unknow primitive value ${value.primitiveValue}")
     }
 }
 
@@ -456,7 +518,22 @@ private fun DataInput.readTRObject(): TRObject? {
     return when (val classNameId = readInt()) {
         TR_OBJECT_NULL_CLASSNAME -> null
         TR_OBJECT_VOID_CLASSNAME -> TR_OBJECT_VOID
-        else -> TRObject(classNameCache[classNameId], readInt())
+        TR_OBJECT_P_BYTE -> TRObject(classNameId, 0, readByte())
+        TR_OBJECT_P_SHORT -> TRObject(classNameId, 0, readShort())
+        TR_OBJECT_P_INT -> TRObject(classNameId, 0, readInt())
+        TR_OBJECT_P_LONG -> TRObject(classNameId, 0, readLong())
+        TR_OBJECT_P_FLOAT -> TRObject(classNameId, 0, readFloat())
+        TR_OBJECT_P_DOUBLE -> TRObject(classNameId, 0, readDouble())
+        TR_OBJECT_P_CHAR -> TRObject(classNameId, 0, readChar())
+        TR_OBJECT_P_STRING -> TRObject(classNameId, 0, readUTF())
+        TR_OBJECT_P_UNIT -> TRObject(classNameId, 0, Unit)
+        else -> {
+            if (classNameId >= 0) {
+                TRObject(classNameId, readInt(), null)
+            } else {
+                error("TRObject: Unknown Class Id $classNameId")
+            }
+        }
     }
 }
 
