@@ -16,7 +16,7 @@ import java.nio.file.Paths
 abstract class AbstractTraceDebuggerIntegrationTest : AbstractIntegrationTest() {
     override val testSourcesPath = Paths.get("src", "jvm", "test-trace-debugger-integration").toString()
 
-    override fun runGradleTest(
+    final override fun runGradleTest(
         testClassName: String,
         testMethodName: String,
         extraJvmArgs: List<String>,
