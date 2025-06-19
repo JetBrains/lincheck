@@ -126,7 +126,7 @@ fun Strategy.runIteration(invocations: Int, verifier: Verifier): LincheckFailure
             // verifier calls `@Operation`s of the class under test which can
             // modify the static memory; thus, we need to restore initial values
             if (this is ManagedStrategy) {
-                restoreStaticMemorySnapshot()
+                restoreMemorySnapshot()
             }
         }
         if (failure != null) return failure
