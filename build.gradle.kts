@@ -78,6 +78,15 @@ sourceSets {
         }
     }
 
+    create("traceRecorderTest") {
+        java.srcDir("src/jvm/test-trace-recorder-integration")
+        configureClasspath()
+
+        resources {
+            srcDir("src/jvm/test-trace-recorder-integration/resources")
+        }
+    }
+
     dependencies {
         // main
         val kotlinVersion: String by project
@@ -101,10 +110,13 @@ sourceSets {
         val junitVersion: String by project
         val jctoolsVersion: String by project
         val mockkVersion: String by project
+        val slf4jVersion: String by project
+        val gradleToolingApiVersion: String by project
 
         testImplementation("junit:junit:$junitVersion")
         testImplementation("org.jctools:jctools-core:$jctoolsVersion")
         testImplementation("io.mockk:mockk:${mockkVersion}")
+        testImplementation("org.gradle:gradle-tooling-api:${gradleToolingApiVersion}")
 
         // integrationTest
         val integrationTestImplementation by configurations
@@ -114,13 +126,20 @@ sourceSets {
         integrationTestImplementation("org.jctools:jctools-core:$jctoolsVersion")
 
         // traceDebuggerTest
-        val gradleToolingApiVersion: String by project
         val traceDebuggerTestImplementation by configurations
         val traceDebuggerTestRuntimeOnly by configurations
 
         traceDebuggerTestImplementation("junit:junit:$junitVersion")
         traceDebuggerTestImplementation("org.gradle:gradle-tooling-api:${gradleToolingApiVersion}")
-        traceDebuggerTestRuntimeOnly("org.slf4j:slf4j-simple:1.7.10")
+        traceDebuggerTestRuntimeOnly("org.slf4j:slf4j-simple:$slf4jVersion")
+
+        // traceRecorderTest
+        val traceRecorderTestImplementation by configurations
+        val traceRecorderTestRuntimeOnly by configurations
+
+        traceRecorderTestImplementation("junit:junit:$junitVersion")
+        traceRecorderTestImplementation("org.gradle:gradle-tooling-api:${gradleToolingApiVersion}")
+        traceRecorderTestRuntimeOnly("org.slf4j:slf4j-simple:$slf4jVersion")
     }
 }
 
@@ -156,6 +175,13 @@ tasks {
     named<KotlinCompile>("compileTraceDebuggerTestKotlin") {
         setupKotlinToolchain()
     }
+
+    named<JavaCompile>("compileTraceRecorderTestJava") {
+        setupJavaToolchain()
+    }
+    named<KotlinCompile>("compileTraceRecorderTestKotlin") {
+        setupKotlinToolchain()
+    }
 }
 
 fun JavaCompile.setupJavaToolchain() {
@@ -181,6 +207,9 @@ kotlin {
         configureAssociation()
     }
     target.compilations.named("traceDebuggerTest") {
+        configureAssociation()
+    }
+    target.compilations.named("traceRecorderTest") {
         configureAssociation()
     }
 }
@@ -253,6 +282,7 @@ tasks {
             extraArgs.add("-Dlincheck.traceDebuggerMode=true")
             exclude("**/lincheck_test/guide/*")
         }
+        // TODO: do we need testInTraceRecorderMode in the gradle.properties then?
         val dumpTransformedSources: String by project
         if (dumpTransformedSources.toBoolean()) {
             extraArgs.add("-Dlincheck.dumpTransformedSources=true")
@@ -327,9 +357,10 @@ tasks {
         outputs.upToDateWhen { false } // Always run tests when called
     }
 
-    registerTraceDebuggerIntegrationTestsPrerequisites()
+    registerTraceAgentIntegrationTestsPrerequisites()
 
     val traceDebuggerIntegrationTest = register<Test>("traceDebuggerIntegrationTest") {
+        configureJvmTestCommon()
         group = "verification"
         include("org/jetbrains/kotlinx/trace_debugger/integration/*")
 
@@ -337,7 +368,19 @@ tasks {
         classpath = sourceSets["traceDebuggerTest"].runtimeClasspath
 
         outputs.upToDateWhen { false } // Always run tests when called
-        dependsOn(traceDebuggerIntegrationTestsPrerequisites)
+        dependsOn(traceAgentIntegrationTestsPrerequisites)
+    }
+
+    val traceRecorderIntegrationTest = register<Test>("traceRecorderIntegrationTest") {
+        configureJvmTestCommon()
+        group = "verification"
+        include("org/jetbrains/kotlinx/trace_recorder/integration/*")
+
+        testClassesDirs = sourceSets["traceRecorderTest"].output.classesDirs
+        classpath = sourceSets["traceRecorderTest"].runtimeClasspath
+
+        outputs.upToDateWhen { false } // Always run tests when called
+        dependsOn(traceAgentIntegrationTestsPrerequisites) // TODO: do we need it here?
     }
 
     check {
@@ -345,7 +388,7 @@ tasks {
     }
 }
 
-registerTraceDebuggerTasks()
+registerTraceAgentTasks()
 
 val bootstrapJar = tasks.register<Copy>("bootstrapJar") {
     dependsOn(":bootstrap:jar")

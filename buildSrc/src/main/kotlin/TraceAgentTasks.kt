@@ -18,8 +18,8 @@ import org.gradle.kotlin.dsl.register
 import org.gradle.api.plugins.JavaPluginExtension
 
 // Below are tasks that are used by the trace debugger plugin.
-// When these jars are loaded the `-Dlincheck.traceDebuggerMode=true` VM argument is expected
-fun Project.registerTraceDebuggerTasks() {
+// When these jars are loaded the `-Dlincheck.traceDebuggerMode=true` or `-Dlincheck.traceRecorderMode=true` VM argument is expected
+fun Project.registerTraceAgentTasks() {
     // Ensure the Java plugin is applied (for sourceSets and runtimeClasspath)
     plugins.apply("java")
 
@@ -28,7 +28,7 @@ fun Project.registerTraceDebuggerTasks() {
 
     val runtimeClasspath = configurations.getByName("runtimeClasspath")
 
-    val traceDebuggerFatJar = tasks.register<Jar>("traceDebuggerFatJar") {
+    val traceAgentFatJar = tasks.register<Jar>("traceAgentFatJar") {
         archiveBaseName.set("lincheck-fat")
         archiveVersion.set("")
         duplicatesStrategy = DuplicatesStrategy.EXCLUDE
@@ -57,7 +57,7 @@ fun Project.registerTraceDebuggerTasks() {
     }
 
     // This jar is useful to add as a dependency to a test project to be able to debug
-    val traceDebuggerJarNoDeps = tasks.register<Jar>("traceDebuggerJarNoDeps") {
+    val traceAgentJarNoDeps = tasks.register<Jar>("traceAgentJarNoDeps") {
         archiveBaseName.set("nodeps-trace-debugger")
         duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 

@@ -97,8 +97,8 @@ class TRMethodCallTracePoint(
         }
         sb.append(')')
         if (exceptionClassName != null) {
-            sb.append(": THROWS EXCEPTION")
-                .append(exceptionClassName)
+            sb.append(": threw ")
+            sb.append(exceptionClassName)
         } else if (result != TR_OBJECT_VOID) {
             sb.append(": ")
             sb.append(result.toString())

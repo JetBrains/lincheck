@@ -19,9 +19,9 @@ class TraceDebuggerExamplesTraceDebuggerIntegrationTest: AbstractTraceDebuggerIn
     @Test
     fun `tests org_examples_integration_bugs_LinkedHashSetTest putAnObjectWithoutDefinedHashCode`() {
         runGradleTest(
-            "org.examples.integration.bugs.LinkedHashSetTest",
-            "putAnObjectWithoutDefinedHashCode",
-            listOf(":test"),
+            testClassName = "org.examples.integration.bugs.LinkedHashSetTest",
+            testMethodName = "putAnObjectWithoutDefinedHashCode",
+            gradleCommands = listOf(":test"),
         )
     }
 
@@ -29,9 +29,9 @@ class TraceDebuggerExamplesTraceDebuggerIntegrationTest: AbstractTraceDebuggerIn
     @Test
     fun `tests org_examples_integration_bugs_ReflectionTest sortMethods`() {
         runGradleTest(
-            "org.examples.integration.bugs.ReflectionTest",
-            "sortMethods",
-            listOf(":test"),
+            testClassName = "org.examples.integration.bugs.ReflectionTest",
+            testMethodName = "sortMethods",
+            gradleCommands = listOf(":test"),
         )
     }
 }

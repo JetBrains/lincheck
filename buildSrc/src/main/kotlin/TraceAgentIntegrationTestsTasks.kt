@@ -16,10 +16,11 @@ import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.kotlin.dsl.register
 
-class GithubProjectSnapshot(val organization: String = "Kotlin", val repositoryName: String, val commitHash: String)
+class GithubProjectSnapshot(val organization: String, val repositoryName: String, val commitHash: String)
 
 private val projectsToTest = listOf(
     GithubProjectSnapshot(
+        organization = "Kotlin",
         repositoryName = "kotlinx.collections.immutable",
         commitHash = "592f05fce02a1ad9e26cc6f3fdb55cdd97910599"
     ),
@@ -27,12 +28,17 @@ private val projectsToTest = listOf(
         organization = "ivandev0",
         repositoryName = "TraceDebuggerExamples",
         commitHash = "e3f39b1cb9dd8b3b4942015d57ef5ce0f5f37c6b"
+    ),
+    GithubProjectSnapshot(
+        organization = "Kotlin",
+        repositoryName = "kotlinx.coroutines",
+        commitHash = "f4f519b36734238ec686dfaec1e174086691781e"
     )
 )
 
-lateinit var traceDebuggerIntegrationTestsPrerequisites: TaskProvider<Task>
+lateinit var traceAgentIntegrationTestsPrerequisites: TaskProvider<Task>
 
-fun Project.registerTraceDebuggerIntegrationTestsPrerequisites() {
+fun Project.registerTraceAgentIntegrationTestsPrerequisites() {
     val unzippedTestProjectsDir = layout.buildDirectory.dir("integrationTestProjects")
     val prerequisite = projectsToTest.map { projectToTest ->
         val projectName = projectToTest.repositoryName
@@ -60,8 +66,8 @@ fun Project.registerTraceDebuggerIntegrationTestsPrerequisites() {
         }
     }
 
-    traceDebuggerIntegrationTestsPrerequisites = tasks.register("traceDebuggerIntegrationTestsPrerequisites") {
+    traceAgentIntegrationTestsPrerequisites = tasks.register("traceAgentIntegrationTestsPrerequisites") {
         prerequisite.forEach { dependsOn(it) }
-        dependsOn("traceDebuggerFatJar")
+        dependsOn("traceAgentFatJar")
     }
 }
