@@ -1333,7 +1333,7 @@ internal abstract class ManagedStrategy(
             return false
         }
         updateSnapshotOnFieldAccess(obj, fieldDescriptor.className, fieldDescriptor.fieldName)
-        objectTracker?.registerObjectLink(fromObject = obj, toObject = value)
+        objectTracker.registerObjectLink(fromObject = obj, toObject = value)
         if (!shouldTrackFieldAccess(obj, fieldDescriptor)) {
             return false
         }
@@ -1361,7 +1361,7 @@ internal abstract class ManagedStrategy(
 
     override fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int): Boolean = runInsideIgnoredSection {
         updateSnapshotOnArrayElementAccess(array, index)
-        objectTracker?.registerObjectLink(fromObject = array, toObject = value)
+        objectTracker.registerObjectLink(fromObject = array, toObject = value)
 
         if (!shouldTrackArrayAccess(array)) {
             return false
@@ -1452,7 +1452,7 @@ internal abstract class ManagedStrategy(
         if (obj.isImmutable) return
         runInsideIgnoredSection {
             identityHashCodeTracker.afterNewTrackedObjectCreation(obj)
-            objectTracker?.registerNewObject(obj)
+            objectTracker.registerNewObject(obj)
         }
     }
 
@@ -1653,7 +1653,7 @@ internal abstract class ManagedStrategy(
         }
         // in case of atomics API setter method call, notify the object tracker about a new link between objects
         if (atomicMethodDescriptor != null && atomicMethodDescriptor.kind.isSetter) {
-            objectTracker?.registerObjectLink(
+            objectTracker.registerObjectLink(
                 fromObject = atomicMethodDescriptor.getAccessedObject(receiver!!, params),
                 toObject = atomicMethodDescriptor.getSetValue(receiver, params)
             )
