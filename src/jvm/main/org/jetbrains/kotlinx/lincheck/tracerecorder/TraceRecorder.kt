@@ -8,7 +8,7 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.strategy.tracerecorder
+package org.jetbrains.kotlinx.lincheck.tracerecorder
 
 import org.jetbrains.kotlinx.lincheck.tracedata.INJECTIONS_VOID_OBJECT
 import sun.nio.ch.lincheck.Injections
