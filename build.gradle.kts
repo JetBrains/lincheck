@@ -398,5 +398,6 @@ publishing {
 }
 
 tasks.named("generateMetadataFileForMavenPublication") {
+    dependsOn(jar)
     dependsOn(sourcesJar)
 }
