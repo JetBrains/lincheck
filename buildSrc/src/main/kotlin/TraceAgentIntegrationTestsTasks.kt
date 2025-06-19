@@ -28,11 +28,6 @@ private val projectsToTest = listOf(
         organization = "ivandev0",
         repositoryName = "TraceDebuggerExamples",
         commitHash = "e3f39b1cb9dd8b3b4942015d57ef5ce0f5f37c6b"
-    ),
-    GithubProjectSnapshot(
-        organization = "Kotlin",
-        repositoryName = "kotlinx.coroutines",
-        commitHash = "f4f519b36734238ec686dfaec1e174086691781e"
     )
 )
 
@@ -47,7 +42,7 @@ fun Project.registerTraceAgentIntegrationTestsPrerequisites() {
         val downloadIntegrationTestsDependency = tasks.register<Download>("download_${projectName}_ForTest") {
             src("https://github.com/${projectToTest.organization}/$projectName/archive/$hash.zip")
             dest(unzippedTestProjectsDir.get().file("$projectName-$hash.zip"))
-            overwrite(false)
+            overwrite(false) // TODO: seems to still overwrite for some reason
         }
 
         tasks.register<Copy>("${projectName}_unzip") {

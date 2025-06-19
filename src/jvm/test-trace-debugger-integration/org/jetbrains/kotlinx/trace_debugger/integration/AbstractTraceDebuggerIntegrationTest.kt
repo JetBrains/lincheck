@@ -21,7 +21,8 @@ abstract class AbstractTraceDebuggerIntegrationTest : AbstractIntegrationTest() 
         testMethodName: String,
         extraJvmArgs: List<String>,
         extraAgentArgs: List<String>,
-        gradleCommands: List<String>
+        gradleCommands: List<String>,
+        checkRepresentation: Boolean,
     ) {
         runGradleTestImpl(
             testClassName,

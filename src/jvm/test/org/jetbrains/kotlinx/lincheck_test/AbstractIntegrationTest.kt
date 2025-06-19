@@ -37,7 +37,6 @@ abstract class AbstractIntegrationTest {
         extraJvmArgs: List<String>,
         extraAgentArgs: List<String>,
     ): String {
-        println("Building init script to dump trace to file: ${fileToDump.absolutePath}, extraJvmArgs=$extraJvmArgs, extraAgentArgs=$extraAgentArgs")
         val pathToFatJar = File(Paths.get("build", "libs", "lincheck-fat.jar").toString())
         return """
             gradle.taskGraph.whenReady {
@@ -72,26 +71,30 @@ abstract class AbstractIntegrationTest {
         extraJvmArgs: List<String> = emptyList(),
         extraAgentArgs: List<String> = emptyList(),
         gradleCommands: List<String>,
+        checkRepresentation: Boolean = true,
     )
 
     fun runGradleTest(
         testClassNamePrefix: String,
         extraJvmArgs: List<String> = emptyList(),
         extraAgentArgs: List<String> = emptyList(),
-        gradleCommands: List<String>,
+        gradleBuildCommands: List<String>,
+        gradleTestCommands: List<String>,
+        checkRepresentation: Boolean = true,
     ) {
-        buildTests()
+        buildTests(gradleBuildCommands)
         collectTestClasses(testClassNamePrefix)
-            .asTestSuite().also { println("Test suite:\n$it") }
+            .asTestSuite()
             .forEach { (testClass, testMethods) ->
                 testMethods.forEach { testMethod ->
-                    println("Running test: ${testClass.name}::${testMethod.name}")
+                    println("Running test: ${testClass.name}::${testMethod.name}(${testMethod.parameters.joinToString(", ") { it.type.simpleName }})")
                     runGradleTest(
                         testClass.name,
                         testMethod.name,
                         extraJvmArgs,
                         extraAgentArgs,
-                        gradleCommands,
+                        gradleTestCommands,
+                        checkRepresentation
                     )
                 }
             }
@@ -104,8 +107,8 @@ abstract class AbstractIntegrationTest {
         extraJvmArgs: List<String> = emptyList(),
         extraAgentArgs: List<String> = emptyList(),
         gradleCommands: List<String>,
+        checkRepresentation: Boolean = true,
     ) {
-        println("Running Gradle test: testClass=$testClassName method=$testMethodName, gradlecommands=$gradleCommands, extraJvmArgs=$extraJvmArgs, extraAgentArgs=$extraAgentArgs")
         val tmpFile = File.createTempFile(testClassName + "_" + testMethodName, "")
 
         createGradleConnection().use { connection ->
@@ -122,17 +125,21 @@ abstract class AbstractIntegrationTest {
         }
 
         // TODO decide how to test: with gold data or run twice?
-        val expectedOutput = getGolderDataFileFor(testClassName, testMethodName)
-        if (expectedOutput.exists()) {
-            Assert.assertEquals(expectedOutput.readText(), tmpFile.readText())
-        } else {
-            if (OVERWRITE_REPRESENTATION_TESTS_OUTPUT) {
-                expectedOutput.parentFile.mkdirs()
-                copy(tmpFile, expectedOutput)
-                Assert.fail("The gold data file was created. Please rerun the test.")
+        if (checkRepresentation) { // otherwise we just want to make sure that tests do not fail
+            val expectedOutput = getGolderDataFileFor(testClassName, testMethodName)
+            if (expectedOutput.exists()) {
+                Assert.assertEquals(expectedOutput.readText(), tmpFile.readText())
             } else {
-                Assert.fail("The gold data file was not found. " +
-                        "Please rerun the test with \"overwriteRepresentationTestsOutput\" option enabled.")
+                if (OVERWRITE_REPRESENTATION_TESTS_OUTPUT) {
+                    expectedOutput.parentFile.mkdirs()
+                    copy(tmpFile, expectedOutput)
+                    Assert.fail("The gold data file was created. Please rerun the test.")
+                } else {
+                    Assert.fail(
+                        "The gold data file was not found. " +
+                        "Please rerun the test with \"overwriteRepresentationTestsOutput\" option enabled."
+                    )
+                }
             }
         }
     }
@@ -158,7 +165,7 @@ abstract class AbstractIntegrationTest {
                     annotation.annotationClass.qualifiedName?.endsWith(".Test") == true
                 }
             } catch (e: Exception) {
-                println("Error analyzing method for @Test annotation: ${clazz.name}.${method.name}: ${e.message}")
+                System.err.println("Error analyzing method for @Test annotation: ${clazz.name}.${method.name}: ${e.message}")
                 false
             }
         }
@@ -171,21 +178,19 @@ abstract class AbstractIntegrationTest {
      * Uses `testClasses` gradle task for that.
      * Also extracts the runtime classpath for the tests.
      */
-    private fun buildTests() {
+    private fun buildTests(gradleBuildCommands: List<String>) {
         // Create a temporary file to store the classpath
         val classpathFile = File.createTempFile("classpath", ".txt")
         classpathFile.deleteOnExit()
 
         // Create an init script to output the classpath to the file
-        val initScript = createInitScriptToOutputClasspath(classpathFile)
+        val initScript = createInitScriptToOutputClasspath(classpathFile, gradleBuildCommands)
         val initScriptFile = createInitScriptAsTempFile(initScript)
 
         createGradleConnection().use { connection ->
             // Build the test classes and extract the classpath
             connection.newBuild()
-                // TODO: there is a common for multiplatform and jvm task: "testClasses", check if it is possible to use that instead
-                .forTasks("compileTestKotlinJvm")
-                .setStandardOutput(System.out)
+                .forTasks(*gradleBuildCommands.toTypedArray())
                 .withArguments("--init-script", initScriptFile.absolutePath)
                 .run()
 
@@ -198,13 +203,12 @@ abstract class AbstractIntegrationTest {
                         .filter { it.isNotEmpty() }
                         .map { File(it).toURI().toURL() }
                         .toTypedArray()
-                    println("Extracted runtime classpath with ${runtimeClasspathUrls.size} entries: ${runtimeClasspathUrls.toList()}")
                 } catch (e: Exception) {
-                    println("Error reading classpath from file: ${e.message}")
+                    System.err.println("Error reading classpath from file: ${e.message}")
                     e.printStackTrace()
                 }
             } else {
-                println("Warning: Classpath file is empty or does not exist")
+                System.err.println("Warning: Classpath file is empty or does not exist")
             }
         }
     }
@@ -212,24 +216,18 @@ abstract class AbstractIntegrationTest {
     /**
      * Creates an init script that outputs the test runtime classpath to a file.
      */
-    private fun createInitScriptToOutputClasspath(outputFile: File): String {
+    private fun createInitScriptToOutputClasspath(outputFile: File, gradleBuildCommands: List<String>): String {
         return """
             gradle.taskGraph.whenReady {
                 allTasks.forEach { task ->
-                    if (task.name in listOf("compileTestKotlinJvm")) {
+                    if (task.name in listOf(${gradleBuildCommands.joinToString(",") { "\"$it\"" }})) {
                         task.doLast {
                             val project = task.project
                             val classpath = project.configurations.findByName("jvmTestRuntimeClasspath")
-                                //project.configurations.findByName("testRuntimeClasspath") ?: 
-                                //project.configurations.findByName("testCompileClasspath") ?:
-                                           
                             if (classpath != null) {
                                 val classpathString = classpath.files.joinToString(File.pathSeparator)
                                 val outputFile = File("${outputFile.absolutePath}")
                                 outputFile.writeText(classpathString)
-                                println("Wrote classpath to: ${outputFile.absolutePath}")
-                            } else {
-                                println("Could not find test runtime classpath configuration")
                             }
                         }
                     }
@@ -277,14 +275,11 @@ abstract class AbstractIntegrationTest {
         // Combine the test class directory URLs with the runtime classpath URLs
         val combinedUrls =
             if (runtimeClasspathUrls.isNotEmpty()) {
-                println("Using runtime classpath with ${runtimeClasspathUrls.size} entries")
                 (testClassDirUrls.toList() + runtimeClasspathUrls.toList()).distinct().toTypedArray()
             } else {
-                println("Warning: Using only test class directories, runtime classpath is empty")
                 testClassDirUrls
             }
 
-        println("ClassLoader URLs: ${combinedUrls.size} entries: ${combinedUrls.toList()}")
         val classLoader = URLClassLoader(combinedUrls, this.javaClass.classLoader)
         val testClasses = testClassesPaths
             .map {
@@ -293,8 +288,6 @@ abstract class AbstractIntegrationTest {
                         ?.let { pattern -> path.substringAfterLast(pattern) }
                         ?: path
                 }.removeSuffix(".class").replace('/', '.')
-
-                println("loading class file: $testClassName")
                 testClassName
             }
             .filter { it.startsWith(testClassNamePrefix) }
@@ -312,7 +305,6 @@ abstract class AbstractIntegrationTest {
                     null
                 }
             }
-        println("Test classes (prefix=$testClassNamePrefix): $testClasses")
         return testClasses.sortedBy { it.name }
     }
 

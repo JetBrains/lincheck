@@ -21,14 +21,16 @@ abstract class AbstractTraceRecorderIntegrationTest : AbstractIntegrationTest() 
         testMethodName: String,
         extraJvmArgs: List<String>,
         extraAgentArgs: List<String>,
-        gradleCommands: List<String>
+        gradleCommands: List<String>,
+        checkRepresentation: Boolean,
     ) {
         runGradleTestImpl(
             testClassName,
             testMethodName,
             extraJvmArgs.plus("-Dlincheck.traceRecorderMode=true"),
             extraAgentArgs.plus("verbose"),
-            gradleCommands
+            gradleCommands,
+            checkRepresentation
         )
     }
 }

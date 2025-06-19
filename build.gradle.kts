@@ -380,7 +380,7 @@ tasks {
         classpath = sourceSets["traceRecorderTest"].runtimeClasspath
 
         outputs.upToDateWhen { false } // Always run tests when called
-        dependsOn(traceAgentIntegrationTestsPrerequisites) // TODO: do we need it here?
+        dependsOn(traceAgentIntegrationTestsPrerequisites)
     }
 
     check {
