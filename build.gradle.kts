@@ -440,8 +440,15 @@ publishing {
                 developers {
                     developer {
                         this.name.set("Nikita Koval")
-                        id.set("ndkoval")
+                        id.set("nikita.koval")
                         email.set("nikita.koval@jetbrains.com")
+                        organization.set("JetBrains")
+                        organizationUrl.set("https://www.jetbrains.com")
+                    }
+                    developer {
+                        this.name.set("Evgeniy Moiseenko")
+                        id.set("evgeniy.moiseenko")
+                        email.set("evgeniy.moiseenko@jetbrains.com")
                         organization.set("JetBrains")
                         organizationUrl.set("https://www.jetbrains.com")
                     }
