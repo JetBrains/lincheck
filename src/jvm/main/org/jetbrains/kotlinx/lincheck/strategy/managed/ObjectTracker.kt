@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import sun.nio.ch.lincheck.IdentityWeakReference
+import sun.nio.ch.lincheck.WeakIdentityReference
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.kotlinx.lincheck.transformation.isJavaLambdaClass
 import kotlin.coroutines.Continuation
@@ -420,7 +420,7 @@ abstract class AbstractObjectTracker(
             objNumber = ++objectCounter,
             objHashCode = System.identityHashCode(obj),
             objDisplayNumber = computeObjectDisplayNumber(obj),
-            objReference = IdentityWeakReference(obj, referenceQueue),
+            objReference = WeakIdentityReference(obj, referenceQueue),
             kind = kind,
         )
         objectIndex.updateInplace(entry.objectHashCode, default = mutableListOf()) {
@@ -474,7 +474,7 @@ abstract class AbstractObjectTracker(
     private fun cleanup() {
         while (true) {
             val objReference = referenceQueue.poll() ?: break
-            val objHashCode = (objReference as IdentityWeakReference).hashCode()
+            val objHashCode = (objReference as WeakIdentityReference).hashCode()
             val entries = objectIndex[objHashCode] ?: continue
             entries.cleanup()
             if (entries.isEmpty()) {

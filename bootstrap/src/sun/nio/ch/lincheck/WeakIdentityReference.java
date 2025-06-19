@@ -13,15 +13,15 @@ package sun.nio.ch.lincheck;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
 
-public class IdentityWeakReference<K> extends WeakReference<K> {
+public class WeakIdentityReference<K> extends WeakReference<K> {
         private final int identityHashCode;
 
-        public IdentityWeakReference(K key) {
+        public WeakIdentityReference(K key) {
             super(key);
             identityHashCode = System.identityHashCode(key);
         }
 
-        public IdentityWeakReference(K key, ReferenceQueue<Object> refQueue) {
+        public WeakIdentityReference(K key, ReferenceQueue<Object> refQueue) {
             super(key, refQueue);
             identityHashCode = System.identityHashCode(key);
         }
@@ -32,8 +32,8 @@ public class IdentityWeakReference<K> extends WeakReference<K> {
                 return true;
             }
             K k = get();
-            if (k != null && o instanceof IdentityWeakReference) {
-                return ((IdentityWeakReference) o).get() == k;
+            if (k != null && o instanceof WeakIdentityReference) {
+                return ((WeakIdentityReference) o).get() == k;
             }
             return false;
         }

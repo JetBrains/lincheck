@@ -43,25 +43,25 @@ public class WeakIdentityHashMap<K,V> extends AbstractMap<K, V> {
     @Override
     public V put(K key, V value) {
         cleanUp();
-        return mMap.put(new IdentityWeakReference<>(key, mRefQueue), value);
+        return mMap.put(new WeakIdentityReference<>(key, mRefQueue), value);
     }
 
     @Override
     public V get(Object key) {
         cleanUp();
-        return mMap.get(new IdentityWeakReference<>(key));
+        return mMap.get(new WeakIdentityReference<>(key));
     }
 
     @Override
     public V remove(Object key) {
         cleanUp();
-        return mMap.remove(new IdentityWeakReference<>(key));
+        return mMap.remove(new WeakIdentityReference<>(key));
     }
 
     @Override
     public boolean containsKey(Object key) {
         cleanUp();
-        return mMap.containsKey(new IdentityWeakReference<>(key));
+        return mMap.containsKey(new WeakIdentityReference<>(key));
     }
 
     @Override
