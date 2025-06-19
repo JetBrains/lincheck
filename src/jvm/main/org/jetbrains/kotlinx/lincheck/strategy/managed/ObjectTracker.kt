@@ -106,6 +106,13 @@ interface ObjectTracker {
     fun shouldTrackObjectAccess(obj: Any?): Boolean
 
     /**
+     * Enumerates all tracked objects registered within the object tracker.
+     *
+     * @return A sequence of [ObjectEntry] instances representing the tracked objects.
+     */
+    fun enumerateObjectEntries(): Sequence<ObjectEntry>
+
+    /**
      * Retains only the entries in the object tracker that match the given predicate.
      *
      * @param predicate a condition that determines which entries should be retained.
@@ -208,10 +215,10 @@ fun ObjectTracker.getObjectDisplayNumber(obj: Any): Int =
  */
 internal fun ObjectTracker.enumerateAllObjects(): Map<Any, Int> {
     val objectNumberMap = hashMapOf<Any, Int>()
-    TODO()
-    // objectNumeration.forEach { _, numbers ->
-    //     objectNumberMap.putAll(numbers)
-    // }
+    for (objectEntry in enumerateObjectEntries()) {
+        val obj = objectEntry.objectReference.get() ?: continue
+        objectNumberMap[obj] = objectEntry.objectDisplayNumber
+    }
     return objectNumberMap
 }
 
@@ -444,6 +451,9 @@ abstract class AbstractObjectTracker(
         val entries = getEntries(objHashCode) ?: return null
         return entries.find { it.objectReference.get() === obj }
     }
+
+    override fun enumerateObjectEntries(): Sequence<ObjectEntry> =
+        objectIndex.values.asSequence().flatten()
 
     override fun retain(predicate: (ObjectEntry) -> Boolean) {
         objectIndex.values.retainAll { entries ->
