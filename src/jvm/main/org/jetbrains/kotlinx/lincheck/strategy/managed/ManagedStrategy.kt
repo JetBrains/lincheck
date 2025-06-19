@@ -1314,7 +1314,7 @@ internal abstract class ManagedStrategy(
                     iThread = iThread,
                     actorId = currentActorId[iThread]!!,
                     callStackTrace = callStackTrace[iThread]!!,
-                    fieldName = "${adornedStringRepresentation(array)}[$index]",
+                    fieldName = "${objectTracker.getObjectRepresentation(array)}[$index]",
                     codeLocation = codeLocation,
                     isLocal = false,
                     valueRepresentation = valueRepresentation,
