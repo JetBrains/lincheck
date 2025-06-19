@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import sun.nio.ch.lincheck.IdentityWeakReference
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.kotlinx.lincheck.transformation.isJavaLambdaClass
 import kotlin.coroutines.Continuation
@@ -490,32 +491,6 @@ abstract class AbstractObjectTracker(
 private fun ReferenceQueue<Any>.clear() {
     while (true) {
         poll() ?: break
-    }
-}
-
-private class IdentityWeakReference<T> : WeakReference<T> {
-
-    private val identityHashCode: Int
-
-    constructor(reference: T) : super(reference) {
-        identityHashCode = System.identityHashCode(reference)
-    }
-
-    constructor(reference: T, referenceQueue: ReferenceQueue<in T>) : super(reference, referenceQueue) {
-        identityHashCode = System.identityHashCode(reference)
-    }
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        val obj = get();
-        if (obj != null && other is IdentityWeakReference<*>) {
-            return obj === other.get()
-        }
-        return false
-    }
-
-    override fun hashCode(): Int {
-        return identityHashCode
     }
 }
 

@@ -43,25 +43,25 @@ public class WeakIdentityHashMap<K,V> extends AbstractMap<K, V> {
     @Override
     public V put(K key, V value) {
         cleanUp();
-        return mMap.put(new CmpWeakReference<>(key, mRefQueue), value);
+        return mMap.put(new IdentityWeakReference<>(key, mRefQueue), value);
     }
 
     @Override
     public V get(Object key) {
         cleanUp();
-        return mMap.get(new CmpWeakReference<>(key));
+        return mMap.get(new IdentityWeakReference<>(key));
     }
 
     @Override
     public V remove(Object key) {
         cleanUp();
-        return mMap.remove(new CmpWeakReference<>(key));
+        return mMap.remove(new IdentityWeakReference<>(key));
     }
 
     @Override
     public boolean containsKey(Object key) {
         cleanUp();
-        return mMap.containsKey(new CmpWeakReference<>(key));
+        return mMap.containsKey(new IdentityWeakReference<>(key));
     }
 
     @Override
@@ -92,37 +92,6 @@ public class WeakIdentityHashMap<K,V> extends AbstractMap<K, V> {
     public boolean isEmpty() {
         cleanUp();
         return mMap.isEmpty();
-    }
-
-    private static class CmpWeakReference<K> extends WeakReference<K> {
-        private final int mHashCode;
-
-        public CmpWeakReference(K key) {
-            super(key);
-            mHashCode = System.identityHashCode(key);
-        }
-
-        public CmpWeakReference(K key, ReferenceQueue<Object> refQueue) {
-            super(key, refQueue);
-            mHashCode = System.identityHashCode(key);
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (o == this) {
-                return true;
-            }
-            K k = get();
-            if (k != null && o instanceof CmpWeakReference) {
-                return ((CmpWeakReference) o).get() == k;
-            }
-            return false;
-        }
-
-        @Override
-        public int hashCode() {
-            return mHashCode;
-        }
     }
 
     private class WeakReferenceEntrySet extends AbstractSet<Map.Entry<K, V>> {
