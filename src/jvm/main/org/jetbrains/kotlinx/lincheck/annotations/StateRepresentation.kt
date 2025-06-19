@@ -19,4 +19,8 @@ package org.jetbrains.kotlinx.lincheck.annotations
  */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.FUNCTION)
+@Deprecated(
+    level = DeprecationLevel.WARNING,
+    message = "",
+)
 annotation class StateRepresentation

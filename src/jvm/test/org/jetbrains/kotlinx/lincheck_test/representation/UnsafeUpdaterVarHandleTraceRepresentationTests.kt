@@ -10,10 +10,10 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import sun.misc.Unsafe
+import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
+import sun.misc.Unsafe
 
 /**
  * Test checks that in case of a field update using Unsafe we remove receiver and offset arguments from the trace.

@@ -28,6 +28,7 @@ import java.io.File
  */
 internal inline fun <reified E: Exception> Options<*, *>.checkFailsWithException(testClass: Class<*>, expectedOutputFilePrefix: String) {
     try {
+        @Suppress("DEPRECATION")
         LinChecker(testClass, this).check()
     } catch (e: Exception) {
         assertTrue(

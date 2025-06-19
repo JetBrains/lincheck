@@ -40,10 +40,8 @@ Here is the resulting test:
 
 ```kotlin
 import org.jctools.queues.atomic.*
-import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.check
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+import org.jetbrains.lincheck.*
+import org.jetbrains.lincheck.datastructures.*
 import org.junit.*
 
 class MPSCQueueTest {
@@ -96,7 +94,7 @@ Here is an example of the scenario generated for this test:
 Note that all consuming `poll()` and `peek()` invocations are performed from a single thread, thus satisfying the
 "single-consumer" restriction.
 
-> [Get the full code](https://github.com/JetBrains/lincheck/blob/master/src/jvm/test-integration/org/jetbrains/kotlinx/lincheck_test/guide/MPSCQueueTest.kt).
+> [Get the full code](https://github.com/JetBrains/lincheck/blob/master/src/jvm/test-integration/org/jetbrains/lincheck_test/guide/MPSCQueueTest.kt).
 >
 {style="note"}
 

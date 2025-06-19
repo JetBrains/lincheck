@@ -10,32 +10,39 @@
 package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.lincheck.LincheckAssertionError
-import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
-import org.jetbrains.kotlinx.lincheck.verifier.*
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.util.DEFAULT_LOG_LEVEL
+import org.jetbrains.kotlinx.lincheck.util.LoggingLevel
+import org.jetbrains.lincheck.datastructures.LogLevel
 import kotlin.reflect.*
 
 /**
  * This class runs concurrent tests.
  */
-class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
+class LinChecker
+@Deprecated(
+    level = DeprecationLevel.WARNING,
+    message = "Use StressOptions.check() or ModelCheckingOptions.check() instead.",
+)
+constructor(private val testClass: Class<*>, options: Options<*, *>?) {
+
     private val testStructure = CTestStructure.getFromTestClass(testClass)
-    private val testConfigurations: List<CTestConfiguration>
-    private val reporter: Reporter
+
+    private val testConfigurations: List<CTestConfiguration> =
+        options?.let { listOf(it.createTestConfigurations(testClass)) } ?: createFromTestClassAnnotations(testClass)
+
+    private val reporter: Reporter = run {
+        val logLevel = options?.logLevel ?: getLoggingLevel(testClass) ?: DEFAULT_LOG_LEVEL
+        Reporter(logLevel)
+    }
 
     init {
-        val logLevel = options?.logLevel ?: testClass.getAnnotation(LogLevel::class.java)?.value ?: DEFAULT_LOG_LEVEL
-        reporter = Reporter(logLevel)
-        testConfigurations = if (options != null) listOf(options.createTestConfigurations(testClass))
-                             else createFromTestClassAnnotations(testClass)
-        // Currently, we extract validation functions from testClass structure, so for custom scenarios declared
-        // with DSL, we have to set up it when testClass is scanned
+        // Currently, we extract validation functions from the `testClass` structure,
+        // so for custom scenarios declared with DSL, we have to set it up when `testClass` is scanned
         testConfigurations.forEach { cTestConfiguration ->
             cTestConfiguration.customScenarios.forEach { it.validationFunction = testStructure.validationFunction }
         }
@@ -126,7 +133,7 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
     private fun CTestConfiguration.runReplayForPlugin(failure: LincheckFailure, verifier: Verifier) {
         if (ideaPluginEnabled && this is ModelCheckingCTestConfiguration) {
             runPluginReplay(
-                testCfg = this,
+                settings = this.createSettings(),
                 testClass = testClass,
                 scenario = failure.scenario,
                 validationFunction = testStructure.validationFunction,
@@ -157,7 +164,7 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
 
     private fun CTestConfiguration.createExecutionGenerator(randomProvider: RandomProvider): ExecutionGenerator {
         if (iterations > 0) {
-            checkAtLeastOneMethodIsMarkedAsOperation(testClass)
+            checkAtLeastOneMethodIsMarkedAsOperation()
         }
         val constructor = generatorClass.getConstructor(
             CTestConfiguration::class.java,
@@ -167,14 +174,8 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
         return constructor.newInstance(this, testStructure, randomProvider)
     }
 
-    private val CTestConfiguration.invocationsPerIteration get() = when (this) {
-        is ModelCheckingCTestConfiguration -> this.invocationsPerIteration
-        is StressCTestConfiguration -> this.invocationsPerIteration
-        else -> error("unexpected")
-    }
-
-    private fun checkAtLeastOneMethodIsMarkedAsOperation(testClass: Class<*>) {
-        check (testClass.methods.any { it.isAnnotationPresent(Operation::class.java) }) { NO_OPERATION_ERROR_MESSAGE }
+    private fun checkAtLeastOneMethodIsMarkedAsOperation() {
+        check (testStructure.hasOperations()) { NO_OPERATION_ERROR_MESSAGE }
     }
 
     // This companion object is used for backwards compatibility.
@@ -188,7 +189,14 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
         @JvmOverloads
         @JvmStatic
         fun check(testClass: Class<*>, options: Options<*, *>? = null) {
+            @Suppress("DEPRECATION")
             LinChecker(testClass, options).check()
+        }
+
+        private fun getLoggingLevel(testClass: Class<*>): LoggingLevel? {
+            @Suppress("DEPRECATION")
+            return testClass.getAnnotation(org.jetbrains.kotlinx.lincheck.annotations.LogLevel::class.java)?.value ?:
+                   testClass.getAnnotation(LogLevel::class.java)?.value
         }
 
         private const val VERIFIER_REFRESH_CYCLE = 100
@@ -280,7 +288,6 @@ private fun ExecutionScenario.tryMinimize(checkScenario: (ExecutionScenario) -> 
     return null
 }
 
-
 /**
  * This is a short-cut for the following code:
  * ```
@@ -306,6 +313,7 @@ fun <O : Options<O, *>> O.check(testClass: KClass<*>) = this.check(testClass.jav
  * @return [LincheckFailure] if a failure is discovered, null otherwise.
  */
 internal fun <O : Options<O, *>> O.checkImpl(testClass: Class<*>): LincheckFailure? =
+    @Suppress("DEPRECATION")
     LinChecker(testClass, this).checkImpl()
 
 /**
@@ -326,6 +334,7 @@ internal fun <O : Options<O, *>> O.checkImpl(testClass: Class<*>): LincheckFailu
  * @return [LincheckFailure] if a failure is discovered, null otherwise.
  */
 internal fun <O : Options<O, *>> O.checkImpl(testClass: Class<*>, cont: LincheckFailureContinuation) {
+    @Suppress("DEPRECATION")
     LinChecker(testClass, this).checkImpl(cont)
 }
 

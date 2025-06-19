@@ -194,11 +194,6 @@ internal inline fun <R> runOutsideIgnoredSection(block: () -> R): R {
  *                        concurrent collections are muted.
  */
 internal class AnalysisProfile(val analyzeStdLib: Boolean) {
-    
-    constructor(testConfiguration: ManagedCTestConfiguration?) : this(
-        testConfiguration is ModelCheckingCTestConfiguration && testConfiguration.stdLibAnalysisEnabled
-    )
-
 
     /**
      * Determines whether a given class and method should be transformed (instrumented) for analysis.
@@ -310,6 +305,12 @@ internal class AnalysisProfile(val analyzeStdLib: Boolean) {
     @Suppress("UNUSED_PARAMETER") // methodName is here for uniformity and might become useful in the future
     fun shouldBeHidden(className: String, methodName: String): Boolean = 
         !analyzeStdLib && (isConcurrentCollectionsLibrary(className) || isCollectionsLibrary(className))
+
+    companion object {
+        val DEFAULT = AnalysisProfile(
+            analyzeStdLib = ManagedCTestConfiguration.DEFAULT_STDLIB_ANALYSIS_ENABLED
+        )
+    }
 }
 
 private val COLLECTION_LIBRARIES = setOf(

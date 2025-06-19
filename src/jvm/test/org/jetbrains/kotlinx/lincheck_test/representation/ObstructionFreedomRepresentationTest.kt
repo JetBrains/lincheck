@@ -11,15 +11,16 @@
 package org.jetbrains.kotlinx.lincheck_test.representation
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck_test.util.*
 
 import java.util.concurrent.atomic.*
-import org.junit.*
 import org.junit.Assume.assumeFalse
+import org.junit.*
+
 
 /**
  * This test checks that the last event in the case of an active lock

@@ -1,0 +1,123 @@
+/*
+ * Lincheck
+ *
+ * Copyright (C) 2019 - 2025 JetBrains s.r.o.
+ *
+ * This Source Code Form is subject to the terms of the
+ * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
+ * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
+
+import org.jetbrains.kotlinx.lincheck.Actor
+import org.jetbrains.kotlinx.lincheck.chooseSequentialSpecification
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.strategy.Strategy
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedOptions
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyGuarantee
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategySettings
+import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
+import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.MODEL_CHECKING
+import org.jetbrains.kotlinx.lincheck.verifier.Verifier
+import java.lang.reflect.Method
+import kotlin.collections.ifEmpty
+
+/**
+ * Options for the model checking strategy.
+ */
+@Deprecated(
+    level = DeprecationLevel.WARNING,
+    message = "Use org.jetbrains.lincheck.datastructures.ModelCheckingOptions instead.",
+)
+@Suppress("DEPRECATION")
+class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, ModelCheckingCTestConfiguration>() {
+    override fun createTestConfigurations(testClass: Class<*>): ModelCheckingCTestConfiguration {
+        return ModelCheckingCTestConfiguration(
+            testClass = testClass,
+            iterations = iterations,
+            threads = threads,
+            actorsPerThread = actorsPerThread,
+            actorsBefore = actorsBefore,
+            actorsAfter = actorsAfter,
+            generatorClass = executionGenerator,
+            verifierClass = verifier,
+            checkObstructionFreedom = checkObstructionFreedom,
+            hangingDetectionThreshold = hangingDetectionThreshold,
+            invocationsPerIteration = invocationsPerIteration,
+            guarantees = guarantees,
+            minimizeFailedScenario = minimizeFailedScenario,
+            sequentialSpecification = chooseSequentialSpecification(sequentialSpecification, testClass),
+            timeoutMs = timeoutMs,
+            customScenarios = customScenarios,
+            stdLibAnalysisEnabled = stdLibAnalysisEnabled,
+        )
+    }
+}
+
+/**
+ * Configuration for the model checking strategy.
+ */
+class ModelCheckingCTestConfiguration(
+    testClass: Class<*>,
+    iterations: Int,
+    threads: Int,
+    actorsPerThread: Int,
+    actorsBefore: Int,
+    actorsAfter: Int,
+    generatorClass: Class<out ExecutionGenerator>,
+    verifierClass: Class<out Verifier>,
+    checkObstructionFreedom: Boolean,
+    hangingDetectionThreshold: Int,
+    invocationsPerIteration: Int,
+    guarantees: List<ManagedStrategyGuarantee>,
+    minimizeFailedScenario: Boolean,
+    sequentialSpecification: Class<*>,
+    timeoutMs: Long,
+    customScenarios: List<ExecutionScenario>,
+    internal val stdLibAnalysisEnabled: Boolean,
+) : ManagedCTestConfiguration(
+    testClass = testClass,
+    iterations = iterations,
+    threads = threads,
+    actorsPerThread = actorsPerThread,
+    actorsBefore = actorsBefore,
+    actorsAfter = actorsAfter,
+    generatorClass = generatorClass,
+    verifierClass = verifierClass,
+    checkObstructionFreedom = checkObstructionFreedom,
+    hangingDetectionThreshold = hangingDetectionThreshold,
+    invocationsPerIteration = invocationsPerIteration,
+    guarantees = guarantees,
+    minimizeFailedScenario = minimizeFailedScenario,
+    sequentialSpecification = sequentialSpecification,
+    timeoutMs = timeoutMs,
+    customScenarios = customScenarios
+) {
+
+    override val instrumentationMode: InstrumentationMode get() = MODEL_CHECKING
+
+    override fun createStrategy(
+        testClass: Class<*>,
+        scenario: ExecutionScenario,
+        validationFunction: Actor?,
+        stateRepresentationMethod: Method?,
+    ): Strategy = ModelCheckingStrategy(
+        testClass,
+        scenario,
+        validationFunction,
+        stateRepresentationMethod,
+        createSettings()
+    )
+
+    internal fun createSettings(): ManagedStrategySettings =
+        ManagedStrategySettings(
+            timeoutMs = this.timeoutMs,
+            hangingDetectionThreshold = this.hangingDetectionThreshold,
+            checkObstructionFreedom = this.checkObstructionFreedom,
+            analyzeStdLib = this.stdLibAnalysisEnabled,
+            guarantees = this.guarantees.ifEmpty { null },
+        )
+}

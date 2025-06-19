@@ -14,7 +14,7 @@ import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.suspendCancellableCoroutine
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.lincheck.datastructures.Operation
 import java.util.concurrent.ConcurrentLinkedQueue
 import kotlin.coroutines.resume
 import org.junit.Ignore

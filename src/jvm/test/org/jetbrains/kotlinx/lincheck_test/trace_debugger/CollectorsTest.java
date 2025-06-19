@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.trace_debugger;
 
-import org.jetbrains.kotlinx.lincheck.annotations.Operation;
+import org.jetbrains.lincheck.datastructures.Operation;
 
 import java.lang.invoke.MethodHandles;
 import java.util.Arrays;

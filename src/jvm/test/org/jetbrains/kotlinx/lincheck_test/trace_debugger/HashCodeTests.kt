@@ -10,10 +10,10 @@
 
 package org.jetbrains.kotlinx.lincheck_test.trace_debugger
 
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
+import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test

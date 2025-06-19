@@ -14,11 +14,11 @@ package org.jetbrains.kotlinx.lincheck_test
 
 import kotlinx.atomicfu.AtomicRef
 import kotlinx.atomicfu.atomic
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.annotations.Validate
+import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
+import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
+import org.jetbrains.lincheck.datastructures.Validate
 import org.junit.Assert.assertTrue
 import org.junit.Test
 

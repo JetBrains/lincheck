@@ -12,7 +12,7 @@ package org.jetbrains.kotlinx.lincheck_test.verifier.linearizability
 
 import kotlinx.atomicfu.*
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+import org.jetbrains.lincheck.datastructures.StressOptions
 import org.junit.*
 
 class LockFreeSetTest {

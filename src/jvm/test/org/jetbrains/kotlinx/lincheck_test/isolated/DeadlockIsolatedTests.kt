@@ -10,7 +10,7 @@
 package org.jetbrains.kotlinx.lincheck_test.isolated
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
 import java.util.concurrent.atomic.AtomicBoolean

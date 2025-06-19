@@ -12,10 +12,10 @@ package org.jetbrains.kotlinx.lincheck_test.representation
 
 import kotlinx.atomicfu.*
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
+import org.jetbrains.lincheck.datastructures.Operation
 import org.junit.*
 import org.junit.Assert.*
 

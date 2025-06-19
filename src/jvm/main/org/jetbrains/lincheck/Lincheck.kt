@@ -9,17 +9,24 @@
  */
 package org.jetbrains.lincheck
 
-import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.Actor
+import org.jetbrains.kotlinx.lincheck.ExceptionResult
+import org.jetbrains.kotlinx.lincheck.LinChecker
+import org.jetbrains.kotlinx.lincheck.Options
+import org.jetbrains.kotlinx.lincheck.createVerifier
+import org.jetbrains.kotlinx.lincheck.runPluginReplay
+import org.jetbrains.kotlinx.lincheck.ideaPluginEnabled
+import org.jetbrains.kotlinx.lincheck.CTestConfiguration
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
+import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.runIteration
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.ensureObjectIsTransformed
 import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
+import kotlin.reflect.KClass
 
 object Lincheck {
 
@@ -84,7 +91,7 @@ object Lincheck {
                     check(strategy is ModelCheckingStrategy)
                     if (ideaPluginEnabled) {
                         runPluginReplay(
-                            testCfg = testCfg,
+                            settings = testCfg.createSettings(),
                             testClass = wrapperClass,
                             scenario = scenario,
                             validationFunction = null,
@@ -99,8 +106,48 @@ object Lincheck {
         }
     }
 
-    internal const val DEFAULT_INVOCATIONS = ManagedCTestConfiguration.DEFAULT_INVOCATIONS
+    /**
+     * Runs the specified concurrent tests.
+     *
+     * @throws LincheckAssertionError if any of the tests fails.
+     */
+    @JvmStatic
+    fun check(options: Options<*, *>, testClass: Class<*>) {
+        @Suppress("DEPRECATION")
+        LinChecker(testClass, options).checkImpl { failure ->
+            if (failure != null) throw LincheckAssertionError(failure)
+        }
+    }
+
+    internal const val DEFAULT_INVOCATIONS = CTestConfiguration.DEFAULT_INVOCATIONS
 }
+
+/**
+ * Runs the specified concurrent tests.
+ *
+ * This is a short-cut for the following code:
+ * ```
+ * Lincheck.check(options, testClass)
+ * ```
+ *
+ * @throws LincheckAssertionError if any of the tests fails.
+ */
+fun <O : Options<O, *>> O.check(testClass: Class<*>) =
+    LinChecker.check(testClass, this)
+
+/**
+ * Runs the specified concurrent tests.
+ *
+ * This is a short-cut for the following code:
+ * ```
+ * Lincheck.check(options, testClass.java)
+ * ```
+ *
+ * @throws LincheckAssertionError if any of the tests fails.
+ */
+fun <O : Options<O, *>> O.check(testClass: KClass<*>) =
+    this.check(testClass.java)
+
 
 internal class GeneralPurposeModelCheckingWrapper {
     fun runGPMCTest(block: Runnable) = block.run()

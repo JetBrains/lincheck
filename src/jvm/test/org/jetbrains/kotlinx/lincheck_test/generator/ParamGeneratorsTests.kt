@@ -13,11 +13,11 @@ package org.jetbrains.kotlinx.lincheck_test.generator
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.lincheck.LincheckAssertionError
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.annotations.Param
+import org.jetbrains.lincheck.datastructures.Operation
+import org.jetbrains.lincheck.datastructures.Param
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.paramgen.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
+import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import org.jetbrains.kotlinx.lincheck_test.verifier.linearizability.SpinLockBasedSet
 import kotlin.math.pow

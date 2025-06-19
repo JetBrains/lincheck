@@ -10,9 +10,9 @@
 
 package org.jetbrains.kotlinx.lincheck_test.runner
 
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.kotlinx.lincheck.check
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
+import org.jetbrains.lincheck.datastructures.StressOptions
 import org.junit.Test
 
 class OuterClass {

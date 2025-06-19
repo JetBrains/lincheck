@@ -10,8 +10,8 @@
 package org.jetbrains.kotlinx.lincheck_test
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.lincheck.datastructures.Operation
 
 class HangingInParallelPartIsolatedTest : AbstractLincheckTest(TimeoutFailure::class) {
 

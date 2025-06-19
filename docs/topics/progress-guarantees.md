@@ -14,11 +14,10 @@ Create a `ConcurrentMapTest.kt` file.
 Then add the following test to detect that `ConcurrentHashMap::put(key: K, value: V)` from the Java standard library is a blocking operation:
 
 ```kotlin
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.junit.*
 import java.util.concurrent.*
+import org.jetbrains.lincheck.*
+import org.jetbrains.lincheck.datastructures.*
+import org.junit.*
 
 class ConcurrentHashMapTest {
     private val map = ConcurrentHashMap<Int, Int>()
@@ -103,8 +102,8 @@ class ConcurrentSkipListMapTest {
 At the moment, Lincheck supports only the obstruction-freedom progress guarantees. However, most real-life liveness bugs
 add unexpected blocking code, so the obstruction-freedom check will also help with lock-free and wait-free algorithms.
 
-> * Get the [full code of the example](https://github.com/JetBrains/lincheck/blob/master/src/jvm/test-integration/org/jetbrains/kotlinx/lincheck_test/guide/ConcurrentMapTest.kt).
-> * See [another example](https://github.com/JetBrains/lincheck/blob/master/src/jvm/test-integration/org/jetbrains/kotlinx/lincheck_test/guide/ObstructionFreedomViolationTest.kt)
+> * Get the [full code of the example](https://github.com/JetBrains/lincheck/blob/master/src/jvm/test-integration/org/jetbrains/lincheck_test/guide/ConcurrentMapTest.kt).
+> * See [another example](https://github.com/JetBrains/lincheck/blob/master/src/jvm/test-integration/org/jetbrains/lincheck_test/guide/ObstructionFreedomViolationTest.kt)
 >   where the Michael-Scott queue implementation is tested for progress guarantees.
 >
 {style="note"}

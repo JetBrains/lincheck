@@ -9,11 +9,11 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.kotlinx.lincheck.checkImpl
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.util.*
+import org.jetbrains.lincheck.datastructures.Validate
 import org.junit.*
 import java.lang.IllegalStateException
 
@@ -99,12 +99,10 @@ class MoreThenOneValidationFunctionFailureTest {
     fun operation() = 1
 
     @Validate
-    fun firstCheck() {
-    }
+    fun firstCheck() {}
 
     @Validate
-    fun secondCheck() {
-    }
+    fun secondCheck() {}
 
     @Test
     fun test() = ModelCheckingOptions()
