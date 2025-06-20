@@ -47,6 +47,7 @@ import org.jetbrains.kotlinx.lincheck.tracedata.isArraysCopyOfIntrinsic
 import org.jetbrains.kotlinx.lincheck.tracedata.isArraysCopyOfRangeIntrinsic
 import org.jetbrains.kotlinx.lincheck.tracedata.methodCache
 import org.jetbrains.kotlinx.lincheck.tracedata.variableCache
+import org.jetbrains.lincheck.datastructures.ManagedStrategyGuarantee
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 import kotlin.Result as KResult
 import org.objectweb.asm.commons.Method.getMethod as getAsmMethod

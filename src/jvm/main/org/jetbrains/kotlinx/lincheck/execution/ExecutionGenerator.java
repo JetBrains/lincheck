@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.execution;
 
-import org.jetbrains.kotlinx.lincheck.CTestConfiguration;
+import org.jetbrains.lincheck.datastructures.CTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.CTestStructure;
 
 /**

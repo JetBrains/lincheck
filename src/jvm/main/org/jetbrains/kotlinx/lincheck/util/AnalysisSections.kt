@@ -10,9 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck.util
 
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration
+import org.jetbrains.lincheck.datastructures.ManagedCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.transformation.isThreadContainerClass
 import org.jetbrains.kotlinx.lincheck.util.AnalysisSectionType.*

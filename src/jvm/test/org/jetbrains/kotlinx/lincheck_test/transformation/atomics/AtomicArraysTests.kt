@@ -12,7 +12,7 @@ package org.jetbrains.kotlinx.lincheck_test.transformation.atomics
 
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.Param
-import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
+import org.jetbrains.lincheck.datastructures.IntGen
 import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
 import org.jetbrains.kotlinx.lincheck_test.util.StringPoolGenerator
 import java.util.concurrent.atomic.*

@@ -10,11 +10,12 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking;
 
 import kotlin.Deprecated;
-import org.jetbrains.kotlinx.lincheck.*;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.execution.*;
-import org.jetbrains.kotlinx.lincheck.verifier.*;
-import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*;
+import org.jetbrains.kotlinx.lincheck.annotations.DummySequentialSpecification;
+import org.jetbrains.lincheck.datastructures.CTestConfiguration;
+import org.jetbrains.lincheck.datastructures.verifier.Verifier;
+import org.jetbrains.lincheck.datastructures.verifier.LinearizabilityVerifier;
 
 import java.lang.annotation.*;
 

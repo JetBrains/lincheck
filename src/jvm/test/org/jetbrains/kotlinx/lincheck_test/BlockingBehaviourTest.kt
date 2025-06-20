@@ -11,10 +11,9 @@
 package org.jetbrains.kotlinx.lincheck_test
 
 import kotlinx.atomicfu.*
-import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.jetbrains.lincheck.datastructures.verifier.EpsilonVerifier
 import org.junit.*
 
 class BlockingOperationTest {

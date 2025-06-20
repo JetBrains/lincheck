@@ -12,7 +12,7 @@ package org.jetbrains.kotlinx.lincheck_test.representation
 
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.managed.forClasses
+import org.jetbrains.lincheck.datastructures.forClasses
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
 import java.util.concurrent.atomic.AtomicInteger

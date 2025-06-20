@@ -12,11 +12,11 @@ package org.jetbrains.kotlinx.lincheck_test.runner
 import org.jetbrains.kotlinx.lincheck.Suspended
 import org.jetbrains.kotlinx.lincheck.ValueResult
 import org.jetbrains.kotlinx.lincheck_test.verifier.*
-import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier
+import org.jetbrains.lincheck.datastructures.verifier.LinearizabilityVerifier
 import org.junit.Test
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
-import org.jetbrains.kotlinx.lincheck.actor
+import org.jetbrains.lincheck.datastructures.actor
 
 // Test for early scenario verification completion: follow-up part resumes suspended operation.
 class ResumingFollowUpTest {

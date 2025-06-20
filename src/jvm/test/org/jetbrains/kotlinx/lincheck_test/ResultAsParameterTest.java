@@ -13,7 +13,7 @@ package org.jetbrains.kotlinx.lincheck_test;
 import org.jetbrains.kotlinx.lincheck.*;
 import org.jetbrains.lincheck.datastructures.Operation;
 import org.jetbrains.lincheck.datastructures.Param;
-import org.jetbrains.kotlinx.lincheck.paramgen.IntGen;
+import org.jetbrains.lincheck.datastructures.IntGen;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest;
 import org.junit.Test;
 

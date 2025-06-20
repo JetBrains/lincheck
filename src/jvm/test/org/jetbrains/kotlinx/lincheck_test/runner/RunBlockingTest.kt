@@ -10,11 +10,11 @@
 package org.jetbrains.kotlinx.lincheck_test.runner
 
 import kotlinx.coroutines.*
-import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
+import org.jetbrains.lincheck.datastructures.Options
 import kotlin.coroutines.*
 
 class RunBlockingTest : AbstractLincheckTest() {

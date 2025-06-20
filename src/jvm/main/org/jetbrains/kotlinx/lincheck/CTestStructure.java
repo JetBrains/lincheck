@@ -12,10 +12,7 @@ package org.jetbrains.kotlinx.lincheck;
 
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.kotlinx.lincheck.execution.*;
-import org.jetbrains.kotlinx.lincheck.paramgen.*;
-import org.jetbrains.lincheck.datastructures.Operation;
-import org.jetbrains.lincheck.datastructures.Param;
-import org.jetbrains.lincheck.datastructures.Validate;
+import org.jetbrains.lincheck.datastructures.*;
 
 import static org.jetbrains.kotlinx.lincheck.ActorKt.*;
 

@@ -10,12 +10,12 @@
 
 package org.jetbrains.kotlinx.lincheck_test.verifier.serializability
 
-import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck_test.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.jetbrains.lincheck.datastructures.Options
+import org.jetbrains.lincheck.datastructures.verifier.SerializabilityVerifier
 
 
 class SerializableQueueTest : AbstractLincheckTest() {

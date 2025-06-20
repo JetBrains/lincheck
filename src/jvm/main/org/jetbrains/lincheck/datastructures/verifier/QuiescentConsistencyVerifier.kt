@@ -1,18 +1,16 @@
 /*
  * Lincheck
  *
- * Copyright (C) 2019 - 2023 JetBrains s.r.o.
+ * Copyright (C) 2019 - 2025 JetBrains s.r.o.
  *
  * This Source Code Form is subject to the terms of the
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.jetbrains.kotlinx.lincheck.verifier.quiescent
+package org.jetbrains.lincheck.datastructures.verifier
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
-import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
 import java.util.*
 import kotlin.collections.ArrayList
 

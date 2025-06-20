@@ -9,7 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck_test
 
-import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.lincheck.datastructures.scenario
 import org.junit.*
 import org.junit.Assert.*
 

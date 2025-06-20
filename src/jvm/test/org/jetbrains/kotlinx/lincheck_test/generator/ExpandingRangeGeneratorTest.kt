@@ -13,7 +13,7 @@ package org.jetbrains.kotlinx.lincheck_test.generator
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
-import org.jetbrains.kotlinx.lincheck.paramgen.ExpandingRangeIntGenerator
+import org.jetbrains.lincheck.datastructures.ExpandingRangeIntGenerator
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.util.Random

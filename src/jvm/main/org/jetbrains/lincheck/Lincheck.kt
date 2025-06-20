@@ -11,12 +11,10 @@ package org.jetbrains.lincheck
 
 import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.ExceptionResult
-import org.jetbrains.kotlinx.lincheck.LinChecker
-import org.jetbrains.kotlinx.lincheck.Options
-import org.jetbrains.kotlinx.lincheck.createVerifier
+import org.jetbrains.lincheck.datastructures.createVerifier
 import org.jetbrains.kotlinx.lincheck.runPluginReplay
 import org.jetbrains.kotlinx.lincheck.ideaPluginEnabled
-import org.jetbrains.kotlinx.lincheck.CTestConfiguration
+import org.jetbrains.lincheck.datastructures.CTestConfiguration
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
@@ -25,8 +23,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelChecki
 import org.jetbrains.kotlinx.lincheck.strategy.runIteration
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.ensureObjectIsTransformed
 import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
-import org.jetbrains.kotlinx.lincheck.verifier.Verifier
-import kotlin.reflect.KClass
+import org.jetbrains.lincheck.datastructures.verifier.Verifier
 
 object Lincheck {
 

@@ -10,10 +10,8 @@
 package org.jetbrains.kotlinx.lincheck
 
 import kotlinx.coroutines.*
+import org.jetbrains.kotlinx.lincheck.annotations.DummySequentialSpecification
 import org.jetbrains.kotlinx.lincheck.runner.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.*
-import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer
-import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import sun.nio.ch.lincheck.*
 import java.io.PrintWriter

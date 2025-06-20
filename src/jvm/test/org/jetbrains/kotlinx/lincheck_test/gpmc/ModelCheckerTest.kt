@@ -16,7 +16,8 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelChecki
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.transformation.*
-import org.jetbrains.kotlinx.lincheck.verifier.Verifier
+import org.jetbrains.lincheck.datastructures.scenario
+import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import kotlin.reflect.*
 import org.junit.Assert
 

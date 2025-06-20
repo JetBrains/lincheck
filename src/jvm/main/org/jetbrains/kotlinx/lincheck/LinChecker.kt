@@ -12,12 +12,16 @@ package org.jetbrains.kotlinx.lincheck
 import org.jetbrains.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration
-import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.jetbrains.lincheck.datastructures.ManagedCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.util.DEFAULT_LOG_LEVEL
 import org.jetbrains.kotlinx.lincheck.util.LoggingLevel
-import org.jetbrains.lincheck.datastructures.LogLevel
+import org.jetbrains.lincheck.datastructures.CTestConfiguration
+import org.jetbrains.lincheck.datastructures.Options
+import org.jetbrains.lincheck.datastructures.RandomProvider
+import org.jetbrains.lincheck.datastructures.createFromTestClassAnnotations
+import org.jetbrains.lincheck.datastructures.createVerifier
+import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import kotlin.reflect.*
 
 /**
@@ -196,8 +200,7 @@ constructor(private val testClass: Class<*>, options: Options<*, *>?) {
 
         private fun getLoggingLevel(testClass: Class<*>): LoggingLevel? {
             @Suppress("DEPRECATION")
-            return testClass.getAnnotation(org.jetbrains.kotlinx.lincheck.annotations.LogLevel::class.java)?.value ?:
-                   testClass.getAnnotation(LogLevel::class.java)?.value
+            return testClass.getAnnotation(org.jetbrains.kotlinx.lincheck.annotations.LogLevel::class.java)?.value
         }
 
         private const val VERIFIER_REFRESH_CYCLE = 100

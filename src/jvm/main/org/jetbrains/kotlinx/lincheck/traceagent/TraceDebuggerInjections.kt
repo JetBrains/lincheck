@@ -15,12 +15,12 @@ import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.execution.threadsResults
-import org.jetbrains.kotlinx.lincheck.scenario
-import org.jetbrains.kotlinx.lincheck.strategy.managed.forClasses
+import org.jetbrains.lincheck.datastructures.scenario
+import org.jetbrains.lincheck.datastructures.forClasses
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.util.LoggingLevel
-import org.jetbrains.kotlinx.lincheck.verifier.Verifier
+import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import java.io.File
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier

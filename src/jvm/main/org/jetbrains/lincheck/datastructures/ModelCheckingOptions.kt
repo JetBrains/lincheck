@@ -15,16 +15,11 @@ import org.jetbrains.kotlinx.lincheck.chooseSequentialSpecification
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedOptions
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyGuarantee
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategySettings
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.MODEL_CHECKING
-import org.jetbrains.kotlinx.lincheck.verifier.Verifier
+import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import java.lang.reflect.Method
-import kotlin.collections.ifEmpty
 
 /**
  * Options for the model checking strategy.

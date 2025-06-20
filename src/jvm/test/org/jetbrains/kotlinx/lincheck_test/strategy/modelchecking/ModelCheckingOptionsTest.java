@@ -14,12 +14,12 @@ import org.jetbrains.kotlinx.lincheck.util.LoggingLevel;
 import org.jetbrains.lincheck.datastructures.Operation;
 import org.jetbrains.kotlinx.lincheck.execution.RandomExecutionGenerator;
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions;
-import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier;
+import org.jetbrains.lincheck.datastructures.verifier.LinearizabilityVerifier;
 import org.junit.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyGuaranteeKt.forClasses;
+import static org.jetbrains.lincheck.datastructures.ManagedStrategyGuaranteeKt.forClasses;
 
 
 public class ModelCheckingOptionsTest {

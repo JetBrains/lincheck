@@ -10,13 +10,14 @@
 
 package org.jetbrains.kotlinx.lincheck_test.verifier.quiescent
 
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
+import org.jetbrains.lincheck.datastructures.IntGen
 import org.jetbrains.kotlinx.lincheck_test.*
-import org.jetbrains.kotlinx.lincheck.verifier.quiescent.*
 import org.jetbrains.kotlinx.lincheck_test.datastructures.LockFreeTaskQueue
 import org.jetbrains.lincheck.datastructures.Operation
+import org.jetbrains.lincheck.datastructures.Options
 import org.jetbrains.lincheck.datastructures.Param
+import org.jetbrains.lincheck.datastructures.verifier.QuiescentConsistencyVerifier
+import org.jetbrains.lincheck.datastructures.verifier.QuiescentConsistent
 
 
 @Param(name = "value", gen = IntGen::class, conf = "1:3")

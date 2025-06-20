@@ -11,7 +11,6 @@
 
 import kotlinx.atomicfu.*
 import org.jetbrains.lincheck.datastructures.*
-import org.jetbrains.kotlinx.lincheck.paramgen.*
 
 class ThreadIdTest : AbstractLincheckTest() {
     private val balances = IntArray(5)
@@ -21,8 +20,9 @@ class ThreadIdTest : AbstractLincheckTest() {
     fun inc(@Param(gen = ThreadIdGen::class) threadId: Int): Int = counter.incrementAndGet()
         .also { balances[threadId]++ }
 
+    @Suppress("DEPRECATION")
     @Operation
-    fun decIfNotNegative(@Param(gen = ThreadIdGen::class) threadId: Int) {
+    fun decIfNotNegative(@Param(gen = org.jetbrains.kotlinx.lincheck.paramgen.ThreadIdGen::class) threadId: Int) {
         if (balances[threadId] == 0) return
         balances[threadId]--
         val c = counter.decrementAndGet()

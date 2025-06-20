@@ -11,12 +11,11 @@
 package org.jetbrains.kotlinx.lincheck_test.strategy.modelchecking.snapshot
 
 import org.jetbrains.kotlinx.lincheck.ExceptionResult
-import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedOptions
+import org.jetbrains.lincheck.datastructures.ManagedOptions
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck.verifier.Verifier
+import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import org.junit.Test
 
 abstract class AbstractSnapshotTest {

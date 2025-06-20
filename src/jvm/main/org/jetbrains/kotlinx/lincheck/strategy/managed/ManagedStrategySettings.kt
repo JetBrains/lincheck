@@ -10,6 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import org.jetbrains.lincheck.datastructures.ManagedStrategyGuarantee
+
 /**
  * Represents the configuration settings for the [ManagedStrategy].
  */
@@ -40,7 +42,7 @@ internal data class ManagedStrategySettings(
     /**
      * @property guarantees A list of methods' guarantees.
      *
-     * @see ManagedStrategyGuarantee
+     * @see org.jetbrains.lincheck.datastructures.ManagedStrategyGuarantee
      */
     val guarantees: List<ManagedStrategyGuarantee>?
 )

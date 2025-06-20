@@ -11,9 +11,9 @@
 package org.jetbrains.kotlinx.lincheck.execution;
 
 import org.jetbrains.kotlinx.lincheck.Actor;
-import org.jetbrains.kotlinx.lincheck.CTestConfiguration;
+import org.jetbrains.lincheck.datastructures.CTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.CTestStructure;
-import org.jetbrains.kotlinx.lincheck.RandomProvider;
+import org.jetbrains.lincheck.datastructures.RandomProvider;
 
 import java.util.ArrayList;
 import java.util.Collections;

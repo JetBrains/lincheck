@@ -13,8 +13,8 @@ import org.jetbrains.kotlinx.lincheck.*;
 import org.jetbrains.kotlinx.lincheck.execution.*;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*;
 import org.jetbrains.kotlinx.lincheck.util.LoggingLevel;
-import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*;
 import org.jetbrains.lincheck.datastructures.Operation;
+import org.jetbrains.lincheck.datastructures.verifier.LinearizabilityVerifier;
 import org.junit.*;
 
 import java.util.concurrent.atomic.*;
