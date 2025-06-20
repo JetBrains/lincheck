@@ -436,19 +436,20 @@ internal abstract class ManagedStrategy(
     }
 
     private val currentActorIsBlocking: Boolean get() {
-        val currentThreadId = threadScheduler.getCurrentThreadId()
-        val actorId = currentActorId[currentThreadId] ?: -1
+        val threadId = threadScheduler.getCurrentThreadId()
+        val actorId = currentActorId[threadId] ?: -1
         // Handle the case when the first actor has not yet started,
         // see https://github.com/JetBrains/lincheck/pull/277
         if (actorId < 0) return false
-        return scenario.threads[currentThreadId][actorId].blocking
+        val currentActor = scenario.threads[threadId].getOrNull(actorId)
+        return currentActor?.blocking ?: false
     }
 
     private val concurrentActorCausesBlocking: Boolean get() {
         val currentThreadId = threadScheduler.getCurrentThreadId()
         val currentActiveActorIds = currentActorId.values.mapIndexed { iThread, actorId ->
             if (iThread != currentThreadId && actorId >= 0 && !threadScheduler.isFinished(iThread)) {
-                scenario.threads[iThread][actorId]
+                scenario.threads[iThread].getOrNull(actorId)
             } else null
         }.filterNotNull()
         return currentActiveActorIds.any { it.causesBlocking }
