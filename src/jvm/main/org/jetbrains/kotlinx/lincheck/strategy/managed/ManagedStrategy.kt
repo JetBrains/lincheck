@@ -352,7 +352,7 @@ internal abstract class ManagedStrategy(
             POST        -> 0
             VALIDATION  -> 0
         }
-        loopDetector.beforePart(nextThread)
+        loopDetector.beforePart(part, nextThread)
         threadScheduler.scheduleThread(nextThread)
     }
 

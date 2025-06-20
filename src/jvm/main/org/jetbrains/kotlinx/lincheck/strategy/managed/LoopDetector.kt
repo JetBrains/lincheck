@@ -11,6 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.primitiveOrIdentityHashCode
+import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import org.jetbrains.kotlinx.lincheck.strategy.managed.LoopDetector.CodeIdentity.RegularCodeLocationIdentity
 import org.jetbrains.kotlinx.lincheck.trace.CallStackTraceElement
 import org.jetbrains.kotlinx.lincheck.trace.SpinCycleStartTracePoint
@@ -68,7 +69,7 @@ import org.jetbrains.lincheck.datastructures.ManagedCTestConfiguration
  * Note: An example of this behavior is detailed in the comments of the code itself.
  */
 internal class LoopDetector(
-    private val hangingDetectionThreshold: Int
+    private var hangingDetectionThreshold: Int
 ) {
     /**
      * Current mode.
@@ -441,11 +442,19 @@ internal class LoopDetector(
     /**
      * Is called before each interleaving part processing
      */
-    fun beforePart(nextThread: Int) {
+    fun beforePart(part: ExecutionPart, nextThread: Int) {
         if (currentThreadId == -1) {
             setFirstThread(nextThread)
         } else if (currentThreadId != nextThread) {
             beforeThreadSwitch(nextThread)
+        }
+        if (part == ExecutionPart.VALIDATION) {
+            // Effectively disable spin-loop detection inside validation functions, because:
+            // - during validation, there are no other threads to switch anyway;
+            // - in our use cases of concurrent algorithms, many typical validation functions contain
+            //   long-running for-loops iterating over large pre-allocated arrays,
+            //   which size exceeds the default value of `hangingDetectionThreshold`.
+            hangingDetectionThreshold = ManagedCTestConfiguration.DEFAULT_LIVELOCK_EVENTS_THRESHOLD
         }
     }
 
