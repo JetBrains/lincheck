@@ -15,21 +15,21 @@ import java.io.*
 private const val OUTPUT_BUFFER_SIZE: Int = 16*1024*1024
 
 const val TRACE_MAGIC : Long = 0x706e547124ee5f70L
-const val TRACE_VERSION : Long = 4
+const val TRACE_VERSION : Long = 5
 
 fun saveRecorderTrace(out: OutputStream, rootCallsPerThread: List<TRTracePoint>) {
     DataOutputStream(out.buffered(OUTPUT_BUFFER_SIZE)).use { output ->
         output.writeLong(TRACE_MAGIC)
         output.writeLong(TRACE_VERSION)
 
+        val codeLocationsStringPool = internalizeCodeLocationStrings()
+
         saveCache(output, methodCache, DataOutput::writeMethodDescriptor)
         saveCache(output, fieldCache, DataOutput::writeFieldDescriptor)
         saveCache(output, variableCache, DataOutput::writeVariableDescriptor)
         saveCache(output, classNameCache, DataOutput::writeUTF)
-
-        // Save all CodeLocations's strings
-        val codeLocationsStringPool = internalizeCodeLocationStrings()
         saveCache(output, codeLocationsStringPool, DataOutput::writeUTF)
+
         saveCodeLocations(output, codeLocationsStringPool)
 
         output.writeInt(rootCallsPerThread.size)
@@ -88,6 +88,9 @@ private fun <V> loadCache(input: DataInput, cache: IndexedPool<V>, reader: DataI
 private fun internalizeCodeLocationStrings(): IndexedPool<String> {
     val pool = IndexedPool<String>()
     CodeLocations.content.forEach {
+        // Maybe, this class missed in cache?
+        classNameCache.getOrCreateId(it.className.toCanonicalClassName())
+
         pool.getOrCreateId(it.methodName)
         val fn = it.fileName
         if (fn != null) {
@@ -212,14 +215,14 @@ private fun DataInput.readVariableDescriptor(): VariableDescriptor {
 }
 
 private fun DataOutput.writeStackTraceElement(value: StackTraceElement, stringCache: IndexedPool<String>) {
-    writeInternalizedString(value.className, classNameCache::getOrCreateId)
+    writeInternalizedString(value.className.toCanonicalClassName(), classNameCache::getOrCreateId)
     writeInternalizedString(value.methodName, stringCache::getOrCreateId)
     writeInternalizedString(value.fileName, stringCache::getOrCreateId)
     writeInt(value.lineNumber)
 }
 
 private fun DataInput.readStackTraceElement(stringCache: IndexedPool<String>): StackTraceElement {
-    val className = readInternalizedString(classNameCache::get)
+    val className = readInternalizedString(classNameCache::get)?.toInternalClassName()
     val methodName = readInternalizedString(stringCache::get)
     val fileName = readInternalizedString(stringCache::get)
     val lineNumber = readInt()
@@ -242,3 +245,17 @@ private fun DataInput.readInternalizedString(internalizer: (Int) -> String?): St
         return internalizer(id)
     }
 }
+
+/**
+ * Converts a string representing a class name in internal format (e.g., "com/example/MyClass")
+ * into a canonical class name format with (e.g., "com.example.MyClass").
+ */
+private fun String.toCanonicalClassName() =
+    this.replace('/', '.')
+
+/**
+ * Converts a string representing a class name in canonical format (e.g., "com.example.MyClass")
+ * into an internal class name format with (e.g., "com/example/MyClass").
+ */
+private fun String.toInternalClassName() =
+    this.replace('.', '/')
