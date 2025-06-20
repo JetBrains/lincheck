@@ -265,7 +265,7 @@ private fun SingleThreadedTable<TraceNode>.compressThreadStart() = compressNodes
  */
 private fun SingleThreadedTable<TraceNode>.compressInlineIV() = compressNodes { node ->
     if (node !is CallNode || node.tracePoint.ownerName == null) return@compressNodes node
-    node.tracePoint.ownerName = node.tracePoint.ownerName!!.removeSuffix("\$iv")
+    node.tracePoint.updateOwnerName(node.tracePoint.ownerName!!.removeSuffix("\$iv"))
     node
 }
 
@@ -289,7 +289,7 @@ private fun SingleThreadedTable<TraceNode>.compressInlineIV() = compressNodes { 
  */
 private fun SingleThreadedTable<TraceNode>.compressDollarThis() = compressNodes { node ->
     if (node !is CallNode || node.tracePoint.ownerName == null) return@compressNodes node
-    if (node.tracePoint.ownerName == "\$this") node.tracePoint.ownerName = null
+    if (node.tracePoint.ownerName == "\$this") node.tracePoint.updateOwnerName(null)
     node
 }
 
@@ -314,7 +314,7 @@ private fun SingleThreadedTable<TraceNode>.compressDollarThis() = compressNodes 
 private fun SingleThreadedTable<TraceNode>.replaceNestedClassDollar() = compressNodes { node ->
     if (node is CallNode && node.tracePoint.ownerName != null) {
         val newOwner = fixNestedClassDollar(node.tracePoint.ownerName!!)
-        node.tracePoint.ownerName = newOwner
+        node.tracePoint.updateOwnerName(newOwner)
     }
     node
 }
@@ -344,8 +344,8 @@ private fun SingleThreadedTable<TraceNode>.compressLambdaCaptureSyntheticField()
         && node.tracePoint.ownerRepresentation?.startsWith("$") == true
         && node.tracePoint.fieldName == "element"
     ) {
-        node.tracePoint.fieldName = node.tracePoint.ownerRepresentation!!.removePrefix("$")
-        node.tracePoint.ownerRepresentation = null
+        node.tracePoint.updateFieldName(node.tracePoint.ownerRepresentation!!.removePrefix("$"))
+        node.tracePoint.updateOwnerRepresentation(null)
     }
 
     if (node is EventNode 
@@ -353,8 +353,8 @@ private fun SingleThreadedTable<TraceNode>.compressLambdaCaptureSyntheticField()
         && node.tracePoint.ownerRepresentation?.startsWith("$") == true
         && node.tracePoint.fieldName == "element"
     ) {
-        node.tracePoint.fieldName = node.tracePoint.ownerRepresentation!!.removePrefix("$")
-        node.tracePoint.ownerRepresentation = null
+        node.tracePoint.updateFieldName(node.tracePoint.ownerRepresentation!!.removePrefix("$"))
+        node.tracePoint.updateOwnerRepresentation(null)
     }
     node
 }
@@ -381,13 +381,13 @@ private fun SingleThreadedTable<TraceNode>.compressLambdaCaptureSyntheticField()
  */
 private fun SingleThreadedTable<TraceNode>.compressVolatileDollar() = compressNodes { node ->
     if (node is CallNode && node.tracePoint.ownerName != null) {
-        node.tracePoint.ownerName = node.tracePoint.ownerName!!.removeSuffix("\$volatile")
+        node.tracePoint.updateOwnerName(node.tracePoint.ownerName!!.removeSuffix("\$volatile"))
     }
 
     // TODO this can be removed after IJTD-151 is merged. 
     //  Could also be fixed in TraceNodes.kt but would cause unnecessary conflicts.
     if (node is EventNode && node.tracePoint is MethodCallTracePoint && node.tracePoint.ownerName != null) {
-        node.tracePoint.ownerName = node.tracePoint.ownerName!!.removeSuffix("\$volatile")
+        node.tracePoint.updateOwnerName(node.tracePoint.ownerName!!.removeSuffix("\$volatile"))
     }
 
     node
@@ -450,7 +450,7 @@ private fun fixNestedClassDollar(nestedClassRepresentation: String): String {
 private fun SingleThreadedTable<TraceNode>.compressSyntheticParameterNumbers() = compressNodes { node ->
     if (node is CallNode) {
         if (node.tracePoint.ownerName != null)
-            node.tracePoint.ownerName = node.tracePoint.ownerName!!.removeSyntheticParameterNameNumbers()
+            node.tracePoint.updateOwnerName(node.tracePoint.ownerName!!.removeSyntheticParameterNameNumbers())
         node.tracePoint.parameters = node.tracePoint.parameters?.map { it.removeSyntheticParameterNameNumbers() }
     }
     node

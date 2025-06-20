@@ -153,16 +153,24 @@ internal class ObstructionFreedomViolationExecutionAbortTracePoint(
 }
 
 internal class ReadTracePoint(
-    var ownerRepresentation: String?,
+    ownerRepresentation: String?,
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
-    var fieldName: String,
+    fieldName: String,
     codeLocation: Int,
     val isLocal: Boolean,
     private val valueRepresentation: String,
     val valueType: String,
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, codeLocation) {
 
+    var fieldName = fieldName
+        private set
+    val updateFieldName = ::fieldName.setter
+
+    var ownerRepresentation = ownerRepresentation
+        private set
+    val updateOwnerRepresentation = ::ownerRepresentation.setter
+    
     override fun toStringCompact(): String = StringBuilder().apply {
         if (ownerRepresentation != null) {
             append("$ownerRepresentation.$fieldName")
@@ -179,15 +187,23 @@ internal class ReadTracePoint(
 }
 
 internal class WriteTracePoint(
-    var ownerRepresentation: String?,
+    ownerRepresentation: String?,
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
-    var fieldName: String,
+    fieldName: String,
     codeLocation: Int,
     val isLocal: Boolean,
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, codeLocation) {
     private lateinit var valueRepresentation: String
     lateinit var valueType: String
+    
+    var fieldName = fieldName
+        private set
+    val updateFieldName = ::fieldName.setter
+    
+    var ownerRepresentation = ownerRepresentation
+        private set
+    val updateOwnerRepresentation = ::ownerRepresentation.setter
 
     override fun toStringCompact(): String = StringBuilder().apply {
         if (ownerRepresentation != null) {
@@ -227,7 +243,10 @@ internal class MethodCallTracePoint(
     var thrownException: Throwable? = null
     var parameters: List<String>? = null
     var parameterTypes: List<String>? = null
+    
     var ownerName: String? = null
+        private set
+    val updateOwnerName = ::ownerName.setter
     
     val isRootCall get() = callType != CallType.NORMAL
     val isActor get() = callType == CallType.ACTOR
