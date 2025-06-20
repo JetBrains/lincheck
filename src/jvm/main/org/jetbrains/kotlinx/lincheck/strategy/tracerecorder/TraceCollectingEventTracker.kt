@@ -117,13 +117,17 @@ class TraceCollectingEventTracker(
         )
         tracePoint.result = TR_OBJECT_VOID
         threadHandle.pushStackFrame(tracePoint, Thread.currentThread())
+        enableAnalysis()
     }
 
-    override fun afterThreadFinish() = Unit
+    override fun afterThreadFinish() {
+        disableAnalysis()
+    }
 
     override fun threadJoin(thread: Thread?, withTimeout: Boolean) = Unit
 
     override fun onThreadRunException(exception: Throwable) = runInsideIgnoredSection {
+        disableAnalysis()
         throw exception
     }
 
