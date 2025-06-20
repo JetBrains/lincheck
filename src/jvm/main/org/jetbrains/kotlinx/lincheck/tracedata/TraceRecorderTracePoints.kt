@@ -12,6 +12,8 @@ package org.jetbrains.kotlinx.lincheck.tracedata
 
 import java.io.DataInput
 import java.io.DataOutput
+import java.math.BigDecimal
+import java.math.BigInteger
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 
@@ -413,6 +415,7 @@ fun loadTRTracePoint(inp: DataInput): TRTracePoint {
 }
 
 internal val classNameCache = IndexedPool<String>()
+private val REGEX_TO_ESCAPE_CHARS = Regex("([\r\n\t])")
 
 @ConsistentCopyVisibility
 data class TRObject internal constructor (
@@ -424,13 +427,19 @@ data class TRObject internal constructor (
     val isPrimitive: Boolean get() = primitiveValue != null
     val value: Any? get() = primitiveValue
 
+    // TODO: Unify with code like `ObjectLabelFactory.adornedStringRepresentation` placed in hypothetical `core` module
     override fun toString(): String {
         return if (primitiveValue != null) {
             when (primitiveValue) {
                 is String -> {
-                    // Max 1KB of text and no more than 1 line (till CR and/or LF)
-                    val v = primitiveValue.take(1024).takeWhile({ it != '\r' && it != '\n' })
-                    "\"$v${if (v != primitiveValue) " (...)" else ""}\""
+                    if (classNameId == TR_OBJECT_P_RAW_STRING) return primitiveValue
+                    // Escape special characters
+                    val v = primitiveValue
+                        .replace("\\", "\\\\")
+                        .replace("\n", "\\n")
+                        .replace("\r", "\\r")
+                        .replace("\t", "\\t")
+                    return "\"$v\""
                 }
                 is Char -> "'$primitiveValue'"
                 is Unit -> "Unit"
@@ -461,6 +470,7 @@ private const val TR_OBJECT_P_DOUBLE = TR_OBJECT_P_FLOAT - 1
 private const val TR_OBJECT_P_CHAR = TR_OBJECT_P_DOUBLE - 1
 private const val TR_OBJECT_P_STRING = TR_OBJECT_P_CHAR - 1
 private const val TR_OBJECT_P_UNIT = TR_OBJECT_P_STRING - 1
+private const val TR_OBJECT_P_RAW_STRING = TR_OBJECT_P_UNIT - 1
 
 fun TRObjectOrNull(obj: Any?): TRObject? =
     obj?.let { TRObject(it) }
@@ -481,6 +491,11 @@ fun TRObject(obj: Any): TRObject {
         is String -> TRObject(TR_OBJECT_P_STRING, 0, obj)
         is CharSequence -> TRObject(TR_OBJECT_P_STRING, 0, obj.toString())
         is Unit -> TRObject(TR_OBJECT_P_UNIT, 0, obj)
+        // Render these types to strings for simplicity
+        is Enum<*> -> TRObject(TR_OBJECT_P_RAW_STRING, 0, "${obj.javaClass.simpleName}.${obj.name}")
+        is BigInteger -> TRObject(TR_OBJECT_P_RAW_STRING, 0, obj.toString())
+        is BigDecimal -> TRObject(TR_OBJECT_P_RAW_STRING, 0, obj.toString())
+        // Generic case
         else -> TRObject(classNameCache.getOrCreateId(obj.javaClass.name), System.identityHashCode(obj), null)
     }
 }
@@ -508,7 +523,7 @@ private fun DataOutput.writeTRObject(value: TRObject?) {
         is Float -> writeFloat(value.primitiveValue)
         is Double -> writeDouble(value.primitiveValue)
         is Char -> writeChar(value.primitiveValue.code)
-        is String -> writeUTF(value.primitiveValue)
+        is String -> writeUTF(value.primitiveValue) // Both STRING and RAW_STRING
         is Unit -> {}
         else -> error("Unknow primitive value ${value.primitiveValue}")
     }
@@ -527,6 +542,7 @@ private fun DataInput.readTRObject(): TRObject? {
         TR_OBJECT_P_CHAR -> TRObject(classNameId, 0, readChar())
         TR_OBJECT_P_STRING -> TRObject(classNameId, 0, readUTF())
         TR_OBJECT_P_UNIT -> TRObject(classNameId, 0, Unit)
+        TR_OBJECT_P_RAW_STRING -> TRObject(classNameId, 0, readUTF())
         else -> {
             if (classNameId >= 0) {
                 TRObject(classNameId, readInt(), null)
