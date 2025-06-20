@@ -175,7 +175,8 @@ internal class LincheckClassVisitor(
             return mv
         }
         /*
-         * TODO
+         * Instrumentation of `java.util.Arrays` class causes some subtle flaky bugs.
+         * See details in https://github.com/JetBrains/lincheck/issues/717.
          */
         if (isJavaUtilArraysClass(className.toCanonicalClassName())) {
             // `java.util.Arrays` contains intrinsic methods --- we need to process them
