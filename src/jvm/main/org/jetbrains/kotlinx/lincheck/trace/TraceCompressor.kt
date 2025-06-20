@@ -24,7 +24,6 @@ internal fun SingleThreadedTable<TraceNode>.compressTrace() = this
     .compressInlineIV()
     .compressDollarThis()
     .replaceNestedClassDollar()
-    .compressSyntheticParameterNumbers()
     .compressLambdaCaptureSyntheticField()
     .compressVolatileDollar()
 
@@ -34,7 +33,6 @@ internal fun SingleThreadedTable<TraceNode>.compressTrace() = this
 internal fun StackTraceElement.compress(): String = this.toString()
     .removePackages()
     .removeStackTraceNestedClassDollarSigns()
-    .removeSyntheticParameterNameNumbers()
 
 /**
  * Compresses `receive$suspendImpl` calls.
@@ -414,9 +412,6 @@ private fun String.removeStackTraceNestedClassDollarSigns(): String {
     return "${fixNestedClassDollar(before)}.$after"
 }
 
-private fun String.removeSyntheticParameterNameNumbers(): String =
-    replace("\\$\\d+".toRegex(), "")
-
 /**
  * Remove nested class dollars from string (if present).
  */
@@ -427,33 +422,6 @@ private fun fixNestedClassDollar(nestedClassRepresentation: String): String {
     val firstPart = if (before.isNotEmpty() && before[0].isUpperCase() && after[0].isUpperCase()) "$before."
     else "$before$"
     return firstPart + fixNestedClassDollar(after)
-}
-
-/**
- * Removes synthetic parameter numbers from variable names.
- *
- * The Kotlin compiler adds numbers to variable names when they shadow other variables in lambdas
- * (e.g., `$0`, `$1`). This transformation makes the trace more readable by removing these numbers.
- *
- * For example:
- *
- * ```
- * A.method(param$0) at A.kt:10
- * ```
- *
- * will be transformed to:
- *
- * ```
- * A.method(param) at A.kt:10
- * ```
- */
-private fun SingleThreadedTable<TraceNode>.compressSyntheticParameterNumbers() = compressNodes { node ->
-    if (node is CallNode) {
-        if (node.tracePoint.ownerName != null)
-            node.tracePoint.updateOwnerName(node.tracePoint.ownerName!!.removeSyntheticParameterNameNumbers())
-        node.tracePoint.parameters = node.tracePoint.parameters?.map { it.removeSyntheticParameterNameNumbers() }
-    }
-    node
 }
 
 internal fun SingleThreadedTable<TraceNode>.collapseLibraries(analysisProfile: AnalysisProfile) = compressNodes { node -> 

@@ -1,37 +1,37 @@
 = Concurrent test has hung =
 
 The following interleaving leads to the error:
-| ---------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                  Main Thread                                                                   |
-| ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| $this_runCatching.block() at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$lambda(RunConcurrentRepresentationTests.kt:48) |
-|   block() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:99)                                    |
-|     q.take() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:104)                                |
-|       lock.lockInterruptibly() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:414)                                                         |
-|       notEmpty.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:417)                                                                 |
-|         LockSupport.park(ConditionObject#1) at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:2081)          |
-|           LockSupport.setBlocker(Thread#0, ConditionObject#1) at LockSupport.park(LockSupport.java:193)                                        |
-|           PARK at LockSupport.park(LockSupport.java:194)                                                                                       |
-| ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| -------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                    Main Thread                                                                     |
+| -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| $this_runCatching.block() at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48) |
+|   block() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:99)                                        |
+|     q.take() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:104)                                    |
+|       lock.lockInterruptibly() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:414)                                                             |
+|       notEmpty.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:417)                                                                     |
+|         LockSupport.park(ConditionObject#1) at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:2081)              |
+|           LockSupport.setBlocker(Thread#0, ConditionObject#1) at LockSupport.park(LockSupport.java:193)                                            |
+|           PARK at LockSupport.park(LockSupport.java:194)                                                                                           |
+| -------------------------------------------------------------------------------------------------------------------------------------------------- |
 All unfinished threads are in deadlock
 
 Detailed trace:
-| ---------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                  Main Thread                                                                   |
-| ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| $this_runCatching.block() at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$lambda(RunConcurrentRepresentationTests.kt:48) |
-|   block() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:99)                                    |
-|     q.take() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:104)                                |
-|       lock.lockInterruptibly() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:414)                                                         |
-|         sync.acquireInterruptibly(1) at ReentrantLock.lockInterruptibly(ReentrantLock.java:317)                                                |
-|           tryAcquire(1): true at AbstractQueuedSynchronizer.acquireInterruptibly(AbstractQueuedSynchronizer.java:1262)                         |
-|             nonfairTryAcquire(1): true at ReentrantLock.NonfairSync.tryAcquire(ReentrantLock.java:199)                                         |
-|               compareAndSetState(0, 1): true at ReentrantLock.Sync.nonfairTryAcquire(ReentrantLock.java:130)                                   |
-|                 state.compareAndSet(0, 1): true at AbstractQueuedSynchronizer.compareAndSetState(AbstractQueuedSynchronizer.java:612)          |
-|       notEmpty.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:417)                                                                 |
-|         LockSupport.park(ConditionObject#1) at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:2081)          |
-|           LockSupport.setBlocker(Thread#0, ConditionObject#1) at LockSupport.park(LockSupport.java:193)                                        |
-|             Unsafe#1.putObject(Thread#0, 76, ConditionObject#1) at LockSupport.setBlocker(LockSupport.java:144)                                |
-|           PARK at LockSupport.park(LockSupport.java:194)                                                                                       |
-| ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| -------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                    Main Thread                                                                     |
+| -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| $this_runCatching.block() at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48) |
+|   block() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:99)                                        |
+|     q.take() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:104)                                    |
+|       lock.lockInterruptibly() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:414)                                                             |
+|         sync.acquireInterruptibly(1) at ReentrantLock.lockInterruptibly(ReentrantLock.java:317)                                                    |
+|           tryAcquire(1): true at AbstractQueuedSynchronizer.acquireInterruptibly(AbstractQueuedSynchronizer.java:1262)                             |
+|             nonfairTryAcquire(1): true at ReentrantLock.NonfairSync.tryAcquire(ReentrantLock.java:199)                                             |
+|               compareAndSetState(0, 1): true at ReentrantLock.Sync.nonfairTryAcquire(ReentrantLock.java:130)                                       |
+|                 state.compareAndSet(0, 1): true at AbstractQueuedSynchronizer.compareAndSetState(AbstractQueuedSynchronizer.java:612)              |
+|       notEmpty.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:417)                                                                     |
+|         LockSupport.park(ConditionObject#1) at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:2081)              |
+|           LockSupport.setBlocker(Thread#0, ConditionObject#1) at LockSupport.park(LockSupport.java:193)                                            |
+|             Unsafe#1.putObject(Thread#0, 76, ConditionObject#1) at LockSupport.setBlocker(LockSupport.java:144)                                    |
+|           PARK at LockSupport.park(LockSupport.java:194)                                                                                           |
+| -------------------------------------------------------------------------------------------------------------------------------------------------- |
 All unfinished threads are in deadlock
