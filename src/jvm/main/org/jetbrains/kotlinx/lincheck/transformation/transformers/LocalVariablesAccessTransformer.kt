@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
+import org.jetbrains.kotlinx.lincheck.tracedata.Types.convertAsmMethodType
 import org.jetbrains.kotlinx.lincheck.tracedata.VariableDescriptor
 import org.jetbrains.kotlinx.lincheck.tracedata.variableCache
 import org.jetbrains.kotlinx.lincheck.transformation.*
@@ -23,10 +24,13 @@ internal class LocalVariablesAccessTransformer(
     className: String,
     methodName: String,
     adapter: GeneratorAdapter,
+    desc: String,
+    isStatic: Boolean,
     private val locals: Map<Int, List<LocalVariableInfo>>,
 ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
     private var turnoffTransform = false
     private val visitedLabels = HashSet<Label>()
+    private val numberOfLocals = convertAsmMethodType(desc).argumentTypes.size  + if (isStatic) 0 else 1
 
     override fun visitLabel(label: Label) = adapter.run {
         visitedLabels += label
@@ -94,6 +98,12 @@ internal class LocalVariablesAccessTransformer(
     }
 
     private fun visitReadVarInsn(localVariableInfo: LocalVariableInfo, opcode: Int, varIndex: Int) = adapter.run {
+        // Skip variable read if it is in an unknown line of code and variable is argument
+        // It can be code inserted by compiler to check Null invariant
+        if (!isKnownLineNumber() && varIndex < numberOfLocals) {
+            visitVarInsn(opcode, varIndex)
+            return
+        }
         invokeIfInAnalyzedCode(
             original = {
                 visitVarInsn(opcode, varIndex)

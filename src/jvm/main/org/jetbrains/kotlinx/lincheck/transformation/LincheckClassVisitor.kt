@@ -83,6 +83,8 @@ internal class LincheckClassVisitor(
         fun MethodVisitor.newAdapter() = GeneratorAdapter(this, access, methodName, desc)
         fun MethodVisitor.newNonRemappingAdapter() = GeneratorAdapterWithoutLocals(this, access, methodName, desc)
 
+        val isStatic = access and ACC_STATIC != 0
+
         if (instrumentationMode == STRESS) {
             return if (methodName != "<clinit>" && methodName != "<init>") {
                 CoroutineCancellabilitySupportTransformer(mv, access, className, methodName, desc)
@@ -113,7 +115,7 @@ internal class LincheckClassVisitor(
                 analyzerAdapter
             }
             val locals: Map<Int, List<LocalVariableInfo>> = methods[methodName + desc]?.variables ?: emptyMap()
-            mv = LocalVariablesAccessTransformer(fileName, className, methodName, mv.newAdapter(), locals)
+            mv = LocalVariablesAccessTransformer(fileName, className, methodName, mv.newAdapter(), desc, isStatic, locals)
 
             // Inline method call transformer relies on the original variables' indices, so it should go before (in FIFO order)
             // all transformers which can create local variables.
@@ -258,7 +260,7 @@ internal class LincheckClassVisitor(
             aa
         }
         val locals: Map<Int, List<LocalVariableInfo>> = methods[methodName + desc]?.variables ?: emptyMap()
-        mv = LocalVariablesAccessTransformer(fileName, className, methodName, mv.newAdapter(), locals)
+        mv = LocalVariablesAccessTransformer(fileName, className, methodName, mv.newAdapter(), desc, isStatic, locals)
         // Inline method call transformer relies on the original variables' indices, so it should go before (in FIFO order)
         // all transformers which can create local variables.
         // We cannot use trick with
@@ -302,6 +304,8 @@ internal open class ManagedStrategyMethodVisitor(
         val codeLocationId = CodeLocations.newCodeLocation(stackTraceElement)
         adapter.push(codeLocationId)
     }
+
+    protected fun isKnownLineNumber(): Boolean = lineNumber > 0
 
     override fun visitLineNumber(line: Int, start: Label) {
         lineNumber = line
