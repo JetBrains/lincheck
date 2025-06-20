@@ -476,6 +476,9 @@ open class BaseObjectTracker(
         perClassObjectNumeration.clear()
     }
 
+    /**
+     * Removes garbage-collected objects from the object tracker.
+     */
     private fun cleanup() {
         while (true) {
             val objReference = referenceQueue.poll() ?: break
@@ -488,6 +491,9 @@ open class BaseObjectTracker(
         }
     }
 
+    /**
+     * Removes entries from the list where the associated object has been garbage collected.
+     */
     private fun MutableList<ObjectEntry>.cleanup() {
         retainAll { it.objectReference.get() != null }
     }
