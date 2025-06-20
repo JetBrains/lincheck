@@ -62,7 +62,8 @@ internal class ModelCheckingStrategy(
     private var isReplayingSpinCycle = false
 
     // Tracker of objects' allocations and object graph topology.
-    override val objectTracker: ObjectTracker = LocalObjectManager(executionMode)
+    override val objectTracker: ObjectTracker =
+        if (isInTraceDebuggerMode) BaseObjectTracker(executionMode) else LocalObjectManager(executionMode)
     // Tracker of the monitors' operations.
     override val monitorTracker: MonitorTracker = ModelCheckingMonitorTracker()
     // Tracker of the thread parking.
@@ -437,7 +438,7 @@ internal class ModelCheckingStrategy(
  */
 internal class LocalObjectManager(
     executionMode: ExecutionMode
-) : AbstractObjectTracker(executionMode) {
+) : BaseObjectTracker(executionMode) {
 
     override fun registerThread(threadId: Int, thread: Thread) {
         super.registerThread(threadId, thread)

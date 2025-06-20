@@ -356,7 +356,7 @@ private class Lambda
  * It provides an implementation for registering, retrieving, updating,
  * and managing objects and their entries in the registry.
  */
-abstract class AbstractObjectTracker(
+open class BaseObjectTracker(
     val executionMode: ExecutionMode
 ) : ObjectTracker {
 
@@ -429,6 +429,11 @@ abstract class AbstractObjectTracker(
         }
         return entry
     }
+
+    override fun registerObjectLink(fromObject: Any?, toObject: Any?) {}
+
+    override fun shouldTrackObjectAccess(obj: Any?): Boolean =
+        true // track all accesses by default
 
     private fun getEntries(objHashCode: IdentityHashCode): List<ObjectEntry>? {
         val entries = objectIndex[objHashCode] ?: return null
