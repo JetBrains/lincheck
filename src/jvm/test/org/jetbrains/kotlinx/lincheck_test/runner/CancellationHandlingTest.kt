@@ -20,7 +20,7 @@ class CancellationHandlingTest : AbstractLincheckTest() {
     private var suspendedContOrCancelled = AtomicReference<Any?>(null)
 
     @InternalCoroutinesApi
-    @Operation(runOnce = true, handleExceptionsAsResult = [CancellationException::class])
+    @Operation(runOnce = true)
     suspend fun suspendIfNotClosed() = suspendCancellableCoroutine<Unit> { cont ->
         val cancelled = !suspendedContOrCancelled.compareAndSet(null, cont)
         if (cancelled) cont.cancel()

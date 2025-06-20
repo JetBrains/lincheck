@@ -23,13 +23,13 @@ import org.jetbrains.lincheck.datastructures.Param
 class RendezvousChannelTest : AbstractLincheckTest() {
     private val ch = Channel<Int>()
 
-    @Operation(handleExceptionsAsResult = [ClosedSendChannelException::class])
+    @Operation
     suspend fun send(@Param(name = "value") value: Int) = ch.send(value)
 
-    @Operation(handleExceptionsAsResult = [ClosedReceiveChannelException::class])
+    @Operation
     suspend fun receive() = ch.receive()
 
-    @Operation(handleExceptionsAsResult = [ClosedReceiveChannelException::class])
+    @Operation
     suspend fun receiveOrNull() = ch.receiveCatching().getOrNull()
 
     @Operation

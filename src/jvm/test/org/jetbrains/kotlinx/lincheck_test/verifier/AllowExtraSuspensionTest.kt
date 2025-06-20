@@ -21,7 +21,7 @@ class AllowExtraSuspensionCorrectTest : AbstractLincheckTest() {
     private val mutex = Mutex()
     private var counter = AtomicInteger()
 
-    @Operation(allowExtraSuspension = true)
+    @Operation
     suspend fun inc(): Int = mutex.withLock {
         counter.getAndIncrement()
     }
@@ -64,7 +64,7 @@ class OnlyExtraSuspensionsHaveToBeAtomicTest : AbstractLincheckTest() {
     }
 
     @InternalCoroutinesApi
-    @Operation(allowExtraSuspension = true)
+    @Operation
     suspend fun operation2() {
         val c = c.incrementAndGet()
         if (c == 6) return
