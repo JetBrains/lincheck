@@ -16,6 +16,7 @@ import org.junit.*
 
 @StressCTest(iterations = 1, minimizeFailedScenario = false)
 class OperationsInAbstractClassTest : AbstractTestClass() {
+    @Suppress("DEPRECATION")
     @Test
     fun test(): Unit = LinChecker.check(this::class.java)
 }

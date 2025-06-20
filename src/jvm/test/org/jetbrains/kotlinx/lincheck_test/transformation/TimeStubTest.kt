@@ -46,6 +46,7 @@ class TimeStubTest {
     @Test
     fun test() {
         assumeFalse(isInTraceDebuggerMode)
+        @Suppress("DEPRECATION")
         LinChecker.check(this::class.java)
     }
 }

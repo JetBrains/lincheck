@@ -35,6 +35,7 @@ class FinalFieldReadingEliminationTest {
 
     @Test(timeout = 100_000)
     fun test() {
+        @Suppress("DEPRECATION")
         LinChecker.check(this::class.java)
     }
 

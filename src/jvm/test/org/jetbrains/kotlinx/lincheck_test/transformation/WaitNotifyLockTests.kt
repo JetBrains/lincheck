@@ -26,6 +26,7 @@ class WaitNotifyLockTest {
 
     @Test
     fun test() {
+        @Suppress("DEPRECATION")
         LinChecker.check(this::class.java)
     }
 }
@@ -41,6 +42,7 @@ class NestedWaitNotifyLockTest {
 
     @Test
     fun test() {
+        @Suppress("DEPRECATION")
         LinChecker.check(this::class.java)
     }
 }

@@ -37,7 +37,7 @@ class MinimizationTest {
             .invocationsPerIteration(INVOCATIONS_COUNT)
             .minimizeFailedScenario(false)
         try {
-            LinChecker.check(MinimizationTest::class.java, options)
+            options.check(this::class)
             fail("Should fail with LincheckAssertionError")
         } catch (error: LincheckAssertionError) {
             val failedScenario = error.failure.scenario
@@ -62,7 +62,7 @@ class MinimizationTest {
             .actorsAfter(4)
             .invocationsPerIteration(INVOCATIONS_COUNT)
         try {
-            LinChecker.check(MinimizationTest::class.java, options)
+            options.check(this::class)
             fail("Should fail with LincheckAssertionError")
         } catch (error: LincheckAssertionError) {
             val failedScenario = error.failure.scenario
@@ -95,7 +95,7 @@ class MinimizationWithExceptionTest {
             .actorsAfter(4)
             .invocationsPerIteration(INVOCATIONS_COUNT)
         try {
-            LinChecker.check(IncorrectImplementationWithException::class.java, options)
+            options.check(IncorrectImplementationWithException::class)
             fail("Should fail with LincheckAssertionError")
         } catch (error: LincheckAssertionError) {
             val failedScenario = error.failure.scenario
@@ -127,7 +127,7 @@ class MinimizationWithExceptionTest {
             .invocationsPerIteration(INVOCATIONS_COUNT)
             .sequentialSpecification(SequentialImplementation::class.java)
         try {
-            LinChecker.check(CorrectImplementationWithException::class.java, options)
+            options.check(CorrectImplementationWithException::class)
             fail("Should fail with LincheckAssertionError")
         } catch (error: LincheckAssertionError) {
             val failedScenario = error.failure.scenario

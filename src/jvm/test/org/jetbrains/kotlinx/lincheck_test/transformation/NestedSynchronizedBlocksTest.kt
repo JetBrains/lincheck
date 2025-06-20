@@ -30,6 +30,7 @@ class NestedSynchronizedBlocksTest {
 
     @Test
     fun test() {
+        @Suppress("DEPRECATION")
         LinChecker.check(this::class.java)
     }
 }

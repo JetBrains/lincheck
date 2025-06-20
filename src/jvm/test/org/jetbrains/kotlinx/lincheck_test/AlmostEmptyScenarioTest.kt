@@ -28,6 +28,7 @@ class AlmostEmptyScenarioTest {
     @Test
     fun test() {
         try {
+            @Suppress("DEPRECATION")
             LinChecker.check(AlmostEmptyScenarioTest::class.java)
             fail("Should fail with LincheckAssertionError")
         } catch (e: LincheckAssertionError) {

@@ -9,13 +9,11 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.verifier
 
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.jetbrains.lincheck.datastructures.*
+import org.jetbrains.lincheck.datastructures.Operation
 import org.junit.*
 
-@StressCTest(iterations = 5, threads = 2, actorsPerThread = 2, verifier = EpsilonVerifier::class)
 class EpsilonVerifierTest {
     private var i = 0
 
@@ -23,5 +21,7 @@ class EpsilonVerifierTest {
     fun incAndGet() = i++ // non-atomic!
 
     @Test
-    fun test() = LinChecker.check(EpsilonVerifierTest::class.java)
+    fun test() = StressOptions()
+        .verifier(EpsilonVerifier::class.java)
+        .check(this::class)
 }
