@@ -9,7 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.transformation
 
-import org.jetbrains.kotlinx.lincheck.Options
+import org.jetbrains.lincheck.datastructures.Options
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
 

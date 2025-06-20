@@ -9,8 +9,8 @@
  */
 package org.jetbrains.kotlinx.lincheck.annotations
 
-import org.jetbrains.kotlinx.lincheck.paramgen.DummyParameterGenerator
-import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator
+import org.jetbrains.lincheck.datastructures.DummyParameterGenerator
+import org.jetbrains.lincheck.datastructures.ParameterGenerator
 import java.lang.annotation.Inherited
 import kotlin.reflect.KClass
 

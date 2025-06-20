@@ -10,14 +10,14 @@
 package org.jetbrains.kotlinx.lincheck.execution
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.paramgen.*
-import org.jetbrains.kotlinx.lincheck.paramgen.THREAD_ID_TOKEN
+import org.jetbrains.lincheck.datastructures.ParameterGenerator
+import org.jetbrains.lincheck.datastructures.THREAD_ID_TOKEN
 import java.lang.reflect.*
 import java.util.Random
 
 /**
  * Implementations of this class generate [actors][Actor]
- * using [parameter generators][ParameterGenerator].
+ * using [parameter generators][org.jetbrains.lincheck.datastructures.ParameterGenerator].
  */
 class ActorGenerator(
     private val method: Method,

@@ -8,25 +8,20 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck
+package org.jetbrains.lincheck.datastructures
 
-import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.execution.RandomExecutionGenerator
-import org.jetbrains.kotlinx.lincheck.strategy.Strategy
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTest
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
+import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfiguration
-import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
-import org.jetbrains.kotlinx.lincheck.util.LoggingLevel
-import org.jetbrains.kotlinx.lincheck.util.DEFAULT_LOG_LEVEL
-import org.jetbrains.kotlinx.lincheck.verifier.Verifier
-import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier
-import java.lang.reflect.Method
-import kotlin.reflect.KClass
+import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.lincheck.datastructures.verifier.*
+import java.lang.reflect.*
+import kotlin.reflect.*
 
 /**
  * Abstract class for test options.
@@ -72,7 +67,7 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
      * Use the specified number of threads for the parallel part of an execution.
      *
      * Note, that the the actual number of threads can be less due to some restrictions
-     * like [Operation.runOnce].
+     * like [org.jetbrains.kotlinx.lincheck.annotations.Operation.runOnce].
      *
      * @see ExecutionScenario.parallelExecution
      */
@@ -84,7 +79,7 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
      * Generate the specified number of operations for each thread of the parallel part of an execution.
      *
      * Note, that the the actual number of operations can be less due to some restrictions
-     * like [Operation.runOnce].
+     * like [org.jetbrains.kotlinx.lincheck.annotations.Operation.runOnce].
      *
      * @see ExecutionScenario.parallelExecution
      */
@@ -96,7 +91,7 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
      * Generate the specified number of operation for the initial sequential part of an execution.
      *
      * Note, that the the actual number of operations can be less due to some restrictions
-     * like [Operation.runOnce].
+     * like [org.jetbrains.kotlinx.lincheck.annotations.Operation.runOnce].
      *
      * @see ExecutionScenario.initExecution
      */
@@ -108,7 +103,7 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
      * Generate the specified number of operation for the last sequential part of an execution.
      *
      * Note, that the the actual number of operations can be less due to some restrictions
-     * like [Operation.runOnce].
+     * like [org.jetbrains.kotlinx.lincheck.annotations.Operation.runOnce].
      *
      * @see ExecutionScenario.postExecution
      */
@@ -196,7 +191,7 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
      */
     fun check(testClass: Class<*>) {
         @Suppress("DEPRECATION")
-        LinChecker.check(testClass, this)
+        LinChecker.Companion.check(testClass, this)
     }
 
     /**

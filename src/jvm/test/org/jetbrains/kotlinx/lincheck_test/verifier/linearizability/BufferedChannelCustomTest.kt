@@ -15,7 +15,8 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck_test.verifier.*
-import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
+import org.jetbrains.lincheck.datastructures.actor
+import org.jetbrains.lincheck.datastructures.verifier.LinearizabilityVerifier
 import org.junit.*
 import java.util.concurrent.CancellationException
 
@@ -71,16 +72,16 @@ class BufferedChannelCustomTest {
         verify(BufferedChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
             parallel {
                 thread {
-                    operation(actor(s,1), VoidResult)
-                    operation(actor(s,2), VoidResult)
-                    operation(actor(s,3), VoidResult)
-                    operation(actor(s,4), VoidResult)
+                    operation(actor(s, 1), VoidResult)
+                    operation(actor(s, 2), VoidResult)
+                    operation(actor(s, 3), VoidResult)
+                    operation(actor(s, 4), VoidResult)
                 }
                 thread {
                     operation(actor(r), ValueResult(1))
                     operation(actor(r), ValueResult(2))
-                    operation(actor(s,5), VoidResult)
-                    operation(actor(s,6), Suspended)
+                    operation(actor(s, 5), VoidResult)
+                    operation(actor(s, 6), Suspended)
                     operation(actor(r), NoResult)
                 }
             }
@@ -92,13 +93,13 @@ class BufferedChannelCustomTest {
         verify(BufferedChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
             parallel {
                 thread {
-                    operation(actor(s,1), VoidResult)
-                    operation(actor(s,2), VoidResult)
+                    operation(actor(s, 1), VoidResult)
+                    operation(actor(s, 2), VoidResult)
                     operation(actor(p), ValueResult(1))
                 }
                 thread {
-                    operation(actor(s,3), VoidResult)
-                    operation(actor(s,4), VoidResult)
+                    operation(actor(s, 3), VoidResult)
+                    operation(actor(s, 4), VoidResult)
                     operation(actor(p), ValueResult(2))
                 }
             }

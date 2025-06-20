@@ -2,7 +2,7 @@ package org.jetbrains.kotlinx.lincheck_test.strategy.modelchecking.snapshot
 
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedOptions
+import org.jetbrains.lincheck.datastructures.ManagedOptions
 
 
 private class Outer {

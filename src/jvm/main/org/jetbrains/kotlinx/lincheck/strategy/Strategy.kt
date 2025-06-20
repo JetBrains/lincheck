@@ -14,7 +14,7 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.kotlinx.lincheck.trace.Trace
 import org.jetbrains.kotlinx.lincheck.util.AnalysisProfile
-import org.jetbrains.kotlinx.lincheck.verifier.Verifier
+import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import java.util.concurrent.TimeoutException
 import java.io.Closeable
 

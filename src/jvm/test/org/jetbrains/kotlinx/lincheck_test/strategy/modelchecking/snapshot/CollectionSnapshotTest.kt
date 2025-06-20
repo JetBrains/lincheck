@@ -11,10 +11,9 @@
 package org.jetbrains.kotlinx.lincheck_test.strategy.modelchecking.snapshot
 
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedOptions
+import org.jetbrains.lincheck.datastructures.ManagedOptions
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import java.util.PriorityQueue
 import java.util.Queue

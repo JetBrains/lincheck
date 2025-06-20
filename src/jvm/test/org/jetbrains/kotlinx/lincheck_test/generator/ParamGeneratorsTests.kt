@@ -16,10 +16,13 @@ import org.jetbrains.lincheck.LincheckAssertionError
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.Param
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.paramgen.*
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck.verifier.Verifier
+import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import org.jetbrains.kotlinx.lincheck_test.verifier.linearizability.SpinLockBasedSet
+import org.jetbrains.lincheck.datastructures.EnumGen
+import org.jetbrains.lincheck.datastructures.IntGen
+import org.jetbrains.lincheck.datastructures.RandomProvider
+import org.jetbrains.lincheck.datastructures.StringGen
 import kotlin.math.pow
 import org.junit.Assert.*
 import org.junit.Test

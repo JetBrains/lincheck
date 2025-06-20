@@ -10,7 +10,7 @@
 package org.jetbrains.kotlinx.lincheck_test.runner
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.CTestConfiguration.Companion.DEFAULT_TIMEOUT_MS
+import org.jetbrains.lincheck.datastructures.CTestConfiguration.Companion.DEFAULT_TIMEOUT_MS
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
@@ -19,6 +19,8 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
 import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck_test.verifier.*
+import org.jetbrains.lincheck.datastructures.actor
+import org.jetbrains.lincheck.datastructures.scenario
 import org.junit.*
 import org.junit.Assert.*
 import java.util.concurrent.atomic.*

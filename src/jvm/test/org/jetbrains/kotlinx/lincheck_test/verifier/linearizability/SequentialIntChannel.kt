@@ -11,7 +11,6 @@ package org.jetbrains.kotlinx.lincheck_test.verifier.linearizability
 
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
 
 @InternalCoroutinesApi
 open class SequentialIntChannel(private val capacity: Int) {

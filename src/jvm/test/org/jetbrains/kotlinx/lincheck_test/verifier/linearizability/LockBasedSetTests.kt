@@ -9,7 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.verifier.linearizability
 
-import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
+import org.jetbrains.lincheck.datastructures.IntGen
 import org.jetbrains.kotlinx.lincheck_test.*
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.Param

@@ -10,20 +10,17 @@
 
 package org.jetbrains.kotlinx.lincheck_test.strategy.stress;
 
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.kotlinx.lincheck.*;
+import org.jetbrains.kotlinx.lincheck.LinChecker;
+import org.jetbrains.kotlinx.lincheck.execution.RandomExecutionGenerator;
+import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest;
 import org.jetbrains.lincheck.datastructures.Operation;
-import org.jetbrains.kotlinx.lincheck.execution.*;
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*;
-import org.jetbrains.kotlinx.lincheck.verifier.*;
-import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*;
-import org.junit.*;
+import org.jetbrains.lincheck.datastructures.verifier.LinearizabilityVerifier;
+import org.junit.Test;
 
-import java.util.concurrent.atomic.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
-@StressCTest(threads = 3, actorsPerThread = 3, iterations = 10, invocationsPerIteration = 5,
-        generator = RandomExecutionGenerator.class, verifier = LinearizabilityVerifier.class)
-public class StressCTestAnnTest extends VerifierState {
+@StressCTest(threads = 3, actorsPerThread = 3, iterations = 10, invocationsPerIteration = 5, generator = RandomExecutionGenerator.class, verifier = LinearizabilityVerifier.class)
+public class StressCTestAnnTest {
     private final AtomicInteger i = new AtomicInteger();
 
     @Operation()
@@ -34,11 +31,5 @@ public class StressCTestAnnTest extends VerifierState {
     @Test
     public void test() {
         LinChecker.check(StressCTestAnnTest.class);
-    }
-
-    @NotNull
-    @Override
-    protected Object extractState() {
-        return i.get();
     }
 }

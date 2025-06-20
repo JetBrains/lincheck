@@ -18,6 +18,8 @@ import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck_test.datastructures.MSQueueBlocking
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
+import org.jetbrains.lincheck.datastructures.CTestConfiguration
+import org.jetbrains.lincheck.datastructures.RandomProvider
 import org.junit.Assume.assumeFalse
 import org.junit.Before
 import org.junit.Ignore

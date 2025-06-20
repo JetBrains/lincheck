@@ -1,17 +1,17 @@
 /*
  * Lincheck
  *
- * Copyright (C) 2019 - 2023 JetBrains s.r.o.
+ * Copyright (C) 2019 - 2025 JetBrains s.r.o.
  *
  * This Source Code Form is subject to the terms of the
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.jetbrains.kotlinx.lincheck.verifier.linearizability
+package org.jetbrains.lincheck.datastructures.verifier
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.jetbrains.lincheck.datastructures.verifier.*
 
 /**
  * This verifier checks that the specified results could happen if the testing operations are linearizable.
@@ -30,9 +30,16 @@ class LinearizabilityVerifier(sequentialSpecification: Class<*>) : AbstractLTSVe
 }
 
 class LinearizabilityContext : VerifierContext {
-    constructor(scenario: ExecutionScenario, results: ExecutionResult, state: LTS.State) : super(scenario, results, state)
-    constructor(scenario: ExecutionScenario, results: ExecutionResult, state: LTS.State,
-                executed: IntArray, suspended: BooleanArray, tickets: IntArray) : super(scenario, results, state, executed, suspended, tickets)
+    constructor(scenario: ExecutionScenario, results: ExecutionResult, state: LTS.State) : super(
+        scenario,
+        results,
+        state
+    )
+
+    constructor(
+        scenario: ExecutionScenario, results: ExecutionResult, state: LTS.State,
+        executed: IntArray, suspended: BooleanArray, tickets: IntArray
+    ) : super(scenario, results, state, executed, suspended, tickets)
 
     override fun nextContext(threadId: Int): LinearizabilityContext? {
         if (isCompleted(threadId)) return null

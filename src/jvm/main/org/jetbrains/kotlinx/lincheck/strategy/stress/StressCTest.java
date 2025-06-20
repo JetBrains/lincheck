@@ -10,14 +10,14 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.stress;
 
-import org.jetbrains.kotlinx.lincheck.CTestConfiguration;
+import org.jetbrains.lincheck.datastructures.CTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator;
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario;
 import org.jetbrains.kotlinx.lincheck.execution.RandomExecutionGenerator;
-import org.jetbrains.kotlinx.lincheck.verifier.DummySequentialSpecification;
-import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier;
-import org.jetbrains.kotlinx.lincheck.verifier.Verifier;
+import org.jetbrains.kotlinx.lincheck.annotations.DummySequentialSpecification;
+import org.jetbrains.lincheck.datastructures.verifier.LinearizabilityVerifier;
+import org.jetbrains.lincheck.datastructures.verifier.Verifier;
 
 import java.lang.annotation.*;
 

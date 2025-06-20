@@ -1,15 +1,16 @@
 /*
  * Lincheck
  *
- * Copyright (C) 2019 - 2023 JetBrains s.r.o.
+ * Copyright (C) 2019 - 2025 JetBrains s.r.o.
  *
  * This Source Code Form is subject to the terms of the
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck
+package org.jetbrains.lincheck.datastructures
 
+import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.execution.*
 import java.lang.IllegalStateException
 import kotlin.reflect.KFunction
@@ -59,7 +60,7 @@ class DSLThreadScenario : ArrayList<Actor>() {
      * An actor to be executed
      */
     fun actor(f: KFunction<*>, vararg args: Any?) {
-        add(org.jetbrains.kotlinx.lincheck.actor(f, *args))
+        add(org.jetbrains.lincheck.datastructures.actor(f, *args))
     }
 }
 

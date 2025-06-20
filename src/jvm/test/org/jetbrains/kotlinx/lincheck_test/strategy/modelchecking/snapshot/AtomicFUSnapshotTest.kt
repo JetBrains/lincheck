@@ -16,7 +16,7 @@ import kotlinx.atomicfu.atomicArrayOfNulls
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedOptions
+import org.jetbrains.lincheck.datastructures.ManagedOptions
 import kotlin.random.Random
 import kotlin.ranges.until
 

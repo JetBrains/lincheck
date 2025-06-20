@@ -12,9 +12,9 @@ package org.jetbrains.kotlinx.lincheck_test.verifier
 import kotlinx.atomicfu.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.*
-import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.kotlinx.lincheck_test.*
+import org.jetbrains.lincheck.datastructures.Options
 import java.util.concurrent.atomic.*
 
 class AllowExtraSuspensionCorrectTest : AbstractLincheckTest() {

@@ -9,11 +9,10 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.verifier
 
-import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck_test.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.jetbrains.lincheck.datastructures.Options
 import java.util.concurrent.atomic.*
 
 class SequentialSpecificationTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
@@ -30,10 +29,8 @@ class SequentialSpecificationTest : AbstractLincheckTest(IncorrectResultsFailure
     }
 }
 
-@Suppress("DEPRECATION")
-class CorrectCounter: VerifierState() {
+class CorrectCounter {
     private var c = 0
     fun set(value: Int) { c = value }
     fun get(): Int = c
-    override fun extractState() = c
 }

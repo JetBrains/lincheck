@@ -17,7 +17,10 @@ import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
 import org.jetbrains.kotlinx.lincheck.util.JdkVersion
 import org.jetbrains.kotlinx.lincheck.util.jdkVersion
 import org.jetbrains.lincheck.datastructures.Operation
+import org.jetbrains.lincheck.datastructures.Options
 import org.jetbrains.lincheck.datastructures.Param
+import org.jetbrains.lincheck.datastructures.ParameterGenerator
+import org.jetbrains.lincheck.datastructures.RandomProvider
 import org.junit.Assume.assumeFalse
 import org.junit.Before
 import java.io.*

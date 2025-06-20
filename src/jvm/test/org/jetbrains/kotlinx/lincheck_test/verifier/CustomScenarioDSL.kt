@@ -12,7 +12,7 @@ package org.jetbrains.kotlinx.lincheck_test.verifier
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.transformation.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.jetbrains.lincheck.datastructures.verifier.Verifier
 
 /**
  * Kotlin DSL for defining custom scenarios and corresponding expected results.
