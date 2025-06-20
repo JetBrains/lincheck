@@ -9,10 +9,8 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.checkImpl
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration
-import org.jetbrains.kotlinx.lincheck.util.LoggingLevel
+import org.jetbrains.lincheck.datastructures.ManagedCTestConfiguration
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.Validate
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
@@ -142,7 +140,6 @@ class ValidationFunctionLongLoopTest {
         .actorsBefore(0)
         .actorsAfter(0)
         .actorsPerThread(1)
-        .logLevel(LoggingLevel.INFO)
         .minimizeFailedScenario(false)
         .check(this::class.java)
 }
