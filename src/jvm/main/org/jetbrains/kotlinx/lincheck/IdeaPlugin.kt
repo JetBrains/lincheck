@@ -410,7 +410,7 @@ private fun visualize(strategy: ManagedStrategy) = runCatching {
         it !is GeneralPurposeModelCheckingWrapper
     }
     visualizeInstance(testObject,
-        objectToNumberMap = strategy.objectTracker.createObjectToNumberMapAsArray(testObject),
+        objectToNumberMap = strategy.createObjectToNumberMapAsArray(testObject),
         continuationToLincheckThreadIdMap = createContinuationToThreadIdMap(lincheckThreads),
         threadToLincheckThreadIdMap = createThreadToLincheckThreadIdMap(allThreads),
     )
@@ -428,7 +428,7 @@ private fun visualizeTrace(): Array<Any>? = runCatching {
     val runner = strategy.runner as ParallelThreadsRunner
     val testObject = runner.testInstance
 
-    return strategy.objectTracker.createObjectToNumberMapAsArray(testObject)
+    return strategy.createObjectToNumberMapAsArray(testObject)
 }.getOrNull()
 
 /**
@@ -439,10 +439,10 @@ private fun visualizeTrace(): Array<Any>? = runCatching {
  * The Debugger uses this information to enumerate objects.
  */
 @Suppress("UNUSED")
-private fun ObjectTracker.createObjectToNumberMapAsArray(testObject: Any?): Array<Any> {
+private fun ManagedStrategy.createObjectToNumberMapAsArray(testObject: Any?): Array<Any> {
     val resultArray = arrayListOf<Any>()
     // val numbersMap = if (testObject != null) enumerateReachableObjects(testObject) else enumerateAllObjects()
-    val numbersMap = enumerateAllObjects()
+    val numbersMap = enumerateObjects()
     numbersMap.forEach { (any, objectNumber) ->
         resultArray.add(any)
         resultArray.add(objectNumber)

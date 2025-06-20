@@ -96,8 +96,7 @@ internal abstract class ManagedStrategy(
     internal val loopDetector: LoopDetector = LoopDetector(settings.hangingDetectionThreshold)
 
     // Tracker of objects' allocations and object graph topology.
-    // TODO: make private again
-    internal abstract val objectTracker: ObjectTracker
+    protected abstract val objectTracker: ObjectTracker
     // Tracker of objects' identity hash codes.
     private val identityHashCodeTracker = ObjectIdentityHashCodeTracker()
     // Tracker of native method call states.
@@ -2444,6 +2443,10 @@ internal abstract class ManagedStrategy(
 
     protected fun resetEventIdProvider() {
         eventIdProvider = EventIdProvider()
+    }
+
+    fun enumerateObjects(): Map<Any, Int> {
+        return objectTracker.enumerateAllObjects()
     }
 
     // == UTILITY METHODS ==
