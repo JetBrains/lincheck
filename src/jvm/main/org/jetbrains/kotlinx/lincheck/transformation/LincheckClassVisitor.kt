@@ -174,6 +174,14 @@ internal class LincheckClassVisitor(
             mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
         }
+        /*
+         * TODO
+         */
+        if (isJavaUtilArraysClass(className.toCanonicalClassName())) {
+            // `java.util.Arrays` contains intrinsic methods --- we need to process them
+            mv = IntrinsicCandidateMethodFilter(className, methodName, desc, intrinsicDelegateVisitor.newAdapter(), mv.newAdapter())
+            return mv
+        }
         if (isCoroutineInternalClass(className.toCanonicalClassName())) {
             return mv
         }

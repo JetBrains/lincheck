@@ -655,6 +655,9 @@ internal fun isIgnoredMethodHandleMethod(className: String, methodName: String):
 internal fun isStackTraceElementClass(className: String): Boolean =
     className == "java.lang.StackTraceElement"
 
+internal fun isJavaUtilArraysClass(className: String): Boolean =
+    className == "java.util.Arrays"
+
 /**
  * Checks if the provided class name matches the [JavaLangAccess] class.
  */
