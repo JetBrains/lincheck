@@ -48,23 +48,29 @@ abstract class BaseRunConcurrentRepresentationTest<R>(private val outputFileName
                 block()
             }
         }
-        check(result.isFailure) {
-            "The test should fail, but it completed successfully"
-        }
-        val error = result.exceptionOrNull()!!
-        check(error is LincheckAssertionError) {
+        checkResult(result, outputFileName, isFlakyTest)
+    }
+
+    open val analyzeStdLib = true
+    
+    companion object {
+        fun checkResult(result: Result<*>, outputFileName: String, isFlakyTest: Boolean = false) {
+            check(result.isFailure) {
+                "The test should fail, but it completed successfully"
+            }
+            val error = result.exceptionOrNull()!!
+            check(error is LincheckAssertionError) {
             """
             |The test should throw LincheckAssertionError, but instead it failed with:
             |${error.stackTraceToString()}
             """
             .trimMargin()
-        }
-        if (!isFlakyTest) {
-            error.failure.checkLincheckOutput(outputFileName)
+            }
+            if (!isFlakyTest) {
+                error.failure.checkLincheckOutput(outputFileName)
+            }
         }
     }
-
-    open val analyzeStdLib = true
 }
 
 class NoEventsRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(

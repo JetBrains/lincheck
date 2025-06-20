@@ -4,12 +4,12 @@ The following interleaving leads to the error:
 | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                    Main Thread                                                                     |
 | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| $this_runCatching.block() at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:47) |
-|   block() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:96)                                        |
-|     q.take() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:101)                                    |
+| $this_runCatching.block() at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48) |
+|   block() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:99)                                        |
+|     q.take() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:104)                                    |
 |       lock.lockInterruptibly() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:400)                                                             |
 |       notEmpty.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:403)                                                                     |
-|         LockSupport.park(ConditionObject#1) at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2039)              |
+|         LockSupport.park(ConditionObject#1) at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:2044)              |
 |           LockSupport.setBlocker(Thread#0, ConditionObject#1) at LockSupport.park(LockSupport.java:174)                                            |
 |           PARK at LockSupport.park(LockSupport.java:175)                                                                                           |
 | -------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -19,17 +19,17 @@ Detailed trace:
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                           Main Thread                                                                           |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| $this_runCatching.block() at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:47)              |
-|   block() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:96)                                                     |
-|     q.take() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:101)                                                 |
+| $this_runCatching.block() at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48)              |
+|   block() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:99)                                                     |
+|     q.take() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:104)                                                 |
 |       lock.lockInterruptibly() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:400)                                                                          |
-|         sync.acquireInterruptibly(1) at ReentrantLock.lockInterruptibly(ReentrantLock.java:335)                                                                 |
-|           tryAcquire(1): true at AbstractQueuedSynchronizer.acquireInterruptibly(AbstractQueuedSynchronizer.java:1221)                                          |
-|             nonfairTryAcquire(1): true at ReentrantLock$NonfairSync.tryAcquire(ReentrantLock.java:213)                                                          |
-|               compareAndSetState(0, 1): true at ReentrantLock$Sync.nonfairTryAcquire(ReentrantLock.java:133)                                                    |
-|                 Unsafe#1.compareAndSwapInt(NonfairSync#1, 16, 0, 1): true at AbstractQueuedSynchronizer.compareAndSetState(AbstractQueuedSynchronizer.java:566) |
+|         sync.acquireInterruptibly(1) at ReentrantLock.lockInterruptibly(ReentrantLock.java:340)                                                                 |
+|           tryAcquire(1): true at AbstractQueuedSynchronizer.acquireInterruptibly(AbstractQueuedSynchronizer.java:1224)                                          |
+|             nonfairTryAcquire(1): true at ReentrantLock.NonfairSync.tryAcquire(ReentrantLock.java:217)                                                          |
+|               compareAndSetState(0, 1): true at ReentrantLock.Sync.nonfairTryAcquire(ReentrantLock.java:135)                                                    |
+|                 Unsafe#1.compareAndSwapInt(NonfairSync#1, 16, 0, 1): true at AbstractQueuedSynchronizer.compareAndSetState(AbstractQueuedSynchronizer.java:567) |
 |       notEmpty.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:403)                                                                                  |
-|         LockSupport.park(ConditionObject#1) at AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2039)                           |
+|         LockSupport.park(ConditionObject#1) at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:2044)                           |
 |           LockSupport.setBlocker(Thread#0, ConditionObject#1) at LockSupport.park(LockSupport.java:174)                                                         |
 |             Unsafe#1.putObject(Thread#0, 88, ConditionObject#1) at LockSupport.setBlocker(LockSupport.java:125)                                                 |
 |           PARK at LockSupport.park(LockSupport.java:175)                                                                                                        |

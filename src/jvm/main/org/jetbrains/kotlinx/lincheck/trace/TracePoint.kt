@@ -121,7 +121,7 @@ internal abstract class CodeLocationTracePoint(
 
     protected abstract fun toStringCompact(): String
     override fun toStringImpl(withLocation: Boolean): String {
-        return toStringCompact() + if (withLocation) " at ${stackTraceElement.shorten()}" else ""
+        return toStringCompact() + if (withLocation) " at ${stackTraceElement.compress()}" else ""
     }
 }
 
@@ -153,15 +153,23 @@ internal class ObstructionFreedomViolationExecutionAbortTracePoint(
 }
 
 internal class ReadTracePoint(
-    private val ownerRepresentation: String?,
+    ownerRepresentation: String?,
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
-    private val fieldName: String,
+    fieldName: String,
     codeLocation: Int,
     val isLocal: Boolean,
     private val valueRepresentation: String,
     val valueType: String,
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, codeLocation) {
+
+    var fieldName = fieldName
+        private set
+    fun updateFieldName(name: String) { fieldName = name }
+
+    var ownerRepresentation = ownerRepresentation
+        private set
+    fun updateOwnerRepresentation(owner: String?) { ownerRepresentation = owner }
 
     override fun toStringCompact(): String = StringBuilder().apply {
         if (ownerRepresentation != null) {
@@ -179,15 +187,23 @@ internal class ReadTracePoint(
 }
 
 internal class WriteTracePoint(
-    private val ownerRepresentation: String?,
+    ownerRepresentation: String?,
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
-    private val fieldName: String,
+    fieldName: String,
     codeLocation: Int,
     val isLocal: Boolean,
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, codeLocation) {
     private lateinit var valueRepresentation: String
     lateinit var valueType: String
+    
+    var fieldName = fieldName
+        private set
+    fun updateFieldName(name: String) { fieldName = name }
+
+    var ownerRepresentation = ownerRepresentation
+        private set
+    fun updateOwnerRepresentation(owner: String?) { ownerRepresentation = owner }
 
     override fun toStringCompact(): String = StringBuilder().apply {
         if (ownerRepresentation != null) {
@@ -227,7 +243,10 @@ internal class MethodCallTracePoint(
     var thrownException: Throwable? = null
     var parameters: List<String>? = null
     var parameterTypes: List<String>? = null
-    private var ownerName: String? = null
+    
+    var ownerName: String? = null
+        private set
+    fun updateOwnerName(name: String?) { ownerName = name }
 
     val isRootCall get() = callType != CallType.NORMAL
     val isActor get() = callType == CallType.ACTOR
@@ -524,17 +543,6 @@ internal class SpinCycleStartTracePoint(iThread: Int, actorId: Int, callStackTra
         SpinCycleStartTracePoint(iThread, actorId, callStackTrace.deepCopy(copiedObjects))
             .also { it.eventId = eventId }
     }
-}
-
-/**
- * Removes package info in the stack trace element representation.
- */
-private fun StackTraceElement.shorten(): String {
-    val stackTraceElement = this.toString()
-    for (i in stackTraceElement.indices.reversed())
-        if (stackTraceElement[i] == '/')
-            return stackTraceElement.substring(i + 1 until stackTraceElement.length)
-    return stackTraceElement
 }
 
 internal sealed class SwitchReason(private val reason: String) {

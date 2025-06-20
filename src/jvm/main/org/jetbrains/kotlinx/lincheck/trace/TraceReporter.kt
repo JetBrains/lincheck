@@ -138,7 +138,6 @@ internal fun Appendable.appendTraceTableSimple(title: String, threadNames: List<
 */
 }
 
-// TODO support multiple root nodes in GPMC mode, needs discussion on how to deal with `result: ...`
 private fun removeGPMCLambda(graph: SingleThreadedTable<TraceNode>): SingleThreadedTable<TraceNode> {
     check(graph.size == 1) { "When in GPMC mode only one scenario section is expected" }
     check(graph[0].isNotEmpty()) { "When in GPMC mode atleast one actor is expected (the run() call to be precise)" }
@@ -147,7 +146,13 @@ private fun removeGPMCLambda(graph: SingleThreadedTable<TraceNode>): SingleThrea
         if (first !is CallNode) return@map section
         if (first.children.isEmpty()) return@map listOf(first.createResultNodeForEmptyActor())
         first.decrementCallDepthOfTree()
-        if (first.children.firstOrNull() is CallNode) (first.children.first() as CallNode).tracePoint.returnedValue = first.tracePoint.returnedValue
+
+        // TODO can be remove after actor results PR is through
+        // if only one child and child is callnode. Treat as actor. 
+        if (first.children.size == 1 && first.children.first() is CallNode) {
+            (first.children.first() as CallNode).tracePoint.returnedValue = first.tracePoint.returnedValue
+        } 
+        
         first.children + section.drop(1)
     }
 }
