@@ -263,7 +263,7 @@ internal fun ObjectTracker.enumerateReachableObjects(root: Any): Map<Any, Int> {
  * @param obj the object to generate a textual representation for.
  * @return a string representation of the specified object.
  */
-fun ObjectTracker.getObjectRepresentation(obj: Any?) = when {
+fun ObjectTracker.getObjectRepresentation(obj: Any?): String = when {
     // null is displayed as is
     obj == null -> "null"
 
@@ -279,6 +279,12 @@ fun ObjectTracker.getObjectRepresentation(obj: Any?) = when {
 
     // for enum types, we display their name
     obj is Enum<*> -> obj.name
+
+    obj is Pair<*, *> ->
+        "(${getObjectRepresentation(obj.first)}, ${getObjectRepresentation(obj.second)})"
+
+    obj is Triple<*, *, *> ->
+        "(${getObjectRepresentation(obj.first)}, ${getObjectRepresentation(obj.second)}, ${getObjectRepresentation(obj.third)})"
 
     else -> {
         // special representation for anonymous classes
