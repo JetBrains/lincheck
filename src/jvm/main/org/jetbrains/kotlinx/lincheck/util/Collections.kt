@@ -10,12 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck.util
 
-fun <K, V> MutableMap<K, V>.update(key: K, default: V, transform: (V) -> V): V {
-    // TODO: could it be done with a single lookup in a map?
-    val value = transform(get(key) ?: default)
-    put(key, value)
-    return value
-}
+fun <K, V> MutableMap<K, V>.update(key: K, default: V, transform: (V) -> V): V =
+    compute(key) { _, current -> transform(current ?: default) }!!
 
 fun <K, V> MutableMap<K, V>.updateInplace(key: K, default: V, apply: V.() -> Unit) {
     computeIfAbsent(key) { default }.also(apply)
