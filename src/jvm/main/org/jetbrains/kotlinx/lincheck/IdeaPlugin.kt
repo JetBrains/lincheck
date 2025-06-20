@@ -16,6 +16,8 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ExecutionMode.GENERAL_PURPOSE_MODEL_CHECKER
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectTracker
+import org.jetbrains.kotlinx.lincheck.strategy.managed.enumerateReachableObjects
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
@@ -228,6 +230,7 @@ internal fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Ar
 
 internal fun flattenedTraceGraphToCSV(nodeList: SingleThreadedTable<TraceNode>): Array<String> {
     val preExpandedNodeSet = nodeList.extractPreExpandedNodes(ShortTraceFlattenPolicy()).toHashSet()
+
     return nodeList.flatMap { section ->
         section.mapNotNull { node ->
             when (node) {
@@ -407,7 +410,7 @@ private fun visualize(strategy: ManagedStrategy) = runCatching {
         it !is GeneralPurposeModelCheckingWrapper
     }
     visualizeInstance(testObject,
-        objectToNumberMap = createObjectToNumberMapAsArray(testObject),
+        objectToNumberMap = strategy.createObjectToNumberMapAsArray(testObject),
         continuationToLincheckThreadIdMap = createContinuationToThreadIdMap(lincheckThreads),
         threadToLincheckThreadIdMap = createThreadToLincheckThreadIdMap(allThreads),
     )
@@ -425,7 +428,7 @@ private fun visualizeTrace(): Array<Any>? = runCatching {
     val runner = strategy.runner as ParallelThreadsRunner
     val testObject = runner.testInstance
 
-    return createObjectToNumberMapAsArray(testObject)
+    return strategy.createObjectToNumberMapAsArray(testObject)
 }.getOrNull()
 
 /**
@@ -435,9 +438,11 @@ private fun visualizeTrace(): Array<Any>? = runCatching {
  *
  * The Debugger uses this information to enumerate objects.
  */
-private fun createObjectToNumberMapAsArray(testObject: Any?): Array<Any> {
+@Suppress("UNUSED")
+private fun ManagedStrategy.createObjectToNumberMapAsArray(testObject: Any?): Array<Any> {
     val resultArray = arrayListOf<Any>()
-    val numbersMap = if (testObject != null) enumerateObjects(testObject) else enumerateObjects()
+    // val numbersMap = if (testObject != null) enumerateReachableObjects(testObject) else enumerateAllObjects()
+    val numbersMap = enumerateObjects()
     numbersMap.forEach { (any, objectNumber) ->
         resultArray.add(any)
         resultArray.add(objectNumber)
