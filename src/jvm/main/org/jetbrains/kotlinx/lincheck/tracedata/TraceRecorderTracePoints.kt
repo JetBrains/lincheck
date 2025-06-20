@@ -13,6 +13,7 @@ package org.jetbrains.kotlinx.lincheck.tracedata
 import java.io.DataInput
 import java.io.DataOutput
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.concurrent.thread
 
 private val EVENT_ID_GENERATOR = AtomicInteger(0)
 
@@ -30,6 +31,8 @@ sealed class TRTracePoint(
         out.writeInt(eventId)
     }
 
+    val codeLocation: StackTraceElement get() = CodeLocations.stackTrace(codeLocationId)
+
     abstract fun toText(verbose: Boolean): String
 }
 
@@ -45,6 +48,14 @@ class TRMethodCallTracePoint(
     var exceptionClassName: String? = null
     @Transient
     val events: MutableList<TRTracePoint> = mutableListOf()
+
+    val methodDescriptor: MethodDescriptor get() = methodCache[methodId]
+
+    // Shortcuts
+    val className: String get() = methodDescriptor.className
+    val methodName: String get() = methodDescriptor.methodName
+    val argumentTypes: List<Types.Type> get() = methodDescriptor.argumentTypes
+    val returnType: Types.Type get() = methodDescriptor.returnType
 
     override fun save(out: DataOutput) {
         super.save(out)
@@ -129,14 +140,24 @@ class TRMethodCallTracePoint(
     }
 }
 
-class TRReadTracePoint(
+sealed class TRFieldTracePoint(
     threadId: Int,
     codeLocationId: Int,
     val fieldId: Int,
     val obj: TRObject?,
     val value: TRObject?,
-    eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
+    eventId: Int
 ) : TRTracePoint(codeLocationId, threadId, eventId) {
+    protected abstract val directionSymbol: String
+
+    val fieldDescriptor: FieldDescriptor get() = fieldCache[fieldId]
+
+    // Shortcuts
+    val className: String get() = fieldDescriptor.className
+    val name: String get() = fieldDescriptor.fieldName
+    val isStatic: Boolean get() = fieldDescriptor.isStatic
+    val isFinal: Boolean get() = fieldDescriptor.isFinal
+
     override fun save(out: DataOutput) {
         super.save(out)
         out.writeInt(fieldId)
@@ -156,12 +177,23 @@ class TRReadTracePoint(
         }
         sb.append('.')
             .append(fd.fieldName)
-            .append(" → ")
+            .append(directionSymbol)
             .append(value.toShortString())
 
         sb.append(codeLocationId, verbose)
         return sb.toString()
     }
+}
+
+class TRReadTracePoint(
+    threadId: Int,
+    codeLocationId: Int,
+    fieldId: Int,
+    obj: TRObject?,
+    value: TRObject?,
+    eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
+) : TRFieldTracePoint(threadId, codeLocationId,  fieldId, obj, value, eventId) {
+    override val directionSymbol: String get() = " → "
 
     internal companion object {
         fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRReadTracePoint {
@@ -173,43 +205,19 @@ class TRReadTracePoint(
                 value = inp.readTRObject(),
                 eventId = eventId,
             )
-       }
+        }
     }
 }
 
 class TRWriteTracePoint(
     threadId: Int,
     codeLocationId: Int,
-    val fieldId: Int,
-    val obj: TRObject?,
-    val value: TRObject?,
+    fieldId: Int,
+    obj: TRObject?,
+    value: TRObject?,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRTracePoint(codeLocationId, threadId, eventId) {
-    override fun save(out: DataOutput) {
-        super.save(out)
-        out.writeInt(fieldId)
-        out.writeTRObject(obj)
-        out.writeTRObject(value)
-    }
-
-    override fun toText(verbose: Boolean): String {
-        val fd = fieldCache[fieldId]
-        val sb = StringBuilder()
-        if (obj != null) {
-            sb.append(obj.className.substringAfterLast("."))
-                .append('@')
-                .append(obj.identityHashCode)
-        } else {
-            sb.append(fd.className.substringAfterLast("."))
-        }
-        sb.append('.')
-            .append(fd.fieldName)
-            .append(" ← ")
-            .append(value.toShortString())
-
-        sb.append(codeLocationId, verbose)
-        return sb.toString()
-    }
+) : TRFieldTracePoint(threadId, codeLocationId,  fieldId, obj, value, eventId) {
+    override val directionSymbol: String get() = " ← "
 
     internal companion object {
         fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRWriteTracePoint {
@@ -225,13 +233,18 @@ class TRWriteTracePoint(
     }
 }
 
-class TRReadLocalVariableTracePoint(
+sealed class TRLocalVariableTracePoint(
     threadId: Int,
     codeLocationId: Int,
     val localVariableId: Int,
     val value: TRObject?,
-    eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
+    eventId: Int
 ) : TRTracePoint(codeLocationId, threadId, eventId) {
+    protected abstract val directionSymbol: String
+
+    val variableDescriptor: VariableDescriptor get() = variableCache[localVariableId]
+    val name: String get() = variableDescriptor.name
+
     override fun save(out: DataOutput) {
         super.save(out)
         out.writeInt(localVariableId)
@@ -242,12 +255,22 @@ class TRReadLocalVariableTracePoint(
         val vd = variableCache[localVariableId]
         val sb = StringBuilder()
         sb.append(vd.name)
-            .append(" → ")
+            .append(directionSymbol)
             .append(value.toShortString())
 
         sb.append(codeLocationId, verbose)
         return sb.toString()
     }
+}
+
+class TRReadLocalVariableTracePoint(
+    threadId: Int,
+    codeLocationId: Int,
+    localVariableId: Int,
+    value: TRObject?,
+    eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
+) : TRLocalVariableTracePoint(threadId, codeLocationId, localVariableId, value, eventId) {
+    override val directionSymbol: String get() = " → "
 
     internal companion object {
         fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRReadLocalVariableTracePoint {
@@ -265,26 +288,11 @@ class TRReadLocalVariableTracePoint(
 class TRWriteLocalVariableTracePoint(
     threadId: Int,
     codeLocationId: Int,
-    val localVariableId: Int,
-    val value: TRObject?,
+    localVariableId: Int,
+    value: TRObject?,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRTracePoint(codeLocationId, threadId, eventId) {
-    override fun save(out: DataOutput) {
-        super.save(out)
-        out.writeInt(localVariableId)
-        out.writeTRObject(value)
-    }
-
-    override fun toText(verbose: Boolean): String {
-        val vd = variableCache[localVariableId]
-        val sb = StringBuilder()
-        sb.append(vd.name)
-            .append(" ← ")
-            .append(value.toShortString())
-
-        sb.append(codeLocationId, verbose)
-        return sb.toString()
-    }
+) : TRLocalVariableTracePoint(threadId, codeLocationId, localVariableId, value, eventId) {
+    override val directionSymbol: String get() = " ← "
 
     internal companion object {
         fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRWriteLocalVariableTracePoint {
@@ -299,14 +307,16 @@ class TRWriteLocalVariableTracePoint(
     }
 }
 
-class TRReadArrayTracePoint(
+sealed class TRArrayTracePoint(
     threadId: Int,
     codeLocationId: Int,
     val array: TRObject,
     val index: Int,
     val value: TRObject?,
-    eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
+    eventId: Int
 ) : TRTracePoint(codeLocationId, threadId, eventId) {
+    protected abstract val directionSymbol: String
+
     override fun save(out: DataOutput) {
         super.save(out)
         out.writeTRObject(array)
@@ -321,12 +331,24 @@ class TRReadArrayTracePoint(
             .append(array.identityHashCode)
             .append('[')
             .append(index)
-            .append("] → ")
+            .append("]")
+            .append(directionSymbol)
             .append(value.toShortString())
 
         sb.append(codeLocationId, verbose)
         return sb.toString()
     }
+}
+
+class TRReadArrayTracePoint(
+    threadId: Int,
+    codeLocationId: Int,
+    array: TRObject,
+    index: Int,
+    value: TRObject?,
+    eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
+) : TRArrayTracePoint(threadId, codeLocationId, array, index, value, eventId) {
+    override val directionSymbol: String get() = " → "
 
     internal companion object {
         fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRReadArrayTracePoint {
@@ -345,17 +367,12 @@ class TRReadArrayTracePoint(
 class TRWriteArrayTracePoint(
     threadId: Int,
     codeLocationId: Int,
-    val array: TRObject,
-    val index: Int,
-    val value: TRObject?,
+    array: TRObject,
+    index: Int,
+    value: TRObject?,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRTracePoint(codeLocationId, threadId, eventId) {
-    override fun save(out: DataOutput) {
-        super.save(out)
-        out.writeTRObject(array)
-        out.writeInt(index)
-        out.writeTRObject(value)
-    }
+) : TRArrayTracePoint(threadId, codeLocationId, array, index, value, eventId) {
+    override val directionSymbol: String get() = " ← "
 
     override fun toText(verbose: Boolean): String {
         val sb = StringBuilder()

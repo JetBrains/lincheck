@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.tracedata
 
-internal data class FieldDescriptor(
+data class FieldDescriptor(
     val className: String,
     val fieldName: String,
     val isStatic: Boolean,
@@ -19,7 +19,7 @@ internal data class FieldDescriptor(
 
 internal val fieldCache = IndexedPool<FieldDescriptor>()
 
-internal data class VariableDescriptor(
+data class VariableDescriptor(
     val name: String,
 )
 
