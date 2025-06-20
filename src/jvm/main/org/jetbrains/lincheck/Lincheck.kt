@@ -106,48 +106,8 @@ object Lincheck {
         }
     }
 
-    /**
-     * Runs the specified concurrent tests.
-     *
-     * @throws LincheckAssertionError if any of the tests fails.
-     */
-    @JvmStatic
-    fun check(options: Options<*, *>, testClass: Class<*>) {
-        @Suppress("DEPRECATION")
-        LinChecker(testClass, options).checkImpl { failure ->
-            if (failure != null) throw LincheckAssertionError(failure)
-        }
-    }
-
     internal const val DEFAULT_INVOCATIONS = CTestConfiguration.DEFAULT_INVOCATIONS
 }
-
-/**
- * Runs the specified concurrent tests.
- *
- * This is a short-cut for the following code:
- * ```
- * Lincheck.check(options, testClass)
- * ```
- *
- * @throws LincheckAssertionError if any of the tests fails.
- */
-fun <O : Options<O, *>> O.check(testClass: Class<*>) =
-    LinChecker.check(testClass, this)
-
-/**
- * Runs the specified concurrent tests.
- *
- * This is a short-cut for the following code:
- * ```
- * Lincheck.check(options, testClass.java)
- * ```
- *
- * @throws LincheckAssertionError if any of the tests fails.
- */
-fun <O : Options<O, *>> O.check(testClass: KClass<*>) =
-    this.check(testClass.java)
-
 
 internal class GeneralPurposeModelCheckingWrapper {
     fun runGPMCTest(block: Runnable) = block.run()

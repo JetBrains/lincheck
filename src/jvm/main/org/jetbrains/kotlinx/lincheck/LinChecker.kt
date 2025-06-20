@@ -13,10 +13,8 @@ import org.jetbrains.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategySettings
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.util.DEFAULT_LOG_LEVEL
 import org.jetbrains.kotlinx.lincheck.util.LoggingLevel
 import org.jetbrains.lincheck.datastructures.LogLevel
@@ -188,6 +186,7 @@ constructor(private val testClass: Class<*>, options: Options<*, *>?) {
          *
          * @throws AssertionError if any of the tests fails.
          */
+        @Deprecated("Use StressOptions.check() or ModelCheckingOptions.check() instead.", level = DeprecationLevel.WARNING)
         @JvmOverloads
         @JvmStatic
         fun check(testClass: Class<*>, options: Options<*, *>? = null) {
@@ -297,7 +296,8 @@ private fun ExecutionScenario.tryMinimize(checkScenario: (ExecutionScenario) -> 
  *  LinChecker.check(testClass, options)
  * ```
  */
-fun <O : Options<O, *>> O.check(testClass: Class<*>) = LinChecker.check(testClass, this)
+@Deprecated("Use StressOptions.check() or ModelCheckingOptions.check() instead.", level = DeprecationLevel.ERROR)
+fun <O : Options<O, *>> O.check(testClass: Class<*>) = check(testClass)
 
 /**
  * This is a short-cut for the following code:
@@ -306,7 +306,8 @@ fun <O : Options<O, *>> O.check(testClass: Class<*>) = LinChecker.check(testClas
  *  LinChecker.check(testClass.java, options)
  * ```
  */
-fun <O : Options<O, *>> O.check(testClass: KClass<*>) = this.check(testClass.java)
+@Deprecated("Use StressOptions.check() or ModelCheckingOptions.check() instead.", level = DeprecationLevel.ERROR)
+fun <O : Options<O, *>> O.check(testClass: KClass<*>) = check(testClass)
 
 /**
  * Runs Lincheck to check the tested class under given configurations.

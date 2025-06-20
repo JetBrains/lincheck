@@ -10,29 +10,32 @@
 
 package org.jetbrains.kotlinx.lincheck_test.datastructures;
 
-import org.jetbrains.lincheck.Lincheck;
+import org.jetbrains.lincheck.datastructures.ModelCheckingOptions;
 import org.jetbrains.lincheck.datastructures.Operation;
 import org.jetbrains.lincheck.datastructures.StressOptions;
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions;
 import org.junit.Test;
 
 public class JavaApiCounterTest {
     private final Counter counter = new Counter();
 
     @Operation
-    public int inc() { return counter.inc(); }
+    public int inc() {
+        return counter.inc();
+    }
 
     @Operation
-    public int get() { return counter.get(); }
+    public int get() {
+        return counter.get();
+    }
 
     @Test(expected = AssertionError.class)
     public void stressTest() {
-        Lincheck.check(new StressOptions(), this.getClass());
+        new StressOptions().check(this.getClass());
     }
 
     @Test(expected = AssertionError.class)
     public void modelCheckingTest() {
-        Lincheck.check(new ModelCheckingOptions(), this.getClass());
+        new ModelCheckingOptions().check(this.getClass());
     }
 
 }

@@ -26,6 +26,7 @@ import org.jetbrains.kotlinx.lincheck.util.DEFAULT_LOG_LEVEL
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier
 import java.lang.reflect.Method
+import kotlin.reflect.KClass
 
 /**
  * Abstract class for test options.
@@ -189,6 +190,19 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     internal fun invocationTimeout(timeoutMs: Long): OPT = applyAndCast {
         this.timeoutMs = timeoutMs
     }
+
+    /**
+     * Runs the specified concurrent test with this options.
+     */
+    fun check(testClass: Class<*>) {
+        @Suppress("DEPRECATION")
+        LinChecker.check(testClass, this)
+    }
+
+    /**
+     * Runs the specified concurrent test with this options.
+     */
+    fun check(testClass: KClass<*>) = check(testClass.java)
 
     companion object {
         @Suppress("UNCHECKED_CAST")
