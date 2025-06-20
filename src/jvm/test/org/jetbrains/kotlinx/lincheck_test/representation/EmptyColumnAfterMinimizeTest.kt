@@ -11,12 +11,8 @@
 package org.jetbrains.kotlinx.lincheck_test.representation
 
 import org.jetbrains.kotlinx.lincheck.checkImpl
-import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
-import org.jetbrains.kotlinx.lincheck.paramgen.LongGen
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
-import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.Param
+import org.jetbrains.lincheck.datastructures.*
 import org.junit.Test
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
