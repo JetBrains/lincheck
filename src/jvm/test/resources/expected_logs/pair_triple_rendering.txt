@@ -1,0 +1,23 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| ----------------------------------------------------------------------------------------------------------------- |
+|                                                     Thread 1                                                      |
+| ----------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                       |
+|   foo(("a", 3, 4.0)): ((1, 2), ("a", 3, 4.0)) at PairTripleRenderingTest.operation(PairTripleRenderingTest.kt:17) |
+|     pair ➜ (1, 2) at PairTripleRenderingTest.foo(PairTripleRenderingTest.kt:20)                                   |
+|   result: void                                                                                                    |
+| ----------------------------------------------------------------------------------------------------------------- |

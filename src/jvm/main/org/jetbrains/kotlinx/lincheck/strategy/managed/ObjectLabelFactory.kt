@@ -38,6 +38,12 @@ object ObjectLabelFactory {
         if (any.javaClass.isEnum) {
             return (any as Enum<*>).name
         }
+        if (any is Pair<*, *>) {
+            return "(${adornedStringRepresentation(any.first)}, ${adornedStringRepresentation(any.second)})"
+        }
+        if (any is Triple<*, *, *>) {
+            return "(${adornedStringRepresentation(any.first)}, ${adornedStringRepresentation(any.second)}, ${adornedStringRepresentation(any.third)})"
+        }
         // Instead of java.util.HashMap$Node@3e2a56 show Node@1.
         // It is better not to use `toString` in general since
         // we usually care about references to certain objects,
