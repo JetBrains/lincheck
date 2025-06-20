@@ -165,12 +165,12 @@ internal class ReadTracePoint(
 
     var fieldName = fieldName
         private set
-    val updateFieldName = ::fieldName.setter
+    fun updateFieldName(name: String) { fieldName = name }
 
     var ownerRepresentation = ownerRepresentation
         private set
-    val updateOwnerRepresentation = ::ownerRepresentation.setter
-    
+    fun updateOwnerRepresentation(owner: String?) { ownerRepresentation = owner }
+
     override fun toStringCompact(): String = StringBuilder().apply {
         if (ownerRepresentation != null) {
             append("$ownerRepresentation.$fieldName")
@@ -199,11 +199,11 @@ internal class WriteTracePoint(
     
     var fieldName = fieldName
         private set
-    val updateFieldName = ::fieldName.setter
-    
+    fun updateFieldName(name: String) { fieldName = name }
+
     var ownerRepresentation = ownerRepresentation
         private set
-    val updateOwnerRepresentation = ::ownerRepresentation.setter
+    fun updateOwnerRepresentation(owner: String?) { ownerRepresentation = owner }
 
     override fun toStringCompact(): String = StringBuilder().apply {
         if (ownerRepresentation != null) {
@@ -246,8 +246,8 @@ internal class MethodCallTracePoint(
     
     var ownerName: String? = null
         private set
-    val updateOwnerName = ::ownerName.setter
-    
+    fun updateOwnerName(name: String?) { ownerName = name }
+
     val isRootCall get() = callType != CallType.NORMAL
     val isActor get() = callType == CallType.ACTOR
     val isThreadStart get() = callType == CallType.THREAD_RUN
