@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.tracerecorder.agent
 
 import org.jetbrains.kotlinx.lincheck.transformation.ASM_API
 import org.jetbrains.kotlinx.lincheck.transformation.invokeStatic
+import org.objectweb.asm.Label
 import org.objectweb.asm.commons.AdviceAdapter
 import org.objectweb.asm.commons.GeneratorAdapter
 
@@ -42,11 +43,29 @@ internal class TraceRecorderMethodTransformer(
     name: String,
     descriptor: String
 ): AdviceAdapter(ASM_API, adapter, access, name, descriptor) {
-     override fun onMethodEnter() {
-         invokeStatic(TraceRecorderInjections::startTraceRecorder)
+    private val startLabel: Label = Label()
+
+    override fun onMethodEnter() {
+        super.onMethodEnter()
+        invokeStatic(TraceRecorderInjections::startTraceRecorder)
+        // Start "try-finally block here to add stop & dump in "finally"
+        visitLabel(startLabel)
      }
 
      override fun onMethodExit(opcode: Int) {
          invokeStatic(TraceRecorderInjections::stopTraceRecorderAndDumpTrace)
+         super.onMethodExit(opcode)
      }
+
+    override fun visitMaxs(maxStack: Int, maxLocals: Int) {
+        val endLabel = Label()
+        visitLabel(endLabel)
+        visitTryCatchBlock(startLabel, endLabel, endLabel, null)
+        // Handler
+        // STACK: Exception
+        // This will call onMethodExit() too!
+        visitInsn(ATHROW)
+
+        super.visitMaxs(maxStack, maxLocals)
+    }
 }
