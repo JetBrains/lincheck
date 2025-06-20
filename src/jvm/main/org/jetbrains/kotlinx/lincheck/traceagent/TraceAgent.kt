@@ -10,6 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck.traceagent
 
+import org.jetbrains.kotlinx.lincheck.tracerecorder.agent.TraceRecorderInjections
+import org.jetbrains.kotlinx.lincheck.tracerecorder.agent.TraceRecorderMethodTransformer
 import org.jetbrains.kotlinx.lincheck.transformation.ASM_API
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.MODEL_CHECKING
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
