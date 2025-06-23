@@ -39,6 +39,12 @@ internal class IndexedPool<T> {
     }
 
     val content: List<T> = items
+
+    @Synchronized
+    fun clear() {
+        items.clear()
+        index.clear()
+    }
 }
 
 internal fun <T> IndexedPool<T>.getInterned(item: T) = get(getOrCreateId(item))
