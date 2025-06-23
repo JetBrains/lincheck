@@ -79,11 +79,13 @@ internal class VerboseTraceFlattenPolicy : TraceFlattenPolicy {
 internal class ShortTraceFlattenPolicy : TraceFlattenPolicy {
     override fun shouldIncludeThisNode(currentNode: TraceNode): Boolean = when (currentNode) {
         is EventNode -> with(currentNode) {
-            !tracePoint.isVirtual && (
+            (!tracePoint.isVirtual && (
                     isLast && tracePoint.isBlocking
                             || tracePoint is SwitchEventTracePoint
                             || tracePoint is ObstructionFreedomViolationExecutionAbortTracePoint
-                    )}
+                    )
+            ) || callDepth == 0
+        }
         is CallNode -> currentNode.tracePoint.wasSuspended || currentNode.isRootCall
         is ResultNode -> true
         else -> false
