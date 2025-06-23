@@ -26,16 +26,10 @@ internal class LocalVariablesAccessTransformer(
     adapter: GeneratorAdapter,
     desc: String,
     isStatic: Boolean,
-    private val locals: Map<Int, List<LocalVariableInfo>>,
+    private val locals: MethodVariables
 ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
     private var turnoffTransform = false
-    private val visitedLabels = HashSet<Label>()
     private val numberOfLocals = convertAsmMethodType(desc).argumentTypes.size  + if (isStatic) 0 else 1
-
-    override fun visitLabel(label: Label) = adapter.run {
-        visitedLabels += label
-        visitLabel(label)
-    }
 
     override fun visitVarInsn(opcode: Int, varIndex: Int) = adapter.run {
         val localVariableInfo = getVariableName(varIndex)?.takeIf { it.name != "this" }
@@ -132,26 +126,10 @@ internal class LocalVariablesAccessTransformer(
     }
 
     private fun getVariableName(varIndex: Int): LocalVariableInfo? {
-        val localList = locals[varIndex] ?: return null
-        check(localList.isNotEmpty())
-        if (localList.size == 1) {
-            return localList.first()
-        }
-        if (localList.isUniqueVariable()) {
-            return localList.first()
-        }
-        // TODO: handle ambiguity
-        return null
-        // return findNameForLabelIndex(localList)
+        return locals.activeVariables.find { it.index == varIndex }
     }
 
     // TODO: does not work
-    private fun findNameForLabelIndex(localList: List<LocalVariableInfo>) =
-        localList.find { (_, _, range, _) ->
-            val (start, finish) = range
-            start in visitedLabels && finish !in visitedLabels
-        }
-
     private fun getVarInsOpcodeType(opcode: Int) = when (opcode) {
         Opcodes.ILOAD -> Type.INT_TYPE
         Opcodes.LLOAD -> Type.LONG_TYPE

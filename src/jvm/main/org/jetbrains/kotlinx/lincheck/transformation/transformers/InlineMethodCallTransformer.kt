@@ -49,7 +49,6 @@ internal class InlineMethodCallTransformer(
     private val inlineStack = ArrayList<LocalVariableInfo>()
 
     override fun visitLabel(label: Label) = adapter.run {
-        locals.visitLabel(label)
         if (!locals.hasInlines || looksLikeSuspendMethod) {
             super.visitLabel(label)
             return
