@@ -478,8 +478,8 @@ publishing {
             url = URI("https://oss.sonatype.org/service/local/staging/deploy/maven2/")
 
             credentials {
-                this.username = System.getenv("libs.sonatype.user")
-                this.password = System.getenv("libs.sonatype.password")
+                username = System.getenv("libs.sonatype.user")
+                password = System.getenv("libs.sonatype.password")
             }
         }
 
