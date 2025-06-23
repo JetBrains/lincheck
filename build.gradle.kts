@@ -352,7 +352,7 @@ val bootstrapJar = tasks.register<Copy>("bootstrapJar") {
     into(file("${layout.buildDirectory.get()}/resources/main"))
 }
 
-val jar by tasks.getting(Jar::class) {
+val jar = tasks.named<Jar>("jar") {
     from(sourceSets["main"].output)
     dependsOn(tasks.compileJava, tasks.compileKotlin)
 }
@@ -364,7 +364,7 @@ val sourcesJar = tasks.register<Jar>("sourcesJar") {
     archiveClassifier.set("sources")
 }
 
-val dokkaHtml by tasks.named<DokkaTask>("dokkaHtml") {
+val dokkaHtml = tasks.named<DokkaTask>("dokkaHtml") {
     outputDirectory.set(file("${layout.buildDirectory.get()}/javadoc"))
     dokkaSourceSets {
         named("main") {
@@ -374,7 +374,7 @@ val dokkaHtml by tasks.named<DokkaTask>("dokkaHtml") {
     }
 }
 
-val javadocJar by tasks.creating(Jar::class) {
+val javadocJar = tasks.register<Jar>("javadocJar") {
     dependsOn(dokkaHtml)
     from("${layout.buildDirectory.get()}/javadoc")
     archiveClassifier.set("javadoc")
@@ -423,7 +423,7 @@ publishing {
             this.version = version
 
             from(components["kotlin"])
-            artifact(sourcesJar.get())
+            artifact(sourcesJar)
             artifact(javadocJar)
 
             pom {
