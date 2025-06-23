@@ -6,6 +6,7 @@ import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.asRequestBody
+import java.net.URI
 import java.util.*
 
 buildscript {
@@ -464,11 +465,25 @@ publishing {
         }
     }
 
-    // set up a local directory publishing for further signing and uploading to sonatype
     repositories {
+        // set up a local directory publishing for further signing and uploading to sonatype
         maven {
             name = "artifacts"
             url = uri(layout.buildDirectory.dir("artifacts/maven"))
+        }
+
+        // legacy sonatype staging publishing
+        maven {
+            name = "staging"
+            url = URI("https://oss.sonatype.org/service/local/staging/deploy/maven2/")
+
+            val username = System.getenv("libs.sonatype.user") ?: "user"
+            val password = System.getenv("libs.sonatype.password") ?: "password"
+
+            credentials {
+                this.username = username
+                this.password = password.trim()
+            }
         }
     }
 }
