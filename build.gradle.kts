@@ -1,12 +1,31 @@
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.dokka.gradle.DokkaTask
+import okhttp3.MultipartBody
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.asRequestBody
+import java.net.URI
+import java.util.*
+
+buildscript {
+    repositories {
+        maven { url = uri("https://packages.jetbrains.team/maven/p/jcs/maven") }
+    }
+    dependencies {
+        classpath("com.jetbrains:jet-sign:45.47")
+        classpath("com.squareup.okhttp3:okhttp:4.12.0")
+    }
+}
 
 plugins {
     java
     kotlin("jvm")
     id("org.jetbrains.kotlinx.atomicfu")
+    id("signing")
     id("maven-publish")
+    id("org.jetbrains.dokka")
     id("kotlinx.team.infra") version "0.4.0-dev-80"
 }
 
@@ -334,15 +353,34 @@ val bootstrapJar = tasks.register<Copy>("bootstrapJar") {
     into(file("${layout.buildDirectory.get()}/resources/main"))
 }
 
-val jar by tasks.getting(Jar::class) {
+val jar = tasks.named<Jar>("jar") {
     from(sourceSets["main"].output)
+    dependsOn(tasks.compileJava, tasks.compileKotlin)
 }
 
 val sourcesJar = tasks.register<Jar>("sourcesJar") {
     from(sourceSets["main"].allSource)
     // Also collect sources for the injected classes to simplify debugging
     from(project(":bootstrap").file("src"))
+    archiveClassifier.set("sources")
 }
+
+val dokkaHtml = tasks.named<DokkaTask>("dokkaHtml") {
+    outputDirectory.set(file("${layout.buildDirectory.get()}/javadoc"))
+    dokkaSourceSets {
+        named("main") {
+            sourceRoots.from(file("src/jvm/main"))
+            reportUndocumented.set(false)
+        }
+    }
+}
+
+val javadocJar = tasks.register<Jar>("javadocJar") {
+    dependsOn(dokkaHtml)
+    from("${layout.buildDirectory.get()}/javadoc")
+    archiveClassifier.set("javadoc")
+}
+
 
 tasks.withType<Jar> {
     dependsOn(bootstrapJar)
@@ -366,6 +404,15 @@ tasks.named("processResources").configure {
     dependsOn(bootstrapJar)
 }
 
+// TODO: signing via JetBrains CodeSign is not yet configured
+// signing {
+//     val isUnderTeamCity = System.getenv("TEAMCITY_VERSION") != null
+//     if (isUnderTeamCity) {
+//         sign(publishing.publications)
+//         signatories = jetbrains.sign.GpgSignSignatoryProvider()
+//     }
+// }
+
 publishing {
     publications {
         register("maven", MavenPublication::class) {
@@ -378,13 +425,35 @@ publishing {
             this.version = version
 
             from(components["kotlin"])
-            artifact(sourcesJar.get()) {
-                classifier = "sources"
-            }
+            artifact(sourcesJar)
+            artifact(javadocJar)
 
             pom {
                 this.name.set(name)
-                this.description.set("Lincheck - framework for testing concurrent data structures")
+                this.description.set("Lincheck - framework for testing concurrent code on the JVM")
+
+                url.set("https://github.com/JetBrains/lincheck")
+                scm {
+                    connection.set("scm:git:https://github.com/JetBrains/lincheck.git")
+                    url.set("https://github.com/JetBrains/lincheck")
+                }
+
+                developers {
+                    developer {
+                        this.name.set("Nikita Koval")
+                        id.set("nikita.koval")
+                        email.set("nikita.koval@jetbrains.com")
+                        organization.set("JetBrains")
+                        organizationUrl.set("https://www.jetbrains.com")
+                    }
+                    developer {
+                        this.name.set("Evgeniy Moiseenko")
+                        id.set("evgeniy.moiseenko")
+                        email.set("evgeniy.moiseenko@jetbrains.com")
+                        organization.set("JetBrains")
+                        organizationUrl.set("https://www.jetbrains.com")
+                    }
+                }
 
                 licenses {
                     license {
@@ -396,9 +465,93 @@ publishing {
             }
         }
     }
+
+    repositories {
+        // set up a local directory publishing for further signing and uploading to sonatype
+        maven {
+            name = "artifacts"
+            url = uri(layout.buildDirectory.dir("artifacts/maven"))
+        }
+
+        // legacy sonatype staging publishing
+        maven {
+            name = "sonatypeStaging"
+            url = URI("https://oss.sonatype.org/service/local/staging/deploy/maven2/")
+
+            credentials {
+                username = System.getenv("libs.sonatype.user")
+                password = System.getenv("libs.sonatype.password")
+            }
+        }
+
+        // space-packages publishing
+        maven {
+            name = "spacePackages"
+            url = URI("https://packages.jetbrains.team/maven/p/concurrency-tools/maven")
+
+            credentials {
+                username = System.getenv("SPACE_USERNAME")
+                password = System.getenv("SPACE_PASSWORD")
+            }
+        }
+    }
 }
 
 tasks.named("generateMetadataFileForMavenPublication") {
     dependsOn(jar)
     dependsOn(sourcesJar)
+    dependsOn(javadocJar)
+}
+
+tasks {
+    val packSonatypeCentralBundle by registering(Zip::class) {
+        group = "publishing"
+
+        dependsOn(":publishMavenPublicationToArtifactsRepository")
+        // (this is the same generated task name)
+
+        from(layout.buildDirectory.dir("artifacts/maven"))
+        archiveFileName.set("bundle.zip")
+        destinationDirectory.set(layout.buildDirectory)
+    }
+
+    val publishMavenToCentralPortal by registering {
+        group = "publishing"
+
+        dependsOn(packSonatypeCentralBundle)
+
+        doLast {
+            val uriBase = "https://central.sonatype.com/api/v1/publisher/upload"
+            val publishingType = "USER_MANAGED"
+            val deploymentName = "${project.name}-$version"
+            val uri = "$uriBase?name=$deploymentName&publishingType=$publishingType"
+
+            val userName = rootProject.extra["centralPortalUserName"] as String
+            val token = rootProject.extra["centralPortalToken"] as String
+            val base64Auth = Base64.getEncoder().encode("$userName:$token".toByteArray()).toString(Charsets.UTF_8)
+            val bundleFile = packSonatypeCentralBundle.get().archiveFile.get().asFile
+
+            println("Sending request to $uri...")
+
+            val client = OkHttpClient()
+            val request = Request.Builder()
+                .url(uri)
+                .header("Authorization", "Bearer $base64Auth")
+                .post(
+                    MultipartBody.Builder()
+                        .setType(MultipartBody.FORM)
+                        .addFormDataPart("bundle", bundleFile.name, bundleFile.asRequestBody())
+                        .build()
+                )
+                .build()
+            client.newCall(request).execute().use { response ->
+              val statusCode = response.code
+              println("Upload status code: $statusCode")
+              println("Upload result: ${response.body!!.string()}")
+              if (statusCode != 201) {
+                  error("Upload error to Central repository. Status code $statusCode.")
+              }
+            }
+        }
+    }
 }
