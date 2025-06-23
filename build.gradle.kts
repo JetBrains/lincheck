@@ -404,13 +404,13 @@ tasks.named("processResources").configure {
     dependsOn(bootstrapJar)
 }
 
-signing {
-    val isUnderTeamCity = System.getenv("TEAMCITY_VERSION") != null
-    if (isUnderTeamCity) {
-        sign(publishing.publications)
-        signatories = jetbrains.sign.GpgSignSignatoryProvider()
-    }
-}
+// signing {
+//     val isUnderTeamCity = System.getenv("TEAMCITY_VERSION") != null
+//     if (isUnderTeamCity) {
+//         sign(publishing.publications)
+//         signatories = jetbrains.sign.GpgSignSignatoryProvider()
+//     }
+// }
 
 publishing {
     publications {
