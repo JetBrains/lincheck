@@ -482,6 +482,17 @@ publishing {
                 this.password = System.getenv("libs.sonatype.password")
             }
         }
+
+        // space-packages publishing
+        maven {
+            name = "spacePackages"
+            url = URI("https://packages.jetbrains.team/maven/p/concurrency-tools/maven")
+
+            credentials {
+                username = System.getenv("SPACE_USERNAME")
+                password = System.getenv("SPACE_PASSWORD")
+            }
+        }
     }
 }
 
