@@ -404,6 +404,7 @@ tasks.named("processResources").configure {
     dependsOn(bootstrapJar)
 }
 
+// TODO: signing via JetBrains CodeSign is not yet configured
 // signing {
 //     val isUnderTeamCity = System.getenv("TEAMCITY_VERSION") != null
 //     if (isUnderTeamCity) {
