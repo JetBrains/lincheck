@@ -203,18 +203,24 @@ internal open class ParallelThreadsRunner(
      */
     @Suppress("unused")
     fun processInvocationResult(res: Any?, iThread: Int, actorId: Int): Result = runInsideIgnoredSection {
-        val actor = scenario.parallelExecution[iThread][actorId]
-        val finalResult = if (res === COROUTINE_SUSPENDED) {
+        val finalResult = if (res !== COROUTINE_SUSPENDED) {
+            createLincheckResult(res)
+        } else {
             val thread = Thread.currentThread() as TestThread
+            val actor = scenario.parallelExecution[iThread][actorId]
             val cont = thread.suspendedContinuation.also { thread.suspendedContinuation = null }
-            if (actor.cancelOnSuspension && cont !== null && cancelByLincheck(cont as CancellableContinuation<*>, actor.promptCancellation) != CANCELLATION_FAILED) {
+            if (actor.cancelOnSuspension && cont !== null &&
+                cancelByLincheck(cont as CancellableContinuation<*>, actor.promptCancellation) != CANCELLATION_FAILED
+            ) {
                 if (!trySetCancelledStatus(iThread, actorId)) {
                     // already resumed, increment `completedOrSuspendedThreads` back
                     completedOrSuspendedThreads.incrementAndGet()
                 }
                 Cancelled
-            } else waitAndInvokeFollowUp(thread, actorId)
-        } else createLincheckResult(res)
+            } else {
+                waitAndInvokeFollowUp(thread, actorId)
+            }
+        }
         val isLastActor = actorId == scenario.parallelExecution[iThread].size - 1
         if (isLastActor && finalResult !== Suspended)
             completedOrSuspendedThreads.incrementAndGet()

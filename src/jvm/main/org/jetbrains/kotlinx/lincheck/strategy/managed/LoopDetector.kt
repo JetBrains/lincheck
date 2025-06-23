@@ -11,6 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.primitiveOrIdentityHashCode
+import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import org.jetbrains.kotlinx.lincheck.strategy.managed.LoopDetector.CodeIdentity.RegularCodeLocationIdentity
 import org.jetbrains.kotlinx.lincheck.trace.CallStackTraceElement
 import org.jetbrains.kotlinx.lincheck.trace.SpinCycleStartTracePoint
@@ -86,6 +87,13 @@ internal class LoopDetector(
     private var totalExecutionsCount = 0
 
     /**
+     * Current threshold for detecting possible livelock conditions during execution.
+     * It is initialized with the [hangingDetectionThreshold] value
+     * and can be adjusted dynamically to influence the sensitivity of the spin-loop detection logic.
+     */
+    private var currentHangingDetectionThreshold = hangingDetectionThreshold
+
+    /**
      * Map, which helps us to determine how many times the current thread visits some code location.
      */
     private val currentThreadCodeLocationVisitCountMap = mutableMapOf<Int, Int>()
@@ -140,6 +148,7 @@ internal class LoopDetector(
     fun reset() {
         currentThreadId = -1
         totalExecutionsCount = 0
+        currentHangingDetectionThreshold = hangingDetectionThreshold
         currentThreadCodeLocationVisitCountMap.clear()
         currentThreadCodeLocationsHistory.clear()
         currentInterleavingHistory.clear()
@@ -261,8 +270,8 @@ internal class LoopDetector(
         if (isInTraceDebuggerMode) {
             return when {
                 // spin-loop detected - switch
-                count > hangingDetectionThreshold ->
-                    Decision.LivelockThreadSwitch(hangingDetectionThreshold)
+                count > currentHangingDetectionThreshold ->
+                    Decision.LivelockThreadSwitch(currentHangingDetectionThreshold)
                 // live-lock detected - fail
                 totalExecutionsCount > ManagedCTestConfiguration.DEFAULT_LIVELOCK_EVENTS_THRESHOLD ->
                     Decision.EventsThresholdReached
@@ -270,7 +279,7 @@ internal class LoopDetector(
                 else -> Decision.Idle
             }
         }
-        val detectedFirstTime = count > hangingDetectionThreshold
+        val detectedFirstTime = count > currentHangingDetectionThreshold
         val detectedEarly = loopTrackingCursor.isInCycle
         // detectedFirstTime and detectedEarly can both sometimes be true
         // when we can't find a cycle period and can't switch to another thread.
@@ -291,7 +300,7 @@ internal class LoopDetector(
             return Decision.LivelockReplayRequired
         }
         if (!detectedFirstTime && detectedEarly) {
-            totalExecutionsCount += hangingDetectionThreshold
+            totalExecutionsCount += currentHangingDetectionThreshold
             val lastNode = currentInterleavingHistory.last()
             // spinCyclePeriod may be not 0 only we tried to switch
             // from the current thread but no available threads were available to switch
@@ -441,11 +450,19 @@ internal class LoopDetector(
     /**
      * Is called before each interleaving part processing
      */
-    fun beforePart(nextThread: Int) {
+    fun beforePart(part: ExecutionPart, nextThread: Int) {
         if (currentThreadId == -1) {
             setFirstThread(nextThread)
         } else if (currentThreadId != nextThread) {
             beforeThreadSwitch(nextThread)
+        }
+        if (part == ExecutionPart.VALIDATION) {
+            // Effectively disable spin-loop detection inside validation functions, because:
+            // - during validation, there are no other threads to switch anyway;
+            // - in our use cases of concurrent algorithms, many typical validation functions contain
+            //   long-running for-loops iterating over large pre-allocated arrays,
+            //   which size exceeds the default value of `hangingDetectionThreshold`.
+            currentHangingDetectionThreshold = ManagedCTestConfiguration.DEFAULT_LIVELOCK_EVENTS_THRESHOLD + 1
         }
     }
 

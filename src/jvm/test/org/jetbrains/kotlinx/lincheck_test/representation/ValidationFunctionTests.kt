@@ -9,11 +9,12 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.lincheck.datastructures.ManagedCTestConfiguration
+import org.jetbrains.lincheck.datastructures.Operation
+import org.jetbrains.lincheck.datastructures.Validate
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.util.*
-import org.jetbrains.lincheck.datastructures.Validate
 import org.junit.*
 import java.lang.IllegalStateException
 
@@ -107,4 +108,38 @@ class MoreThenOneValidationFunctionFailureTest {
     @Test
     fun test() = ModelCheckingOptions()
         .checkFailsWithException<IllegalStateException>(this::class.java, "two_validation_functions_exception")
+}
+
+class ValidationFunctionLongLoopTest {
+    var a = 0
+
+    val loopCount = 1024
+
+    init {
+        check(loopCount > ManagedCTestConfiguration.DEFAULT_HANGING_DETECTION_THRESHOLD)
+        check(loopCount < ManagedCTestConfiguration.DEFAULT_LIVELOCK_EVENTS_THRESHOLD)
+    }
+
+    @Operation
+    fun operation() {
+        a++
+    }
+
+    @Validate
+    fun validate() {
+        // check that long-running loops inside a validation function
+        // do not trigger active-lock failure
+        repeat(loopCount) {
+            a++
+        }
+    }
+
+    @Test
+    fun test() = ModelCheckingOptions()
+        .iterations(1)
+        .actorsBefore(0)
+        .actorsAfter(0)
+        .actorsPerThread(1)
+        .minimizeFailedScenario(false)
+        .check(this::class.java)
 }
