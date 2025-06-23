@@ -428,7 +428,7 @@ publishing {
 
             pom {
                 this.name.set(name)
-                this.description.set("Lincheck - framework for testing concurrent data structures")
+                this.description.set("Lincheck - framework for testing concurrent code on the JVM")
 
                 url.set("https://github.com/JetBrains/lincheck")
                 scm {
