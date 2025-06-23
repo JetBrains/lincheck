@@ -474,15 +474,12 @@ publishing {
 
         // legacy sonatype staging publishing
         maven {
-            name = "staging"
+            name = "sonatypeStaging"
             url = URI("https://oss.sonatype.org/service/local/staging/deploy/maven2/")
 
-            val username = System.getenv("libs.sonatype.user") ?: "user"
-            val password = System.getenv("libs.sonatype.password") ?: "password"
-
             credentials {
-                this.username = username
-                this.password = password.trim()
+                this.username = System.getenv("libs.sonatype.user")
+                this.password = System.getenv("libs.sonatype.password")
             }
         }
     }
