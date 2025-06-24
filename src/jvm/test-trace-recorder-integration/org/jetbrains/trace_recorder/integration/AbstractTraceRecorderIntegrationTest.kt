@@ -27,7 +27,11 @@ abstract class AbstractTraceRecorderIntegrationTest : AbstractIntegrationTest() 
         runGradleTestImpl(
             testClassName,
             testMethodName,
-            extraJvmArgs.plus("-Dlincheck.traceRecorderMode=true"),
+            extraJvmArgs + listOf(
+                "-Dlincheck.traceRecorderMode=true",
+                "-XX:+UnlockExperimentalVMOptions",
+                "-XX:hashCode=2"
+            ),
             extraAgentArgs.plus("verbose"),
             gradleCommands,
             checkRepresentation
