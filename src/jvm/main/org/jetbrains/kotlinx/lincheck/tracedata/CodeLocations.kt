@@ -29,8 +29,6 @@ import kotlin.collections.HashMap
  * code locations it analyses, and stores more detailed information necessary for trace generation in this object.
  */
 internal object CodeLocations {
-    private val codeLocations = ArrayList<StackTraceElement>()
-
     /**
      * Registers a new code location and returns its unique ID.
      *
@@ -39,11 +37,7 @@ internal object CodeLocations {
      */
     @JvmStatic
     @Synchronized
-    fun newCodeLocation(stackTraceElement: StackTraceElement): Int {
-        val id = codeLocations.size
-        codeLocations.add(stackTraceElement)
-        return id
-    }
+    fun newCodeLocation(stackTraceElement: StackTraceElement): Int = TRACE_CONTEXT.newCodeLocation(stackTraceElement)
 
     /**
      * Returns the [StackTraceElement] associated with the specified code location ID.
@@ -53,17 +47,8 @@ internal object CodeLocations {
      */
     @JvmStatic
     @Synchronized
-    fun stackTrace(codeLocationId: Int): StackTraceElement {
-        // actors do not have a code location (for now)
-        if (codeLocationId == UNKNOWN_CODE_LOCATION_ID) return EMPTY_STACK_TRACE
-        return codeLocations[codeLocationId]
-    }
-
-    val content: List<StackTraceElement> get() = codeLocations
+    fun stackTrace(codeLocationId: Int): StackTraceElement = TRACE_CONTEXT.stackTrace(codeLocationId)
 }
-
-internal const val UNKNOWN_CODE_LOCATION_ID = -1
-private val EMPTY_STACK_TRACE = StackTraceElement("", "", "", 0)
 
 // TODO or create a ticket to refactor this and use FieldDescriptor and ClassNode visitor instead.
 /**

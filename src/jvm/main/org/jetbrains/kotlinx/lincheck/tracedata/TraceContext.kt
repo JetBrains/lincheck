@@ -12,7 +12,11 @@ package org.jetbrains.kotlinx.lincheck.tracedata
 
 val TRACE_CONTEXT = TraceContext()
 
+internal const val UNKNOWN_CODE_LOCATION_ID = -1
+private val EMPTY_STACK_TRACE = StackTraceElement("", "", "", 0)
+
 class TraceContext {
+    private val locations = ArrayList<StackTraceElement>()
     private val classes = IndexedPool<ClassDescriptor>()
     private val methods = IndexedPool<MethodDescriptor>()
     private val fields = IndexedPool<FieldDescriptor>()
@@ -79,7 +83,27 @@ class TraceContext {
         variables.getOrCreateId(value)
     }
 
+
+    internal val codeLocations: List<StackTraceElement> get() = locations
+
+    fun newCodeLocation(stackTraceElement: StackTraceElement): Int {
+        val id = locations.size
+        locations.add(stackTraceElement)
+        return id
+    }
+
+    fun stackTrace(codeLocationId: Int): StackTraceElement {
+        // actors do not have a code location (for now)
+        if (codeLocationId == UNKNOWN_CODE_LOCATION_ID) return EMPTY_STACK_TRACE
+        return locations[codeLocationId]
+    }
+
+    internal fun restoreCodeLocation(value: StackTraceElement) {
+        locations.add(value)
+    }
+
     fun clear() {
+        locations.clear()
         classes.clear()
         methods.clear()
         fields.clear()
