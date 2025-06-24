@@ -8,13 +8,13 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.trace_recorder.integration
+package org.jetbrains.trace_debugger.integration
 
 import org.jetbrains.kotlinx.lincheck_test.AbstractIntegrationTest
 import java.nio.file.Paths
 
-abstract class AbstractTraceRecorderIntegrationTest : AbstractIntegrationTest() {
-    override val testSourcesPath = Paths.get("src", "jvm", "test-trace-recorder-integration").toString()
+abstract class AbstractTraceDebuggerIntegrationTest : AbstractIntegrationTest() {
+    override val testSourcesPath = Paths.get("src", "jvm", "test-trace-debugger-integration").toString()
 
     final override fun runGradleTest(
         testClassName: String,
@@ -27,10 +27,13 @@ abstract class AbstractTraceRecorderIntegrationTest : AbstractIntegrationTest() 
         runGradleTestImpl(
             testClassName,
             testMethodName,
-            extraJvmArgs.plus("-Dlincheck.traceRecorderMode=true"),
-            extraAgentArgs.plus("verbose"),
-            gradleCommands,
-            checkRepresentation
+            extraJvmArgs + listOf(
+                "-Dlincheck.traceDebuggerMode=true",
+                "-XX:+UnlockExperimentalVMOptions",
+                "-XX:hashCode=2"
+            ),
+            extraAgentArgs,
+            gradleCommands
         )
     }
 }

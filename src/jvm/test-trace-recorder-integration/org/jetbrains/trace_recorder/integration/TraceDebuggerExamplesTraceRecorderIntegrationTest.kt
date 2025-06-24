@@ -8,7 +8,7 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.trace_recorder.integration
+package org.jetbrains.trace_recorder.integration
 
 import org.junit.Test
 

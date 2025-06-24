@@ -302,9 +302,10 @@ tasks {
         if (!ideaActive) {
             // We need to be able to run these tests in IntelliJ IDEA.
             // Unfortunately, the current Gradle support doesn't detect
-            // the `jvmTestIsolated` and `traceDebuggerIntegrationTest` tasks.
+            // the `jvmTestIsolated` and `trace[Debugger/Recorder]IntegrationTest` tasks.
             exclude("**/*IsolatedTest*")
-            exclude("org/jetbrains/kotlinx/trace_debugger/integration/*")
+            exclude("org/jetbrains/trace_debugger/integration/*")
+            exclude("org/jetbrains/trace_recorder/integration/*")
         }
         // Do not run JdkUnsafeTraceRepresentationTest on Java 12 or earlier,
         // as this test relies on specific ConcurrentHashMap implementation.
@@ -362,7 +363,7 @@ tasks {
     val traceDebuggerIntegrationTest = register<Test>("traceDebuggerIntegrationTest") {
         configureJvmTestCommon()
         group = "verification"
-        include("org/jetbrains/kotlinx/trace_debugger/integration/*")
+        include("org/jetbrains/trace_debugger/integration/*")
 
         testClassesDirs = sourceSets["traceDebuggerTest"].output.classesDirs
         classpath = sourceSets["traceDebuggerTest"].runtimeClasspath
@@ -374,7 +375,7 @@ tasks {
     val traceRecorderIntegrationTest = register<Test>("traceRecorderIntegrationTest") {
         configureJvmTestCommon()
         group = "verification"
-        include("org/jetbrains/kotlinx/trace_recorder/integration/*")
+        include("org/jetbrains/trace_recorder/integration/*")
 
         testClassesDirs = sourceSets["traceRecorderTest"].output.classesDirs
         classpath = sourceSets["traceRecorderTest"].runtimeClasspath
