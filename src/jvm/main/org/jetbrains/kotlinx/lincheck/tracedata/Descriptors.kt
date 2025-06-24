@@ -10,12 +10,23 @@
 
 package org.jetbrains.kotlinx.lincheck.tracedata
 
+data class ClassDescriptor(
+    val name: String,
+)
+
+internal val classDescriptorsCache = IndexedPool<ClassDescriptor>()
+
 data class FieldDescriptor(
-    val className: String,
+    val classId: Int,
     val fieldName: String,
     val isStatic: Boolean,
     val isFinal: Boolean,
-)
+) {
+    constructor(className: String, fieldName:String, isStatic: Boolean, isFinal: Boolean) :
+            this(classDescriptorsCache.getOrCreateId(ClassDescriptor(className)), fieldName, isStatic, isFinal)
+
+    val className: String get() = classDescriptorsCache[classId].name
+}
 
 internal val fieldCache = IndexedPool<FieldDescriptor>()
 

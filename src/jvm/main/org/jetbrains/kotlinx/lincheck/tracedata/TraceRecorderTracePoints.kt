@@ -15,7 +15,6 @@ import java.io.DataOutput
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.concurrent.thread
 
 private val EVENT_ID_GENERATOR = AtomicInteger(0)
 
@@ -414,16 +413,13 @@ fun loadTRTracePoint(inp: DataInput): TRTracePoint {
     return loader(inp, codeLocationId, threadId, eventId)
 }
 
-internal val classNameCache = IndexedPool<String>()
-private val REGEX_TO_ESCAPE_CHARS = Regex("([\r\n\t])")
-
 @ConsistentCopyVisibility
 data class TRObject internal constructor (
     internal val classNameId: Int,
     val identityHashCode: Int,
     internal val primitiveValue: Any?
 ) {
-    val className: String  get() = primitiveValue?.javaClass?.name ?: classNameCache[classNameId]
+    val className: String  get() = primitiveValue?.javaClass?.name ?: classDescriptorsCache[classNameId].name
     val isPrimitive: Boolean get() = primitiveValue != null
     val value: Any? get() = primitiveValue
 
@@ -496,7 +492,7 @@ fun TRObject(obj: Any): TRObject {
         is BigInteger -> TRObject(TR_OBJECT_P_RAW_STRING, 0, obj.toString())
         is BigDecimal -> TRObject(TR_OBJECT_P_RAW_STRING, 0, obj.toString())
         // Generic case
-        else -> TRObject(classNameCache.getOrCreateId(obj.javaClass.name), System.identityHashCode(obj), null)
+        else -> TRObject(classDescriptorsCache.getOrCreateId(ClassDescriptor(obj.javaClass.name)), System.identityHashCode(obj), null)
     }
 }
 

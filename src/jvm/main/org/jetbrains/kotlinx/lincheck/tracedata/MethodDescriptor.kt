@@ -22,14 +22,15 @@ internal fun java.lang.reflect.Method.toMethodSignature() = Method.getMethod(thi
 internal val methodCache = IndexedPool<MethodDescriptor>()
 
 data class MethodDescriptor(
-    val className: String,
+    val classId: Int,
     val methodSignature: MethodSignature
 ) {
     var isIntrinsic: Boolean = false
 
     constructor(className: String, methodName: String, desc: String) :
-        this(className, MethodSignature(methodName, Types.convertAsmMethodType(desc)))
+        this(classDescriptorsCache.getOrCreateId(ClassDescriptor(className)), MethodSignature(methodName, Types.convertAsmMethodType(desc)))
 
+    val className: String get() = classDescriptorsCache[classId].name
     val methodName: String get() = methodSignature.name
     val returnType: Types.Type get() = methodSignature.methodType.returnType
     val argumentTypes: List<Types.Type> get() = methodSignature.methodType.argumentTypes

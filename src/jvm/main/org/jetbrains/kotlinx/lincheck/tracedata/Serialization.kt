@@ -15,7 +15,7 @@ import java.io.*
 private const val OUTPUT_BUFFER_SIZE: Int = 16*1024*1024
 
 const val TRACE_MAGIC : Long = 0x706e547124ee5f70L
-const val TRACE_VERSION : Long = 5
+const val TRACE_VERSION : Long = 6
 
 fun saveRecorderTrace(out: OutputStream, rootCallsPerThread: List<TRTracePoint>) {
     DataOutputStream(out.buffered(OUTPUT_BUFFER_SIZE)).use { output ->
@@ -27,7 +27,7 @@ fun saveRecorderTrace(out: OutputStream, rootCallsPerThread: List<TRTracePoint>)
         saveCache(output, methodCache, DataOutput::writeMethodDescriptor)
         saveCache(output, fieldCache, DataOutput::writeFieldDescriptor)
         saveCache(output, variableCache, DataOutput::writeVariableDescriptor)
-        saveCache(output, classNameCache, DataOutput::writeUTF)
+        saveCache(output, classDescriptorsCache, DataOutput::writeClassDescriptor)
         saveCache(output, codeLocationsStringPool, DataOutput::writeUTF)
 
         saveCodeLocations(output, codeLocationsStringPool)
@@ -54,7 +54,7 @@ fun loadRecordedTrace(inp: InputStream): List<TRTracePoint> {
         loadCache(input, methodCache, DataInput::readMethodDescriptor)
         loadCache(input, fieldCache, DataInput::readFieldDescriptor)
         loadCache(input, variableCache, DataInput::readVariableDescriptor)
-        loadCache(input, classNameCache, DataInput::readUTF)
+        loadCache(input, classDescriptorsCache, DataInput::readClassDescriptor)
 
         val codeLocationsStringPool = IndexedPool<String>()
         loadCache(input, codeLocationsStringPool, DataInput::readUTF)
@@ -89,7 +89,7 @@ private fun internalizeCodeLocationStrings(): IndexedPool<String> {
     val pool = IndexedPool<String>()
     CodeLocations.content.forEach {
         // Maybe, this class missed in cache?
-        classNameCache.getOrCreateId(it.className.toCanonicalClassName())
+        classDescriptorsCache.getOrCreateId(ClassDescriptor(it.className.toCanonicalClassName()))
 
         pool.getOrCreateId(it.methodName)
         val fn = it.fileName
@@ -172,13 +172,21 @@ private fun DataInput.readMethodType(): Types.MethodType {
     return Types.MethodType(argumentTypes, returnType)
 }
 
+private fun DataOutput.writeClassDescriptor(value: ClassDescriptor) {
+    writeUTF(value.name)
+}
+
+private fun DataInput.readClassDescriptor(): ClassDescriptor {
+    return ClassDescriptor(readUTF())
+}
+
 private fun DataOutput.writeMethodDescriptor(value: MethodDescriptor) {
-   writeUTF(value.className)
+   writeInt(value.classId)
    writeMethodSignature(value.methodSignature)
 }
 
 private fun DataInput.readMethodDescriptor(): MethodDescriptor {
-    return MethodDescriptor(readUTF(), readMethodSignature())
+    return MethodDescriptor(readInt(), readMethodSignature())
 }
 
 private fun DataOutput.writeMethodSignature(value: MethodSignature) {
@@ -191,7 +199,7 @@ private fun DataInput.readMethodSignature(): MethodSignature {
 }
 
 private fun DataOutput.writeFieldDescriptor(value: FieldDescriptor) {
-    writeUTF(value.className)
+    writeInt(value.classId)
     writeUTF(value.fieldName)
     writeBoolean(value.isStatic)
     writeBoolean(value.isFinal)
@@ -199,7 +207,7 @@ private fun DataOutput.writeFieldDescriptor(value: FieldDescriptor) {
 
 private fun DataInput.readFieldDescriptor(): FieldDescriptor {
     return FieldDescriptor(
-        className = readUTF(),
+        classId = readInt(),
         fieldName = readUTF(),
         isStatic = readBoolean(),
         isFinal = readBoolean()
@@ -215,14 +223,14 @@ private fun DataInput.readVariableDescriptor(): VariableDescriptor {
 }
 
 private fun DataOutput.writeStackTraceElement(value: StackTraceElement, stringCache: IndexedPool<String>) {
-    writeInternalizedString(value.className.toCanonicalClassName(), classNameCache::getOrCreateId)
+    writeInternalizedString(value.className.toCanonicalClassName(), { name -> classDescriptorsCache.getOrCreateId(ClassDescriptor(name)) })
     writeInternalizedString(value.methodName, stringCache::getOrCreateId)
     writeInternalizedString(value.fileName, stringCache::getOrCreateId)
     writeInt(value.lineNumber)
 }
 
 private fun DataInput.readStackTraceElement(stringCache: IndexedPool<String>): StackTraceElement {
-    val className = readInternalizedString(classNameCache::get)?.toInternalClassName()
+    val className = readInternalizedString({ id -> classDescriptorsCache[id].name  })?.toInternalClassName()
     val methodName = readInternalizedString(stringCache::get)
     val fileName = readInternalizedString(stringCache::get)
     val lineNumber = readInt()
