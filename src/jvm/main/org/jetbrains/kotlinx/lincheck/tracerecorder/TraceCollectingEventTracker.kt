@@ -405,32 +405,24 @@ class TraceCollectingEventTracker(
         methodId: Int,
         codeLocation: Int,
         owner: Any?,
-    ): Unit = Unit
-// runInsideIgnoredSection {
-//        val threadData = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTrackerData as? ThreadData? ?: return
-//        val methodDescriptor = methodCache[methodId]
-//        val tracePoint = MethodCallTracePoint(
-//            iThread = threadData.threadId,
-//            actorId = 0,
-//            className = methodDescriptor.className,
-//            methodName = methodDescriptor.methodName,
-//            callStackTrace = EMPTY_CALL_STACK_TRACE,
-//            codeLocation = codeLocation,
-//            isStatic = false,
-//            callType = MethodCallTracePoint.CallType.NORMAL,
-//            isSuspend = false
-//        )
-//        threadData.addTracepointToCurrentCall(tracePoint)
-//        threadData.pushTracepointStackFrame(tracePoint, owner)
-//    }
+    ): Unit = runInsideIgnoredSection {
+        val threadData = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTrackerData as? ThreadData? ?: return
+        val tracePoint = TRMethodCallTracePoint(
+            threadId = threadData.threadId,
+            codeLocationId = codeLocation,
+            methodId = methodId,
+            obj = TRObjectOrNull(owner),
+            parameters = emptyList()
+        )
+        threadData.currentMethodCallTracePoint().events.add(tracePoint)
+        threadData.pushStackFrame(tracePoint, owner)
+    }
 
-    override fun onInlineMethodCallReturn(methodId: Int): Unit = Unit
-// runInsideIgnoredSection {
-//        val threadData = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTrackerData as? ThreadData? ?: return
-//        val tracePoint = threadData.popTracepointStackFrame()
-//        // TODO: add returned value
-//        // tracePoint.returnedValue
-//    }
+    override fun onInlineMethodCallReturn(methodId: Int): Unit = runInsideIgnoredSection {
+        val threadData = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTrackerData as? ThreadData? ?: return
+        val tracePoint = threadData.popStackFrame()
+        tracePoint.result = TR_OBJECT_VOID
+    }
 
     override fun invokeDeterministicallyOrNull(
         descriptorId: Long,
@@ -524,6 +516,10 @@ class TraceCollectingEventTracker(
                 } else {
                     if (st.size > 1) {
                         System.err.println("Trace Recorder: Thread ${thread.threadId + 1}: Stack is not empty, contains ${st.size} elements, report bug")
+                        System.err.println("Stack leftover:")
+                        st.reversed().forEach {
+                            System.err.println("  ${it.toText(true)}")
+                        }
                     }
                     roots.add(st.first())
                 }

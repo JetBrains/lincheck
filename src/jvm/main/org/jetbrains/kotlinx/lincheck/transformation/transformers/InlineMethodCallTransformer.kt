@@ -104,6 +104,16 @@ internal class InlineMethodCallTransformer(
         super.visitLabel(label)
     }
 
+    override fun visitMaxs(maxStack: Int, maxLocals: Int) {
+        super.visitMaxs(maxStack, maxLocals)
+        if (inlineStack.isNotEmpty()) {
+            System.err.println("Inline methods calls are not balanced at $className.$methodName:")
+            inlineStack.reversed().forEach {
+                System.err.println("  ${it.name} (slot ${it.index}) called at label ${it.labelIndexRange.first}")
+            }
+        }
+    }
+
     @Suppress("UNUSED_PARAMETER")
     private fun processInlineMethodCall(className: String, inlineMethodName: String, ownerType: org.objectweb.asm.Type?, owner: Int?, startLabel: Label) = adapter.run {
         // Create a fake method descriptor
