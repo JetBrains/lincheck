@@ -15,7 +15,8 @@ import java.io.PrintStream
 
 private const val OUTPUT_BUFFER_SIZE: Int = 16*1024*1024
 
-fun printRecorderTrace(output: OutputStream, rootCallsPerThread: List<TRTracePoint>, verbose: Boolean) {
+fun printRecorderTrace(output: OutputStream, context: TraceContext, rootCallsPerThread: List<TRTracePoint>, verbose: Boolean) {
+    check(context == TRACE_CONTEXT) { "Now only global TRACE_CONTEXT is supported" }
     PrintStream(output.buffered(OUTPUT_BUFFER_SIZE)).use { output ->
         rootCallsPerThread.forEachIndexed { i, root ->
             output.println("# Thread ${i+1}")

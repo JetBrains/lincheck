@@ -525,9 +525,9 @@ class TraceCollectingEventTracker(
                 }
             }
             when (outputType) {
-                TraceCollectorOutputType.BINARY -> saveRecorderTrace(output, roots)
-                TraceCollectorOutputType.TEXT -> printRecorderTrace(output, roots, false)
-                TraceCollectorOutputType.VERBOSE -> printRecorderTrace(output, roots, true)
+                TraceCollectorOutputType.BINARY -> saveRecorderTrace(output, TRACE_CONTEXT, roots)
+                TraceCollectorOutputType.TEXT -> printRecorderTrace(output, TRACE_CONTEXT, roots, false)
+                TraceCollectorOutputType.VERBOSE -> printRecorderTrace(output, TRACE_CONTEXT, roots, true)
             }
         } catch (t: Throwable) {
             System.err.println("TraceRecorder: Cannot write output file $traceDumpPath: ${t.message}")

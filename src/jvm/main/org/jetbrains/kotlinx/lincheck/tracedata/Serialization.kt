@@ -17,20 +17,21 @@ private const val OUTPUT_BUFFER_SIZE: Int = 16*1024*1024
 const val TRACE_MAGIC : Long = 0x706e547124ee5f70L
 const val TRACE_VERSION : Long = 6
 
-fun saveRecorderTrace(out: OutputStream, rootCallsPerThread: List<TRTracePoint>) {
+fun saveRecorderTrace(out: OutputStream, context: TraceContext, rootCallsPerThread: List<TRTracePoint>) {
+    check(context == TRACE_CONTEXT) { "Now only global TRACE_CONTEXT is supported" }
     DataOutputStream(out.buffered(OUTPUT_BUFFER_SIZE)).use { output ->
         output.writeLong(TRACE_MAGIC)
         output.writeLong(TRACE_VERSION)
 
-        val codeLocationsStringPool = internalizeCodeLocationStrings(TRACE_CONTEXT)
+        val codeLocationsStringPool = internalizeCodeLocationStrings(context)
 
-        saveCache(output, TRACE_CONTEXT.classDescriptors, DataOutput::writeClassDescriptor)
-        saveCache(output, TRACE_CONTEXT.methodDescriptors, DataOutput::writeMethodDescriptor)
-        saveCache(output, TRACE_CONTEXT.fieldDescriptors, DataOutput::writeFieldDescriptor)
-        saveCache(output, TRACE_CONTEXT.variableDescriptors, DataOutput::writeVariableDescriptor)
+        saveCache(output, context.classDescriptors, DataOutput::writeClassDescriptor)
+        saveCache(output, context.methodDescriptors, DataOutput::writeMethodDescriptor)
+        saveCache(output, context.fieldDescriptors, DataOutput::writeFieldDescriptor)
+        saveCache(output, context.variableDescriptors, DataOutput::writeVariableDescriptor)
         saveCache(output, codeLocationsStringPool.content, DataOutput::writeUTF)
 
-        saveCodeLocations(output, TRACE_CONTEXT.codeLocations, TRACE_CONTEXT,codeLocationsStringPool)
+        saveCodeLocations(output, context.codeLocations, context,codeLocationsStringPool)
 
         output.writeInt(rootCallsPerThread.size)
         rootCallsPerThread.forEach { root ->
@@ -39,7 +40,7 @@ fun saveRecorderTrace(out: OutputStream, rootCallsPerThread: List<TRTracePoint>)
     }
 }
 
-fun loadRecordedTrace(inp: InputStream): List<TRTracePoint> {
+fun loadRecordedTrace(inp: InputStream): Pair<TraceContext, List<TRTracePoint>> {
     DataInputStream(inp.buffered(OUTPUT_BUFFER_SIZE)).use { input ->
         val magic = input.readLong()
         if (magic != TRACE_MAGIC) {
@@ -51,14 +52,15 @@ fun loadRecordedTrace(inp: InputStream): List<TRTracePoint> {
             error("Wrong version $version (expected $TRACE_VERSION)")
         }
 
-        loadCache(input, TRACE_CONTEXT::restoreClassDescriptor, DataInput::readClassDescriptor)
-        loadCache(input, TRACE_CONTEXT::restoreMethodDescriptor, { readMethodDescriptor(TRACE_CONTEXT) })
-        loadCache(input, TRACE_CONTEXT::restoreFieldDescriptor, { readFieldDescriptor(TRACE_CONTEXT) })
-        loadCache(input, TRACE_CONTEXT::restoreVariableDescriptor, DataInput::readVariableDescriptor)
+        val context = TRACE_CONTEXT // TraceContext()
+        loadCache(input, context::restoreClassDescriptor, DataInput::readClassDescriptor)
+        loadCache(input, context::restoreMethodDescriptor, { readMethodDescriptor(context) })
+        loadCache(input, context::restoreFieldDescriptor, { readFieldDescriptor(context) })
+        loadCache(input, context::restoreVariableDescriptor, DataInput::readVariableDescriptor)
 
         val codeLocationsStringPool = IndexedPool<String>()
         loadCache(input, codeLocationsStringPool::getOrCreateId, DataInput::readUTF)
-        loadCodeLocations(input, TRACE_CONTEXT,codeLocationsStringPool)
+        loadCodeLocations(input, context,codeLocationsStringPool)
 
 
         val threadNum = input.readInt()
@@ -66,7 +68,7 @@ fun loadRecordedTrace(inp: InputStream): List<TRTracePoint> {
         repeat(threadNum) {
             roots.add(loadTRTracePoint(input) as TRMethodCallTracePoint)
         }
-        return roots
+        return context to roots
     }
 }
 
