@@ -10,10 +10,10 @@
 
 package org.jetbrains.trace_debugger.integration
 
-import org.jetbrains.kotlinx.lincheck_test.AbstractIntegrationTest
+import org.jetbrains.kotlinx.lincheck_test.AbstractTraceIntegrationTest
 import java.nio.file.Paths
 
-abstract class AbstractTraceDebuggerIntegrationTest : AbstractIntegrationTest() {
+abstract class AbstractTraceDebuggerIntegrationTest : AbstractTraceIntegrationTest() {
     override val testSourcesPath = Paths.get("src", "jvm", "test-trace-debugger-integration").toString()
 
     final override fun runGradleTest(

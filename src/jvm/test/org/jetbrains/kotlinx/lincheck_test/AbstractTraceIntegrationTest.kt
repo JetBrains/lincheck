@@ -23,7 +23,7 @@ import java.net.URL
 import java.net.URLClassLoader
 import java.nio.file.Paths
 
-abstract class AbstractIntegrationTest {
+abstract class AbstractTraceIntegrationTest {
     abstract val projectPath: String
     protected abstract val testSourcesPath: String
 

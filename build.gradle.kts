@@ -282,7 +282,6 @@ tasks {
             extraArgs.add("-Dlincheck.traceDebuggerMode=true")
             exclude("**/lincheck_test/guide/*")
         }
-        // TODO: do we need testInTraceRecorderMode in the gradle.properties then?
         val dumpTransformedSources: String by project
         if (dumpTransformedSources.toBoolean()) {
             extraArgs.add("-Dlincheck.dumpTransformedSources=true")
