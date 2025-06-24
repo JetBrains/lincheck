@@ -129,7 +129,6 @@ internal class LocalVariablesAccessTransformer(
         return locals.activeVariables.find { it.index == varIndex }
     }
 
-    // TODO: does not work
     private fun getVarInsOpcodeType(opcode: Int) = when (opcode) {
         Opcodes.ILOAD -> Type.INT_TYPE
         Opcodes.LLOAD -> Type.LONG_TYPE
