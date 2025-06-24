@@ -11,7 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.jetbrains.kotlinx.lincheck.tracedata.TRACE_CONTEXT
-import org.jetbrains.kotlinx.lincheck.tracedata.isTrackedIntrinsic
+import org.jetbrains.kotlinx.lincheck.util.isTrackedIntrinsic
 import org.jetbrains.kotlinx.lincheck.transformation.ASM_API
 import org.jetbrains.kotlinx.lincheck.transformation.toCanonicalClassName
 import org.objectweb.asm.AnnotationVisitor

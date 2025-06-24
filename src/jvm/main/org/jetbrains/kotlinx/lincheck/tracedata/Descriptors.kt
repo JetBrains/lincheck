@@ -15,14 +15,37 @@ data class ClassDescriptor internal constructor(
     val name: String,
 )
 
+data class MethodSignature(val name: String, val methodType: Types.MethodType) {
+    override fun toString(): String {
+        return "$name$methodType"
+    }
+}
+
+@ConsistentCopyVisibility
+data class MethodDescriptor internal constructor(
+    private val context: TraceContext,
+    val classId: Int,
+    val methodSignature: MethodSignature
+) {
+    var isIntrinsic: Boolean = false
+
+    val className: String get() = context.getClassDescriptor(classId).name
+    val methodName: String get() = methodSignature.name
+    val returnType: Types.Type get() = methodSignature.methodType.returnType
+    val argumentTypes: List<Types.Type> get() = methodSignature.methodType.argumentTypes
+
+    override fun toString(): String = "$className.$methodSignature"
+}
+
 @ConsistentCopyVisibility
 data class FieldDescriptor internal constructor(
+    private val context: TraceContext,
     val classId: Int,
     val fieldName: String,
     val isStatic: Boolean,
     val isFinal: Boolean,
 ) {
-    val className: String get() = TRACE_CONTEXT.getClassDescriptor(classId).name
+    val className: String get() = context.getClassDescriptor(classId).name
 }
 
 @ConsistentCopyVisibility

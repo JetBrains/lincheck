@@ -34,6 +34,7 @@ class TraceContext {
 
     fun getOrCreateMethodId(className: String, methodName: String, desc: String): Int {
         return methods.getOrCreateId(MethodDescriptor(
+            context = this,
             classId = getOrCreateClassId(className),
             methodSignature = MethodSignature(
                 name = methodName,
@@ -52,6 +53,7 @@ class TraceContext {
 
     fun getOrCreateFieldId(className: String, fieldName: String, isStatic: Boolean, isFinal: Boolean): Int {
         return fields.getOrCreateId(FieldDescriptor(
+            context = this,
             classId = getOrCreateClassId(className),
             fieldName = fieldName,
             isStatic = isStatic,

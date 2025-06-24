@@ -38,11 +38,10 @@ import org.jetbrains.lincheck.GeneralPurposeModelCheckingWrapper
 import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.tracedata.CodeLocations
 import org.jetbrains.kotlinx.lincheck.tracedata.FieldDescriptor
-import org.jetbrains.kotlinx.lincheck.tracedata.MethodDescriptor
 import org.jetbrains.kotlinx.lincheck.tracedata.TRACE_CONTEXT
 import org.jetbrains.kotlinx.lincheck.tracedata.Types
-import org.jetbrains.kotlinx.lincheck.tracedata.isArraysCopyOfIntrinsic
-import org.jetbrains.kotlinx.lincheck.tracedata.isArraysCopyOfRangeIntrinsic
+import org.jetbrains.kotlinx.lincheck.util.isArraysCopyOfIntrinsic
+import org.jetbrains.kotlinx.lincheck.util.isArraysCopyOfRangeIntrinsic
 import org.jetbrains.lincheck.datastructures.ManagedStrategyGuarantee
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 import kotlin.Result as KResult

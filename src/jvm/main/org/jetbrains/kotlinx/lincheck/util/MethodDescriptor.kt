@@ -8,27 +8,10 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.tracedata
+package org.jetbrains.kotlinx.lincheck.util
 
-import org.objectweb.asm.commons.Method
-
-internal fun Method.toMethodSignature() = MethodSignature(this.name, Types.convertAsmMethodType(this.descriptor))
-internal fun java.lang.reflect.Method.toMethodSignature() = Method.getMethod(this).toMethodSignature()
-
-@ConsistentCopyVisibility
-data class MethodDescriptor internal constructor(
-    val classId: Int,
-    val methodSignature: MethodSignature
-) {
-    var isIntrinsic: Boolean = false
-
-    val className: String get() = TRACE_CONTEXT.getClassDescriptor(classId).name
-    val methodName: String get() = methodSignature.name
-    val returnType: Types.Type get() = methodSignature.methodType.returnType
-    val argumentTypes: List<Types.Type> get() = methodSignature.methodType.argumentTypes
-
-    override fun toString(): String = "$className.$methodSignature"
-}
+import org.jetbrains.kotlinx.lincheck.tracedata.MethodDescriptor
+import org.jetbrains.kotlinx.lincheck.tracedata.Types
 
 internal fun MethodDescriptor.isArraysCopyOfIntrinsic(): Boolean {
     return (

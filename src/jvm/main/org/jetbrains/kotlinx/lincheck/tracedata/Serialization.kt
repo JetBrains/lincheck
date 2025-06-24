@@ -186,7 +186,7 @@ private fun DataOutput.writeMethodDescriptor(value: MethodDescriptor) {
 }
 
 private fun DataInput.readMethodDescriptor(): MethodDescriptor {
-    return MethodDescriptor(readInt(), readMethodSignature())
+    return MethodDescriptor(TRACE_CONTEXT,readInt(), readMethodSignature())
 }
 
 private fun DataOutput.writeMethodSignature(value: MethodSignature) {
@@ -207,6 +207,7 @@ private fun DataOutput.writeFieldDescriptor(value: FieldDescriptor) {
 
 private fun DataInput.readFieldDescriptor(): FieldDescriptor {
     return FieldDescriptor(
+        context = TRACE_CONTEXT,
         classId = readInt(),
         fieldName = readUTF(),
         isStatic = readBoolean(),
