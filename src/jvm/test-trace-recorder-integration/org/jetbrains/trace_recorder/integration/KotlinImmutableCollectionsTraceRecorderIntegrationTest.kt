@@ -17,7 +17,6 @@ import java.nio.file.Paths
 class KotlinImmutableCollectionsTraceRecorderIntegrationTest : AbstractTraceRecorderIntegrationTest() {
     override val projectPath: String = Paths.get("build", "integrationTestProjects", "kotlinx.collections.immutable").toString()
 
-    @Ignore("Lambdas memory addresses differ between invocation. Trace should get rid of them.")
     @Test
     fun `tests_contract_list_ImmutableListTest empty`() {
         runGradleTest(

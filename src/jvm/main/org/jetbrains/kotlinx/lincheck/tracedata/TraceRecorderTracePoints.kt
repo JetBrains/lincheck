@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.tracedata
 
+import org.jetbrains.kotlinx.lincheck.transformation.isJavaLambdaClass
 import java.io.DataInput
 import java.io.DataOutput
 import java.math.BigDecimal
@@ -79,9 +80,7 @@ class TRMethodCallTracePoint(
         val md = methodCache[methodId]
         val sb = StringBuilder()
         if (obj != null) {
-            sb.append(obj.className.substringAfterLast("."))
-                .append('@')
-                .append(obj.identityHashCode)
+            sb.append(obj.adornedRepresentation())
         } else {
             sb.append(md.className.substringAfterLast("."))
         }
@@ -173,9 +172,7 @@ sealed class TRFieldTracePoint(
         val fd = fieldCache[fieldId]
         val sb = StringBuilder()
         if (obj != null) {
-            sb.append(obj.className.substringAfterLast("."))
-                .append('@')
-                .append(obj.identityHashCode)
+            sb.append(obj.adornedRepresentation())
         } else {
             sb.append(fd.className.substringAfterLast("."))
         }
@@ -450,9 +447,15 @@ data class TRObject internal constructor (
         } else if (classNameId == TR_OBJECT_VOID_CLASSNAME) {
             "void"
         } else {
-            className.substringAfterLast(".") + "@" + identityHashCode
+            adornedRepresentation()
         }
     }
+
+    fun adornedRepresentation(): String =
+        className.substringAfterLast(".").let {
+            if (isJavaLambdaClass(it)) it.substringBeforeLast('/')
+            else it
+        } + "@" + identityHashCode
 }
 
 private const val TR_OBJECT_NULL_CLASSNAME = -1
