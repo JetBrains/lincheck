@@ -12,9 +12,10 @@ package org.jetbrains.trace_debugger.integration
 
 import org.junit.Ignore
 import org.junit.Test
+import java.nio.file.Paths
 
 class KotlinImmutableCollectionsTraceDebuggerIntegrationTest: AbstractTraceDebuggerIntegrationTest() {
-    override val projectPath: String = "build/integrationTestProjects/kotlinx.collections.immutable"
+    override val projectPath: String = Paths.get("build", "integrationTestProjects", "kotlinx.collections.immutable").toString()
 
     @Ignore
     @Test

@@ -12,9 +12,10 @@ package org.jetbrains.trace_debugger.integration
 
 import org.junit.Ignore
 import org.junit.Test
+import java.nio.file.Paths
 
 class TraceDebuggerExamplesTraceDebuggerIntegrationTest: AbstractTraceDebuggerIntegrationTest() {
-    override val projectPath: String = "build/integrationTestProjects/TraceDebuggerExamples"
+    override val projectPath: String = Paths.get("build", "integrationTestProjects", "TraceDebuggerExamples").toString()
 
     @Test
     fun `org_examples_integration_bugs_LinkedHashSetTest putAnObjectWithoutDefinedHashCode`() {

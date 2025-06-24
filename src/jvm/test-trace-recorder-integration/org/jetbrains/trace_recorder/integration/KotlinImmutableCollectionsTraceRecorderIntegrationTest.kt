@@ -12,9 +12,10 @@ package org.jetbrains.trace_recorder.integration
 
 import org.junit.Ignore
 import org.junit.Test
+import java.nio.file.Paths
 
 class KotlinImmutableCollectionsTraceRecorderIntegrationTest : AbstractTraceRecorderIntegrationTest() {
-    override val projectPath: String = "build/integrationTestProjects/kotlinx.collections.immutable"
+    override val projectPath: String = Paths.get("build", "integrationTestProjects", "kotlinx.collections.immutable").toString()
 
     @Ignore("Lambdas memory addresses differ between invocation. Trace should get rid of them.")
     @Test
