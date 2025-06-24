@@ -12,7 +12,7 @@ package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.tracedata.MethodDescriptor
-import org.jetbrains.kotlinx.lincheck.tracedata.methodCache
+import org.jetbrains.kotlinx.lincheck.tracedata.TRACE_CONTEXT
 import org.objectweb.asm.Label
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
@@ -160,7 +160,7 @@ internal class InlineMethodCallTransformer(
     }
 
     private fun getPseudoMethodId(possibleClassName: String?, startLabel: Label, inlineMethodName: String): Int =
-        methodCache.getOrCreateId(MethodDescriptor(possibleClassName ?: "$className\$$methodName\$$startLabel\$inlineCall", inlineMethodName, "()V"))
+        TRACE_CONTEXT.getOrCreateMethodId(possibleClassName ?: "$className\$$methodName\$$startLabel\$inlineCall", inlineMethodName, "()V")
 
     // Don't support atomicfu for now, it is messed with stack
     // Maybe we will need to expand it later

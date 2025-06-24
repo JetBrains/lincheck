@@ -10,46 +10,22 @@
 
 package org.jetbrains.kotlinx.lincheck.tracedata
 
-data class ClassDescriptor(
+@ConsistentCopyVisibility
+data class ClassDescriptor internal constructor(
     val name: String,
 )
 
-internal val classDescriptorsCache = IndexedPool<ClassDescriptor>()
-
-data class FieldDescriptor(
+@ConsistentCopyVisibility
+data class FieldDescriptor internal constructor(
     val classId: Int,
     val fieldName: String,
     val isStatic: Boolean,
     val isFinal: Boolean,
 ) {
-    constructor(className: String, fieldName:String, isStatic: Boolean, isFinal: Boolean) :
-            this(classDescriptorsCache.getOrCreateId(ClassDescriptor(className)), fieldName, isStatic, isFinal)
-
-    val className: String get() = classDescriptorsCache[classId].name
+    val className: String get() = TRACE_CONTEXT.getClassDescriptor(classId).name
 }
 
-internal val fieldCache = IndexedPool<FieldDescriptor>()
-
-data class VariableDescriptor(
+@ConsistentCopyVisibility
+data class VariableDescriptor internal constructor(
     val name: String,
 )
-
-internal val variableCache = IndexedPool<VariableDescriptor>()
-
-internal class IndexedPool<T> {
-    private val items = mutableListOf<T>()
-    private val index = hashMapOf<T, Int>()
-
-    @Synchronized
-    operator fun get(id: Int): T = items[id]
-
-    @Synchronized
-    fun getOrCreateId(item: T): Int = index.getOrPut(item) {
-        items.add(item)
-        items.lastIndex
-    }
-
-    val content: List<T> = items
-}
-
-internal fun <T> IndexedPool<T>.getInterned(item: T) = get(getOrCreateId(item))
