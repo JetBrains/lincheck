@@ -452,10 +452,13 @@ data class TRObject internal constructor (
     }
 
     fun adornedRepresentation(): String =
+        adornedClassNameRepresentation(className) + "@" + identityHashCode
+
+    private fun adornedClassNameRepresentation(className: String): String =
         className.substringAfterLast(".").let {
             if (isJavaLambdaClass(it)) it.substringBeforeLast('/')
             else it
-        } + "@" + identityHashCode
+        }
 }
 
 private const val TR_OBJECT_NULL_CLASSNAME = -1
