@@ -53,6 +53,12 @@ internal abstract class TraceNode(var callDepth: Int, val eventNumber: Int, open
         children.forEach { it.setCallDepthOfTree(depth + 1) }
     }
 
+    // Shifts stackTrace to the left
+    fun decrementCallDepthOfTree() {
+        callDepth--
+        children.forEach { it.decrementCallDepthOfTree() }
+    }
+
     fun lastOrNull(predicate: (TraceNode) -> Boolean): TraceNode? {
         val last = children.mapNotNull { it.lastOrNull(predicate) }.lastOrNull()
         if (last != null) return last
