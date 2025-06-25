@@ -8,17 +8,18 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.trace_debugger.integration
+package org.jetbrains.trace_debugger.integration
 
 import org.junit.Ignore
 import org.junit.Test
+import java.nio.file.Paths
 
 class KotlinImmutableCollectionsTraceDebuggerIntegrationTest: AbstractTraceDebuggerIntegrationTest() {
-    override val projectPath: String = "build/integrationTestProjects/kotlinx.collections.immutable"
+    override val projectPath: String = Paths.get("build", "integrationTestProjects", "kotlinx.collections.immutable").toString()
 
     @Ignore
     @Test
-    fun `tests contract list GuavaImmutableListTest_list`() {
+    fun `tests_contract_list_GuavaImmutableListTest list`() {
         runGradleTest(
             testClassName = "tests.contract.list.GuavaImmutableListTest",
             testMethodName = "list",

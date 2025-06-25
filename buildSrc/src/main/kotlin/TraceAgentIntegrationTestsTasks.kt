@@ -16,10 +16,11 @@ import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.kotlin.dsl.register
 
-class GithubProjectSnapshot(val organization: String = "Kotlin", val repositoryName: String, val commitHash: String)
+class GithubProjectSnapshot(val organization: String, val repositoryName: String, val commitHash: String)
 
 private val projectsToTest = listOf(
     GithubProjectSnapshot(
+        organization = "Kotlin",
         repositoryName = "kotlinx.collections.immutable",
         commitHash = "592f05fce02a1ad9e26cc6f3fdb55cdd97910599"
     ),
@@ -30,9 +31,9 @@ private val projectsToTest = listOf(
     )
 )
 
-lateinit var traceDebuggerIntegrationTestsPrerequisites: TaskProvider<Task>
+lateinit var traceAgentIntegrationTestsPrerequisites: TaskProvider<Task>
 
-fun Project.registerTraceDebuggerIntegrationTestsPrerequisites() {
+fun Project.registerTraceAgentIntegrationTestsPrerequisites() {
     val unzippedTestProjectsDir = layout.buildDirectory.dir("integrationTestProjects")
     val prerequisite = projectsToTest.map { projectToTest ->
         val projectName = projectToTest.repositoryName
@@ -41,7 +42,7 @@ fun Project.registerTraceDebuggerIntegrationTestsPrerequisites() {
         val downloadIntegrationTestsDependency = tasks.register<Download>("download_${projectName}_ForTest") {
             src("https://github.com/${projectToTest.organization}/$projectName/archive/$hash.zip")
             dest(unzippedTestProjectsDir.get().file("$projectName-$hash.zip"))
-            overwrite(false)
+            overwrite(false) // TODO: seems to still overwrite for some reason
         }
 
         tasks.register<Copy>("${projectName}_unzip") {
@@ -60,8 +61,8 @@ fun Project.registerTraceDebuggerIntegrationTestsPrerequisites() {
         }
     }
 
-    traceDebuggerIntegrationTestsPrerequisites = tasks.register("traceDebuggerIntegrationTestsPrerequisites") {
+    traceAgentIntegrationTestsPrerequisites = tasks.register("traceAgentIntegrationTestsPrerequisites") {
         prerequisite.forEach { dependsOn(it) }
-        dependsOn("traceDebuggerFatJar")
+        dependsOn("traceAgentFatJar")
     }
 }

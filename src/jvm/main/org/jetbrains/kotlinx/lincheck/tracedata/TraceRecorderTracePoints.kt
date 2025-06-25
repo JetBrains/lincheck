@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.tracedata
 
+import org.jetbrains.kotlinx.lincheck.transformation.isJavaLambdaClass
 import java.io.DataInput
 import java.io.DataOutput
 import java.math.BigDecimal
@@ -78,9 +79,7 @@ class TRMethodCallTracePoint(
         val md = TRACE_CONTEXT.getMethodDescriptor(methodId)
         val sb = StringBuilder()
         if (obj != null) {
-            sb.append(obj.className.substringAfterLast("."))
-                .append('@')
-                .append(obj.identityHashCode)
+            sb.append(obj.adornedRepresentation())
         } else {
             sb.append(md.className.substringAfterLast("."))
         }
@@ -96,8 +95,8 @@ class TRMethodCallTracePoint(
         }
         sb.append(')')
         if (exceptionClassName != null) {
-            sb.append(": THROWS EXCEPTION")
-                .append(exceptionClassName)
+            sb.append(": threw ")
+            sb.append(exceptionClassName)
         } else if (result != TR_OBJECT_VOID) {
             sb.append(": ")
             sb.append(result.toString())
@@ -172,9 +171,7 @@ sealed class TRFieldTracePoint(
         val fd = TRACE_CONTEXT.getFieldDescriptor(fieldId)
         val sb = StringBuilder()
         if (obj != null) {
-            sb.append(obj.className.substringAfterLast("."))
-                .append('@')
-                .append(obj.identityHashCode)
+            sb.append(obj.adornedRepresentation())
         } else {
             sb.append(fd.className.substringAfterLast("."))
         }
@@ -446,9 +443,18 @@ data class TRObject internal constructor (
         } else if (classNameId == TR_OBJECT_VOID_CLASSNAME) {
             "void"
         } else {
-            className.substringAfterLast(".") + "@" + identityHashCode
+            adornedRepresentation()
         }
     }
+
+    fun adornedRepresentation(): String =
+        adornedClassNameRepresentation(className) + "@" + identityHashCode
+
+    private fun adornedClassNameRepresentation(className: String): String =
+        className.substringAfterLast(".").let {
+            if (isJavaLambdaClass(it)) it.substringBeforeLast('/')
+            else it
+        }
 }
 
 private const val TR_OBJECT_NULL_CLASSNAME = -1

@@ -65,7 +65,7 @@ private fun SingleThreadedTable<TraceNode>.compressSuspendImpl() = compressNodes
  * For example:
  *
  * ```
- * A.calLMe$default(A#1, 3, null, 2, null) at A.operation(A.kt:23)
+ * A.callMe$default(A#1, 3, null, 2, null) at A.operation(A.kt:23)
  *   A.callMe(3, "Hey") at A.callMe$default(A.kt:27)
  * ```
  *
