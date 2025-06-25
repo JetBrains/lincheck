@@ -27,7 +27,12 @@ private val projectsToTest = listOf(
         organization = "ivandev0",
         repositoryName = "TraceDebuggerExamples",
         commitHash = "e3f39b1cb9dd8b3b4942015d57ef5ce0f5f37c6b"
-    )
+    ),
+    GithubProjectSnapshot(
+        organization = "ktorio",
+        repositoryName = "ktor",
+        commitHash = "4f3f69731810842e58f5c51091441d4335a16ea7"
+    ),
 )
 
 lateinit var traceDebuggerIntegrationTestsPrerequisites: TaskProvider<Task>
