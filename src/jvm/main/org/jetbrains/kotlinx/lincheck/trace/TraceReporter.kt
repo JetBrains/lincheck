@@ -15,9 +15,8 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.execution.threadsResults
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
-import org.jetbrains.kotlinx.lincheck.util.AnalysisProfile
 import org.jetbrains.kotlinx.lincheck.strategy.managed.afterSpinCycleTraceCollected
+import org.jetbrains.kotlinx.lincheck.util.*
 import kotlin.math.max
 
 internal typealias SingleThreadedTable<T> = List<SingleThreadedSection<T>>
@@ -260,25 +259,6 @@ internal fun List<MethodCallTracePoint>.isEqualStackTrace(other: List<MethodCall
         if (this[i] !== other[i]) return false
     }
     return true
-}
-
-fun <T> MutableList<T>.subList(range: IntRange): MutableList<T> =
-    subList(range.first, range.last + 1)
-
-fun <T> MutableList<T>.move(from: Int, to: Int) {
-    check(from >= to)
-    if (from == to) return
-    val element = this[from]
-    removeAt(from)
-    add(to, element)
-}
-
-fun <T> MutableList<T>.move(from: IntRange, to: Int) {
-    check(from.first < to && from.last <= to)
-    val sublist = this.subList(from)
-    val elements = sublist.toList()
-    sublist.clear()
-    addAll(to - elements.size, elements)
 }
 
 // TODO support multiple root nodes in GPMC mode, needs discussion on how to deal with `result: ...`
