@@ -20,11 +20,11 @@ Detailed trace:
 | $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48) |
 |   block(): threw IllegalStateException at AccessFieldRepresentationTest.block(AccessFunctionRepresentationTest.kt:43)                                                           |
 |     DirectMethodHandle#1.invokeExact(AccessFieldRepresentationTest#1): Lambda#2 at AccessFieldRepresentationTest.block(AccessFunctionRepresentationTest.kt:49)                  |
-|       DirectMethodHandle.internalMemberName(DirectMethodHandle#1): MemberName#1 at DirectMethodHandle$Holder.invokeStatic(DirectMethodHandle$Holder:0)                          |
-|       MethodHandle.linkToStatic(AccessFieldRepresentationTest#1, MemberName#1): Lambda#2 at DirectMethodHandle$Holder.invokeStatic(DirectMethodHandle$Holder:0)                 |
+|       DirectMethodHandle.internalMemberName(DirectMethodHandle#1): MemberName#1 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                          |
+|       MethodHandle.linkToStatic(AccessFieldRepresentationTest#1, MemberName#1): Lambda#2 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                 |
 |     AccessFunctionRepresentationTestKt.runLambda(Lambda#2) at AccessFieldRepresentationTest.block(AccessFunctionRepresentationTest.kt:49)                                       |
 |       r.invoke() at AccessFunctionRepresentationTestKt.runLambda(AccessFunctionRepresentationTest.kt:40)                                                                        |
-|         this$0.a ➜ 1 at AccessFieldRepresentationTest.block$lambda$0(AccessFunctionRepresentationTest.kt:49)                                                                    |
-|         this$0.a = 2 at AccessFieldRepresentationTest.block$lambda$0(AccessFunctionRepresentationTest.kt:49)                                                                    |
+|         this$0.a ➜ 0 at AccessFieldRepresentationTest.block$lambda$0(AccessFunctionRepresentationTest.kt:49)                                                                    |
+|         this$0.a = 1 at AccessFieldRepresentationTest.block$lambda$0(AccessFunctionRepresentationTest.kt:49)                                                                    |
 |   result: IllegalStateException #1                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

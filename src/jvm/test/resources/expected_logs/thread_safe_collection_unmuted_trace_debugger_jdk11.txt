@@ -19,20 +19,28 @@ Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48) |
 |   block(): threw IllegalStateException at ThreadSafeCollectionUnmutedRepresentationTest.block(StdLibRepresentationTests.kt:34)                                                  |
-|     concurrentMap.put(1, 1): 1 at ThreadSafeCollectionUnmutedRepresentationTest.block(StdLibRepresentationTests.kt:39)                                                          |
-|       putVal(1, 1, false): 1 at ConcurrentHashMap.put(ConcurrentHashMap.java:1006)                                                                                              |
+|     concurrentMap.put(1, 1): null at ThreadSafeCollectionUnmutedRepresentationTest.block(StdLibRepresentationTests.kt:39)                                                       |
+|       putVal(1, 1, false): null at ConcurrentHashMap.put(ConcurrentHashMap.java:1006)                                                                                           |
 |         key.hashCode(): 1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1012)                                                                                              |
 |         ConcurrentHashMap.spread(1): 1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1012)                                                                                 |
-|         table ➜ Array<Node>#1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1014)                                                                                          |
-|         ConcurrentHashMap.tabAt(Array<Node>#1, 1): Node#1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1018)                                                              |
-|           Array<Node>#1[1].getObjectAcquire(): Node#1 at ConcurrentHashMap.tabAt(ConcurrentHashMap.java:760)                                                                    |
-|         MONITORENTER at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1031)                                                                                                   |
-|         ConcurrentHashMap.tabAt(Array<Node>#1, 1): Node#1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1032)                                                              |
-|           Array<Node>#1[1].getObjectAcquire(): Node#1 at ConcurrentHashMap.tabAt(ConcurrentHashMap.java:760)                                                                    |
-|         f.val ➜ 1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1040)                                                                                                      |
-|         f.val = 1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1042)                                                                                                      |
-|         MONITOREXIT at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1065)                                                                                                    |
-|     a ➜ 2 at ThreadSafeCollectionUnmutedRepresentationTest.block(StdLibRepresentationTests.kt:40)                                                                               |
-|     a = 3 at ThreadSafeCollectionUnmutedRepresentationTest.block(StdLibRepresentationTests.kt:40)                                                                               |
+|         table ➜ null at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1014)                                                                                                   |
+|         initTable(): Array<Node>#1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1017)                                                                                     |
+|           table ➜ null at ConcurrentHashMap.initTable(ConcurrentHashMap.java:2285)                                                                                              |
+|           sizeCtl ➜ 0 at ConcurrentHashMap.initTable(ConcurrentHashMap.java:2286)                                                                                               |
+|           sizeCtl.compareAndSetInt(0, -1): true at ConcurrentHashMap.initTable(ConcurrentHashMap.java:2288)                                                                     |
+|           table ➜ null at ConcurrentHashMap.initTable(ConcurrentHashMap.java:2290)                                                                                              |
+|           table = Array<Node>#1 at ConcurrentHashMap.initTable(ConcurrentHashMap.java:2294)                                                                                     |
+|           sizeCtl = 12 at ConcurrentHashMap.initTable(ConcurrentHashMap.java:2298)                                                                                              |
+|         ConcurrentHashMap.tabAt(Array<Node>#1, 1): null at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1018)                                                                |
+|           Array<Node>#1[1].getObjectAcquire(): null at ConcurrentHashMap.tabAt(ConcurrentHashMap.java:760)                                                                      |
+|         ConcurrentHashMap.casTabAt(Array<Node>#1, 1, null, Node#1): true at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1019)                                               |
+|           Array<Node>#1[1].compareAndSetObject(null, Node#1): true at ConcurrentHashMap.casTabAt(ConcurrentHashMap.java:765)                                                    |
+|         addCount(1, 0) at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1075)                                                                                                 |
+|           counterCells ➜ null at ConcurrentHashMap.addCount(ConcurrentHashMap.java:2318)                                                                                        |
+|           baseCount ➜ 0 at ConcurrentHashMap.addCount(ConcurrentHashMap.java:2318)                                                                                              |
+|           baseCount.compareAndSetLong(0, 1): true at ConcurrentHashMap.addCount(ConcurrentHashMap.java:2319)                                                                    |
+|           sizeCtl ➜ 12 at ConcurrentHashMap.addCount(ConcurrentHashMap.java:2335)                                                                                               |
+|     a ➜ 1 at ThreadSafeCollectionUnmutedRepresentationTest.block(StdLibRepresentationTests.kt:40)                                                                               |
+|     a = 2 at ThreadSafeCollectionUnmutedRepresentationTest.block(StdLibRepresentationTests.kt:40)                                                                               |
 |   result: IllegalStateException #1                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
