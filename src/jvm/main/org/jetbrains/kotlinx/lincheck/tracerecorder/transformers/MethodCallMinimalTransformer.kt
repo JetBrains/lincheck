@@ -12,7 +12,7 @@ package org.jetbrains.kotlinx.lincheck.tracerecorder.transformers
 
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.tracedata.MethodDescriptor
-import org.jetbrains.kotlinx.lincheck.tracedata.methodCache
+import org.jetbrains.kotlinx.lincheck.tracedata.TRACE_CONTEXT
 import org.jetbrains.kotlinx.lincheck.transformation.transformers.MethodCallTransformerBase
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type.*
@@ -43,7 +43,7 @@ internal class MethodCallMinimalTransformer(
             (opcode != INVOKESTATIC) -> newLocal(receiverType).also { storeLocal(it) }
             else -> null
         }
-        val methodId = methodCache.getOrCreateId(MethodDescriptor(owner.toCanonicalClassName(), name, desc))
+        val methodId = TRACE_CONTEXT.getOrCreateMethodId(owner.toCanonicalClassName(), name, desc)
         // STACK: <empty>
         processMethodCallEnter(methodId, receiverLocal, argumentsArrayLocal)
         // STACK: deterministicCallDescriptor

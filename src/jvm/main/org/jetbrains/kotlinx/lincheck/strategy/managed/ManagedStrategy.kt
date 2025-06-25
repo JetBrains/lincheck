@@ -38,13 +38,10 @@ import org.jetbrains.lincheck.GeneralPurposeModelCheckingWrapper
 import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.tracedata.CodeLocations
 import org.jetbrains.kotlinx.lincheck.tracedata.FieldDescriptor
-import org.jetbrains.kotlinx.lincheck.tracedata.MethodDescriptor
+import org.jetbrains.kotlinx.lincheck.tracedata.TRACE_CONTEXT
 import org.jetbrains.kotlinx.lincheck.tracedata.Types
-import org.jetbrains.kotlinx.lincheck.tracedata.fieldCache
-import org.jetbrains.kotlinx.lincheck.tracedata.isArraysCopyOfIntrinsic
-import org.jetbrains.kotlinx.lincheck.tracedata.isArraysCopyOfRangeIntrinsic
-import org.jetbrains.kotlinx.lincheck.tracedata.methodCache
-import org.jetbrains.kotlinx.lincheck.tracedata.variableCache
+import org.jetbrains.kotlinx.lincheck.util.isArraysCopyOfIntrinsic
+import org.jetbrains.kotlinx.lincheck.util.isArraysCopyOfRangeIntrinsic
 import org.jetbrains.lincheck.datastructures.ManagedStrategyGuarantee
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 import kotlin.Result as KResult
@@ -747,7 +744,11 @@ internal abstract class ManagedStrategy(
             className = "java.lang.Thread",
             methodName = "run",
             codeLocation = UNKNOWN_CODE_LOCATION,
-            methodId = methodCache.getOrCreateId(MethodDescriptor("java.lang.Thread", "run", methodDescriptor)),
+            methodId = TRACE_CONTEXT.getOrCreateMethodId(
+                className = "java.lang.Thread",
+                methodName = "run",
+                desc = methodDescriptor
+            ),
             threadId = currentThreadId,
             methodParams = emptyArray(),
             atomicMethodDescriptor = null,
@@ -983,12 +984,10 @@ internal abstract class ManagedStrategy(
             className = actor.method.declaringClass.name,
             methodName = actor.method.name,
             codeLocation = UNKNOWN_CODE_LOCATION,
-            methodId = methodCache.getOrCreateId(
-                MethodDescriptor(
-                    actor.method.declaringClass.name.toCanonicalClassName(),
-                    actor.method.name,
-                    methodDescriptor
-                )
+            methodId = TRACE_CONTEXT.getOrCreateMethodId(
+                className = actor.method.declaringClass.name.toCanonicalClassName(),
+                methodName = actor.method.name,
+                desc = methodDescriptor
             ),
             threadId = iThread,
             methodParams = actor.arguments.toTypedArray(),
@@ -1244,7 +1243,7 @@ internal abstract class ManagedStrategy(
      * Returns `true` if a switch point is created.
      */
     override fun beforeReadField(obj: Any?, codeLocation: Int, fieldId: Int): Boolean = runInsideIgnoredSection {
-        val fieldDescriptor = fieldCache[fieldId]
+        val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
         if (!fieldDescriptor.isStatic && obj == null) {
             // Ignore, NullPointerException will be thrown
             return false
@@ -1280,7 +1279,7 @@ internal abstract class ManagedStrategy(
     override fun afterReadField(obj: Any?, codeLocation: Int, fieldId: Int, value: Any?) = runInsideIgnoredSection {
         if (collectTrace) {
             val iThread = threadScheduler.getCurrentThreadId()
-            val fieldDescriptor = fieldCache[fieldId]
+            val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
             if (value != null) {
                 constants[value] = fieldDescriptor.fieldName
             }
@@ -1328,7 +1327,7 @@ internal abstract class ManagedStrategy(
     }
 
     override fun beforeWriteField(obj: Any?, value: Any?, codeLocation: Int, fieldId: Int): Boolean = runInsideIgnoredSection {
-        val fieldDescriptor = fieldCache[fieldId]
+        val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
         if (!fieldDescriptor.isStatic && obj == null) {
             // Ignore, NullPointerException will be thrown
             return false
@@ -1398,7 +1397,7 @@ internal abstract class ManagedStrategy(
     }
 
     override fun afterLocalRead(codeLocation: Int, variableId: Int, value: Any?) = runInsideIgnoredSection {
-        val variableDescriptor = variableCache[variableId]
+        val variableDescriptor = TRACE_CONTEXT.getVariableDescriptor(variableId)
         if (!collectTrace) return
         val iThread = threadScheduler.getCurrentThreadId()
         val shadowStackFrame = shadowStack[iThread]!!.last()
@@ -1422,7 +1421,7 @@ internal abstract class ManagedStrategy(
     }
 
     override fun afterLocalWrite(codeLocation: Int, variableId: Int, value: Any?) = runInsideIgnoredSection {
-        val variableDescriptor = variableCache[variableId]
+        val variableDescriptor = TRACE_CONTEXT.getVariableDescriptor(variableId)
         if (!collectTrace) return
         val iThread = threadScheduler.getCurrentThreadId()
         val shadowStackFrame = shadowStack[iThread]!!.last()
@@ -1604,7 +1603,7 @@ internal abstract class ManagedStrategy(
         methodId: Int,
         result: Any?
     ) {
-        val intrinsicDescriptor = methodCache[methodId]
+        val intrinsicDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
         check(intrinsicDescriptor.isIntrinsic) { "Processing intrinsic method effect of non-intrinsic call" }
 
         if (
@@ -1621,7 +1620,7 @@ internal abstract class ManagedStrategy(
         receiver: Any?,
         params: Array<Any?>
     ): Any? = runInsideIgnoredSection {
-        val methodDescriptor = methodCache[methodId]
+        val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
         // process method effect on the static memory snapshot
         processMethodEffectOnStaticSnapshot(receiver, params)
         // re-throw abort error if the thread was aborted
@@ -1710,7 +1709,7 @@ internal abstract class ManagedStrategy(
         params: Array<Any?>,
         result: Any?
     ): Any? = runInsideIgnoredSection {
-        val methodDescriptor = methodCache[methodId]
+        val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
         var newResult = result
         if (deterministicMethodDescriptor != null) {
             Logger.debug { "On method return with descriptor $deterministicMethodDescriptor: $result" }
@@ -1770,7 +1769,7 @@ internal abstract class ManagedStrategy(
         throwable: Throwable
     ): Throwable = runInsideIgnoredSection {
         var newThrowable = throwable
-        val methodDescriptor = methodCache[methodId]
+        val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
         if (deterministicMethodDescriptor != null) {
             Logger.debug { "On method exception with descriptor $deterministicMethodDescriptor:\n${throwable.stackTraceToString()}" }
         }
@@ -1815,7 +1814,7 @@ internal abstract class ManagedStrategy(
         codeLocation: Int,
         owner: Any?,
     ) = runInsideIgnoredSection {
-        val methodDescriptor = methodCache[methodId]
+        val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
         val threadId = threadScheduler.getCurrentThreadId()
         if (threadScheduler.isAborted(threadId)) {
             threadScheduler.abortCurrentThread()

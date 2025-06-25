@@ -15,7 +15,6 @@ import java.io.DataOutput
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.concurrent.thread
 
 private val EVENT_ID_GENERATOR = AtomicInteger(0)
 
@@ -51,7 +50,7 @@ class TRMethodCallTracePoint(
     @Transient
     val events: MutableList<TRTracePoint> = mutableListOf()
 
-    val methodDescriptor: MethodDescriptor get() = methodCache[methodId]
+    val methodDescriptor: MethodDescriptor get() = TRACE_CONTEXT.getMethodDescriptor(methodId)
 
     // Shortcuts
     val className: String get() = methodDescriptor.className
@@ -76,7 +75,7 @@ class TRMethodCallTracePoint(
     }
 
     override fun toText(verbose: Boolean): String {
-        val md = methodCache[methodId]
+        val md = TRACE_CONTEXT.getMethodDescriptor(methodId)
         val sb = StringBuilder()
         if (obj != null) {
             sb.append(obj.className.substringAfterLast("."))
@@ -154,7 +153,7 @@ sealed class TRFieldTracePoint(
 ) : TRTracePoint(codeLocationId, threadId, eventId) {
     protected abstract val directionSymbol: String
 
-    val fieldDescriptor: FieldDescriptor get() = fieldCache[fieldId]
+    val fieldDescriptor: FieldDescriptor get() = TRACE_CONTEXT.getFieldDescriptor(fieldId)
 
     // Shortcuts
     val className: String get() = fieldDescriptor.className
@@ -170,7 +169,7 @@ sealed class TRFieldTracePoint(
     }
 
     override fun toText(verbose: Boolean): String {
-        val fd = fieldCache[fieldId]
+        val fd = TRACE_CONTEXT.getFieldDescriptor(fieldId)
         val sb = StringBuilder()
         if (obj != null) {
             sb.append(obj.className.substringAfterLast("."))
@@ -246,7 +245,7 @@ sealed class TRLocalVariableTracePoint(
 ) : TRTracePoint(codeLocationId, threadId, eventId) {
     protected abstract val directionSymbol: String
 
-    val variableDescriptor: VariableDescriptor get() = variableCache[localVariableId]
+    val variableDescriptor: VariableDescriptor get() = TRACE_CONTEXT.getVariableDescriptor(localVariableId)
     val name: String get() = variableDescriptor.name
 
     override fun save(out: DataOutput) {
@@ -256,7 +255,7 @@ sealed class TRLocalVariableTracePoint(
     }
 
     override fun toText(verbose: Boolean): String {
-        val vd = variableCache[localVariableId]
+        val vd = TRACE_CONTEXT.getVariableDescriptor(localVariableId)
         val sb = StringBuilder()
         sb.append(vd.name)
             .append(directionSymbol)
@@ -414,16 +413,13 @@ fun loadTRTracePoint(inp: DataInput): TRTracePoint {
     return loader(inp, codeLocationId, threadId, eventId)
 }
 
-internal val classNameCache = IndexedPool<String>()
-private val REGEX_TO_ESCAPE_CHARS = Regex("([\r\n\t])")
-
 @ConsistentCopyVisibility
 data class TRObject internal constructor (
     internal val classNameId: Int,
     val identityHashCode: Int,
     internal val primitiveValue: Any?
 ) {
-    val className: String  get() = primitiveValue?.javaClass?.name ?: classNameCache[classNameId]
+    val className: String  get() = primitiveValue?.javaClass?.name ?: TRACE_CONTEXT.getClassDescriptor(classNameId).name
     val isPrimitive: Boolean get() = primitiveValue != null
     val value: Any? get() = primitiveValue
 
@@ -471,6 +467,7 @@ private const val TR_OBJECT_P_CHAR = TR_OBJECT_P_DOUBLE - 1
 private const val TR_OBJECT_P_STRING = TR_OBJECT_P_CHAR - 1
 private const val TR_OBJECT_P_UNIT = TR_OBJECT_P_STRING - 1
 private const val TR_OBJECT_P_RAW_STRING = TR_OBJECT_P_UNIT - 1
+private const val TR_OBJECT_P_BOOLEAN = TR_OBJECT_P_RAW_STRING - 1
 
 fun TRObjectOrNull(obj: Any?): TRObject? =
     obj?.let { TRObject(it) }
@@ -491,12 +488,13 @@ fun TRObject(obj: Any): TRObject {
         is String -> TRObject(TR_OBJECT_P_STRING, 0, obj)
         is CharSequence -> TRObject(TR_OBJECT_P_STRING, 0, obj.toString())
         is Unit -> TRObject(TR_OBJECT_P_UNIT, 0, obj)
+        is Boolean -> TRObject(TR_OBJECT_P_BOOLEAN, 0, obj)
         // Render these types to strings for simplicity
         is Enum<*> -> TRObject(TR_OBJECT_P_RAW_STRING, 0, "${obj.javaClass.simpleName}.${obj.name}")
         is BigInteger -> TRObject(TR_OBJECT_P_RAW_STRING, 0, obj.toString())
         is BigDecimal -> TRObject(TR_OBJECT_P_RAW_STRING, 0, obj.toString())
         // Generic case
-        else -> TRObject(classNameCache.getOrCreateId(obj.javaClass.name), System.identityHashCode(obj), null)
+        else -> TRObject(TRACE_CONTEXT.getOrCreateClassId(obj.javaClass.name), System.identityHashCode(obj), null)
     }
 }
 
@@ -524,6 +522,7 @@ private fun DataOutput.writeTRObject(value: TRObject?) {
         is Double -> writeDouble(value.primitiveValue)
         is Char -> writeChar(value.primitiveValue.code)
         is String -> writeUTF(value.primitiveValue) // Both STRING and RAW_STRING
+        is Boolean -> writeBoolean(value.primitiveValue)
         is Unit -> {}
         else -> error("Unknow primitive value ${value.primitiveValue}")
     }
@@ -543,6 +542,7 @@ private fun DataInput.readTRObject(): TRObject? {
         TR_OBJECT_P_STRING -> TRObject(classNameId, 0, readUTF())
         TR_OBJECT_P_UNIT -> TRObject(classNameId, 0, Unit)
         TR_OBJECT_P_RAW_STRING -> TRObject(classNameId, 0, readUTF())
+        TR_OBJECT_P_BOOLEAN -> TRObject(classNameId, 0, readBoolean())
         else -> {
             if (classNameId >= 0) {
                 TRObject(classNameId, readInt(), null)

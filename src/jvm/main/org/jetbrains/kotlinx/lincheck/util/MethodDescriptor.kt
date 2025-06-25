@@ -8,34 +8,10 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.tracedata
+package org.jetbrains.kotlinx.lincheck.util
 
-import org.objectweb.asm.commons.Method
-
-internal fun Method.toMethodSignature() = MethodSignature(this.name, Types.convertAsmMethodType(this.descriptor))
-internal fun java.lang.reflect.Method.toMethodSignature() = Method.getMethod(this).toMethodSignature()
-
-/**
- * Provides unique IDs for all the methods that are called from the instrumented code.
- * These IDs are used to detect the first recursive call in case of a recursive spin-cycle.
- */
-internal val methodCache = IndexedPool<MethodDescriptor>()
-
-data class MethodDescriptor(
-    val className: String,
-    val methodSignature: MethodSignature
-) {
-    var isIntrinsic: Boolean = false
-
-    constructor(className: String, methodName: String, desc: String) :
-        this(className, MethodSignature(methodName, Types.convertAsmMethodType(desc)))
-
-    val methodName: String get() = methodSignature.name
-    val returnType: Types.Type get() = methodSignature.methodType.returnType
-    val argumentTypes: List<Types.Type> get() = methodSignature.methodType.argumentTypes
-
-    override fun toString(): String = "$className.$methodSignature"
-}
+import org.jetbrains.kotlinx.lincheck.tracedata.MethodDescriptor
+import org.jetbrains.kotlinx.lincheck.tracedata.Types
 
 internal fun MethodDescriptor.isArraysCopyOfIntrinsic(): Boolean {
     return (

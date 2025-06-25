@@ -10,9 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
-import org.jetbrains.kotlinx.lincheck.tracedata.FieldDescriptor
 import org.jetbrains.kotlinx.lincheck.tracedata.FinalFields
-import org.jetbrains.kotlinx.lincheck.tracedata.fieldCache
+import org.jetbrains.kotlinx.lincheck.tracedata.TRACE_CONTEXT
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
 import org.objectweb.asm.Type.*
@@ -54,13 +53,12 @@ internal class SharedMemoryAccessTransformer(
                         visitFieldInsn(opcode, owner, fieldName, desc)
                     },
                     instrumented = {
-                        val fieldDescriptor = FieldDescriptor(
+                        val fieldId = TRACE_CONTEXT.getOrCreateFieldId(
                             className = owner.toCanonicalClassName(),
                             fieldName = fieldName,
                             isStatic = true,
                             isFinal = FinalFields.isFinalField(owner, fieldName)
                         )
-                        val fieldId = fieldCache.getOrCreateId(fieldDescriptor)
                         // STACK: <empty>
                         pushNull()
                         loadNewCodeLocationId()
@@ -92,13 +90,12 @@ internal class SharedMemoryAccessTransformer(
                         visitFieldInsn(opcode, owner, fieldName, desc)
                     },
                     instrumented = {
-                        val fieldDescriptor = FieldDescriptor(
+                        val fieldId = TRACE_CONTEXT.getOrCreateFieldId(
                             className = owner.toCanonicalClassName(),
                             fieldName = fieldName,
                             isStatic = false,
                             isFinal = FinalFields.isFinalField(owner, fieldName)
                         )
-                        val fieldId = fieldCache.getOrCreateId(fieldDescriptor)
                         // STACK: obj
                         val ownerLocal = newLocal(getType("L$owner;")).also { copyLocal(it) }
                         loadLocal(ownerLocal)
@@ -133,13 +130,12 @@ internal class SharedMemoryAccessTransformer(
                     },
                     instrumented = {
                         val valueType = getType(desc)
-                        val fieldDescriptor = FieldDescriptor(
+                        val fieldId = TRACE_CONTEXT.getOrCreateFieldId(
                             className = owner.toCanonicalClassName(),
                             fieldName = fieldName,
                             isStatic = true,
                             isFinal = FinalFields.isFinalField(owner, fieldName)
                         )
-                        val fieldId = fieldCache.getOrCreateId(fieldDescriptor)
                         val valueLocal = newLocal(valueType) // we cannot use DUP as long/double require DUP2
                         copyLocal(valueLocal)
                         // STACK: value
@@ -173,13 +169,12 @@ internal class SharedMemoryAccessTransformer(
                     },
                     instrumented = {
                         val valueType = getType(desc)
-                        val fieldDescriptor = FieldDescriptor(
+                        val fieldId = TRACE_CONTEXT.getOrCreateFieldId(
                             className = owner.toCanonicalClassName(),
                             fieldName = fieldName,
                             isStatic = false,
-                            isFinal = FinalFields.isFinalField(owner, fieldName),
+                            isFinal = FinalFields.isFinalField(owner, fieldName)
                         )
-                        val fieldId = fieldCache.getOrCreateId(fieldDescriptor)
                         val valueLocal = newLocal(valueType) // we cannot use DUP as long/double require DUP2
                         storeLocal(valueLocal)
                         // STACK: obj

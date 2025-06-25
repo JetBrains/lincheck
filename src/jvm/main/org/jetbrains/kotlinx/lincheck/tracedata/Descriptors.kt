@@ -10,35 +10,45 @@
 
 package org.jetbrains.kotlinx.lincheck.tracedata
 
-data class FieldDescriptor(
-    val className: String,
-    val fieldName: String,
-    val isStatic: Boolean,
-    val isFinal: Boolean,
-)
-
-internal val fieldCache = IndexedPool<FieldDescriptor>()
-
-data class VariableDescriptor(
+@ConsistentCopyVisibility
+data class ClassDescriptor internal constructor(
     val name: String,
 )
 
-internal val variableCache = IndexedPool<VariableDescriptor>()
-
-internal class IndexedPool<T> {
-    private val items = mutableListOf<T>()
-    private val index = hashMapOf<T, Int>()
-
-    @Synchronized
-    operator fun get(id: Int): T = items[id]
-
-    @Synchronized
-    fun getOrCreateId(item: T): Int = index.getOrPut(item) {
-        items.add(item)
-        items.lastIndex
+data class MethodSignature(val name: String, val methodType: Types.MethodType) {
+    override fun toString(): String {
+        return "$name$methodType"
     }
-
-    val content: List<T> = items
 }
 
-internal fun <T> IndexedPool<T>.getInterned(item: T) = get(getOrCreateId(item))
+@ConsistentCopyVisibility
+data class MethodDescriptor internal constructor(
+    private val context: TraceContext,
+    val classId: Int,
+    val methodSignature: MethodSignature
+) {
+    var isIntrinsic: Boolean = false
+
+    val className: String get() = context.getClassDescriptor(classId).name
+    val methodName: String get() = methodSignature.name
+    val returnType: Types.Type get() = methodSignature.methodType.returnType
+    val argumentTypes: List<Types.Type> get() = methodSignature.methodType.argumentTypes
+
+    override fun toString(): String = "$className.$methodSignature"
+}
+
+@ConsistentCopyVisibility
+data class FieldDescriptor internal constructor(
+    private val context: TraceContext,
+    val classId: Int,
+    val fieldName: String,
+    val isStatic: Boolean,
+    val isFinal: Boolean,
+) {
+    val className: String get() = context.getClassDescriptor(classId).name
+}
+
+@ConsistentCopyVisibility
+data class VariableDescriptor internal constructor(
+    val name: String,
+)

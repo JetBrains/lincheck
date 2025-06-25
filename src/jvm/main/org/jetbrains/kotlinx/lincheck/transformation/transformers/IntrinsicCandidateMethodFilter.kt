@@ -10,10 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
-import org.jetbrains.kotlinx.lincheck.tracedata.MethodDescriptor
-import org.jetbrains.kotlinx.lincheck.tracedata.getInterned
-import org.jetbrains.kotlinx.lincheck.tracedata.isTrackedIntrinsic
-import org.jetbrains.kotlinx.lincheck.tracedata.methodCache
+import org.jetbrains.kotlinx.lincheck.tracedata.TRACE_CONTEXT
+import org.jetbrains.kotlinx.lincheck.util.isTrackedIntrinsic
 import org.jetbrains.kotlinx.lincheck.transformation.ASM_API
 import org.jetbrains.kotlinx.lincheck.transformation.toCanonicalClassName
 import org.objectweb.asm.AnnotationVisitor
@@ -33,18 +31,22 @@ internal class IntrinsicCandidateMethodFilter(
         // here we manually specify intrinsic methods that could lead to error in lincheck analysis.
         // Also, some methods are intrinsified even though they do not have mentioned annotations
         // (such as Arrays.copyOf(...) methods).
-        val methodDescriptor = MethodDescriptor(className.toCanonicalClassName(), methodName, methodDesc)
+        val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(
+            TRACE_CONTEXT.getOrCreateMethodId(className.toCanonicalClassName(), methodName, methodDesc)
+        )
         if (methodDescriptor.isTrackedIntrinsic()) {
-            methodCache.getInterned(methodDescriptor).isIntrinsic = true
+            methodDescriptor.isIntrinsic = true
             delegate()
         }
         return super.visitCode()
     }
 
     override fun visitAnnotation(desc: String, visible: Boolean): AnnotationVisitor? {
-        val methodDescriptor = MethodDescriptor(className.toCanonicalClassName(), methodName, methodDesc)
+        val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(
+            TRACE_CONTEXT.getOrCreateMethodId(className.toCanonicalClassName(), methodName, methodDesc)
+        )
         if (isIntrinsicCandidateAnnotation(desc)) {
-            methodCache.getInterned(methodDescriptor).isIntrinsic = true
+            methodDescriptor.isIntrinsic = true
             delegate()
         }
         return super.visitAnnotation(desc, visible)
