@@ -79,6 +79,8 @@ private fun <V> saveCache(output: DataOutput, cache: IndexedPool<V>, writer: Dat
 
 
 private fun <V> loadCache(input: DataInput, cache: IndexedPool<V>, reader: DataInput.() -> V) {
+    cache.clear()
+
     val count = input.readInt()
     repeat(count) {
         cache.getOrCreateId(input.reader())
@@ -108,6 +110,8 @@ private fun saveCodeLocations(output: DataOutput, stringCache: IndexedPool<Strin
 }
 
 private fun loadCodeLocations(input: DataInput, stringCache: IndexedPool<String>) {
+    CodeLocations.clear()
+
     val count = input.readInt()
     repeat(count) {
         CodeLocations.newCodeLocation(input.readStackTraceElement(stringCache))

@@ -59,6 +59,15 @@ internal object CodeLocations {
         return codeLocations[codeLocationId]
     }
 
+    /**
+     * Clear all saved code locations.
+     */
+    @JvmStatic
+    @Synchronized
+    fun clear() {
+        codeLocations.clear()
+    }
+
     val content: List<StackTraceElement> get() = codeLocations
 }
 
