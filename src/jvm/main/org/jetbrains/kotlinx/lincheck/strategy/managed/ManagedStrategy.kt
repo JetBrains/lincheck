@@ -1312,7 +1312,6 @@ internal abstract class ManagedStrategy(
                     ownerRepresentation = null,
                     iThread = iThread,
                     actorId = currentActorId[iThread]!!,
-                    callStackTrace = callStackTrace[iThread]!!,
                     fieldName = "${objectTracker.getObjectRepresentation(array)}[$index]",
                     codeLocation = codeLocation,
                     isLocal = false,
@@ -1749,7 +1748,7 @@ internal abstract class ManagedStrategy(
                 when  {
                     result == Unit -> tracePoint.initializeVoidReturnedValue()
                     result == Injections.VOID_RESULT -> tracePoint.initializeVoidReturnedValue()
-                    result == COROUTINE_SUSPENDED && isSuspendFunction(className, methodName, params) ->
+                    result == COROUTINE_SUSPENDED && isSuspendFunction(methodDescriptor.className, methodDescriptor.methodName, params) ->
                         tracePoint.initializeCoroutineSuspendedResult()
                     else -> tracePoint.initializeReturnedValue(objectTracker.getObjectRepresentation(result), objectFqTypeName(result))
                 }
