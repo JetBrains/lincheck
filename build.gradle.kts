@@ -344,7 +344,8 @@ tasks {
         forkEvery = 1
     }
 
-    val lincheckIntegrationTest = register<Test>("lincheckIntegrationTest") {
+    // TODO: rename to match trace-debugger/recorder gradle task naming pattern to 'lincheckIntegrationTest'
+    val lincheckIntegrationTest = register<Test>("integrationTest") {
         group = "verification"
 
         testClassesDirs = sourceSets["lincheckIntegrationTest"].output.classesDirs
