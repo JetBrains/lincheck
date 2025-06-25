@@ -8,7 +8,7 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.channels.channel03
+package org.jetbrains.lincheck_test.gpmc.coroutines.channels.channel03
 
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
