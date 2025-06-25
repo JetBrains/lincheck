@@ -10,16 +10,9 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
-import org.jetbrains.kotlinx.lincheck.transformation.*
-import org.jetbrains.kotlinx.lincheck.tracedata.MethodDescriptor
-import org.jetbrains.kotlinx.lincheck.tracedata.methodCache
-import org.jetbrains.kotlinx.lincheck.transformation.transformers.LocalVariablesAccessTransformer
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
-import org.objectweb.asm.Type
-import org.objectweb.asm.Type.*
-import org.objectweb.asm.commons.*
-import sun.nio.ch.lincheck.*
+import sun.nio.ch.lincheck.EventTracker
 
 /**
  * [LocalVariablesTracker] tracks method calls,
