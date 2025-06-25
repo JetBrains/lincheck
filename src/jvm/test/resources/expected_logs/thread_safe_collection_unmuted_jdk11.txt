@@ -3,24 +3,25 @@
 java.lang.IllegalStateException: Check failed.
 	at org.jetbrains.kotlinx.lincheck_test.representation.ThreadSafeCollectionUnmutedRepresentationTest.block(StdLibRepresentationTests.kt:41)
 	at org.jetbrains.kotlinx.lincheck_test.representation.ThreadSafeCollectionUnmutedRepresentationTest.block(StdLibRepresentationTests.kt:34)
-	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:49)
+	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48)
 	at java.base/java.lang.Thread.run(Thread.java:829)
 
 The following interleaving leads to the error:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                                   Main Thread                                                                                   |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:49) |
+| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48) |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 
 Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                                   Main Thread                                                                                   |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:49) |
+| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48) |
 |   block(): threw IllegalStateException at ThreadSafeCollectionUnmutedRepresentationTest.block(StdLibRepresentationTests.kt:34)                                                  |
 |     concurrentMap.put(1, 1): null at ThreadSafeCollectionUnmutedRepresentationTest.block(StdLibRepresentationTests.kt:39)                                                       |
 |       putVal(1, 1, false): null at ConcurrentHashMap.put(ConcurrentHashMap.java:1006)                                                                                           |
+|         ConcurrentHashMap.spread(1): 1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1012)                                                                                 |
 |         table ➜ null at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1014)                                                                                                   |
 |         initTable(): Array<Node>#1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1017)                                                                                     |
 |           table ➜ null at ConcurrentHashMap.initTable(ConcurrentHashMap.java:2285)                                                                                              |

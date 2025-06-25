@@ -5,11 +5,18 @@ The following interleaving leads to the error:
 |                                                                    Main Thread                                                                     |
 | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | $this_runCatching.block() at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48) |
-|   block() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:99)                                        |
-|     q.take() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:104)                                    |
+|   block() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:105)                                       |
+|     sync.newCondition(): ConditionObject#1 at ReentrantLock.newCondition(ReentrantLock.java:500)                                                   |
+|     sync.newCondition(): ConditionObject#2 at ReentrantLock.newCondition(ReentrantLock.java:500)                                                   |
+|     q.take() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:110)                                    |
 |       lock.lockInterruptibly() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:400)                                                             |
 |       notEmpty.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:403)                                                                     |
-|         LockSupport.park(ConditionObject#1) at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:2044)              |
+|         Thread.interrupted(): false at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:2033)                      |
+|         addConditionWaiter(): Node#1 at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:2035)                     |
+|         this$0.fullyRelease(Node#1): 1 at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:2036)                   |
+|         this$0.isOnSyncQueue(Node#1): false at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:2038)              |
+|         LockSupport.park(ConditionObject#1) at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:2039)              |
+|           Thread.currentThread(): Thread#0 at LockSupport.park(LockSupport.java:173)                                                               |
 |           LockSupport.setBlocker(Thread#0, ConditionObject#1) at LockSupport.park(LockSupport.java:174)                                            |
 |           PARK at LockSupport.park(LockSupport.java:175)                                                                                           |
 | -------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -20,16 +27,36 @@ Detailed trace:
 |                                                                           Main Thread                                                                           |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | $this_runCatching.block() at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48)              |
-|   block() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:99)                                                     |
-|     q.take() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:104)                                                 |
+|   block() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:105)                                                    |
+|     sync.newCondition(): ConditionObject#1 at ReentrantLock.newCondition(ReentrantLock.java:500)                                                                |
+|     sync.newCondition(): ConditionObject#2 at ReentrantLock.newCondition(ReentrantLock.java:500)                                                                |
+|     q.take() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:110)                                                 |
 |       lock.lockInterruptibly() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:400)                                                                          |
-|         sync.acquireInterruptibly(1) at ReentrantLock.lockInterruptibly(ReentrantLock.java:340)                                                                 |
-|           tryAcquire(1): true at AbstractQueuedSynchronizer.acquireInterruptibly(AbstractQueuedSynchronizer.java:1224)                                          |
-|             nonfairTryAcquire(1): true at ReentrantLock.NonfairSync.tryAcquire(ReentrantLock.java:217)                                                          |
-|               compareAndSetState(0, 1): true at ReentrantLock.Sync.nonfairTryAcquire(ReentrantLock.java:135)                                                    |
-|                 Unsafe#1.compareAndSwapInt(NonfairSync#1, 16, 0, 1): true at AbstractQueuedSynchronizer.compareAndSetState(AbstractQueuedSynchronizer.java:567) |
+|         sync.acquireInterruptibly(1) at ReentrantLock.lockInterruptibly(ReentrantLock.java:335)                                                                 |
+|           Thread.interrupted(): false at AbstractQueuedSynchronizer.acquireInterruptibly(AbstractQueuedSynchronizer.java:1219)                                  |
+|           tryAcquire(1): true at AbstractQueuedSynchronizer.acquireInterruptibly(AbstractQueuedSynchronizer.java:1221)                                          |
+|             nonfairTryAcquire(1): true at ReentrantLock.NonfairSync.tryAcquire(ReentrantLock.java:213)                                                          |
+|               Thread.currentThread(): Thread#0 at ReentrantLock.Sync.nonfairTryAcquire(ReentrantLock.java:130)                                                  |
+|               getState(): 0 at ReentrantLock.Sync.nonfairTryAcquire(ReentrantLock.java:131)                                                                     |
+|               compareAndSetState(0, 1): true at ReentrantLock.Sync.nonfairTryAcquire(ReentrantLock.java:133)                                                    |
+|                 Unsafe#1.compareAndSwapInt(NonfairSync#1, 16, 0, 1): true at AbstractQueuedSynchronizer.compareAndSetState(AbstractQueuedSynchronizer.java:566) |
+|               setExclusiveOwnerThread(Thread#0) at ReentrantLock.Sync.nonfairTryAcquire(ReentrantLock.java:134)                                                 |
 |       notEmpty.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:403)                                                                                  |
-|         LockSupport.park(ConditionObject#1) at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:2044)                           |
+|         Thread.interrupted(): false at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:2033)                                   |
+|         addConditionWaiter(): Node#1 at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:2035)                                  |
+|           Thread.currentThread(): Thread#0 at AbstractQueuedSynchronizer.ConditionObject.addConditionWaiter(AbstractQueuedSynchronizer.java:1855)               |
+|         this$0.fullyRelease(Node#1): 1 at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:2036)                                |
+|           getState(): 1 at AbstractQueuedSynchronizer.fullyRelease(AbstractQueuedSynchronizer.java:1722)                                                        |
+|           release(1): true at AbstractQueuedSynchronizer.fullyRelease(AbstractQueuedSynchronizer.java:1723)                                                     |
+|             tryRelease(1): true at AbstractQueuedSynchronizer.release(AbstractQueuedSynchronizer.java:1261)                                                     |
+|               getState(): 1 at ReentrantLock.Sync.tryRelease(ReentrantLock.java:149)                                                                            |
+|               Thread.currentThread(): Thread#0 at ReentrantLock.Sync.tryRelease(ReentrantLock.java:150)                                                         |
+|               getExclusiveOwnerThread(): Thread#0 at ReentrantLock.Sync.tryRelease(ReentrantLock.java:150)                                                      |
+|               setExclusiveOwnerThread(null) at ReentrantLock.Sync.tryRelease(ReentrantLock.java:155)                                                            |
+|               setState(0) at ReentrantLock.Sync.tryRelease(ReentrantLock.java:157)                                                                              |
+|         this$0.isOnSyncQueue(Node#1): false at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:2038)                           |
+|         LockSupport.park(ConditionObject#1) at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:2039)                           |
+|           Thread.currentThread(): Thread#0 at LockSupport.park(LockSupport.java:173)                                                                            |
 |           LockSupport.setBlocker(Thread#0, ConditionObject#1) at LockSupport.park(LockSupport.java:174)                                                         |
 |             Unsafe#1.putObject(Thread#0, 88, ConditionObject#1) at LockSupport.setBlocker(LockSupport.java:125)                                                 |
 |           PARK at LockSupport.park(LockSupport.java:175)                                                                                                        |

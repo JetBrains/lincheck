@@ -19,10 +19,12 @@ Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48) |
 |   block(): threw IllegalStateException at ThreadSafeCollectionMutedRepresentationTest.block(StdLibRepresentationTests.kt:21)                                                    |
-|     concurrentMap.put(1, 1): 1 at ThreadSafeCollectionMutedRepresentationTest.block(StdLibRepresentationTests.kt:27)                                                            |
-|       Array<Node>#1[1].getObjectVolatile(): Node#1 at ConcurrentHashMap.tabAt(ConcurrentHashMap.java:755)                                                                       |
-|       Array<Node>#1[1].getObjectVolatile(): Node#1 at ConcurrentHashMap.tabAt(ConcurrentHashMap.java:755)                                                                       |
-|     a ➜ 2 at ThreadSafeCollectionMutedRepresentationTest.block(StdLibRepresentationTests.kt:28)                                                                                 |
-|     a = 3 at ThreadSafeCollectionMutedRepresentationTest.block(StdLibRepresentationTests.kt:28)                                                                                 |
+|     concurrentMap.put(1, 1): null at ThreadSafeCollectionMutedRepresentationTest.block(StdLibRepresentationTests.kt:27)                                                         |
+|       sizeCtl.compareAndSwapInt(0, -1): true at ConcurrentHashMap.initTable(ConcurrentHashMap.java:2228)                                                                        |
+|       Array<Node>#1[1].getObjectVolatile(): null at ConcurrentHashMap.tabAt(ConcurrentHashMap.java:755)                                                                         |
+|       Array<Node>#1[1].compareAndSwapObject(null, Node#1): true at ConcurrentHashMap.casTabAt(ConcurrentHashMap.java:760)                                                       |
+|       baseCount.compareAndSwapLong(0, 1): true at ConcurrentHashMap.addCount(ConcurrentHashMap.java:2259)                                                                       |
+|     a ➜ 1 at ThreadSafeCollectionMutedRepresentationTest.block(StdLibRepresentationTests.kt:28)                                                                                 |
+|     a = 2 at ThreadSafeCollectionMutedRepresentationTest.block(StdLibRepresentationTests.kt:28)                                                                                 |
 |   result: IllegalStateException #1                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -37,6 +37,6 @@ Detailed trace:
 |         StringBuilder#1.append(1): StringBuilder#1 at RandomKt.boundsErrorMessage(Random.kt:382)                                                 |
 |         StringBuilder#1.append(")."): StringBuilder#1 at RandomKt.boundsErrorMessage(Random.kt:382)                                              |
 |         StringBuilder#1.toString(): "Random range is empty: [1, 1)." at RandomKt.boundsErrorMessage(Random.kt:382)                               |
-|       $i$a$-require-RandomKt$checkRangeBounds$1.toString(): "Random range is empty: [1, 1)." at RandomKt.checkRangeBounds(Random.kt:378)         |
+|       "Random range is empty: [1, 1).".toString(): "Random range is empty: [1, 1)." at RandomKt.checkRangeBounds(Random.kt:378)                  |
 |   result: IllegalArgumentException #1                                                                                                            |
 | ------------------------------------------------------------------------------------------------------------------------------------------------ |

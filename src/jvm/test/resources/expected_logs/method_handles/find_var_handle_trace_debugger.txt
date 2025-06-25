@@ -19,9 +19,11 @@ Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48) |
 |   block(): threw IllegalStateException at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:44)                                                        |
+|     ensureConcurrentHashMapIsInstrumented() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:50)                                                   |
 |     doTest() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:53)                                                                                  |
 |       Companion.create(): Counter#1 at MethodHandlesFindVarHandleRepresentationTest.doTest(MethodHandlesLookupTests.kt:39)                                                      |
 |         Counter.shared = Counter#1 at Counter.Companion.create(MethodHandlesLookupTests.kt:165)                                                                                 |
+|       Lookup#1.findVarHandle(Class#2, "value", Class#1): FieldInstanceReadWrite#1 at MethodHandlesFindVarHandleRepresentationTest.doTest(MethodHandlesLookupTests.kt:41)        |
 |       counter.value.set(42) at MethodHandlesFindVarHandleRepresentationTest.doTest(MethodHandlesLookupTests.kt:42)                                                              |
 |       counter.value.get(): 42 at MethodHandlesFindVarHandleRepresentationTest.doTest(MethodHandlesLookupTests.kt:43)                                                            |
 |       counter.value ➜ 42 at MethodHandlesFindVarHandleRepresentationTest.doTest(MethodHandlesLookupTests.kt:44)                                                                 |

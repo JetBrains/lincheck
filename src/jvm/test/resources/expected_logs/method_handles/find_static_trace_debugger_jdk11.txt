@@ -19,15 +19,20 @@ Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48) |
 |   block(): threw IllegalStateException at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:44)                                                        |
+|     ensureConcurrentHashMapIsInstrumented() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:50)                                                   |
 |     doTest() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:53)                                                                                  |
 |       Companion.create(): Counter#1 at MethodHandlesFindStaticRepresentationTest.doTest(MethodHandlesLookupTests.kt:101)                                                        |
 |         Counter.shared = Counter#1 at Counter.Companion.create(MethodHandlesLookupTests.kt:165)                                                                                 |
+|       MethodType.methodType(Class#1, Class#2): MethodType#1 at MethodHandlesFindStaticRepresentationTest.doTest(MethodHandlesLookupTests.kt:104)                                |
+|       Lookup#1.findStatic(Class#2, "increment", MethodType#1): DirectMethodHandle#1 at MethodHandlesFindStaticRepresentationTest.doTest(MethodHandlesLookupTests.kt:103)        |
 |       methodHandle.invoke(Counter#1) at MethodHandlesFindStaticRepresentationTest.doTest(MethodHandlesLookupTests.kt:106)                                                       |
+|         DirectMethodHandle.internalMemberName(DirectMethodHandle#1): MemberName#1 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                        |
 |         MethodHandle.linkToStatic(Counter#1, MemberName#1) at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                                               |
 |           Companion.increment(Counter#1) at Counter.increment(MethodHandlesLookupTests.kt:0)                                                                                    |
 |             counter.value ➜ 0 at Counter.Companion.increment(MethodHandlesLookupTests.kt:169)                                                                                   |
 |             counter.value = 1 at Counter.Companion.increment(MethodHandlesLookupTests.kt:169)                                                                                   |
 |       methodHandle.invokeExact(Counter#1) at MethodHandlesFindStaticRepresentationTest.doTest(MethodHandlesLookupTests.kt:107)                                                  |
+|         DirectMethodHandle.internalMemberName(DirectMethodHandle#1): MemberName#1 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                        |
 |         MethodHandle.linkToStatic(Counter#1, MemberName#1) at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                                               |
 |           Companion.increment(Counter#1) at Counter.increment(MethodHandlesLookupTests.kt:0)                                                                                    |
 |             counter.value ➜ 1 at Counter.Companion.increment(MethodHandlesLookupTests.kt:169)                                                                                   |

@@ -21,7 +21,7 @@ Detailed trace:
 |   block(): threw IllegalStateException at AccessFieldRepresentationTest.block(AccessFunctionRepresentationTest.kt:43)                                                           |
 |     AccessFunctionRepresentationTestKt.runLambda(Lambda#2) at AccessFieldRepresentationTest.block(AccessFunctionRepresentationTest.kt:49)                                       |
 |       r.invoke() at AccessFunctionRepresentationTestKt.runLambda(AccessFunctionRepresentationTest.kt:40)                                                                        |
-|         this$0.a ➜ 1 at AccessFieldRepresentationTest.block$lambda$0(AccessFunctionRepresentationTest.kt:49)                                                                    |
-|         this$0.a = 2 at AccessFieldRepresentationTest.block$lambda$0(AccessFunctionRepresentationTest.kt:49)                                                                    |
+|         this$0.a ➜ 0 at AccessFieldRepresentationTest.block$lambda$0(AccessFunctionRepresentationTest.kt:49)                                                                    |
+|         this$0.a = 1 at AccessFieldRepresentationTest.block$lambda$0(AccessFunctionRepresentationTest.kt:49)                                                                    |
 |   result: IllegalStateException #1                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

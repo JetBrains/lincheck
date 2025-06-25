@@ -1,8 +1,8 @@
 = Concurrent test failed =
 
 java.lang.IllegalStateException: Check failed.
-	at org.jetbrains.kotlinx.lincheck_test.representation.AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:259)
-	at org.jetbrains.kotlinx.lincheck_test.representation.AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:238)
+	at org.jetbrains.kotlinx.lincheck_test.representation.AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:265)
+	at org.jetbrains.kotlinx.lincheck_test.representation.AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:244)
 	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48)
 	at java.base/java.lang.Thread.run(Thread.java:829)
 
@@ -14,15 +14,17 @@ The following interleaving leads to the error:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 
 Detailed trace:
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                   Main Thread                                                                                   |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48) |
-|   block(): threw IllegalStateException at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:238)                                         |
-|     runnable = test$1 at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:257)                                                          |
-|     runnable ➜ test$1 at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:258)                                                          |
-|     runnable.run() at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:258)                                                             |
-|       AnonymousObjectRunConcurrentRepresentationTest.x ➜ 0 at AnonymousObjectRunConcurrentRepresentationTest.I$test$1.run(RunConcurrentRepresentationTests.kt:250)              |
-|       AnonymousObjectRunConcurrentRepresentationTest.x = 1 at AnonymousObjectRunConcurrentRepresentationTest.I$test$1.run(RunConcurrentRepresentationTests.kt:250)              |
-|   result: IllegalStateException #1                                                                                                                                              |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                            Main Thread                                                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:48)                   |
+|   block(): threw IllegalStateException at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:244)                                                           |
+|     block$1.test(): test$1 at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:263)                                                                       |
+|       AnonymousObjectRunConcurrentRepresentationTest.I.DefaultImpls.test(block$1): test$1 at AnonymousObjectRunConcurrentRepresentationTest$block$1.test(RunConcurrentRepresentationTests.kt:263) |
+|     runnable = test$1 at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:263)                                                                            |
+|     runnable ➜ test$1 at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:264)                                                                            |
+|     runnable.run() at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:264)                                                                               |
+|       AnonymousObjectRunConcurrentRepresentationTest.x ➜ 0 at AnonymousObjectRunConcurrentRepresentationTest.I$test$1.run(RunConcurrentRepresentationTests.kt:256)                                |
+|       AnonymousObjectRunConcurrentRepresentationTest.x = 1 at AnonymousObjectRunConcurrentRepresentationTest.I$test$1.run(RunConcurrentRepresentationTests.kt:256)                                |
+|   result: IllegalStateException #1                                                                                                                                                                |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
