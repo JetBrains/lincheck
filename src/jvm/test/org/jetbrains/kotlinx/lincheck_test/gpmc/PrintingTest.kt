@@ -19,7 +19,7 @@ import kotlin.concurrent.thread
  * This test aims to test the effects of printing to `stdout` and `stderr`.
  * The test used to hang because of prints, see https://github.com/JetBrains/lincheck/issues/409.
  *
- * See [CyclicBarrierTest] for identical test but with no printing.
+ * See `CyclicBarrierTest` for identical test but with no printing.
  */
 class PrintingTest {
 

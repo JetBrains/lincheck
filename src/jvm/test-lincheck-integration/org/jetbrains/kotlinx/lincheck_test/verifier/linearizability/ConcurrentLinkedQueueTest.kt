@@ -1,21 +1,22 @@
 /*
  * Lincheck
  *
- * Copyright (C) 2019 - 2023 JetBrains s.r.o.
+ * Copyright (C) 2019 - 2025 JetBrains s.r.o.
  *
  * This Source Code Form is subject to the terms of the
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
 package org.jetbrains.kotlinx.lincheck_test.verifier.linearizability
 
-import org.jetbrains.lincheck.datastructures.Options
+import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
 import org.jetbrains.lincheck.datastructures.IntGen
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck_test.*
 import org.jetbrains.lincheck.datastructures.Operation
+import org.jetbrains.lincheck.datastructures.Options
 import org.jetbrains.lincheck.datastructures.Param
-import java.util.concurrent.*
+import java.util.concurrent.ConcurrentLinkedQueue
 
 @Param(name = "value", gen = IntGen::class, conf = "1:5")
 class ConcurrentLinkedQueueTest : AbstractLincheckTest() {

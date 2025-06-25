@@ -1,7 +1,7 @@
 /*
  * Lincheck
  *
- * Copyright (C) 2019 - 2023 JetBrains s.r.o.
+ * Copyright (C) 2019 - 2025 JetBrains s.r.o.
  *
  * This Source Code Form is subject to the terms of the
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
@@ -10,15 +10,14 @@
 
 package org.jetbrains.kotlinx.lincheck_test.verifier.quiescent
 
-import org.jetbrains.lincheck.datastructures.IntGen
-import org.jetbrains.kotlinx.lincheck_test.*
+import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
 import org.jetbrains.kotlinx.lincheck_test.datastructures.LockFreeTaskQueue
+import org.jetbrains.lincheck.datastructures.IntGen
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.Options
 import org.jetbrains.lincheck.datastructures.Param
 import org.jetbrains.lincheck.datastructures.verifier.QuiescentConsistencyVerifier
 import org.jetbrains.lincheck.datastructures.verifier.QuiescentConsistent
-
 
 @Param(name = "value", gen = IntGen::class, conf = "1:3")
 class LockFreeTaskQueueTest : AbstractLincheckTest() {

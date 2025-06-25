@@ -64,12 +64,12 @@ sourceSets {
         }
     }
 
-    create("integrationTest") {
-        java.srcDir("src/jvm/test-integration")
+    create("lincheckIntegrationTest") {
+        java.srcDir("src/jvm/test-lincheck-integration")
         configureClasspath()
     }
 
-    create("traceDebuggerTest") {
+    create("traceDebuggerIntegrationTest") {
         java.srcDir("src/jvm/test-trace-debugger-integration")
         configureClasspath()
 
@@ -118,20 +118,20 @@ sourceSets {
         testImplementation("io.mockk:mockk:${mockkVersion}")
         testImplementation("org.gradle:gradle-tooling-api:${gradleToolingApiVersion}")
 
-        // integrationTest
-        val integrationTestImplementation by configurations
+        // lincheckIntegrationTest
+        val lincheckIntegrationTestImplementation by configurations
 
-        integrationTestImplementation(rootProject)
-        integrationTestImplementation("junit:junit:$junitVersion")
-        integrationTestImplementation("org.jctools:jctools-core:$jctoolsVersion")
+        lincheckIntegrationTestImplementation(rootProject)
+        lincheckIntegrationTestImplementation("junit:junit:$junitVersion")
+        lincheckIntegrationTestImplementation("org.jctools:jctools-core:$jctoolsVersion")
 
         // traceDebuggerTest
-        val traceDebuggerTestImplementation by configurations
-        val traceDebuggerTestRuntimeOnly by configurations
+        val traceDebuggerIntegrationTestImplementation by configurations
+        val traceDebuggerIntegrationTestRuntimeOnly by configurations
 
-        traceDebuggerTestImplementation("junit:junit:$junitVersion")
-        traceDebuggerTestImplementation("org.gradle:gradle-tooling-api:${gradleToolingApiVersion}")
-        traceDebuggerTestRuntimeOnly("org.slf4j:slf4j-simple:$slf4jVersion")
+        traceDebuggerIntegrationTestImplementation("junit:junit:$junitVersion")
+        traceDebuggerIntegrationTestImplementation("org.gradle:gradle-tooling-api:${gradleToolingApiVersion}")
+        traceDebuggerIntegrationTestRuntimeOnly("org.slf4j:slf4j-simple:$slf4jVersion")
 
         // traceRecorderTest
         val traceRecorderTestImplementation by configurations
@@ -162,17 +162,17 @@ tasks {
         setupKotlinToolchain()
     }
 
-    named<JavaCompile>("compileIntegrationTestJava") {
+    named<JavaCompile>("compileLincheckIntegrationTestJava") {
         setupJavaToolchain()
     }
-    named<KotlinCompile>("compileIntegrationTestKotlin") {
+    named<KotlinCompile>("compileLincheckIntegrationTestKotlin") {
         setupKotlinToolchain()
     }
 
-    named<JavaCompile>("compileTraceDebuggerTestJava") {
+    named<JavaCompile>("compileTraceDebuggerIntegrationTestJava") {
         setupJavaToolchain()
     }
-    named<KotlinCompile>("compileTraceDebuggerTestKotlin") {
+    named<KotlinCompile>("compileTraceDebuggerIntegrationTestKotlin") {
         setupKotlinToolchain()
     }
 
@@ -203,10 +203,10 @@ fun KotlinCompile.setupKotlinToolchain() {
 // add an association to main and test modules to enable access to `internal` APIs inside integration tests:
 // https://kotlinlang.org/docs/gradle-configure-project.html#associate-compiler-tasks
 kotlin {
-    target.compilations.named("integrationTest") {
+    target.compilations.named("lincheckIntegrationTest") {
         configureAssociation()
     }
-    target.compilations.named("traceDebuggerTest") {
+    target.compilations.named("traceDebuggerIntegrationTest") {
         configureAssociation()
     }
     target.compilations.named("traceRecorderTest") {
@@ -344,11 +344,11 @@ tasks {
         forkEvery = 1
     }
 
-    val integrationTest = register<Test>("integrationTest") {
+    val lincheckIntegrationTest = register<Test>("lincheckIntegrationTest") {
         group = "verification"
 
-        testClassesDirs = sourceSets["integrationTest"].output.classesDirs
-        classpath = sourceSets["integrationTest"].runtimeClasspath
+        testClassesDirs = sourceSets["lincheckIntegrationTest"].output.classesDirs
+        classpath = sourceSets["lincheckIntegrationTest"].runtimeClasspath
 
         configureJvmTestCommon()
 
@@ -364,8 +364,8 @@ tasks {
         group = "verification"
         include("org/jetbrains/trace_debugger/integration/*")
 
-        testClassesDirs = sourceSets["traceDebuggerTest"].output.classesDirs
-        classpath = sourceSets["traceDebuggerTest"].runtimeClasspath
+        testClassesDirs = sourceSets["traceDebuggerIntegrationTest"].output.classesDirs
+        classpath = sourceSets["traceDebuggerIntegrationTest"].runtimeClasspath
 
         outputs.upToDateWhen { false } // Always run tests when called
         dependsOn(traceAgentIntegrationTestsPrerequisites)
