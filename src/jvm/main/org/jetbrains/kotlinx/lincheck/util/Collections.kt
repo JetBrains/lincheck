@@ -11,6 +11,44 @@
 package org.jetbrains.kotlinx.lincheck.util
 
 /**
+ * Finds the index of the first element that matches the given [predicate]
+ * starting from the specified [from] index.
+ *
+ * @param from the index from which to start searching. Must be within the bounds of the list.
+ * @param predicate a lambda function to test each element for a condition.
+ * @return the index of the first matching element, or -1 if no elements match the condition.
+ * @throws IllegalArgumentException if [from] is out of bounds.
+ */
+fun <T> List<T>.indexOf(from: Int, predicate: (T) -> Boolean): Int {
+    require(from in indices) {
+        "Index out of bounds: $from"
+    }
+    for (i in from until size) {
+        if (predicate(this[i])) return i
+    }
+    return -1
+}
+
+/**
+ * Finds the index of the last element in the list that matches the given [predicate],
+ * starting the search from the specified [from] index and moving backwards.
+ *
+ * @param from the index to start searching from, moving backwards.
+ * @param predicate the condition to match elements against.
+ * @return the index of the last element matching the condition, or -1 if no such element exists.
+ * @throws IllegalArgumentException if [from] is out of bounds of the list.
+ */
+fun <T> List<T>.indexOfLast(from: Int, predicate: (T) -> Boolean): Int {
+    require(from in indices) {
+        "Index out of bounds: $from"
+    }
+    for (i in from downTo 0) {
+        if (predicate(this[i])) return i
+    }
+    return -1
+}
+
+/**
  * Returns a view of the portion of this mutable list within the specified range.
  *
  * @param range the range of indices defining the sublist,

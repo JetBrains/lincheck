@@ -91,56 +91,54 @@ internal class TraceReporter(
         val newTrace = this.trace.toMutableList()
         val tracePointsToRemove = mutableListOf<IntRange>()
 
-        for (i in newTrace.indices) {
-            val tracePoint = newTrace[i]
+        for (currentPosition in newTrace.indices) {
+            val tracePoint = newTrace[currentPosition]
             if (tracePoint !is SwitchEventTracePoint) continue
 
             // find a place where to move the switch point
-            var j = i
-            while ((j - 1 >= 0) && (
-                    (newTrace[j - 1] is MethodCallTracePoint &&
-                            // do not move the switch out of `Thread.start()`
-                            !newTrace[j - 1].isThreadStart() &&
-                            // do not move the switch out of suspend method calls
-                            !(newTrace[j - 1] as MethodCallTracePoint).isSuspend)
-                    || (newTrace[j - 1] is SpinCycleStartTracePoint)
+            var switchMovePosition = newTrace.indexOfLast(from = currentPosition - 1) {
+                !(
+                    (it is MethodCallTracePoint &&
+                        // do not move the switch out of `Thread.start()`
+                        !it.isThreadStart() &&
+                        // do not move the switch out of suspend method calls
+                        !it.isSuspend
+                    ) ||
+                    (it is SpinCycleStartTracePoint)
                 )
-            ) {
-                j--
             }
-            if (j == i) continue
+            if (++switchMovePosition == currentPosition) continue
 
             // find the next section of the thread we are switching from
             // to move the remaining method call trace points there
-            var k = i + 1
-            val threadId = newTrace[i].iThread
-            while (k < newTrace.size && newTrace[k].iThread != threadId) {
-                k++
+            val currentThreadNextTracePointPosition = newTrace.indexOf(from = currentPosition + 1) {
+                it.iThread == tracePoint.iThread
             }
 
             // move switch point before method calls
-            newTrace.move(i, j)
+            newTrace.move(currentPosition, switchMovePosition)
 
-            val movedTracePointsRange = IntRange(j + 1, i)
+            val movedTracePointsRange = IntRange(switchMovePosition + 1, currentPosition)
             val movedTracePoints = newTrace.subList(movedTracePointsRange)
             val methodCallTracePoints = movedTracePoints.filter { it is MethodCallTracePoint }
-            val remainingTracePoints = newTrace.subList(k, newTrace.size).filter { it.iThread == threadId }
+            val remainingTracePoints = newTrace.subList(currentThreadNextTracePointPosition, newTrace.size)
+                .filter { it.iThread == tracePoint.iThread }
             val shouldRemoveRemainingTracePoints = remainingTracePoints.all {
-                    (it is MethodCallTracePoint && it.isActor) ||
-                    (it is MethodReturnTracePoint) ||
-                    it is SpinCycleStartTracePoint
+                (it is MethodCallTracePoint && it.isActor) ||
+                (it is MethodReturnTracePoint) ||
+                it is SpinCycleStartTracePoint
             }
             val isThreadJoinSwitch = (remainingTracePoints.firstOrNull()?.isThreadJoin() == true)
-            if (k == newTrace.size || shouldRemoveRemainingTracePoints && !isThreadJoinSwitch) {
+            if (currentThreadNextTracePointPosition == newTrace.size || shouldRemoveRemainingTracePoints && !isThreadJoinSwitch) {
                 // handle the case when the switch point is the last event in the thread
                 val methodReturnTracePointsRange = if (methodCallTracePoints.isNotEmpty())
-                    IntRange(k, k + methodCallTracePoints.size - 1)
+                    IntRange(currentThreadNextTracePointPosition, currentThreadNextTracePointPosition + methodCallTracePoints.size - 1)
                     else IntRange.EMPTY
                 tracePointsToRemove.add(movedTracePointsRange)
                 tracePointsToRemove.add(methodReturnTracePointsRange)
             } else {
                 // else move method call trace points to the next trace section of the current thread
-                newTrace.move(movedTracePointsRange, k)
+                newTrace.move(movedTracePointsRange, currentThreadNextTracePointPosition)
             }
         }
 
@@ -156,32 +154,28 @@ internal class TraceReporter(
     private fun Trace.moveSpinCycleStartTracePoints(): Trace {
         val newTrace = this.trace.toMutableList()
 
-        for (i in newTrace.indices) {
-            val tracePoint = newTrace[i]
+        for (currentPosition in newTrace.indices) {
+            val tracePoint = newTrace[currentPosition]
             if (tracePoint !is SpinCycleStartTracePoint) continue
 
-            check(i > 0)
+            check(currentPosition > 0)
 
             // find a beginning of the current thread section
-            var j = i
-            while ((j - 1 >= 0) && (newTrace[j - 1].iThread == tracePoint.iThread)) {
-                j--
+            var currentThreadSectionStartPosition = newTrace.indexOfLast(from = currentPosition - 1) {
+                it.iThread != tracePoint.iThread
             }
+            ++currentThreadSectionStartPosition
 
             // find the next thread switch
-            var k = i + 1
-            while (k < newTrace.size &&
-                   newTrace[k] !is SwitchEventTracePoint &&
-                   newTrace[k] !is ObstructionFreedomViolationExecutionAbortTracePoint)
-            {
-                k++
+            val nextThreadSwitchPosition = newTrace.indexOf(from = currentPosition + 1) {
+                it is SwitchEventTracePoint || it is ObstructionFreedomViolationExecutionAbortTracePoint
             }
-            if (k == i + 1) continue
+            if (nextThreadSwitchPosition == currentPosition + 1) continue
 
             // compute call stack traces
             val currentStackTrace = mutableListOf<MethodCallTracePoint>()
             val stackTraces = mutableListOf<List<MethodCallTracePoint>>()
-            for (n in j .. i) {
+            for (n in currentThreadSectionStartPosition .. currentPosition) {
                 stackTraces.add(currentStackTrace.toList())
                 if (newTrace[n] is MethodCallTracePoint) {
                     currentStackTrace.add(newTrace[n] as MethodCallTracePoint)
@@ -191,19 +185,22 @@ internal class TraceReporter(
             }
 
             val (patchedStackTrace, stackTraceElementsDropCount) = afterSpinCycleTraceCollected(
-                spinCycleStartTracePoint = newTrace[i],
-                spinCycleEndTracePoint = newTrace[k],
+                spinCycleStartTracePoint = newTrace[currentPosition],
+                spinCycleEndTracePoint = newTrace[nextThreadSwitchPosition],
             )
 
             val spinCycleStartStackTraceSize = stackTraces.lastOrNull()?.size ?: 0
             val callStackSize = (spinCycleStartStackTraceSize - stackTraceElementsDropCount).coerceAtLeast(0)
 
-            var m = i
-            while (m >= j && stackTraces[m - j].size > callStackSize) {
-                --m
+            // find the position where to move the spin cycle start trace point
+            val i = currentPosition
+            var j = currentPosition
+            val k = currentThreadSectionStartPosition
+            while (j >= k && stackTraces[j - k].size > callStackSize) {
+                --j
             }
 
-            newTrace.move(i, m)
+            newTrace.move(i, j)
         }
 
         return Trace(newTrace, this.threadNames)
