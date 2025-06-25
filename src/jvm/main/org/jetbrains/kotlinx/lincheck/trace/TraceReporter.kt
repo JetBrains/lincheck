@@ -15,7 +15,7 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.execution.threadsResults
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.afterSpinCycleTraceCollected
+import org.jetbrains.kotlinx.lincheck.strategy.managed.recomputeSpinCycleStartCallStack
 import org.jetbrains.kotlinx.lincheck.util.*
 import kotlin.math.max
 
@@ -186,7 +186,7 @@ internal class TraceReporter(
 
             // compute the patched stack trace of the spin cycle trace point
             val spinCycleStartStackTrace = tracePoint.callStackTrace
-            val spinCycleStartPatchedStackTrace = afterSpinCycleTraceCollected(
+            val spinCycleStartPatchedStackTrace = recomputeSpinCycleStartCallStack(
                 spinCycleStartTracePoint = newTrace[currentPosition],
                 spinCycleEndTracePoint = newTrace[nextThreadSwitchPosition],
             )

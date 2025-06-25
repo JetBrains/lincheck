@@ -13,8 +13,6 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import org.jetbrains.kotlinx.lincheck.primitiveOrIdentityHashCode
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import org.jetbrains.kotlinx.lincheck.strategy.managed.LoopDetector.CodeIdentity.RegularCodeLocationIdentity
-import org.jetbrains.kotlinx.lincheck.trace.CallStackTrace
-import org.jetbrains.kotlinx.lincheck.trace.CallStackTraceElement
 import org.jetbrains.kotlinx.lincheck.trace.MethodCallTracePoint
 import org.jetbrains.kotlinx.lincheck.trace.ObstructionFreedomViolationExecutionAbortTracePoint
 import org.jetbrains.kotlinx.lincheck.trace.SpinCycleStartTracePoint
@@ -922,7 +920,7 @@ private class ReplayModeLoopDetectorHelper(
  * The count of the call passed the condition above equals to the call we need to lift from the first spin cycle
  * node to get the correct spin cycle start trace point depth.
  */
-internal fun afterSpinCycleTraceCollected(
+internal fun recomputeSpinCycleStartCallStack(
     spinCycleStartTracePoint: TracePoint,
     spinCycleEndTracePoint: TracePoint,
 ) : List<MethodCallTracePoint> {
