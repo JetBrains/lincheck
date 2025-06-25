@@ -185,12 +185,13 @@ internal class TraceReporter(
             }
 
             // compute the patched stack trace of the spin cycle trace point
-            val patchedSpinCycleStartStackTrace = afterSpinCycleTraceCollected(
+            val spinCycleStartStackTrace = tracePoint.callStackTrace
+            val spinCycleStartPatchedStackTrace = afterSpinCycleTraceCollected(
                 spinCycleStartTracePoint = newTrace[currentPosition],
                 spinCycleEndTracePoint = newTrace[nextThreadSwitchPosition],
             )
+            val stackTraceElementsDropCount = spinCycleStartStackTrace.size - spinCycleStartPatchedStackTrace.size
             val spinCycleStartStackTraceSize = stackTraces.lastOrNull()?.size ?: 0
-            val stackTraceElementsDropCount = tracePoint.callStackTrace.size - patchedSpinCycleStartStackTrace.size
             val callStackSize = (spinCycleStartStackTraceSize - stackTraceElementsDropCount).coerceAtLeast(0)
 
             // find the position where to move the spin cycle start trace point
