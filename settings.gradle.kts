@@ -21,8 +21,8 @@ plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version("0.7.0")
 }
 
-val name: String by settings
-rootProject.name = name
+val projectName: String by settings
+rootProject.name = projectName
 
 include(":bootstrap")
 include(":jvm-agent")
