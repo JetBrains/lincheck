@@ -168,7 +168,7 @@ The updated `BasicCounterTest` class will look like this:
    * **T2**: The second thread resumes and increments the previously obtained counter value, incorrectly updating the
    counter to `1`.
 
-> [Get the full code](https://github.com/JetBrains/lincheck/blob/master/src/jvm/test-integration/org/jetbrains/lincheck_test/guide/BasicCounterTest.kt).
+> [Get the full code](https://github.com/JetBrains/lincheck/blob/master/src/jvm/test-lincheck-integration/org/jetbrains/lincheck_test/guide/BasicCounterTest.kt).
 >
 {style="note"}
 
@@ -249,7 +249,7 @@ The following interleaving leads to the error:
 | --------------------------------------------------------------------------------------------------------------------------------- |
 ```
 
-> [Get the full code](https://github.com/JetBrains/lincheck/blob/master/src/jvm/test-integration/org/jetbrains/lincheck_test/guide/ConcurrentLinkedDequeTest.kt).
+> [Get the full code](https://github.com/JetBrains/lincheck/blob/master/src/jvm/test-lincheck-integration/org/jetbrains/lincheck_test/guide/ConcurrentLinkedDequeTest.kt).
 >
 {style="note"}
 
