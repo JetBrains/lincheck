@@ -52,8 +52,13 @@ fun KotlinCompile.setupKotlinToolchain() {
     setupKotlinToolchain(javaToolchains, jdkToolchainVersion)
 }
 
-tasks.jar {
+val jar = tasks.jar {
     archiveFileName.set("trace.jar")
+}
+
+val sourcesJar = tasks.register<Jar>("sourcesJar") {
+    from(sourceSets["main"].allSource)
+    archiveClassifier.set("sources")
 }
 
 publishing {
@@ -68,7 +73,7 @@ publishing {
             this.version = version
 
             from(components["kotlin"])
-            // artifact(sourcesJar)
+            artifact(sourcesJar)
             // artifact(javadocJar)
 
             configureMavenPublication {
