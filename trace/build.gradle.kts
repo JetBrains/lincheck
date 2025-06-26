@@ -59,12 +59,12 @@ val javadocJar = createJavadocJar()
 publishing {
     publications {
         register("maven", MavenPublication::class) {
-            val traceArtifactId: String by project
             val groupId: String by project
+            val traceArtifactId: String by project
             val traceVersion: String by project
 
-            this.artifactId = traceArtifactId
             this.groupId = groupId
+            this.artifactId = traceArtifactId
             this.version = traceVersion
 
             from(components["kotlin"])
