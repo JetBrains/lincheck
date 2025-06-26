@@ -19,11 +19,14 @@ import org.gradle.plugins.signing.SigningPlugin
 fun MavenPublication.configureMavenPublication(configurePom: MavenPom.() -> Unit) {
     pom {
         configurePom()
+
         url.set("https://github.com/JetBrains/lincheck")
         scm {
             connection.set("scm:git:https://github.com/JetBrains/lincheck.git")
             url.set("https://github.com/JetBrains/lincheck")
         }
+
+        // according to the reference, this should be the person(s) to be contacted about the project
         developers {
             developer {
                 name.set("Nikita Koval")
@@ -47,6 +50,7 @@ fun MavenPublication.configureMavenPublication(configurePom: MavenPom.() -> Unit
                 organizationUrl.set("https://www.jetbrains.com")
             }
         }
+
         licenses {
             license {
                 name.set("Mozilla Public License Version 2.0")
