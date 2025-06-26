@@ -426,12 +426,12 @@ tasks.named("processResources").configure {
 publishing {
     publications {
         register("maven", MavenPublication::class) {
-            val artifactId: String by project
             val groupId: String by project
+            val artifactId: String by project
             val version: String by project
 
-            this.artifactId = artifactId
             this.groupId = groupId
+            this.artifactId = artifactId
             this.version = version
 
             from(components["kotlin"])
