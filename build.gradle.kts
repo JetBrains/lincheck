@@ -146,9 +146,7 @@ kotlin {
 }
 
 java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(8)
-    }
+    configureJava()
 }
 
 tasks {
@@ -183,18 +181,12 @@ tasks {
 
 fun JavaCompile.setupJavaToolchain() {
     val jdkToolchainVersion: String by project
-    javaToolchains {
-        javaCompiler = compilerFor {
-            languageVersion.set(JavaLanguageVersion.of(jdkToolchainVersion))
-        }
-    }
+    setupJavaToolchain(javaToolchains, jdkToolchainVersion)
 }
 
 fun KotlinCompile.setupKotlinToolchain() {
     val jdkToolchainVersion: String by project
-    kotlinJavaToolchain.toolchain.use(javaToolchains.launcherFor {
-        languageVersion.set(JavaLanguageVersion.of(jdkToolchainVersion))
-    })
+    setupKotlinToolchain(javaToolchains, jdkToolchainVersion)
 }
 
 // add an association to main and test modules to enable access to `internal` APIs inside integration tests:
