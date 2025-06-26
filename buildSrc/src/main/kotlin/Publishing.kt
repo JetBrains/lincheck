@@ -8,13 +8,14 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-import org.gradle.api.publish.maven.MavenPom
-import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.Project
 import org.gradle.api.publish.maven.tasks.AbstractPublishToMaven
 import org.gradle.api.publish.PublishingExtension
+import org.gradle.api.publish.maven.MavenPom
+import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.plugins.signing.SigningExtension
 import org.gradle.plugins.signing.SigningPlugin
+import java.net.URI
 
 fun MavenPublication.configureMavenPublication(configurePom: MavenPom.() -> Unit) {
     pom {
@@ -56,6 +57,38 @@ fun MavenPublication.configureMavenPublication(configurePom: MavenPom.() -> Unit
                 name.set("Mozilla Public License Version 2.0")
                 url.set("https://www.mozilla.org/en-US/MPL/2.0/")
                 distribution.set("repo")
+            }
+        }
+    }
+}
+
+fun PublishingExtension.configureRepositories(project: Project) {
+    repositories {
+        // set up a local directory publishing for further signing and uploading to sonatype
+        maven {
+            name = "artifacts"
+            url = project.run { uri(layout.buildDirectory.dir("artifacts/maven")) }
+        }
+
+        // legacy sonatype staging publishing
+        maven {
+            name = "sonatypeStaging"
+            url = URI("https://oss.sonatype.org/service/local/staging/deploy/maven2/")
+
+            credentials {
+                username = System.getenv("libs.sonatype.user")
+                password = System.getenv("libs.sonatype.password")
+            }
+        }
+
+        // space-packages publishing
+        maven {
+            name = "spacePackages"
+            url = URI("https://packages.jetbrains.team/maven/p/concurrency-tools/maven")
+
+            credentials {
+                username = System.getenv("SPACE_USERNAME")
+                password = System.getenv("SPACE_PASSWORD")
             }
         }
     }
