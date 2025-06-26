@@ -4,6 +4,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     java
     kotlin("jvm")
+    id("maven-publish")
 }
 
 repositories {
@@ -53,4 +54,31 @@ fun KotlinCompile.setupKotlinToolchain() {
 
 tasks.jar {
     archiveFileName.set("trace.jar")
+}
+
+publishing {
+    publications {
+        register("maven", MavenPublication::class) {
+            val artifactId: String by project
+            val groupId: String by project
+            val version: String by project
+
+            this.artifactId = artifactId
+            this.groupId = groupId
+            this.version = version
+
+            from(components["kotlin"])
+            // artifact(sourcesJar)
+            // artifact(javadocJar)
+
+            configureMavenPublication {
+                name.set(artifactId)
+                description.set("Lincheck trace model and (de)serialization library")
+            }
+        }
+    }
+
+    configureRepositories(
+        artifactsRepositoryUrl = rootProject.run { uri(layout.buildDirectory.dir("artifacts/maven")) }
+    )
 }
