@@ -579,12 +579,12 @@ tasks {
                 )
                 .build()
             client.newCall(request).execute().use { response ->
-              val statusCode = response.code
-              println("Upload status code: $statusCode")
-              println("Upload result: ${response.body!!.string()}")
-              if (statusCode != 201) {
-                  error("Upload error to Central repository. Status code $statusCode.")
-              }
+                val statusCode = response.code
+                println("Upload status code: $statusCode")
+                println("Upload result: ${response.body!!.string()}")
+                if (statusCode != 201) {
+                    error("Upload error to Central repository. Status code $statusCode.")
+                }
             }
         }
     }
