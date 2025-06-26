@@ -16,12 +16,11 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ExecutionMode.GENERAL_PURPOSE_MODEL_CHECKER
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectTracker
-import org.jetbrains.kotlinx.lincheck.strategy.managed.enumerateReachableObjects
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.trace.*
+import org.jetbrains.lincheck.trace.*
 import org.jetbrains.kotlinx.lincheck.util.ThreadMap
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import org.jetbrains.lincheck.GeneralPurposeModelCheckingWrapper

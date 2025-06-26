@@ -15,8 +15,7 @@ import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import org.jetbrains.kotlinx.lincheck.strategy.managed.LincheckAnalysisAbortedError
 import org.jetbrains.kotlinx.lincheck.strategy.BlockingReason
 import org.jetbrains.kotlinx.lincheck.util.ThreadId
-import kotlin.collections.map
-import org.jetbrains.kotlinx.lincheck.tracedata.CodeLocations
+import org.jetbrains.lincheck.trace.CodeLocations
 
 data class Trace(
     val trace: List<TracePoint>,

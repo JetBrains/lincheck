@@ -10,9 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
-import org.jetbrains.kotlinx.lincheck.tracedata.TRACE_CONTEXT
-import org.jetbrains.kotlinx.lincheck.tracedata.Types.convertAsmMethodType
-import org.jetbrains.kotlinx.lincheck.tracedata.VariableDescriptor
+import org.jetbrains.lincheck.trace.TRACE_CONTEXT
+import org.jetbrains.lincheck.trace.Types.convertAsmMethodType
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.objectweb.asm.*
 import org.objectweb.asm.commons.GeneratorAdapter

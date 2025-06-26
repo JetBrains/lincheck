@@ -50,3 +50,7 @@ fun KotlinCompile.setupKotlinToolchain() {
     val jdkToolchainVersion: String by project
     setupKotlinToolchain(javaToolchains, jdkToolchainVersion)
 }
+
+tasks.jar {
+    archiveFileName.set("trace.jar")
+}

@@ -10,8 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck.util
 
-import org.jetbrains.kotlinx.lincheck.tracedata.MethodDescriptor
-import org.jetbrains.kotlinx.lincheck.tracedata.Types
+import org.jetbrains.lincheck.trace.MethodDescriptor
+import org.jetbrains.lincheck.trace.Types
 
 internal fun MethodDescriptor.isArraysCopyOfIntrinsic(): Boolean {
     return (

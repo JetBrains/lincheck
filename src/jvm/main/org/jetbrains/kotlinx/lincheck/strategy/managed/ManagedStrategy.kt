@@ -36,10 +36,10 @@ import java.util.concurrent.TimeoutException
 import kotlinx.coroutines.CancellableContinuation
 import org.jetbrains.lincheck.GeneralPurposeModelCheckingWrapper
 import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
-import org.jetbrains.kotlinx.lincheck.tracedata.CodeLocations
-import org.jetbrains.kotlinx.lincheck.tracedata.FieldDescriptor
-import org.jetbrains.kotlinx.lincheck.tracedata.TRACE_CONTEXT
-import org.jetbrains.kotlinx.lincheck.tracedata.Types
+import org.jetbrains.lincheck.trace.CodeLocations
+import org.jetbrains.lincheck.trace.FieldDescriptor
+import org.jetbrains.lincheck.trace.TRACE_CONTEXT
+import org.jetbrains.lincheck.trace.Types
 import org.jetbrains.kotlinx.lincheck.util.isArraysCopyOfIntrinsic
 import org.jetbrains.kotlinx.lincheck.util.isArraysCopyOfRangeIntrinsic
 import org.jetbrains.lincheck.datastructures.ManagedStrategyGuarantee
