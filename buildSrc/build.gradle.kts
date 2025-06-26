@@ -18,7 +18,9 @@ repositories {
 
 dependencies {
     val kotlinVersion: String by project
+    val dokkaVersion: String by project
 
     implementation("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
+    implementation("org.jetbrains.dokka:dokka-gradle-plugin:$dokkaVersion")
     implementation("de.undercouch.download:de.undercouch.download.gradle.plugin:5.6.0")
 }
