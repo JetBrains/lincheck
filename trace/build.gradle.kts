@@ -59,20 +59,20 @@ val javadocJar = createJavadocJar()
 publishing {
     publications {
         register("maven", MavenPublication::class) {
-            val artifactId: String by project
+            val traceArtifactId: String by project
             val groupId: String by project
-            val version: String by project
+            val traceVersion: String by project
 
-            this.artifactId = artifactId
+            this.artifactId = traceArtifactId
             this.groupId = groupId
-            this.version = version
+            this.version = traceVersion
 
             from(components["kotlin"])
             artifact(sourcesJar)
             artifact(javadocJar)
 
             configureMavenPublication {
-                name.set(artifactId)
+                name.set(traceArtifactId)
                 description.set("Lincheck trace model and (de)serialization library")
             }
         }
