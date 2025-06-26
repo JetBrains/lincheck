@@ -934,29 +934,13 @@ internal fun recomputeSpinCycleStartCallStack(
         is ObstructionFreedomViolationExecutionAbortTracePoint -> spinCycleEndTracePoint.callStackTrace.map { it.tracePoint }
         else -> error("Unreachable code")
     }
-    val isRecursive = spinCycleLastTracePointCallStackTrace.size != spinCycleFirstTracePointCallStackTrace.size
 
-    if (isRecursive) {
-        // See above the description of the algorithm for recursive spin lock.
-        var currentI = spinCycleLastTracePointCallStackTrace.lastIndex
-        var firstI = spinCycleFirstTracePointCallStackTrace.lastIndex
-        var count = 0
-        while (firstI >= 0) {
-            val firstTracePoint = spinCycleFirstTracePointCallStackTrace.getOrNull(firstI)
-            val lastTracePoint = spinCycleLastTracePointCallStackTrace.getOrNull(currentI)
-
-            // Comparing corresponding calls.
-            if (firstTracePoint == null || lastTracePoint == null || !firstTracePoint.isEqualInvocation(lastTracePoint)) break
-
-            currentI--
-            firstI--
-            count++
-        }
-        return spinCycleFirstTracePointCallStackTrace.dropLast(count)
+    val isRecursive = (spinCycleLastTracePointCallStackTrace.size != spinCycleFirstTracePointCallStackTrace.size)
+    return if (isRecursive) {
+        getCommonRecursiveStackTrace(spinCycleFirstTracePointCallStackTrace, spinCycleLastTracePointCallStackTrace)
+    } else {
+        getCommonMinStackTrace(listOf(spinCycleFirstTracePointCallStackTrace, spinCycleLastTracePointCallStackTrace))
     }
-
-    // See above the description of the algorithm for iterative spin lock.
-    return getCommonMinStackTrace(listOf(spinCycleFirstTracePointCallStackTrace, spinCycleLastTracePointCallStackTrace))
 }
 
 /**
@@ -974,6 +958,23 @@ private fun getCommonMinStackTrace(spinCycleCallStacks: List<List<MethodCallTrac
         count++
     }
     return spinCycleCallStacks.first().take(count)
+}
+
+private fun getCommonRecursiveStackTrace(
+    first: List<MethodCallTracePoint>,
+    last: List<MethodCallTracePoint>
+): List<MethodCallTracePoint> {
+    var i = first.lastIndex
+    var j = last.lastIndex
+    var count = 0
+    while (i >= 0 && j >= 0) {
+        if (!first[i].isEqualInvocation(last[j])) break
+
+        i--
+        j--
+        count++
+    }
+    return first.dropLast(count)
 }
 
 private fun MethodCallTracePoint.isEqualInvocation(other: MethodCallTracePoint): Boolean =
