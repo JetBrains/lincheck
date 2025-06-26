@@ -49,9 +49,6 @@ internal inline fun <reified E: Exception> Options<*, *>.checkFailsWithException
  */
 internal fun LincheckFailure?.checkLincheckOutput(expectedOutputFilePrefix: String) {
     check(this != null) { "The test should fail" }
-    // In case we compare and overwrite representation tests only
-    // for default jdk, then just return when non-default jdk is provided
-    if (HANDLE_ONLY_DEFAULT_JDK_REPRESENTATION_TESTS_OUTPUT && jdkVersion != DEFAULT_TEST_JDK_VERSION) return
     val actualOutput = StringBuilder().appendFailure(this).toString()
     compareAndOverwrite(expectedOutputFilePrefix, actualOutput)
 }
@@ -233,9 +230,6 @@ class StringPoolGenerator(randomProvider: RandomProvider, configuration: String)
     override fun generate(): String =
         strings[random.nextInt(strings.size)]
 }
-
-internal val HANDLE_ONLY_DEFAULT_JDK_REPRESENTATION_TESTS_OUTPUT: Boolean =
-    System.getProperty("lincheck.handleOnlyDefaultJdkRepresentationTestsOutput").toBoolean()
 
 internal val OVERWRITE_REPRESENTATION_TESTS_OUTPUT: Boolean =
     System.getProperty("lincheck.overwriteRepresentationTestsOutput").toBoolean()
