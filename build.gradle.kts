@@ -462,40 +462,9 @@ publishing {
             artifact(sourcesJar)
             artifact(javadocJar)
 
-            pom {
+            configureMavenPublication {
                 name.set(artifactId)
                 description.set("Lincheck - framework for testing concurrent code on the JVM")
-
-                url.set("https://github.com/JetBrains/lincheck")
-                scm {
-                    connection.set("scm:git:https://github.com/JetBrains/lincheck.git")
-                    url.set("https://github.com/JetBrains/lincheck")
-                }
-
-                developers {
-                    developer {
-                        name.set("Nikita Koval")
-                        id.set("nikita.koval")
-                        email.set("nikita.koval@jetbrains.com")
-                        organization.set("JetBrains")
-                        organizationUrl.set("https://www.jetbrains.com")
-                    }
-                    developer {
-                        name.set("Evgeniy Moiseenko")
-                        id.set("evgeniy.moiseenko")
-                        email.set("evgeniy.moiseenko@jetbrains.com")
-                        organization.set("JetBrains")
-                        organizationUrl.set("https://www.jetbrains.com")
-                    }
-                }
-
-                licenses {
-                    license {
-                        name.set("Mozilla Public License Version 2.0")
-                        url.set("https://www.mozilla.org/en-US/MPL/2.0/")
-                        distribution.set("repo")
-                    }
-                }
             }
         }
     }
