@@ -44,7 +44,7 @@ internal class ThreadTransformer(
             loadThis()
             // STACK: forkedThread
             invokeStatic(Injections::beforeThreadFork)
-            // STACK: isTracePoint
+            // STACK: <empty>
         }
         if (isThreadRunMethod(methodName, desc)) {
             // STACK: <empty>
@@ -52,6 +52,7 @@ internal class ThreadTransformer(
             visitLabel(runMethodTryBlockStart)
             // STACK: <empty>
             invokeStatic(Injections::beforeThreadStart)
+            // STACK: <empty>
         }
     }
 
