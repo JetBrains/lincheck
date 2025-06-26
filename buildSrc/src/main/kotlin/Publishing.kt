@@ -62,12 +62,12 @@ fun MavenPublication.configureMavenPublication(configurePom: MavenPom.() -> Unit
     }
 }
 
-fun PublishingExtension.configureRepositories(project: Project) {
+fun PublishingExtension.configureRepositories(artifactsRepositoryUrl: URI) {
     repositories {
         // set up a local directory publishing for further signing and uploading to sonatype
         maven {
             name = "artifacts"
-            url = project.run { uri(layout.buildDirectory.dir("artifacts/maven")) }
+            url = artifactsRepositoryUrl
         }
 
         // legacy sonatype staging publishing
