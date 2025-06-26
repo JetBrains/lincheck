@@ -96,7 +96,8 @@ sourceSets {
         val atomicfuVersion: String by project
 
         compileOnly(project(":bootstrap"))
-        implementation(project(":trace"))
+        api(project(":trace"))
+
         api("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
         api("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion")
         api("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
