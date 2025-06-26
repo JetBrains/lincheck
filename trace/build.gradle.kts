@@ -5,6 +5,7 @@ plugins {
     java
     kotlin("jvm")
     id("maven-publish")
+    id("org.jetbrains.dokka")
 }
 
 repositories {
@@ -61,6 +62,8 @@ val sourcesJar = tasks.register<Jar>("sourcesJar") {
     archiveClassifier.set("sources")
 }
 
+val javadocJar = createJavadocJar()
+
 publishing {
     publications {
         register("maven", MavenPublication::class) {
@@ -74,7 +77,7 @@ publishing {
 
             from(components["kotlin"])
             artifact(sourcesJar)
-            // artifact(javadocJar)
+            artifact(javadocJar)
 
             configureMavenPublication {
                 name.set(artifactId)

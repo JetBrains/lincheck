@@ -398,22 +398,7 @@ val sourcesJar = tasks.register<Jar>("sourcesJar") {
     archiveClassifier.set("sources")
 }
 
-val dokkaHtml = tasks.named<DokkaTask>("dokkaHtml") {
-    outputDirectory.set(file("${layout.buildDirectory.get()}/javadoc"))
-    dokkaSourceSets {
-        named("main") {
-            sourceRoots.from(file("src/jvm/main"))
-            reportUndocumented.set(false)
-        }
-    }
-}
-
-val javadocJar = tasks.register<Jar>("javadocJar") {
-    dependsOn(dokkaHtml)
-    from("${layout.buildDirectory.get()}/javadoc")
-    archiveClassifier.set("javadoc")
-}
-
+val javadocJar = createJavadocJar()
 
 tasks.withType<Jar> {
     dependsOn(bootstrapJar)
