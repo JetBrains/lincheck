@@ -257,6 +257,10 @@ tasks {
         if (instrumentAllClasses.toBoolean()) {
             systemProperty("lincheck.instrumentAllClasses", "true")
         }
+        val handleOnlyDefaultJdkRepresentationTestsOutput: String by project
+        if (handleOnlyDefaultJdkRepresentationTestsOutput.toBoolean()) {
+            systemProperty("lincheck.handleOnlyDefaultJdkRepresentationTestsOutput", "true")
+        }
         // The `overwriteRepresentationTestsOutput` flag is used to automatically repair representation tests.
         // Representation tests work by comparing an actual output of the test (execution trace in most cases)
         // with the expected output stored in a file (which is kept in resources).
