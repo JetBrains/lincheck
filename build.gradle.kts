@@ -6,7 +6,6 @@ import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.asRequestBody
-import java.net.URI
 import java.util.*
 
 buildscript {
@@ -469,35 +468,7 @@ publishing {
         }
     }
 
-    repositories {
-        // set up a local directory publishing for further signing and uploading to sonatype
-        maven {
-            name = "artifacts"
-            url = uri(layout.buildDirectory.dir("artifacts/maven"))
-        }
-
-        // legacy sonatype staging publishing
-        maven {
-            name = "sonatypeStaging"
-            url = URI("https://oss.sonatype.org/service/local/staging/deploy/maven2/")
-
-            credentials {
-                username = System.getenv("libs.sonatype.user")
-                password = System.getenv("libs.sonatype.password")
-            }
-        }
-
-        // space-packages publishing
-        maven {
-            name = "spacePackages"
-            url = URI("https://packages.jetbrains.team/maven/p/concurrency-tools/maven")
-
-            credentials {
-                username = System.getenv("SPACE_USERNAME")
-                password = System.getenv("SPACE_PASSWORD")
-            }
-        }
-    }
+    configureRepositories(rootProject)
 }
 
 tasks.named("generateMetadataFileForMavenPublication") {
