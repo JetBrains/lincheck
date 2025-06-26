@@ -15,7 +15,7 @@ import java.util.HashMap;
 
 public class JavaLambdaRepresentationTest extends BaseTraceRepresentationTest {
     public JavaLambdaRepresentationTest() {
-        super("java_lambda_argument_representation");
+        super("java_lambda_argument_representation", true);
     }
     
     private HashMap<Integer, Integer> hm = new HashMap<>();

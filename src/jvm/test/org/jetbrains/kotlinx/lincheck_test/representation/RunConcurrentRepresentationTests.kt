@@ -28,7 +28,10 @@ import org.junit.*
 import org.junit.Assume.assumeFalse
 
 
-abstract class BaseRunConcurrentRepresentationTest<R>(private val outputFileName: String) {
+abstract class BaseRunConcurrentRepresentationTest<R>(
+    private val outputFileName: String,
+    private val handleOnlyDefaultJdkOutput: Boolean = true
+) {
     /**
      * If this flag is marked as `true`, then this test will not check its
      * representation output with the expected one saved on disk.
@@ -48,13 +51,13 @@ abstract class BaseRunConcurrentRepresentationTest<R>(private val outputFileName
                 block()
             }
         }
-        checkResult(result, outputFileName, isFlakyTest)
+        checkResult(result, outputFileName, handleOnlyDefaultJdkOutput, isFlakyTest)
     }
 
     open val analyzeStdLib = true
     
     companion object {
-        fun checkResult(result: Result<*>, outputFileName: String, isFlakyTest: Boolean = false) {
+        fun checkResult(result: Result<*>, outputFileName: String, handleOnlyDefaultJdkOutput: Boolean, isFlakyTest: Boolean = false) {
             check(result.isFailure) {
                 "The test should fail, but it completed successfully"
             }
@@ -67,7 +70,7 @@ abstract class BaseRunConcurrentRepresentationTest<R>(private val outputFileName
             .trimMargin()
             }
             if (!isFlakyTest) {
-                error.failure.checkLincheckOutput(outputFileName)
+                error.failure.checkLincheckOutput(outputFileName, handleOnlyDefaultJdkOutput)
             }
         }
     }
