@@ -440,12 +440,12 @@ tasks.named("processResources").configure {
 publishing {
     publications {
         register("maven", MavenPublication::class) {
-            val name: String by project
-            val group: String by project
+            val artifactId: String by project
+            val groupId: String by project
             val version: String by project
 
-            this.artifactId = name
-            this.groupId = group
+            this.artifactId = artifactId
+            this.groupId = groupId
             this.version = version
 
             from(components["kotlin"])
@@ -453,7 +453,7 @@ publishing {
             artifact(javadocJar)
 
             pom {
-                this.name.set(name)
+                this.name.set(artifactId)
                 this.description.set("Lincheck - framework for testing concurrent code on the JVM")
 
                 url.set("https://github.com/JetBrains/lincheck")
