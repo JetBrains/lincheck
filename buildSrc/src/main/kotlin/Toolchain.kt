@@ -28,9 +28,9 @@ fun JavaPluginExtension.configureJava() {
 }
 
 fun JavaCompile.setupJavaToolchain(javaToolchains: JavaToolchainService,  jdkToolchainVersion: String) {
-    javaCompiler = javaToolchains.compilerFor {
+    javaCompiler.set(javaToolchains.compilerFor {
         languageVersion.set(JavaLanguageVersion.of(jdkToolchainVersion))
-    }
+    })
 }
 
 fun KotlinCompile.setupKotlinToolchain(javaToolchains: JavaToolchainService, jdkToolchainVersion: String) {
