@@ -468,7 +468,9 @@ publishing {
         }
     }
 
-    configureRepositories(rootProject)
+    configureRepositories(
+        artifactsRepositoryUrl = uri(layout.buildDirectory.dir("artifacts/maven"))
+    )
 }
 
 tasks.named("generateMetadataFileForMavenPublication") {
