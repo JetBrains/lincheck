@@ -21,6 +21,7 @@ fun MavenPublication.configureMavenPublication(configurePom: MavenPom.() -> Unit
             url.set("https://github.com/JetBrains/lincheck")
         }
 
+        // according to the reference, this should be the person(s) to be contacted about the project
         developers {
             developer {
                 name.set("Nikita Koval")
