@@ -8,49 +8,15 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.tracedata
+package org.jetbrains.kotlinx.lincheck.transformation
 
-import org.jetbrains.kotlinx.lincheck.tracedata.FinalFields.FieldInfo.*
-import org.jetbrains.kotlinx.lincheck.tracedata.FinalFields.addFinalField
-import org.jetbrains.kotlinx.lincheck.tracedata.FinalFields.addMutableField
-import org.jetbrains.kotlinx.lincheck.tracedata.FinalFields.collectFieldInformation
-import org.jetbrains.kotlinx.lincheck.tracedata.FinalFields.isFinalField
-import org.jetbrains.kotlinx.lincheck.transformation.ASM_API
-import org.objectweb.asm.*
+import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.addFinalField
+import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.addMutableField
+import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.collectFieldInformation
+import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.isFinalField
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
+import org.objectweb.asm.*
 
-/**
- * [CodeLocations] object is used to maintain the mapping between unique IDs and code locations.
- * When Lincheck detects an error in the model checking mode, it provides a detailed interleaving trace.
- * This trace includes a list of all shared memory events that occurred during the execution of the program,
- * along with their corresponding code locations. To minimize overhead, Lincheck assigns unique IDs to all
- * code locations it analyses, and stores more detailed information necessary for trace generation in this object.
- */
-internal object CodeLocations {
-    /**
-     * Registers a new code location and returns its unique ID.
-     *
-     * @param stackTraceElement Stack trace element representing the new code location.
-     * @return Unique ID of the new code location.
-     */
-    @JvmStatic
-    @Synchronized
-    fun newCodeLocation(stackTraceElement: StackTraceElement): Int = TRACE_CONTEXT.newCodeLocation(stackTraceElement)
-
-    /**
-     * Returns the [StackTraceElement] associated with the specified code location ID.
-     *
-     * @param codeLocationId ID of the code location.
-     * @return [StackTraceElement] corresponding to the given ID.
-     */
-    @JvmStatic
-    @Synchronized
-    fun stackTrace(codeLocationId: Int): StackTraceElement = TRACE_CONTEXT.stackTrace(codeLocationId)
-}
-
-// TODO or create a ticket to refactor this and use FieldDescriptor and ClassNode visitor instead.
 /**
  * [FinalFields] object is used to track final fields across different classes.
  * It is used only during byte-code transformation to get information about fields
@@ -66,6 +32,7 @@ internal object CodeLocations {
  * If field is found, we record this information and return the result, otherwise we scan superclass and all implemented
  * interfaces in the same way.
  */
+// TODO or create a ticket to refactor this and use FieldDescriptor and ClassNode visitor instead.
 internal object FinalFields {
 
     /**
@@ -78,7 +45,7 @@ internal object FinalFields {
      */
     fun addFinalField(internalClassName: String, fieldName: String) {
         val fields = classToFieldsMap.computeIfAbsent(internalClassName) { HashMap() }
-        fields[fieldName] = FINAL
+        fields[fieldName] = FinalFields.FieldInfo.FINAL
     }
 
     /**
@@ -86,7 +53,7 @@ internal object FinalFields {
      */
     fun addMutableField(internalClassName: String, fieldName: String) {
         val fields = classToFieldsMap.computeIfAbsent(internalClassName) { HashMap() }
-        fields[fieldName] = MUTABLE
+        fields[fieldName] = FinalFields.FieldInfo.MUTABLE
     }
 
     /**
@@ -95,12 +62,12 @@ internal object FinalFields {
     fun isFinalField(internalClassName: String, fieldName: String): Boolean {
         val fields = classToFieldsMap.computeIfAbsent(internalClassName) { HashMap() }
         // Fast-path, in case we already have information about this field.
-        fields[fieldName]?.let { return it == FINAL }
+        fields[fieldName]?.let { return it == FinalFields.FieldInfo.FINAL }
         // If we haven't processed this class yet, fall back to a slow-path, reading the class byte-code.
         collectFieldInformation(internalClassName, fieldName, fields)
         // Here we must have information about this field, as we scanned all the hierarchy of this class.
         val fieldInfo = fields[fieldName] ?: error("Internal error: can't find field with $fieldName in class $internalClassName")
-        return fieldInfo == FINAL
+        return fieldInfo == FinalFields.FieldInfo.FINAL
     }
 
     /**
@@ -119,8 +86,8 @@ internal object FinalFields {
         // Scan class.
         classReader.accept(visitor, 0)
         // Store information about all final and mutable fields.
-        visitor.finalFields.forEach { field -> fields[field] = FINAL }
-        visitor.mutableFields.forEach { field -> fields[field] = MUTABLE }
+        visitor.finalFields.forEach { field -> fields[field] = FinalFields.FieldInfo.FINAL }
+        visitor.mutableFields.forEach { field -> fields[field] = FinalFields.FieldInfo.MUTABLE }
         // If the field is found - return it.
         if (fieldName in visitor.finalFields || fieldName in visitor.mutableFields) return true
         // If field is not present in this class - search in the superclass recursively.
