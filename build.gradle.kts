@@ -142,9 +142,7 @@ fun SourceSet.configureClasspath() {
 }
 
 kotlin {
-    compilerOptions {
-        allWarningsAsErrors = true
-    }
+    configureKotlin()
 }
 
 java {
