@@ -8,7 +8,7 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck_test.verifier.linearizability
+package org.jetbrains.lincheck_test.datastructures.linearizable
 
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.jetbrains.kotlinx.lincheck.strategy.UnexpectedExceptionFailure

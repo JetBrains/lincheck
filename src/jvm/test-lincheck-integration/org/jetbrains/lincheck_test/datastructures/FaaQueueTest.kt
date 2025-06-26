@@ -8,14 +8,13 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck_test
+package org.jetbrains.lincheck_test.datastructures
 
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.Options
 import org.jetbrains.lincheck.datastructures.StressOptions
-import org.jetbrains.lincheck_test.datastructures.FAAQueue
 
 /**
  * Should fail with invalid execution results.
