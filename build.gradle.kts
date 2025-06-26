@@ -468,8 +468,8 @@ tasks {
     val packSonatypeCentralBundle by registering(Zip::class) {
         group = "publishing"
 
+        dependsOn(":trace:publishMavenPublicationToArtifactsRepository")
         dependsOn(":publishMavenPublicationToArtifactsRepository")
-        // (this is the same generated task name)
 
         from(layout.buildDirectory.dir("artifacts/maven"))
         archiveFileName.set("bundle.zip")
