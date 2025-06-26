@@ -8,11 +8,47 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+import org.gradle.api.publish.maven.MavenPom
+import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.Project
 import org.gradle.api.publish.maven.tasks.AbstractPublishToMaven
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.plugins.signing.SigningExtension
 import org.gradle.plugins.signing.SigningPlugin
+
+fun MavenPublication.configureMavenPublication(configurePom: MavenPom.() -> Unit) {
+    pom {
+        configurePom()
+        url.set("https://github.com/JetBrains/lincheck")
+        scm {
+            connection.set("scm:git:https://github.com/JetBrains/lincheck.git")
+            url.set("https://github.com/JetBrains/lincheck")
+        }
+        developers {
+            developer {
+                name.set("Nikita Koval")
+                id.set("nikita.koval")
+                email.set("nikita.koval@jetbrains.com")
+                organization.set("JetBrains")
+                organizationUrl.set("https://www.jetbrains.com")
+            }
+            developer {
+                name.set("Evgeniy Moiseenko")
+                id.set("evgeniy.moiseenko")
+                email.set("evgeniy.moiseenko@jetbrains.com")
+                organization.set("JetBrains")
+                organizationUrl.set("https://www.jetbrains.com")
+            }
+        }
+        licenses {
+            license {
+                name.set("Mozilla Public License Version 2.0")
+                url.set("https://www.mozilla.org/en-US/MPL/2.0/")
+                distribution.set("repo")
+            }
+        }
+    }
+}
 
 // Borrowed from https://github.com/Kotlin/kotlinx.team.infra/.
 // Currently we re-use the kotlin libraries key for signing.
