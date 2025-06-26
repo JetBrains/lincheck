@@ -33,12 +33,6 @@ repositories {
     maven { url = uri("https://repo.gradle.org/gradle/libs-releases/") }
 }
 
-kotlin {
-    compilerOptions {
-        allWarningsAsErrors = true
-    }
-}
-
 sourceSets {
     main {
         java.srcDirs("src/jvm/main")
@@ -145,6 +139,12 @@ sourceSets {
 fun SourceSet.configureClasspath() {
     compileClasspath += sourceSets.main.get().output + sourceSets.test.get().output
     runtimeClasspath += sourceSets.main.get().output + sourceSets.test.get().output
+}
+
+kotlin {
+    compilerOptions {
+        allWarningsAsErrors = true
+    }
 }
 
 java {
