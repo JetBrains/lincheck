@@ -26,3 +26,5 @@ rootProject.name = name
 
 include(":bootstrap")
 include(":trace")
+
+include(":integration-test")

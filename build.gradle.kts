@@ -64,11 +64,6 @@ sourceSets {
         }
     }
 
-    create("lincheckIntegrationTest") {
-        java.srcDir("src/jvm/test-lincheck-integration")
-        configureClasspath()
-    }
-
     create("traceDebuggerIntegrationTest") {
         java.srcDir("src/jvm/test-trace-debugger-integration")
         configureClasspath()
@@ -120,13 +115,6 @@ sourceSets {
         testImplementation("io.mockk:mockk:${mockkVersion}")
         testImplementation("org.gradle:gradle-tooling-api:${gradleToolingApiVersion}")
 
-        // lincheckIntegrationTest
-        val lincheckIntegrationTestImplementation by configurations
-
-        lincheckIntegrationTestImplementation(rootProject)
-        lincheckIntegrationTestImplementation("junit:junit:$junitVersion")
-        lincheckIntegrationTestImplementation("org.jctools:jctools-core:$jctoolsVersion")
-
         // traceDebuggerIntegrationTest
         val traceDebuggerIntegrationTestImplementation by configurations
         val traceDebuggerIntegrationTestRuntimeOnly by configurations
@@ -158,13 +146,6 @@ tasks {
         setupKotlinToolchain()
     }
 
-    named<JavaCompile>("compileLincheckIntegrationTestJava") {
-        setupJavaToolchain()
-    }
-    named<KotlinCompile>("compileLincheckIntegrationTestKotlin") {
-        setupKotlinToolchain()
-    }
-
     named<JavaCompile>("compileTraceDebuggerIntegrationTestJava") {
         setupJavaToolchain()
     }
@@ -193,9 +174,6 @@ fun KotlinCompile.setupKotlinToolchain() {
 // add an association to main and test modules to enable access to `internal` APIs inside integration tests:
 // https://kotlinlang.org/docs/gradle-configure-project.html#associate-compiler-tasks
 kotlin {
-    target.compilations.named("lincheckIntegrationTest") {
-        configureAssociation()
-    }
     target.compilations.named("traceDebuggerIntegrationTest") {
         configureAssociation()
     }
@@ -332,20 +310,6 @@ tasks {
         outputs.upToDateWhen { false } // Always run tests when called
 
         forkEvery = 1
-    }
-
-    // TODO: rename to match trace-debugger/recorder gradle task naming pattern to 'lincheckIntegrationTest'
-    val lincheckIntegrationTest = register<Test>("integrationTest") {
-        group = "verification"
-
-        testClassesDirs = sourceSets["lincheckIntegrationTest"].output.classesDirs
-        classpath = sourceSets["lincheckIntegrationTest"].runtimeClasspath
-
-        configureJvmTestCommon()
-
-        enableAssertions = true
-        testLogging.showStandardStreams = true
-        outputs.upToDateWhen { false } // Always run tests when called
     }
 
     registerTraceAgentIntegrationTestsPrerequisites()

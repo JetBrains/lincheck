@@ -10,10 +10,11 @@
 
 package org.jetbrains.lincheck_test.guide
 
-import org.jctools.queues.atomic.*
-import org.jetbrains.lincheck.*
-import org.jetbrains.lincheck.datastructures.*
-import org.junit.*
+import org.jctools.queues.atomic.MpscLinkedAtomicQueue
+import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
+import org.jetbrains.lincheck.datastructures.Operation
+import org.jetbrains.lincheck.datastructures.StressOptions
+import org.junit.Test
 
 class MPSCQueueTest {
     private val queue = MpscLinkedAtomicQueue<Int>()
