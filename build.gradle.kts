@@ -14,7 +14,6 @@ buildscript {
         maven { url = uri("https://packages.jetbrains.team/maven/p/jcs/maven") }
     }
     dependencies {
-        classpath("com.jetbrains:jet-sign:45.47")
         classpath("com.squareup.okhttp3:okhttp:4.12.0")
     }
 }
@@ -448,15 +447,6 @@ tasks.named("processResources").configure {
     dependsOn(bootstrapJar)
 }
 
-// TODO: signing via JetBrains CodeSign is not yet configured
-// signing {
-//     val isUnderTeamCity = System.getenv("TEAMCITY_VERSION") != null
-//     if (isUnderTeamCity) {
-//         sign(publishing.publications)
-//         signatories = jetbrains.sign.GpgSignSignatoryProvider()
-//     }
-// }
-
 publishing {
     publications {
         register("maven", MavenPublication::class) {
@@ -545,6 +535,14 @@ tasks.named("generateMetadataFileForMavenPublication") {
     dependsOn(jar)
     dependsOn(sourcesJar)
     dependsOn(javadocJar)
+}
+
+signing {
+    val isUnderTeamCity = (System.getenv("TEAMCITY_VERSION") != null)
+    if (isUnderTeamCity) {
+        configureSigning()
+        sign(publishing.publications)
+    }
 }
 
 tasks {
