@@ -19,9 +19,9 @@ import org.gradle.plugins.signing.SigningPlugin
 fun Project.configureSigning() {
     project.pluginManager.apply(SigningPlugin::class.java)
 
-    val keyId = System.getenv("libs.sign.key.id")
-    val signingKey = System.getenv("libs.sign.key.private")
-    val signingKeyPassphrase = System.getenv("libs.sign.passphrase")
+    val keyId = propertyOrEnv("libs.sign.key.id")
+    val signingKey = propertyOrEnv("libs.sign.key.private")
+    val signingKeyPassphrase = propertyOrEnv("libs.sign.passphrase")
 
     if (keyId != null) {
         project.extensions.configure<SigningExtension>("signing") {
@@ -39,3 +39,6 @@ fun Project.configureSigning() {
         error("signing key id is not specified, artifact signing is not enabled.")
     }
 }
+
+private fun Project.propertyOrEnv(name: String): String? =
+    findProperty(name) as? String ?: System.getenv(name)
