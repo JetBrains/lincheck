@@ -11,11 +11,15 @@
 package org.jetbrains.lincheck.trace
 
 internal class IndexedPool<T> {
-    private val items = mutableListOf<T>()
+    private val items = mutableListOf<T?>()
     private val index = hashMapOf<T, Int>()
 
     @Synchronized
-    operator fun get(id: Int): T = items[id]
+    operator fun get(id: Int): T {
+        val item = items[id]
+        check(item != null) { "Element $id is not found in pool"}
+        return item
+    }
 
     @Synchronized
     fun getOrCreateId(item: T): Int = index.getOrPut(item) {
@@ -23,12 +27,24 @@ internal class IndexedPool<T> {
         items.lastIndex
     }
 
-    val content: List<T> = items
+    val content: List<T?> get() = items
 
     @Synchronized
     fun clear() {
         items.clear()
         index.clear()
+    }
+
+    @Synchronized
+    internal fun restore(id: Int, value: T) {
+        check (id >= items.size || items[id] == null) {
+            "Item with id $id is already present in poo"
+        }
+        while (items.size <= id) {
+            items.add(null)
+        }
+        items[id] = value
+        index[value] = id
     }
 }
 

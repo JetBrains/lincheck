@@ -506,6 +506,16 @@ class TraceCollectingEventTracker(
             return
         }
 
+        val idx = try {
+            val f = File("$traceDumpPath.idx")
+            f.parentFile?.mkdirs()
+            f.createNewFile()
+            f.outputStream()
+        } catch (t: Throwable) {
+            System.err.println("TraceRecorder: Cannot create output file $traceDumpPath: ${t.message}")
+            return
+        }
+
         try {
             allThreads.sortBy { it.threadId }
             val roots = mutableListOf<TRTracePoint>()
@@ -525,12 +535,12 @@ class TraceCollectingEventTracker(
                 }
             }
             when (outputType) {
-                TraceCollectorOutputType.BINARY -> saveRecorderTrace(output, TRACE_CONTEXT, roots)
+                TraceCollectorOutputType.BINARY -> saveRecorderTrace(output, idx, TRACE_CONTEXT, roots)
                 TraceCollectorOutputType.TEXT -> printRecorderTrace(output, TRACE_CONTEXT, roots, false)
                 TraceCollectorOutputType.VERBOSE -> printRecorderTrace(output, TRACE_CONTEXT, roots, true)
             }
         } catch (t: Throwable) {
-            System.err.println("TraceRecorder: Cannot write output file $traceDumpPath: ${t.message}")
+            System.err.println("TraceRecorder: Cannot write output file $traceDumpPath: ${t.message} at ${t.stackTraceToString()}")
             return
         } finally {
             output.close()

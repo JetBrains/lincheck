@@ -17,13 +17,13 @@ const val UNKNOWN_CODE_LOCATION_ID = -1
 private val EMPTY_STACK_TRACE = StackTraceElement("", "", "", 0)
 
 class TraceContext {
-    private val locations = ArrayList<StackTraceElement>()
+    private val locations = ArrayList<StackTraceElement?>()
     private val classes = IndexedPool<ClassDescriptor>()
     private val methods = IndexedPool<MethodDescriptor>()
     private val fields = IndexedPool<FieldDescriptor>()
     private val variables = IndexedPool<VariableDescriptor>()
 
-    internal val classDescriptors: List<ClassDescriptor> get() = classes.content
+    internal val classDescriptors: List<ClassDescriptor?> get() = classes.content
 
     fun getOrCreateClassId(className: String): Int {
         return classes.getOrCreateId(ClassDescriptor(className))
@@ -31,11 +31,11 @@ class TraceContext {
 
     fun getClassDescriptor(classId: Int): ClassDescriptor = classes[classId]
 
-    internal fun restoreClassDescriptor(value: ClassDescriptor) {
-        classes.getOrCreateId(value)
+    internal fun restoreClassDescriptor(id: Int, value: ClassDescriptor) {
+        classes.restore(id, value)
     }
 
-    internal val methodDescriptors: List<MethodDescriptor> get() = methods.content
+    internal val methodDescriptors: List<MethodDescriptor?> get() = methods.content
 
     fun getOrCreateMethodId(className: String, methodName: String, desc: String): Int {
         return methods.getOrCreateId(MethodDescriptor(
@@ -50,11 +50,11 @@ class TraceContext {
 
     fun getMethodDescriptor(methodId: Int): MethodDescriptor = methods[methodId]
 
-    internal fun restoreMethodDescriptor(value: MethodDescriptor) {
-        methods.getOrCreateId(value)
+    internal fun restoreMethodDescriptor(id: Int, value: MethodDescriptor) {
+        methods.restore(id, value)
     }
 
-    internal val fieldDescriptors: List<FieldDescriptor> get() = fields.content
+    internal val fieldDescriptors: List<FieldDescriptor?> get() = fields.content
 
     fun getOrCreateFieldId(className: String, fieldName: String, isStatic: Boolean, isFinal: Boolean): Int {
         return fields.getOrCreateId(FieldDescriptor(
@@ -68,11 +68,11 @@ class TraceContext {
 
     fun getFieldDescriptor(fieldId: Int): FieldDescriptor = fields[fieldId]
 
-    internal fun restoreFieldDescriptor(value: FieldDescriptor) {
-        fields.getOrCreateId(value)
+    internal fun restoreFieldDescriptor(id: Int, value: FieldDescriptor) {
+        fields.restore(id, value)
     }
 
-    internal val variableDescriptors: List<VariableDescriptor> get() = variables.content
+    internal val variableDescriptors: List<VariableDescriptor?> get() = variables.content
 
     fun getOrCreateVariableId(variableName: String): Int {
         return variables.getOrCreateId(VariableDescriptor(variableName))
@@ -80,12 +80,12 @@ class TraceContext {
 
     fun getVariableDescriptor(variableId: Int): VariableDescriptor = variables[variableId]
 
-    internal fun restoreVariableDescriptor(value: VariableDescriptor) {
-        variables.getOrCreateId(value)
+    internal fun restoreVariableDescriptor(id: Int, value: VariableDescriptor) {
+        variables.restore(id, value)
     }
 
 
-    internal val codeLocations: List<StackTraceElement> get() = locations
+    internal val codeLocations: List<StackTraceElement?> get() = locations
 
     fun newCodeLocation(stackTraceElement: StackTraceElement): Int {
         val id = locations.size
@@ -96,11 +96,18 @@ class TraceContext {
     fun stackTrace(codeLocationId: Int): StackTraceElement {
         // actors do not have a code location (for now)
         if (codeLocationId == UNKNOWN_CODE_LOCATION_ID) return EMPTY_STACK_TRACE
-        return locations[codeLocationId]
+        var loc = locations[codeLocationId]
+        if (loc == null) {
+            error("Unknown code location $codeLocationId")
+        }
+        return loc
     }
 
-    internal fun restoreCodeLocation(value: StackTraceElement) {
-        locations.add(value)
+    internal fun restoreCodeLocation(id: Int, value: StackTraceElement) {
+        while (locations.size <= id) {
+            locations.add(null)
+        }
+        locations[id] = value
     }
 
     fun clear() {

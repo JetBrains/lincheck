@@ -15,28 +15,249 @@ import java.io.*
 private const val OUTPUT_BUFFER_SIZE: Int = 16*1024*1024
 
 const val TRACE_MAGIC : Long = 0x706e547124ee5f70L
-const val TRACE_VERSION : Long = 6
+const val INDEX_MAGIC : Long = TRACE_MAGIC.inv()
+const val TRACE_VERSION : Long = 7
 
-fun saveRecorderTrace(out: OutputStream, context: TraceContext, rootCallsPerThread: List<TRTracePoint>) {
-    check(context == TRACE_CONTEXT) { "Now only global TRACE_CONTEXT is supported" }
-    DataOutputStream(out.buffered(OUTPUT_BUFFER_SIZE)).use { output ->
-        output.writeLong(TRACE_MAGIC)
-        output.writeLong(TRACE_VERSION)
+private enum class ObjectKind {
+    CLASS_DESCRIPTOR, METHOD_DESCRIPTOR, FIELD_DESCRIPTOR, VARIABLE_DESCRIPTOR, STRING, CODE_LOCATION, TRACEPOINT, TRACEPOINT_FOOTER, EOF
+}
 
-        val codeLocationsStringPool = internalizeCodeLocationStrings(context)
+/**
+ * It is a strategy to save tracepoints.
+ */
+internal interface TraceWriter : DataOutput {
+    fun preWriteTRObject(value: TRObject?)
+    fun writeTRObject(value: TRObject?)
 
-        saveCache(output, context.classDescriptors, DataOutput::writeClassDescriptor)
-        saveCache(output, context.methodDescriptors, DataOutput::writeMethodDescriptor)
-        saveCache(output, context.fieldDescriptors, DataOutput::writeFieldDescriptor)
-        saveCache(output, context.variableDescriptors, DataOutput::writeVariableDescriptor)
-        saveCache(output, codeLocationsStringPool.content, DataOutput::writeUTF)
+    fun startWriteAnyTracepoint()
 
-        saveCodeLocations(output, context.codeLocations, context,codeLocationsStringPool)
+    fun endWriteContainerTracepointHeader(id: Int)
+    fun startWriteContainerTracepointFooter(id: Int)
 
-        output.writeInt(rootCallsPerThread.size)
-        rootCallsPerThread.forEach { root ->
-            root.save(output)
+    fun writeClassDescriptor(id: Int)
+    fun writeMethodDescriptor(id: Int)
+    fun writeFieldDescriptor(id: Int)
+    fun writeVariableDescriptor(id: Int)
+    fun writeCodeLocation(id: Int)
+}
+
+private class LongOutputStream(
+    private val out: OutputStream
+) : OutputStream() {
+    private var position: Long = 0
+
+    val currentPosition: Long get() = position
+
+    override fun write(b: Int) {
+        out.write(b)
+        position += 1
+    }
+
+    override fun write(b: ByteArray?) {
+        out.write(b)
+        position += b?.size ?: 0
+    }
+
+    override fun write(b: ByteArray?, off: Int, len: Int) {
+        out.write(b, off, len)
+        position += len
+    }
+
+    override fun flush() = out.flush()
+
+    override fun close() = out.close()
+}
+
+private class TwoStreamTraceWriter private constructor(
+    private val pos: LongOutputStream,
+    private val index: DataOutputStream,
+    private val context: TraceContext,
+    private val data: DataOutputStream = DataOutputStream(pos),
+): TraceWriter, Closeable, DataOutput by data {
+    constructor(dataStream: OutputStream, indexStream: OutputStream, context: TraceContext) :
+            this(
+                pos = LongOutputStream( dataStream.buffered(OUTPUT_BUFFER_SIZE)),
+                index = DataOutputStream(indexStream.buffered(OUTPUT_BUFFER_SIZE)),
+                context = context
+            )
+
+    private val seenClassDescriptors = Array(context.classDescriptors.size, { _ -> false })
+    private val seenMethodDescriptors = Array(context.methodDescriptors.size, { _ -> false })
+    private val seenFieldDescriptors = Array(context.fieldDescriptors.size, { _ -> false })
+    private val seenVariableDescriptors = Array(context.variableDescriptors.size, { _ -> false })
+    private val seenCodeLocations = Array(context.codeLocations.size, { _ -> false })
+
+    private val stringCache = mutableMapOf<String, Int>()
+
+    // Stack of "container" tracepoints
+    private val containerStack = mutableListOf<Pair<Int, Long>>()
+
+    init {
+        data.writeLong(TRACE_MAGIC)
+        data.writeLong(TRACE_VERSION)
+
+        index.writeLong(INDEX_MAGIC)
+        index.writeLong(TRACE_VERSION)
+    }
+
+    override fun close() {
+        index.writeLong(INDEX_MAGIC)
+        data.writeKind(ObjectKind.EOF)
+        data.close()
+        index.close()
+    }
+
+    override fun preWriteTRObject(value: TRObject?) {
+        if (value == null || value.isPrimitive || value.isSpecial) return
+        writeClassDescriptor(value.classNameId)
+    }
+
+    override fun writeTRObject(value: TRObject?) = data.writeTRObject(value)
+
+    override fun startWriteAnyTracepoint() = data.writeKind(ObjectKind.TRACEPOINT)
+
+    override fun endWriteContainerTracepointHeader(id: Int) {
+        // Store where container content starts
+        containerStack.add(id to pos.currentPosition)
+    }
+
+    override fun startWriteContainerTracepointFooter(id: Int) {
+        check(containerStack.isNotEmpty()) {
+            "Calls endWriteContainerTracepointHeader() / startWriteContainerTracepointFooter($id) are not balanced"
         }
+        val (storedId, startPos) = containerStack.removeLast()
+        check(id == storedId) {
+            "Calls endWriteContainerTracepointHeader($storedId) / startWriteContainerTracepointFooter($id) are not balanced"
+        }
+        writeIndexCell(ObjectKind.TRACEPOINT, id, startPos, pos.currentPosition)
+
+        // Start object
+        data.writeKind(ObjectKind.TRACEPOINT_FOOTER)
+    }
+
+    override fun writeClassDescriptor(id: Int) {
+        if (seenClassDescriptors[id]) return
+
+        // Write class descriptor into data and position into index
+        val position = pos.currentPosition
+        data.writeKind(ObjectKind.CLASS_DESCRIPTOR)
+        data.writeInt(id)
+        data.writeClassDescriptor(context.getClassDescriptor(id))
+
+        writeIndexCell(ObjectKind.CLASS_DESCRIPTOR, id, position)
+        seenClassDescriptors[id] = true
+    }
+
+    override fun writeMethodDescriptor(id: Int) {
+        if (seenMethodDescriptors[id]) return
+
+        val descriptor = context.getMethodDescriptor(id)
+        writeClassDescriptor(descriptor.classId)
+        // Write method descriptor into data and position into index
+        val position = pos.currentPosition
+        data.writeKind(ObjectKind.METHOD_DESCRIPTOR)
+        data.writeInt(id)
+        data.writeMethodDescriptor(descriptor)
+
+        writeIndexCell(ObjectKind.METHOD_DESCRIPTOR, id, position)
+        seenMethodDescriptors[id] = true
+    }
+
+    override fun writeFieldDescriptor(id: Int) {
+        if (seenFieldDescriptors[id]) return
+
+        val descriptor = context.getFieldDescriptor(id)
+        writeClassDescriptor(descriptor.classId)
+        // Write field descriptor into data and position into index
+        val position = pos.currentPosition
+        data.writeKind(ObjectKind.FIELD_DESCRIPTOR)
+        data.writeInt(id)
+        data.writeFieldDescriptor(descriptor)
+
+        writeIndexCell(ObjectKind.FIELD_DESCRIPTOR, id, position)
+        seenFieldDescriptors[id] = true
+    }
+
+    override fun writeVariableDescriptor(id: Int) {
+        if (seenVariableDescriptors[id]) return
+
+        // Write variable descriptor into data and position into index
+        val position = pos.currentPosition
+        data.writeKind(ObjectKind.VARIABLE_DESCRIPTOR)
+        data.writeInt(id)
+        data.writeVariableDescriptor(context.getVariableDescriptor(id))
+
+        writeIndexCell(ObjectKind.VARIABLE_DESCRIPTOR, id, position)
+        seenVariableDescriptors[id] = true
+    }
+
+    override fun writeCodeLocation(id: Int) {
+        if (id == UNKNOWN_CODE_LOCATION_ID || seenCodeLocations[id]) return
+
+        val codeLocation = context.stackTrace(id)
+        // All strings only once. It will have duplications with class and method descriptors,
+        // but size loss is negligible and this way is simplier
+        val fileNameId = writeString(codeLocation.fileName)
+        val classNameId = writeString(codeLocation.className)
+        val methodNameId = writeString(codeLocation.methodName)
+
+        // Code location into data and position into index
+        val position = pos.currentPosition
+        data.writeKind(ObjectKind.CODE_LOCATION)
+        data.writeInt(id)
+        data.writeInt(fileNameId)
+        data.writeInt(classNameId)
+        data.writeInt(methodNameId)
+        data.writeInt(codeLocation.lineNumber)
+
+        writeIndexCell(ObjectKind.CODE_LOCATION, id, position)
+        seenCodeLocations[id] = true
+    }
+
+    private fun writeString(value: String?): Int {
+        if (value == null) return -1
+
+        var id = stringCache[value]
+        if (id != null) return id
+
+        id = stringCache.size
+        stringCache[value] = id
+
+        val position = pos.currentPosition
+        data.writeKind(ObjectKind.STRING)
+        data.writeInt(id)
+        data.writeUTF(value)
+
+        writeIndexCell(ObjectKind.STRING, id, position)
+
+        return id
+    }
+
+    private fun writeIndexCell(kind: ObjectKind, id: Int, startPos: Long, endPos: Long = -1) {
+        index.writeByte(kind.ordinal)
+        index.writeInt(id)
+        index.writeLong(startPos)
+        index.writeLong(endPos)
+    }
+}
+
+fun saveRecorderTrace(data: OutputStream, index: OutputStream, context: TraceContext, rootCallsPerThread: List<TRTracePoint>) {
+    check(context == TRACE_CONTEXT) { "Now only global TRACE_CONTEXT is supported" }
+
+    TwoStreamTraceWriter(data, index, context).use { tw ->
+        rootCallsPerThread.forEach { root ->
+            saveTRTracepoint(tw, root)
+        }
+    }
+}
+
+private fun saveTRTracepoint(writer: TraceWriter, tracepoint: TRTracePoint) {
+    tracepoint.save(writer)
+    if (tracepoint is TRMethodCallTracePoint) {
+        tracepoint.events.forEach {
+            saveTRTracepoint(writer, it)
+        }
+        tracepoint.saveFooter(writer)
     }
 }
 
@@ -53,67 +274,114 @@ fun loadRecordedTrace(inp: InputStream): Pair<TraceContext, List<TRTracePoint>> 
         }
 
         val context = TRACE_CONTEXT // TraceContext()
-        loadCache(input, context::restoreClassDescriptor, DataInput::readClassDescriptor)
-        loadCache(input, context::restoreMethodDescriptor, { readMethodDescriptor(context) })
-        loadCache(input, context::restoreFieldDescriptor, { readFieldDescriptor(context) })
-        loadCache(input, context::restoreVariableDescriptor, DataInput::readVariableDescriptor)
-
-        val codeLocationsStringPool = IndexedPool<String>()
-        loadCache(input, codeLocationsStringPool::getOrCreateId, DataInput::readUTF)
-        loadCodeLocations(input, context,codeLocationsStringPool)
-
-
-        val threadNum = input.readInt()
-        val roots = mutableListOf<TRMethodCallTracePoint>()
-        repeat(threadNum) {
-            roots.add(loadTRTracePoint(input) as TRMethodCallTracePoint)
+        val roots = mutableListOf<TRTracePoint>()
+        val stringCache = mutableListOf<String?>()
+        // Load objects
+        val eof = loadObjectsEagerly(input, context, stringCache, roots)
+        check(eof == ObjectKind.EOF) {
+            "Input contains unbalanced method call tracepoint: footer without main data"
         }
+
         return context to roots
     }
 }
 
-private fun <V> saveCache(output: DataOutput, cache: List<V>, writer: DataOutput.(V) -> Unit) {
-    output.writeInt(cache.size)
-    cache.forEach {
-        output.writer(it)
-    }
-}
-
-
-private fun <V> loadCache(input: DataInput, setter: (V) -> Unit, reader: DataInput.() -> V) {
-    val count = input.readInt()
-    repeat(count) {
-        setter(input.reader())
-    }
-}
-
-private fun internalizeCodeLocationStrings(context: TraceContext): IndexedPool<String> {
-    val pool = IndexedPool<String>()
-    context.codeLocations.forEach {
-        // Maybe, this class missed in cache?
-        context.getOrCreateClassId(it.className.toCanonicalClassName())
-
-        pool.getOrCreateId(it.methodName)
-        val fn = it.fileName
-        if (fn != null) {
-            pool.getOrCreateId(fn)
+private fun loadObjectsEagerly(input: DataInput, context: TraceContext, stringCache: MutableList<String?>, tracepoints: MutableList<TRTracePoint>): ObjectKind {
+    while (true) {
+        val kind = input.readKind()
+        when (kind) {
+            ObjectKind.CLASS_DESCRIPTOR -> loadClassDescriptor(input, context)
+            ObjectKind.METHOD_DESCRIPTOR -> loadMethodDescriptor(input, context)
+            ObjectKind.FIELD_DESCRIPTOR -> loadFieldDescriptor(input, context)
+            ObjectKind.VARIABLE_DESCRIPTOR -> loadVariableDescriptor(input, context)
+            ObjectKind.STRING -> loadString(input, stringCache)
+            ObjectKind.CODE_LOCATION -> loadCodeLocation(input, context, stringCache)
+            ObjectKind.TRACEPOINT -> tracepoints.add(loadTracePointEagerly(input, context, stringCache))
+            ObjectKind.TRACEPOINT_FOOTER -> return kind
+            ObjectKind.EOF -> return kind
         }
     }
-    return pool
 }
 
-private fun saveCodeLocations(output: DataOutput, locations: List<StackTraceElement>, context: TraceContext, stringCache: IndexedPool<String>) {
-    output.writeInt(locations.size)
-    locations.forEach {
-        output.writeStackTraceElement(it, context, stringCache)
-    }
+private fun loadClassDescriptor(
+    input: DataInput,
+    context: TraceContext
+) {
+    val id = input.readInt()
+    val descriptor = input.readClassDescriptor()
+    context.restoreClassDescriptor(id,descriptor)
 }
 
-private fun loadCodeLocations(input: DataInput, context: TraceContext, stringCache: IndexedPool<String>) {
-    val count = input.readInt()
-    repeat(count) {
-        CodeLocations.newCodeLocation(input.readStackTraceElement(context, stringCache))
+private fun loadMethodDescriptor(
+    input: DataInput,
+    context: TraceContext
+) {
+    val id = input.readInt()
+    val descriptor = input.readMethodDescriptor(context)
+    context.restoreMethodDescriptor(id,descriptor)
+}
+
+private fun loadFieldDescriptor(
+    input: DataInput,
+    context: TraceContext
+) {
+    val id = input.readInt()
+    val descriptor = input.readFieldDescriptor(context)
+    context.restoreFieldDescriptor(id,descriptor)
+}
+
+private fun loadVariableDescriptor(
+    input: DataInput,
+    context: TraceContext
+) {
+    val id = input.readInt()
+    val descriptor = input.readVariableDescriptor()
+    context.restoreVariableDescriptor(id,descriptor)
+}
+
+private fun loadString(
+    input: DataInput,
+    stringCache: MutableList<String?>
+) {
+    val id = input.readInt()
+    val value = input.readUTF()
+    while (stringCache.size <= id) {
+        stringCache.add(null)
     }
+    stringCache[id] = value
+}
+
+private fun loadCodeLocation(
+    input: DataInput,
+    context: TraceContext,
+    stringCache: MutableList<String?>
+) {
+    val id = input.readInt()
+
+    val fileNameId = input.readInt()
+    val classNameId = input.readInt()
+    val methodNameId = input.readInt()
+    val lineNumber = input.readInt()
+
+    val ste = StackTraceElement(
+        /* declaringClass = */ stringCache[classNameId],
+        /* methodName = */ stringCache[methodNameId],
+        /* fileName = */ stringCache[fileNameId],
+        /* lineNumber = */ lineNumber
+    )
+    context.restoreCodeLocation(id, ste)
+}
+
+private fun loadTracePointEagerly(input: DataInput, context: TraceContext, stringCache: MutableList<String?>): TRTracePoint {
+    val tracePoint = loadTRTracePoint(input)
+    if (tracePoint !is TRMethodCallTracePoint) return tracePoint
+    // Load all children
+    val kind = loadObjectsEagerly(input, context, stringCache, tracePoint.events)
+    check(kind == ObjectKind.TRACEPOINT_FOOTER) {
+        "Input contains unbalanced method call tracepoint: tracepoint without footer"
+    }
+    tracePoint.loadFooter(input)
+    return tracePoint
 }
 
 private fun DataOutput.writeType(value: Types.Type) {
@@ -225,36 +493,16 @@ private fun DataInput.readVariableDescriptor(): VariableDescriptor {
     return VariableDescriptor(readUTF())
 }
 
-private fun DataOutput.writeStackTraceElement(value: StackTraceElement, context: TraceContext, stringCache: IndexedPool<String>) {
-    writeInternalizedString(value.className.toCanonicalClassName(), { name -> context.getOrCreateClassId(name) })
-    writeInternalizedString(value.methodName, stringCache::getOrCreateId)
-    writeInternalizedString(value.fileName, stringCache::getOrCreateId)
-    writeInt(value.lineNumber)
-}
 
-private fun DataInput.readStackTraceElement(context: TraceContext, stringCache: IndexedPool<String>): StackTraceElement {
-    val className = readInternalizedString({ id -> context.getClassDescriptor(id).name  })?.toInternalClassName()
-    val methodName = readInternalizedString(stringCache::get)
-    val fileName = readInternalizedString(stringCache::get)
-    val lineNumber = readInt()
-    return StackTraceElement(className, methodName, fileName, lineNumber)
-}
+private fun DataOutput.writeKind(value: ObjectKind) = writeByte(value.ordinal)
 
-private fun DataOutput.writeInternalizedString(value: String?, internalizer: (String) -> Int?) {
-    if (value == null) {
-        writeInt(-1)
-    } else {
-        writeInt(internalizer(value) ?: -1)
+private fun DataInput.readKind(): ObjectKind {
+    val ordinal = readByte()
+    val values = ObjectKind.entries
+    if (ordinal < 0 || ordinal > values.size) {
+        throw InvalidObjectException("Cannot read ObjectKind: unknown ordinal $ordinal")
     }
-}
-
-private fun DataInput.readInternalizedString(internalizer: (Int) -> String?): String? {
-    val id = readInt()
-    if (id < 0) {
-        return null
-    } else {
-        return internalizer(id)
-    }
+    return values[ordinal.toInt()]
 }
 
 /**
