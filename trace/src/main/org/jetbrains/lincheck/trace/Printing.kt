@@ -15,6 +15,14 @@ import java.io.PrintStream
 
 private const val OUTPUT_BUFFER_SIZE: Int = 16*1024*1024
 
+fun printRecorderTrace(fileName: String?, context: TraceContext, rootCallsPerThread: List<TRTracePoint>, verbose: Boolean) =
+    printRecorderTrace(
+        output = if (fileName == null) System.out else openNewFile(fileName),
+        context = context,
+        rootCallsPerThread = rootCallsPerThread,
+        verbose = verbose
+    )
+
 fun printRecorderTrace(output: OutputStream, context: TraceContext, rootCallsPerThread: List<TRTracePoint>, verbose: Boolean) {
     check(context == TRACE_CONTEXT) { "Now only global TRACE_CONTEXT is supported" }
     PrintStream(output.buffered(OUTPUT_BUFFER_SIZE)).use { output ->

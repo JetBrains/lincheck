@@ -15,7 +15,6 @@ import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.trace.*
 import sun.nio.ch.lincheck.*
-import java.io.File
 import java.lang.invoke.CallSite
 import java.util.concurrent.ConcurrentHashMap
 
@@ -75,7 +74,7 @@ private class ThreadData(
 }
 
 enum class TraceCollectorOutputType {
-    BINARY, TEXT, VERBOSE
+    BINARY, `BINARY-MEM`, TEXT, VERBOSE
 }
 
 fun String?.toTraceCollectorOutputType(): TraceCollectorOutputType {
@@ -99,7 +98,27 @@ class TraceCollectingEventTracker(
     // only at the end
     private val threads = ConcurrentHashMap<Thread, ThreadData>()
 
+    private val strategy: TraceCollectingStrategy
+
+    init {
+        when (outputType) {
+            TraceCollectorOutputType.BINARY -> {
+                check(traceDumpPath != null) { "Stream output type needs non-empty output file name" }
+                strategy = FileStreamingTraceCollecting(traceDumpPath, TRACE_CONTEXT)
+            }
+            TraceCollectorOutputType.`BINARY-MEM` -> {
+                check(traceDumpPath != null) { "Binary output type needs non-empty output file name" }
+                strategy = MemoryTraceCollecting()
+            }
+            else -> {
+                strategy = MemoryTraceCollecting()
+            }
+        }
+    }
+
     override fun beforeThreadFork(thread: Thread, descriptor: ThreadDescriptor) = runInsideIgnoredSection {
+        if (outputType == TraceCollectorOutputType.BINARY) return
+
         ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         // Create new thread handle
         val forkedThreadData = ThreadData(threads.size)
@@ -109,6 +128,8 @@ class TraceCollectingEventTracker(
     }
 
     override fun beforeThreadStart() = runInsideIgnoredSection {
+        if (outputType == TraceCollectorOutputType.BINARY) return
+
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
         val tracePoint = TRMethodCallTracePoint(
@@ -118,17 +139,20 @@ class TraceCollectingEventTracker(
             obj = TRObject(Thread.currentThread()),
             parameters = emptyList()
         )
-        tracePoint.result = TR_OBJECT_VOID
+        strategy.tracePointCreated(null, tracePoint)
         threadData.pushStackFrame(tracePoint, Thread.currentThread())
         threadDescriptor.enableAnalysis()
     }
 
     override fun afterThreadFinish() {
+        if (outputType == TraceCollectorOutputType.BINARY) return
+
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
         // Don't pop, we need it
         val tracePoint = threadData.callStack.first()
         tracePoint.result = TR_OBJECT_VOID
+        strategy.callEnded(tracePoint)
         threadDescriptor.disableAnalysis()
     }
 
@@ -140,6 +164,7 @@ class TraceCollectingEventTracker(
         // Don't pop, we need it
         val tracePoint = threadData.callStack.first()
         tracePoint.exceptionClassName = exception::class.java.name
+        strategy.callEnded(tracePoint)
         threadDescriptor.disableAnalysis()
         throw exception
     }
@@ -244,7 +269,7 @@ class TraceCollectingEventTracker(
             obj = TRObjectOrNull(obj),
             value = TRObjectOrNull(value)
         )
-        threadData.currentMethodCallTracePoint().events.add(tracePoint)
+        strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
     }
 
     override fun afterReadArrayElement(array: Any, index: Int, codeLocation: Int, value: Any?) {
@@ -257,7 +282,7 @@ class TraceCollectingEventTracker(
             index = index,
             value = null // todo
         )
-        threadData.currentMethodCallTracePoint().events.add(tracePoint)
+        strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
     }
 
     override fun beforeWriteField(
@@ -280,7 +305,7 @@ class TraceCollectingEventTracker(
             obj = TRObjectOrNull(obj),
             value = TRObjectOrNull(value)
         )
-        threadData.currentMethodCallTracePoint().events.add(tracePoint)
+        strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
         return false
     }
 
@@ -298,7 +323,7 @@ class TraceCollectingEventTracker(
             index = index,
             value = TRObjectOrNull(value)
         )
-        threadData.currentMethodCallTracePoint().events.add(tracePoint)
+        strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
         return false
     }
 
@@ -313,7 +338,7 @@ class TraceCollectingEventTracker(
             localVariableId = variableId,
             value = TRObjectOrNull(value)
         )
-        threadData.currentMethodCallTracePoint().events.add(tracePoint)
+        strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
 
         val variableDescriptor = TRACE_CONTEXT.getVariableDescriptor(variableId)
         threadData.afterLocalRead(variableDescriptor.name, value)
@@ -328,7 +353,7 @@ class TraceCollectingEventTracker(
             localVariableId = variableId,
             value = TRObjectOrNull(value)
         )
-        threadData.currentMethodCallTracePoint().events.add(tracePoint)
+        strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
 
         val variableDescriptor = TRACE_CONTEXT.getVariableDescriptor(variableId)
         threadData.afterLocalWrite(variableDescriptor.name, value)
@@ -355,7 +380,7 @@ class TraceCollectingEventTracker(
             obj = TRObjectOrNull(receiver),
             parameters = params.map { TRObjectOrNull(it) }
         )
-        threadData.currentMethodCallTracePoint().events.add(tracePoint)
+        strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
         threadData.pushStackFrame(tracePoint, receiver)
 
         // if the method has certain guarantees, enter the corresponding section
@@ -376,6 +401,7 @@ class TraceCollectingEventTracker(
 
         val tracePoint = threadData.popStackFrame()
         tracePoint.result = TRObjectOrVoid(result)
+        strategy.callEnded(tracePoint)
 
         val methodSection = methodAnalysisSectionType(receiver, methodDescriptor.className, methodDescriptor.methodName)
         threadData.leaveAnalysisSection(methodSection)
@@ -395,6 +421,7 @@ class TraceCollectingEventTracker(
 
         val tracePoint = threadData.popStackFrame()
         tracePoint.exceptionClassName = t.javaClass.name
+        strategy.callEnded(tracePoint)
 
         val methodSection = methodAnalysisSectionType(receiver, methodDescriptor.className, methodDescriptor.methodName)
         threadData.leaveAnalysisSection(methodSection)
@@ -414,7 +441,7 @@ class TraceCollectingEventTracker(
             obj = TRObjectOrNull(owner),
             parameters = emptyList()
         )
-        threadData.currentMethodCallTracePoint().events.add(tracePoint)
+        strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
         threadData.pushStackFrame(tracePoint, owner)
     }
 
@@ -422,6 +449,7 @@ class TraceCollectingEventTracker(
         val threadData = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTrackerData as? ThreadData? ?: return
         val tracePoint = threadData.popStackFrame()
         tracePoint.result = TR_OBJECT_VOID
+        strategy.callEnded(tracePoint)
     }
 
     override fun invokeDeterministicallyOrNull(
@@ -478,41 +506,30 @@ class TraceCollectingEventTracker(
             obj = null,
             parameters = emptyList()
         )
-        tracePoint.result = TR_OBJECT_VOID
+        strategy.tracePointCreated(null,tracePoint)
         threadData.pushStackFrame(tracePoint, null)
 
         startTime = System.currentTimeMillis()
     }
 
     fun finishAndDumpTrace() {
+        // Close this thread callstack
+        val threadData = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTrackerData as? ThreadData? ?: return
+        val tracePoint = threadData.currentMethodCallTracePoint()
+        tracePoint.result = TR_OBJECT_VOID
+        strategy.callEnded(tracePoint)
+
+
         val allThreads = mutableListOf<ThreadData>()
         allThreads.addAll(threads.values)
         threads.clear()
 
-        if (traceDumpPath == null) {
-            return
-        }
+        strategy.traceEnded()
 
-        // System.err.println("Trace collected in ${System.currentTimeMillis() - startTime} ms")
+        System.err.println("Trace collected in ${System.currentTimeMillis() - startTime} ms")
         startTime = System.currentTimeMillis()
 
-        val output = try {
-            val f = File(traceDumpPath)
-            f.parentFile?.mkdirs()
-            f.createNewFile()
-            f.outputStream()
-        } catch (t: Throwable) {
-            System.err.println("TraceRecorder: Cannot create output file $traceDumpPath: ${t.message}")
-            return
-        }
-
-        val idx = try {
-            val f = File("$traceDumpPath.idx")
-            f.parentFile?.mkdirs()
-            f.createNewFile()
-            f.outputStream()
-        } catch (t: Throwable) {
-            System.err.println("TraceRecorder: Cannot create output file $traceDumpPath: ${t.message}")
+        if (outputType == TraceCollectorOutputType.BINARY) {
             return
         }
 
@@ -535,16 +552,16 @@ class TraceCollectingEventTracker(
                 }
             }
             when (outputType) {
-                TraceCollectorOutputType.BINARY -> saveRecorderTrace(output, idx, TRACE_CONTEXT, roots)
-                TraceCollectorOutputType.TEXT -> printRecorderTrace(output, TRACE_CONTEXT, roots, false)
-                TraceCollectorOutputType.VERBOSE -> printRecorderTrace(output, TRACE_CONTEXT, roots, true)
+                TraceCollectorOutputType.`BINARY-MEM` -> saveRecorderTrace(traceDumpPath!!, TRACE_CONTEXT, roots)
+                TraceCollectorOutputType.TEXT -> printRecorderTrace(traceDumpPath, TRACE_CONTEXT, roots, false)
+                TraceCollectorOutputType.VERBOSE -> printRecorderTrace(traceDumpPath, TRACE_CONTEXT, roots, true)
+                TraceCollectorOutputType.BINARY -> Unit // Do nothing, everything is written
             }
         } catch (t: Throwable) {
             System.err.println("TraceRecorder: Cannot write output file $traceDumpPath: ${t.message} at ${t.stackTraceToString()}")
             return
         } finally {
-            output.close()
-            // System.err.println("Trace dumped in ${System.currentTimeMillis() - startTime} ms")
+            System.err.println("Trace dumped in ${System.currentTimeMillis() - startTime} ms")
         }
     }
 
