@@ -19,26 +19,22 @@ import org.gradle.plugins.signing.SigningPlugin
 fun Project.configureSigning() {
     project.pluginManager.apply(SigningPlugin::class.java)
 
-    val keyId = propertyOrEnv("libs.sign.key.id")
-    val signingKey = propertyOrEnv("libs.sign.key.private")
-    val signingKeyPassphrase = propertyOrEnv("libs.sign.passphrase")
+    val keyId = getProperty("libs.sign.key.id")
+    val signingKey = getProperty("libs.sign.key.private")
+    val signingKeyPassphrase = getProperty("libs.sign.passphrase")
 
-    if (keyId != null) {
-        project.extensions.configure<SigningExtension>("signing") {
-            useInMemoryPgpKeys(keyId, signingKey, signingKeyPassphrase)
-            val signingTasks = sign(extensions.getByType(PublishingExtension::class.java).publications) // all publications
-            // due to each publication including the same javadoc artifact file,
-            // every publication signing task produces (overwrites) the same javadoc.asc signature file beside
-            // and includes it to that publication
-            // Thus, every publication publishing task implicitly depends on every signing task
-            tasks.withType(AbstractPublishToMaven::class.java).configureEach {
-                dependsOn(signingTasks) // make this dependency explicit
-            }
+    project.extensions.configure<SigningExtension>("signing") {
+        useInMemoryPgpKeys(keyId, signingKey, signingKeyPassphrase)
+        val signingTasks = sign(extensions.getByType(PublishingExtension::class.java).publications) // all publications
+        // due to each publication including the same javadoc artifact file,
+        // every publication signing task produces (overwrites) the same javadoc.asc signature file beside
+        // and includes it to that publication
+        // Thus, every publication publishing task implicitly depends on every signing task
+        tasks.withType(AbstractPublishToMaven::class.java).configureEach {
+            dependsOn(signingTasks) // make this dependency explicit
         }
-    } else {
-        error("signing key id is not specified, artifact signing is not enabled.")
     }
 }
 
-private fun Project.propertyOrEnv(name: String): String? =
-    findProperty(name) as? String ?: System.getenv(name)
+private fun Project.getProperty(name: String): String =
+    findProperty(name) as? String ?: error("Property `$name` is not specified, artifact signing is not enabled.")
