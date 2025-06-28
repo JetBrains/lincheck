@@ -38,7 +38,7 @@ internal class IndexedPool<T> {
     @Synchronized
     internal fun restore(id: Int, value: T) {
         check (id >= items.size || items[id] == null) {
-            "Item with id $id is already present in poo"
+            "Item with id $id is already present in pool"
         }
         while (items.size <= id) {
             items.add(null)

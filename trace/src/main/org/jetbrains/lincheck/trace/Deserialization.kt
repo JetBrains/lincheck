@@ -357,7 +357,7 @@ private class SeekableInputStream(
     private val channel: SeekableByteChannel
 ): InputStream() {
     private var mark: Long = 0
-    private val buffer = ByteBuffer.allocate(4096)
+    private val buffer = ByteBuffer.allocate(65536)
 
     override fun read(): Int {
         buffer.clear()
