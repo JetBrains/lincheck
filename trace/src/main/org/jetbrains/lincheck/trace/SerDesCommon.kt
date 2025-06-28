@@ -13,6 +13,8 @@ package org.jetbrains.kotlinx.lincheck.tracedata
 import java.io.DataInput
 import java.io.DataOutput
 import java.io.File
+import java.io.IOException
+import java.io.InputStream
 import java.io.InvalidObjectException
 import java.io.OutputStream
 
@@ -159,7 +161,7 @@ internal fun DataInput.readKind(): ObjectKind {
     val ordinal = readByte()
     val values = ObjectKind.entries
     if (ordinal < 0 || ordinal > values.size) {
-        throw InvalidObjectException("Cannot read ObjectKind: unknown ordinal $ordinal")
+        throw IOException("Cannot read ObjectKind: unknown ordinal $ordinal")
     }
     return values[ordinal.toInt()]
 }
@@ -169,4 +171,10 @@ internal fun openNewFile(name: String): OutputStream {
     f.parentFile?.mkdirs()
     f.createNewFile()
     return f.outputStream()
+}
+
+internal fun openExistingFile(name: String?): InputStream? {
+    val f = File(name)
+    if (!f.exists()) return null
+    return f.inputStream()
 }

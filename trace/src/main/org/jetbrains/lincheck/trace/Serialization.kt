@@ -124,10 +124,12 @@ private class TwoStreamTraceWriter private constructor(
     }
 
     override fun close() {
+        writeIndexCell(ObjectKind.EOF, -1, -1, -1)
         index.writeLong(INDEX_MAGIC)
+        index.close()
+
         data.writeKind(ObjectKind.EOF)
         data.close()
-        index.close()
     }
 
     override fun preWriteTRObject(value: TRObject?) {
