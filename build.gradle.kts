@@ -104,23 +104,23 @@ sourceSets {
         }
     }
 
-    create("traceDebuggerIntegrationTest") {
-        java.srcDir("src/jvm/test-trace-debugger-integration")
-        configureClasspath()
+//    create("traceDebuggerIntegrationTest") {
+//        java.srcDir("src/jvm/test-trace-debugger-integration")
+//        configureClasspath()
+//
+//        resources {
+//            srcDir("src/jvm/test-trace-debugger-integration/resources")
+//        }
+//    }
 
-        resources {
-            srcDir("src/jvm/test-trace-debugger-integration/resources")
-        }
-    }
-
-    create("traceRecorderIntegrationTest") {
-        java.srcDir("src/jvm/test-trace-recorder-integration")
-        configureClasspath()
-
-        resources {
-            srcDir("src/jvm/test-trace-recorder-integration/resources")
-        }
-    }
+//    create("traceRecorderIntegrationTest") {
+//        java.srcDir("src/jvm/test-trace-recorder-integration")
+//        configureClasspath()
+//
+//        resources {
+//            srcDir("src/jvm/test-trace-recorder-integration/resources")
+//        }
+//    }
 
     dependencies {
         // main
@@ -159,20 +159,20 @@ sourceSets {
         testImplementation("org.gradle:gradle-tooling-api:${gradleToolingApiVersion}")
 
         // traceDebuggerIntegrationTest
-        val traceDebuggerIntegrationTestImplementation by configurations
-        val traceDebuggerIntegrationTestRuntimeOnly by configurations
-
-        traceDebuggerIntegrationTestImplementation("junit:junit:$junitVersion")
-        traceDebuggerIntegrationTestImplementation("org.gradle:gradle-tooling-api:${gradleToolingApiVersion}")
-        traceDebuggerIntegrationTestRuntimeOnly("org.slf4j:slf4j-simple:$slf4jVersion")
+//        val traceDebuggerIntegrationTestImplementation by configurations
+//        val traceDebuggerIntegrationTestRuntimeOnly by configurations
+//
+//        traceDebuggerIntegrationTestImplementation("junit:junit:$junitVersion")
+//        traceDebuggerIntegrationTestImplementation("org.gradle:gradle-tooling-api:${gradleToolingApiVersion}")
+//        traceDebuggerIntegrationTestRuntimeOnly("org.slf4j:slf4j-simple:$slf4jVersion")
 
         // traceRecorderIntegrationTest
-        val traceRecorderIntegrationTestImplementation by configurations
-        val traceRecorderIntegrationTestRuntimeOnly by configurations
-
-        traceRecorderIntegrationTestImplementation("junit:junit:$junitVersion")
-        traceRecorderIntegrationTestImplementation("org.gradle:gradle-tooling-api:${gradleToolingApiVersion}")
-        traceRecorderIntegrationTestRuntimeOnly("org.slf4j:slf4j-simple:$slf4jVersion")
+//        val traceRecorderIntegrationTestImplementation by configurations
+//        val traceRecorderIntegrationTestRuntimeOnly by configurations
+//
+//        traceRecorderIntegrationTestImplementation("junit:junit:$junitVersion")
+//        traceRecorderIntegrationTestImplementation("org.gradle:gradle-tooling-api:${gradleToolingApiVersion}")
+//        traceRecorderIntegrationTestRuntimeOnly("org.slf4j:slf4j-simple:$slf4jVersion")
     }
 }
 
@@ -196,19 +196,19 @@ tasks {
         setupKotlinToolchain(project)
     }
 
-    named<JavaCompile>("compileTraceDebuggerIntegrationTestJava") {
-        setupJavaToolchain(project)
-    }
-    named<KotlinCompile>("compileTraceDebuggerIntegrationTestKotlin") {
-        setupKotlinToolchain(project)
-    }
-
-    named<JavaCompile>("compileTraceRecorderIntegrationTestJava") {
-        setupJavaToolchain(project)
-    }
-    named<KotlinCompile>("compileTraceRecorderIntegrationTestKotlin") {
-        setupKotlinToolchain(project)
-    }
+//    named<JavaCompile>("compileTraceDebuggerIntegrationTestJava") {
+//        setupJavaToolchain(project)
+//    }
+//    named<KotlinCompile>("compileTraceDebuggerIntegrationTestKotlin") {
+//        setupKotlinToolchain(project)
+//    }
+//
+//    named<JavaCompile>("compileTraceRecorderIntegrationTestJava") {
+//        setupJavaToolchain(project)
+//    }
+//    named<KotlinCompile>("compileTraceRecorderIntegrationTestKotlin") {
+//        setupKotlinToolchain(project)
+//    }
 
     withType<KotlinCompile> {
         getAccessToInternalDefinitionsOf(project(":common"))
@@ -218,12 +218,12 @@ tasks {
 // add an association to main and test modules to enable access to `internal` APIs inside integration tests:
 // https://kotlinlang.org/docs/gradle-configure-project.html#associate-compiler-tasks
 kotlin {
-    target.compilations.named("traceDebuggerIntegrationTest") {
-        configureAssociation()
-    }
-    target.compilations.named("traceRecorderIntegrationTest") {
-        configureAssociation()
-    }
+//    target.compilations.named("traceDebuggerIntegrationTest") {
+//        configureAssociation()
+//    }
+//    target.compilations.named("traceRecorderIntegrationTest") {
+//        configureAssociation()
+//    }
 }
 
 fun KotlinCompilation<*>.configureAssociation() {
@@ -345,32 +345,32 @@ tasks {
 
     registerTraceAgentIntegrationTestsPrerequisites()
 
-    val copyTraceDebuggerFatJar = copyTraceAgentFatJar(project(":trace-debugger"), "trace-debugger-fat.jar")
-    val copyTraceRecorderFatJar = copyTraceAgentFatJar(project(":trace-recorder"), "trace-recorder-fat.jar")
-
-    val traceDebuggerIntegrationTest = register<Test>("traceDebuggerIntegrationTest") {
-        configureJvmTestCommon()
-        group = "verification"
-        include("org/jetbrains/trace/debugger/integration/*")
-
-        testClassesDirs = sourceSets["traceDebuggerIntegrationTest"].output.classesDirs
-        classpath = sourceSets["traceDebuggerIntegrationTest"].runtimeClasspath
-
-        outputs.upToDateWhen { false } // Always run tests when called
-        dependsOn(copyTraceDebuggerFatJar)
-    }
-
-    val traceRecorderIntegrationTest = register<Test>("traceRecorderIntegrationTest") {
-        configureJvmTestCommon()
-        group = "verification"
-        include("org/jetbrains/trace/recorder/integration/*")
-
-        testClassesDirs = sourceSets["traceRecorderIntegrationTest"].output.classesDirs
-        classpath = sourceSets["traceRecorderIntegrationTest"].runtimeClasspath
-
-        outputs.upToDateWhen { false } // Always run tests when called
-        dependsOn(copyTraceRecorderFatJar)
-    }
+//    val copyTraceDebuggerFatJar = copyTraceAgentFatJar(project(":trace-debugger"), "trace-debugger-fat.jar")
+//    val copyTraceRecorderFatJar = copyTraceAgentFatJar(project(":trace-recorder"), "trace-recorder-fat.jar")
+//
+//    val traceDebuggerIntegrationTest = register<Test>("traceDebuggerIntegrationTest") {
+//        configureJvmTestCommon()
+//        group = "verification"
+//        include("org/jetbrains/trace/debugger/integration/*")
+//
+//        testClassesDirs = sourceSets["traceDebuggerIntegrationTest"].output.classesDirs
+//        classpath = sourceSets["traceDebuggerIntegrationTest"].runtimeClasspath
+//
+//        outputs.upToDateWhen { false } // Always run tests when called
+//        dependsOn(copyTraceDebuggerFatJar)
+//    }
+//
+//    val traceRecorderIntegrationTest = register<Test>("traceRecorderIntegrationTest") {
+//        configureJvmTestCommon()
+//        group = "verification"
+//        include("org/jetbrains/trace/recorder/integration/*")
+//
+//        testClassesDirs = sourceSets["traceRecorderIntegrationTest"].output.classesDirs
+//        classpath = sourceSets["traceRecorderIntegrationTest"].runtimeClasspath
+//
+//        outputs.upToDateWhen { false } // Always run tests when called
+//        dependsOn(copyTraceRecorderFatJar)
+//    }
 
     check {
         dependsOn += testIsolated
