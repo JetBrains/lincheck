@@ -87,6 +87,30 @@ internal class TraceReporter(
             .forEach { event -> event.returnedValue = resultProvider[event.iThread, event.actorId] }
     }
 
+    /**
+     * Adjusts the positions of `SwitchEventTracePoint` instances within the trace,
+     * moving the switch points occurring at the beginning of methods outside the method call trace points.
+     *
+     * For instance, the following trace sequence:
+     *   ```
+     *   foo()
+     *      bar()
+     *         switch
+     *         ...
+     *         x = 42
+     *   ```
+     *
+     *  will be transformed into:
+     *    ```
+     *    switch
+     *    ...
+     *    foo()
+     *      bar()
+     *        x = 42
+     *    ```
+     *
+     * @return A new trace instance with updated trace point ordering.
+     */
     private fun Trace.moveStartingSwitchPointsOutOfMethodCalls(): Trace {
         val newTrace = this.trace.toMutableList()
         val tracePointsToRemove = mutableListOf<IntRange>()
@@ -151,6 +175,47 @@ internal class TraceReporter(
         return Trace(newTrace, this.threadNames)
     }
 
+    /**
+     * Adjusts the positions of `SpinCycleStartTracePoint` instances within the trace
+     * corresponding to recursive spin-locks, ensuring that the recursive spin-lock is marked
+     * at the point of the recursive method call trace point.
+     *
+     * For instance, the following trace sequence:
+     *   ```
+     *   foo()
+     *     bar()
+     *       /* spin loop start */
+     *   ┌╶> x = 42
+     *   |   ...
+     *   └╶╶ switch
+     *     ...
+     *     foo()
+     *        bar()
+     *          /* spin loop start */
+     *      ┌╶> x = 42
+     *      |   ...
+     *      └╶╶ switch
+     *   ```
+     *
+     *  will be transformed into:
+     *   ```
+     *       /* spin loop start */
+     *   ┌╶> foo()
+     *   |     bar()
+     *   |       x = 42
+     *   |       ...
+     *   └╶╶---- switch
+     *     ...
+     *           /* spin loop start */
+     *       ┌╶> foo()
+     *       |     bar()
+     *       |       x = 42
+     *       |       ...
+     *       └╶╶---- switch
+     *   ```
+     *
+     * @return A new trace instance with updated trace point ordering.
+     */
     private fun Trace.moveSpinCycleStartTracePoints(): Trace {
         val newTrace = this.trace.toMutableList()
 
