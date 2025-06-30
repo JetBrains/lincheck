@@ -397,20 +397,18 @@ private class SeekableInputStream(
 
     override fun read(): Int {
         if (buffer.remaining() < 1) {
-            refillBuffer()
-        }
-        if (buffer.remaining() < 1) {
-            return -1
+            if (!refillBuffer()) {
+                return -1
+            }
         }
         return buffer.get().toInt() and 0xff
     }
 
     override fun read(b: ByteArray, off: Int, len: Int): Int {
         if (buffer.remaining() < 1) {
-            refillBuffer()
-        }
-        if (buffer.remaining() < 1) {
-            return -1
+            if (!refillBuffer()) {
+                return -1
+            }
         }
         val toRead = min(buffer.remaining(), len)
         buffer.get(b, off, toRead)
@@ -456,11 +454,16 @@ private class SeekableInputStream(
         return startPosition + buffer.position()
     }
 
-    private fun refillBuffer() {
+    private fun refillBuffer(): Boolean {
         buffer.clear()
         startPosition = channel.position()
-        channel.read(buffer)
+        var read = 0
+        while (read == 0) {
+            read = channel.read(buffer)
+            if (read < 0) return false
+        }
         buffer.rewind()
+        return true
     }
 }
 
