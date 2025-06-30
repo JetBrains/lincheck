@@ -154,7 +154,8 @@ tasks {
     val traceDebuggerIntegrationTest = register<Test>("traceDebuggerIntegrationTest") {
         configureJvmTestCommon(project)
         group = "verification"
-//        include("org/jetbrains/trace_debugger/integration/*")
+        // TODO: do I need these explicit include's?
+        include("org/jetbrains/trace_debugger_test/*")
 
         testClassesDirs = sourceSets["traceDebuggerIntegrationTest"].output.classesDirs
         classpath = sourceSets["traceDebuggerIntegrationTest"].runtimeClasspath
@@ -179,13 +180,11 @@ tasks {
 // TODO: how not to copy these functions everywhere
 fun JavaCompile.setupJavaToolchain() {
     val jdkToolchainVersion: String by project
-    println("Using JAVA JDK toolchain version: $jdkToolchainVersion")
     setupJavaToolchain(javaToolchains, jdkToolchainVersion)
 }
 
 fun KotlinCompile.setupKotlinToolchain() {
     val jdkToolchainVersion: String by project
-    println("Using KOTLIN JDK toolchain version: $jdkToolchainVersion")
     setupKotlinToolchain(javaToolchains, jdkToolchainVersion)
 }
 
@@ -203,14 +202,4 @@ fun KotlinCompile.setupFriendPathsToRootProject() {
     val testSourceSet = rootProject.sourceSets.test.get().output.files
     val rootJarArchive = Paths.get(rootProject.buildDir.absolutePath, "libs", rootProject.name + "-" + rootProject.version + ".jar").toFile()
     friendPaths.setFrom(friendPaths.files + mainSourceSet + testSourceSet + rootJarArchive)
-
-//    val rootProjectMainOutput = Paths.get(rootProject.buildDir.path, "classes", "kotlin", "main").toFile()
-//    val rootProjectLib = Paths.get(rootProject.buildDir.path, "libs", "lincheck-3.0-SNAPSHOT.jar").toFile()
-//    //rootProject.sourceSets.main.get().output
-//    println("rootProjectMainOutput: ${rootProjectMainOutput.absolutePath}")
-//    println("Friend paths [BEFORE]: ${friendPaths.asPath}")
-//    //friendPaths.setFrom(friendPaths.files + rootProjectMainOutput.files)
-//    //compilerOptions.freeCompilerArgs.add("-Xfriend-paths=${rootProjectMainOutput.absolutePath}")
-//    friendPaths.setFrom(friendPaths.files + rootProjectMainOutput + rootProjectLib)
-    println("Friend paths [AFTER]: ${friendPaths.asPath}")
 }

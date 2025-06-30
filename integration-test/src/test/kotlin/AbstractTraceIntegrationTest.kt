@@ -81,12 +81,8 @@ abstract class AbstractTraceIntegrationTest {
         checkRepresentation: Boolean = true,
     ) {
         buildTests(gradleBuildCommands)
-        val testClasses = collectTestClasses(testClassNamePrefix)
-        println("Test classes $testClasses\n")
-        val suite = testClasses
+        collectTestClasses(testClassNamePrefix)
             .asTestSuite()
-        println("Running suite:\n$suite")
-        suite
             .forEach { (testClass, testMethods) ->
                 testMethods.forEach { testMethod ->
                     println("Running test: ${testClass.name}::${testMethod.name}(${testMethod.parameters.joinToString(", ") { it.type.simpleName }})")
@@ -163,7 +159,6 @@ abstract class AbstractTraceIntegrationTest {
     private fun collectTestMethodsOfClass(clazz: Class<*>): List<Method> {
         val testMethods = clazz.declaredMethods.filter { method ->
             try {
-                println("Checking method: ${clazz.name}.${method.name}: annotations=[${method.annotations.joinToString(",")}]")
                 method.annotations.any { annotation ->
                     annotation.annotationClass.qualifiedName?.endsWith(".Test") == true
                 }
@@ -283,8 +278,6 @@ abstract class AbstractTraceIntegrationTest {
                 testClassDirUrls
             }
 
-        println("Classpath: ${System.getProperty("java.class.path").split(":").joinToString("\n")}")
-        println("URI classloader path: ${combinedUrls.joinToString(",")}}")
         val classLoader = URLClassLoader(combinedUrls, this.javaClass.classLoader)
         val testClasses = testClassesPaths
             .map {
