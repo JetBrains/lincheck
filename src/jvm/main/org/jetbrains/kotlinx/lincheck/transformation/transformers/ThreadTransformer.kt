@@ -124,7 +124,6 @@ internal class ThreadTransformer(
             push(withTimeout)
             // STACK: thread, millis?, nanos?, thread, withTimeout
             invokeStatic(Injections::threadJoin)
-            invokeBeforeEventIfPluginEnabled("thread join")
             // STACK: thread, millis?, nanos?
         }
         // In some newer versions of JDK, some of the java library classes
