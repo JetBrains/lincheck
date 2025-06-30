@@ -107,12 +107,6 @@ fun Test.configureJvmTestCommon(project: Project) {
     }
     extraArgs.add("-Dlincheck.version=${project.version}")
 
-    println(
-        "Setup commonJvmTest: instrumentAllClasses=$instrumentAllClasses, overwriteRepresentationTestsOutput=$overwriteRepresentationTestsOutput, " +
-        "extraArgs=$extraArgs, testInTraceDebuggerMode=$testInTraceDebuggerMode, version=${project.version}, " +
-        "lincheckk.logFile=${project.findProperty("lincheck.logFile")}, lincheck.logLevel=${project.findProperty("lincheck.logLevel")}"
-    )
-
     project.findProperty("lincheck.logFile")?.let { extraArgs.add("-Dlincheck.logFile=${it as String}") }
     project.findProperty("lincheck.logLevel")?.let { extraArgs.add("-Dlincheck.logLevel=${it as String}") }
 
