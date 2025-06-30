@@ -397,10 +397,6 @@ class IncorrectHashmapRunConcurrentRepresentationTest : BaseRunConcurrentReprese
 class ThreadPoolRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
     "run_concurrent_test/thread_pool/thread_pool"
 ) {
-    // TODO: flaky object numeration --- investigate and fix
-    override val isFlakyTest: Boolean
-        get() = true
-
     @Before
     fun setUp() {
         assumeFalse(isInTraceDebuggerMode) // unstable hash-code
