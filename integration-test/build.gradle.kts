@@ -141,7 +141,6 @@ tasks {
         testClassesDirs = sourceSets["lincheckIntegrationTest"].output.classesDirs
         classpath = sourceSets["lincheckIntegrationTest"].runtimeClasspath
 
-        println("Integration tests, project name: ${project.name}")
         configureJvmTestCommon(project)
 
         enableAssertions = true
