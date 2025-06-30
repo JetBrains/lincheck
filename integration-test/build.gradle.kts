@@ -1,7 +1,4 @@
-import org.gradle.kotlin.dsl.named
-import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import org.jetbrains.kotlin.gradle.utils.named
 import java.nio.file.Paths
 
 plugins {
@@ -21,23 +18,6 @@ kotlin {
 java {
     configureJava()
 }
-
-//tasks.withType<KotlinCompile> {
-//    setupKotlinToolchain()
-//
-//    println("ROT : " + rootProject.sourceSets.main.get().output.files)
-//    println("ARCHIVE : " + (rootProject.tasks.named("jar").get() as Jar).archiveFileName.get())
-//
-//    val rootProjectMainOutput = Paths.get(rootProject.buildDir.path, "classes", "kotlin", "main").toFile()
-//    val rootProjectLib = Paths.get(rootProject.buildDir.path, "libs", "lincheck-3.0-SNAPSHOT.jar").toFile()
-//    //rootProject.sourceSets.main.get().output
-//    println("rootProjectMainOutput: ${rootProjectMainOutput.absolutePath}")
-//    println("Friend paths [BEFORE]: ${friendPaths.asPath}")
-//    //friendPaths.setFrom(friendPaths.files + rootProjectMainOutput.files)
-//    //compilerOptions.freeCompilerArgs.add("-Xfriend-paths=${rootProjectMainOutput.absolutePath}")
-//    friendPaths.setFrom(friendPaths.files + rootProjectMainOutput + rootProjectLib)
-//    println("Friend paths [AFTER]: ${friendPaths.asPath}")
-//}
 
 sourceSets {
     create("lincheckIntegrationTest") {
@@ -64,27 +44,7 @@ sourceSets {
     }
 
     dependencies {
-        implementation(rootProject)
-
-//        // main
-//        val kotlinVersion: String by project
-//        val kotlinxCoroutinesVersion: String by project
-//        val asmVersion: String by project
-//        val byteBuddyVersion: String by project
-//        val atomicfuVersion: String by project
-//
-//        compileOnly(project(":bootstrap"))
-//        api(project(":trace"))
-//
-//        api("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
-//        api("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion")
-//        api("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
-//        api("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinxCoroutinesVersion")
-//        api("org.ow2.asm:asm-commons:$asmVersion")
-//        api("org.ow2.asm:asm-util:$asmVersion")
-//        api("net.bytebuddy:byte-buddy:$byteBuddyVersion")
-//        api("net.bytebuddy:byte-buddy-agent:$byteBuddyVersion")
-//        api("org.jetbrains.kotlinx:atomicfu:$atomicfuVersion")
+        testImplementation(rootProject.sourceSets["test"].output)
 
         // test
         val junitVersion: String by project
@@ -151,13 +111,13 @@ tasks {
         setupKotlinToolchain()
     }
 
-//    named<JavaCompile>("compileTraceDebuggerIntegrationTestJava") {
-//        setupJavaToolchain()
-//    }
-//    named<KotlinCompile>("compileTraceDebuggerIntegrationTestKotlin") {
-//        setupKotlinToolchain()
-//    }
-//
+    named<JavaCompile>("compileTraceDebuggerIntegrationTestJava") {
+        setupJavaToolchain()
+    }
+    named<KotlinCompile>("compileTraceDebuggerIntegrationTestKotlin") {
+        setupKotlinToolchain()
+    }
+
 //    named<JavaCompile>("compileTraceRecorderIntegrationTestJava") {
 //        setupJavaToolchain()
 //    }
@@ -186,20 +146,20 @@ tasks {
         outputs.upToDateWhen { false } // Always run tests when called
     }
 
-//    registerTraceAgentIntegrationTestsPrerequisites()
-//
-//    val traceDebuggerIntegrationTest = register<Test>("traceDebuggerIntegrationTest") {
-//        configureJvmTestCommon(project)
-//        group = "verification"
-////        include("org/jetbrains/trace_debugger/integration/*")
-//
-//        testClassesDirs = sourceSets["traceDebuggerIntegrationTest"].output.classesDirs
-//        classpath = sourceSets["traceDebuggerIntegrationTest"].runtimeClasspath
-//
-//        outputs.upToDateWhen { false } // Always run tests when called
-//        dependsOn(traceAgentIntegrationTestsPrerequisites)
-//    }
-//
+    registerTraceAgentIntegrationTestsPrerequisites()
+
+    val traceDebuggerIntegrationTest = register<Test>("traceDebuggerIntegrationTest") {
+        configureJvmTestCommon(project)
+        group = "verification"
+//        include("org/jetbrains/trace_debugger/integration/*")
+
+        testClassesDirs = sourceSets["traceDebuggerIntegrationTest"].output.classesDirs
+        classpath = sourceSets["traceDebuggerIntegrationTest"].runtimeClasspath
+
+        outputs.upToDateWhen { false } // Always run tests when called
+        dependsOn(traceAgentIntegrationTestsPrerequisites)
+    }
+
 //    val traceRecorderIntegrationTest = register<Test>("traceRecorderIntegrationTest") {
 //        configureJvmTestCommon(project)
 //        group = "verification"
@@ -230,15 +190,16 @@ fun SourceSet.configureClasspath() {
     compileClasspath += sourceSets.main.get().output + sourceSets.test.get().output
     runtimeClasspath += sourceSets.main.get().output + sourceSets.test.get().output
 
-    // Add root project's source sets to allow access to internal classes
+    // Add the root project's source sets to allow access to internal classes later via friend paths
     compileClasspath += rootProject.sourceSets.main.get().output + rootProject.sourceSets.test.get().output
     runtimeClasspath += rootProject.sourceSets.main.get().output + rootProject.sourceSets.test.get().output
 }
 
 fun KotlinCompile.setupFriendPathsToRootProject() {
     val mainSourceSet = rootProject.sourceSets.main.get().output.files
+    val testSourceSet = rootProject.sourceSets.test.get().output.files
     val rootJarArchive = Paths.get(rootProject.buildDir.absolutePath, "libs", rootProject.name + "-" + rootProject.version + ".jar").toFile()
-    friendPaths.setFrom(friendPaths.files + mainSourceSet + rootJarArchive)
+    friendPaths.setFrom(friendPaths.files + mainSourceSet + testSourceSet + rootJarArchive)
 
 //    val rootProjectMainOutput = Paths.get(rootProject.buildDir.path, "classes", "kotlin", "main").toFile()
 //    val rootProjectLib = Paths.get(rootProject.buildDir.path, "libs", "lincheck-3.0-SNAPSHOT.jar").toFile()
