@@ -19,9 +19,9 @@ import org.gradle.plugins.signing.SigningPlugin
 fun Project.configureSigning() {
     project.pluginManager.apply(SigningPlugin::class.java)
 
-    val keyId = getProperty("libs.sign.key.id")
-    val signingKey = getProperty("libs.sign.key.private")
-    val signingKeyPassphrase = getProperty("libs.sign.passphrase")
+    val keyId = getSigningProperty("libs.sign.key.id") ?: return
+    val signingKey = getSigningProperty("libs.sign.key.private") ?: return
+    val signingKeyPassphrase = getSigningProperty("libs.sign.passphrase") ?: return
 
     project.extensions.configure<SigningExtension>("signing") {
         useInMemoryPgpKeys(keyId, signingKey, signingKeyPassphrase)
@@ -36,5 +36,7 @@ fun Project.configureSigning() {
     }
 }
 
-private fun Project.getProperty(name: String): String =
-    findProperty(name) as? String ?: error("Property `$name` is not specified, artifact signing is not enabled.")
+private fun Project.getSigningProperty(name: String): String? =
+    (findProperty(name) as? String).also {
+        if (it == null) logger.warn("Property `$name` is not specified, artifact signing is not enabled.")
+    }
