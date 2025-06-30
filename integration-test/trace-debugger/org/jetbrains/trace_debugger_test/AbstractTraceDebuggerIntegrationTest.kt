@@ -8,13 +8,12 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.trace_debugger.integration
+package org.jetbrains.trace_debugger_test
 
-import org.jetbrains.kotlinx.lincheck_test.AbstractTraceIntegrationTest
-import java.nio.file.Paths
+import AbstractTraceIntegrationTest
 
 abstract class AbstractTraceDebuggerIntegrationTest : AbstractTraceIntegrationTest() {
-    override val testSourcesPath = Paths.get("src", "jvm", "test-trace-debugger-integration").toString()
+    override val testSourcesPath = "trace-debugger"
 
     final override fun runGradleTest(
         testClassName: String,
