@@ -70,6 +70,8 @@ sourceSets {
         val traceDebuggerIntegrationTestRuntimeOnly by configurations
 
         traceDebuggerIntegrationTestImplementation("junit:junit:$junitVersion")
+        traceDebuggerIntegrationTestImplementation("io.mockk:mockk:${mockkVersion}") // transitively includes junit 5, which is needed to
+                                                                                     // parse junit-5 '@Test' annotations from method definitions
         traceDebuggerIntegrationTestImplementation("org.gradle:gradle-tooling-api:${gradleToolingApiVersion}")
         traceDebuggerIntegrationTestRuntimeOnly("org.slf4j:slf4j-simple:$slf4jVersion")
 
@@ -78,6 +80,7 @@ sourceSets {
         val traceRecorderIntegrationTestRuntimeOnly by configurations
 
         traceRecorderIntegrationTestImplementation("junit:junit:$junitVersion")
+        traceRecorderIntegrationTestImplementation("io.mockk:mockk:${mockkVersion}")
         traceRecorderIntegrationTestImplementation("org.gradle:gradle-tooling-api:${gradleToolingApiVersion}")
         traceRecorderIntegrationTestRuntimeOnly("org.slf4j:slf4j-simple:$slf4jVersion")
     }
@@ -118,12 +121,12 @@ tasks {
         setupKotlinToolchain()
     }
 
-//    named<JavaCompile>("compileTraceRecorderIntegrationTestJava") {
-//        setupJavaToolchain()
-//    }
-//    named<KotlinCompile>("compileTraceRecorderIntegrationTestKotlin") {
-//        setupKotlinToolchain()
-//    }
+    named<JavaCompile>("compileTraceRecorderIntegrationTestJava") {
+        setupJavaToolchain()
+    }
+    named<KotlinCompile>("compileTraceRecorderIntegrationTestKotlin") {
+        setupKotlinToolchain()
+    }
 
     withType<KotlinCompile> {
         setupFriendPathsToRootProject()
@@ -160,17 +163,17 @@ tasks {
         dependsOn(traceAgentIntegrationTestsPrerequisites)
     }
 
-//    val traceRecorderIntegrationTest = register<Test>("traceRecorderIntegrationTest") {
-//        configureJvmTestCommon(project)
-//        group = "verification"
-////        include("org/jetbrains/trace_recorder/integration/*")
-//
-//        testClassesDirs = sourceSets["traceRecorderIntegrationTest"].output.classesDirs
-//        classpath = sourceSets["traceRecorderIntegrationTest"].runtimeClasspath
-//
-//        outputs.upToDateWhen { false } // Always run tests when called
-//        dependsOn(traceAgentIntegrationTestsPrerequisites)
-//    }
+    val traceRecorderIntegrationTest = register<Test>("traceRecorderIntegrationTest") {
+        configureJvmTestCommon(project)
+        group = "verification"
+        include("org/jetbrains/trace_recorder_test/*")
+
+        testClassesDirs = sourceSets["traceRecorderIntegrationTest"].output.classesDirs
+        classpath = sourceSets["traceRecorderIntegrationTest"].runtimeClasspath
+
+        outputs.upToDateWhen { false } // Always run tests when called
+        dependsOn(traceAgentIntegrationTestsPrerequisites)
+    }
 }
 
 // TODO: how not to copy these functions everywhere
