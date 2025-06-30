@@ -68,13 +68,15 @@ class LazyTraceReader(
     }
 
     fun readRoots(): List<TRTracePoint> {
-        loadOrRecreateIndex()
+        loadContext()
 
         val roots = mutableListOf<TRTracePoint>()
 
-        val kind = loadObjects(data, context, mutableListOf(), false) { input, context, stringCache ->
+        val kind = loadObjects(data, context, mutableListOf(), false) { input, _, _ ->
             val tracePoint = loadTRTracePoint(input)
-            check (tracePoint is TRMethodCallTracePoint) { "Expecting TRMethodCallTracepoint, found ${tracePoint.javaClass.simpleName}" }
+            check (tracePoint is TRMethodCallTracePoint) {
+                "Expecting TRMethodCallTracepoint, found ${tracePoint.javaClass.simpleName}"
+            }
             skipChildrenAndLoadFooter(input as SeekableDataInput, tracePoint)
             roots.add(tracePoint)
         }
@@ -90,7 +92,7 @@ class LazyTraceReader(
         check(positions != null) { "TRMethodCallTracePoint ${parent.eventId} is not found in index" }
         parent.events.clear()
         data.seek(positions.first)
-        val kind = loadObjects(data, context, mutableListOf(), false) { input, context, stringCache ->
+        val kind = loadObjects(data, context, mutableListOf(), false) { input, _, _ ->
             val tracePoint = loadTRTracePoint(input)
             if (tracePoint is TRMethodCallTracePoint) {
                 skipChildrenAndLoadFooter(input as SeekableDataInput, tracePoint)
@@ -98,7 +100,11 @@ class LazyTraceReader(
             parent.events.add(tracePoint)
         }
         check (kind == ObjectKind.TRACEPOINT_FOOTER) {
-            "Input contains broken data: expected Tracepoint Footer get $kind"
+            "Input contains broken data: expected Tracepoint Footer for event ${parent.eventId} got $kind"
+        }
+        val actualFooterPos = data.position() - 1 // 1 is size of object kind
+        check (actualFooterPos == positions.second) {
+            "Input contains broken data: expected Tracepoint Footer for event ${parent.eventId} at position ${positions.second}, got $actualFooterPos"
         }
     }
 
@@ -116,20 +122,20 @@ class LazyTraceReader(
         tracePoint.loadFooter(input)
     }
 
-    private fun loadOrRecreateIndex() {
+    private fun loadContext() {
         if (index == null) {
-            System.err.println("TraceRecorder: No index file is given for ${this.dataFileName}: read whole data file to re-create index")
-            recreateIndex()
-        } else if (!loadIndex()) {
-            System.err.println("TraceRecorder: Index file for $dataFileName id corrupted: read whole data file to re-create index")
+            System.err.println("TraceRecorder: No index file is given for ${this.dataFileName}: read whole data file to re-create context")
+            loadContextWithoutIndex()
+        } else if (!loadContextWithIndex()) {
+            System.err.println("TraceRecorder: Index file for $dataFileName id corrupted: read whole data file to re-create context")
             context.clear()
-            recreateIndex()
+            loadContextWithoutIndex()
         }
         // Seek to start after magic and version
         data.seek((Long.SIZE_BYTES * 2).toLong())
     }
 
-    private fun loadIndex(): Boolean {
+    private fun loadContextWithIndex(): Boolean {
         if (index == null) return false
         index.use { index ->
             try {
@@ -192,7 +198,33 @@ class LazyTraceReader(
         return true
     }
 
-    private fun recreateIndex() {
+    private fun loadContextWithoutIndex() {
+        val stringCache = mutableListOf<String?>()
+        val kind = loadObjects(data, context, stringCache, true) { input, context, stringCache ->
+            val tracePoint = loadTRTracePoint(input)
+            if (tracePoint is TRMethodCallTracePoint) {
+                loadAndThrowAwayChildren(input, context, stringCache, tracePoint)
+            }
+        }
+        check (kind == ObjectKind.EOF) {
+            "Input contains additional data: expected EOF get $kind"
+        }
+    }
+
+    private fun loadAndThrowAwayChildren(input: DataInput, context: TraceContext, stringCache: MutableList<String?>, parent: TRMethodCallTracePoint) {
+        val startPos = (input as SeekableDataInput).position()
+        val kind = loadObjects(input, context, stringCache, true) { input, context, stringCache ->
+            val tracePoint = loadTRTracePoint(input)
+            if (tracePoint is TRMethodCallTracePoint) {
+                loadAndThrowAwayChildren(input, context, stringCache, tracePoint)
+            }
+        }
+        check(kind == ObjectKind.TRACEPOINT_FOOTER) {
+            "Input contains unbalanced method call tracepoint: tracepoint without footer"
+        }
+        val endPos = input.position() - 1 // 1 is the size of ObjectKind.TRACEPOINT_FOOTER
+        tracepointPositions[parent.eventId] = startPos to endPos
+        parent.loadFooter(input)
     }
 
     private companion object {
@@ -206,14 +238,12 @@ class LazyTraceReader(
 fun loadRecordedTrace(inp: InputStream): Pair<TraceContext, List<TRTracePoint>> {
     DataInputStream(inp.buffered(INPUT_BUFFER_SIZE)).use { input ->
         val magic = input.readLong()
-        if (magic != TRACE_MAGIC) {
-            error("Wrong magic 0x${(magic.toString(16))}, expected ${TRACE_MAGIC.toString(16)}")
+        check(magic == TRACE_MAGIC) {
+            "Wrong magic 0x${(magic.toString(16))}, expected ${TRACE_MAGIC.toString(16)}"
         }
 
         val version = input.readLong()
-        if (version != TRACE_VERSION) {
-            error("Wrong version $version (expected $TRACE_VERSION)")
-        }
+        check (version == TRACE_VERSION) { "Wrong version $version (expected $TRACE_VERSION)" }
 
         val context = TRACE_CONTEXT // TraceContext()
         val roots = mutableListOf<TRTracePoint>()
@@ -356,40 +386,45 @@ private fun loadCodeLocation(
 private class SeekableInputStream(
     private val channel: SeekableByteChannel
 ): InputStream() {
+    private val buffer = ByteBuffer.allocate(1048576)
     private var mark: Long = 0
-    private val buffer = ByteBuffer.allocate(65536)
+    private var startPosition: Long = 0
+
+    init {
+        // Mark it as "empty"
+        buffer.position(buffer.capacity())
+    }
 
     override fun read(): Int {
-        buffer.clear()
-        buffer.limit(1)
-        if (channel.read(buffer) != 1) return -1
-        buffer.rewind()
+        if (buffer.remaining() < 1) {
+            refillBuffer()
+        }
+        if (buffer.remaining() < 1) {
+            return -1
+        }
         return buffer.get().toInt() and 0xff
     }
 
     override fun read(b: ByteArray, off: Int, len: Int): Int {
-        var pos = off
-        while (pos < off + len) {
-            buffer.clear()
-            val toRead = min(buffer.capacity(), len - (pos - off))
-            buffer.limit(toRead)
-            val r = channel.read(buffer)
-            if (r <= 0) return pos - off
-            buffer.rewind()
-            buffer.get(b, pos, r)
-            pos += r
+        if (buffer.remaining() < 1) {
+            refillBuffer()
         }
-        return pos - off
+        if (buffer.remaining() < 1) {
+            return -1
+        }
+        val toRead = min(buffer.remaining(), len)
+        buffer.get(b, off, toRead)
+        return toRead
     }
 
     override fun skip(n: Long): Long {
-        val oldPos = channel.position()
-        channel.position(max(0L, oldPos + n))
-        return channel.position() - oldPos
+        val oldPos = position()
+        seek(max(0L, oldPos + n))
+        return position() - oldPos
     }
 
     override fun available(): Int {
-        return (channel.size() - channel.position()).toInt()
+        return (channel.size() - position()).toInt()
     }
 
     override fun close() {
@@ -397,22 +432,36 @@ private class SeekableInputStream(
     }
 
     override fun mark(readlimit: Int) {
-        mark = channel.position()
+        mark = position()
     }
 
     override fun reset() {
-        channel.position(mark)
-    }
-
-    fun seek(pos: Long) {
-        channel.position(pos)
-    }
-
-    fun position(): Long {
-        return channel.position()
+        seek(mark)
     }
 
     override fun markSupported(): Boolean = true
+
+    fun seek(pos: Long) {
+        if (pos < startPosition || pos >= startPosition + buffer.capacity()) {
+            buffer.clear()
+            // Mark as empty for reading
+            buffer.position(buffer.capacity())
+            channel.position(pos)
+        } else {
+            buffer.position((pos - startPosition).toInt())
+        }
+    }
+
+    fun position(): Long {
+        return startPosition + buffer.position()
+    }
+
+    private fun refillBuffer() {
+        buffer.clear()
+        startPosition = channel.position()
+        channel.read(buffer)
+        buffer.rewind()
+    }
 }
 
 private class SeekableDataInput (
