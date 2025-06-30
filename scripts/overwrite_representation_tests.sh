@@ -11,7 +11,7 @@
 
 
 # This script runs all representation tests in overwrite mode.
-# It runs the tests on all jdks and both in trace and non-trace modes, in the order:
+# It runs the tests on all jdks, specified in array and both in trace and non-trace modes, in the order:
 # jdk-default non-trace -> jdk-default trace -> jdk-8 non-trace -> jdk 8 trace -> jdk-11 non-trace, jdk-11 trace, ...
 # Where necessary the output files are created or overwritten.
 # One can use this script to verify trace outputs by looking at the local changes after the script ran.
@@ -19,15 +19,16 @@
 
 cd ../
 
+# Right now only default JDK (17) output is stored, in case if another jdk
+# will be required, it could be added to the list.
+#
 # We put JDK 17 on the first place because it is the default JDK version for tests.
 # By default, when run on other JDK versions, representation tests will first
 # try to compare the output with the default log file (i.e. log file for default JDK version),
 # and only if they are not equal a JDK-specific expected log file will be created.
 # Thus by first running tests on default JDK version we ensure that the default log file
 # always created at the beginning.
-#
-# JDK 11 is SLOW! So remove it if you don't expect files to change
-jdks=("17" "8" "11" "21")
+jdks=("17") # ... "8" "11" "21"
 
 testFilter="org.jetbrains.kotlinx.lincheck_test.representation.*"
 
