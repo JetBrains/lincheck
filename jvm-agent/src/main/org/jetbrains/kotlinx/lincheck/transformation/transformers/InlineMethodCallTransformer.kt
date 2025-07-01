@@ -112,6 +112,25 @@ internal class InlineMethodCallTransformer(
         super.visitLabel(label)
     }
 
+    override fun visitInsn(opcode: Int) = adapter.run {
+        when (opcode) {
+            ARETURN, DRETURN, FRETURN, IRETURN, LRETURN, RETURN -> {
+                if (inlineStack.isNotEmpty()) {
+                    invokeIfInAnalyzedCode(
+                        original = {},
+                        instrumented = {
+                            for (lvar in inlineStack.reversed()) {
+                                processInlineMethodCallReturn(lvar.inlineMethodName!!, lvar.labelIndexRange.second)
+                            }
+                        }
+                    )
+                    inlineStack.clear()
+                }
+            }
+        }
+        super.visitInsn(opcode)
+    }
+
     override fun visitMaxs(maxStack: Int, maxLocals: Int) {
         if (inlineStack.isNotEmpty()) {
             Logger.warn {
