@@ -14,6 +14,7 @@ import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.util.Logger
 import org.jetbrains.lincheck.trace.TRACE_CONTEXT
 import org.objectweb.asm.Label
+import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
 import sun.nio.ch.lincheck.*
@@ -32,11 +33,12 @@ internal class InlineMethodCallTransformer(
     val localsTracker: LocalVariablesAccessTransformer?
 ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
     private companion object {
-        val objectType = getObjectType("java/lang/Object").className
-        val contType = getObjectType("kotlin/coroutines/Continuation").className
+        val objectType: String = getObjectType("java/lang/Object").className
+        val contType: String = getObjectType("kotlin/coroutines/Continuation").className
     }
 
     private val methodType = getMethodType(desc)
+
     private val looksLikeSuspendMethod =
         methodType.returnType.className == objectType &&
         methodType.argumentTypes.lastOrNull()?.className == contType &&
