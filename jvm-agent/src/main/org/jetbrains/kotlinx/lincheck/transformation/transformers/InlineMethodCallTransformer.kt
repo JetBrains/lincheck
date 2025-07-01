@@ -11,6 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.jetbrains.kotlinx.lincheck.util.Logger
 import org.jetbrains.lincheck.trace.TRACE_CONTEXT
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
@@ -111,9 +112,11 @@ internal class InlineMethodCallTransformer(
 
     override fun visitMaxs(maxStack: Int, maxLocals: Int) {
         if (inlineStack.isNotEmpty()) {
-            System.err.println("Inline methods calls are not balanced at $className.$methodName:")
-            inlineStack.reversed().forEach {
-                System.err.println("  ${it.name} (slot ${it.index}) called at label ${it.labelIndexRange.first}")
+            Logger.warn {
+                "Inline methods calls are not balanced at $className.$methodName:\n" +
+                inlineStack.reversed().joinToString(separator = "\n") {
+                    "  ${it.name} (slot ${it.index}) called at label ${it.labelIndexRange.first}"
+                }
             }
         }
         super.visitMaxs(maxStack, maxLocals)
