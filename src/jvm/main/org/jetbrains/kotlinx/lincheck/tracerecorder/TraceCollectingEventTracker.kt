@@ -11,9 +11,9 @@
 package org.jetbrains.kotlinx.lincheck.tracerecorder
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ShadowStackFrame
-import org.jetbrains.kotlinx.lincheck.tracedata.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.lincheck.trace.*
 import sun.nio.ch.lincheck.*
 import java.io.File
 import java.lang.invoke.CallSite

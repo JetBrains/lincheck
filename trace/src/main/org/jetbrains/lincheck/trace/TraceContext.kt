@@ -8,11 +8,12 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.tracedata
+package org.jetbrains.lincheck.trace
 
 val TRACE_CONTEXT = TraceContext()
 
-internal const val UNKNOWN_CODE_LOCATION_ID = -1
+const val UNKNOWN_CODE_LOCATION_ID = -1
+
 private val EMPTY_STACK_TRACE = StackTraceElement("", "", "", 0)
 
 class TraceContext {

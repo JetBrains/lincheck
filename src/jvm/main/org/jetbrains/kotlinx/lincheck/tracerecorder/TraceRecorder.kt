@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.tracerecorder
 
-import org.jetbrains.kotlinx.lincheck.tracedata.INJECTIONS_VOID_OBJECT
+import org.jetbrains.lincheck.trace.INJECTIONS_VOID_OBJECT
 import sun.nio.ch.lincheck.Injections
 import sun.nio.ch.lincheck.ThreadDescriptor
 

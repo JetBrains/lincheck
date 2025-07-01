@@ -10,13 +10,13 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.native_calls.io
 
-import org.jetbrains.kotlinx.lincheck.tracedata.MethodSignature
+import org.jetbrains.lincheck.trace.MethodSignature
+import org.jetbrains.lincheck.trace.Types
 import org.jetbrains.kotlinx.lincheck.util.and
 import org.jetbrains.kotlinx.lincheck.util.getMethods
 import org.jetbrains.kotlinx.lincheck.util.isInstance
 import org.jetbrains.kotlinx.lincheck.util.isPublic
 import org.jetbrains.kotlinx.lincheck.util.isStatic
-import org.jetbrains.kotlinx.lincheck.tracedata.Types
 import java.io.Closeable
 import java.io.FileInputStream
 import java.io.FileOutputStream

@@ -8,7 +8,7 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.tracedata
+package org.jetbrains.lincheck.trace
 
 import java.io.OutputStream
 import java.io.PrintStream
