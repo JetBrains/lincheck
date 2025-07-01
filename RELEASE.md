@@ -35,19 +35,18 @@ Follow these steps to release a new `<version>` of Lincheck.
 
 10. Press 'deploy' button in the [Teamcity publish configuration](https://teamcity.jetbrains.com/buildConfiguration/KotlinTools_KotlinxLincheck_Publish?branch=%3Cdefault%3E&buildTypeTab=overview&mode=builds). 
 Set `releaseVersion` property to `<version>` in the pop-up window. Make sure that the build succeeds.
+After the task succeeds, the artifact should be uploaded to https://central.sonatype.com/ automatically (may take several minutes).
 
-11. In [Sonatype](https://oss.sonatype.org/) admin interface, close the automatically created staging repository and release it.
-
-12. In [GitHub](https://github.com/JetBrains/lincheck/releases) interface:
+11. In [GitHub](https://github.com/JetBrains/lincheck/releases) interface:
     * Create a release named `lincheck-<version>`.
     * Write a release notes message following the old ones as example of style.
     
-13. Switch into `develop` branch back: <br>
+12. Switch into `develop` branch back: <br>
     `git checkout develop`
 
-14. Update the version to the next `SNAPSHOT` one in [`gradle.properties`](gradle.properties).
+13. Update the version to the next `SNAPSHOT` one in [`gradle.properties`](gradle.properties).
 
-15. Commit and push the updated [`gradle.properties`](gradle.properties): <br>
+14. Commit and push the updated [`gradle.properties`](gradle.properties): <br>
    `git add gradle.properties` <br>
    `git commit -m "Prepare for next development iteration"` <br>
    `git push`
