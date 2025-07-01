@@ -36,6 +36,6 @@ class MultipleRootsInRunConcurrent {
                 check(counter == 2)
             }
         }
-        BaseRunConcurrentRepresentationTest.checkResult(result, "run_concurrent_test/multiple_roots")
+        BaseRunConcurrentRepresentationTest.checkResult(result, "run_concurrent_test/multiple_roots", handleOnlyDefaultJdkOutput = true)
     }
 }

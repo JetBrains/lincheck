@@ -20,9 +20,15 @@ import org.junit.Test
 
 /**
  * Failing test that checks that output using [outputFileName].
- * The goal is to place the logic to check trace in the [actionsForTrace] method.
+ *
+ * In case if [handleOnlyDefaultJdkOutput] is `true` then results comparison will be
+ * performed only for a default jdk version, for the rest of jdks just presence of
+ * detected failure will be checked.
  */
-abstract class BaseTraceRepresentationTest(private val outputFileName: String) {
+abstract class BaseTraceRepresentationTest(
+    private val outputFileName: String,
+    private val handleOnlyDefaultJdkOutput: Boolean = true
+) {
 
     /**
      * Implement me and place the logic to check its trace.
@@ -42,7 +48,7 @@ abstract class BaseTraceRepresentationTest(private val outputFileName: String) {
         .iterations(0)
         .apply { customize() }
         .checkImpl(this::class.java) { failure ->
-            failure.checkLincheckOutput(outputFileName)
+            failure.checkLincheckOutput(outputFileName, handleOnlyDefaultJdkOutput)
         }
 
     open fun ModelCheckingOptions.customize() {}

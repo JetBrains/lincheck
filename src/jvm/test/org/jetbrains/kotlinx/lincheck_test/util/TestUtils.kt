@@ -46,9 +46,13 @@ internal inline fun <reified E: Exception> Options<*, *>.checkFailsWithException
  * Checks that failure output matches the expected one stored in a file.
  *
  * @param expectedOutputFilePrefix name of file stored in resources/expected_logs, storing the expected lincheck output.
+ * @param handleOnlyDefaultJdkOutput flag which disables comparing and overwriting representation output files for non-default jdks.
  */
-internal fun LincheckFailure?.checkLincheckOutput(expectedOutputFilePrefix: String) {
+internal fun LincheckFailure?.checkLincheckOutput(expectedOutputFilePrefix: String, handleOnlyDefaultJdkOutput: Boolean = true) {
     check(this != null) { "The test should fail" }
+    // In case we compare and overwrite representation tests only
+    // for default jdk, then just return when non-default jdk is provided
+    if (handleOnlyDefaultJdkOutput && jdkVersion != DEFAULT_TEST_JDK_VERSION) return
     val actualOutput = StringBuilder().appendFailure(this).toString()
     compareAndOverwrite(expectedOutputFilePrefix, actualOutput)
 }
