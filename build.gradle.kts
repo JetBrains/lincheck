@@ -564,7 +564,7 @@ tasks {
 
         doLast {
             val uriBase = "https://central.sonatype.com/api/v1/publisher/upload"
-            val publishingType = "USER_MANAGED"
+            val publishingType = "AUTOMATIC"
             val deploymentName = "${project.name}-$version"
             val uri = "$uriBase?name=$deploymentName&publishingType=$publishingType"
 
