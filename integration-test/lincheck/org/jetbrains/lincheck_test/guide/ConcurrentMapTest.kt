@@ -43,6 +43,6 @@ class ConcurrentSkipListMapTest {
     @Test
     fun modelCheckingTest() = ModelCheckingOptions()
         .checkObstructionFreedom(true)
-        .analyzeStdLib(true) //  TODO: cannot access internal APIs of the main source set, old way does not work between projects
+        .analyzeStdLib(true)
         .check(this::class)
 }

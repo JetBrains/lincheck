@@ -217,11 +217,16 @@ abstract class AbstractTraceIntegrationTest {
     private fun createInitScriptToOutputClasspath(outputFile: File, gradleBuildCommands: List<String>): String {
         return """
             gradle.taskGraph.whenReady {
+                val buildTasks = listOf(${gradleBuildCommands.joinToString(",") { "\"$it\"" }})
+                    .map { if (it.startsWith(":")) it.drop(1) else it }
+    
                 allTasks.forEach { task ->
-                    if (task.name in listOf(${gradleBuildCommands.joinToString(",") { "\"$it\"" }})) {
+                    if (task.name in buildTasks) {
                         task.doLast {
                             val project = task.project
-                            val classpath = project.configurations.findByName("jvmTestRuntimeClasspath")
+                            val classpath = project.configurations.findByName("jvmTestRuntimeClasspath") ?:
+                                            project.configurations.findByName("testRuntimeClasspath")
+
                             if (classpath != null) {
                                 val classpathString = classpath.files.joinToString(File.pathSeparator)
                                 val outputFile = File("${outputFile.absolutePath}")
