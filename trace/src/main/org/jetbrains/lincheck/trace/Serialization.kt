@@ -39,7 +39,7 @@ private const val DATA_FLUSH_THRESHOLD: Int = 1024
 /**
  * It is a strategy to collect trace: it can be full-track in memory or streaming to a file on-the-fly
  */
-internal interface TraceCollectingStrategy {
+interface TraceCollectingStrategy {
     /**
      * Register current thread in strategy.
      */
@@ -288,7 +288,7 @@ private sealed class TraceWriterBase(
         data.writeClassDescriptor(context.getClassDescriptor(id))
         contextState.markClassDescriptorSaved(id)
 
-        writeIndexCell(ObjectKind.CLASS_DESCRIPTOR, id, position)
+        writeIndexCell(ObjectKind.CLASS_DESCRIPTOR, id, position, -1)
     }
 
     override fun writeMethodDescriptor(id: Int) {
@@ -304,7 +304,7 @@ private sealed class TraceWriterBase(
         data.writeMethodDescriptor(descriptor)
         contextState.markMethodDescriptorSaved(id)
 
-        writeIndexCell(ObjectKind.METHOD_DESCRIPTOR, id, position)
+        writeIndexCell(ObjectKind.METHOD_DESCRIPTOR, id, position, -1)
     }
 
     override fun writeFieldDescriptor(id: Int) {
@@ -319,7 +319,7 @@ private sealed class TraceWriterBase(
         data.writeFieldDescriptor(descriptor)
         contextState.markFieldDescriptorSaved(id)
 
-        writeIndexCell(ObjectKind.FIELD_DESCRIPTOR, id, position)
+        writeIndexCell(ObjectKind.FIELD_DESCRIPTOR, id, position, -1)
     }
 
     override fun writeVariableDescriptor(id: Int) {
@@ -332,7 +332,7 @@ private sealed class TraceWriterBase(
         data.writeVariableDescriptor(context.getVariableDescriptor(id))
         contextState.markVariableDescriptorSaved(id)
 
-        writeIndexCell(ObjectKind.VARIABLE_DESCRIPTOR, id, position)
+        writeIndexCell(ObjectKind.VARIABLE_DESCRIPTOR, id, position, -1)
     }
 
     override fun writeCodeLocation(id: Int) {
@@ -357,7 +357,7 @@ private sealed class TraceWriterBase(
         data.writeInt(codeLocation.lineNumber)
         contextState.markCodeLocationSaved(id)
 
-        writeIndexCell(ObjectKind.CODE_LOCATION, id, position)
+        writeIndexCell(ObjectKind.CODE_LOCATION, id, position, -1)
     }
 
     protected fun writeString(value: String?): Int {
@@ -374,12 +374,12 @@ private sealed class TraceWriterBase(
         contextState.markStringSaved(value)
 
         // It cannot fail
-        writeIndexCell(ObjectKind.STRING, -id, position)
+        writeIndexCell(ObjectKind.STRING, -id, position, -1)
 
-        return id
+        return -id
     }
 
-    protected abstract fun writeIndexCell(kind: ObjectKind, id: Int, startPos: Long, endPos: Long = -1)
+    protected abstract fun writeIndexCell(kind: ObjectKind, id: Int, startPos: Long, endPos: Long)
 }
 
 internal data class IndexCell(
@@ -410,8 +410,7 @@ private class BufferedTraceWriter (
     override val currentDataPosition: Long get() = currentStartDataPosition + dataStream.position()
 
     override fun close() {
-        storage.saveDataAndIndexBlock(writerId, dataStream.getBuffer(), index)
-        index.clear()
+        flush()
         super.close()
     }
 
@@ -564,7 +563,14 @@ private class DirectTraceWriter (
     override val currentDataPosition: Long get() = pos.currentPosition
     override val writerId: Int get() = currentWriterId
 
-    override fun writeIndexCell(kind: ObjectKind, id: Int, startPos: Long, endPos: Long) = index.writeIndexCell(kind, id, startPos, endPos)
+    override fun writeIndexCell(kind: ObjectKind, id: Int, startPos: Long, endPos: Long) {
+        if (kind == ObjectKind.TRACEPOINT) {
+            // Each thread in this case has only one block, current block
+            index.writeIndexCell(kind, id, startPos - currentBlockStart, endPos - currentBlockStart)
+        } else {
+            index.writeIndexCell(kind, id, startPos, endPos)
+        }
+    }
 
     fun startNewRoot(id: Int) {
         currentWriterId = id
@@ -580,7 +586,7 @@ private class DirectTraceWriter (
     }
 }
 
-internal class MemoryTraceCollecting: TraceCollectingStrategy {
+class MemoryTraceCollecting: TraceCollectingStrategy {
     override fun registerCurrentThread(threadId: Int) = Unit
     override fun finishCurrentThread() = Unit
 
@@ -609,16 +615,16 @@ private class AtomicBitmap(size: Int) {
 
     fun isSet(id: Int): Boolean {
         val idx = id shr ATOMIC_SIZE_SHIFT
-        val bit = (1 shl (id and ATOMIC_BIT_MASK)).toLong()
+        val bit = 1L shl (id and ATOMIC_BIT_MASK)
         return isSet(idx, bit)
     }
 
     fun set(id: Int) {
         val idx = id shr ATOMIC_SIZE_SHIFT
-        val bit = (1 shl (id and ATOMIC_BIT_MASK)).toLong()
+        val bit = 1L shl (id and ATOMIC_BIT_MASK)
 
         val b = bitmap.get()
-        if (idx > b.length()) {
+        if (idx >= b.length()) {
             resizeBitmap(idx)
         }
         while (!isSet(idx, bit)) {
@@ -651,11 +657,11 @@ private class AtomicBitmap(size: Int) {
     }
 }
 
-internal class FileStreamingTraceCollecting(
+class FileStreamingTraceCollecting(
     dataStream: OutputStream,
     indexStream: OutputStream,
     val context: TraceContext
-): TraceCollectingStrategy, BlockSaver, ContextSavingState {
+): TraceCollectingStrategy, ContextSavingState {
     constructor(baseFileName: String, context: TraceContext) :
             this(
                 dataStream = openNewFile(baseFileName),
@@ -665,13 +671,13 @@ internal class FileStreamingTraceCollecting(
 
     private val pos: PositionCalculatingOutputStream = PositionCalculatingOutputStream(dataStream)
     private val data: DataOutputStream = DataOutputStream(pos)
-    private val index: DataOutputStream = DataOutputStream(indexStream)
+    private val index: DataOutputStream = DataOutputStream(indexStream.buffered(PER_THREAD_DATA_BUFFER_SIZE))
 
-    private var seenClassDescriptors = AtomicBitmap(context.classDescriptors.size * 2)
-    private var seenMethodDescriptors = AtomicBitmap(context.methodDescriptors.size * 2)
-    private var seenFieldDescriptors = AtomicBitmap(context.fieldDescriptors.size * 2)
-    private var seenVariableDescriptors = AtomicBitmap(context.variableDescriptors.size * 2)
-    private var seenCodeLocations = AtomicBitmap(context.codeLocations.size * 2)
+    private var seenClassDescriptors = AtomicBitmap(1024)
+    private var seenMethodDescriptors = AtomicBitmap(1024)
+    private var seenFieldDescriptors = AtomicBitmap(1024)
+    private var seenVariableDescriptors = AtomicBitmap(1024)
+    private var seenCodeLocations = AtomicBitmap(1024)
     private val stringCache = ConcurrentHashMap<String, Int>()
     private val stringIdGenerator = AtomicInteger(1)
 
@@ -688,7 +694,16 @@ internal class FileStreamingTraceCollecting(
     override fun registerCurrentThread(threadId: Int) {
         val t = Thread.currentThread()
         if (writers[t] != null) return
-        writers[t] = BufferedTraceWriter(threadId, context, this, this)
+        writers[t] = BufferedTraceWriter(
+            writerId = threadId,
+            context = context,
+            contextState = this,
+            // This is needed to work around visibility problems
+            storage = object : BlockSaver {
+                override fun saveDataAndIndexBlock(writerId: Int, dataBlock: ByteBuffer, indexList: List<IndexCell>) =
+                    saveDataAndIndexBlockImpl(writerId, dataBlock, indexList)
+            }
+        )
     }
 
     override fun finishCurrentThread() {
@@ -729,11 +744,12 @@ internal class FileStreamingTraceCollecting(
 
         index.writeIndexCell(ObjectKind.EOF, -1, -1, -1)
         index.writeLong(INDEX_MAGIC)
+        index.close()
     }
 
     // This is a synchronization point for all real stream writes
     @Synchronized
-    override fun saveDataAndIndexBlock(writerId: Int, dataBlock: ByteBuffer, indexList: List<IndexCell>) {
+    private fun saveDataAndIndexBlockImpl(writerId: Int, dataBlock: ByteBuffer, indexList: List<IndexCell>) {
         val startPosition = pos.currentPosition
         data.writeKind(ObjectKind.BLOCK_START)
         data.writeInt(writerId)
@@ -754,6 +770,7 @@ internal class FileStreamingTraceCollecting(
                 index.writeIndexCell(it.kind, it.id, it.startPos + indexShift, it.endPos + indexShift)
             }
         }
+        index.flush()
     }
 
     override fun isClassDescriptorSaved(id: Int): Boolean = seenClassDescriptors.isSet(id)

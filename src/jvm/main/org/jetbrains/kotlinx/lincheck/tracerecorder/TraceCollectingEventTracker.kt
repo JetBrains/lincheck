@@ -504,6 +504,7 @@ class TraceCollectingEventTracker(
             obj = null,
             parameters = emptyList()
         )
+        strategy.registerCurrentThread(threadData.threadId)
         strategy.tracePointCreated(null,tracePoint)
         threadData.pushStackFrame(tracePoint, null)
 

@@ -10,9 +10,11 @@
 
 package org.jetbrains.kotlinx.lincheck.tracedata
 
+import org.jetbrains.lincheck.trace.TRACE_CONTEXT
 import org.jetbrains.lincheck.trace.TRMethodCallTracePoint
 import org.jetbrains.lincheck.trace.TRTracePoint
 import org.jetbrains.lincheck.trace.TraceContext
+import org.jetbrains.lincheck.trace.loadTRTracePoint
 import java.io.Closeable
 import java.io.DataInput
 import java.io.DataInputStream
@@ -21,12 +23,106 @@ import java.nio.file.Files
 import java.nio.file.StandardOpenOption
 import kotlin.io.path.Path
 
-
-private const val INPUT_BUFFER_SIZE: Int = 16*1024*1024
+private const val INPUT_BUFFER_SIZE: Int = 16 * 1024 * 1024
 
 private typealias StringCache = MutableList<String?>
 private typealias CallStack = MutableList<TRMethodCallTracePoint>
-private typealias TracePointReader = (DataInput, TraceContext, StringCache, CallStack) -> Unit
+private typealias TracePointReader = (DataInput, TraceContext, StringCache) -> Boolean
+
+private interface TracepointConsumer {
+    fun tracePointRead(parent: TRMethodCallTracePoint?, tracePoint: TRTracePoint)
+    fun footerStarted(tracePoint: TRMethodCallTracePoint) = Unit
+}
+
+private interface BlockConsumer {
+    fun blockStarted(threadId: Int) = Unit
+    fun blockEnded(threadId: Int) = Unit
+}
+
+private const val BLOCK_HEADER_SIZE: Int = Byte.SIZE_BYTES + Int.SIZE_BYTES
+private const val BLOCK_FOOTER_SIZE: Int = Byte.SIZE_BYTES
+
+private class DataBlock(
+    start: Long,
+    end: Long,
+    aaccDataSize: Long
+) {
+    constructor(start: Long, aaccdDataSize: Long) : this(start, Long.MAX_VALUE, aaccdDataSize)
+
+    val physicalStart: Long
+    var physicalEnd: Long
+        private set
+    val accDataSize: Long
+
+    val physicalDataStart: Long get() = physicalStart + BLOCK_HEADER_SIZE
+    val logicalDataStart: Long get() = accDataSize
+    val logicalDataEnd: Long get() = accDataSize + dataSize
+
+    val size: Long get() = physicalEnd - physicalStart
+    val dataSize: Long get() = physicalEnd - physicalStart - BLOCK_HEADER_SIZE
+
+    init {
+        require(start >= 0) { "start must be non-negative" }
+        require(start < end)  { "block cannot be empty" }
+        require(aaccDataSize >= 0) { "accumulated data size cannot be negative" }
+        physicalStart = start
+        physicalEnd = end
+        accDataSize = aaccDataSize
+    }
+
+    fun coversPhysicalOffset(offset: Long): Boolean = offset in physicalStart ..<physicalEnd
+
+    fun coversLogicalOffset(offset: Long): Boolean = offset in logicalDataStart ..<logicalDataStart + dataSize
+
+    /**
+     * For usage with [List.binarySearch]
+     *
+     * Function that returns zero when called on the list element being searched.
+     * On the elements coming before the target element, the function must return negative values;
+     * on the elements coming after the target element, the function must return positive values.
+     */
+    fun compareWithPhysicalOffset(offset: Long): Int =
+        if (offset < physicalStart) +1
+        else if (offset >= physicalEnd) -1
+        else 0
+
+    fun compareWithLogicalOffset(offset: Long): Int =
+        if (offset < accDataSize) +1
+        else if (offset >= accDataSize + dataSize) -1
+        else 0
+
+    fun updateEnd(newPhysicalEnd: Long) {
+        require(physicalStart < newPhysicalEnd)  { "block cannot be empty" }
+        check(physicalEnd == Long.MAX_VALUE) { "block cannot be updated twice"}
+        physicalEnd = newPhysicalEnd
+    }
+}
+
+private typealias BlockList = MutableList<DataBlock>
+
+private fun BlockList.addNewPartialBlock(start: Long) {
+    require(isEmpty() || last().physicalEnd < start) {
+        "Start offsets of blocks in the list must increase: last block ends at ${last().physicalEnd}, new starts at $start "
+    }
+    add(DataBlock(start, dataSize()))
+}
+
+private fun BlockList.addNewBlock(start: Long, end: Long) {
+    require(isEmpty() || last().physicalEnd < start) {
+        "Start offsets of blocks in the list must increase: last block ends at ${last().physicalEnd}, new starts at $start "
+    }
+    add(DataBlock(start, end,dataSize()))
+}
+
+private fun BlockList.fixLastBlock(end: Long) {
+    check(isNotEmpty()) { "Cannot fix last block in empty list" }
+    last().updateEnd(end)
+}
+
+private fun BlockList.dataSize(): Long {
+    return if (isEmpty()) 0 else last().accDataSize + last().dataSize
+}
+
 
 /**
  * This needs a file name as it uses a seekable file channel, it is easier than seekable stream
@@ -35,7 +131,7 @@ class LazyTraceReader(
     private val dataFileName: String,
     private val index: DataInputStream?,
     private val context: TraceContext
-): Closeable {
+) : Closeable {
     constructor(baseFileName: String, context: TraceContext) :
             this(
                 dataFileName = baseFileName,
@@ -45,9 +141,8 @@ class LazyTraceReader(
 
     private val dataStream: SeekableInputStream
     private val data: SeekableDataInput
-    private val perThreadData = mutableMapOf<Int, SeekableChunkedInputStream>()
-    private val dataBlockRanges = mutableMapOf<Int, MutableList<Pair<Long, Long>>>()
-    private val callTracepointPositions = mutableMapOf<Int, Pair<Long, Long>>()
+    private val dataBlocks = mutableMapOf<Int, MutableList<DataBlock>>()
+    private val callTracepointChildren = mutableMapOf<Int, Pair<Long, Long>>()
 
     init {
         val channel = Files.newByteChannel(Path(dataFileName), StandardOpenOption.READ)
@@ -55,17 +150,8 @@ class LazyTraceReader(
         data = SeekableDataInput(dataStream)
 
         try {
-            // Check format
-            val magic = data.readLong()
-            if (magic != TRACE_MAGIC) {
-                error("TraceRecorder: Wrong magic 0x${(magic.toString(16))} in file $dataFileName, expected ${TRACE_MAGIC.toString(16)}")
-            }
-
-            val version = data.readLong()
-            if (version != TRACE_VERSION) {
-                error("TraceRecorder: Wrong version $version in file $dataFileName, expected $TRACE_VERSION")
-            }
-        } catch (t : Throwable) {
+            checkDataHeader(data)
+        } catch (t: Throwable) {
             data.close()
             index?.close()
             throw t
@@ -80,56 +166,77 @@ class LazyTraceReader(
     fun readRoots(): List<TRTracePoint> {
         loadContext()
 
-        val roots = mutableListOf<TRTracePoint>()
+        val roots = mutableMapOf<Int, TRTracePoint>()
 
-        val kind = loadObjects(data, context, mutableListOf(), false) { input, _, _ ->
-            val tracePoint = loadTRTracePoint(input)
-            check (tracePoint is TRMethodCallTracePoint) {
-                "Expecting TRMethodCallTracepoint, found ${tracePoint.javaClass.simpleName}"
+        dataBlocks.forEach {
+            val (threadId, blocks) = it
+            data.seek(blocks.first().physicalStart)
+            val kind = data.readKind()
+            check(kind == ObjectKind.BLOCK_START) { "Thread $threadId block 0 has wrong start: $kind" }
+            val blockId = data.readInt()
+            check(blockId == threadId) { "Thread $threadId block 0 has wrong idt: $blockId" }
+
+            val tracepoints = mutableListOf<TRTracePoint>()
+            readTracePointsShallow(threadId, tracepoints)
+            if (tracepoints.isEmpty()) {
+                System.err.println("Thread $threadId doesn't write any tracepoints")
+            } else {
+                if (tracepoints.size > 1) {
+                    System.err.println("Thread $threadId wrote too many root tracepoints: ${tracepoints.size}")
+                }
+                roots[threadId] = tracepoints.first()
             }
-            skipChildrenAndLoadFooter(input as SeekableDataInput, tracePoint)
-            roots.add(tracePoint)
-        }
-        check (kind == ObjectKind.EOF) {
-            "Input contains additional data: expected EOF get $kind"
         }
 
-        return roots
+        return roots.entries.sortedBy { it.key }.map { (_, tracePoint) -> tracePoint }
     }
 
     fun readChildren(parent: TRMethodCallTracePoint) {
-        val positions = callTracepointPositions[parent.eventId]
-        check(positions != null) { "TRMethodCallTracePoint ${parent.eventId} is not found in index" }
-        parent.events.clear()
-        data.seek(positions.first)
-        val kind = loadObjects(data, context, mutableListOf(), false) { input, _, _ ->
-            val tracePoint = loadTRTracePoint(input)
-            if (tracePoint is TRMethodCallTracePoint) {
-                skipChildrenAndLoadFooter(input as SeekableDataInput, tracePoint)
-            }
-            parent.events.add(tracePoint)
-        }
-        check (kind == ObjectKind.TRACEPOINT_FOOTER) {
-            "Input contains broken data: expected Tracepoint Footer for event ${parent.eventId} got $kind"
-        }
+        val positions = callTracepointChildren[parent.eventId]
+            ?: error("TRMethodCallTracePoint ${parent.eventId} is not found in index")
+        data.seek(calculatePhysicalOffset(parent.threadId, positions.first))
+
+        readTracePointsShallow(parent.threadId, parent.events)
+
         val actualFooterPos = data.position() - 1 // 1 is size of object kind
-        check (actualFooterPos == positions.second) {
+        check(actualFooterPos == calculatePhysicalOffset(parent.threadId, positions.second)) {
             "Input contains broken data: expected Tracepoint Footer for event ${parent.eventId} at position ${positions.second}, got $actualFooterPos"
         }
     }
 
-    private fun skipChildrenAndLoadFooter(input: SeekableDataInput, tracePoint: TRMethodCallTracePoint) {
-        val positions = callTracepointPositions[tracePoint.eventId]
-        check(positions != null) { "TRMethodCallTracePoint ${tracePoint.eventId} is not found in index" }
-        check(positions.first == data.position()) {
-            "TRMethodCallTracePoint ${tracePoint.eventId} has wrong start position in index: ${positions.first}, expected ${data.position()}"
+    private fun readTracePointsShallow(threadId: Int, container: MutableList<TRTracePoint>) {
+        val blocks = dataBlocks[threadId] ?: error("No data blocks for Thread $threadId")
+        while (true) {
+            var kind = loadObjects(data, context, mutableListOf(), false) { input, context, stringCache ->
+                val tracePoint = loadTracePointShallow(input, context, stringCache)
+                container.add(tracePoint)
+                true
+            }
+            if (kind == ObjectKind.TRACEPOINT_FOOTER) {
+                break
+            } else if (kind != ObjectKind.BLOCK_END) {
+                error("Unexpected object kind $kind when reading tracepoints")
+            }
+
+            // Find the next block, -2 to take the size of BLOCK_END into account, and that block end is exclusive
+            // point to last data byte of block, as current position points after BLOCK_END byte
+            val physicalOffset = data.position() - 2
+            val blockIdx = findBlockByPhysicalOffset(threadId, physicalOffset)
+            check(blockIdx != null) { "Thread $threadId doesn't contain physical offset $physicalOffset"}
+            if (blockIdx + 1 == blocks.size) {
+                // Thread ended, Ok
+                return
+            }
+            val block = blocks.getOrNull(blockIdx + 1)
+                ?: error("Thread ${threadId} doesn't have enough data blocks")
+
+            data.seek(block.physicalStart)
+            kind = data.readKind()
+            check(kind == ObjectKind.BLOCK_START) { "Thread ${threadId} block $blockIdx has invalid start: $kind" }
+            val id = data.readInt()
+            check(id == threadId) { "Thread ${threadId} block $blockIdx has invalid id: $id" }
+            // Ready to continue reading
         }
-        data.seek(positions.second)
-        val kind = input.readKind()
-        check(kind == ObjectKind.TRACEPOINT_FOOTER) {
-            "Input contains unbalanced method call tracepoint: tracepoint without footer"
-        }
-        tracePoint.loadFooter(input)
     }
 
     private fun loadContext() {
@@ -139,12 +246,8 @@ class LazyTraceReader(
         } else if (!loadContextWithIndex()) {
             System.err.println("TraceRecorder: Index file for $dataFileName id corrupted: read whole data file to re-create context")
             context.clear()
+            dataBlocks.clear()
             loadContextWithoutIndex()
-        }
-
-        // Create all virtual streams for each thread
-        dataBlockRanges.forEach { id, blocks ->
-            perThreadData[id] = SeekableChunkedInputStream(dataStream, blocks)
         }
 
         // Seek to start after magic and version
@@ -157,12 +260,12 @@ class LazyTraceReader(
             try {
                 // Check format
                 val magic = index.readLong()
-                check (magic == INDEX_MAGIC) {
+                check(magic == INDEX_MAGIC) {
                     "Wrong index magic 0x${(magic.toString(16))}, expected ${TRACE_MAGIC.toString(16)}"
                 }
 
                 val version = index.readLong()
-                check (version == TRACE_VERSION) {
+                check(version == TRACE_VERSION) {
                     "Wrong index version $version, expected $TRACE_VERSION"
                 }
 
@@ -181,12 +284,12 @@ class LazyTraceReader(
                     }
 
                     if (kind == ObjectKind.TRACEPOINT) {
-                        callTracepointPositions[id] = start to end
+                        callTracepointChildren[id] = start to end
                     } else {
                         // Check kind
                         data.seek(start)
                         val dataKind = data.readKind()
-                        check (dataKind == kind) {
+                        check(dataKind == kind) {
                             "Object $objNum: expected $kind but datafile has $dataKind"
                         }
                         val dataId = when (kind) {
@@ -197,10 +300,9 @@ class LazyTraceReader(
                             ObjectKind.STRING -> loadString(data, stringCache, true)
                             ObjectKind.CODE_LOCATION -> loadCodeLocation(data, context, stringCache, true)
                             ObjectKind.BLOCK_START -> {
-                                val list = dataBlockRanges.computeIfAbsent(id) { mutableListOf() }
-                                // Move start 5 bytes later to skip the header: Kind (one byte) + Int
-                                list.add(start + 5 to end - (start + 5))
-                                // Read thread id for consistency check
+                                val list = dataBlocks.computeIfAbsent(id) { mutableListOf() }
+                                list.addNewBlock(start, end)
+                                // Read id from data for check
                                 data.readInt()
                             }
                             // Kotlin complains without these branches, though they are unreachable
@@ -210,7 +312,7 @@ class LazyTraceReader(
                             ObjectKind.BLOCK_END,
                             ObjectKind.TRACEPOINT_FOOTER -> error("Object $objNum has unexpected kind $kind")
                         }
-                        check (id == dataId) {
+                        check(id == dataId) {
                             "Object $objNum of kind $kind: expected $id but datafile has $dataId"
                         }
                     }
@@ -234,35 +336,99 @@ class LazyTraceReader(
     }
 
     private fun loadContextWithoutIndex() {
-        val stringCache = mutableListOf<String?>()
-        // We don't bother about block boundaries, so simply convert them into block data for later streams
-        // Also, double-definition of objects is Ok in multithreaded environment, as one
-        // thread can save the same object as another one, we don't roll back such savings
-        // in case of conflict which, theoretically, can be detected
-        while (true) {
-            val kind = loadObjects(data, context, stringCache, true) { input, context, stringCache ->
-                val tracePoint = loadTRTracePoint(input)
-                if (tracePoint is TRMethodCallTracePoint) {
-                    loadAndThrowAwayChildren(input, context, stringCache, tracePoint)
+        val context = TRACE_CONTEXT
+        // Two Longs is header
+        data.seek((Long.SIZE_BYTES * 2).toLong())
+        loadAllObjectsDeep(
+            input = data,
+            context = context,
+            tracepointConsumer = object : TracepointConsumer {
+                override fun tracePointRead(
+                    parent: TRMethodCallTracePoint?,
+                    tracePoint: TRTracePoint
+                ) {
+                    if (tracePoint is TRMethodCallTracePoint) {
+                        // We are in the last saved block in
+                        val childrenStart = calculateLogicalOffset(tracePoint.threadId,data.position())
+                        callTracepointChildren[tracePoint.eventId] = childrenStart to Long.MAX_VALUE
+                    }
                 }
+
+                override fun footerStarted(tracePoint: TRMethodCallTracePoint) {
+                    val partialPair = callTracepointChildren[tracePoint.eventId]
+                    check(partialPair != null) { "Thread ${tracePoint.threadId} doesn't have start of children mark" }
+                    check(partialPair.second == Long.MAX_VALUE) { "Thread ${tracePoint.threadId} already have full address range" }
+                    // -1 is here because Kind is already read
+                    val childrenEnd = calculateLogicalOffset(tracePoint.threadId,data.position() - 1)
+                    callTracepointChildren[tracePoint.eventId] = partialPair.first to childrenEnd
+                }
+            },
+            blockConsumer = object : BlockConsumer {
+                private var blockStart: Long = 0L
+
+                override fun blockStarted(threadId: Int) {
+                    // 5 bytes for the header which is read already
+                    blockStart = data.position() - BLOCK_HEADER_SIZE
+                    dataBlocks.computeIfAbsent(threadId) { mutableListOf() }.addNewPartialBlock(blockStart)
+                }
+
+                override fun blockEnded(threadId: Int) {
+                    val endPos = data.position() - BLOCK_FOOTER_SIZE // 1 byte for read kind
+                    dataBlocks[threadId]?.fixLastBlock(endPos)
+                }
+
             }
-        }
+        )
     }
 
-    private fun loadAndThrowAwayChildren(input: DataInput, context: TraceContext, stringCache: StringCache, parent: TRMethodCallTracePoint) {
-        val startPos = (input as SeekableDataInput).position()
-        val kind = loadObjects(input, context, stringCache, true) { input, context, stringCache ->
-            val tracePoint = loadTRTracePoint(input)
-            if (tracePoint is TRMethodCallTracePoint) {
-                loadAndThrowAwayChildren(input, context, stringCache, tracePoint)
-            }
+    private fun loadTracePointShallow(input: DataInput, context: TraceContext, stringCache: StringCache): TRTracePoint {
+        // Load tracepoint itself
+        val tracePoint = loadTRTracePoint(input)
+        if (tracePoint !is TRMethodCallTracePoint) {
+            return tracePoint
         }
-        check(kind == ObjectKind.TRACEPOINT_FOOTER) {
-            "Input contains unbalanced method call tracepoint: tracepoint without footer"
+
+        val positions = callTracepointChildren[tracePoint.eventId]
+            ?: error("Tracepoint ${tracePoint.eventId} is not known in index")
+
+        val checkFor = calculatePhysicalOffset(tracePoint.threadId, positions.first)
+        check(data.position() == checkFor) {
+            "TRMethodCallTracePoint ${tracePoint.eventId} has wrong start position in index: ${positions.first} / $checkFor, expected ${data.position()}"
         }
-        val endPos = input.position() - 1 // 1 is the size of ObjectKind.TRACEPOINT_FOOTER
-        callTracepointPositions[parent.eventId] = startPos to endPos
-        parent.loadFooter(input)
+
+        val skipTo = calculatePhysicalOffset(tracePoint.threadId, positions.second)
+        data.seek(skipTo)
+
+        val kind = input.readKind()
+        if (kind == ObjectKind.TRACEPOINT_FOOTER) {
+            tracePoint.loadFooter(input)
+        } else {
+            System.err.println("TraceRecorder: Unexpected object kind $kind when loading tracepoints")
+        }
+
+        return tracePoint
+    }
+
+    private fun calculatePhysicalOffset(threadId: Int, logicalOffset: Long): Long {
+        val blocks = dataBlocks[threadId] ?: error("ThreadId $threadId is not found in block list")
+        val blockIdx = blocks.binarySearch { it.compareWithLogicalOffset(logicalOffset) }
+        check(blockIdx >= 0) { "Thread $threadId doesn't have data at logical offset $logicalOffset" }
+        val block = blocks[blockIdx]
+        return block.physicalStart + logicalOffset - block.accDataSize
+    }
+
+    private fun calculateLogicalOffset(threadId: Int, physicalOffset: Long): Long {
+        val blocks = dataBlocks[threadId] ?: error("ThreadId $threadId is not found in block list")
+        val blockIdx = blocks.binarySearch { it.compareWithPhysicalOffset(physicalOffset) }
+        check(blockIdx >= 0) { "Thread $threadId doesn't have data at physical offset $physicalOffset" }
+        val block = blocks[blockIdx]
+        return block.accDataSize + physicalOffset - block.physicalStart
+    }
+
+    private fun findBlockByPhysicalOffset(threadId: Int, physicalOffset: Long): Int? {
+        val blocks = dataBlocks[threadId] ?: error("ThreadId $threadId is not found in block list")
+        val blockIdx = blocks.binarySearch { it.compareWithPhysicalOffset(physicalOffset) }
+        return if (blockIdx < 0) null else blockIdx
     }
 
     private companion object {
@@ -273,62 +439,159 @@ class LazyTraceReader(
     }
 }
 
+public fun <T> List<T>.mbinarySearch(fromIndex: Int = 0, toIndex: Int = size, comparison: (T) -> Int): Int {
+    var low = fromIndex
+    var high = toIndex - 1
+
+    while (low <= high) {
+        val mid = (low + high).ushr(1) // safe from overflows
+        val midVal = get(mid)
+        val cmp = comparison(midVal)
+
+        if (cmp < 0)
+            low = mid + 1
+        else if (cmp > 0)
+            high = mid - 1
+        else
+            return mid // key found
+    }
+    return -(low + 1)  // key not found
+}
+
+
 fun loadRecordedTrace(inp: InputStream): Pair<TraceContext, List<TRTracePoint>> {
     DataInputStream(inp.buffered(INPUT_BUFFER_SIZE)).use { input ->
-        val magic = input.readLong()
-        check(magic == TRACE_MAGIC) {
-            "Wrong magic 0x${(magic.toString(16))}, expected ${TRACE_MAGIC.toString(16)}"
+        checkDataHeader(input)
+
+        val context = TRACE_CONTEXT
+        val roots = mutableMapOf<Int, MutableList<TRTracePoint>>()
+
+        loadAllObjectsDeep(
+            input = input,
+            context = context,
+            tracepointConsumer = object : TracepointConsumer {
+                override fun tracePointRead(
+                    parent: TRMethodCallTracePoint?,
+                    tracePoint: TRTracePoint
+                ) {
+                    if (parent == null) {
+                        roots.computeIfAbsent(tracePoint.threadId) { mutableListOf() }.add(tracePoint)
+                    } else {
+                        parent.events.add(tracePoint)
+                    }
+                }
+            },
+            blockConsumer = object : BlockConsumer {}
+        )
+
+        roots.forEach {
+            if (it.value.size > 1) {
+                System.err.println("TraceRecorder: Thread #${it.key} contains multiple top-level calls")
+            }
         }
 
-        val version = input.readLong()
-        check (version == TRACE_VERSION) { "Wrong version $version (expected $TRACE_VERSION)" }
-
-        val context = TRACE_CONTEXT // TraceContext()
-        val stacks = mutableMapOf<Int, MutableList<TRMethodCallTracePoint>>()
-        val stringCache = mutableListOf<String?>()
-
-        var seenEOF = false
-        while (input.available() > 0) {
-            // Start a new block
-            val kind = input.readKind()
-
-            // All blocks are read
-            if (kind == ObjectKind.EOF) {
-                seenEOF = true
-                break
-            }
-
-            if (kind != ObjectKind.BLOCK_START) {
-                System.err.println("TraceRecorder: Unexpected object kind $kind, broken file")
-                break
-            }
-
-            val threadId = input.readInt()
-            val stack = stacks.computeIfAbsent(threadId) { mutableListOf() }
-            // Read objects with this stack
-
-            val lastKind = loadObjects()
-        }
-
-        // Check that everything is closed
-
-        return context to roots.values.toList()
+        return context to roots.values.map { it.first() }
     }
 }
 
-private fun loadObjectsEagerly(input: DataInput, context: TraceContext, stringCache: StringCache, tracepoints: MutableList<TRTracePoint>): ObjectKind =
-    loadObjects(input, context, stringCache, true) { input, context, stringCache ->
-        tracepoints.add(loadTracePointDeep(input, context,  stringCache))
+private fun loadAllObjectsDeep(
+    input: DataInputStream,
+    context: TraceContext,
+    tracepointConsumer: TracepointConsumer,
+    blockConsumer: BlockConsumer
+) {
+    val stringCache = mutableListOf<String?>()
+    val stacks = mutableMapOf<Int, MutableList<TRMethodCallTracePoint>>()
+    var seenEOF = false
+
+    while (input.available() > 0) {
+        // Start a new block
+        val kind = input.readKind()
+
+        // All blocks are read
+        if (kind == ObjectKind.EOF) {
+            seenEOF = true
+            break
+        }
+
+        check (kind == ObjectKind.BLOCK_START) {
+            "Unexpected object kind $kind, expected BLOCK_START, broken file"
+        }
+
+        val threadId = input.readInt()
+        blockConsumer.blockStarted(threadId)
+
+        val stack = stacks.computeIfAbsent(threadId) { mutableListOf() }
+
+        // Read objects and tracepoints from this block till it ends.
+        // Unwind the stack manually, if needed
+        while (true) {
+            val kind = loadObjects(input, context, stringCache, true) { input, context, stringCache ->
+                loadTracePointDeep(input, context, stringCache, stack, tracepointConsumer)
+            }
+            if (kind == ObjectKind.BLOCK_END) {
+                blockConsumer.blockEnded(threadId)
+                break
+            }
+            check(kind == ObjectKind.TRACEPOINT_FOOTER) {
+                "Unexpected object kind $kind, expected TRACEPOINT_FOOTER, broken file"
+            }
+            check (stack.isNotEmpty()) { "Stack underflow" }
+
+            val tracePoint = stack.removeLast()
+            tracepointConsumer.footerStarted(tracePoint)
+            tracePoint.loadFooter(input)
+        }
     }
+    if (!seenEOF) {
+        System.err.println("TraceRecorder: no EOF record at the end of the file")
+    }
+    // Check that all stacks are empty
+    stacks.forEach {
+        if (!it.value.isEmpty()) {
+            System.err.println("TraceRecorder: Thread #${it.key} contains unfinished method calls")
+        }
+    }
+}
+
+private fun loadTracePointDeep(
+    input: DataInput,
+    context: TraceContext,
+    stringCache: StringCache,
+    stack: CallStack,
+    consumer: TracepointConsumer
+): Boolean {
+    // Load tracepoint itself
+    val tracePoint = loadTRTracePoint(input)
+    consumer.tracePointRead(stack.lastOrNull(), tracePoint)
+    if (tracePoint !is TRMethodCallTracePoint) {
+        return true
+    }
+    // We need to load all children
+    stack.add(tracePoint)
+    val kind = loadObjects(input, context, stringCache, true) { input, context, stringCache ->
+        loadTracePointDeep(input, context, stringCache, stack, consumer)
+    }
+    if (kind == ObjectKind.TRACEPOINT_FOOTER) {
+        check(tracePoint == stack.removeLast()) { "Tracepoint reading stack corruption" }
+        consumer.footerStarted(tracePoint)
+        tracePoint.loadFooter(input)
+    } else if (kind == ObjectKind.BLOCK_END) {
+        return false
+    } else {
+        System.err.println("TraceRecorder: Unexpected object kind $kind when loading tracepoints")
+        return false
+    }
+    return true
+}
 
 private fun loadObjects(
     input: DataInput,
     context: TraceContext,
     stringCache: StringCache,
     restore: Boolean,
-    stack: CallStack,
     tracePointReader: TracePointReader
-) : ObjectKind {
+): ObjectKind {
     while (true) {
         when (val kind = input.readKind()) {
             ObjectKind.CLASS_DESCRIPTOR -> loadClassDescriptor(input, context, restore)
@@ -337,8 +600,9 @@ private fun loadObjects(
             ObjectKind.VARIABLE_DESCRIPTOR -> loadVariableDescriptor(input, context, restore)
             ObjectKind.STRING -> loadString(input, stringCache, restore)
             ObjectKind.CODE_LOCATION -> loadCodeLocation(input, context, stringCache, restore)
-            ObjectKind.TRACEPOINT -> tracePointReader(input, context, stringCache, stack)
-            ObjectKind.TRACEPOINT_FOOTER, // Children read
+            // Tracepoint reader returns "true" if read is complete and "false" if it encountered end of block
+            ObjectKind.TRACEPOINT -> if (!tracePointReader(input, context, stringCache)) return ObjectKind.BLOCK_END
+            ObjectKind.TRACEPOINT_FOOTER, // Children read or skipped by recursion into tracePointReader
             ObjectKind.BLOCK_START, // Should not happen, really
             ObjectKind.BLOCK_END, // Block ended
             ObjectKind.EOF // Should not happen, really; BLOCK_END must go first
@@ -347,27 +611,16 @@ private fun loadObjects(
     }
 }
 
-private fun loadTracePointDeep(input: DataInput, context: TraceContext, stringCache: StringCache, stack: CallStack): TRTracePoint {
-    val tracePoint = loadTRTracePoint(input)
-    if (tracePoint !is TRMethodCallTracePoint) return tracePoint
-    // Load all children
-    val kind = loadObjectsEagerly(input, context, stringCache, tracePoint.events)
-    check(kind == ObjectKind.TRACEPOINT_FOOTER) {
-        "Input contains unbalanced method call tracepoint: tracepoint without footer"
-    }
-    tracePoint.loadFooter(input)
-    return tracePoint
-}
-
 private fun loadClassDescriptor(
     input: DataInput,
     context: TraceContext,
     restore: Boolean
-) : Int {
+): Int {
     val id = input.readInt()
     val descriptor = input.readClassDescriptor()
-    if (restore)
+    if (restore) {
         context.restoreClassDescriptor(id, descriptor)
+    }
     return id
 }
 
@@ -375,7 +628,7 @@ private fun loadMethodDescriptor(
     input: DataInput,
     context: TraceContext,
     restore: Boolean
-) : Int {
+): Int {
     val id = input.readInt()
     val descriptor = input.readMethodDescriptor(context)
     if (restore)
@@ -387,7 +640,7 @@ private fun loadFieldDescriptor(
     input: DataInput,
     context: TraceContext,
     restore: Boolean
-) : Int {
+): Int {
     val id = input.readInt()
     val descriptor = input.readFieldDescriptor(context)
     if (restore)
@@ -399,7 +652,7 @@ private fun loadVariableDescriptor(
     input: DataInput,
     context: TraceContext,
     restore: Boolean
-) : Int {
+): Int {
     val id = input.readInt()
     val descriptor = input.readVariableDescriptor()
     if (restore)
@@ -411,7 +664,7 @@ private fun loadString(
     input: DataInput,
     stringCache: StringCache,
     restore: Boolean
-) : Int {
+): Int {
     val id = input.readInt()
     val value = input.readUTF()
     if (restore) {
@@ -428,7 +681,7 @@ private fun loadCodeLocation(
     context: TraceContext,
     stringCache: StringCache,
     restore: Boolean
-) : Int {
+): Int {
     val id = input.readInt()
 
     val fileNameId = input.readInt()
@@ -446,4 +699,16 @@ private fun loadCodeLocation(
         context.restoreCodeLocation(id, ste)
     }
     return id
+}
+
+private fun checkDataHeader(input: DataInput) {
+    val magic = input.readLong()
+    check(magic == TRACE_MAGIC) {
+        "Wrong magic 0x${(magic.toString(16))}, expected ${TRACE_MAGIC.toString(16)}"
+    }
+
+    val version = input.readLong()
+    check(version == TRACE_VERSION) {
+        "Wrong version $version (expected $TRACE_VERSION)"
+    }
 }
