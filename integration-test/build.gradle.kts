@@ -20,6 +20,11 @@ java {
 }
 
 sourceSets {
+    create("common") {
+        java.srcDir("common")
+        configureAccessToRootProject()
+    }
+
     create("lincheckIntegrationTest") {
         java.srcDir("lincheck")
         configureClasspath()
@@ -44,19 +49,20 @@ sourceSets {
     }
 
     dependencies {
-        testImplementation(rootProject.sourceSets["test"].output)
-
-        // test
+        // common
         val junitVersion: String by project
         val jctoolsVersion: String by project
         val mockkVersion: String by project
         val slf4jVersion: String by project
         val gradleToolingApiVersion: String by project
 
-        testImplementation("junit:junit:$junitVersion")
-        testImplementation("org.jctools:jctools-core:$jctoolsVersion")
-        testImplementation("io.mockk:mockk:${mockkVersion}")
-        testImplementation("org.gradle:gradle-tooling-api:${gradleToolingApiVersion}")
+        val commonImplementation by configurations
+
+        commonImplementation(rootProject.sourceSets["test"].output)
+        commonImplementation("junit:junit:$junitVersion")
+        commonImplementation("org.jctools:jctools-core:$jctoolsVersion")
+        commonImplementation("io.mockk:mockk:${mockkVersion}")
+        commonImplementation("org.gradle:gradle-tooling-api:${gradleToolingApiVersion}")
 
         // lincheckIntegrationTest
         val lincheckIntegrationTestImplementation by configurations
@@ -97,35 +103,12 @@ tasks.withType<Test> {
 }
 
 tasks {
-    named<JavaCompile>("compileTestJava") {
-        setupJavaToolchain()
-    }
-    named<KotlinCompile>("compileTestKotlin") {
-        setupKotlinToolchain()
-    }
-
-    named<JavaCompile>("compileLincheckIntegrationTestJava") {
-        setupJavaToolchain()
-    }
-    named<KotlinCompile>("compileLincheckIntegrationTestKotlin") {
-        setupKotlinToolchain()
-    }
-
-    named<JavaCompile>("compileTraceDebuggerIntegrationTestJava") {
-        setupJavaToolchain()
-    }
-    named<KotlinCompile>("compileTraceDebuggerIntegrationTestKotlin") {
-        setupKotlinToolchain()
-    }
-
-    named<JavaCompile>("compileTraceRecorderIntegrationTestJava") {
-        setupJavaToolchain()
-    }
-    named<KotlinCompile>("compileTraceRecorderIntegrationTestKotlin") {
-        setupKotlinToolchain()
+    withType<JavaCompile> {
+        setupJavaToolchain(project)
     }
 
     withType<KotlinCompile> {
+        setupKotlinToolchain(project)
         setupFriendPathsToRootProject()
     }
 }
@@ -133,12 +116,11 @@ tasks {
 tasks {
     // TODO: rename to match trace-debugger/recorder gradle task naming pattern to 'lincheckIntegrationTest'
     val lincheckIntegrationTest = register<Test>("integrationTest") {
+        configureJvmTestCommon(project)
         group = "verification"
 
         testClassesDirs = sourceSets["lincheckIntegrationTest"].output.classesDirs
         classpath = sourceSets["lincheckIntegrationTest"].runtimeClasspath
-
-        configureJvmTestCommon(project)
 
         enableAssertions = true
         testLogging.showStandardStreams = true
@@ -173,22 +155,15 @@ tasks {
     }
 }
 
-// TODO: how not to copy these functions everywhere
-fun JavaCompile.setupJavaToolchain() {
-    val jdkToolchainVersion: String by project
-    setupJavaToolchain(javaToolchains, jdkToolchainVersion)
-}
-
-fun KotlinCompile.setupKotlinToolchain() {
-    val jdkToolchainVersion: String by project
-    setupKotlinToolchain(javaToolchains, jdkToolchainVersion)
-}
-
 fun SourceSet.configureClasspath() {
-    compileClasspath += sourceSets.main.get().output + sourceSets.test.get().output
-    runtimeClasspath += sourceSets.main.get().output + sourceSets.test.get().output
+    compileClasspath += sourceSets.main.get().output + sourceSets.test.get().output + sourceSets["common"].output
+    runtimeClasspath += sourceSets.main.get().output + sourceSets.test.get().output + sourceSets["common"].output
 
     // Add the root project's source sets to allow access to internal classes later via friend paths
+    configureAccessToRootProject()
+}
+
+fun SourceSet.configureAccessToRootProject() {
     compileClasspath += rootProject.sourceSets.main.get().output + rootProject.sourceSets.test.get().output
     runtimeClasspath += rootProject.sourceSets.main.get().output + rootProject.sourceSets.test.get().output
 }

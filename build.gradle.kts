@@ -1,25 +1,10 @@
-/*
- * Lincheck
- *
- * Copyright (C) 2019 - 2025 JetBrains s.r.o.
- *
- * This Source Code Form is subject to the terms of the
- * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
- * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
-
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.asRequestBody
-import org.gradle.kotlin.dsl.invoke
-import org.gradle.kotlin.dsl.java
-import org.gradle.kotlin.dsl.kotlin
-import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
+import org.gradle.jvm.tasks.Jar
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import java.nio.file.Paths
-import java.util.Base64
-
+import java.util.*
 
 buildscript {
     repositories {

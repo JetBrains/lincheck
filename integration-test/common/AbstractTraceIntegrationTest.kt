@@ -112,6 +112,7 @@ abstract class AbstractTraceIntegrationTest {
         createGradleConnection().use { connection ->
             connection
                 .newBuild()
+                .setStandardError(System.err)
                 .addArguments(
                     "--init-script",
                     createInitScriptAsTempFile(buildGradleInitScriptToDumpTrace(testClassName, testMethodName, tmpFile, extraJvmArgs, extraAgentArgs)).absolutePath,
@@ -134,7 +135,7 @@ abstract class AbstractTraceIntegrationTest {
                     Assert.fail("The gold data file was created. Please rerun the test.")
                 } else {
                     Assert.fail(
-                        "The gold data file was not found. " +
+                        "The gold data file was not found at '${expectedOutput.absolutePath}'. " +
                         "Please rerun the test with \"overwriteRepresentationTestsOutput\" option enabled."
                     )
                 }
@@ -188,6 +189,7 @@ abstract class AbstractTraceIntegrationTest {
         createGradleConnection().use { connection ->
             // Build the test classes and extract the classpath
             connection.newBuild()
+                .setStandardError(System.err)
                 .forTasks(*gradleBuildCommands.toTypedArray())
                 .withArguments("--init-script", initScriptFile.absolutePath)
                 .run()
