@@ -152,42 +152,32 @@ fun SourceSet.configureClasspath() {
 
 tasks {
     named<JavaCompile>("compileTestJava") {
-        setupJavaToolchain()
+        setupJavaToolchain(project)
     }
     named<KotlinCompile>("compileTestKotlin") {
-        setupKotlinToolchain()
+        setupKotlinToolchain(project)
     }
 
     named<JavaCompile>("compileLincheckIntegrationTestJava") {
-        setupJavaToolchain()
+        setupJavaToolchain(project)
     }
     named<KotlinCompile>("compileLincheckIntegrationTestKotlin") {
-        setupKotlinToolchain()
+        setupKotlinToolchain(project)
     }
 
     named<JavaCompile>("compileTraceDebuggerIntegrationTestJava") {
-        setupJavaToolchain()
+        setupJavaToolchain(project)
     }
     named<KotlinCompile>("compileTraceDebuggerIntegrationTestKotlin") {
-        setupKotlinToolchain()
+        setupKotlinToolchain(project)
     }
 
     named<JavaCompile>("compileTraceRecorderIntegrationTestJava") {
-        setupJavaToolchain()
+        setupJavaToolchain(project)
     }
     named<KotlinCompile>("compileTraceRecorderIntegrationTestKotlin") {
-        setupKotlinToolchain()
+        setupKotlinToolchain(project)
     }
-}
-
-fun JavaCompile.setupJavaToolchain() {
-    val jdkToolchainVersion: String by project
-    setupJavaToolchain(javaToolchains, jdkToolchainVersion)
-}
-
-fun KotlinCompile.setupKotlinToolchain() {
-    val jdkToolchainVersion: String by project
-    setupKotlinToolchain(javaToolchains, jdkToolchainVersion)
 }
 
 // add an association to main and test modules to enable access to `internal` APIs inside integration tests:

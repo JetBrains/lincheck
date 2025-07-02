@@ -8,10 +8,12 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+import org.gradle.api.Project
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.jvm.toolchain.JavaToolchainService
+import org.gradle.kotlin.dsl.provideDelegate
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
@@ -27,13 +29,25 @@ fun JavaPluginExtension.configureJava() {
     }
 }
 
-fun JavaCompile.setupJavaToolchain(javaToolchains: JavaToolchainService,  jdkToolchainVersion: String) {
+fun JavaCompile.setupJavaToolchain(project: Project) {
+    val jdkToolchainVersion: String by project
+    val javaToolchains: JavaToolchainService = project.extensions.getByType(JavaToolchainService::class.java)
+    setupJavaToolchain(javaToolchains, jdkToolchainVersion)
+}
+
+private fun JavaCompile.setupJavaToolchain(javaToolchains: JavaToolchainService,  jdkToolchainVersion: String) {
     javaCompiler.set(javaToolchains.compilerFor {
         languageVersion.set(JavaLanguageVersion.of(jdkToolchainVersion))
     })
 }
 
-fun KotlinCompile.setupKotlinToolchain(javaToolchains: JavaToolchainService, jdkToolchainVersion: String) {
+fun KotlinCompile.setupKotlinToolchain(project: Project) {
+    val jdkToolchainVersion: String by project
+    val javaToolchains: JavaToolchainService = project.extensions.getByType(JavaToolchainService::class.java)
+    setupKotlinToolchain(javaToolchains, jdkToolchainVersion)
+}
+
+private fun KotlinCompile.setupKotlinToolchain(javaToolchains: JavaToolchainService, jdkToolchainVersion: String) {
     kotlinJavaToolchain.toolchain.use(javaToolchains.launcherFor {
         languageVersion.set(JavaLanguageVersion.of(jdkToolchainVersion))
     })

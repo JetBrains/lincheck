@@ -28,21 +28,11 @@ sourceSets {
 
 tasks {
     named<JavaCompile>("compileTestJava") {
-        setupJavaToolchain()
+        setupJavaToolchain(project)
     }
     named<KotlinCompile>("compileTestKotlin") {
-        setupKotlinToolchain()
+        setupKotlinToolchain(project)
     }
-}
-
-fun JavaCompile.setupJavaToolchain() {
-    val jdkToolchainVersion: String by project
-    setupJavaToolchain(javaToolchains, jdkToolchainVersion)
-}
-
-fun KotlinCompile.setupKotlinToolchain() {
-    val jdkToolchainVersion: String by project
-    setupKotlinToolchain(javaToolchains, jdkToolchainVersion)
 }
 
 val jar = tasks.jar {
