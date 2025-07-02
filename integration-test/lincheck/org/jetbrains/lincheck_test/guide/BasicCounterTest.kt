@@ -10,34 +10,32 @@
 
 package org.jetbrains.lincheck_test.guide
 
-import org.jetbrains.lincheck.*
 import org.jetbrains.lincheck.datastructures.*
-import java.util.concurrent.*
 import org.junit.*
 
-class ConcurrentLinkedDequeTest {
-    private val deque = ConcurrentLinkedDeque<Int>()
+class Counter {
+    @Volatile
+    private var value = 0
+
+    fun inc(): Int = ++value
+    fun get() = value
+}
+
+class BasicCounterTest {
+    private val c = Counter() // initial state
+
+    // operations on the Counter
+    @Operation
+    fun inc() = c.inc()
 
     @Operation
-    fun addFirst(e: Int) = deque.addFirst(e)
-
-    @Operation
-    fun addLast(e: Int) = deque.addLast(e)
-
-    @Operation
-    fun pollFirst() = deque.pollFirst()
-
-    @Operation
-    fun pollLast() = deque.pollLast()
-
-    @Operation
-    fun peekFirst() = deque.peekFirst()
-
-    @Operation
-    fun peekLast() = deque.peekLast()
+    fun get() = c.get()
 
     //@Test // TODO: Please, uncomment me and comment the line below to run the test and get the output
     @Test(expected = AssertionError::class)
-    fun modelCheckingTest() = ModelCheckingOptions()
-        .check(this::class)
+    fun stressTest() = StressOptions().check(this::class) // the magic button
+
+    //@Test // TODO: Please, uncomment me and comment the line below to run the test and get the output
+    @Test(expected = AssertionError::class)
+    fun modelCheckingTest() = ModelCheckingOptions().check(this::class)
 }

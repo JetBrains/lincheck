@@ -8,7 +8,7 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.trace_recorder.integration
+package org.jetbrains.trace_recorder_test
 
 import org.junit.Test
 import java.nio.file.Paths
@@ -29,7 +29,7 @@ class TraceDebuggerExamplesTraceRecorderIntegrationTest : AbstractTraceRecorderI
     fun `org_examples_integration_bugs_LinkedHashSetTest`() {
         runGradleTests(
             testClassNamePrefix = "org.examples.integration.bugs.LinkedHashSetTest",
-            gradleBuildCommands = listOf("compileTestKotlin"),
+            gradleBuildCommands = listOf(":compileTestKotlin"),
             gradleTestCommands = listOf(":test"),
             checkRepresentation = false,
         )

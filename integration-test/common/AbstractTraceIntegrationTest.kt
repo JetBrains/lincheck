@@ -8,8 +8,6 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck_test
-
 import org.gradle.tooling.GradleConnector
 import org.gradle.tooling.ProjectConnection
 import org.jetbrains.kotlinx.lincheck_test.util.OVERWRITE_REPRESENTATION_TESTS_OUTPUT
@@ -37,7 +35,7 @@ abstract class AbstractTraceIntegrationTest {
         extraJvmArgs: List<String>,
         extraAgentArgs: List<String>,
     ): String {
-        val pathToFatJar = File(Paths.get("build", "libs", "lincheck-fat.jar").toString())
+        val pathToFatJar = File(Paths.get(".." /* enter the root project dir */, "build", "libs", "lincheck-fat.jar").toString())
         return """
             gradle.taskGraph.whenReady {
                 val jvmTasks = allTasks.filter { task -> task is JavaForkOptions }
@@ -136,7 +134,7 @@ abstract class AbstractTraceIntegrationTest {
                     Assert.fail("The gold data file was created. Please rerun the test.")
                 } else {
                     Assert.fail(
-                        "The gold data file was not found. " +
+                        "The gold data file was not found at '${expectedOutput.absolutePath}'. " +
                         "Please rerun the test with \"overwriteRepresentationTestsOutput\" option enabled."
                     )
                 }
@@ -219,11 +217,16 @@ abstract class AbstractTraceIntegrationTest {
     private fun createInitScriptToOutputClasspath(outputFile: File, gradleBuildCommands: List<String>): String {
         return """
             gradle.taskGraph.whenReady {
+                val buildTasks = listOf(${gradleBuildCommands.joinToString(",") { "\"$it\"" }})
+                    .map { if (it.startsWith(":")) it.drop(1) else it }
+    
                 allTasks.forEach { task ->
-                    if (task.name in listOf(${gradleBuildCommands.joinToString(",") { "\"$it\"" }})) {
+                    if (task.name in buildTasks) {
                         task.doLast {
                             val project = task.project
-                            val classpath = project.configurations.findByName("jvmTestRuntimeClasspath")
+                            val classpath = project.configurations.findByName("jvmTestRuntimeClasspath") ?:
+                                            project.configurations.findByName("testRuntimeClasspath")
+
                             if (classpath != null) {
                                 val classpathString = classpath.files.joinToString(File.pathSeparator)
                                 val outputFile = File("${outputFile.absolutePath}")
@@ -250,8 +253,8 @@ abstract class AbstractTraceIntegrationTest {
         val testClassesPaths = projectDir.walk()
             .filter {
                 it.isFile &&
-                        it.extension == "class" &&
-                        !it.path.contains("$") // Skip inner classes, anonymous classes, etc.
+                it.extension == "class" &&
+                !it.path.contains("$") // Skip inner classes, anonymous classes, etc.
             }
             .filter {
                 val filePath = it.systemIndependentPath
