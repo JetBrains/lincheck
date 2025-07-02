@@ -26,7 +26,7 @@ sealed class TRTracePoint(
     val eventId: Int
 ) {
     internal open fun save(out: TraceWriter) {
-        preSave(out)
+        saveReferences(out)
 
         out.startWriteAnyTracepoint()
         out.writeByte(getClassId(this))
@@ -35,7 +35,7 @@ sealed class TRTracePoint(
         out.writeInt(eventId)
     }
 
-    internal open fun preSave(out: TraceWriter) {
+    internal open fun saveReferences(out: TraceWriter) {
         out.writeCodeLocation(codeLocationId)
     }
 
@@ -78,8 +78,8 @@ class TRMethodCallTracePoint(
         out.endWriteContainerTracepointHeader(eventId)
     }
 
-    override fun preSave(out: TraceWriter) {
-        super.preSave(out)
+    override fun saveReferences(out: TraceWriter) {
+        super.saveReferences(out)
         out.writeMethodDescriptor(methodId)
         out.preWriteTRObject(obj)
         parameters.forEach {
@@ -94,6 +94,7 @@ class TRMethodCallTracePoint(
         out.startWriteContainerTracepointFooter(eventId)
         out.writeTRObject(result)
         out.writeUTF(exceptionClassName ?: "")
+        out.endWriteContainerTracepointFooter()
     }
 
     internal fun loadFooter(inp: DataInput) {
@@ -182,10 +183,11 @@ sealed class TRFieldTracePoint(
         out.writeInt(fieldId)
         out.writeTRObject(obj)
         out.writeTRObject(value)
+        out.endWriteLeafTracepoint()
     }
 
-    override fun preSave(out: TraceWriter) {
-        super.preSave(out)
+    override fun saveReferences(out: TraceWriter) {
+        super.saveReferences(out)
         out.writeFieldDescriptor(fieldId)
         out.preWriteTRObject(obj)
         out.preWriteTRObject(value)
@@ -274,10 +276,11 @@ sealed class TRLocalVariableTracePoint(
         super.save(out)
         out.writeInt(localVariableId)
         out.writeTRObject(value)
+        out.endWriteLeafTracepoint()
     }
 
-    override fun preSave(out: TraceWriter) {
-        super.preSave(out)
+    override fun saveReferences(out: TraceWriter) {
+        super.saveReferences(out)
         out.writeVariableDescriptor(localVariableId)
         out.preWriteTRObject(value)
     }
@@ -353,10 +356,11 @@ sealed class TRArrayTracePoint(
         out.writeTRObject(array)
         out.writeInt(index)
         out.writeTRObject(value)
+        out.endWriteLeafTracepoint()
     }
 
-    override fun preSave(out: TraceWriter) {
-        super.preSave(out)
+    override fun saveReferences(out: TraceWriter) {
+        super.saveReferences(out)
         out.preWriteTRObject(array)
         out.preWriteTRObject(value)
     }

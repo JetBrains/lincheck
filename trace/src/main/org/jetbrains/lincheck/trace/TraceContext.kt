@@ -104,6 +104,9 @@ class TraceContext {
     }
 
     internal fun restoreCodeLocation(id: Int, value: StackTraceElement) {
+        check (id >= locations.size || locations[id] == null || locations[id] == value) {
+            "CodeLocation with id $id is already present in context and differs from $value"
+        }
         while (locations.size <= id) {
             locations.add(null)
         }

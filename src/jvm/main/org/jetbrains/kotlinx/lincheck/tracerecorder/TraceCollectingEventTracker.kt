@@ -117,8 +117,6 @@ class TraceCollectingEventTracker(
     }
 
     override fun beforeThreadFork(thread: Thread, descriptor: ThreadDescriptor) = runInsideIgnoredSection {
-        if (outputType == TraceCollectorOutputType.BINARY) return
-
         ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         // Create new thread handle
         val forkedThreadData = ThreadData(threads.size)
@@ -128,10 +126,11 @@ class TraceCollectingEventTracker(
     }
 
     override fun beforeThreadStart() = runInsideIgnoredSection {
-        if (outputType == TraceCollectorOutputType.BINARY) return
-
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
+
+        strategy.registerCurrentThread(threadData.threadId)
+
         val tracePoint = TRMethodCallTracePoint(
             threadId = threadData.threadId,
             codeLocationId = -1,
@@ -145,14 +144,13 @@ class TraceCollectingEventTracker(
     }
 
     override fun afterThreadFinish() {
-        if (outputType == TraceCollectorOutputType.BINARY) return
-
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
         // Don't pop, we need it
         val tracePoint = threadData.callStack.first()
         tracePoint.result = TR_OBJECT_VOID
         strategy.callEnded(tracePoint)
+        strategy.finishCurrentThread()
         threadDescriptor.disableAnalysis()
     }
 

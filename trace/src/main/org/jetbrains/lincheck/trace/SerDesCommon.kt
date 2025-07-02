@@ -42,6 +42,8 @@ internal enum class ObjectKind {
     CODE_LOCATION,
     TRACEPOINT,
     TRACEPOINT_FOOTER,
+    BLOCK_START,
+    BLOCK_END,
     EOF
 }
 

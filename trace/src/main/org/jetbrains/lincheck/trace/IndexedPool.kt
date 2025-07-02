@@ -37,8 +37,9 @@ internal class IndexedPool<T> {
 
     @Synchronized
     internal fun restore(id: Int, value: T) {
-        check (id >= items.size || items[id] == null) {
-            "Item with id $id is already present in pool"
+        // Check that double-restore is idempotent
+        check (id >= items.size || items[id] == null || items[id] == value) {
+            "Item with id $id is already present in pool and differs from $value"
         }
         while (items.size <= id) {
             items.add(null)

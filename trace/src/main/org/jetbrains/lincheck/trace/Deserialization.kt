@@ -10,17 +10,20 @@
 
 package org.jetbrains.kotlinx.lincheck.tracedata
 
-import java.io.*
-import java.nio.ByteBuffer
-import java.nio.channels.SeekableByteChannel
+import java.io.Closeable
+import java.io.DataInput
+import java.io.DataInputStream
+import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption
 import kotlin.io.path.Path
-import kotlin.math.max
-import kotlin.math.min
 
 
 private const val INPUT_BUFFER_SIZE: Int = 16*1024*1024
+
+private typealias StringCache = MutableList<String?>
+private typealias CallStack = MutableList<TRMethodCallTracePoint>
+private typealias TracePointReader = (DataInput, TraceContext, StringCache, CallStack) -> Unit
 
 /**
  * This needs a file name as it uses a seekable file channel, it is easier than seekable stream
@@ -37,12 +40,16 @@ class LazyTraceReader(
                 context = context
             )
 
+    private val dataStream: SeekableInputStream
     private val data: SeekableDataInput
-    private val tracepointPositions = mutableMapOf<Int, Pair<Long, Long>>()
+    private val perThreadData = mutableMapOf<Int, SeekableChunkedInputStream>()
+    private val dataBlockRanges = mutableMapOf<Int, MutableList<Pair<Long, Long>>>()
+    private val callTracepointPositions = mutableMapOf<Int, Pair<Long, Long>>()
 
     init {
         val channel = Files.newByteChannel(Path(dataFileName), StandardOpenOption.READ)
-        data = SeekableDataInput(SeekableInputStream(channel))
+        dataStream = SeekableChannelBufferedInputStream(channel)
+        data = SeekableDataInput(dataStream)
 
         try {
             // Check format
@@ -88,7 +95,7 @@ class LazyTraceReader(
     }
 
     fun readChildren(parent: TRMethodCallTracePoint) {
-        val positions = tracepointPositions[parent.eventId]
+        val positions = callTracepointPositions[parent.eventId]
         check(positions != null) { "TRMethodCallTracePoint ${parent.eventId} is not found in index" }
         parent.events.clear()
         data.seek(positions.first)
@@ -109,7 +116,7 @@ class LazyTraceReader(
     }
 
     private fun skipChildrenAndLoadFooter(input: SeekableDataInput, tracePoint: TRMethodCallTracePoint) {
-        val positions = tracepointPositions[tracePoint.eventId]
+        val positions = callTracepointPositions[tracePoint.eventId]
         check(positions != null) { "TRMethodCallTracePoint ${tracePoint.eventId} is not found in index" }
         check(positions.first == data.position()) {
             "TRMethodCallTracePoint ${tracePoint.eventId} has wrong start position in index: ${positions.first}, expected ${data.position()}"
@@ -131,6 +138,12 @@ class LazyTraceReader(
             context.clear()
             loadContextWithoutIndex()
         }
+
+        // Create all virtual streams for each thread
+        dataBlockRanges.forEach { id, blocks ->
+            perThreadData[id] = SeekableChunkedInputStream(dataStream, blocks)
+        }
+
         // Seek to start after magic and version
         data.seek((Long.SIZE_BYTES * 2).toLong())
     }
@@ -152,16 +165,20 @@ class LazyTraceReader(
 
                 var objNum = 0
                 val stringCache = mutableListOf<String?>()
-                while (true) {
+                var seenEOF = false
+                while (index.available() >= 21) {
                     val kind = index.readKind()
                     val id = index.readInt()
                     val start = index.readLong()
                     val end = index.readLong()
 
-                    if (kind == ObjectKind.EOF) break
+                    if (kind == ObjectKind.EOF) {
+                        seenEOF = true
+                        break
+                    }
 
                     if (kind == ObjectKind.TRACEPOINT) {
-                        tracepointPositions[id] = start to end
+                        callTracepointPositions[id] = start to end
                     } else {
                         // Check kind
                         data.seek(start)
@@ -176,9 +193,19 @@ class LazyTraceReader(
                             ObjectKind.VARIABLE_DESCRIPTOR -> loadVariableDescriptor(data, context, true)
                             ObjectKind.STRING -> loadString(data, stringCache, true)
                             ObjectKind.CODE_LOCATION -> loadCodeLocation(data, context, stringCache, true)
-                            ObjectKind.TRACEPOINT_FOOTER -> error("Object $objNum is unexpected kind $kind")
-                            ObjectKind.TRACEPOINT -> Unit
-                            ObjectKind.EOF -> Unit
+                            ObjectKind.BLOCK_START -> {
+                                val list = dataBlockRanges.computeIfAbsent(id) { mutableListOf() }
+                                // Move start 5 bytes later to skip the header: Kind (one byte) + Int
+                                list.add(start + 5 to end - (start + 5))
+                                // Read thread id for consistency check
+                                data.readInt()
+                            }
+                            // Kotlin complains without these branches, though they are unreachable
+                            ObjectKind.TRACEPOINT,
+                            ObjectKind.EOF -> -1
+                            // Cannot be in index
+                            ObjectKind.BLOCK_END,
+                            ObjectKind.TRACEPOINT_FOOTER -> error("Object $objNum has unexpected kind $kind")
                         }
                         check (id == dataId) {
                             "Object $objNum of kind $kind: expected $id but datafile has $dataId"
@@ -186,9 +213,14 @@ class LazyTraceReader(
                     }
                     objNum++
                 }
-                val magicEnd = index.readLong()
-                if (magicEnd != INDEX_MAGIC) {
-                    error("Wrong final index magic 0x${(magic.toString(16))}, expected ${TRACE_MAGIC.toString(16)}")
+                if (!seenEOF) {
+                    // Allow for truncated indices, only print warning
+                    System.err.println("TraceRecorder: Warning: Index for $dataFileName is truncated")
+                } else {
+                    val magicEnd = index.readLong()
+                    if (magicEnd != INDEX_MAGIC) {
+                        error("Wrong final index magic 0x${(magic.toString(16))}, expected ${TRACE_MAGIC.toString(16)}")
+                    }
                 }
             } catch (t: Throwable) {
                 System.err.println("TraceRecorder: Error reading index for $dataFileName: ${t.message}")
@@ -200,18 +232,21 @@ class LazyTraceReader(
 
     private fun loadContextWithoutIndex() {
         val stringCache = mutableListOf<String?>()
-        val kind = loadObjects(data, context, stringCache, true) { input, context, stringCache ->
-            val tracePoint = loadTRTracePoint(input)
-            if (tracePoint is TRMethodCallTracePoint) {
-                loadAndThrowAwayChildren(input, context, stringCache, tracePoint)
+        // We don't bother about block boundaries, so simply convert them into block data for later streams
+        // Also, double-definition of objects is Ok in multithreaded environment, as one
+        // thread can save the same object as another one, we don't roll back such savings
+        // in case of conflict which, theoretically, can be detected
+        while (true) {
+            val kind = loadObjects(data, context, stringCache, true) { input, context, stringCache ->
+                val tracePoint = loadTRTracePoint(input)
+                if (tracePoint is TRMethodCallTracePoint) {
+                    loadAndThrowAwayChildren(input, context, stringCache, tracePoint)
+                }
             }
-        }
-        check (kind == ObjectKind.EOF) {
-            "Input contains additional data: expected EOF get $kind"
         }
     }
 
-    private fun loadAndThrowAwayChildren(input: DataInput, context: TraceContext, stringCache: MutableList<String?>, parent: TRMethodCallTracePoint) {
+    private fun loadAndThrowAwayChildren(input: DataInput, context: TraceContext, stringCache: StringCache, parent: TRMethodCallTracePoint) {
         val startPos = (input as SeekableDataInput).position()
         val kind = loadObjects(input, context, stringCache, true) { input, context, stringCache ->
             val tracePoint = loadTRTracePoint(input)
@@ -223,7 +258,7 @@ class LazyTraceReader(
             "Input contains unbalanced method call tracepoint: tracepoint without footer"
         }
         val endPos = input.position() - 1 // 1 is the size of ObjectKind.TRACEPOINT_FOOTER
-        tracepointPositions[parent.eventId] = startPos to endPos
+        callTracepointPositions[parent.eventId] = startPos to endPos
         parent.loadFooter(input)
     }
 
@@ -246,43 +281,70 @@ fun loadRecordedTrace(inp: InputStream): Pair<TraceContext, List<TRTracePoint>> 
         check (version == TRACE_VERSION) { "Wrong version $version (expected $TRACE_VERSION)" }
 
         val context = TRACE_CONTEXT // TraceContext()
-        val roots = mutableListOf<TRTracePoint>()
+        val stacks = mutableMapOf<Int, MutableList<TRMethodCallTracePoint>>()
         val stringCache = mutableListOf<String?>()
-        // Load objects
-        val eof = loadObjectsEagerly(input, context, stringCache, roots)
-        check(eof == ObjectKind.EOF) {
-            "Input contains unbalanced method call tracepoint: footer without main data"
+
+        var seenEOF = false
+        while (input.available() > 0) {
+            // Start a new block
+            val kind = input.readKind()
+
+            // All blocks are read
+            if (kind == ObjectKind.EOF) {
+                seenEOF = true
+                break
+            }
+
+            if (kind != ObjectKind.BLOCK_START) {
+                System.err.println("TraceRecorder: Unexpected object kind $kind, broken file")
+                break
+            }
+
+            val threadId = input.readInt()
+            val stack = stacks.computeIfAbsent(threadId) { mutableListOf() }
+            // Read objects with this stack
+
+            val lastKind = loadObjects()
         }
 
-        return context to roots
+        // Check that everything is closed
+
+        return context to roots.values.toList()
     }
 }
 
-typealias TracePointProcessor = (DataInput, TraceContext, MutableList<String?>) -> Unit
-
-private fun loadObjectsEagerly(input: DataInput, context: TraceContext, stringCache: MutableList<String?>, tracepoints: MutableList<TRTracePoint>): ObjectKind =
+private fun loadObjectsEagerly(input: DataInput, context: TraceContext, stringCache: StringCache, tracepoints: MutableList<TRTracePoint>): ObjectKind =
     loadObjects(input, context, stringCache, true) { input, context, stringCache ->
-        tracepoints.add(loadTracePointEagerly(input, context,  stringCache))
+        tracepoints.add(loadTracePointDeep(input, context,  stringCache))
     }
 
-private fun loadObjects(input: DataInput, context: TraceContext, stringCache: MutableList<String?>, restore: Boolean, tpProcessor: TracePointProcessor): ObjectKind {
+private fun loadObjects(
+    input: DataInput,
+    context: TraceContext,
+    stringCache: StringCache,
+    restore: Boolean,
+    stack: CallStack,
+    tracePointReader: TracePointReader
+) : ObjectKind {
     while (true) {
-        val kind = input.readKind()
-        when (kind) {
+        when (val kind = input.readKind()) {
             ObjectKind.CLASS_DESCRIPTOR -> loadClassDescriptor(input, context, restore)
             ObjectKind.METHOD_DESCRIPTOR -> loadMethodDescriptor(input, context, restore)
             ObjectKind.FIELD_DESCRIPTOR -> loadFieldDescriptor(input, context, restore)
             ObjectKind.VARIABLE_DESCRIPTOR -> loadVariableDescriptor(input, context, restore)
             ObjectKind.STRING -> loadString(input, stringCache, restore)
             ObjectKind.CODE_LOCATION -> loadCodeLocation(input, context, stringCache, restore)
-            ObjectKind.TRACEPOINT -> tpProcessor(input, context, stringCache)
-            ObjectKind.TRACEPOINT_FOOTER -> return kind
-            ObjectKind.EOF -> return kind
+            ObjectKind.TRACEPOINT -> tracePointReader(input, context, stringCache, stack)
+            ObjectKind.TRACEPOINT_FOOTER, // Children read
+            ObjectKind.BLOCK_START, // Should not happen, really
+            ObjectKind.BLOCK_END, // Block ended
+            ObjectKind.EOF // Should not happen, really; BLOCK_END must go first
+                -> return kind
         }
     }
 }
 
-private fun loadTracePointEagerly(input: DataInput, context: TraceContext, stringCache: MutableList<String?>): TRTracePoint {
+private fun loadTracePointDeep(input: DataInput, context: TraceContext, stringCache: StringCache, stack: CallStack): TRTracePoint {
     val tracePoint = loadTRTracePoint(input)
     if (tracePoint !is TRMethodCallTracePoint) return tracePoint
     // Load all children
@@ -302,7 +364,7 @@ private fun loadClassDescriptor(
     val id = input.readInt()
     val descriptor = input.readClassDescriptor()
     if (restore)
-        context.restoreClassDescriptor(id,descriptor)
+        context.restoreClassDescriptor(id, descriptor)
     return id
 }
 
@@ -314,7 +376,7 @@ private fun loadMethodDescriptor(
     val id = input.readInt()
     val descriptor = input.readMethodDescriptor(context)
     if (restore)
-        context.restoreMethodDescriptor(id,descriptor)
+        context.restoreMethodDescriptor(id, descriptor)
     return id
 }
 
@@ -326,7 +388,7 @@ private fun loadFieldDescriptor(
     val id = input.readInt()
     val descriptor = input.readFieldDescriptor(context)
     if (restore)
-        context.restoreFieldDescriptor(id,descriptor)
+        context.restoreFieldDescriptor(id, descriptor)
     return id
 }
 
@@ -338,13 +400,13 @@ private fun loadVariableDescriptor(
     val id = input.readInt()
     val descriptor = input.readVariableDescriptor()
     if (restore)
-        context.restoreVariableDescriptor(id,descriptor)
+        context.restoreVariableDescriptor(id, descriptor)
     return id
 }
 
 private fun loadString(
     input: DataInput,
-    stringCache: MutableList<String?>,
+    stringCache: StringCache,
     restore: Boolean
 ) : Int {
     val id = input.readInt()
@@ -361,7 +423,7 @@ private fun loadString(
 private fun loadCodeLocation(
     input: DataInput,
     context: TraceContext,
-    stringCache: MutableList<String?>,
+    stringCache: StringCache,
     restore: Boolean
 ) : Int {
     val id = input.readInt()
@@ -381,100 +443,4 @@ private fun loadCodeLocation(
         context.restoreCodeLocation(id, ste)
     }
     return id
-}
-
-private class SeekableInputStream(
-    private val channel: SeekableByteChannel
-): InputStream() {
-    private val buffer = ByteBuffer.allocate(1048576)
-    private var mark: Long = 0
-    private var startPosition: Long = 0
-
-    init {
-        // Mark it as "empty"
-        buffer.position(buffer.capacity())
-    }
-
-    override fun read(): Int {
-        if (buffer.remaining() < 1) {
-            if (!refillBuffer()) {
-                return -1
-            }
-        }
-        return buffer.get().toInt() and 0xff
-    }
-
-    override fun read(b: ByteArray, off: Int, len: Int): Int {
-        if (buffer.remaining() < 1) {
-            if (!refillBuffer()) {
-                return -1
-            }
-        }
-        val toRead = min(buffer.remaining(), len)
-        buffer.get(b, off, toRead)
-        return toRead
-    }
-
-    override fun skip(n: Long): Long {
-        val oldPos = position()
-        seek(max(0L, oldPos + n))
-        return position() - oldPos
-    }
-
-    override fun available(): Int {
-        return (channel.size() - position()).toInt()
-    }
-
-    override fun close() {
-        channel.close()
-    }
-
-    override fun mark(readlimit: Int) {
-        mark = position()
-    }
-
-    override fun reset() {
-        seek(mark)
-    }
-
-    override fun markSupported(): Boolean = true
-
-    fun seek(pos: Long) {
-        if (pos < startPosition || pos >= startPosition + buffer.capacity()) {
-            buffer.clear()
-            // Mark as empty for reading
-            buffer.position(buffer.capacity())
-            channel.position(pos)
-        } else {
-            buffer.position((pos - startPosition).toInt())
-        }
-    }
-
-    fun position(): Long {
-        return startPosition + buffer.position()
-    }
-
-    private fun refillBuffer(): Boolean {
-        buffer.clear()
-        startPosition = channel.position()
-        var read = 0
-        while (read == 0) {
-            read = channel.read(buffer)
-            if (read < 0) return false
-        }
-        buffer.rewind()
-        return true
-    }
-}
-
-private class SeekableDataInput (
-    private val stream: SeekableInputStream
-) : DataInputStream(stream) {
-    fun seek(pos: Long) {
-        stream.seek(pos)
-    }
-
-    fun position(): Long {
-        return stream.position()
-    }
 }
