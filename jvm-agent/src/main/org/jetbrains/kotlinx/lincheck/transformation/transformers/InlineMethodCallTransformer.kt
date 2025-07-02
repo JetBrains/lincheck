@@ -112,6 +112,24 @@ internal class InlineMethodCallTransformer(
         super.visitLabel(label)
     }
 
+
+    override fun visitJumpInsn(opcode: Int, label: Label) = adapter.run {
+        // Maybe we jump out of the inline stack?
+        if (inlineStack.isNotEmpty() && labelSorter.compare(inlineStack.last().labelIndexRange.second, label) <= 0) {
+            invokeIfInAnalyzedCode(
+                original = {},
+                instrumented = {
+                    while (inlineStack.isNotEmpty() && labelSorter.compare(inlineStack.last().labelIndexRange.second, label) <= 0) {
+                        val lvar = inlineStack.removeLast()
+                        System.err.println("===== === === REMOVE ${lvar.name}")
+                        processInlineMethodCallReturn(lvar.inlineMethodName!!, lvar.labelIndexRange.second)
+                    }
+                }
+            )
+        }
+        visitJumpInsn(opcode, label)
+    }
+
     override fun visitInsn(opcode: Int) = adapter.run {
         when (opcode) {
             ARETURN, DRETURN, FRETURN, IRETURN, LRETURN, RETURN -> {
@@ -128,7 +146,7 @@ internal class InlineMethodCallTransformer(
                 }
             }
         }
-        super.visitInsn(opcode)
+        visitInsn(opcode)
     }
 
     override fun visitMaxs(maxStack: Int, maxLocals: Int) {

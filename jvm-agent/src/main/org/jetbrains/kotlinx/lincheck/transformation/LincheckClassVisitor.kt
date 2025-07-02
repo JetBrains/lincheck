@@ -28,7 +28,8 @@ import sun.nio.ch.lincheck.*
 internal class LincheckClassVisitor(
     private val classVisitor: SafeClassWriter,
     private val instrumentationMode: InstrumentationMode,
-    private val methods: Map<String, MethodVariables>,
+    private val methodVariables: Map<String, MethodVariables>,
+    private val methodLabels: Map<String, MethodLabels>
 ) : ClassVisitor(ASM_API, classVisitor) {
     private var classVersion = 0
 
