@@ -390,7 +390,7 @@ internal data class IndexCell(
 )
 
 private interface BlockSaver {
-    fun saveDataAndIndexBlock(writerId: Int, dataBlock: ByteBuffer, indexList: List<IndexCell>)
+    fun saveDataAndIndexBlock(writerId: Int, logicalBlockStart: Long, dataBlock: ByteBuffer, indexList: List<IndexCell>)
 }
 
 private class BufferedTraceWriter (
@@ -429,8 +429,9 @@ private class BufferedTraceWriter (
     }
 
     fun flush() {
+        val logicalStart = currentStartDataPosition
         currentStartDataPosition += dataStream.position()
-        storage.saveDataAndIndexBlock(writerId, dataStream.getBuffer(), index)
+        storage.saveDataAndIndexBlock(writerId, logicalStart, dataStream.getBuffer(), index)
         dataStream.reset()
         index.clear()
     }
@@ -700,8 +701,8 @@ class FileStreamingTraceCollecting(
             contextState = this,
             // This is needed to work around visibility problems
             storage = object : BlockSaver {
-                override fun saveDataAndIndexBlock(writerId: Int, dataBlock: ByteBuffer, indexList: List<IndexCell>) =
-                    saveDataAndIndexBlockImpl(writerId, dataBlock, indexList)
+                override fun saveDataAndIndexBlock(writerId: Int, logicalBlockStart: Long, dataBlock: ByteBuffer, indexList: List<IndexCell>) =
+                    saveDataAndIndexBlockImpl(writerId, logicalBlockStart,dataBlock, indexList)
             }
         )
     }
@@ -749,11 +750,11 @@ class FileStreamingTraceCollecting(
 
     // This is a synchronization point for all real stream writes
     @Synchronized
-    private fun saveDataAndIndexBlockImpl(writerId: Int, dataBlock: ByteBuffer, indexList: List<IndexCell>) {
+    private fun saveDataAndIndexBlockImpl(writerId: Int, logicalBlockStart: Long, dataBlock: ByteBuffer, indexList: List<IndexCell>) {
         val startPosition = pos.currentPosition
         data.writeKind(ObjectKind.BLOCK_START)
         data.writeInt(writerId)
-        val indexShift = pos.currentPosition
+        val indexShift = pos.currentPosition - logicalBlockStart
         data.write(dataBlock.array(), 0, dataBlock.limit())
         val endPosition = pos.currentPosition
         data.writeKind(ObjectKind.BLOCK_END)

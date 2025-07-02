@@ -272,7 +272,7 @@ class LazyTraceReader(
                 var objNum = 0
                 val stringCache = mutableListOf<String?>()
                 var seenEOF = false
-                while (index.available() >= 21) {
+                while (true) {
                     val kind = index.readKind()
                     val id = index.readInt()
                     val start = index.readLong()
@@ -414,7 +414,7 @@ class LazyTraceReader(
         val blockIdx = blocks.binarySearch { it.compareWithLogicalOffset(logicalOffset) }
         check(blockIdx >= 0) { "Thread $threadId doesn't have data at logical offset $logicalOffset" }
         val block = blocks[blockIdx]
-        return block.physicalStart + logicalOffset - block.accDataSize
+        return block.physicalDataStart + logicalOffset - block.accDataSize
     }
 
     private fun calculateLogicalOffset(threadId: Int, physicalOffset: Long): Long {
