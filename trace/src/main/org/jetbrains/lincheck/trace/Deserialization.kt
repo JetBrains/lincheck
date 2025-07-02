@@ -10,6 +10,9 @@
 
 package org.jetbrains.kotlinx.lincheck.tracedata
 
+import org.jetbrains.lincheck.trace.TRMethodCallTracePoint
+import org.jetbrains.lincheck.trace.TRTracePoint
+import org.jetbrains.lincheck.trace.TraceContext
 import java.io.Closeable
 import java.io.DataInput
 import java.io.DataInputStream

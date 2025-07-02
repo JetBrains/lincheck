@@ -10,7 +10,6 @@
 
 package org.jetbrains.kotlinx.lincheck.tracedata
 
-import org.jetbrains.kotlinx.lincheck.util.isPrimitive
 import java.io.DataInputStream
 import java.io.InputStream
 import java.nio.ByteBuffer

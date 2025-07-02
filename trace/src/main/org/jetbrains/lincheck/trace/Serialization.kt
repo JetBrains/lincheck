@@ -10,6 +10,17 @@
 
 package org.jetbrains.lincheck.trace
 
+import org.jetbrains.kotlinx.lincheck.tracedata.INDEX_FILENAME_SUFFIX
+import org.jetbrains.kotlinx.lincheck.tracedata.INDEX_MAGIC
+import org.jetbrains.kotlinx.lincheck.tracedata.ObjectKind
+import org.jetbrains.kotlinx.lincheck.tracedata.TRACE_MAGIC
+import org.jetbrains.kotlinx.lincheck.tracedata.TRACE_VERSION
+import org.jetbrains.kotlinx.lincheck.tracedata.openNewFile
+import org.jetbrains.kotlinx.lincheck.tracedata.writeClassDescriptor
+import org.jetbrains.kotlinx.lincheck.tracedata.writeFieldDescriptor
+import org.jetbrains.kotlinx.lincheck.tracedata.writeKind
+import org.jetbrains.kotlinx.lincheck.tracedata.writeMethodDescriptor
+import org.jetbrains.kotlinx.lincheck.tracedata.writeVariableDescriptor
 import java.io.*
 import java.nio.ByteBuffer
 import java.util.concurrent.ConcurrentHashMap
@@ -520,12 +531,12 @@ private class PositionCalculatingOutputStream(
         position += 1
     }
 
-    override fun write(b: ByteArray?) {
+    override fun write(b: ByteArray) {
         out.write(b)
-        position += b?.size ?: 0
+        position += b.size
     }
 
-    override fun write(b: ByteArray?, off: Int, len: Int) {
+    override fun write(b: ByteArray, off: Int, len: Int) {
         out.write(b, off, len)
         position += len
     }

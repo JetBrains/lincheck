@@ -10,12 +10,18 @@
 
 package org.jetbrains.kotlinx.lincheck.tracedata
 
+import org.jetbrains.lincheck.trace.ClassDescriptor
+import org.jetbrains.lincheck.trace.FieldDescriptor
+import org.jetbrains.lincheck.trace.MethodDescriptor
+import org.jetbrains.lincheck.trace.MethodSignature
+import org.jetbrains.lincheck.trace.TraceContext
+import org.jetbrains.lincheck.trace.Types
+import org.jetbrains.lincheck.trace.VariableDescriptor
 import java.io.DataInput
 import java.io.DataOutput
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
-import java.io.InvalidObjectException
 import java.io.OutputStream
 
 /**
