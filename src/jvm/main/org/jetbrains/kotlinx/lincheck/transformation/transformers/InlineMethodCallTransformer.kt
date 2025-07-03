@@ -11,8 +11,10 @@
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.jetbrains.kotlinx.lincheck.util.Logger
 import org.jetbrains.lincheck.trace.TRACE_CONTEXT
 import org.objectweb.asm.Label
+import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
 import sun.nio.ch.lincheck.*
@@ -28,14 +30,16 @@ internal class InlineMethodCallTransformer(
     desc: String,
     adapter: GeneratorAdapter,
     val locals: MethodVariables,
+    val labelSorter: Comparator<Label>,
     val localsTracker: LocalVariablesAccessTransformer?
 ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
     private companion object {
-        val objectType = getObjectType("java/lang/Object").className
-        val contType = getObjectType("kotlin/coroutines/Continuation").className
+        val objectType: String = getObjectType("java/lang/Object").className
+        val contType: String = getObjectType("kotlin/coroutines/Continuation").className
     }
 
     private val methodType = getMethodType(desc)
+
     private val looksLikeSuspendMethod =
         methodType.returnType.className == objectType &&
         methodType.argumentTypes.lastOrNull()?.className == contType &&
@@ -102,12 +106,51 @@ internal class InlineMethodCallTransformer(
         super.visitLabel(label)
     }
 
+
+    override fun visitJumpInsn(opcode: Int, label: Label) = adapter.run {
+        // Maybe we jump out of the inline stack?
+        if (inlineStack.isNotEmpty() && labelSorter.compare(inlineStack.last().labelIndexRange.second, label) <= 0) {
+            invokeIfInAnalyzedCode(
+                original = {},
+                instrumented = {
+                    while (inlineStack.isNotEmpty() && labelSorter.compare(inlineStack.last().labelIndexRange.second, label) <= 0) {
+                        val lvar = inlineStack.removeLast()
+                        System.err.println("===== === === REMOVE ${lvar.name}")
+                        processInlineMethodCallReturn(lvar.inlineMethodName!!, lvar.labelIndexRange.second)
+                    }
+                }
+            )
+        }
+        visitJumpInsn(opcode, label)
+    }
+
+    override fun visitInsn(opcode: Int) = adapter.run {
+        when (opcode) {
+            ARETURN, DRETURN, FRETURN, IRETURN, LRETURN, RETURN -> {
+                if (inlineStack.isNotEmpty()) {
+                    invokeIfInAnalyzedCode(
+                        original = {},
+                        instrumented = {
+                            for (lvar in inlineStack.reversed()) {
+                                processInlineMethodCallReturn(lvar.inlineMethodName!!, lvar.labelIndexRange.second)
+                            }
+                        }
+                    )
+                    inlineStack.clear()
+                }
+            }
+        }
+        visitInsn(opcode)
+    }
+
     override fun visitMaxs(maxStack: Int, maxLocals: Int) {
         super.visitMaxs(maxStack, maxLocals)
         if (inlineStack.isNotEmpty()) {
-            System.err.println("Inline methods calls are not balanced at $className.$methodName:")
-            inlineStack.reversed().forEach {
-                System.err.println("  ${it.name} (slot ${it.index}) called at label ${it.labelIndexRange.first}")
+            Logger.warn {
+                "Inline methods calls are not balanced at $className.$methodName:\n" +
+                inlineStack.reversed().joinToString(separator = "\n") {
+                    "  ${it.name} (slot ${it.index}) called at label ${it.labelIndexRange.first}"
+                }
             }
         }
     }
