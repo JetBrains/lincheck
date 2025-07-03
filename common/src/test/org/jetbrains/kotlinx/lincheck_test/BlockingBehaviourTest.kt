@@ -11,6 +11,7 @@
 package org.jetbrains.kotlinx.lincheck_test
 
 import kotlinx.atomicfu.*
+import org.jetbrains.kotlinx.lincheck.util.LoggingLevel
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.datastructures.verifier.EpsilonVerifier
@@ -48,6 +49,7 @@ class CausesBlockingOperationTest {
         .checkObstructionFreedom()
         .verifier(EpsilonVerifier::class.java)
         .iterations(20)
+        .logLevel(LoggingLevel.INFO)
         .actorsBefore(0)
         .actorsAfter(0)
         .check(this::class)

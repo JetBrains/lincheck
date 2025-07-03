@@ -26,3 +26,4 @@ rootProject.name = name
 
 include(":bootstrap")
 include(":trace")
+include(":common")

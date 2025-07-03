@@ -27,6 +27,6 @@ public class JavaLambdaRepresentationTest extends BaseTraceRepresentationTest {
 
     @Override
     public void customize(ModelCheckingOptions $this$customize) {
-        $this$customize.analyzeStdLib$lincheck(false);
+        $this$customize.analyzeStdLib$common(false);
     }
 }
