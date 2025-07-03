@@ -15,6 +15,8 @@ import java.io.DataOutput
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.math.max
+import kotlin.math.roundToInt
 
 private val EVENT_ID_GENERATOR = AtomicInteger(0)
 
@@ -55,7 +57,9 @@ class TRMethodCallTracePoint(
 ) : TRTracePoint(codeLocationId, threadId, eventId) {
     var result: TRObject? = null
     var exceptionClassName: String? = null
-    val events: MutableList<TRTracePoint> = mutableListOf()
+
+    private val children: MutableList<TRTracePoint?> = ArrayList(16)
+    private var childrenAddresses: LongArray = LongArray(16)
 
     // TODO Make parametrized
     val methodDescriptor: MethodDescriptor get() = TRACE_CONTEXT.getMethodDescriptor(methodId)
@@ -65,6 +69,51 @@ class TRMethodCallTracePoint(
     val methodName: String get() = methodDescriptor.methodName
     val argumentTypes: List<Types.Type> get() = methodDescriptor.argumentTypes
     val returnType: Types.Type get() = methodDescriptor.returnType
+
+    val totalChildrenCount: Int get() = children.size
+    val events: List<TRTracePoint?> get() {
+        return if (children.firstOrNull({ it != null }) != null) {
+            children
+        } else {
+            emptyList()
+        }
+    }
+
+    internal fun addChildAddress(address: Long) {
+        if (childrenAddresses.size == children.size) {
+            childrenAddresses = childrenAddresses.copyOf(max(children.size + 1, (children.size * 1.25).roundToInt()))
+        }
+        childrenAddresses[children.size] = address
+        children.add(null)
+    }
+
+    internal fun addChild(child: TRTracePoint, address: Long = -1) {
+        if (childrenAddresses.size == children.size) {
+            childrenAddresses = childrenAddresses.copyOf(max(children.size + 1, (children.size * 1.25).roundToInt()))
+        }
+        childrenAddresses[children.size] = address
+        children.add(child)
+    }
+
+    internal fun getChildAddress(index: Int): Long {
+        require(index in 0 ..< children.size) { "Index $index out of range 0..<${children.size}" }
+        return childrenAddresses[index]
+    }
+
+    internal fun loadChild(index: Int, child: TRTracePoint) {
+        require(index in 0 ..< children.size) { "Index $index out of range 0..<${children.size}" }
+        // Should we check for override? Lets skip for now
+        children[index] = child
+    }
+
+    fun unloadChild(index: Int) {
+        require(index in 0 ..< children.size) { "Index $index out of range 0..<${children.size}" }
+        children[index] = null
+    }
+
+    fun unloadAllChildren() {
+        children.fill(null)
+    }
 
     override fun save(out: TraceWriter) {
         super.save(out)

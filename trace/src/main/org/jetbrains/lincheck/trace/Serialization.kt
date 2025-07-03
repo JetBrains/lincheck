@@ -541,7 +541,7 @@ class MemoryTraceCollecting: TraceCollectingStrategy {
         parent: TRMethodCallTracePoint?,
         created: TRTracePoint
     ) {
-        parent?.events?.add(created)
+        parent?.addChild(created)
     }
 
     override fun callEnded(callTracepoint: TRMethodCallTracePoint) = Unit
@@ -727,7 +727,9 @@ private fun saveTRTracepoint(writer: TraceWriter, tracepoint: TRTracePoint) {
     tracepoint.save(writer)
     if (tracepoint is TRMethodCallTracePoint) {
         tracepoint.events.forEach {
-            saveTRTracepoint(writer, it)
+            if (it != null) {
+                saveTRTracepoint(writer, it)
+            }
         }
         tracepoint.saveFooter(writer)
     }

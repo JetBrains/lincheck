@@ -39,7 +39,12 @@ private fun printTRPoint(output: PrintStream, node: TRTracePoint, depth: Int, ve
     output.println(node.toText(verbose))
     if (node is TRMethodCallTracePoint) {
         node.events.forEach {
-            printTRPoint(output, it, depth + 1, verbose)
+            if (it != null) {
+                printTRPoint(output, it, depth + 1, verbose)
+            } else {
+                output.print(" ".repeat(depth * 2 + 2))
+                output.println("<unloaded tracepoint>")
+            }
         }
     }
 }

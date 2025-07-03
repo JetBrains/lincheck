@@ -174,7 +174,7 @@ class LazyTraceReader(
             check(blockId == threadId) { "Thread $threadId block 0 has wrong idt: $blockId" }
 
             val tracepoints = mutableListOf<TRTracePoint>()
-            readTracePointsShallow(threadId, tracepoints)
+            loadTracePoints(threadId, this::readTracePointWithChildAddresses) { _, tracePoint, _ -> tracepoints.add(tracePoint) }
             if (tracepoints.isEmpty()) {
                 System.err.println("Thread $threadId doesn't write any tracepoints")
             } else {
@@ -188,12 +188,14 @@ class LazyTraceReader(
         return roots.entries.sortedBy { it.key }.map { (_, tracePoint) -> tracePoint }
     }
 
-    fun readChildren(parent: TRMethodCallTracePoint) {
+    fun loadAllChildren(parent: TRMethodCallTracePoint) {
         val positions = callTracepointChildren[parent.eventId]
             ?: error("TRMethodCallTracePoint ${parent.eventId} is not found in index")
         data.seek(calculatePhysicalOffset(parent.threadId, positions.first))
 
-        readTracePointsShallow(parent.threadId, parent.events)
+        loadTracePoints(parent.threadId, this::readTracePointWithChildAddresses) { idx, tracePoint, _ ->
+            parent.loadChild(idx, tracePoint)
+        }
 
         val actualFooterPos = data.position() - 1 // 1 is size of object kind
         check(actualFooterPos == calculatePhysicalOffset(parent.threadId, positions.second)) {
@@ -201,12 +203,14 @@ class LazyTraceReader(
         }
     }
 
-    private fun readTracePointsShallow(threadId: Int, container: MutableList<TRTracePoint>) {
+    private fun loadTracePoints(threadId: Int, reader: () -> TRTracePoint, consumer: (Int, TRTracePoint, Long) -> Unit) {
         val blocks = dataBlocks[threadId] ?: error("No data blocks for Thread $threadId")
+        var idx = 0
         while (true) {
-            var kind = loadObjects(data, context, mutableListOf(), false) { input, context, stringCache ->
-                val tracePoint = loadTracePointShallow(input, context, stringCache)
-                container.add(tracePoint)
+            var kind = loadObjects(data, context, mutableListOf(), false) { _, _, _ ->
+                val tracePointOffset = calculateLogicalOffset(threadId, data.position() - 1) // account for Kind
+                val tracePoint = reader()
+                consumer(idx++, tracePoint, tracePointOffset)
                 true
             }
             if (kind == ObjectKind.TRACEPOINT_FOOTER) {
@@ -369,9 +373,9 @@ class LazyTraceReader(
         )
     }
 
-    private fun loadTracePointShallow(input: DataInput, context: TraceContext, stringCache: StringCache): TRTracePoint {
+    private fun readTracePointShallow(): TRTracePoint {
         // Load tracepoint itself
-        val tracePoint = loadTRTracePoint(input)
+        val tracePoint = loadTRTracePoint(data)
         if (tracePoint !is TRMethodCallTracePoint) {
             return tracePoint
         }
@@ -387,12 +391,37 @@ class LazyTraceReader(
         val skipTo = calculatePhysicalOffset(tracePoint.threadId, positions.second)
         data.seek(skipTo)
 
-        val kind = input.readKind()
+        val kind = data.readKind()
         if (kind == ObjectKind.TRACEPOINT_FOOTER) {
-            tracePoint.loadFooter(input)
+            tracePoint.loadFooter(data)
         } else {
             System.err.println("TraceRecorder: Unexpected object kind $kind when loading tracepoints")
         }
+
+        return tracePoint
+    }
+
+    private fun readTracePointWithChildAddresses(): TRTracePoint {
+        // Load tracepoint itself
+        val tracePoint = loadTRTracePoint(data)
+        if (tracePoint !is TRMethodCallTracePoint) {
+            return tracePoint
+        }
+
+        val positions = callTracepointChildren[tracePoint.eventId]
+            ?: error("Tracepoint ${tracePoint.eventId} is not known in index")
+
+        val checkFor = calculatePhysicalOffset(tracePoint.threadId, positions.first)
+        check(data.position() == checkFor) {
+            "TRMethodCallTracePoint ${tracePoint.eventId} has wrong start position in index: ${positions.first} / $checkFor, expected ${data.position()}"
+        }
+
+        // Read tracepoints truly shallow
+        loadTracePoints(tracePoint.threadId, this::readTracePointShallow) { _, _, address ->
+            tracePoint.addChildAddress(calculateLogicalOffset(tracePoint.threadId, address))
+        }
+        // Kind is guaranteed by loadTracePoints()
+        tracePoint.loadFooter(data)
 
         return tracePoint
     }
@@ -445,7 +474,7 @@ fun loadRecordedTrace(inp: InputStream): Pair<TraceContext, List<TRTracePoint>> 
                     if (parent == null) {
                         roots.computeIfAbsent(tracePoint.threadId) { mutableListOf() }.add(tracePoint)
                     } else {
-                        parent.events.add(tracePoint)
+                        parent.addChild(tracePoint)
                     }
                 }
             },
