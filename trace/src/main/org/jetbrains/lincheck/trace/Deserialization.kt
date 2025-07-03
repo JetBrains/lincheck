@@ -126,15 +126,16 @@ private fun BlockList.dataSize(): Long {
  */
 class LazyTraceReader(
     private val dataFileName: String,
-    private val index: DataInputStream?,
-    private val context: TraceContext
+    private val index: DataInputStream?
 ) : Closeable {
-    constructor(baseFileName: String, context: TraceContext) :
+    constructor(baseFileName: String) :
             this(
                 dataFileName = baseFileName,
-                index = wrapStream(openExistingFile(baseFileName + INDEX_FILENAME_SUFFIX)),
-                context = context
+                index = wrapStream(openExistingFile(baseFileName + INDEX_FILENAME_SUFFIX))
             )
+
+    // TODO: Create new
+    val context: TraceContext = TRACE_CONTEXT
 
     private val dataStream: SeekableInputStream
     private val data: SeekableDataInput

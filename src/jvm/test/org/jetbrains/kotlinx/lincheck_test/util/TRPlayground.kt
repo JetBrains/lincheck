@@ -19,9 +19,7 @@ fun main(args: Array<String>) {
     // val (context, trace) = loadRecordedTrace(FileInputStream("C:\\home\\lev\\Projects\\kotlinx.collections.immutable\\core\\output.bin"))
 
     val context = TRACE_CONTEXT
-    val reader = LazyTraceReader("C:\\home\\lev\\dada\\FundsTest_testTransfers1056732866102702014.bin",
-        context
-    )
+    val reader = LazyTraceReader("C:\\home\\lev\\dada\\FundsTest_testTransfers1056732866102702014.bin")
     val trace = reader.readRoots()
     reader.loadChildrenRange(trace.first() as TRMethodCallTracePoint, 5, 5)
     // reader.loadAllChildren(trace.first() as TRMethodCallTracePoint)
