@@ -10,25 +10,18 @@
 
 package org.jetbrains.lincheck.trace
 
-import org.jetbrains.kotlinx.lincheck.tracedata.INDEX_FILENAME_SUFFIX
-import org.jetbrains.kotlinx.lincheck.tracedata.INDEX_MAGIC
-import org.jetbrains.kotlinx.lincheck.tracedata.ObjectKind
-import org.jetbrains.kotlinx.lincheck.tracedata.TRACE_MAGIC
-import org.jetbrains.kotlinx.lincheck.tracedata.TRACE_VERSION
-import org.jetbrains.kotlinx.lincheck.tracedata.openNewFile
-import org.jetbrains.kotlinx.lincheck.tracedata.writeClassDescriptor
-import org.jetbrains.kotlinx.lincheck.tracedata.writeFieldDescriptor
-import org.jetbrains.kotlinx.lincheck.tracedata.writeKind
-import org.jetbrains.kotlinx.lincheck.tracedata.writeMethodDescriptor
-import org.jetbrains.kotlinx.lincheck.tracedata.writeVariableDescriptor
-import java.io.*
+import org.jetbrains.kotlinx.lincheck.tracedata.*
+import java.io.Closeable
+import java.io.DataOutput
+import java.io.DataOutputStream
+import java.io.OutputStream
 import java.nio.ByteBuffer
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicLongArray
-import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.absoluteValue
-import kotlin.math.max
+
+// Buffer for saving trace in one piece
+private const val OUTPUT_BUFFER_SIZE: Int = 16 * 1024 * 1024
 
 // 1 MiB
 private const val PER_THREAD_DATA_BUFFER_SIZE: Int = 1024 * 1024
@@ -142,41 +135,6 @@ internal interface TraceWriter : DataOutput, Closeable {
      * This must be called before [startWriteAnyTracepoint] or [startWriteContainerTracepointFooter] for all used code locations.
      */
     fun writeCodeLocation(id: Int)
-}
-
-private class BufferOverflowException: Exception()
-
-private class ByteBufferOutputStream(
-    bufferSize: Int
-) : OutputStream() {
-    private val buffer = ByteBuffer.allocate(bufferSize)
-
-    override fun write(b: Int) {
-        if (buffer.remaining() < 1) {
-            throw BufferOverflowException()
-        }
-        buffer.put(b.toByte())
-    }
-
-    override fun write(b: ByteArray, off: Int, len: Int) {
-        if (buffer.remaining() < len) {
-            throw BufferOverflowException()
-        }
-        buffer.put(b, off, len)
-    }
-
-    fun available(): Int = buffer.remaining()
-
-    fun getBuffer(): ByteBuffer {
-        buffer.flip()
-        return buffer
-    }
-
-    fun reset() {
-        buffer.clear()
-    }
-
-    fun position(): Int = buffer.position()
 }
 
 /**
@@ -519,33 +477,6 @@ private class SimpleContextSavingState: ContextSavingState {
     }
 }
 
-private class PositionCalculatingOutputStream(
-    private val out: OutputStream
-) : OutputStream() {
-    private var position: Long = 0
-
-    val currentPosition: Long get() = position
-
-    override fun write(b: Int) {
-        out.write(b)
-        position += 1
-    }
-
-    override fun write(b: ByteArray) {
-        out.write(b)
-        position += b.size
-    }
-
-    override fun write(b: ByteArray, off: Int, len: Int) {
-        out.write(b, off, len)
-        position += len
-    }
-
-    override fun flush() = out.flush()
-
-    override fun close() = out.close()
-}
-
 private class DirectTraceWriter (
     dataStream: OutputStream,
     indexStream: OutputStream,
@@ -559,31 +490,46 @@ private class DirectTraceWriter (
     private val index = DataOutputStream(indexStream)
 
     private var currentWriterId: Int = 0
-    private var currentBlockStart: Long = 0
+    private var currentBlockStart: Long = 0 // with header
+    private var currentDataStart: Long = 0 // after header
 
-    override val currentDataPosition: Long get() = pos.currentPosition
+    override val currentDataPosition: Long get() = pos.currentPosition - currentDataStart
     override val writerId: Int get() = currentWriterId
+
+    init {
+        data.writeLong(TRACE_MAGIC)
+        data.writeLong(TRACE_VERSION)
+
+        index.writeLong(INDEX_MAGIC)
+        index.writeLong(TRACE_VERSION)
+    }
+
+    override fun close() {
+        super.close()
+        index.writeLong(INDEX_MAGIC)
+        index.close()
+    }
 
     override fun writeIndexCell(kind: ObjectKind, id: Int, startPos: Long, endPos: Long) {
         if (kind == ObjectKind.TRACEPOINT) {
-            // Each thread in this case has only one block, current block
-            index.writeIndexCell(kind, id, startPos - currentBlockStart, endPos - currentBlockStart)
-        } else {
             index.writeIndexCell(kind, id, startPos, endPos)
+        } else {
+            index.writeIndexCell(kind, id, startPos + currentDataStart, endPos + currentDataStart)
         }
     }
 
     fun startNewRoot(id: Int) {
         currentWriterId = id
-        currentBlockStart = currentDataPosition
+        currentBlockStart = pos.currentPosition
         data.writeKind(ObjectKind.BLOCK_START)
         data.writeInt(id)
+        currentDataStart = pos.currentPosition
     }
 
     fun endRoot() {
-        val endPos = currentDataPosition
+        val endPos = pos.currentPosition
         data.writeKind(ObjectKind.BLOCK_END)
-        writeIndexCell(ObjectKind.BLOCK_START, currentWriterId, currentBlockStart, endPos)
+        index.writeIndexCell(ObjectKind.BLOCK_START, currentWriterId, currentBlockStart, endPos)
     }
 }
 
@@ -607,57 +553,6 @@ class MemoryTraceCollecting: TraceCollectingStrategy {
     override fun traceEnded() = Unit
 }
 
-private const val ATOMIC_SIZE_BITS = Long.SIZE_BITS
-private const val ATOMIC_SIZE_SHIFT = 6
-private const val ATOMIC_BIT_MASK = 0x3F
-
-private class AtomicBitmap(size: Int) {
-    private val bitmap = AtomicReference(AtomicLongArray(size / ATOMIC_SIZE_BITS))
-
-    fun isSet(id: Int): Boolean {
-        val idx = id shr ATOMIC_SIZE_SHIFT
-        val bit = 1L shl (id and ATOMIC_BIT_MASK)
-        return isSet(idx, bit)
-    }
-
-    fun set(id: Int) {
-        val idx = id shr ATOMIC_SIZE_SHIFT
-        val bit = 1L shl (id and ATOMIC_BIT_MASK)
-
-        val b = bitmap.get()
-        if (idx >= b.length()) {
-            resizeBitmap(idx)
-        }
-        while (!isSet(idx, bit)) {
-            do {
-                val b = bitmap.get()
-                val oldVal = b.get(idx)
-            } while (!b.compareAndSet(idx, oldVal, oldVal or bit))
-        }
-    }
-
-    private fun isSet(idx: Int, bit: Long): Boolean {
-        val b = bitmap.get()
-        if (idx >= b.length()) return false
-        val value = b.get(idx)
-        return (value and bit) != 0L
-    }
-
-    private fun resizeBitmap(idx: Int) {
-        do {
-            val b = bitmap.get()
-            // Another thread was faster
-            if (b.length() > idx) return
-
-            val newLen = max(idx + 1, b.length() + b.length() / 2)
-            val newB = AtomicLongArray(newLen)
-            for (i in 0..< b.length()) {
-                newB.lazySet(i,b.get(i))
-            }
-        } while (!bitmap.compareAndSet(b, newB))
-    }
-}
-
 class FileStreamingTraceCollecting(
     dataStream: OutputStream,
     indexStream: OutputStream,
@@ -672,7 +567,7 @@ class FileStreamingTraceCollecting(
 
     private val pos: PositionCalculatingOutputStream = PositionCalculatingOutputStream(dataStream)
     private val data: DataOutputStream = DataOutputStream(pos)
-    private val index: DataOutputStream = DataOutputStream(indexStream.buffered(PER_THREAD_DATA_BUFFER_SIZE))
+    private val index: DataOutputStream = DataOutputStream(indexStream.buffered(OUTPUT_BUFFER_SIZE))
 
     private var seenClassDescriptors = AtomicBitmap(1024)
     private var seenMethodDescriptors = AtomicBitmap(1024)
@@ -810,8 +705,8 @@ class FileStreamingTraceCollecting(
  */
 fun saveRecorderTrace(baseFileName: String, context: TraceContext, rootCallsPerThread: List<TRTracePoint>) =
     saveRecorderTrace(
-        data = openNewFile(baseFileName),
-        index = openNewFile(baseFileName + INDEX_FILENAME_SUFFIX),
+        data = openNewFile(baseFileName).buffered(OUTPUT_BUFFER_SIZE),
+        index = openNewFile(baseFileName + INDEX_FILENAME_SUFFIX).buffered(OUTPUT_BUFFER_SIZE),
         context = context,
         rootCallsPerThread = rootCallsPerThread
     )

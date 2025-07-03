@@ -39,9 +39,6 @@ private interface BlockConsumer {
     fun blockEnded(threadId: Int) = Unit
 }
 
-private const val BLOCK_HEADER_SIZE: Int = Byte.SIZE_BYTES + Int.SIZE_BYTES
-private const val BLOCK_FOOTER_SIZE: Int = Byte.SIZE_BYTES
-
 private class DataBlock(
     start: Long,
     end: Long,
@@ -271,17 +268,13 @@ class LazyTraceReader(
 
                 var objNum = 0
                 val stringCache = mutableListOf<String?>()
-                var seenEOF = false
                 while (true) {
                     val kind = index.readKind()
                     val id = index.readInt()
                     val start = index.readLong()
                     val end = index.readLong()
 
-                    if (kind == ObjectKind.EOF) {
-                        seenEOF = true
-                        break
-                    }
+                    if (kind == ObjectKind.EOF) break
 
                     if (kind == ObjectKind.TRACEPOINT) {
                         callTracepointChildren[id] = start to end
@@ -318,14 +311,9 @@ class LazyTraceReader(
                     }
                     objNum++
                 }
-                if (!seenEOF) {
-                    // Allow for truncated indices, only print warning
-                    System.err.println("TraceRecorder: Warning: Index for $dataFileName is truncated")
-                } else {
-                    val magicEnd = index.readLong()
-                    if (magicEnd != INDEX_MAGIC) {
-                        error("Wrong final index magic 0x${(magic.toString(16))}, expected ${TRACE_MAGIC.toString(16)}")
-                    }
+                val magicEnd = index.readLong()
+                if (magicEnd != INDEX_MAGIC) {
+                    error("Wrong final index magic 0x${(magic.toString(16))}, expected ${TRACE_MAGIC.toString(16)}")
                 }
             } catch (t: Throwable) {
                 System.err.println("TraceRecorder: Error reading index for $dataFileName: ${t.message}")
@@ -438,26 +426,6 @@ class LazyTraceReader(
         }
     }
 }
-
-public fun <T> List<T>.mbinarySearch(fromIndex: Int = 0, toIndex: Int = size, comparison: (T) -> Int): Int {
-    var low = fromIndex
-    var high = toIndex - 1
-
-    while (low <= high) {
-        val mid = (low + high).ushr(1) // safe from overflows
-        val midVal = get(mid)
-        val cmp = comparison(midVal)
-
-        if (cmp < 0)
-            low = mid + 1
-        else if (cmp > 0)
-            high = mid - 1
-        else
-            return mid // key found
-    }
-    return -(low + 1)  // key not found
-}
-
 
 fun loadRecordedTrace(inp: InputStream): Pair<TraceContext, List<TRTracePoint>> {
     DataInputStream(inp.buffered(INPUT_BUFFER_SIZE)).use { input ->

@@ -39,6 +39,9 @@ internal const val TRACE_VERSION : Long = 7
 
 internal const val INDEX_FILENAME_SUFFIX = ".idx"
 
+internal const val BLOCK_HEADER_SIZE: Int = Byte.SIZE_BYTES + Int.SIZE_BYTES
+internal const val BLOCK_FOOTER_SIZE: Int = Byte.SIZE_BYTES
+
 internal enum class ObjectKind {
     CLASS_DESCRIPTOR,
     METHOD_DESCRIPTOR,

@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.tracedata
 
 import java.io.DataInputStream
 import java.io.InputStream
+import java.io.OutputStream
 import java.nio.ByteBuffer
 import java.nio.channels.SeekableByteChannel
 import kotlin.math.max
@@ -44,7 +45,6 @@ internal class SeekableChannelBufferedInputStream(
     private val channel: SeekableByteChannel
 ): SeekableInputStream() {
     private val buffer = ByteBuffer.allocate(1048576)
-    private var mark: Long = 0
     private var bufferStartPosition: Long = 0
 
     init {
@@ -112,80 +112,6 @@ internal class SeekableChannelBufferedInputStream(
     }
 }
 
-// Chunk is (from, size)
-internal class SeekableChunkedInputStream(
-    private val input: SeekableInputStream,
-    achunks: List<Pair<Long, Long>>
-): SeekableInputStream() {
-    private val chunks = achunks.toMutableList()
-    private val accumulatedSizes = mutableListOf<Long>()
-
-    private var chunk: Int = 0
-    private var positionInChunk: Long = 0L
-    private var buf = ByteArray(1)
-
-    init {
-        var aSize = 0L
-        for (chunk in chunks) {
-            accumulatedSizes.add(aSize)
-            aSize += chunk.second
-        }
-        accumulatedSizes.add(aSize)
-    }
-
-    override fun read(): Int {
-        val read = read(buf, 0, 1)
-        if (read < 0) return read
-        return buf[0].toInt() and 0xff
-    }
-
-    override fun read(b: ByteArray?, off: Int, len: Int): Int {
-        val ch = chunks.getOrNull(chunk) ?: return -1
-        val toRead = min(len, (ch.second - positionInChunk).toInt())
-
-        input.seek(ch.first + positionInChunk)
-        val read = input.read(b, off, toRead)
-
-        positionInChunk += read
-        if (positionInChunk == ch.second) {
-            positionInChunk = 0
-            chunk++
-        }
-        return read
-    }
-
-    override fun available(): Int = (accumulatedSizes.last() - accumulatedSizes[chunk] - positionInChunk).toInt()
-
-    override fun seek(pos: Long) {
-        if (pos < 0) throw IllegalArgumentException("Pos should be non-negative, but was $pos")
-        if (chunks.isEmpty()) return
-
-        if (pos >= accumulatedSizes.last()) {
-            chunk = chunks.size
-            positionInChunk = 0
-            return
-        }
-
-        val idx = accumulatedSizes.binarySearch(pos)
-        // Exact match points to exact chunk
-        if (idx >= 0) {
-            chunk = idx
-            positionInChunk = 0
-        } else {
-            // -insertion_point - 1 -> -(insertion_point + 1) and it points *next after* which we need
-            chunk = -idx - 2
-            positionInChunk = pos - accumulatedSizes[chunk]
-        }
-        // Don't seek underlying stream as we re-seek on each read
-    }
-
-    override fun position(): Long = accumulatedSizes[chunk] + positionInChunk
-
-    fun appendChunk(offset: Long, size: Long) {
-        chunks.add(offset to size)
-        accumulatedSizes.add(accumulatedSizes.last() + size)
-    }
-}
 
 internal class SeekableDataInput (
     private val stream: SeekableInputStream
@@ -197,4 +123,66 @@ internal class SeekableDataInput (
     fun position(): Long {
         return stream.position()
     }
+}
+
+internal class BufferOverflowException: Exception()
+
+internal class ByteBufferOutputStream(
+    bufferSize: Int
+) : OutputStream() {
+    private val buffer = ByteBuffer.allocate(bufferSize)
+
+    override fun write(b: Int) {
+        if (buffer.remaining() < 1) {
+            throw BufferOverflowException()
+        }
+        buffer.put(b.toByte())
+    }
+
+    override fun write(b: ByteArray, off: Int, len: Int) {
+        if (buffer.remaining() < len) {
+            throw BufferOverflowException()
+        }
+        buffer.put(b, off, len)
+    }
+
+    fun available(): Int = buffer.remaining()
+
+    fun getBuffer(): ByteBuffer {
+        buffer.flip()
+        return buffer
+    }
+
+    fun reset() {
+        buffer.clear()
+    }
+
+    fun position(): Int = buffer.position()
+}
+
+internal class PositionCalculatingOutputStream(
+    private val out: OutputStream
+) : OutputStream() {
+    private var position: Long = 0
+
+    val currentPosition: Long get() = position
+
+    override fun write(b: Int) {
+        out.write(b)
+        position += 1
+    }
+
+    override fun write(b: ByteArray) {
+        out.write(b)
+        position += b.size
+    }
+
+    override fun write(b: ByteArray, off: Int, len: Int) {
+        out.write(b, off, len)
+        position += len
+    }
+
+    override fun flush() = out.flush()
+
+    override fun close() = out.close()
 }
