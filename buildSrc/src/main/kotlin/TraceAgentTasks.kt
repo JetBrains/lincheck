@@ -33,7 +33,7 @@ fun Project.registerTraceAgentTasks() {
         archiveVersion.set("")
         duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
-        dependsOn("bootstrapJar")
+        dependsOn(":bootstrapJar")
 
         // Include compiled sources
         from(mainSourceSet.output)
