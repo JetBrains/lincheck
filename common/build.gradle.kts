@@ -10,6 +10,7 @@ buildscript {
 plugins {
     java
     kotlin("jvm")
+    id("org.jetbrains.kotlinx.atomicfu")
 }
 
 repositories {
@@ -23,6 +24,20 @@ kotlin {
 
 java {
     configureJava()
+}
+
+/*
+ * Unfortunately, Lincheck was affected by the following bug in atomicfu
+ * (at the latest version 0.27.0 at the time when this comment was written):
+ * https://github.com/Kotlin/kotlinx-atomicfu/issues/525.
+ *
+ * To bypass the bug, the solution is to disable post-compilation JVM bytecode transformation
+ * and enable only the JVM-IR transformation at the Kotlin compilation stage.
+ *
+ * See also https://github.com/JetBrains/lincheck/issues/668 for a more detailed description of the bug.
+ */
+atomicfu {
+    transformJvm = false
 }
 
 sourceSets {
@@ -203,6 +218,8 @@ tasks.withType<Test> {
         }
     )
 }
+
+registerTraceAgentTasks()
 
 tasks.named("processResources").configure {
     dependsOn(":bootstrapJar")

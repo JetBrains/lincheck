@@ -49,7 +49,6 @@ class CausesBlockingOperationTest {
         .checkObstructionFreedom()
         .verifier(EpsilonVerifier::class.java)
         .iterations(20)
-        .logLevel(LoggingLevel.INFO)
         .actorsBefore(0)
         .actorsAfter(0)
         .check(this::class)
