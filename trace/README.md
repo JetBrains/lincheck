@@ -4,10 +4,25 @@
 
  Stored trace consists of two files: the main data file and and auxiliary *index* file.
 
- The main data file can be used without an index, as the index will be re-created in memory if a data file
-without an index or with a broken index is opened. For now, the re-created index is not stored back to disk.
+ The main data file can be used without an index, as the index will be re-created in memory 
+if a data file without an index or with a broken index is opened. For now, the re-created
+index is not stored back to disk.
 
  Index is not used for batch (not lazy) loading of trace at all.
+
+### Zero data duplication principle.
+ Trace points are stored in memory with all possibly shared data referenced
+by id and not stored into trace points themselves.
+
+ This concerns classes, methods, fields, variables, and code locations.
+
+ This shared data constitutes *context* of recorded trace.
+
+ These objects are called «reference objects» or «thread-independent objects»
+in this document, and these names are used interchangeably.
+
+ Binary storage format follows this principle and makes the best effort to store 
+all such entities only once, no matter how many other entities reference them.
 
 ### Data format.
  Data file consists of a *header*, series of *objects* which are divided into *data blocks*
@@ -83,11 +98,11 @@ of a program crash, as all trace objects accumulated in memory will be lost.
 
  The second subdivision is between *thread-neutral* and *thread-dependent* objects.
 
-- *Thread-neutral* objects are shared between al threads. It is all reference objects, which
-  are used by all threads. All these objects are *atomic*. They are written to the data file
-  and index by the first thread which encounters them. This could lead to rare duplication
-  of these objects in the data file, but it doesn't lead to conflicts, as all these objects
-  are *immutable*.
+- *Thread-independent* objects are shared between al threads. It is all reference objects, which
+  are used by all threads. The whole set of these objects constitutes *context* of recorded trace.
+  All these objects are *atomic*. They are written to the data file and index by the first thread 
+  which encounters them. This could lead to rare duplication of these objects in the data file,
+  but it doesn't lead to conflicts, as all these objects are *immutable*.
 - *Thread-dependent* objects are created by specific threads and belong to them. These objects must be
   stored in a data block which has the same thread id as they. Now it is only trace points.
 
@@ -172,7 +187,8 @@ cell is not coincidence.
 
  Most object kinds don't use end offset and fills it with `-1`.
 
- Index contains cells for all thread-independent objects, data blocks, and container objects.
+ Index contains cells for all *thread-independent* (*reference*) objects, data blocks,
+and container objects.
 
  Thread-dependent atomic objects (i.e. leaf trace points) are not recorded to index, as they
 can be loaded only as part of their parent's content. 
@@ -200,9 +216,9 @@ can be loaded only as part of their parent's content.
   offset of the previous data byte.
 
 ## API for trace-recording writing and reading.
- There are two API to write (save) trace and two API to read (load) it.
+ There are two API to collect and write (save) trace and two API to read (load) it.
 
-### API to write (save) trace. 
+### API to collect and write (save) trace. 
  Trace Recorder can collect trace points completely in memory, from start to finish, and
 then write (save) all data into a data file and index in one go.
 
@@ -217,7 +233,7 @@ if the program crashes, no trace could be recovered.
 
  The second («streaming») method has more synchronization points, as writing blocks of
 data and parts of index become point when threads meet each other. Also, tracking of
-saved thread-independent objects can become a point of contention. On the other hand,
+saved reference objects can become a point of contention. On the other hand,
 memory pressure in this scenario is fixed (each thread has a constant-size buffer for 
 accumulating data), and in the case of a small number of threads, it becomes much faster.
 Trace recovering in case of the program crash is possible too, though all data accumulated in
@@ -241,7 +257,7 @@ is controlled by strategy's code too, method call tracepoint doesn't save its on
 and a separate function must be used to create data and index files.
  
  The function to save trees of trace points is inherently single-threaded. It uses
-a straightforward way to track thread-independent objects and creates one data block
+a straightforward way to track reference objects and creates one data block
 per one thread, without interleaving trace points from different threads.
 
 #### Streaming.
@@ -259,6 +275,13 @@ and non-atomic flushes.
  This strategy effectively splits data from each thread into almost-1MiB (cannot be configured
 without changing sources for now) data blocks.
 
+ This strategy uses lock-free bitmap to track which thread-independent objects were already
+written and have a small race window when two threads can save the same object. This code
+doesn't try to «rollback» the second write, and it could lead to rare duplication of reference
+objects in different data blocks. This is not a problem because all reference objects
+are *immutable* and second copy simply wast a small amount of space and doesn't lead to
+any conflicts.
+
 ### API to read (load) trace.
  Trace can be loaded in memory completely or lazily.
  
@@ -266,19 +289,19 @@ without changing sources for now) data blocks.
 reading a data file once from beginning to end. It allows work with trace as with
 a forest of objects (one tree per thread), but can consume a huge amount of memory.
 
- Lazy loader loads all thread-independent objects first, using index to locate them, 
+ Lazy loader loads all reference objects first, using index to locate them, 
 and only top-level method call trace point («root») for each thread after that.
 
- Now all code uses global context (collection of thread-independent objects), so
-no two different traces could be loaded simultaneously. Each next call for
-loading API, no matter eager or lazy, invalidates the previously loaded trace. It will
-be changed in the future to allow loading of multiple traces. High-level API is ready
-for this change, but trace point implementations are not.
+ Now all code uses global context, so no two different traces could be loaded 
+simultaneously. Each next call for loading API, no matter eager or lazy, invalidates
+the previously loaded trace. It will be changed in the future to allow loading of
+multiple traces. High-level API is ready for this change, but trace point
+implementations are not.
 
 #### Eager.
  Eager loader (function `loadRecordedTrace`) doesn't need index as it loads a full
 data file in any case. It can read data from any `InoutStream` and returns
-re-created context (which contains all thread-independent reference objects) and list
+re-created context (which contains all reference objects) and list
 of method call trace points, one per thread.
 
  All children of all method call tracepoints are loaded and linked to their parents,
