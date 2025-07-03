@@ -256,6 +256,9 @@ cells are saved into the simple list and flushed together with a data buffer.
 file and one index file and use standard JVM synchronization to avoid conflicts
 and non-atomic flushes.
 
+ This strategy effectively splits data from each thread into almost-1MiB (cannot be configured
+without changing sources for now) data blocks.
+
 ### API to read (load) trace.
  Trace can be loaded in memory completely or lazily.
  
