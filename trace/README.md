@@ -52,6 +52,8 @@ integer, which corresponds to `threadId` field of trace points.
  After this, all other objects follows, and last object in the block is `BLOCK_END` which
 doesn't have any data fields.
 
+ Data blocks don't have any size limitations.
+
  As trace is written in «streaming» fashion, and it is impossible to know the size of
 the block ahead of time sometimes, or where the next block from the same thread will be
 placed, there is no linkage between blocks in the data file.
@@ -222,17 +224,112 @@ Trace recovering in case of the program crash is possible too, though all data a
 memory after the last save is lost anyway and saving is triggered only by the number of data 
 accumulated, not by timer.
 
+ All callback methods are shared between methods, and selection is performed by using one of
+the two strategies, which hooks up into trace point creation and method call result processing.
+
+ Both strategies use respectable implementations of `TraceWriter` interface which extends
+`DataOutput` and allows all other code to write objects in consistent way, but with different
+ backends.
+
+ Each trace point implements methods to save al dependencies and itself to any `TraceWriter`
+and these methods are called by strategies and support code. Method call trace point also
+has a method to save footer after all children are saved. Saving of chidlren tracepoints
+is controlled by strategy's code too, method call tracepoint doesn't save its onw children.
+
 #### Collect-and-dump.
-TODO
+ This strategy simply creates a per-thread tree of trace points. It doesn't store it to file, 
+and a separate function must be used to create data and index files.
+ 
+ The function to save trees of trace points is inherently single-threaded. It uses
+a straightforward way to track thread-independent objects and creates one data block
+per one thread, without interleaving trace points from different threads.
 
 #### Streaming.
-TODO
+ This strategy saves trace points as soon as they are created and doesn't store them
+in memory, except the current call stack consisting of method call trace points.
+
+ Each thread has its own instance of `TraceWriter` implementation. This implementation
+stores all data in the memory buffer and flushes this buffer when it is almost full. Index
+cells are saved into the simple list and flushed together with a data buffer.
+
+ Strategy, which is the owner for all per-thread `TraceWriter` instances, manage one data
+file and one index file and use standard JVM synchronization to avoid conflicts
+and non-atomic flushes.
 
 ### API to read (load) trace.
-TODO
+ Trace can be loaded in memory completely or lazily.
+ 
+ Eager loader reads whole trace points with all thread-independent objects in one go, 
+reading a data file once from beginning to end. It allows work with trace as with
+a forest of objects (one tree per thread), but can consume a huge amount of memory.
+
+ Lazy loader loads all thread-independent objects first, using index to locate them, 
+and only top-level method call trace point («root») for each thread after that.
+
+ Now all code uses global context (collection of thread-independent objects), so
+no two different traces could be loaded simultaneously. Each next call for
+loading API, no matter eager or lazy, invalidates the previously loaded trace. It will
+be changed in the future to allow loading of multiple traces. High-level API is ready
+for this change, but trace point implementations are not.
 
 #### Eager.
-TODO
+ Eager loader (function `loadRecordedTrace`) doesn't need index as it loads a full
+data file in any case. It can read data from any `InoutStream` and returns
+re-created context (which contains all thread-independent reference objects) and list
+of method call trace points, one per thread.
+
+ All children of all method call tracepoints are loaded and linked to their parents,
+in full available depth.
+
+ Beware that this data structure can consume a humongous amount of memory.
+
+ Now returned context is global `TRACE_CONTEXT`, but it will change in the future
+to allow loading multiple traces in once.
 
 #### Lazy.
-TODO
+ Lazy loader (class `LazyTraceReader`) requires file name and optional index `InputStream`
+as arguments. It cannot use any `InputStream` for data input as it needs effective
+seekable stream to support random access to data.
+
+ Lazy loader first loads or re-creates index, populates context with all thread-independent
+reference objects, and then loads root method call trace points, one per thread.
+
+ These method call trace points don't have their children loaded, thay only know
+where to load children and their count.
+
+ After that the same insance of lazy loader can be used to load any children of any
+already loaded method call tracepoint. It is possible to load all children at once
+or load only some range of children.
+
+ Method call trace point with children which were not yet loaded will have `null`
+at corresponding positions in the children list (`events` property). This list
+will have a proper fixed number of elements from the beginning.
+
+ Also, method call trace point which is loaded in such way can «forget» any children
+or all of them, but such children can be loaded again later with the help of the same
+lazy loader.
+
+ If the index cannot be loaded due to absence, any I/O error, or inconsistency with
+the data file, lazy loader reads the whole data file first to re-create context,
+data blocks, and method call trace points indices. After that it works as in
+the case with a healthy index. This recreation can take a lot of time.
+
+ For now there is no way to re-create the index on disk, but this feature is planned
+for the future.
+ 
+ Instance of lazy loader contains a reference to context used to load data, but, again,
+for now it is global `TRACE_CONTEXT` and using another instance of lazy or eager loader will
+invalidate old one. It will change in the future.
+
+### Printing a tree of trace points.
+ Tree of trace points can be pretty-printed to any print stream with help
+of `printRecorderTrace` function. It prints text representation of each trace point
+in the provided list, with indentations to show call hierarchy.
+ 
+ All not loaded tracepoints in method call tracepoints are folded to
+lines indicating how much was missed.
+
+ Tracepoints can be printed with their code locations (`verbose = true`) or 
+without (`verbose = false`).
+
+ If `null` is passed as output filename, `System.out` is used as output stream.
