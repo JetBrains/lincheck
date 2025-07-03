@@ -10,7 +10,7 @@ index is not stored back to disk.
 
  Index is not used for batch (not lazy) loading of trace at all.
 
-### Zero data duplication principle.
+### Trace Context and Zero data duplication principle.
  Trace points are stored in memory with all possibly shared data referenced
 by id and not stored into trace points themselves.
 
@@ -23,6 +23,10 @@ in this document, and these names are used interchangeably.
 
  Binary storage format follows this principle and makes the best effort to store 
 all such entities only once, no matter how many other entities reference them.
+
+ To allow on-the-fly writing («streaming») of trace, a binary format doesn't group
+all reference data in one place like the header or footer of the file but intermixes
+it with trace points as needed.
 
 ### Data format.
  Data file consists of a *header*, series of *objects* which are divided into *data blocks*
