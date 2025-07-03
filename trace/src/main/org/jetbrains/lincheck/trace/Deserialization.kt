@@ -174,7 +174,9 @@ class LazyTraceReader(
             check(blockId == threadId) { "Thread $threadId block 0 has wrong idt: $blockId" }
 
             val tracepoints = mutableListOf<TRTracePoint>()
-            loadTracePoints(threadId, this::readTracePointWithChildAddresses) { _, tracePoint, _ -> tracepoints.add(tracePoint) }
+            loadTracePoints(threadId, Integer.MAX_VALUE, this::readTracePointWithChildAddresses) { _, tracePoint, _
+                -> tracepoints.add(tracePoint)
+            }
             if (tracepoints.isEmpty()) {
                 System.err.println("Thread $threadId doesn't write any tracepoints")
             } else {
@@ -193,7 +195,7 @@ class LazyTraceReader(
             ?: error("TRMethodCallTracePoint ${parent.eventId} is not found in index")
         data.seek(calculatePhysicalOffset(parent.threadId, positions.first))
 
-        loadTracePoints(parent.threadId, this::readTracePointWithChildAddresses) { idx, tracePoint, _ ->
+        loadTracePoints(parent.threadId, Integer.MAX_VALUE, this::readTracePointWithChildAddresses) { idx, tracePoint, _ ->
             parent.loadChild(idx, tracePoint)
         }
 
@@ -203,15 +205,31 @@ class LazyTraceReader(
         }
     }
 
-    private fun loadTracePoints(threadId: Int, reader: () -> TRTracePoint, consumer: (Int, TRTracePoint, Long) -> Unit) {
+    fun loadChild(parent: TRMethodCallTracePoint, childIdx: Int) = loadChildrenRange(parent, childIdx, 1)
+
+    fun loadChildrenRange(parent: TRMethodCallTracePoint, from: Int, count: Int) {
+        require(from in 0 ..< parent.events.size) { "From index $from must be in range 0..<${parent.events.size}" }
+        require(count in 1 .. parent.events.size - from) { "Count $count must be in range 1..${parent.events.size - from}" }
+
+        data.seek(calculatePhysicalOffset(parent.threadId, parent.getChildAddress(from)))
+        loadTracePoints(parent.threadId, count,this::readTracePointWithChildAddresses) { idx, tracePoint, _ ->
+            parent.loadChild(idx + from, tracePoint)
+        }
+
+    }
+
+    private fun loadTracePoints(threadId: Int, maxRead: Int, reader: () -> TRTracePoint, consumer: (Int, TRTracePoint, Long) -> Unit) {
         val blocks = dataBlocks[threadId] ?: error("No data blocks for Thread $threadId")
         var idx = 0
         while (true) {
             var kind = loadObjects(data, context, mutableListOf(), false) { _, _, _ ->
-                val tracePointOffset = calculateLogicalOffset(threadId, data.position() - 1) // account for Kind
+                val tracePointOffset = data.position() - 1 // account for Kind
                 val tracePoint = reader()
                 consumer(idx++, tracePoint, tracePointOffset)
-                true
+                idx < maxRead
+            }
+            if (idx == maxRead) {
+                break
             }
             if (kind == ObjectKind.TRACEPOINT_FOOTER) {
                 break
@@ -417,7 +435,7 @@ class LazyTraceReader(
         }
 
         // Read tracepoints truly shallow
-        loadTracePoints(tracePoint.threadId, this::readTracePointShallow) { _, _, address ->
+        loadTracePoints(tracePoint.threadId, Integer.MAX_VALUE, this::readTracePointShallow) { _, _, address ->
             tracePoint.addChildAddress(calculateLogicalOffset(tracePoint.threadId, address))
         }
         // Kind is guaranteed by loadTracePoints()
@@ -439,7 +457,7 @@ class LazyTraceReader(
         val blockIdx = blocks.binarySearch { it.compareWithPhysicalOffset(physicalOffset) }
         check(blockIdx >= 0) { "Thread $threadId doesn't have data at physical offset $physicalOffset" }
         val block = blocks[blockIdx]
-        return block.accDataSize + physicalOffset - block.physicalStart
+        return block.accDataSize + physicalOffset - block.physicalDataStart
     }
 
     private fun findBlockByPhysicalOffset(threadId: Int, physicalOffset: Long): Int? {

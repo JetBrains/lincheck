@@ -38,13 +38,26 @@ private fun printTRPoint(output: PrintStream, node: TRTracePoint, depth: Int, ve
     output.print(" ".repeat(depth * 2))
     output.println(node.toText(verbose))
     if (node is TRMethodCallTracePoint) {
-        node.events.forEach {
-            if (it != null) {
-                printTRPoint(output, it, depth + 1, verbose)
+        var unloaded = 0
+        node.events.forEach { event ->
+            if (event == null) {
+                unloaded++
             } else {
-                output.print(" ".repeat(depth * 2 + 2))
-                output.println("<unloaded tracepoint>")
+                reportUnloaded(output, unloaded, depth + 1)
+                unloaded = 0
+                printTRPoint(output, event, depth + 1, verbose)
             }
         }
+        reportUnloaded(output, unloaded, depth + 1)
+    }
+}
+
+private fun reportUnloaded(output: PrintStream, unloaded: Int, depth: Int) {
+    if (unloaded == 1) {
+        output.print(" ".repeat(depth * 2))
+        output.println("... <unloaded child>")
+    } else if (unloaded > 1) {
+        output.print(" ".repeat(depth * 2))
+        output.println("... <${unloaded} unloaded children>")
     }
 }

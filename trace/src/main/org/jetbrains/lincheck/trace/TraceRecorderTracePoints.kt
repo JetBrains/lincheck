@@ -70,14 +70,7 @@ class TRMethodCallTracePoint(
     val argumentTypes: List<Types.Type> get() = methodDescriptor.argumentTypes
     val returnType: Types.Type get() = methodDescriptor.returnType
 
-    val totalChildrenCount: Int get() = children.size
-    val events: List<TRTracePoint?> get() {
-        return if (children.firstOrNull({ it != null }) != null) {
-            children
-        } else {
-            emptyList()
-        }
-    }
+    val events: List<TRTracePoint?> get() = children
 
     internal fun addChildAddress(address: Long) {
         if (childrenAddresses.size == children.size) {
