@@ -377,7 +377,7 @@ val sourcesJar = tasks.register<Jar>("sourcesJar") {
     archiveClassifier.set("sources")
 }
 
-val javadocJar = createJavadocJar()
+val javadocJar = createJavadocJar(rootProject.name)
 
 tasks.withType<Jar> {
     dependsOn(":bootstrapJar")
