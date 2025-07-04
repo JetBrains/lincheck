@@ -97,8 +97,8 @@ sourceSets {
         val atomicfuVersion: String by project
 
         compileOnly(project(":bootstrap"))
-        api(project(":common"))
         api(project(":jvm-agent"))
+        api(project(":common"))
         api(project(":trace"))
 
         api("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
@@ -275,7 +275,7 @@ tasks {
         if (!ideaActive) {
             // We need to be able to run these tests in IntelliJ IDEA.
             // Unfortunately, the current Gradle support doesn't detect
-            // the `jvmTestIsolated` and `trace[Debugger/Recorder]IntegrationTest` tasks.
+            // the `testIsolated` and `trace[Debugger/Recorder]IntegrationTest` tasks.
             exclude("**/*IsolatedTest*")
             exclude("org/jetbrains/trace_debugger/integration/*")
             exclude("org/jetbrains/trace_recorder/integration/*")
@@ -334,15 +334,18 @@ tasks {
 
     registerTraceAgentIntegrationTestsPrerequisites()
 
-    val copyTraceAgentFatJar = register<Copy>("copyTraceAgentFatJar") {
-        dependsOn(traceAgentIntegrationTestsPrerequisites)
+//    val copyTraceAgentFatJar = register<Copy>("copyTraceAgentFatJar") {
+//        dependsOn(traceAgentIntegrationTestsPrerequisites)
+//
+//        val traceRecorderProject = project(":trace-recorder")
+//        val fatJarFile = traceRecorderProject.layout.buildDirectory.file("libs/lincheck-fat.jar")
+//
+//        from(fatJarFile)
+//        into(layout.buildDirectory.dir("libs"))
+//    }
 
-        val traceToolsProject = project(":trace-tools")
-        val fatJarFile = traceToolsProject.layout.buildDirectory.file("libs/lincheck-fat.jar")
-
-        from(fatJarFile)
-        into(layout.buildDirectory.dir("libs"))
-    }
+    val copyTraceDebuggerFatJar = copyTraceAgentFatJar(project(":trace-debugger"))
+    val copyTraceRecorderFatJar = copyTraceAgentFatJar(project(":trace-recorder"))
 
     val traceDebuggerIntegrationTest = register<Test>("traceDebuggerIntegrationTest") {
         configureJvmTestCommon()
@@ -354,7 +357,7 @@ tasks {
 
         outputs.upToDateWhen { false } // Always run tests when called
         //dependsOn(traceAgentIntegrationTestsPrerequisites)
-        dependsOn(copyTraceAgentFatJar)
+        dependsOn(copyTraceDebuggerFatJar)
     }
 
     val traceRecorderIntegrationTest = register<Test>("traceRecorderIntegrationTest") {
@@ -367,7 +370,7 @@ tasks {
 
         outputs.upToDateWhen { false } // Always run tests when called
         //dependsOn(traceAgentIntegrationTestsPrerequisites)
-        dependsOn(copyTraceAgentFatJar)
+        dependsOn(copyTraceRecorderFatJar)
     }
 
     check {

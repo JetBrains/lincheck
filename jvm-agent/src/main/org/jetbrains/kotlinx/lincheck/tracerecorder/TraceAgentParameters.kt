@@ -8,11 +8,11 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.traceagent
+package org.jetbrains.kotlinx.lincheck.tracerecorder
 
 import java.lang.reflect.Method
 
-internal object TraceAgentParameters {
+object TraceAgentParameters {
     @JvmStatic
     lateinit var classUnderTraceDebugging: String
 

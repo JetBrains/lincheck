@@ -49,28 +49,6 @@ fun Project.registerTraceAgentTasks() {
             }
         })
 
-//        // Include other modules code
-//        val rr = compileClasspath.resolve()
-//            .filter {
-//                println("Filtering: " + it.name)
-//                it.absolutePath.contains("build/libs") && it.name.endsWith(".jar")
-//            }
-//            .filterNot { it.name.endsWith("trace.jar") }
-//            .map {
-//                println("Compile dep: ${it.name}")
-//                if (it.isDirectory) it else zipTree(it)
-//            }
-//        from({
-//            compileClasspath.resolve()
-//                .filter { it.name.contains("build/libs") && it.name.endsWith(".jar") }
-//                .filterNot { it.name.equals("trace.jar") }
-//                .map {
-//                    println("Compile dep: ${it.name}")
-//                    //if (it.isDirectory) it else zipTree(it)
-//                    it
-//                }
-//        })
-
         manifest {
             attributes(
                 mapOf(
