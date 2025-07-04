@@ -26,6 +26,7 @@ sourceSets {
         val byteBuddyVersion: String by project
 
         api(project(":common"))
+        api(project(":core")) // should be alone as dependedency here
         compileOnly(project(":bootstrap"))
 
         api("org.jetbrains.kotlin:kotlin-stdlib:${kotlinVersion}")
