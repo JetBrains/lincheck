@@ -1,35 +1,11 @@
-import org.gradle.jvm.tasks.Jar
-import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import org.jetbrains.dokka.gradle.DokkaTask
-import okhttp3.MultipartBody
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.asRequestBody
-import java.util.*
-
-buildscript {
-    repositories {
-        maven { url = uri("https://packages.jetbrains.team/maven/p/jcs/maven") }
-    }
-    dependencies {
-        classpath("com.squareup.okhttp3:okhttp:4.12.0")
-    }
-}
-
-
 plugins {
     java
     kotlin("jvm")
-    id("signing")
-    id("maven-publish")
-    id("org.jetbrains.dokka")
     id("kotlinx.team.infra") version "0.4.0-dev-80"
 }
 
 repositories {
     mavenCentral()
-    maven { url = uri("https://repo.gradle.org/gradle/libs-releases/") }
 }
 
 kotlin {
@@ -40,13 +16,16 @@ java {
     configureJava()
 }
 
+subprojects {
+    plugins.apply("java")
+    plugins.apply("org.jetbrains.kotlin.jvm")
 
-tasks {
-    named<JavaCompile>("compileTestJava") {
-        setupJavaToolchain(project)
+    kotlin {
+        configureKotlin()
     }
-    named<KotlinCompile>("compileTestKotlin") {
-        setupKotlinToolchain(project)
+
+    java {
+        configureJava()
     }
 }
 
@@ -54,134 +33,4 @@ val bootstrapJar = tasks.register<Copy>("bootstrapJar") {
     dependsOn(":bootstrap:jar")
     from(file("${project(":bootstrap").layout.buildDirectory.get()}/libs/bootstrap.jar"))
     into(file("${project(":common").layout.buildDirectory.get()}/resources/main"))
-}
-
-val jar = tasks.named<Jar>("jar") {
-    from(sourceSets["main"].output)
-    dependsOn(tasks.compileJava, tasks.compileKotlin)
-}
-
-val sourcesJar = tasks.register<Jar>("sourcesJar") {
-    from(sourceSets["main"].allSource)
-    // Also collect sources for the injected classes to simplify debugging
-    from(project(":bootstrap").file("src"))
-    archiveClassifier.set("sources")
-}
-
-val javadocJar = createJavadocJar()
-
-tasks.withType<Jar> {
-    dependsOn(bootstrapJar)
-
-    manifest {
-        val inceptionYear: String by project
-        val lastCopyrightYear: String by project
-        val version: String by project
-        attributes(
-            "Copyright" to
-                    "Copyright (C) 2015 - 2019 Devexperts, LLC\n"
-                    + " ".repeat(29) + // additional space to fill to the 72-character length of JAR manifest file
-                    "Copyright (C) $inceptionYear - $lastCopyrightYear JetBrains, s.r.o.",
-            // This attribute let us get the version from the code.
-            "Implementation-Version" to version
-        )
-    }
-}
-
-//tasks.named("processResources").configure {
-//    dependsOn(bootstrapJar)
-//}
-
-publishing {
-    publications {
-        register("maven", MavenPublication::class) {
-            val groupId: String by project
-            val artifactId: String by project
-            val version: String by project
-
-            this.groupId = groupId
-            this.artifactId = artifactId
-            this.version = version
-
-            from(components["kotlin"])
-            artifact(sourcesJar)
-            artifact(javadocJar)
-
-            configureMavenPublication {
-                name.set(artifactId)
-                description.set("Lincheck - framework for testing concurrent code on the JVM")
-            }
-        }
-    }
-
-    configureRepositories(
-        artifactsRepositoryUrl = uri(layout.buildDirectory.dir("artifacts/maven"))
-    )
-}
-
-tasks.named("generateMetadataFileForMavenPublication") {
-    dependsOn(jar)
-    dependsOn(sourcesJar)
-    dependsOn(javadocJar)
-}
-
-signing {
-    val isUnderTeamCity = (System.getenv("TEAMCITY_VERSION") != null)
-    if (isUnderTeamCity) {
-        configureSigning()
-        sign(publishing.publications)
-    }
-}
-
-tasks {
-    val packSonatypeCentralBundle by registering(Zip::class) {
-        group = "publishing"
-
-        dependsOn(":trace:publishMavenPublicationToArtifactsRepository")
-        dependsOn(":publishMavenPublicationToArtifactsRepository")
-
-        from(layout.buildDirectory.dir("artifacts/maven"))
-        archiveFileName.set("bundle.zip")
-        destinationDirectory.set(layout.buildDirectory)
-    }
-
-    val publishMavenToCentralPortal by registering {
-        group = "publishing"
-
-        dependsOn(packSonatypeCentralBundle)
-
-        doLast {
-            val uriBase = "https://central.sonatype.com/api/v1/publisher/upload"
-            val publishingType = "USER_MANAGED"
-            val deploymentName = "${project.name}-$version"
-            val uri = "$uriBase?name=$deploymentName&publishingType=$publishingType"
-
-            val userName = rootProject.extra["centralPortalUserName"] as String
-            val token = rootProject.extra["centralPortalToken"] as String
-            val base64Auth = Base64.getEncoder().encode("$userName:$token".toByteArray()).toString(Charsets.UTF_8)
-            val bundleFile = packSonatypeCentralBundle.get().archiveFile.get().asFile
-
-            println("Sending request to $uri...")
-
-            val client = OkHttpClient()
-            val request = Request.Builder()
-                .url(uri)
-                .header("Authorization", "Bearer $base64Auth")
-                .post(
-                    MultipartBody.Builder()
-                        .setType(MultipartBody.FORM)
-                        .addFormDataPart("bundle", bundleFile.name, bundleFile.asRequestBody())
-                        .build()
-                )
-                .build()
-            client.newCall(request).execute().use { response ->
-                val statusCode = response.code
-                println("Upload status code: $statusCode")
-                println("Upload result: ${response.body!!.string()}")
-                if (statusCode != 201) {
-                    error("Upload error to Central repository. Status code $statusCode.")
-                }
-            }
-        }
-    }
 }

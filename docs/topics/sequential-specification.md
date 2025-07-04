@@ -48,6 +48,6 @@ class SequentialQueue {
 }
 ```
 
-> Get the [full code of the examples](https://github.com/JetBrains/lincheck/blob/master/src/jvm/test-lincheck-integration/org/jetbrains/lincheck_test/guide/ConcurrentLinkedQueueTest.kt).
+> Get the [full code of the examples](https://github.com/JetBrains/lincheck/blob/master/common/src/test-lincheck-integration/org/jetbrains/lincheck_test/guide/ConcurrentLinkedQueueTest.kt).
 >
 {style="note"}
