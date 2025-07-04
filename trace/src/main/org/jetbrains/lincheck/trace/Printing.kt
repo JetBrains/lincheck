@@ -10,10 +10,19 @@
 
 package org.jetbrains.lincheck.trace
 
+import org.jetbrains.kotlinx.lincheck.tracedata.openNewFile
 import java.io.OutputStream
 import java.io.PrintStream
 
 private const val OUTPUT_BUFFER_SIZE: Int = 16*1024*1024
+
+fun printRecorderTrace(fileName: String?, context: TraceContext, rootCallsPerThread: List<TRTracePoint>, verbose: Boolean) =
+    printRecorderTrace(
+        output = if (fileName == null) System.out else openNewFile(fileName),
+        context = context,
+        rootCallsPerThread = rootCallsPerThread,
+        verbose = verbose
+    )
 
 fun printRecorderTrace(output: OutputStream, context: TraceContext, rootCallsPerThread: List<TRTracePoint>, verbose: Boolean) {
     check(context == TRACE_CONTEXT) { "Now only global TRACE_CONTEXT is supported" }
@@ -29,8 +38,26 @@ private fun printTRPoint(output: PrintStream, node: TRTracePoint, depth: Int, ve
     output.print(" ".repeat(depth * 2))
     output.println(node.toText(verbose))
     if (node is TRMethodCallTracePoint) {
-        node.events.forEach {
-            printTRPoint(output, it, depth + 1, verbose)
+        var unloaded = 0
+        node.events.forEach { event ->
+            if (event == null) {
+                unloaded++
+            } else {
+                reportUnloaded(output, unloaded, depth + 1)
+                unloaded = 0
+                printTRPoint(output, event, depth + 1, verbose)
+            }
         }
+        reportUnloaded(output, unloaded, depth + 1)
+    }
+}
+
+private fun reportUnloaded(output: PrintStream, unloaded: Int, depth: Int) {
+    if (unloaded == 1) {
+        output.print(" ".repeat(depth * 2))
+        output.println("... <unloaded child>")
+    } else if (unloaded > 1) {
+        output.print(" ".repeat(depth * 2))
+        output.println("... <${unloaded} unloaded children>")
     }
 }

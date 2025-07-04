@@ -12,11 +12,9 @@ package org.jetbrains.kotlinx.lincheck.transformation
 
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
-import sun.nio.ch.lincheck.EventTracker
 
 /**
- * [LocalVariablesTracker] tracks method calls,
- * injecting invocations of corresponding [EventTracker] methods.
+ * [LocalVariablesTracker] tracks active regions of variables in the method.
  */
 internal class LocalVariablesTracker(
     visitor: MethodVisitor,
