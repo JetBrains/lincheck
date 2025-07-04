@@ -16,11 +16,11 @@ import org.jetbrains.kotlinx.lincheck.transformation.ASM_API
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.MODEL_CHECKING
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.transformation.SafeClassWriter
-import org.jetbrains.kotlinx.lincheck.transformation.isInTraceDebuggerMode
-import org.jetbrains.kotlinx.lincheck.transformation.isInTraceRecorderMode
 import org.jetbrains.kotlinx.lincheck.transformation.isInstrumentationInitialized
 import org.jetbrains.kotlinx.lincheck.transformation.isTraceJavaAgentAttached
 import org.jetbrains.kotlinx.lincheck.transformation.toCanonicalClassName
+import org.jetbrains.kotlinx.lincheck.util.isInTraceDebuggerMode
+import org.jetbrains.kotlinx.lincheck.util.isInTraceRecorderMode
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.ClassWriter

@@ -14,19 +14,19 @@ import java.io.*
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
-internal object Logger {
+object Logger {
     private val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss.SSS")
 
     private val logFile: File? = System.getProperty("lincheck.logFile")?.let { fileName ->
         File(fileName).also { runCatching { initFile(it) }.getOrNull() }
     }
 
-    private var logWriter: Writer = BufferedWriter(
+    val logWriter: Writer = BufferedWriter(
         if (logFile != null) FileWriter(logFile)
         else System.err.writer()
     )
 
-    private var logLevel: LoggingLevel = System.getProperty("lincheck.logLevel")?.uppercase()?.let {
+    val logLevel: LoggingLevel = System.getProperty("lincheck.logLevel")?.uppercase()?.let {
         runCatching { LoggingLevel.valueOf(it) }.getOrElse { DEFAULT_LOG_LEVEL }
     } ?: DEFAULT_LOG_LEVEL
 
@@ -46,9 +46,18 @@ internal object Logger {
 
     fun debug(e: Throwable) = log(LoggingLevel.DEBUG, e)
 
-    private inline fun log(logLevel: LoggingLevel, lazyMessage: () -> String) {
+    inline fun log(logLevel: LoggingLevel, lazyMessage: () -> String) {
         if (logLevel >= this.logLevel) {
             write(logLevel, lazyMessage(), logWriter)
+        }
+    }
+
+    fun write(logLevel: LoggingLevel, s: String, writer: Writer) {
+        try {
+            writer.write("[${logLevel.name}] $s$LINE_SEPARATOR")
+            writer.flush()
+        } catch (e: IOException) {
+            e.printStackTrace()
         }
     }
 
@@ -58,15 +67,6 @@ internal object Logger {
                 throwable.printStackTrace(PrintWriter(writer))
                 writer.toString()
             }
-        }
-    }
-
-    private fun write(logLevel: LoggingLevel, s: String, writer: Writer) {
-        try {
-            writer.write("[${logLevel.name}] $s$LINE_SEPARATOR")
-            writer.flush()
-        } catch (e: IOException) {
-            e.printStackTrace()
         }
     }
 

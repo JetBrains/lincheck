@@ -10,10 +10,6 @@
 
 package org.jetbrains.kotlinx.lincheck.util
 
-import org.jetbrains.lincheck.datastructures.ManagedCTestConfiguration
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
-import org.jetbrains.kotlinx.lincheck.transformation.isInTraceDebuggerMode
-import org.jetbrains.kotlinx.lincheck.transformation.isThreadContainerClass
 import org.jetbrains.kotlinx.lincheck.util.AnalysisSectionType.*
 import sun.nio.ch.lincheck.Injections
 import sun.nio.ch.lincheck.ThreadDescriptor
@@ -101,29 +97,30 @@ enum class AnalysisSectionType {
 fun AnalysisSectionType.isCallStackPropagating() =
     this >= AnalysisSectionType.SILENT_PROPAGATING
 
-internal fun AnalysisSectionType.isSilent() =
+fun AnalysisSectionType.isSilent() =
     this == AnalysisSectionType.SILENT         ||
     this == AnalysisSectionType.SILENT_PROPAGATING
+
 
 /**
  * Enables analysis for the current thread.
  */
-internal fun enableAnalysis() {
+fun enableAnalysis() {
     Injections.enableAnalysis()
 }
 
 /**
  * Disables analysis for the current thread.
  */
-internal fun disableAnalysis() {
+fun disableAnalysis() {
     Injections.disableAnalysis()
 }
 
 /**
  * Enters an ignored section for the current thread.
  *
-     * Does not affect the current thread if it is untracked
-     * (e.g. not registered in the Lincheck strategy).
+ * Does not affect the current thread if it is untracked
+ * (e.g. not registered in the Lincheck strategy).
  */
 fun enterIgnoredSection() {
     Injections.enterIgnoredSection()
@@ -132,8 +129,8 @@ fun enterIgnoredSection() {
 /**
  * Leaves an ignored section for the current thread.
  *
-     * Does not affect the current thread if it is untracked
-     * (e.g. not registered in the Lincheck strategy).
+ * Does not affect the current thread if it is untracked
+ * (e.g. not registered in the Lincheck strategy).
  */
 fun leaveIgnoredSection() {
     Injections.leaveIgnoredSection()
@@ -167,9 +164,17 @@ inline fun <R> runInsideIgnoredSection(block: () -> R): R {
  * @return result of [block] invocation.
  * @throws IllegalStateException if the method is called not from an ignored section.
  */
-internal inline fun <R> runOutsideIgnoredSection(block: () -> R): R {
+inline fun <R> runOutsideIgnoredSection(block: () -> R): R {
     val descriptor = ThreadDescriptor.getCurrentThreadDescriptor()
-    if (descriptor == null || descriptor.eventTracker !is ManagedStrategy) {
+    if (
+        descriptor == null ||
+        descriptor.eventTracker == null ||
+        descriptor.eventTracker.javaClass.name !in listOf(
+            "org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy",
+            "org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy"
+        )
+    // descriptor.eventTracker !is ManagedStrategy
+    ) {
         return block()
     }
     check(descriptor.inIgnoredSection()) {
@@ -304,12 +309,6 @@ class AnalysisProfile(val analyzeStdLib: Boolean) {
     @Suppress("UNUSED_PARAMETER") // methodName is here for uniformity and might become useful in the future
     fun shouldBeHidden(className: String, methodName: String): Boolean = 
         !analyzeStdLib && (isConcurrentCollectionsLibrary(className) || isCollectionsLibrary(className))
-
-    companion object {
-        val DEFAULT = AnalysisProfile(
-            analyzeStdLib = ManagedCTestConfiguration.DEFAULT_STDLIB_ANALYSIS_ENABLED
-        )
-    }
 }
 
 private val COLLECTION_LIBRARIES = setOf(
@@ -394,3 +393,13 @@ private fun isJavaExecutorService(className: String) =
     className.startsWith("java.util.concurrent.AbstractExecutorService") ||
     className.startsWith("java.util.concurrent.ThreadPoolExecutor") ||
     className.startsWith("java.util.concurrent.ForkJoinPool")
+
+/**
+ * Tests if the provided [className] represents one of jdk internal [ThreadContainer] classes
+ * that use [JavaLangAccess.start] API to start threads.
+ *
+ * *Note*: this is a copy of the same method in `jvm-agent` module.
+ */
+private fun isThreadContainerClass(className: String): Boolean =
+    className == "jdk.internal.vm.SharedThreadContainer"  ||
+    className == "jdk.internal.misc.ThreadFlock"
