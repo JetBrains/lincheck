@@ -45,4 +45,8 @@ tasks {
     named<KotlinCompile>("compileTestKotlin") {
         setupKotlinToolchain(project)
     }
+
+    withType<Jar> {
+        dependsOn(":bootstrapJar")
+    }
 }

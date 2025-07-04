@@ -117,11 +117,14 @@ abstract class AbstractTraceIntegrationTest {
                 .addArguments(
                     "--init-script",
                     createInitScriptAsTempFile(buildGradleInitScriptToDumpTrace(testClassName, testMethodName, tmpFile, extraJvmArgs, extraAgentArgs)).absolutePath,
-                ).forTasks(
+                )
+                .forTasks(
                     *gradleCommands.toTypedArray(),
                     "--tests",
                     "$testClassName.$testMethodName",
-                ).run()
+                )
+                .setStandardError(System.err)
+                .run()
         }
 
         // TODO decide how to test: with gold data or run twice?

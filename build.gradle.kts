@@ -32,5 +32,5 @@ subprojects {
 val bootstrapJar = tasks.register<Copy>("bootstrapJar") {
     dependsOn(":bootstrap:jar")
     from(file("${project(":bootstrap").layout.buildDirectory.get()}/libs/bootstrap.jar"))
-    into(file("${project(":core").layout.buildDirectory.get()}/resources/main"))
+    into(file("${project(":jvm-agent").layout.buildDirectory.get()}/resources/main"))
 }

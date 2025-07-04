@@ -11,7 +11,6 @@
 package org.jetbrains.kotlinx.lincheck.traceagent
 
 import org.jetbrains.kotlinx.lincheck.tracerecorder.TraceRecorder
-import org.jetbrains.kotlinx.lincheck.tracerecorder.TraceAgentParameters
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 

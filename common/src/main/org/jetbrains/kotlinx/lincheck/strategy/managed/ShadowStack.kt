@@ -11,7 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 /**
- * Represents a shadow stack frame used to reflect the program's stack in [ManagedStrategy].
+ * Represents a shadow stack frame used to reflect the program's stack in [org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy].
  *
  * @property instance the object on which the method was invoked, null in the case of a static method.
   */
