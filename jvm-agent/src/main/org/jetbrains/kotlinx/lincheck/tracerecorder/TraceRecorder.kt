@@ -45,7 +45,7 @@ object TraceRecorder {
         // Set signal "void" object from Injections for better text output
         INJECTIONS_VOID_OBJECT = Injections.VOID_RESULT
 
-        // this method does need 'runInsideIgnoredSection' because analysis is not enabled until its completion
+        // this method does not need 'runInsideIgnoredSection' because analysis is not enabled until its completion
         eventTracker = TraceCollectingEventTracker(className, methodName, traceFileName, parseOutputMode(outputMode, outputOption))
         val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: ThreadDescriptor(Thread.currentThread()).also {
             ThreadDescriptor.setCurrentThreadDescriptor(it)
