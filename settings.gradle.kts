@@ -25,7 +25,7 @@ val name: String by settings
 rootProject.name = name
 
 include(":bootstrap")
-include(":core")
+include(":jvm-agent")
 include(":common")
 include(":trace")
-include(":jvm-agent")
+include(":trace-tools")

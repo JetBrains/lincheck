@@ -335,8 +335,8 @@ tasks {
     val copyTraceAgentFatJar = register<Copy>("copyTraceAgentFatJar") {
         dependsOn(traceAgentIntegrationTestsPrerequisites)
 
-        val agentProject = project(":jvm-agent")
-        val fatJarFile = agentProject.layout.buildDirectory.file("libs/lincheck-fat.jar")
+        val traceToolsProject = project(":trace-tools")
+        val fatJarFile = traceToolsProject.layout.buildDirectory.file("libs/lincheck-fat.jar")
 
         from(fatJarFile)
         into(layout.buildDirectory.dir("libs"))

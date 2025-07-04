@@ -1,5 +1,6 @@
 import org.gradle.kotlin.dsl.named
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import java.nio.file.Paths
 
 repositories {
     mavenCentral()
@@ -24,6 +25,8 @@ sourceSets {
         val asmVersion: String by project
         val byteBuddyVersion: String by project
 
+        api(project(":common"))
+        api(project(":jvm-agent")) // should be alone as dependedency here
         compileOnly(project(":bootstrap"))
 
         api("org.jetbrains.kotlin:kotlin-stdlib:${kotlinVersion}")
@@ -36,6 +39,7 @@ sourceSets {
     }
 }
 
+
 tasks {
     named<JavaCompile>("compileTestJava") {
         setupJavaToolchain(project)
@@ -44,3 +48,5 @@ tasks {
         setupKotlinToolchain(project)
     }
 }
+
+registerTraceAgentTasks()
