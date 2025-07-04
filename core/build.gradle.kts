@@ -334,16 +334,6 @@ tasks {
 
     registerTraceAgentIntegrationTestsPrerequisites()
 
-//    val copyTraceAgentFatJar = register<Copy>("copyTraceAgentFatJar") {
-//        dependsOn(traceAgentIntegrationTestsPrerequisites)
-//
-//        val traceRecorderProject = project(":trace-recorder")
-//        val fatJarFile = traceRecorderProject.layout.buildDirectory.file("libs/lincheck-fat.jar")
-//
-//        from(fatJarFile)
-//        into(layout.buildDirectory.dir("libs"))
-//    }
-
     val copyTraceDebuggerFatJar = copyTraceAgentFatJar(project(":trace-debugger"))
     val copyTraceRecorderFatJar = copyTraceAgentFatJar(project(":trace-recorder"))
 
@@ -356,7 +346,6 @@ tasks {
         classpath = sourceSets["traceDebuggerIntegrationTest"].runtimeClasspath
 
         outputs.upToDateWhen { false } // Always run tests when called
-        //dependsOn(traceAgentIntegrationTestsPrerequisites)
         dependsOn(copyTraceDebuggerFatJar)
     }
 
@@ -369,7 +358,6 @@ tasks {
         classpath = sourceSets["traceRecorderIntegrationTest"].runtimeClasspath
 
         outputs.upToDateWhen { false } // Always run tests when called
-        //dependsOn(traceAgentIntegrationTestsPrerequisites)
         dependsOn(copyTraceRecorderFatJar)
     }
 
