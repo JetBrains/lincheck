@@ -35,7 +35,6 @@ import kotlin.coroutines.Continuation
 import java.util.concurrent.TimeoutException
 import kotlinx.coroutines.CancellableContinuation
 import org.jetbrains.lincheck.GeneralPurposeModelCheckingWrapper
-import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
 import org.jetbrains.lincheck.trace.CodeLocations
 import org.jetbrains.lincheck.trace.FieldDescriptor
 import org.jetbrains.lincheck.trace.TRACE_CONTEXT

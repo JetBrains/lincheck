@@ -63,6 +63,6 @@ fun Project.registerTraceAgentIntegrationTestsPrerequisites() {
 
     traceAgentIntegrationTestsPrerequisites = tasks.register("traceAgentIntegrationTestsPrerequisites") {
         prerequisite.forEach { dependsOn(it) }
-        dependsOn("traceAgentFatJar")
+        dependsOn(":jvm-agent:traceAgentFatJar")
     }
 }

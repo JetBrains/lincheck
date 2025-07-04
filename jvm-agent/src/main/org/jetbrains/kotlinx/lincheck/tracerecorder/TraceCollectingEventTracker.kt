@@ -91,7 +91,7 @@ class TraceCollectingEventTracker(
     private val methodName: String,
     private val traceDumpPath: String?,
     private val outputType: TraceCollectorOutputType
-) :  EventTracker {
+) : EventTracker {
     // We don't want to re-create this object each time we need it
     private val analysisProfile: AnalysisProfile = AnalysisProfile(false)
 

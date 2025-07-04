@@ -26,7 +26,7 @@ import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 import kotlin.reflect.jvm.kotlinFunction
 
-internal object TraceDebuggerInjections {
+object TraceDebuggerInjections {
     @JvmStatic
     var firstRun = true
 

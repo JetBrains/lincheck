@@ -11,7 +11,6 @@
 package org.jetbrains.kotlinx.lincheck.transformation
 
 import net.bytebuddy.agent.ByteBuddyAgent
-import org.jetbrains.kotlinx.lincheck.traceagent.TraceAgent
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.install
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentation
@@ -59,7 +58,7 @@ internal inline fun withLincheckJavaAgent(instrumentationMode: InstrumentationMo
     }
 }
 
-internal enum class InstrumentationMode {
+enum class InstrumentationMode {
     /**
      * In this mode, Lincheck transforms bytecode
      * only to track coroutine suspensions.
@@ -85,14 +84,14 @@ internal enum class InstrumentationMode {
  * @property instrumentation The ByteBuddy instrumentation instance.
  * @property instrumentationMode The instrumentation mode to determine which classes to transform.
  */
-internal object LincheckJavaAgent {
+object LincheckJavaAgent {
     /**
      * The [Instrumentation] instance is used to perform bytecode transformations during runtime.
      *
      * It is set either by [TraceAgent] static agent, or on the first call to
      * [withLincheckJavaAgent] which will use [ByteBuddyAgent] dynamic agent instead.
      */
-    internal lateinit var instrumentation: Instrumentation
+    lateinit var instrumentation: Instrumentation
 
     /**
      * Determines how to transform classes;
@@ -376,8 +375,8 @@ internal object LincheckJavaAgent {
         System.getProperty("lincheck.instrumentAllClasses")?.toBoolean() ?: false
 }
 
-internal var isTraceJavaAgentAttached: Boolean = false
-internal var isInstrumentationInitialized: Boolean = false
+var isTraceJavaAgentAttached: Boolean = false
+var isInstrumentationInitialized: Boolean = false
 
 internal val dumpTransformedSources by lazy {
     System.getProperty(DUMP_TRANSFORMED_SOURCES_PROPERTY, "false").toBoolean()

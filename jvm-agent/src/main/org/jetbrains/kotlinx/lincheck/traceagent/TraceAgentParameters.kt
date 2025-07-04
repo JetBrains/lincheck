@@ -12,11 +12,6 @@ package org.jetbrains.kotlinx.lincheck.traceagent
 
 import java.lang.reflect.Method
 
-private const val TRACE_DEBUGGER_MODE_PROPERTY = "lincheck.traceDebuggerMode"
-private const val TRACE_RECORDER_MODE_PROPERTY = "lincheck.traceRecorderMode"
-val isInTraceDebuggerMode by lazy { System.getProperty(TRACE_DEBUGGER_MODE_PROPERTY, "false").toBoolean() }
-val isInTraceRecorderMode by lazy { System.getProperty(TRACE_RECORDER_MODE_PROPERTY, "false").toBoolean() }
-
 internal object TraceAgentParameters {
     @JvmStatic
     lateinit var classUnderTraceDebugging: String

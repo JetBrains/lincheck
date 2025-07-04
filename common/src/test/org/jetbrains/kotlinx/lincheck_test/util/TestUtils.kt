@@ -13,7 +13,7 @@ package org.jetbrains.kotlinx.lincheck_test.util
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.lincheck.datastructures.ParameterGenerator
-import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
+import org.jetbrains.kotlinx.lincheck.transformation.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.util.DEFAULT_TEST_JDK_VERSION
 import org.jetbrains.kotlinx.lincheck.util.JdkVersion
 import org.jetbrains.kotlinx.lincheck.util.jdkVersion
