@@ -15,6 +15,7 @@ import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.execution.threadsResults
+import org.jetbrains.kotlinx.lincheck.tracerecorder.TraceAgentParameters
 import org.jetbrains.lincheck.datastructures.scenario
 import org.jetbrains.lincheck.datastructures.forClasses
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
