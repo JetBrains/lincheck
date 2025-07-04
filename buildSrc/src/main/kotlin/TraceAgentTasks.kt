@@ -27,6 +27,10 @@ fun Project.registerTraceAgentTasks() {
     val mainSourceSet = javaPluginExtension.sourceSets.getByName("main")
 
     val runtimeClasspath = configurations.getByName("runtimeClasspath")
+    val compileClasspath = configurations.getByName("compileClasspath")
+    println("Runtime classpath: ${runtimeClasspath.resolve().joinToString("\n")}")
+    println("\n\n")
+    println("Compile classpath: ${compileClasspath.resolve().joinToString("\n")}")
 
     val traceAgentFatJar = tasks.register<Jar>("traceAgentFatJar") {
         archiveBaseName.set("lincheck-fat")
@@ -44,6 +48,28 @@ fun Project.registerTraceAgentTasks() {
                 if (it.isDirectory) it else zipTree(it)
             }
         })
+
+//        // Include other modules code
+//        val rr = compileClasspath.resolve()
+//            .filter {
+//                println("Filtering: " + it.name)
+//                it.absolutePath.contains("build/libs") && it.name.endsWith(".jar")
+//            }
+//            .filterNot { it.name.endsWith("trace.jar") }
+//            .map {
+//                println("Compile dep: ${it.name}")
+//                if (it.isDirectory) it else zipTree(it)
+//            }
+//        from({
+//            compileClasspath.resolve()
+//                .filter { it.name.contains("build/libs") && it.name.endsWith(".jar") }
+//                .filterNot { it.name.equals("trace.jar") }
+//                .map {
+//                    println("Compile dep: ${it.name}")
+//                    //if (it.isDirectory) it else zipTree(it)
+//                    it
+//                }
+//        })
 
         manifest {
             attributes(

@@ -25,6 +25,11 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KFunction
 import kotlin.reflect.jvm.javaMethod
 
+private const val TRACE_DEBUGGER_MODE_PROPERTY = "lincheck.traceDebuggerMode"
+private const val TRACE_RECORDER_MODE_PROPERTY = "lincheck.traceRecorderMode"
+val isInTraceDebuggerMode by lazy { System.getProperty(TRACE_DEBUGGER_MODE_PROPERTY, "false").toBoolean() }
+val isInTraceRecorderMode by lazy { System.getProperty(TRACE_RECORDER_MODE_PROPERTY, "false").toBoolean() }
+
 /**
  * GeneratorAdapter which doesn't remap access to local variables and prohibit creation of new locals
  */
@@ -422,7 +427,7 @@ internal val functionToDeclaringClassMap = HashMap<KFunction<*>, Pair<Type, Meth
 /**
  * Invokes a static method represented by a KFunction.
  */
-internal fun GeneratorAdapter.invokeStatic(function: KFunction<*>) {
+fun GeneratorAdapter.invokeStatic(function: KFunction<*>) {
     val (clazz, method) = functionToDeclaringClassMap.computeIfAbsent(function) {
         function.javaMethod!!.let {
             getType(it.declaringClass) to Method.getMethod(it)
@@ -438,7 +443,7 @@ internal fun GeneratorAdapter.invokeStatic(function: KFunction<*>) {
  * @param thenClause the then-clause code.
  * @param elseClause the else-clause code.
  */
-internal inline fun GeneratorAdapter.ifStatement(
+inline fun GeneratorAdapter.ifStatement(
     condition: GeneratorAdapter.() -> Unit,
     thenClause: GeneratorAdapter.() -> Unit,
     elseClause: GeneratorAdapter.() -> Unit = { },
@@ -675,7 +680,7 @@ internal fun String.toSimpleClassName() =
  * Converts a string representing a class name in internal format (e.g., "com/example/MyClass")
  * into a canonical class name format with (e.g., "com.example.MyClass").
  */
-internal fun String.toCanonicalClassName() =
+fun String.toCanonicalClassName() =
     this.replace('/', '.')
 
 /**
@@ -685,7 +690,7 @@ internal fun String.toCanonicalClassName() =
 internal fun String.toInternalClassName() =
     this.replace('.', '/')
 
-internal const val ASM_API = Opcodes.ASM9
+const val ASM_API = Opcodes.ASM9
 
 internal val OBJECT_ARRAY_TYPE = getType(Array<Any>::class.java)
 internal val STRING_TYPE = getType(String::class.java)

@@ -220,8 +220,6 @@ tasks.withType<Test> {
     )
 }
 
-registerTraceAgentTasks()
-
 tasks {
     fun Test.configureJvmTestCommon() {
         maxParallelForks = 1
@@ -334,6 +332,16 @@ tasks {
 
     registerTraceAgentIntegrationTestsPrerequisites()
 
+    val copyTraceAgentFatJar = register<Copy>("copyTraceAgentFatJar") {
+        dependsOn(traceAgentIntegrationTestsPrerequisites)
+
+        val agentProject = project(":jvm-agent")
+        val fatJarFile = agentProject.layout.buildDirectory.file("libs/lincheck-fat.jar")
+
+        from(fatJarFile)
+        into(layout.buildDirectory.dir("libs"))
+    }
+
     val traceDebuggerIntegrationTest = register<Test>("traceDebuggerIntegrationTest") {
         configureJvmTestCommon()
         group = "verification"
@@ -343,7 +351,8 @@ tasks {
         classpath = sourceSets["traceDebuggerIntegrationTest"].runtimeClasspath
 
         outputs.upToDateWhen { false } // Always run tests when called
-        dependsOn(traceAgentIntegrationTestsPrerequisites)
+        //dependsOn(traceAgentIntegrationTestsPrerequisites)
+        dependsOn(copyTraceAgentFatJar)
     }
 
     val traceRecorderIntegrationTest = register<Test>("traceRecorderIntegrationTest") {
@@ -355,7 +364,8 @@ tasks {
         classpath = sourceSets["traceRecorderIntegrationTest"].runtimeClasspath
 
         outputs.upToDateWhen { false } // Always run tests when called
-        dependsOn(traceAgentIntegrationTestsPrerequisites)
+        //dependsOn(traceAgentIntegrationTestsPrerequisites)
+        dependsOn(copyTraceAgentFatJar)
     }
 
     check {

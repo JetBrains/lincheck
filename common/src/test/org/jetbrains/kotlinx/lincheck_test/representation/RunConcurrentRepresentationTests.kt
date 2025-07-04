@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
+import org.jetbrains.kotlinx.lincheck.transformation.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
 import org.jetbrains.kotlinx.lincheck_test.gpmc.*
 import org.jetbrains.kotlinx.lincheck_test.util.*

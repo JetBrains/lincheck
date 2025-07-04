@@ -15,7 +15,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelChecki
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
-import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
+import org.jetbrains.kotlinx.lincheck.transformation.isInTraceDebuggerMode
 import org.junit.Assume.assumeFalse
 import org.junit.Before
 import org.junit.Test

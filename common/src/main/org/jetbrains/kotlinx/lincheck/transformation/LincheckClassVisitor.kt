@@ -11,7 +11,6 @@
 package org.jetbrains.kotlinx.lincheck.transformation
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
 import org.jetbrains.lincheck.trace.CodeLocations
 import org.jetbrains.kotlinx.lincheck.tracerecorder.transformers.MethodCallMinimalTransformer
 import org.jetbrains.kotlinx.lincheck.tracerecorder.transformers.ObjectCreationMinimalTransformer

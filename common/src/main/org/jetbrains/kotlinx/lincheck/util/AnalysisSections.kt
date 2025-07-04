@@ -12,7 +12,7 @@ package org.jetbrains.kotlinx.lincheck.util
 
 import org.jetbrains.lincheck.datastructures.ManagedCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
-import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
+import org.jetbrains.kotlinx.lincheck.transformation.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.transformation.isThreadContainerClass
 import org.jetbrains.kotlinx.lincheck.util.AnalysisSectionType.*
 import sun.nio.ch.lincheck.Injections
@@ -47,7 +47,7 @@ import sun.nio.ch.lincheck.ThreadDescriptor
  * Local sections: [NORMAL], [SILENT].
  * Propagating sections: [SILENT_PROPAGATING], [ATOMIC], [IGNORED].
  */
-internal enum class AnalysisSectionType {
+enum class AnalysisSectionType {
 
     /**
      * Normal section without special handling.
@@ -98,7 +98,7 @@ internal enum class AnalysisSectionType {
     IGNORED,
 }
 
-internal fun AnalysisSectionType.isCallStackPropagating() =
+fun AnalysisSectionType.isCallStackPropagating() =
     this >= AnalysisSectionType.SILENT_PROPAGATING
 
 internal fun AnalysisSectionType.isSilent() =
@@ -125,7 +125,7 @@ internal fun disableAnalysis() {
      * Does not affect the current thread if it is untracked
      * (e.g. not registered in the Lincheck strategy).
  */
-internal fun enterIgnoredSection() {
+fun enterIgnoredSection() {
     Injections.enterIgnoredSection()
 }
 
@@ -135,7 +135,7 @@ internal fun enterIgnoredSection() {
      * Does not affect the current thread if it is untracked
      * (e.g. not registered in the Lincheck strategy).
  */
-internal fun leaveIgnoredSection() {
+fun leaveIgnoredSection() {
     Injections.leaveIgnoredSection()
 }
 
@@ -149,7 +149,7 @@ internal fun leaveIgnoredSection() {
  * @param block the code to execute within the ignored section.
  * @return result of the [block] invocation.
  */
-internal inline fun <R> runInsideIgnoredSection(block: () -> R): R {
+inline fun <R> runInsideIgnoredSection(block: () -> R): R {
     val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: return block()
     desc.enterIgnoredSection()
     try {
@@ -192,7 +192,7 @@ internal inline fun <R> runOutsideIgnoredSection(block: () -> R): R {
  *                        standard collections and concurrent collections are hidden,
  *                        concurrent collections are muted.
  */
-internal class AnalysisProfile(val analyzeStdLib: Boolean) {
+class AnalysisProfile(val analyzeStdLib: Boolean) {
 
     /**
      * Determines whether a given class and method should be transformed (instrumented) for analysis.

@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
-import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
+import org.jetbrains.kotlinx.lincheck.transformation.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.lincheck.trace.TRACE_CONTEXT
 import org.objectweb.asm.Opcodes.*

@@ -15,7 +15,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
  *
  * @property instance the object on which the method was invoked, null in the case of a static method.
   */
-internal class ShadowStackFrame(val instance: Any?) {
+class ShadowStackFrame(val instance: Any?) {
     private val localVariables: MutableMap<String, LocalVariableState> = mutableMapOf()
 
     private var accessCounter: Int = 0

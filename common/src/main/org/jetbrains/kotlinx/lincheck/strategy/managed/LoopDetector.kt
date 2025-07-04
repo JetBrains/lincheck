@@ -18,7 +18,7 @@ import org.jetbrains.kotlinx.lincheck.trace.ObstructionFreedomViolationExecution
 import org.jetbrains.kotlinx.lincheck.trace.SpinCycleStartTracePoint
 import org.jetbrains.kotlinx.lincheck.trace.SwitchEventTracePoint
 import org.jetbrains.kotlinx.lincheck.trace.TracePoint
-import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
+import org.jetbrains.kotlinx.lincheck.transformation.isInTraceDebuggerMode
 import org.jetbrains.lincheck.trace.UNKNOWN_CODE_LOCATION_ID
 import org.jetbrains.lincheck.datastructures.ManagedCTestConfiguration
 
