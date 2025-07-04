@@ -24,9 +24,9 @@ sourceSets {
         val asmVersion: String by project
         val byteBuddyVersion: String by project
 
-        api(project(":core"))
-        api(project(":jvm-agent")) // should be alone as dependedency here
         compileOnly(project(":bootstrap"))
+        api(project(":core"))
+        api(project(":jvm-agent"))
 
         api("org.jetbrains.kotlin:kotlin-stdlib:${kotlinVersion}")
         api("org.jetbrains.kotlin:kotlin-stdlib-common:${kotlinVersion}")

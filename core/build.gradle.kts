@@ -383,6 +383,7 @@ val sourcesJar = tasks.register<Jar>("sourcesJar") {
 val javadocJar = createJavadocJar(rootProject.name)
 
 tasks.withType<Jar> {
+    // TODO: should bootstrap.jar be put in jvm-agent jar?
     dependsOn(":bootstrapJar")
 
     manifest {
