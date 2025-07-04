@@ -14,7 +14,7 @@ import org.gradle.api.tasks.bundling.Jar
 import org.jetbrains.dokka.gradle.DokkaTask
 import org.gradle.kotlin.dsl.*
 
-fun Project.createJavadocJar(): TaskProvider<Jar> {
+fun Project.createJavadocJar(archiveName: String = this.name): TaskProvider<Jar> {
     val dokkaHtml = tasks.named<DokkaTask>("dokkaHtml") {
         outputDirectory.set(file("${layout.buildDirectory.get()}/javadoc"))
         dokkaSourceSets {
@@ -26,7 +26,7 @@ fun Project.createJavadocJar(): TaskProvider<Jar> {
     }
 
     val javadocJar = tasks.register<Jar>("javadocJar") {
-        archiveBaseName.set(rootProject.name)
+        archiveBaseName.set(archiveName)
         dependsOn(dokkaHtml)
         from("${layout.buildDirectory.get()}/javadoc")
         archiveClassifier.set("javadoc")
