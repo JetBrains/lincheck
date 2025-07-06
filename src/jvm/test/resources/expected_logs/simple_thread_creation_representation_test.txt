@@ -7,32 +7,32 @@ java.lang.IllegalStateException: Check failed.
 	at java.base/java.lang.Thread.run(Unknown Source)
 
 The following interleaving leads to the error:
-| ----------------------------------------------------------------------- |
-|                      Main Thread                       |    Thread 1    |
-| ----------------------------------------------------------------------- |
-| $this_runCatching.block(): threw IllegalStateException |                |
-|   block(): threw IllegalStateException                 |                |
-|     thread(block = Lambda#2): Thread#1                 |                |
-|     switch (reason: waiting for Thread 1 to finish)    |                |
-|                                                        | run()          |
-|                                                        |   this$0.a ➜ 0 |
-|                                                        |   this$0.a = 1 |
-|     Thread#1.join()                                    |                |
-|   result: IllegalStateException #1                     |                |
-| ----------------------------------------------------------------------- |
+| ----------------------------------------------------------------- |
+|                      Main Thread                       | Thread 1 |
+| ----------------------------------------------------------------- |
+| $this_runCatching.block(): threw IllegalStateException |          |
+|   block(): threw IllegalStateException                 |          |
+|     thread(block = Lambda#2): Thread#1                 |          |
+|     switch (reason: waiting for Thread 1 to finish)    |          |
+|                                                        | run()    |
+|                                                        |   a ➜ 0  |
+|                                                        |   a = 1  |
+|     Thread#1.join()                                    |          |
+|   result: IllegalStateException #1                     |          |
+| ----------------------------------------------------------------- |
 
 Detailed trace:
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                   Main Thread                                                                                   |                                                    Thread 1                                                     |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:51) |                                                                                                                 |
-|   block(): threw IllegalStateException at SimpleThreadCreationRepresentationTest.block(ThreadCreationRepresentationTest.kt:39)                                                  |                                                                                                                 |
-|     thread(block = Lambda#2): Thread#1 at SimpleThreadCreationRepresentationTest.block(ThreadCreationRepresentationTest.kt:47)                                                  |                                                                                                                 |
-|       Thread#1.start() at ThreadsKt.thread(Thread.kt:42)                                                                                                                        |                                                                                                                 |
-|     switch (reason: waiting for Thread 1 to finish)                                                                                                                             |                                                                                                                 |
-|                                                                                                                                                                                 | run()                                                                                                           |
-|                                                                                                                                                                                 |   this$0.a ➜ 0 at SimpleThreadCreationRepresentationTest.block$lambda$0(ThreadCreationRepresentationTest.kt:48) |
-|                                                                                                                                                                                 |   this$0.a = 1 at SimpleThreadCreationRepresentationTest.block$lambda$0(ThreadCreationRepresentationTest.kt:48) |
-|     Thread#1.join() at SimpleThreadCreationRepresentationTest.block(ThreadCreationRepresentationTest.kt:50)                                                                     |                                                                                                                 |
-|   result: IllegalStateException #1                                                                                                                                              |                                                                                                                 |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|                                                                                   Main Thread                                                                                   |                                                 Thread 1                                                 |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:51) |                                                                                                          |
+|   block(): threw IllegalStateException at SimpleThreadCreationRepresentationTest.block(ThreadCreationRepresentationTest.kt:39)                                                  |                                                                                                          |
+|     thread(block = Lambda#2): Thread#1 at SimpleThreadCreationRepresentationTest.block(ThreadCreationRepresentationTest.kt:47)                                                  |                                                                                                          |
+|       Thread#1.start() at ThreadsKt.thread(Thread.kt:42)                                                                                                                        |                                                                                                          |
+|     switch (reason: waiting for Thread 1 to finish)                                                                                                                             |                                                                                                          |
+|                                                                                                                                                                                 | run()                                                                                                    |
+|                                                                                                                                                                                 |   a ➜ 0 at SimpleThreadCreationRepresentationTest.block$lambda$0(ThreadCreationRepresentationTest.kt:48) |
+|                                                                                                                                                                                 |   a = 1 at SimpleThreadCreationRepresentationTest.block$lambda$0(ThreadCreationRepresentationTest.kt:48) |
+|     Thread#1.join() at SimpleThreadCreationRepresentationTest.block(ThreadCreationRepresentationTest.kt:50)                                                                     |                                                                                                          |
+|   result: IllegalStateException #1                                                                                                                                              |                                                                                                          |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

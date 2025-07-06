@@ -11,7 +11,7 @@ The following interleaving leads to the error:
 | ----------------------------------------------------- |
 |              | put2(): null                           |
 |              |   hm.put(1, 2): null                   |
-|              |     HashMap.hash(1): 1                 |
+|              |     hash(1): 1                         |
 |              |     putVal(1, 1, 2, false, true): null |
 |              |       table ➜ null                     |
 |              |       resize(): Array<Node>#1          |
@@ -35,7 +35,7 @@ Detailed trace:
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                                               | put2(): null                                                                                  |
 |                                                                                               |   hm.put(1, 2): null at UnsafeCollectionSwitchPointTest.put2(StdLibRepresentationTests.kt:89) |
-|                                                                                               |     HashMap.hash(1): 1 at HashMap.put(HashMap.java:610)                                       |
+|                                                                                               |     hash(1): 1 at HashMap.put(HashMap.java:610)                                               |
 |                                                                                               |       key.hashCode(): 1 at HashMap.hash(HashMap.java:338)                                     |
 |                                                                                               |     putVal(1, 1, 2, false, true): null at HashMap.put(HashMap.java:610)                       |
 |                                                                                               |       table ➜ null at HashMap.putVal(HashMap.java:626)                                        |

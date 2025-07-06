@@ -27,7 +27,7 @@ import java.lang.reflect.Modifier
  * @param params An array of parameters passed to the method used to infer the method signature.
  * @return `true` if the method is a suspending function; `false` otherwise.
  */
-internal fun isSuspendFunction(className: String, methodName: String, params: Array<Any?>): Boolean {
+internal fun isSuspendFunction(className: String, methodName: String, params: List<Any?>): Boolean {
     // fast-path: if the last parameter is not continuation - then this is not suspending function
     if (params.lastOrNull() !is Continuation<*>) return false
     val result = runCatching {
@@ -42,6 +42,9 @@ internal fun isSuspendFunction(className: String, methodName: String, params: Ar
     }
 }
 
+// TODO: move Java reflection utils (not depending on kotlin-reflection)
+//   to `common/org/jetbrains/lincheck/util/Utils.kt`
+
 /**
  * Retrieves a `Method` object representing a method of the specified name and parameter types.
  *
@@ -52,7 +55,7 @@ internal fun isSuspendFunction(className: String, methodName: String, params: Ar
  *   with the runtime classes of the elements in this array.
  * @return The matching [Method] object if found, or `null` if no method matches.
  */
-internal fun getMethod(className: String, methodName: String, params: Array<Any?>): Method? { 
+internal fun getMethod(className: String, methodName: String, params: List<Any?>): Method? {
     val possibleMethods = getCachedFilteredDeclaredMethods(className, methodName)
     // search through all possible methods, matching the arguments' types
     for (method in possibleMethods) {
