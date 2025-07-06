@@ -93,11 +93,11 @@ internal fun getAtomicMethodDescriptor(obj: Any?, methodName: String): AtomicMet
     }
 }
 
-internal fun AtomicMethodDescriptor.getAccessedObject(obj: Any, params: Array<Any?>): Any = when {
+internal fun AtomicMethodDescriptor.getAccessedObject(obj: Any?, params: Array<Any?>): Any? = when {
     apiKind == ATOMIC_FIELD_UPDATER ||
     apiKind == VAR_HANDLE ||
     apiKind == UNSAFE ->
-        params[0]!!
+        params[0]
     else ->
         obj
 }

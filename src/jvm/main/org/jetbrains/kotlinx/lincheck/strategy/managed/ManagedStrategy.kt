@@ -1669,10 +1669,10 @@ internal abstract class ManagedStrategy(
         if (receiver == null && methodSection < AnalysisSectionType.ATOMIC) {
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(methodDescriptor.className)
         }
-        // in case of atomics API setter method call, notify the object tracker about a new link between objects
+        // in the case of atomics API setter method call, notify the object tracker about a new link between objects
         if (atomicMethodDescriptor != null && atomicMethodDescriptor.kind.isSetter) {
             objectTracker.registerObjectLink(
-                fromObject = atomicMethodDescriptor.getAccessedObject(receiver!!, params),
+                fromObject = atomicMethodDescriptor.getAccessedObject(receiver, params),
                 toObject = atomicMethodDescriptor.getSetValue(receiver, params)
             )
         }
