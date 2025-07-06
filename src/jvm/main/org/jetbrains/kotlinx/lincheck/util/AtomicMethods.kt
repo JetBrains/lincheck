@@ -94,35 +94,46 @@ internal fun getAtomicMethodDescriptor(obj: Any?, methodName: String): AtomicMet
 }
 
 internal fun AtomicMethodDescriptor.getAccessedObject(obj: Any, params: Array<Any?>): Any = when {
-    (isAtomicFieldUpdater(obj) || isVarHandle(obj) || isUnsafe(obj)) -> params[0]!!
-    else -> obj
+    apiKind == ATOMIC_FIELD_UPDATER ||
+    apiKind == VAR_HANDLE ||
+    apiKind == UNSAFE ->
+        params[0]!!
+    else ->
+        obj
 }
 
 internal fun AtomicMethodDescriptor.getSetValue(obj: Any?, params: Array<Any?>): Any? {
+    require(kind.isSetter)
+
     var argOffset = 0
     // AFU case - the first argument is an accessed object
-    if (isAtomicFieldUpdater(obj))
+    if (apiKind == ATOMIC_FIELD_UPDATER) {
         argOffset += 1
+    }
     // VarHandle case
-    if (isVarHandle(obj)) {
-        val methodType = VarHandleNames.varHandleMethodType(obj, params)
+    if (apiKind == VAR_HANDLE) {
+        val methodType = VarHandleNames.varHandleMethodType(obj!!, params)
         // non-static field access case - the first argument is an accessed object
-        if (methodType !is VarHandleMethodType.StaticVarHandleMethod)
+        if (methodType !is VarHandleMethodType.StaticVarHandleMethod) {
             argOffset += 1
+        }
         // array access case - there is an additional element index argument
-        if (methodType is VarHandleMethodType.ArrayVarHandleMethod)
+        if (methodType is VarHandleMethodType.ArrayVarHandleMethod) {
             argOffset += 1
+        }
     }
     // Unsafe case - the first argument is an accessed object, plus an additional offset argument
-    if (isUnsafe(obj))
+    if (apiKind == UNSAFE) {
         argOffset += 2
+    }
     // Atomic arrays case - the first argument is element index
-    if (isAtomicArray(obj))
+    if (apiKind == ATOMIC_ARRAY) {
         argOffset += 1
+    }
     // CAS case - there is an expected value additional argument
-    if (kind.isCasSetter)
+    if (kind.isCasSetter) {
         argOffset += 1
-
+    }
     return params[argOffset]
 }
 
