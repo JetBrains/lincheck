@@ -296,6 +296,17 @@ a forest of objects (one tree per thread), but can consume a huge amount of memo
  Lazy loader loads all reference objects first, using index to locate them, 
 and only top-level method call trace point («root») for each thread after that.
 
+ There is one non-trivial problem with reference objects dependencies: any
+reference object is stored to trace before it is used. But it is possible that
+one thread writes some reference object first, but its data block goes to the
+disk last. Then all references written by another thread, which was stored to disk
+first, will be loaded before dependencies. It is not a problem for trace points
+and descriptors, as references will be resolved later, but it is a problem for
+code locations, as they need already loaded strings on creation. To solve
+this race between strings and code locations, all code locations are loaded
+to custom «shallow» objects, and they are inflated to proper `StackTraceElement`s
+later, after all reference objects are loaded.
+
  Now all code uses global context, so no two different traces could be loaded 
 simultaneously. Each next call for loading API, no matter eager or lazy, invalidates
 the previously loaded trace. It will be changed in the future to allow loading of
@@ -346,6 +357,11 @@ the case with a healthy index. This recreation can take a lot of time.
 
  For now there is no way to re-create the index on disk, but this feature is planned
 for the future.
+
+ When lazy loader loads a list of trace points, it loads all reference objects it
+ encounters but throws them away because context is already restored. As all
+reference objects are rather small (typically several `Int`s), it is not worth 
+having special skipping code, it will not be faster than load.
  
  Instance of lazy loader contains a reference to context used to load data, but, again,
 for now it is global `TRACE_CONTEXT` and using another instance of lazy or eager loader will

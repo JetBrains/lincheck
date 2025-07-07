@@ -25,9 +25,8 @@ import kotlin.io.path.Path
 
 private const val INPUT_BUFFER_SIZE: Int = 16 * 1024 * 1024
 
-private typealias StringCache = MutableList<String?>
 private typealias CallStack = MutableList<TRMethodCallTracePoint>
-private typealias TracePointReader = (DataInput, TraceContext, StringCache) -> Boolean
+private typealias TracePointReader = (DataInput, TraceContext, CodeLocationsContext) -> Boolean
 
 private interface TracepointConsumer {
     fun tracePointRead(parent: TRMethodCallTracePoint?, tracePoint: TRTracePoint)
@@ -118,6 +117,49 @@ private fun BlockList.fixLastBlock(end: Long) {
 
 private fun BlockList.dataSize(): Long {
     return if (isEmpty()) 0 else last().accDataSize + last().dataSize
+}
+
+
+private data class ShallowStackTraceElement(
+    val className: Int,
+    val methodName: Int,
+    val fileName: Int,
+    val lineNumber: Int
+)
+
+/**
+ * This class is used to load code locations without referring strings too early.
+ *
+ * It is possible, that code location ([StackTraceElement]) can be loaded before
+ * its strings are loaded due to data blocks serialization order.
+ */
+private class CodeLocationsContext {
+    private val stringCache: MutableList<String?> = ArrayList()
+    private val shallowSTEs: MutableList<ShallowStackTraceElement?> = ArrayList()
+
+    fun loadString(id: Int, value: String) = load(stringCache, id, value)
+
+    fun loadCodeLocation(id: Int, value: ShallowStackTraceElement) = load(shallowSTEs, id, value)
+
+    fun restoreAllCodeLocations(context: TraceContext) {
+        shallowSTEs.forEachIndexed { id, value ->
+            if (value != null) {
+                context.restoreCodeLocation(id, StackTraceElement(
+                    /* declaringClass = */ stringCache[value.className] ?: "<unknown class>",
+                    /* methodName = */ stringCache[value.methodName] ?: "<unknown method>",
+                    /* fileName = */ stringCache[value.fileName] ?: "<unknown file>",
+                    /* lineNumber = */ value.lineNumber
+                ))
+            }
+        }
+    }
+
+    private fun <T> load(container: MutableList<T?>, id: Int, value: T) {
+        while (container.size < id) {
+            container.add(null)
+        }
+        container[id] = value
+    }
 }
 
 
@@ -223,7 +265,7 @@ class LazyTraceReader(
         val blocks = dataBlocks[threadId] ?: error("No data blocks for Thread $threadId")
         var idx = 0
         while (true) {
-            var kind = loadObjects(data, context, mutableListOf(), false) { _, _, _ ->
+            var kind = loadObjects(data, context, CodeLocationsContext(), false) { _, _, _ ->
                 val tracePointOffset = data.position() - 1 // account for Kind
                 val tracePoint = reader()
                 consumer(idx++, tracePoint, tracePointOffset)
@@ -290,7 +332,7 @@ class LazyTraceReader(
                 }
 
                 var objNum = 0
-                val stringCache = mutableListOf<String?>()
+                val codeLocs = CodeLocationsContext()
                 while (true) {
                     val kind = index.readKind()
                     val id = index.readInt()
@@ -313,8 +355,8 @@ class LazyTraceReader(
                             ObjectKind.METHOD_DESCRIPTOR -> loadMethodDescriptor(data, context, true)
                             ObjectKind.FIELD_DESCRIPTOR -> loadFieldDescriptor(data, context, true)
                             ObjectKind.VARIABLE_DESCRIPTOR -> loadVariableDescriptor(data, context, true)
-                            ObjectKind.STRING -> loadString(data, stringCache, true)
-                            ObjectKind.CODE_LOCATION -> loadCodeLocation(data, context, stringCache, true)
+                            ObjectKind.STRING -> loadString(data, codeLocs, true)
+                            ObjectKind.CODE_LOCATION -> loadCodeLocation(data, codeLocs, true)
                             ObjectKind.BLOCK_START -> {
                                 val list = dataBlocks.computeIfAbsent(id) { mutableListOf() }
                                 list.addNewBlock(start, end)
@@ -334,6 +376,7 @@ class LazyTraceReader(
                     }
                     objNum++
                 }
+                codeLocs.restoreAllCodeLocations(context)
                 val magicEnd = index.readLong()
                 if (magicEnd != INDEX_MAGIC) {
                     error("Wrong final index magic 0x${(magic.toString(16))}, expected ${TRACE_MAGIC.toString(16)}")
@@ -516,7 +559,7 @@ private fun loadAllObjectsDeep(
     tracepointConsumer: TracepointConsumer,
     blockConsumer: BlockConsumer
 ) {
-    val stringCache = mutableListOf<String?>()
+    val codeLocs = CodeLocationsContext()
     val stacks = mutableMapOf<Int, MutableList<TRMethodCallTracePoint>>()
     var seenEOF = false
 
@@ -542,8 +585,8 @@ private fun loadAllObjectsDeep(
         // Read objects and tracepoints from this block till it ends.
         // Unwind the stack manually, if needed
         while (true) {
-            val kind = loadObjects(input, context, stringCache, true) { input, context, stringCache ->
-                loadTracePointDeep(input, context, stringCache, stack, tracepointConsumer)
+            val kind = loadObjects(input, context, codeLocs, true) { input, context, codeLocs ->
+                loadTracePointDeep(input, context, codeLocs, stack, tracepointConsumer)
             }
             if (kind == ObjectKind.BLOCK_END) {
                 blockConsumer.blockEnded(threadId)
@@ -559,6 +602,8 @@ private fun loadAllObjectsDeep(
             tracePoint.loadFooter(input)
         }
     }
+    codeLocs.restoreAllCodeLocations(context)
+
     if (!seenEOF) {
         System.err.println("TraceRecorder: no EOF record at the end of the file")
     }
@@ -573,7 +618,7 @@ private fun loadAllObjectsDeep(
 private fun loadTracePointDeep(
     input: DataInput,
     context: TraceContext,
-    stringCache: StringCache,
+    codeLocs: CodeLocationsContext,
     stack: CallStack,
     consumer: TracepointConsumer
 ): Boolean {
@@ -585,7 +630,7 @@ private fun loadTracePointDeep(
     }
     // We need to load all children
     stack.add(tracePoint)
-    val kind = loadObjects(input, context, stringCache, true) { input, context, stringCache ->
+    val kind = loadObjects(input, context, codeLocs, true) { input, context, stringCache ->
         loadTracePointDeep(input, context, stringCache, stack, consumer)
     }
     if (kind == ObjectKind.TRACEPOINT_FOOTER) {
@@ -604,7 +649,7 @@ private fun loadTracePointDeep(
 private fun loadObjects(
     input: DataInput,
     context: TraceContext,
-    stringCache: StringCache,
+    codeLocs: CodeLocationsContext,
     restore: Boolean,
     tracePointReader: TracePointReader
 ): ObjectKind {
@@ -614,10 +659,10 @@ private fun loadObjects(
             ObjectKind.METHOD_DESCRIPTOR -> loadMethodDescriptor(input, context, restore)
             ObjectKind.FIELD_DESCRIPTOR -> loadFieldDescriptor(input, context, restore)
             ObjectKind.VARIABLE_DESCRIPTOR -> loadVariableDescriptor(input, context, restore)
-            ObjectKind.STRING -> loadString(input, stringCache, restore)
-            ObjectKind.CODE_LOCATION -> loadCodeLocation(input, context, stringCache, restore)
+            ObjectKind.STRING -> loadString(input, codeLocs, restore)
+            ObjectKind.CODE_LOCATION -> loadCodeLocation(input, codeLocs, restore)
             // Tracepoint reader returns "true" if read is complete and "false" if it encountered end of block
-            ObjectKind.TRACEPOINT -> if (!tracePointReader(input, context, stringCache)) return ObjectKind.BLOCK_END
+            ObjectKind.TRACEPOINT -> if (!tracePointReader(input, context, codeLocs)) return ObjectKind.BLOCK_END
             ObjectKind.TRACEPOINT_FOOTER, // Children read or skipped by recursion into tracePointReader
             ObjectKind.BLOCK_START, // Should not happen, really
             ObjectKind.BLOCK_END, // Block ended
@@ -678,24 +723,20 @@ private fun loadVariableDescriptor(
 
 private fun loadString(
     input: DataInput,
-    stringCache: StringCache,
+    codeLocs: CodeLocationsContext,
     restore: Boolean
 ): Int {
     val id = input.readInt()
     val value = input.readUTF()
     if (restore) {
-        while (stringCache.size <= id) {
-            stringCache.add(null)
-        }
-        stringCache[id] = value
+        codeLocs.loadString(id, value)
     }
     return id
 }
 
 private fun loadCodeLocation(
     input: DataInput,
-    context: TraceContext,
-    stringCache: StringCache,
+    codeLocs: CodeLocationsContext,
     restore: Boolean
 ): Int {
     val id = input.readInt()
@@ -706,13 +747,13 @@ private fun loadCodeLocation(
     val lineNumber = input.readInt()
 
     if (restore) {
-        val ste = StackTraceElement(
-            /* declaringClass = */ stringCache[classNameId],
-            /* methodName = */ stringCache[methodNameId],
-            /* fileName = */ stringCache[fileNameId],
-            /* lineNumber = */ lineNumber
+        val ste = ShallowStackTraceElement(
+            className = classNameId,
+            methodName = methodNameId,
+            fileName = fileNameId,
+            lineNumber = lineNumber
         )
-        context.restoreCodeLocation(id, ste)
+        codeLocs.loadCodeLocation(id, ste)
     }
     return id
 }
