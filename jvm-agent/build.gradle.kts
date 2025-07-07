@@ -10,14 +10,6 @@ repositories {
     mavenCentral()
 }
 
-kotlin {
-    configureKotlin()
-}
-
-java {
-    configureJava()
-}
-
 sourceSets {
     main {
         java.srcDirs("src/main")
