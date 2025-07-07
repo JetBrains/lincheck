@@ -221,10 +221,9 @@ internal class LincheckClassVisitor(
         }
         mv = CoroutineCancellabilitySupportTransformer(mv, access, className, methodName, desc)
         mv = CoroutineDelaySupportTransformer(fileName, className, methodName, mv.newAdapter())
-        mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
-        // We can do further instrumentation in methods of the custom thread subclasses,
-        // but not in the `java.lang.Thread` itself.
+        // For `java.lang.Thread` class, we only apply `ThreadTransformer` and skip all other transformations
         if (isThreadClass(className.toCanonicalClassName())) {
+            mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
             // Must appear last in the code, to completely hide intrinsic candidate methods from all transformers
             mv = IntrinsicCandidateMethodFilter(className, methodName, desc, intrinsicDelegateVisitor.newAdapter(), mv.newAdapter())
             return mv
@@ -246,6 +245,7 @@ internal class LincheckClassVisitor(
             mv = ParkingTransformer(fileName, className, methodName, mv.newAdapter())
             mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
         }
+        mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
         // TODO: replace with proper instrumentation mode for debugger, don't use globals
         if (isInTraceDebuggerMode) {
             // Lincheck does not support true identity hash codes (it always uses zeroes),

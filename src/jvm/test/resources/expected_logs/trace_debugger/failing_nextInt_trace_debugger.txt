@@ -23,3 +23,20 @@ Exception stack traces:
 	at org.jetbrains.kotlinx.lincheck_test.representation.trace_debugger.FailingCustomRandomCallRepresentationTest.operation(RandomRepresentationTests.kt:40)
 	at java.base/java.lang.Thread.run(Thread.java:840)
 
+Detailed trace:
+| ------------------------------------------------------------------------------------------------------------------------------------------------ |
+|                                                                     Thread 1                                                                     |
+| ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| operation(): IllegalArgumentException #1                                                                                                         |
+|   INSTANCE.nextInt(1, 1): threw IllegalArgumentException at FailingCustomRandomCallRepresentationTest.operation(RandomRepresentationTests.kt:40) |
+|     RandomKt.checkRangeBounds(1, 1): threw IllegalArgumentException at Random.nextInt(Random.kt:65)                                              |
+|       RandomKt.boundsErrorMessage(1, 1): "Random range is empty: [1, 1)." at RandomKt.checkRangeBounds(Random.kt:378)                            |
+|         StringBuilder#1.append("Random range is empty: ["): StringBuilder#1 at RandomKt.boundsErrorMessage(Random.kt:382)                        |
+|         StringBuilder#1.append(1): StringBuilder#1 at RandomKt.boundsErrorMessage(Random.kt:382)                                                 |
+|         StringBuilder#1.append(", "): StringBuilder#1 at RandomKt.boundsErrorMessage(Random.kt:382)                                              |
+|         StringBuilder#1.append(1): StringBuilder#1 at RandomKt.boundsErrorMessage(Random.kt:382)                                                 |
+|         StringBuilder#1.append(")."): StringBuilder#1 at RandomKt.boundsErrorMessage(Random.kt:382)                                              |
+|         StringBuilder#1.toString(): "Random range is empty: [1, 1)." at RandomKt.boundsErrorMessage(Random.kt:382)                               |
+|       "Random range is empty: [1, 1).".toString(): "Random range is empty: [1, 1)." at RandomKt.checkRangeBounds(Random.kt:378)                  |
+|   result: IllegalArgumentException #1                                                                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------------------------ |

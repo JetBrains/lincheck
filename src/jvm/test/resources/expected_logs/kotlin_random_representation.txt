@@ -13,10 +13,15 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| -------------------------------------------------------------------------------------------------- |
-|                                              Thread 1                                              |
-| -------------------------------------------------------------------------------------------------- |
-| operation()                                                                                        |
-|   a = -1147404850 at KotlinRandomRepresentationTest.operation(KotlinRandomRepresentationTest.kt:9) |
-|   result: void                                                                                     |
-| -------------------------------------------------------------------------------------------------- |
+| ------------------------------------------------------------------------------------------------------------------ |
+|                                                      Thread 1                                                      |
+| ------------------------------------------------------------------------------------------------------------------ |
+| operation()                                                                                                        |
+|   Default.nextInt(): -1147404850 at KotlinRandomRepresentationTest.operation(KotlinRandomRepresentationTest.kt:17) |
+|     Random.access$getDefaultRandom$cp(): PlatformThreadLocalRandom#1 at Random.Default.nextInt(Random.kt:282)      |
+|     defaultRandom.nextInt(): -1147404850 at Random.Default.nextInt(Random.kt:282)                                  |
+|       getImpl(): ThreadLocalRandom#1 at AbstractPlatformRandom.nextInt(PlatformRandom.kt:41)                       |
+|       ThreadLocalRandom#1.nextInt(): -1147404850 at AbstractPlatformRandom.nextInt(PlatformRandom.kt:41)           |
+|   a = -1147404850 at KotlinRandomRepresentationTest.operation(KotlinRandomRepresentationTest.kt:17)                |
+|   result: void                                                                                                     |
+| ------------------------------------------------------------------------------------------------------------------ |

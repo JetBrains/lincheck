@@ -10,11 +10,13 @@
 package org.jetbrains.kotlinx.lincheck.trace
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.execution.threadsResults
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
-import org.jetbrains.kotlinx.lincheck.util.AnalysisProfile
+import org.jetbrains.kotlinx.lincheck.strategy.managed.recomputeSpinCycleStartCallStack
+import org.jetbrains.kotlinx.lincheck.util.*
 import kotlin.math.max
 
 internal typealias SingleThreadedTable<T> = List<SingleThreadedSection<T>>
@@ -53,9 +55,11 @@ internal class TraceReporter(
         // - adding `ActorResult` to actors
         val fixedTrace = trace
             .removeValidationIfNeeded()
+            .moveStartingSwitchPointsOutOfMethodCalls()
+            .moveSpinCycleStartTracePoints()
             .addResultsToActors()
 
-        graph = traceToCollapsedGraph(fixedTrace, failure.analysisProfile, failure.scenario)
+         graph = traceToCollapsedGraph(fixedTrace, failure.analysisProfile, failure.scenario)
     }
     
     fun appendTrace(app: Appendable) = with(app) {
@@ -82,7 +86,193 @@ internal class TraceReporter(
             .filter { it.isActor }
             .forEach { event -> event.returnedValue = resultProvider[event.iThread, event.actorId] }
     }
-    
+
+    /**
+     * Adjusts the positions of `SwitchEventTracePoint` instances within the trace,
+     * moving the switch points occurring at the beginning of methods outside the method call trace points.
+     *
+     * For instance, the following trace sequence:
+     *   ```
+     *   foo()
+     *      bar()
+     *         switch
+     *         ...
+     *         x = 42
+     *   ```
+     *
+     *  will be transformed into:
+     *    ```
+     *    switch
+     *    ...
+     *    foo()
+     *      bar()
+     *        x = 42
+     *    ```
+     *
+     * @return A new trace instance with updated trace point ordering.
+     */
+    private fun Trace.moveStartingSwitchPointsOutOfMethodCalls(): Trace {
+        val newTrace = this.trace.toMutableList()
+        val tracePointsToRemove = mutableListOf<IntRange>()
+
+        for (currentPosition in newTrace.indices) {
+            val tracePoint = newTrace[currentPosition]
+            if (tracePoint !is SwitchEventTracePoint) continue
+
+            // find a place where to move the switch point
+            var switchMovePosition = newTrace.indexOfLast(from = currentPosition - 1) {
+                !(
+                    (it is MethodCallTracePoint &&
+                        // do not move the switch out of `Thread.start()`
+                        !it.isThreadStart() &&
+                        // do not move the switch out of suspend method calls
+                        !it.isSuspend
+                    ) ||
+                    (it is SpinCycleStartTracePoint)
+                )
+            }
+            if (++switchMovePosition == currentPosition) continue
+
+            // find the next section of the thread we are switching from
+            // to move the remaining method call trace points there
+            val currentThreadNextTracePointPosition = newTrace.indexOf(from = currentPosition + 1) {
+                it.iThread == tracePoint.iThread
+            }
+
+            // move switch point before method calls
+            newTrace.move(currentPosition, switchMovePosition)
+
+            val movedTracePointsRange = IntRange(switchMovePosition + 1, currentPosition)
+            val movedTracePoints = newTrace.subList(movedTracePointsRange)
+            val methodCallTracePoints = movedTracePoints.filter { it is MethodCallTracePoint }
+            val remainingTracePoints = newTrace.subList(currentThreadNextTracePointPosition, newTrace.size)
+                .filter { it.iThread == tracePoint.iThread }
+            val shouldRemoveRemainingTracePoints = remainingTracePoints.all {
+                (it is MethodCallTracePoint && it.isActor) ||
+                (it is MethodReturnTracePoint) ||
+                it is SpinCycleStartTracePoint
+            }
+            val isThreadJoinSwitch = (remainingTracePoints.firstOrNull()?.isThreadJoin() == true)
+            if (currentThreadNextTracePointPosition == newTrace.size || shouldRemoveRemainingTracePoints && !isThreadJoinSwitch) {
+                // handle the case when the switch point is the last event in the thread
+                val methodReturnTracePointsRange = if (methodCallTracePoints.isNotEmpty())
+                    IntRange(currentThreadNextTracePointPosition, currentThreadNextTracePointPosition + methodCallTracePoints.size - 1)
+                    else IntRange.EMPTY
+                tracePointsToRemove.add(movedTracePointsRange)
+                tracePointsToRemove.add(methodReturnTracePointsRange)
+            } else {
+                // else move method call trace points to the next trace section of the current thread
+                newTrace.move(movedTracePointsRange, currentThreadNextTracePointPosition)
+            }
+        }
+
+        for (i in tracePointsToRemove.indices.reversed()) {
+            val range = tracePointsToRemove[i]
+            if (range.isEmpty()) continue
+            newTrace.subList(range).clear()
+        }
+
+        return Trace(newTrace, this.threadNames)
+    }
+
+    /**
+     * Adjusts the positions of `SpinCycleStartTracePoint` instances within the trace
+     * corresponding to recursive spin-locks, ensuring that the recursive spin-lock is marked
+     * at the point of the recursive method call trace point.
+     *
+     * For instance, the following trace sequence:
+     *   ```
+     *   foo()
+     *     bar()
+     *       /* spin loop start */
+     *   ┌╶> x = 42
+     *   |   ...
+     *   └╶╶ switch
+     *     ...
+     *     foo()
+     *        bar()
+     *          /* spin loop start */
+     *      ┌╶> x = 42
+     *      |   ...
+     *      └╶╶ switch
+     *   ```
+     *
+     *  will be transformed into:
+     *   ```
+     *       /* spin loop start */
+     *   ┌╶> foo()
+     *   |     bar()
+     *   |       x = 42
+     *   |       ...
+     *   └╶╶---- switch
+     *     ...
+     *           /* spin loop start */
+     *       ┌╶> foo()
+     *       |     bar()
+     *       |       x = 42
+     *       |       ...
+     *       └╶╶---- switch
+     *   ```
+     *
+     * @return A new trace instance with updated trace point ordering.
+     */
+    private fun Trace.moveSpinCycleStartTracePoints(): Trace {
+        val newTrace = this.trace.toMutableList()
+
+        for (currentPosition in newTrace.indices) {
+            val tracePoint = newTrace[currentPosition]
+            if (tracePoint !is SpinCycleStartTracePoint) continue
+
+            check(currentPosition > 0)
+
+            // find a beginning of the current thread section
+            var currentThreadSectionStartPosition = newTrace.indexOfLast(from = currentPosition - 1) {
+                it.iThread != tracePoint.iThread
+            }
+            ++currentThreadSectionStartPosition
+
+            // find the next thread switch
+            val nextThreadSwitchPosition = newTrace.indexOf(from = currentPosition + 1) {
+                it is SwitchEventTracePoint || it is ObstructionFreedomViolationExecutionAbortTracePoint
+            }
+            if (nextThreadSwitchPosition == currentPosition + 1) continue
+
+            // compute call stack traces
+            val currentStackTrace = mutableListOf<MethodCallTracePoint>()
+            val stackTraces = mutableListOf<List<MethodCallTracePoint>>()
+            for (n in currentThreadSectionStartPosition .. currentPosition) {
+                stackTraces.add(currentStackTrace.toList())
+                if (newTrace[n] is MethodCallTracePoint) {
+                    currentStackTrace.add(newTrace[n] as MethodCallTracePoint)
+                } else if (newTrace[n] is MethodReturnTracePoint) {
+                    currentStackTrace.removeLastOrNull()
+                }
+            }
+
+            // compute the patched stack trace of the spin cycle trace point
+            val spinCycleStartStackTrace = tracePoint.callStackTrace
+            val spinCycleStartPatchedStackTrace = recomputeSpinCycleStartCallStack(
+                spinCycleStartTracePoint = newTrace[currentPosition],
+                spinCycleEndTracePoint = newTrace[nextThreadSwitchPosition],
+            )
+            val stackTraceElementsDropCount = spinCycleStartStackTrace.size - spinCycleStartPatchedStackTrace.size
+            val spinCycleStartStackTraceSize = stackTraces.lastOrNull()?.size ?: 0
+            val callStackSize = (spinCycleStartStackTraceSize - stackTraceElementsDropCount).coerceAtLeast(0)
+
+            // find the position where to move the spin cycle start trace point
+            val i = currentPosition
+            var j = currentPosition
+            val k = currentThreadSectionStartPosition
+            while (j >= k && stackTraces[j - k].size > callStackSize) {
+                --j
+            }
+
+            newTrace.move(i, j)
+        }
+
+        return Trace(newTrace, this.threadNames)
+    }
+
     private fun Trace.removeValidationIfNeeded(): Trace {
         if (failure is ValidationFailure) return this
         val newTrace = this.trace.takeWhile { !(it is SectionDelimiterTracePoint && it.executionPart == ExecutionPart.VALIDATION) }
@@ -125,19 +315,17 @@ internal fun Appendable.appendTraceTableSimple(title: String, threadNames: List<
         interleavingSections = stringTable,
         threadNames = threadNames,
     )
-/*
-    with(layout) {
-        appendSeparatorLine()
-        appendHeader()
-        appendSeparatorLine()
-        stringTable.forEach { section ->
-            appendColumns(section)
-            appendSeparatorLine()
-        }
-    }
-*/
 }
 
+internal fun List<MethodCallTracePoint>.isEqualStackTrace(other: List<MethodCallTracePoint>): Boolean {
+    if (this.size != other.size) return false
+    for (i in this.indices) {
+        if (this[i] !== other[i]) return false
+    }
+    return true
+}
+
+// TODO support multiple root nodes in GPMC mode, needs discussion on how to deal with `result: ...`
 private fun removeGPMCLambda(graph: SingleThreadedTable<TraceNode>): SingleThreadedTable<TraceNode> {
     check(graph.size == 1) { "When in GPMC mode only one scenario section is expected" }
     check(graph[0].isNotEmpty()) { "When in GPMC mode atleast one actor is expected (the run() call to be precise)" }
@@ -148,11 +336,11 @@ private fun removeGPMCLambda(graph: SingleThreadedTable<TraceNode>): SingleThrea
         first.decrementCallDepthOfTree()
 
         // TODO can be remove after actor results PR is through
-        // if only one child and child is callnode. Treat as actor. 
+        // if only one child and child is callnode. Treat as actor.
         if (first.children.size == 1 && first.children.first() is CallNode) {
             (first.children.first() as CallNode).tracePoint.returnedValue = first.tracePoint.returnedValue
-        } 
-        
+        }
+
         first.children + section.drop(1)
     }
 }
@@ -201,7 +389,7 @@ private fun traceNodeTableToString(table: MultiThreadedTable<TraceNode?>): Multi
             // If begin of spin cycle
             if (spinCycleDepth == START_SPIN_CYCLE) {
                 spinCycleDepth = node.callDepth
-                return@map "  ".repeat(virtualCallDepth - 2) + "┌╶> " + node.toString()
+                return@map "  ".repeat((virtualCallDepth - 2).coerceAtLeast(0)) + "┌╶> " + node.toString()
             }
             
             // If spinc cycle detected change state. Next iteration will start visualization
@@ -211,13 +399,13 @@ private fun traceNodeTableToString(table: MultiThreadedTable<TraceNode?>): Multi
             if (spinCycleDepth >= 0 && node is EventNode
                 && (node.tracePoint is ObstructionFreedomViolationExecutionAbortTracePoint || node.tracePoint is SwitchEventTracePoint)) {
                 spinCycleDepth = NO_SPIN_CYCLE
-                val prefix = "  ".repeat(virtualSpinCycleDepth - 2) + "└╶╶╶" + "╶╶".repeat(max(virtualCallDepth - virtualSpinCycleDepth, 0)) 
+                val prefix = "  ".repeat((virtualSpinCycleDepth - 2).coerceAtLeast(0)) + "└╶╶╶" + "╶╶".repeat(max(virtualCallDepth - virtualSpinCycleDepth, 0))
                 return@map  prefix.dropLast(1) + " " + node.toString()
             }
             
             // If during spin cycle
             if (spinCycleDepth >= 0) {
-                return@map "  ".repeat(virtualSpinCycleDepth - 2) + "|   " + "  ".repeat(max(virtualCallDepth - virtualSpinCycleDepth, 0)) + node.toString()
+                return@map "  ".repeat((virtualSpinCycleDepth - 2).coerceAtLeast(0)) + "|   " + "  ".repeat(max(virtualCallDepth - virtualSpinCycleDepth, 0)) + node.toString()
             }
             
             // Default

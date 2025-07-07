@@ -21,6 +21,7 @@ Detailed trace:
 |   block(): threw IllegalStateException at ThreadSafeCollectionUnmutedRepresentationTest.block(StdLibRepresentationTests.kt:34)                                                  |
 |     concurrentMap.put(1, 1): null at ThreadSafeCollectionUnmutedRepresentationTest.block(StdLibRepresentationTests.kt:39)                                                       |
 |       putVal(1, 1, false): null at ConcurrentHashMap.put(ConcurrentHashMap.java:1006)                                                                                           |
+|         key.hashCode(): 1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1012)                                                                                              |
 |         ConcurrentHashMap.spread(1): 1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1012)                                                                                 |
 |         table ➜ null at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1014)                                                                                                   |
 |         initTable(): Array<Node>#1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1017)                                                                                     |

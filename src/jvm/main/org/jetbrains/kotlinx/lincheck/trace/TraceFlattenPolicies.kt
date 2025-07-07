@@ -65,7 +65,7 @@ internal class VerboseTraceFlattenPolicy : TraceFlattenPolicy {
 
                 // Check if result node should be added
                 if (descendants.size > 1 && returnedValue is ReturnedValueResult.ActorResult && returnedValue.showAtEndOfActor) {
-                    return descendants + ResultNode(currentNode.callDepth + 1, returnedValue, descendants.last().eventNumber, currentNode.tracePoint)
+                    return descendants + ResultNode(currentNode.callDepth + 1, returnedValue, currentNode.returnEventNumber, currentNode.tracePoint)
                 }
 
                 return descendants
@@ -116,7 +116,7 @@ internal class ShortTraceFlattenPolicy : TraceFlattenPolicy {
 
                 // Check if result node should be added
                 val nodesToReturn = if (descendants.size > 1 && returnedValue is ReturnedValueResult.ActorResult && returnedValue.showAtEndOfActor) {
-                    descendants + ResultNode(currentNode.callDepth + 1, returnedValue, descendants.last().eventNumber, currentNode.tracePoint)
+                    descendants + ResultNode(currentNode.callDepth + 1, returnedValue, currentNode.returnEventNumber, currentNode.tracePoint)
                     // Or thread start root nodes
                 } else if (descendants.size == 1 && descendants.contains(currentNode) && currentNode.tracePoint.isThreadStart) {
                     descendants + currentNode.children
@@ -136,13 +136,6 @@ internal class ShortTraceFlattenPolicy : TraceFlattenPolicy {
             else -> return descendants
         }
     }
-
-    // virtual trace points are not displayed in the trace
-    private val TracePoint.isVirtual: Boolean get() = when (this) {
-        is ThreadStartTracePoint, is ThreadJoinTracePoint -> true
-        else -> false
-    }
-
 }
 
 internal fun TraceNode.flattenNodes(policy: TraceFlattenPolicy): List<TraceNode> {
@@ -160,17 +153,17 @@ internal fun TraceNode.flattenNodes(policy: TraceFlattenPolicy): List<TraceNode>
 }
 
 internal fun SingleThreadedTable<TraceNode>.flattenNodes(flattenPolicy: TraceFlattenPolicy): SingleThreadedTable<TraceNode> =
-    map { section -> section.flatMap { traceNode -> traceNode.flattenNodes(flattenPolicy) } }
+    map { section ->
+        section.forEach { it.setCallDepthOfTree(0) }
+        section.flatMap { traceNode -> traceNode.flattenNodes(flattenPolicy) }
+    }
 
 //for idea plugin
 internal fun SingleThreadedTable<TraceNode>.extractPreExpandedNodes(flattenPolicy: TraceFlattenPolicy): List<TraceNode> =
     flatMap { section -> section.flatMap { it.extractPreExpanded(flattenPolicy).first }}
 
 // virtual trace points are not displayed in the trace
-private val TracePoint.isVirtual: Boolean get() = when (this) {
-    is ThreadStartTracePoint, is ThreadJoinTracePoint -> true
-    else -> false
-}
+private val TracePoint.isVirtual: Boolean get() = this.isThreadStart() || this.isThreadJoin()
 
 private val TracePoint.isBlocking: Boolean get() = when (this) {
     is MonitorEnterTracePoint, is WaitTracePoint, is ParkTracePoint -> true

@@ -17,8 +17,10 @@ Detailed trace:
 |                                                            Thread 1                                                             |
 | ------------------------------------------------------------------------------------------------------------------------------- |
 | operation()                                                                                                                     |
-|   hashMap.put(1, 2): null at JdkUnsafeTraceRepresentationTest.operation(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:53)   |
+|   hashMap.put(1, 2): null at JdkUnsafeTraceRepresentationTest.operation(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:54)   |
 |     putVal(1, 2, false): null at ConcurrentHashMap.put(ConcurrentHashMap.java:1006)                                             |
+|       key.hashCode(): 1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1012)                                                |
+|       ConcurrentHashMap.spread(1): 1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1012)                                   |
 |       table ➜ null at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1014)                                                     |
 |       initTable(): Array<Node>#1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1017)                                       |
 |         table ➜ null at ConcurrentHashMap.initTable(ConcurrentHashMap.java:2293)                                                |

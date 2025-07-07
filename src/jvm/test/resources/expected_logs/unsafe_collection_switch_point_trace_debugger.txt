@@ -36,6 +36,7 @@ Detailed trace:
 |                                                                                               | put2(): null                                                                                  |
 |                                                                                               |   hm.put(1, 2): null at UnsafeCollectionSwitchPointTest.put2(StdLibRepresentationTests.kt:89) |
 |                                                                                               |     HashMap.hash(1): 1 at HashMap.put(HashMap.java:610)                                       |
+|                                                                                               |       key.hashCode(): 1 at HashMap.hash(HashMap.java:338)                                     |
 |                                                                                               |     putVal(1, 1, 2, false, true): null at HashMap.put(HashMap.java:610)                       |
 |                                                                                               |       table ➜ null at HashMap.putVal(HashMap.java:626)                                        |
 |                                                                                               |       resize(): Array<Node>#1 at HashMap.putVal(HashMap.java:627)                             |
@@ -44,6 +45,7 @@ Detailed trace:
 |                                                                                               |       switch                                                                                  |
 | put1(): null                                                                                  |                                                                                               |
 |   hm.put(1, 1): null at UnsafeCollectionSwitchPointTest.put1(StdLibRepresentationTests.kt:86) |                                                                                               |
+|     key.hashCode(): 1 at HashMap.hash(HashMap.java:338)                                       |                                                                                               |
 |   result: null                                                                                |                                                                                               |
 |                                                                                               |       Array<Node>#1[1] = Node#1 at HashMap.putVal(HashMap.java:629)                           |
 |                                                                                               |       modCount ➜ 1 at HashMap.putVal(HashMap.java:659)                                        |

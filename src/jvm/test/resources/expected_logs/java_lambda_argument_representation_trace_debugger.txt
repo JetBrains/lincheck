@@ -1,0 +1,26 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| --------------------------------------------------------------------------------------------------------------------- |
+|                                                       Thread 1                                                        |
+| --------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                           |
+|   hm ➜ HashMap#1 at JavaLambdaRepresentationTest.operation(JavaLambdaRepresentationTest.java:25)                      |
+|   Species_L#1.invokeExact(): Lambda#1 at JavaLambdaRepresentationTest.operation(JavaLambdaRepresentationTest.java:25) |
+|   hm.computeIfAbsent(1, Lambda#1): 1 at JavaLambdaRepresentationTest.operation(JavaLambdaRepresentationTest.java:25)  |
+|     key.hashCode(): 1 at HashMap.hash(HashMap.java:338)                                                               |
+|     mappingFunction.apply(1): 1 at HashMap.computeIfAbsent(HashMap.java:1220)                                         |
+|   result: void                                                                                                        |
+| --------------------------------------------------------------------------------------------------------------------- |
