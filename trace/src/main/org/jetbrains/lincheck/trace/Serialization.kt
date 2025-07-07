@@ -653,6 +653,7 @@ class FileStreamingTraceCollecting(
         data.write(dataBlock.array(), 0, dataBlock.limit())
         val endPosition = pos.currentPosition
         data.writeKind(ObjectKind.BLOCK_END)
+        data.flush()
 
         index.writeIndexCell(ObjectKind.BLOCK_START, writerId, startPosition, endPosition)
         indexList.forEach {

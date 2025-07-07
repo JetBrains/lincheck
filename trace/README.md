@@ -95,7 +95,7 @@ of a program crash, as all trace objects accumulated in memory will be lost.
   without referring to block structure as soon as a physical offset of their start is known.
   They are written as *kind* byte followed by all their data fields.
 - *Container objects* can be split between data blocks and represented as two on-disk objects:
-  one for the fixed header and one for fixed footer. Between these two on-disk objects the content of
+  one for the fixed header and one for fixed footer. Between these two on-disk objects, the content of
   the container is written, as a series of corresponding objects. Header and footer of a container
   object can be written to different data blocks belonging to the same thread. They could be separated
   by any number of data blocks. Now there is only one container object: a method call trace point.
@@ -132,8 +132,18 @@ owner thread.
  Each object can be written into the data file only after all its dependencies. If an object refers to
 another object by id (like `MethodDescriptor` refers to `ClassDescriptor` by id or any trace point
 refers to `CodeLocation` by id), a referred object must be already written to file, maybe by another
-thread. It could lead to a situation when a referred object is put into file physically later than
-referring, but it is supported by deserialization code.
+thread.
+
+ There is one non-trivial problem with reference objects dependencies: any
+reference object is stored to trace before it is used. But it is possible that
+one thread writes some reference object first, but its data block goes to the
+disk last. Then all references written by another thread, which was stored to disk
+first, will be loaded before dependencies. It is not a problem for trace points
+and descriptors, as references will be resolved later, but it is a problem for
+code locations, as they need already loaded strings on creation. To solve
+this race between strings and code locations, all code locations are loaded
+to custom «shallow» objects, and they are inflated to proper `StackTraceElement`s
+later, after all reference objects are loaded.
 
  Container objects own all thread-dependent objects that were written between the container
 header on-disk object and the footer on-disk object. Container objects can be nested without 
@@ -295,17 +305,6 @@ a forest of objects (one tree per thread), but can consume a huge amount of memo
 
  Lazy loader loads all reference objects first, using index to locate them, 
 and only top-level method call trace point («root») for each thread after that.
-
- There is one non-trivial problem with reference objects dependencies: any
-reference object is stored to trace before it is used. But it is possible that
-one thread writes some reference object first, but its data block goes to the
-disk last. Then all references written by another thread, which was stored to disk
-first, will be loaded before dependencies. It is not a problem for trace points
-and descriptors, as references will be resolved later, but it is a problem for
-code locations, as they need already loaded strings on creation. To solve
-this race between strings and code locations, all code locations are loaded
-to custom «shallow» objects, and they are inflated to proper `StackTraceElement`s
-later, after all reference objects are loaded.
 
  Now all code uses global context, so no two different traces could be loaded 
 simultaneously. Each next call for loading API, no matter eager or lazy, invalidates
