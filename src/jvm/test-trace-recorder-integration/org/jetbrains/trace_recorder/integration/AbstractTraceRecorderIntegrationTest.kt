@@ -14,7 +14,7 @@ import org.jetbrains.kotlinx.lincheck_test.AbstractTraceIntegrationTest
 import java.nio.file.Paths
 
 abstract class AbstractTraceRecorderIntegrationTest : AbstractTraceIntegrationTest() {
-    override val testSourcesPath = Paths.get("src", "test-trace-recorder-integration").toString()
+    override val testSourcesPath = Paths.get("src", "jvm", "test-trace-recorder-integration").toString()
 
     final override fun runGradleTest(
         testClassName: String,

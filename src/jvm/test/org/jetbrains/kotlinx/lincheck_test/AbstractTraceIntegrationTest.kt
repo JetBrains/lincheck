@@ -139,7 +139,7 @@ abstract class AbstractTraceIntegrationTest {
                     Assert.fail("The gold data file was created. Please rerun the test.")
                 } else {
                     Assert.fail(
-                        "The gold data file was not found. " +
+                        "The gold data file was not found at '${expectedOutput.absolutePath}'. " +
                         "Please rerun the test with \"overwriteRepresentationTestsOutput\" option enabled."
                     )
                 }
