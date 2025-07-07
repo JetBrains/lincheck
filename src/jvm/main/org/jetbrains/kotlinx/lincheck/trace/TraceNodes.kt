@@ -140,19 +140,7 @@ internal fun traceToGraph(trace: Trace): SingleThreadedTable<CallNode> {
     // loop over events
     trace.trace.forEachIndexed { eventNumber, event ->
         val currentThreadId = event.iThread
-
-        // TODO this is hack to fix actor with suspension
-        val currentCallNode = if (
-            currentNodePerThread[currentThreadId] != null
-            && event is MethodReturnTracePoint
-            && event.methodTracePoint.isActor
-        ) {
-            var node = currentNodePerThread[currentThreadId]
-            while (node!!.parent != null) node = node.parent as CallNode
-            node
-        } else { currentNodePerThread[currentThreadId] }
-
-
+        val currentCallNode = currentNodePerThread[currentThreadId]
 
         when {
             event is SectionDelimiterTracePoint -> {
@@ -182,5 +170,11 @@ internal fun traceToGraph(trace: Trace): SingleThreadedTable<CallNode> {
             }
         }
     }
+
+    // if an actor was finished unexpectedly, the `MethodReturnTracePoint` could be missing
+    for (callNode in currentNodePerThread.values) {
+        callNode?.returnEventNumber = Int.MAX_VALUE
+    }
+
     return sections
 }

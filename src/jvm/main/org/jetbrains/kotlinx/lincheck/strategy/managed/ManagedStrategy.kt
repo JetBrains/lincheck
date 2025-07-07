@@ -983,27 +983,20 @@ internal abstract class ManagedStrategy(
         else validationFunction
         check(actor != null) { "Could not find current actor" }
 
-        val lastTracePoint = traceCollector?.trace?.lastOrNull()
-
-        if (lastTracePoint !is MethodReturnTracePoint
-            || lastTracePoint.methodTracePoint.methodName != actor.method.name
-            || lastTracePoint.methodTracePoint.className != actor.method.declaringClass.name) {
-            // TODO rewrite. This will create an additional return trace point if actor is a suspend function
-            //  or if the actor is in the loop cycle.
-            val className = actor.method.declaringClass.name
-            val methodName = actor.method.name
-            val tracePoint = MethodCallTracePoint(
-                iThread = iThread,
-                actorId = currentActorId[iThread]!!,
-                className = className,
-                methodName = methodName,
-                codeLocation = UNKNOWN_CODE_LOCATION,
-                isStatic = false,
-                callType = MethodCallTracePoint.CallType.ACTOR,
-                isSuspend = isSuspendFunction(className, methodName, actor.arguments.toTypedArray())
-            )
-            traceCollector?.addTracePointInternal(MethodReturnTracePoint(tracePoint))
-        }
+        // TODO rewrite. This will create an additional return trace point if actor's thread was aborted
+        val className = actor.method.declaringClass.name
+        val methodName = actor.method.name
+        val tracePoint = MethodCallTracePoint(
+            iThread = iThread,
+            actorId = currentActorId[iThread]!!,
+            className = className,
+            methodName = methodName,
+            codeLocation = UNKNOWN_CODE_LOCATION,
+            isStatic = false,
+            callType = MethodCallTracePoint.CallType.ACTOR,
+            isSuspend = isSuspendFunction(className, methodName, actor.arguments.toTypedArray())
+        )
+        traceCollector?.addTracePointInternal(MethodReturnTracePoint(tracePoint))
 
         // This is a hack to guarantee correct stepping in the plugin.
         // When stepping out to the TestThreadExecution class, stepping continues unproductively.
