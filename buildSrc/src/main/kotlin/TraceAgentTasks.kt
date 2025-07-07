@@ -27,10 +27,6 @@ fun Project.registerTraceAgentTasks() {
     val mainSourceSet = javaPluginExtension.sourceSets.getByName("main")
 
     val runtimeClasspath = configurations.getByName("runtimeClasspath")
-    val compileClasspath = configurations.getByName("compileClasspath")
-    println("Runtime classpath: ${runtimeClasspath.resolve().joinToString("\n")}")
-    println("\n\n")
-    println("Compile classpath: ${compileClasspath.resolve().joinToString("\n")}")
 
     val traceAgentFatJar = tasks.register<Jar>("traceAgentFatJar") {
         archiveBaseName.set("lincheck-fat")
