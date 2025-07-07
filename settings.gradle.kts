@@ -26,7 +26,6 @@ rootProject.name = name
 
 include(":bootstrap")
 include(":jvm-agent")
-//include(":core")
 include(":common")
 include(":trace")
 include(":trace-recorder")
