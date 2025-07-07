@@ -192,10 +192,6 @@ fun SourceSet.configureClasspath() {
 }
 
 tasks {
-    processTestResources {
-        duplicatesStrategy = DuplicatesStrategy.INCLUDE
-    }
-
     named<JavaCompile>("compileTestJava") {
         setupJavaToolchain(project)
     }
@@ -411,20 +407,18 @@ val bootstrapJar = tasks.register<Copy>("bootstrapJar") {
 }
 
 val jar = tasks.named<Jar>("jar") {
-    archiveBaseName.set(rootProject.name)
     from(sourceSets["main"].output)
     dependsOn(tasks.compileJava, tasks.compileKotlin)
 }
 
 val sourcesJar = tasks.register<Jar>("sourcesJar") {
-    archiveBaseName.set(rootProject.name)
     from(sourceSets["main"].allSource)
     // Also collect sources for the injected classes to simplify debugging
     from(project(":bootstrap").file("src"))
     archiveClassifier.set("sources")
 }
 
-val javadocJar = createJavadocJar(rootProject.name)
+val javadocJar = createJavadocJar("src/jvm/main")
 
 tasks.withType<Jar> {
     // TODO: should bootstrap.jar be put in jvm-agent jar?
@@ -494,6 +488,8 @@ tasks {
     val packSonatypeCentralBundle by registering(Zip::class) {
         group = "publishing"
 
+        dependsOn(":common:publishMavenPublicationToArtifactsRepository")
+        dependsOn(":jvm-agent:publishMavenPublicationToArtifactsRepository")
         dependsOn(":trace:publishMavenPublicationToArtifactsRepository")
         dependsOn(":publishMavenPublicationToArtifactsRepository")
 

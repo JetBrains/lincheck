@@ -14,19 +14,19 @@ import org.gradle.api.tasks.bundling.Jar
 import org.jetbrains.dokka.gradle.DokkaTask
 import org.gradle.kotlin.dsl.*
 
-fun Project.createJavadocJar(archiveName: String = this.name): TaskProvider<Jar> {
+fun Project.createJavadocJar(mainSourceSetPath: String = "src/main"): TaskProvider<Jar> {
     val dokkaHtml = tasks.named<DokkaTask>("dokkaHtml") {
         outputDirectory.set(file("${layout.buildDirectory.get()}/javadoc"))
         dokkaSourceSets {
             named("main") {
-                sourceRoots.from(file("src/main"))
+                sourceRoots.from(file(mainSourceSetPath))
                 reportUndocumented.set(false)
             }
         }
     }
 
     val javadocJar = tasks.register<Jar>("javadocJar") {
-        archiveBaseName.set(archiveName)
+        archiveBaseName.set(this@createJavadocJar.name)
         dependsOn(dokkaHtml)
         from("${layout.buildDirectory.get()}/javadoc")
         archiveClassifier.set("javadoc")

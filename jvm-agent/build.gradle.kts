@@ -1,6 +1,11 @@
 import org.gradle.kotlin.dsl.named
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
+plugins {
+    id("maven-publish")
+    id("org.jetbrains.dokka")
+}
+
 repositories {
     mavenCentral()
 }
@@ -49,4 +54,42 @@ tasks {
     withType<Jar> {
         dependsOn(":bootstrapJar")
     }
+}
+
+val jar = tasks.jar {
+    archiveFileName.set("jvm-agent.jar")
+}
+
+val sourcesJar = tasks.register<Jar>("sourcesJar") {
+    from(sourceSets["main"].allSource)
+    archiveClassifier.set("sources")
+}
+
+val javadocJar = createJavadocJar()
+
+publishing {
+    publications {
+        register("maven", MavenPublication::class) {
+            val groupId: String by project
+            val jvmAgentArtifactId: String by project
+            val jvmAgentVersion: String by project
+
+            this.groupId = groupId
+            this.artifactId = jvmAgentArtifactId
+            this.version = jvmAgentVersion
+
+            from(components["kotlin"])
+            artifact(sourcesJar)
+            artifact(javadocJar)
+
+            configureMavenPublication {
+                name.set(jvmAgentArtifactId)
+                description.set("Lincheck jvm agent library")
+            }
+        }
+    }
+
+    configureRepositories(
+        artifactsRepositoryUrl = rootProject.run { uri(layout.buildDirectory.dir("artifacts/maven")) }
+    )
 }
