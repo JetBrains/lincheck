@@ -8,10 +8,9 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.trace
+package org.jetbrains.kotlinx.lincheck.trace
 
-@ConsistentCopyVisibility
-data class ClassDescriptor internal constructor(
+data class ClassDescriptor(
     val name: String,
 )
 
@@ -21,9 +20,8 @@ data class MethodSignature(val name: String, val methodType: Types.MethodType) {
     }
 }
 
-@ConsistentCopyVisibility
-data class MethodDescriptor internal constructor(
-    private val context: TraceContext,
+data class MethodDescriptor(
+    private val context: ITraceContext,
     val classId: Int,
     val methodSignature: MethodSignature
 ) {
@@ -37,9 +35,8 @@ data class MethodDescriptor internal constructor(
     override fun toString(): String = "$className.$methodSignature"
 }
 
-@ConsistentCopyVisibility
-data class FieldDescriptor internal constructor(
-    private val context: TraceContext,
+data class FieldDescriptor(
+    private val context: ITraceContext,
     val classId: Int,
     val fieldName: String,
     val isStatic: Boolean,
@@ -48,7 +45,6 @@ data class FieldDescriptor internal constructor(
     val className: String get() = context.getClassDescriptor(classId).name
 }
 
-@ConsistentCopyVisibility
-data class VariableDescriptor internal constructor(
+data class VariableDescriptor(
     val name: String,
 )

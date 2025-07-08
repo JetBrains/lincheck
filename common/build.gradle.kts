@@ -20,8 +20,6 @@ sourceSets {
         val kotlinVersion: String by project
 
         compileOnly(project(":bootstrap"))
-        api(project(":trace")) // TODO: can this be fixed?
-
         api("org.jetbrains.kotlin:kotlin-stdlib:${kotlinVersion}")
         api("org.jetbrains.kotlin:kotlin-stdlib-common:${kotlinVersion}")
         api("org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}")

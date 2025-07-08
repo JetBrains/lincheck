@@ -10,8 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck.util
 
-import org.jetbrains.lincheck.trace.MethodSignature
-import org.jetbrains.lincheck.trace.Types
+import org.jetbrains.kotlinx.lincheck.trace.MethodSignature
+import org.jetbrains.kotlinx.lincheck.trace.Types
 import org.objectweb.asm.commons.Method
 
 

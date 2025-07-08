@@ -14,6 +14,10 @@ sourceSets {
     main {
         java.srcDirs("src/main")
     }
+
+    dependencies {
+        implementation(project(":common"))
+    }
 }
 
 tasks {

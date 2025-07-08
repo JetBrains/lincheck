@@ -10,6 +10,10 @@
 
 package org.jetbrains.lincheck.trace
 
+import org.jetbrains.kotlinx.lincheck.trace.FieldDescriptor
+import org.jetbrains.kotlinx.lincheck.trace.MethodDescriptor
+import org.jetbrains.kotlinx.lincheck.trace.Types
+import org.jetbrains.kotlinx.lincheck.trace.VariableDescriptor
 import java.io.DataInput
 import java.io.DataOutput
 import java.math.BigDecimal

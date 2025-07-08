@@ -10,8 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.native_calls.io
 
-import org.jetbrains.lincheck.trace.MethodSignature
-import org.jetbrains.lincheck.trace.Types
+import org.jetbrains.kotlinx.lincheck.trace.MethodSignature
+import org.jetbrains.kotlinx.lincheck.trace.Types
 import org.jetbrains.kotlinx.lincheck.util.and
 import org.jetbrains.kotlinx.lincheck.util.getMethods
 import org.jetbrains.kotlinx.lincheck.util.isInstance

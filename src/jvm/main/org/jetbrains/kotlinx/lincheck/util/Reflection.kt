@@ -11,7 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.util
 
 import org.jetbrains.kotlinx.lincheck.isSuspendable
-import org.jetbrains.lincheck.trace.MethodSignature
+import org.jetbrains.kotlinx.lincheck.trace.MethodSignature
 import java.lang.reflect.Executable
 import kotlin.coroutines.Continuation
 import java.lang.reflect.Method
