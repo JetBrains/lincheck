@@ -39,15 +39,19 @@ private interface BlockConsumer {
 }
 
 private class DataBlock(
-    start: Long,
-    end: Long,
-    aaccDataSize: Long
+    physicalStart : Long,
+    physicalEnd: Long,
+    accDataSize: Long
 ) {
-    constructor(start: Long, aaccdDataSize: Long) : this(start, Long.MAX_VALUE, aaccdDataSize)
+    constructor(start: Long, accDataSize: Long) : this(start, Long.MAX_VALUE, accDataSize)
 
     val physicalStart: Long
     var physicalEnd: Long
         private set
+
+    /**
+     * Accumulated data size: sum of sizes of all data blocks in this thread before this block.
+     */
     val accDataSize: Long
 
     val physicalDataStart: Long get() = physicalStart + BLOCK_HEADER_SIZE
@@ -58,17 +62,17 @@ private class DataBlock(
     val dataSize: Long get() = physicalEnd - physicalStart - BLOCK_HEADER_SIZE
 
     init {
-        require(start >= 0) { "start must be non-negative" }
-        require(start < end)  { "block cannot be empty" }
-        require(aaccDataSize >= 0) { "accumulated data size cannot be negative" }
-        physicalStart = start
-        physicalEnd = end
-        accDataSize = aaccDataSize
+        require(physicalStart >= 0) { "start must be non-negative" }
+        require(physicalStart < physicalEnd)  { "block cannot be empty" }
+        require(accDataSize >= 0) { "accumulated data size cannot be negative" }
+        this.physicalStart = physicalStart
+        this.physicalEnd = physicalEnd
+        this.accDataSize = accDataSize
     }
 
-    fun coversPhysicalOffset(offset: Long): Boolean = offset in physicalStart ..<physicalEnd
+    fun coversPhysicalOffset(offset: Long): Boolean = offset in physicalStart ..< physicalEnd
 
-    fun coversLogicalOffset(offset: Long): Boolean = offset in logicalDataStart ..<logicalDataStart + dataSize
+    fun coversLogicalOffset(offset: Long): Boolean = offset in logicalDataStart ..< logicalDataStart + dataSize
 
     /**
      * For usage with [List.binarySearch]
@@ -170,6 +174,11 @@ class LazyTraceReader(
     private val dataFileName: String,
     private val index: DataInputStream?
 ) : Closeable {
+
+    private fun interface TracepointRegistrator {
+        fun register(indexInParent: Int, tracePoint: TRTracePoint, physicalOffset: Long): Unit
+    }
+
     constructor(baseFileName: String) :
             this(
                 dataFileName = baseFileName,
@@ -217,9 +226,14 @@ class LazyTraceReader(
             check(blockId == threadId) { "Thread $threadId block 0 has wrong idt: $blockId" }
 
             val tracepoints = mutableListOf<TRTracePoint>()
-            loadTracePoints(threadId, Integer.MAX_VALUE, this::readTracePointWithChildAddresses) { _, tracePoint, _
-                -> tracepoints.add(tracePoint)
-            }
+            loadTracePoints(
+                threadId = threadId,
+                maxRead = Integer.MAX_VALUE,
+                reader = this::readTracePointWithChildAddresses,
+                registrator = { _, tracePoint, _ ->
+                    tracepoints.add(tracePoint)
+                }
+            )
             if (tracepoints.isEmpty()) {
                 System.err.println("Thread $threadId doesn't write any tracepoints")
             } else {
@@ -238,9 +252,14 @@ class LazyTraceReader(
             ?: error("TRMethodCallTracePoint ${parent.eventId} is not found in index")
         data.seek(calculatePhysicalOffset(parent.threadId, positions.first))
 
-        loadTracePoints(parent.threadId, Integer.MAX_VALUE, this::readTracePointWithChildAddresses) { idx, tracePoint, _ ->
-            parent.loadChild(idx, tracePoint)
-        }
+        loadTracePoints(
+            threadId = parent.threadId,
+            maxRead = Integer.MAX_VALUE,
+            reader = this::readTracePointWithChildAddresses,
+            registrator = { idx, tracePoint, _ ->
+                parent.loadChild(idx, tracePoint)
+            }
+        )
 
         val actualFooterPos = data.position() - 1 // 1 is size of object kind
         check(actualFooterPos == calculatePhysicalOffset(parent.threadId, positions.second)) {
@@ -255,20 +274,25 @@ class LazyTraceReader(
         require(count in 1 .. parent.events.size - from) { "Count $count must be in range 1..${parent.events.size - from}" }
 
         data.seek(calculatePhysicalOffset(parent.threadId, parent.getChildAddress(from)))
-        loadTracePoints(parent.threadId, count,this::readTracePointWithChildAddresses) { idx, tracePoint, _ ->
-            parent.loadChild(idx + from, tracePoint)
-        }
+        loadTracePoints(
+            threadId = parent.threadId,
+            maxRead = count,
+            reader = this::readTracePointWithChildAddresses,
+            registrator = { idx, tracePoint, _ ->
+                parent.loadChild(idx + from, tracePoint)
+            }
+        )
 
     }
 
-    private fun loadTracePoints(threadId: Int, maxRead: Int, reader: () -> TRTracePoint, consumer: (Int, TRTracePoint, Long) -> Unit) {
+    private fun loadTracePoints(threadId: Int, maxRead: Int, reader: () -> TRTracePoint, registrator: TracepointRegistrator) {
         val blocks = dataBlocks[threadId] ?: error("No data blocks for Thread $threadId")
         var idx = 0
         while (true) {
             var kind = loadObjects(data, context, CodeLocationsContext(), false) { _, _, _ ->
                 val tracePointOffset = data.position() - 1 // account for Kind
                 val tracePoint = reader()
-                consumer(idx++, tracePoint, tracePointOffset)
+                registrator.register(idx++, tracePoint, tracePointOffset)
                 idx < maxRead
             }
             if (idx == maxRead) {
@@ -479,9 +503,14 @@ class LazyTraceReader(
         }
 
         // Read tracepoints truly shallow
-        loadTracePoints(tracePoint.threadId, Integer.MAX_VALUE, this::readTracePointShallow) { _, _, address ->
-            tracePoint.addChildAddress(calculateLogicalOffset(tracePoint.threadId, address))
-        }
+        loadTracePoints(
+            threadId = tracePoint.threadId,
+            maxRead = Integer.MAX_VALUE,
+            reader = this::readTracePointShallow,
+            registrator = { _, _, physicalOffset ->
+                tracePoint.addChildAddress(calculateLogicalOffset(tracePoint.threadId, physicalOffset))
+            }
+        )
         // Kind is guaranteed by loadTracePoints()
         tracePoint.loadFooter(data)
 

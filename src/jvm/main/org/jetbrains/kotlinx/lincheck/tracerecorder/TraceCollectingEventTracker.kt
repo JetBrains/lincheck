@@ -78,7 +78,7 @@ private class ThreadData(
  *
  * Can be passed as a fourth argument to agent, in any case.
  *
- * Default is [BINARY]
+ * Default is [BINARY_STREAM]
  */
 enum class TraceCollectorMode {
     /**
@@ -88,13 +88,13 @@ enum class TraceCollectorMode {
      * It is the default mode if a parameter is not passed or cannot be
      * recognized.
      */
-    BINARY,
+    BINARY_STREAM,
 
     /**
      * Collect full trace in the memory and dump to the output file at the end
      * of the run.
      */
-    `BINARY-MEM`,
+    BINARY_DUMP,
 
     /**
      * Collect full trace in memory and print it as text to the output file,
@@ -106,22 +106,34 @@ enum class TraceCollectorMode {
      * Collect full trace in memory and print it as text to the output file,
      * with code locations.
      */
-    VERBOSE
+    TEXT_VERBOSE
 }
 
-fun String?.toTraceCollectorOutputType(): TraceCollectorMode {
-    if (this == null) return TraceCollectorMode.BINARY
-    for (v in TraceCollectorMode.entries) {
-        if (this.equals(v.name, ignoreCase = true)) return v
+fun parseOutputMode(outputMode: String?, outputOption: String?): TraceCollectorMode {
+    if (outputMode == null) return TraceCollectorMode.BINARY_STREAM
+    if ("binary".startsWith(outputMode, true)) {
+        if (outputOption != null && "dump".startsWith(outputOption, true)) {
+            return TraceCollectorMode.BINARY_DUMP
+        } else {
+            return TraceCollectorMode.BINARY_STREAM
+        }
+    } else if ("text".startsWith(outputMode, true)) {
+        if (outputOption != null && "verbose".startsWith(outputOption, true)) {
+            return TraceCollectorMode.TEXT_VERBOSE
+        } else {
+            return TraceCollectorMode.TEXT
+        }
+    } else {
+        // Default
+        return TraceCollectorMode.BINARY_STREAM
     }
-    return TraceCollectorMode.BINARY
 }
 
 class TraceCollectingEventTracker(
     private val className: String,
     private val methodName: String,
     private val traceDumpPath: String?,
-    private val outputType: TraceCollectorMode
+    private val mode: TraceCollectorMode
 ) :  EventTracker {
     // We don't want to re-create this object each time we need it
     private val analysisProfile: AnalysisProfile = AnalysisProfile(false)
@@ -133,12 +145,12 @@ class TraceCollectingEventTracker(
     private val strategy: TraceCollectingStrategy
 
     init {
-        when (outputType) {
-            TraceCollectorMode.BINARY -> {
+        when (mode) {
+            TraceCollectorMode.BINARY_STREAM -> {
                 check(traceDumpPath != null) { "Stream output type needs non-empty output file name" }
                 strategy = FileStreamingTraceCollecting(traceDumpPath, TRACE_CONTEXT)
             }
-            TraceCollectorMode.`BINARY-MEM` -> {
+            TraceCollectorMode.BINARY_DUMP -> {
                 check(traceDumpPath != null) { "Binary output type needs non-empty output file name" }
                 strategy = MemoryTraceCollecting()
             }
@@ -560,7 +572,7 @@ class TraceCollectingEventTracker(
         System.err.println("Trace collected in ${System.currentTimeMillis() - startTime} ms")
         startTime = System.currentTimeMillis()
 
-        if (outputType == TraceCollectorMode.BINARY) {
+        if (mode == TraceCollectorMode.BINARY_STREAM) {
             return
         }
 
@@ -582,11 +594,11 @@ class TraceCollectingEventTracker(
                     roots.add(st.first())
                 }
             }
-            when (outputType) {
-                TraceCollectorMode.`BINARY-MEM` -> saveRecorderTrace(traceDumpPath!!, TRACE_CONTEXT, roots)
+            when (mode) {
+                TraceCollectorMode.BINARY_DUMP -> saveRecorderTrace(traceDumpPath!!, TRACE_CONTEXT, roots)
                 TraceCollectorMode.TEXT -> printRecorderTrace(traceDumpPath, TRACE_CONTEXT, roots, false)
-                TraceCollectorMode.VERBOSE -> printRecorderTrace(traceDumpPath, TRACE_CONTEXT, roots, true)
-                TraceCollectorMode.BINARY -> Unit // Do nothing, everything is written
+                TraceCollectorMode.TEXT_VERBOSE -> printRecorderTrace(traceDumpPath, TRACE_CONTEXT, roots, true)
+                TraceCollectorMode.BINARY_STREAM -> Unit // Do nothing, everything is written
             }
         } catch (t: Throwable) {
             System.err.println("TraceRecorder: Cannot write output file $traceDumpPath: ${t.message} at ${t.stackTraceToString()}")

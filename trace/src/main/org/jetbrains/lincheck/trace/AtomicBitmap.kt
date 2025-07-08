@@ -67,6 +67,7 @@ internal class AtomicBitmap {
             val newValue = value or bit
         } while (ch.compareAndSet(idx, value, newValue))
     }
+
     @Synchronized
     private fun resizeBitmap(chunk: Int) {
         // volatile read of chunkCount
