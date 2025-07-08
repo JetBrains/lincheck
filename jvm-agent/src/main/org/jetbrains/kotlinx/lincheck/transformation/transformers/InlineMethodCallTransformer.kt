@@ -11,7 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.jetbrains.kotlinx.lincheck.transformation.*
-import org.jetbrains.lincheck.trace.TRACE_CONTEXT
+import org.jetbrains.kotlinx.lincheck.trace.TRACE_CONTEXT
 import org.objectweb.asm.Label
 import org.objectweb.asm.Type
 import org.objectweb.asm.Type.*

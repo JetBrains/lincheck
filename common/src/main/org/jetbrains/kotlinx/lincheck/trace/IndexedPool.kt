@@ -8,10 +8,10 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.trace
+package org.jetbrains.kotlinx.lincheck.trace
 
-internal class IndexedPool<T> {
-    private val items = mutableListOf<T?>()
+class IndexedPool<T> {
+    private val items = mutableListOf<T>()
     private val index = hashMapOf<T, Int>()
 
     @Synchronized

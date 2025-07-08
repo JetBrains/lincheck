@@ -21,7 +21,7 @@ data class MethodSignature(val name: String, val methodType: Types.MethodType) {
 }
 
 data class MethodDescriptor(
-    private val context: ITraceContext,
+    private val context: TraceContext,
     val classId: Int,
     val methodSignature: MethodSignature
 ) {
@@ -36,7 +36,7 @@ data class MethodDescriptor(
 }
 
 data class FieldDescriptor(
-    private val context: ITraceContext,
+    private val context: TraceContext,
     val classId: Int,
     val fieldName: String,
     val isStatic: Boolean,

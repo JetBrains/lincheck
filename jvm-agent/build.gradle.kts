@@ -23,7 +23,6 @@ sourceSets {
 
         compileOnly(project(":bootstrap"))
         api(project(":common"))
-        api(project(":trace"))
 
         api("org.jetbrains.kotlin:kotlin-stdlib:${kotlinVersion}")
         api("org.jetbrains.kotlin:kotlin-stdlib-common:${kotlinVersion}")

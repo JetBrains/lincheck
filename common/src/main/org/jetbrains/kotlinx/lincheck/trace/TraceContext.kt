@@ -8,15 +8,7 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.trace
-
-import org.jetbrains.kotlinx.lincheck.trace.ClassDescriptor
-import org.jetbrains.kotlinx.lincheck.trace.FieldDescriptor
-import org.jetbrains.kotlinx.lincheck.trace.ITraceContext
-import org.jetbrains.kotlinx.lincheck.trace.MethodDescriptor
-import org.jetbrains.kotlinx.lincheck.trace.MethodSignature
-import org.jetbrains.kotlinx.lincheck.trace.Types
-import org.jetbrains.kotlinx.lincheck.trace.VariableDescriptor
+package org.jetbrains.kotlinx.lincheck.trace
 
 val TRACE_CONTEXT: TraceContext = TraceContext()
 
@@ -24,28 +16,28 @@ const val UNKNOWN_CODE_LOCATION_ID = -1
 
 private val EMPTY_STACK_TRACE = StackTraceElement("", "", "", 0)
 
-class TraceContext : ITraceContext {
+class TraceContext {
     private val locations = ArrayList<StackTraceElement>()
     private val classes = IndexedPool<ClassDescriptor>()
     private val methods = IndexedPool<MethodDescriptor>()
     private val fields = IndexedPool<FieldDescriptor>()
     private val variables = IndexedPool<VariableDescriptor>()
 
-    internal val classDescriptors: List<ClassDescriptor?> get() = classes.content
+    val classDescriptors: List<ClassDescriptor?> get() = classes.content
 
-    override fun getOrCreateClassId(className: String): Int {
+    fun getOrCreateClassId(className: String): Int {
         return classes.getOrCreateId(ClassDescriptor(className))
     }
 
-    override fun getClassDescriptor(classId: Int): ClassDescriptor = classes[classId]
+    fun getClassDescriptor(classId: Int): ClassDescriptor = classes[classId]
 
-    internal fun restoreClassDescriptor(id: Int, value: ClassDescriptor) {
+    fun restoreClassDescriptor(id: Int, value: ClassDescriptor) {
         classes.restore(id, value)
     }
 
-    internal val methodDescriptors: List<MethodDescriptor?> get() = methods.content
+    val methodDescriptors: List<MethodDescriptor?> get() = methods.content
 
-    override fun getOrCreateMethodId(className: String, methodName: String, desc: String): Int {
+    fun getOrCreateMethodId(className: String, methodName: String, desc: String): Int {
         return methods.getOrCreateId(
             MethodDescriptor(
                 context = this,
@@ -58,15 +50,15 @@ class TraceContext : ITraceContext {
         )
     }
 
-    override fun getMethodDescriptor(methodId: Int): MethodDescriptor = methods[methodId]
+    fun getMethodDescriptor(methodId: Int): MethodDescriptor = methods[methodId]
 
-    internal fun restoreMethodDescriptor(id: Int, value: MethodDescriptor) {
+    fun restoreMethodDescriptor(id: Int, value: MethodDescriptor) {
         methods.restore(id, value)
     }
 
-    internal val fieldDescriptors: List<FieldDescriptor?> get() = fields.content
+    val fieldDescriptors: List<FieldDescriptor?> get() = fields.content
 
-    override fun getOrCreateFieldId(className: String, fieldName: String, isStatic: Boolean, isFinal: Boolean): Int {
+    fun getOrCreateFieldId(className: String, fieldName: String, isStatic: Boolean, isFinal: Boolean): Int {
         return fields.getOrCreateId(
             FieldDescriptor(
                 context = this,
@@ -78,34 +70,34 @@ class TraceContext : ITraceContext {
         )
     }
 
-    override fun getFieldDescriptor(fieldId: Int): FieldDescriptor = fields[fieldId]
+    fun getFieldDescriptor(fieldId: Int): FieldDescriptor = fields[fieldId]
 
-    internal fun restoreFieldDescriptor(id: Int, value: FieldDescriptor) {
+    fun restoreFieldDescriptor(id: Int, value: FieldDescriptor) {
         fields.restore(id, value)
     }
 
-    internal val variableDescriptors: List<VariableDescriptor?> get() = variables.content
+    val variableDescriptors: List<VariableDescriptor?> get() = variables.content
 
-    override fun getOrCreateVariableId(variableName: String): Int {
+    fun getOrCreateVariableId(variableName: String): Int {
         return variables.getOrCreateId(VariableDescriptor(variableName))
     }
 
-    override fun getVariableDescriptor(variableId: Int): VariableDescriptor = variables[variableId]
+    fun getVariableDescriptor(variableId: Int): VariableDescriptor = variables[variableId]
 
-    internal fun restoreVariableDescriptor(id: Int, value: VariableDescriptor) {
+    fun restoreVariableDescriptor(id: Int, value: VariableDescriptor) {
         variables.restore(id, value)
     }
 
 
-    internal val codeLocations: List<StackTraceElement?> get() = locations
+    val codeLocations: List<StackTraceElement?> get() = locations
 
-    override fun newCodeLocation(stackTraceElement: StackTraceElement): Int {
+    fun newCodeLocation(stackTraceElement: StackTraceElement): Int {
         val id = locations.size
         locations.add(stackTraceElement)
         return id
     }
 
-    override fun stackTrace(codeLocationId: Int): StackTraceElement {
+    fun stackTrace(codeLocationId: Int): StackTraceElement {
         // actors do not have a code location (for now)
         if (codeLocationId == UNKNOWN_CODE_LOCATION_ID) return EMPTY_STACK_TRACE
         var loc = locations[codeLocationId]
@@ -115,7 +107,7 @@ class TraceContext : ITraceContext {
         return loc
     }
 
-    internal fun restoreCodeLocation(id: Int, value: StackTraceElement) {
+    fun restoreCodeLocation(id: Int, value: StackTraceElement) {
         check (id >= locations.size || locations[id] == null || locations[id] == value) {
             "CodeLocation with id $id is already present in context and differs from $value"
         }
@@ -125,7 +117,7 @@ class TraceContext : ITraceContext {
         locations[id] = value
     }
 
-    override fun clear() {
+    fun clear() {
         locations.clear()
         classes.clear()
         methods.clear()

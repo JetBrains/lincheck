@@ -8,7 +8,7 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.trace
+package org.jetbrains.kotlinx.lincheck.trace
 
 /**
  * [CodeLocations] object is used to maintain the mapping between unique IDs and code locations.

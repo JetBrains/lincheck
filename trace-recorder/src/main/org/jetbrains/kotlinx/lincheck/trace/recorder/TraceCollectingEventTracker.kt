@@ -11,6 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.trace.recorder
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ShadowStackFrame
+import org.jetbrains.kotlinx.lincheck.trace.TRACE_CONTEXT
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.trace.*

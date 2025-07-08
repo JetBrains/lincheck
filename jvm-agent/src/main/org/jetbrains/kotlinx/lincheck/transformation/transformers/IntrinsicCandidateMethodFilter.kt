@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
-import org.jetbrains.lincheck.trace.TRACE_CONTEXT
+import org.jetbrains.kotlinx.lincheck.trace.TRACE_CONTEXT
 import org.jetbrains.kotlinx.lincheck.util.isTrackedIntrinsic
 import org.jetbrains.kotlinx.lincheck.transformation.ASM_API
 import org.jetbrains.kotlinx.lincheck.transformation.toCanonicalClassName
