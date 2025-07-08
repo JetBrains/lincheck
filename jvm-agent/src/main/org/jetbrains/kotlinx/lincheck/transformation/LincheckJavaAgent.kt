@@ -45,12 +45,12 @@ inline fun withLincheckJavaAgent(instrumentationMode: InstrumentationMode, block
              * but at the moment of implementing this logic (March 2024), it was the smoothest way
              * to inject code in the user codebase when the `java.base` module also needs to be instrumented.
              */
-            instrumentation = ByteBuddyAgent.install()
+            LincheckJavaAgent.instrumentation = ByteBuddyAgent.install()
             isInstrumentationInitialized = true
         }
 
         // run the testing code with instrumentation
-        install(instrumentationMode)
+        LincheckJavaAgent.install(instrumentationMode)
         return try {
             block()
         } finally {

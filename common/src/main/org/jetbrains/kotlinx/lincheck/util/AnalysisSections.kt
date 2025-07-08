@@ -173,7 +173,6 @@ inline fun <R> runOutsideIgnoredSection(block: () -> R): R {
             "org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy",
             "org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy"
         )
-    // descriptor.eventTracker !is ManagedStrategy
     ) {
         return block()
     }

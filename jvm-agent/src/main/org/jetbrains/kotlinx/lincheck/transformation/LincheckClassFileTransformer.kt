@@ -101,7 +101,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
                     val cr = ClassReader(it)
                     val sw = StringWriter()
                     val pw = PrintWriter(sw)
-                    cr.accept(TraceClassVisitor(pw), 0)
+                    cr.accept(org.objectweb.asm.util.TraceClassVisitor(pw), 0)
 
                     File("build/transformedBytecode/${classNode.name}.txt")
                         .apply { parentFile.mkdirs() }

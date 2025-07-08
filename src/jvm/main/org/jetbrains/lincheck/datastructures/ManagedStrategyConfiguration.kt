@@ -13,7 +13,6 @@ package org.jetbrains.lincheck.datastructures
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategySettings
-import org.jetbrains.lincheck.datastructures.ManagedCTestConfiguration.Companion.DEFAULT_STDLIB_ANALYSIS_ENABLED
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
 
 /**
@@ -28,7 +27,7 @@ abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfigurat
         ManagedCTestConfiguration.DEFAULT_HANGING_DETECTION_THRESHOLD
 
     internal var stdLibAnalysisEnabled: Boolean =
-        DEFAULT_STDLIB_ANALYSIS_ENABLED
+        ManagedCTestConfiguration.DEFAULT_STDLIB_ANALYSIS_ENABLED
 
     protected val guarantees: MutableList<ManagedStrategyGuarantee> =
         ArrayList(ManagedCTestConfiguration.DEFAULT_GUARANTEES)
