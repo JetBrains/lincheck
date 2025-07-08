@@ -312,7 +312,7 @@ tasks {
             // the `testIsolated` and `trace[Debugger/Recorder]IntegrationTest` tasks.
             exclude("**/*IsolatedTest*")
             exclude("org/jetbrains/trace/debugger/integration/*")
-            exclude("org/jetbrains/trace_recorder/integration/*")
+            exclude("org/jetbrains/trace/recorder/integration/*")
         }
         // Do not run JdkUnsafeTraceRepresentationTest on Java 12 or earlier,
         // as this test relies on specific ConcurrentHashMap implementation.
@@ -386,7 +386,7 @@ tasks {
     val traceRecorderIntegrationTest = register<Test>("traceRecorderIntegrationTest") {
         configureJvmTestCommon()
         group = "verification"
-        include("org/jetbrains/trace_recorder/integration/*")
+        include("org/jetbrains/trace/recorder/integration/*")
 
         testClassesDirs = sourceSets["traceRecorderIntegrationTest"].output.classesDirs
         classpath = sourceSets["traceRecorderIntegrationTest"].runtimeClasspath

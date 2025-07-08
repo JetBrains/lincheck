@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.traceagent
 
-import org.jetbrains.kotlinx.lincheck.tracerecorder.TraceRecorder
+import org.jetbrains.kotlinx.lincheck.trace.recorder.TraceRecorder
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 

@@ -11,8 +11,8 @@
 package org.jetbrains.kotlinx.lincheck.transformation
 
 import org.jetbrains.lincheck.trace.CodeLocations
-import org.jetbrains.kotlinx.lincheck.tracerecorder.transformers.MethodCallMinimalTransformer
-import org.jetbrains.kotlinx.lincheck.tracerecorder.transformers.ObjectCreationMinimalTransformer
+import org.jetbrains.kotlinx.lincheck.trace.recorder.transformers.MethodCallMinimalTransformer
+import org.jetbrains.kotlinx.lincheck.trace.recorder.transformers.ObjectCreationMinimalTransformer
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.commons.*
