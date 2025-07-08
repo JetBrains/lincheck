@@ -73,23 +73,55 @@ private class ThreadData(
     }
 }
 
-enum class TraceCollectorOutputType {
-    BINARY, `BINARY-MEM`, TEXT, VERBOSE
+/**
+ * Style of trace collecting and output
+ *
+ * Can be passed as a fourth argument to agent, in any case.
+ *
+ * Default is [BINARY]
+ */
+enum class TraceCollectorMode {
+    /**
+     * Write a binary format directly to the output file, without
+     * collecting it in memory.
+     *
+     * It is the default mode if a parameter is not passed or cannot be
+     * recognized.
+     */
+    BINARY,
+
+    /**
+     * Collect full trace in the memory and dump to the output file at the end
+     * of the run.
+     */
+    `BINARY-MEM`,
+
+    /**
+     * Collect full trace in memory and print it as text to the output file,
+     * without code locations.
+     */
+    TEXT,
+
+    /**
+     * Collect full trace in memory and print it as text to the output file,
+     * with code locations.
+     */
+    VERBOSE
 }
 
-fun String?.toTraceCollectorOutputType(): TraceCollectorOutputType {
-    if (this == null) return TraceCollectorOutputType.BINARY
-    for (v in TraceCollectorOutputType.entries) {
+fun String?.toTraceCollectorOutputType(): TraceCollectorMode {
+    if (this == null) return TraceCollectorMode.BINARY
+    for (v in TraceCollectorMode.entries) {
         if (this.equals(v.name, ignoreCase = true)) return v
     }
-    return TraceCollectorOutputType.BINARY
+    return TraceCollectorMode.BINARY
 }
 
 class TraceCollectingEventTracker(
     private val className: String,
     private val methodName: String,
     private val traceDumpPath: String?,
-    private val outputType: TraceCollectorOutputType
+    private val outputType: TraceCollectorMode
 ) :  EventTracker {
     // We don't want to re-create this object each time we need it
     private val analysisProfile: AnalysisProfile = AnalysisProfile(false)
@@ -102,11 +134,11 @@ class TraceCollectingEventTracker(
 
     init {
         when (outputType) {
-            TraceCollectorOutputType.BINARY -> {
+            TraceCollectorMode.BINARY -> {
                 check(traceDumpPath != null) { "Stream output type needs non-empty output file name" }
                 strategy = FileStreamingTraceCollecting(traceDumpPath, TRACE_CONTEXT)
             }
-            TraceCollectorOutputType.`BINARY-MEM` -> {
+            TraceCollectorMode.`BINARY-MEM` -> {
                 check(traceDumpPath != null) { "Binary output type needs non-empty output file name" }
                 strategy = MemoryTraceCollecting()
             }
@@ -528,7 +560,7 @@ class TraceCollectingEventTracker(
         System.err.println("Trace collected in ${System.currentTimeMillis() - startTime} ms")
         startTime = System.currentTimeMillis()
 
-        if (outputType == TraceCollectorOutputType.BINARY) {
+        if (outputType == TraceCollectorMode.BINARY) {
             return
         }
 
@@ -551,10 +583,10 @@ class TraceCollectingEventTracker(
                 }
             }
             when (outputType) {
-                TraceCollectorOutputType.`BINARY-MEM` -> saveRecorderTrace(traceDumpPath!!, TRACE_CONTEXT, roots)
-                TraceCollectorOutputType.TEXT -> printRecorderTrace(traceDumpPath, TRACE_CONTEXT, roots, false)
-                TraceCollectorOutputType.VERBOSE -> printRecorderTrace(traceDumpPath, TRACE_CONTEXT, roots, true)
-                TraceCollectorOutputType.BINARY -> Unit // Do nothing, everything is written
+                TraceCollectorMode.`BINARY-MEM` -> saveRecorderTrace(traceDumpPath!!, TRACE_CONTEXT, roots)
+                TraceCollectorMode.TEXT -> printRecorderTrace(traceDumpPath, TRACE_CONTEXT, roots, false)
+                TraceCollectorMode.VERBOSE -> printRecorderTrace(traceDumpPath, TRACE_CONTEXT, roots, true)
+                TraceCollectorMode.BINARY -> Unit // Do nothing, everything is written
             }
         } catch (t: Throwable) {
             System.err.println("TraceRecorder: Cannot write output file $traceDumpPath: ${t.message} at ${t.stackTraceToString()}")
