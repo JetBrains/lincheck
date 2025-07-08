@@ -21,6 +21,13 @@ import sun.nio.ch.lincheck.*
 /**
  * [MethodCallMinimalTransformer] tracks method calls,
  * injecting invocations of corresponding [EventTracker] methods.
+ *
+ *
+ * *Note*:
+ *
+ * [MethodCallMinimalTransformer] and [ObjectCreationMinimalTransformer] transformers are part of the `jvm-agent` subproject,
+ * and not the `trace-recorder` one, because they are not used directly by trace-recorder, but rather
+ * by the lincheck's [LincheckClassVisitor].
  */
 internal class MethodCallMinimalTransformer(
     fileName: String,
