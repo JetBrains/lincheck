@@ -159,7 +159,7 @@ internal fun getExpectedLogFileFromResources(fullFileName: String): File? =
     ClassLoader.getSystemResource("expected_logs/$fullFileName")?.file?.let { File(it) }
 
 internal fun getExpectedLogFileFromSources(fullFileName: String): File =
-    File("src/test/resources/expected_logs/$fullFileName")
+    File("src/jvm/test/resources/expected_logs/$fullFileName")
 
 // Generates a file name in one of the following forms:
 // prefix.txt, prefix_jdk15.txt, prefix_trace_debugger.txt, prefix_trace_debugger_jdk15.txt

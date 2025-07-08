@@ -120,7 +120,7 @@ internal class InlineMethodCallTransformer(
     }
 
     @Suppress("UNUSED_PARAMETER")
-    private fun processInlineMethodCall(className: String, inlineMethodName: String, ownerType: Type?, owner: Int?, startLabel: Label) = adapter.run {
+    private fun processInlineMethodCall(className: String, inlineMethodName: String, ownerType: org.objectweb.asm.Type?, owner: Int?, startLabel: Label) = adapter.run {
         // Create a fake method descriptor
         val methodId = getPseudoMethodId(className, startLabel, inlineMethodName)
         push(methodId)

@@ -13,7 +13,6 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
-import org.jetbrains.kotlinx.lincheck.transformation.isJavaLambdaClass
 import org.jetbrains.kotlinx.lincheck.util.*
 import java.lang.ref.WeakReference
 import java.lang.reflect.*

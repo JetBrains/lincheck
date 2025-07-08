@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
+import org.jetbrains.kotlinx.lincheck.util.isJavaLambdaClass
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.ANEWARRAY
 import org.objectweb.asm.Type.*
@@ -604,12 +605,6 @@ internal fun isCoroutineStateMachineClass(className: String): Boolean {
 }
 
 private val isCoroutineStateMachineClassMap = ConcurrentHashMap<String, Boolean>()
-
-/**
- * Test if the given class name corresponds to a Java lambda class.
- */
-fun isJavaLambdaClass(className: String): Boolean =
-    className.contains("\$\$Lambda")
 
 /**
  * Extracts and returns the enclosing class name of a Java lambda class.

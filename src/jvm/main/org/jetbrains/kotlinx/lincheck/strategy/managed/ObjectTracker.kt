@@ -12,7 +12,6 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import sun.nio.ch.lincheck.WeakIdentityReference
 import org.jetbrains.kotlinx.lincheck.util.*
-import org.jetbrains.kotlinx.lincheck.transformation.isJavaLambdaClass
 import kotlin.coroutines.Continuation
 import java.lang.ref.ReferenceQueue
 import java.lang.ref.WeakReference

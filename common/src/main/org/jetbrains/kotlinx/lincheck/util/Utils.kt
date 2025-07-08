@@ -38,3 +38,9 @@ private fun ideaPluginEnabled(): Boolean {
     // treat as enabled in tests if we want so
     return eventIdStrictOrderingCheck
 }
+
+/**
+ * Test if the given class name corresponds to a Java lambda class.
+ */
+fun isJavaLambdaClass(className: String): Boolean =
+    className.contains("\$\$Lambda")
