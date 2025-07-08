@@ -14,6 +14,7 @@ import org.jetbrains.kotlinx.lincheck_test.AbstractTraceIntegrationTest
 import java.nio.file.Paths
 
 abstract class AbstractTraceDebuggerIntegrationTest : AbstractTraceIntegrationTest() {
+    override val fatJarName: String = "trace-debugger-fat.jar"
     override val testSourcesPath = Paths.get("src", "jvm", "test-trace-debugger-integration").toString()
 
     final override fun runGradleTest(

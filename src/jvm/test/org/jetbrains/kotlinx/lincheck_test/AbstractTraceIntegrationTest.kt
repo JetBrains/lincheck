@@ -24,6 +24,7 @@ import java.net.URLClassLoader
 import java.nio.file.Paths
 
 abstract class AbstractTraceIntegrationTest {
+    abstract val fatJarName: String
     abstract val projectPath: String
     protected abstract val testSourcesPath: String
 
@@ -37,7 +38,8 @@ abstract class AbstractTraceIntegrationTest {
         extraJvmArgs: List<String>,
         extraAgentArgs: List<String>,
     ): String {
-        val pathToFatJar = File(Paths.get("build", "libs", "lincheck-fat.jar").toString())
+        val pathToFatJar = File(Paths.get("build", "libs", fatJarName).toString())
+        check(pathToFatJar.exists()) { "Agent fat-jar not found at '${pathToFatJar.absolutePath}'" }
         return """
             gradle.taskGraph.whenReady {
                 val jvmTasks = allTasks.filter { task -> task is JavaForkOptions }

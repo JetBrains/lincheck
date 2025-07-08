@@ -368,8 +368,8 @@ tasks {
 
     registerTraceAgentIntegrationTestsPrerequisites()
 
-    val copyTraceDebuggerFatJar = copyTraceAgentFatJar(project(":trace-debugger"))
-    val copyTraceRecorderFatJar = copyTraceAgentFatJar(project(":trace-recorder"))
+    val copyTraceDebuggerFatJar = copyTraceAgentFatJar(project(":trace-debugger"), "trace-debugger-fat.jar")
+    val copyTraceRecorderFatJar = copyTraceAgentFatJar(project(":trace-recorder"), "trace-recorder-fat.jar")
 
     val traceDebuggerIntegrationTest = register<Test>("traceDebuggerIntegrationTest") {
         configureJvmTestCommon()

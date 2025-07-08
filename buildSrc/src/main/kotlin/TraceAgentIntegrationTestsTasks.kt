@@ -63,15 +63,15 @@ fun Project.registerTraceAgentIntegrationTestsPrerequisites() {
 
     traceAgentIntegrationTestsPrerequisites = tasks.register("traceAgentIntegrationTestsPrerequisites") {
         prerequisite.forEach { dependsOn(it) }
-        dependsOn(":trace-debugger:traceAgentFatJar")
-        dependsOn(":trace-recorder:traceAgentFatJar")
+        dependsOn(":trace-debugger:traceDebuggerFatJar")
+        dependsOn(":trace-recorder:traceRecorderFatJar")
     }
 }
 
-fun Project.copyTraceAgentFatJar(fromProject: Project): TaskProvider<Copy> {
-    val copyTraceAgentFatJar = tasks.register<Copy>("${fromProject.name}_copyTraceAgentFatJar") {
+fun Project.copyTraceAgentFatJar(fromProject: Project, fatJarName: String): TaskProvider<Copy> {
+    val copyTraceAgentFatJar = tasks.register<Copy>("${fromProject.name}_copyAgentFatJar") {
         dependsOn(traceAgentIntegrationTestsPrerequisites)
-        val fatJarFile = fromProject.layout.buildDirectory.file("libs/lincheck-fat.jar")
+        val fatJarFile = fromProject.layout.buildDirectory.file("libs/$fatJarName")
         from(fatJarFile)
         into(layout.buildDirectory.dir("libs"))
     }

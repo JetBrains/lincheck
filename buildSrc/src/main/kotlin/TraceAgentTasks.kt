@@ -19,7 +19,7 @@ import org.gradle.api.plugins.JavaPluginExtension
 
 // Below are tasks that are used by the trace debugger plugin.
 // When these jars are loaded the `-Dlincheck.traceDebuggerMode=true` or `-Dlincheck.traceRecorderMode=true` VM argument is expected
-fun Project.registerTraceAgentTasks() {
+fun Project.registerTraceAgentTasks(fatJarName: String, fatJarTaskName: String, premainClass: String) {
     // Ensure the Java plugin is applied (for sourceSets and runtimeClasspath)
     plugins.apply("java")
 
@@ -28,8 +28,8 @@ fun Project.registerTraceAgentTasks() {
 
     val runtimeClasspath = configurations.getByName("runtimeClasspath")
 
-    val traceAgentFatJar = tasks.register<Jar>("traceAgentFatJar") {
-        archiveBaseName.set("lincheck-fat")
+    val traceAgentFatJar = tasks.register<Jar>(fatJarTaskName) {
+        archiveBaseName.set(fatJarName)
         archiveVersion.set("")
         duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
@@ -48,7 +48,8 @@ fun Project.registerTraceAgentTasks() {
         manifest {
             attributes(
                 mapOf(
-                    "Premain-Class" to "org.jetbrains.kotlinx.lincheck.traceagent.TraceAgent",
+                    "Premain-Class" to premainClass,
+                            //"org.jetbrains.kotlinx.lincheck.traceagent.TraceAgent",
                     "Can-Redefine-Classes" to "true",
                     "Can-Retransform-Classes" to "true"
                 )
@@ -57,8 +58,8 @@ fun Project.registerTraceAgentTasks() {
     }
 
     // This jar is useful to add as a dependency to a test project to be able to debug
-    val traceAgentJarNoDeps = tasks.register<Jar>("traceAgentJarNoDeps") {
-        archiveBaseName.set("nodeps-trace-debugger")
+    val traceAgentJarNoDeps = tasks.register<Jar>("${fatJarTaskName}NoDeps") {
+        archiveBaseName.set("nodeps-$fatJarName")
         duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
         from(mainSourceSet.output)

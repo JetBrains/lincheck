@@ -18,7 +18,7 @@ import org.jetbrains.kotlinx.lincheck.util.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.util.isInTraceRecorderMode
 import java.lang.instrument.Instrumentation
 
-object TraceAgent {
+object TraceDebuggerAgent {
     @JvmStatic
     fun premain(agentArgs: String?, inst: Instrumentation) {
         /*

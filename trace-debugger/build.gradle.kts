@@ -48,4 +48,8 @@ tasks {
     }
 }
 
-registerTraceAgentTasks()
+registerTraceAgentTasks(
+    fatJarName = "trace-debugger-fat",
+    fatJarTaskName = "traceDebuggerFatJar",
+    premainClass = "org.jetbrains.kotlinx.lincheck.traceagent.TraceDebuggerAgent"
+)

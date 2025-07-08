@@ -23,7 +23,7 @@ import java.lang.instrument.Instrumentation
  * `-Dlincheck.traceRecorderMode=true` in order to enable trace debugging plugin or trace recorder functionality
  * accordingly.
  */
-internal object TraceAgent {
+internal object TraceRecorderAgent {
     @JvmStatic
     fun premain(agentArgs: String?, inst: Instrumentation) {
         /*

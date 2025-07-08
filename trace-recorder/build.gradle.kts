@@ -48,4 +48,8 @@ tasks {
     }
 }
 
-registerTraceAgentTasks()
+registerTraceAgentTasks(
+    fatJarName = "trace-recorder-fat",
+    fatJarTaskName = "traceRecorderFatJar",
+    premainClass = "org.jetbrains.kotlinx.lincheck.traceagent.TraceRecorderAgent"
+)
