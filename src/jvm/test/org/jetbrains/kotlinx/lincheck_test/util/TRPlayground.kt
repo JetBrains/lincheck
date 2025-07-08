@@ -11,17 +11,30 @@
 package org.jetbrains.kotlinx.lincheck_test.util
 
 import org.jetbrains.kotlinx.lincheck.tracedata.LazyTraceReader
+import org.jetbrains.kotlinx.lincheck.tracedata.loadRecordedTrace
 import org.jetbrains.lincheck.trace.TRACE_CONTEXT
 import org.jetbrains.lincheck.trace.TRMethodCallTracePoint
 import org.jetbrains.lincheck.trace.printRecorderTrace
+import java.io.FileInputStream
 
 fun main(args: Array<String>) {
-    // val (context, trace) = loadRecordedTrace(FileInputStream("C:\\home\\lev\\Projects\\kotlinx.collections.immutable\\core\\output.bin"))
+    // Choose one!
 
-    val context = TRACE_CONTEXT
-    val reader = LazyTraceReader("C:\\home\\lev\\dada\\FundsTest_testTransfers1056732866102702014.bin")
+    // eagerLoadAndPrintTrace("<path to binary file>")
+
+    // lazyLoadAndPrintTrace("<path to binary file>")
+}
+
+private fun eagerLoadAndPrintTrace(fileName: String) {
+    val trace = loadRecordedTrace(FileInputStream(fileName))
+    printRecorderTrace(System.out, trace.context, trace.roots, true)
+}
+
+private fun lazyLoadAndPrintTrace(fileName: String) {
+    val reader = LazyTraceReader(fileName)
     val trace = reader.readRoots()
     reader.loadChildrenRange(trace.first() as TRMethodCallTracePoint, 5, 5)
+    // Or you could run or other variant to load children
     // reader.loadAllChildren(trace.first() as TRMethodCallTracePoint)
-    printRecorderTrace(System.out, context, trace, true)
+    printRecorderTrace(System.out, reader.context, trace, true)
 }
