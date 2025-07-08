@@ -569,11 +569,11 @@ class FileStreamingTraceCollecting(
     private val data: DataOutputStream = DataOutputStream(pos)
     private val index: DataOutputStream = DataOutputStream(indexStream.buffered(OUTPUT_BUFFER_SIZE))
 
-    private var seenClassDescriptors = AtomicBitmap(1024)
-    private var seenMethodDescriptors = AtomicBitmap(1024)
-    private var seenFieldDescriptors = AtomicBitmap(1024)
-    private var seenVariableDescriptors = AtomicBitmap(1024)
-    private var seenCodeLocations = AtomicBitmap(1024)
+    private var seenClassDescriptors = AtomicBitmap()
+    private var seenMethodDescriptors = AtomicBitmap()
+    private var seenFieldDescriptors = AtomicBitmap()
+    private var seenVariableDescriptors = AtomicBitmap()
+    private var seenCodeLocations = AtomicBitmap()
     private val stringCache = ConcurrentHashMap<String, Int>()
     private val stringIdGenerator = AtomicInteger(1)
 

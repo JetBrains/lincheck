@@ -11,56 +11,69 @@
 package org.jetbrains.lincheck.trace
 
 import java.util.concurrent.atomic.AtomicLongArray
-import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.max
 
-private const val ATOMIC_SIZE_BITS = Long.SIZE_BITS
-private const val ATOMIC_SIZE_SHIFT = 6
-private const val ATOMIC_BIT_MASK = 0x3F
+private const val ATOMIC_SIZE_BITS = Long.SIZE_BITS                          // Bits in one atomic array cell (Long)
+private const val ATOMIC_SIZE_BYTES = Long.SIZE_BYTES                        // Bytes in one atomic array cell (Long)
+private const val ATOMIC_SIZE_SHIFT = 6                                      // log2(ATOMIC_SIZE_BITS)
+private const val ATOMIC_BIT_MASK = (1 shl ATOMIC_SIZE_SHIFT)                // Mask to have a reminder for division by ATOMIC_SIZE_BITS
+private const val ATOMIC_CHUNK_BYTES = 4096                                  // One chunk in bytes (typical page)
+private const val ATOMIC_CHUNK_SIZE = ATOMIC_CHUNK_BYTES / ATOMIC_SIZE_BYTES // One chunk in cells
+private const val ATOMIC_CHUNK_BITS = ATOMIC_CHUNK_SIZE * ATOMIC_SIZE_BYTES  // One chunk in bits
+private const val ATOMIC_CHUNK_SHIFT = 15                                    // log2(ATOMIC_CHUNK_BITS)
+private const val ATOMIC_CHUNK_MASK = (1 shl ATOMIC_CHUNK_SHIFT) - 1         // Mask to have a reminder for division by ATOMIC_CHUNK_BITS
 
-internal class AtomicBitmap(size: Int) {
-    private val bitmap = AtomicReference(AtomicLongArray(size / ATOMIC_SIZE_BITS))
+internal class AtomicBitmap {
+    private val bitmap = ArrayList<AtomicLongArray>()
+    @Volatile
+    private var chunkCount = 0
+
+    init {
+        // Add the first chunk
+        bitmap.add(AtomicLongArray(ATOMIC_CHUNK_SIZE))
+        chunkCount = 1
+    }
 
     fun isSet(id: Int): Boolean {
-        val idx = id shr ATOMIC_SIZE_SHIFT
-        val bit = 1L shl (id and ATOMIC_BIT_MASK)
-        return isSet(idx, bit)
-    }
+        val chunk = id shr ATOMIC_CHUNK_SHIFT
+        // volatile read to see changes by another thread
+        if (chunk >= chunkCount) return false
 
-    fun set(id: Int) {
-        val idx = id shr ATOMIC_SIZE_SHIFT
-        val bit = 1L shl (id and ATOMIC_BIT_MASK)
+        val bitInChunk = id and ATOMIC_CHUNK_MASK
 
-        val b = bitmap.get()
-        if (idx >= b.length()) {
-            resizeBitmap(idx)
-        }
-        while (!isSet(idx, bit)) {
-            do {
-                val b = bitmap.get()
-                val oldVal = b.get(idx)
-            } while (!b.compareAndSet(idx, oldVal, oldVal or bit))
-        }
-    }
+        val idx = bitInChunk shr ATOMIC_SIZE_SHIFT
+        val bit = 1L shl (bitInChunk and ATOMIC_BIT_MASK)
 
-    private fun isSet(idx: Int, bit: Long): Boolean {
-        val b = bitmap.get()
-        if (idx >= b.length()) return false
-        val value = b.get(idx)
+        val ch = bitmap.get(chunk)
+        val value = ch.get(idx)
         return (value and bit) != 0L
     }
 
-    private fun resizeBitmap(idx: Int) {
-        do {
-            val b = bitmap.get()
-            // Another thread was faster
-            if (b.length() > idx) return
+    fun set(id: Int) {
+        val chunk = id shr ATOMIC_CHUNK_SHIFT
+        val bitInChunk = id and ATOMIC_CHUNK_MASK
 
-            val newLen = max(idx + 1, b.length() + b.length() / 2)
-            val newB = AtomicLongArray(newLen)
-            for (i in 0..< b.length()) {
-                newB.lazySet(i,b.get(i))
-            }
-        } while (!bitmap.compareAndSet(b, newB))
+        val idx = bitInChunk shr ATOMIC_SIZE_SHIFT
+        val bit = 1L shl (bitInChunk and ATOMIC_BIT_MASK)
+
+        // volatile read of chunkCount
+        if (chunk >= chunkCount) {
+            resizeBitmap(chunk)
+        }
+
+        val ch = bitmap.get(chunk)
+        do {
+            val value = ch.get(idx)
+            val newValue = value or bit
+        } while (ch.compareAndSet(idx, value, newValue))
+    }
+    @Synchronized
+    private fun resizeBitmap(chunk: Int) {
+        // volatile read of chunkCount
+        while (chunk >= bitmap.size) {
+            bitmap.add(AtomicLongArray(ATOMIC_CHUNK_SIZE))
+        }
+        // volatile write for future atomic reads on a hot path
+        chunkCount = bitmap.size
     }
 }
