@@ -16,6 +16,7 @@ import org.jetbrains.lincheck.datastructures.ManagedCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.util.DEFAULT_LOG_LEVEL
 import org.jetbrains.kotlinx.lincheck.util.LoggingLevel
+import org.jetbrains.kotlinx.lincheck.util.ideaPluginEnabled
 import org.jetbrains.lincheck.datastructures.CTestConfiguration
 import org.jetbrains.lincheck.datastructures.Options
 import org.jetbrains.lincheck.datastructures.RandomProvider

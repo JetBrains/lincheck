@@ -10,7 +10,6 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
-import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.lincheck.trace.CodeLocations
 import org.jetbrains.kotlinx.lincheck.tracerecorder.transformers.MethodCallMinimalTransformer
 import org.jetbrains.kotlinx.lincheck.tracerecorder.transformers.ObjectCreationMinimalTransformer
@@ -20,6 +19,7 @@ import org.objectweb.asm.commons.*
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
 import org.jetbrains.kotlinx.lincheck.transformation.transformers.*
 import org.jetbrains.kotlinx.lincheck.util.Logger
+import org.jetbrains.kotlinx.lincheck.util.ideaPluginEnabled
 import org.jetbrains.kotlinx.lincheck.util.isInTraceDebuggerMode
 import sun.nio.ch.lincheck.*
 

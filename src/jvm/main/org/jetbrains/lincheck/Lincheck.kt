@@ -13,7 +13,7 @@ import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.ExceptionResult
 import org.jetbrains.lincheck.datastructures.createVerifier
 import org.jetbrains.kotlinx.lincheck.runPluginReplay
-import org.jetbrains.kotlinx.lincheck.ideaPluginEnabled
+import org.jetbrains.kotlinx.lincheck.util.ideaPluginEnabled
 import org.jetbrains.lincheck.datastructures.CTestConfiguration
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
