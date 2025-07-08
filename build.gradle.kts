@@ -311,7 +311,7 @@ tasks {
             // Unfortunately, the current Gradle support doesn't detect
             // the `testIsolated` and `trace[Debugger/Recorder]IntegrationTest` tasks.
             exclude("**/*IsolatedTest*")
-            exclude("org/jetbrains/trace_debugger/integration/*")
+            exclude("org/jetbrains/trace/debugger/integration/*")
             exclude("org/jetbrains/trace_recorder/integration/*")
         }
         // Do not run JdkUnsafeTraceRepresentationTest on Java 12 or earlier,
@@ -374,7 +374,7 @@ tasks {
     val traceDebuggerIntegrationTest = register<Test>("traceDebuggerIntegrationTest") {
         configureJvmTestCommon()
         group = "verification"
-        include("org/jetbrains/trace_debugger/integration/*")
+        include("org/jetbrains/trace/debugger/integration/*")
 
         testClassesDirs = sourceSets["traceDebuggerIntegrationTest"].output.classesDirs
         classpath = sourceSets["traceDebuggerIntegrationTest"].runtimeClasspath

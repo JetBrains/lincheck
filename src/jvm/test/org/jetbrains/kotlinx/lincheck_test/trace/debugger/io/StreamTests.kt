@@ -8,10 +8,10 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck_test.trace_debugger.io
+package org.jetbrains.kotlinx.lincheck_test.trace.debugger.io
 
+import org.jetbrains.kotlinx.lincheck_test.trace.debugger.AbstractDeterministicTest
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.kotlinx.lincheck_test.trace_debugger.AbstractDeterministicTest
 import java.io.*
 
 abstract class StreamOperationTest : AbstractDeterministicTest()
