@@ -49,7 +49,6 @@ fun Project.registerTraceAgentTasks(fatJarName: String, fatJarTaskName: String, 
             attributes(
                 mapOf(
                     "Premain-Class" to premainClass,
-                            //"org.jetbrains.kotlinx.lincheck.traceagent.TraceAgent",
                     "Can-Redefine-Classes" to "true",
                     "Can-Retransform-Classes" to "true"
                 )

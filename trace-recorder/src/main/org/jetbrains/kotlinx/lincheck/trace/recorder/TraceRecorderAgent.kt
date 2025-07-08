@@ -10,8 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck.trace.recorder
 
-import org.jetbrains.kotlinx.lincheck.traceagent.TraceAgentParameters
-import org.jetbrains.kotlinx.lincheck.traceagent.TraceAgentTransformer
+import org.jetbrains.kotlinx.lincheck.trace.agent.TraceAgentParameters
+import org.jetbrains.kotlinx.lincheck.trace.agent.TraceAgentTransformer
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.transformation.isInstrumentationInitialized
 import org.jetbrains.kotlinx.lincheck.transformation.isTraceJavaAgentAttached

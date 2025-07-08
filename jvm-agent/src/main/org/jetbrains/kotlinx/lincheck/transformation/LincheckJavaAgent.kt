@@ -88,7 +88,7 @@ object LincheckJavaAgent {
     /**
      * The [Instrumentation] instance is used to perform bytecode transformations during runtime.
      *
-     * It is set either by [TraceAgent] static agent, or on the first call to
+     * It is set either by `TraceDebuggerAgent`/`TraceRecorderAgent` static agents, or on the first call to
      * [withLincheckJavaAgent] which will use [ByteBuddyAgent] dynamic agent instead.
      */
     lateinit var instrumentation: Instrumentation
