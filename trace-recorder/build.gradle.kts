@@ -47,6 +47,13 @@ tasks {
     named<KotlinCompile>("compileTestKotlin") {
         setupKotlinToolchain(project)
     }
+
+    withType<KotlinCompile> {
+        getAccessToInternalDefinitionsOf(
+            project(":common"),
+            project(":trace")
+        )
+    }
 }
 
 registerTraceAgentTasks(

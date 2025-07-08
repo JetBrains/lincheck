@@ -17,7 +17,7 @@ package org.jetbrains.kotlinx.lincheck.trace
  * along with their corresponding code locations. To minimize overhead, Lincheck assigns unique IDs to all
  * code locations it analyses, and stores more detailed information necessary for trace generation in this object.
  */
-object CodeLocations {
+internal object CodeLocations {
     /**
      * Registers a new code location and returns its unique ID.
      *

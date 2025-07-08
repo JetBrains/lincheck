@@ -14,7 +14,7 @@ import java.util.ArrayList
 import java.util.Objects
 import kotlin.math.max
 
-object Types {
+internal object Types {
     private fun convertAsmTypeName(className: String): Type {
         when (className) {
             "V" -> return VOID_TYPE

@@ -14,6 +14,7 @@ plugins {
 
 repositories {
     mavenCentral()
+    gradlePluginPortal()
 }
 
 dependencies {
@@ -23,4 +24,9 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
     implementation("org.jetbrains.dokka:dokka-gradle-plugin:$dokkaVersion")
     implementation("de.undercouch.download:de.undercouch.download.gradle.plugin:5.6.0")
+
+    implementation(gradleApi())
+    implementation(gradleKotlinDsl())
+    implementation(kotlin("gradle-plugin"))
+    implementation("org.gradle.kotlin:gradle-kotlin-dsl-plugins:4.2.1")  // Add this line
 }

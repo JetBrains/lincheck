@@ -13,7 +13,7 @@ package org.jetbrains.kotlinx.lincheck.util
 import org.jetbrains.kotlinx.lincheck.trace.MethodDescriptor
 import org.jetbrains.kotlinx.lincheck.trace.Types
 
-fun MethodDescriptor.isArraysCopyOfIntrinsic(): Boolean {
+internal fun MethodDescriptor.isArraysCopyOfIntrinsic(): Boolean {
     return (
         className == "java.util.Arrays" &&
         methodName == "copyOf" &&
@@ -26,7 +26,7 @@ fun MethodDescriptor.isArraysCopyOfIntrinsic(): Boolean {
     )
 }
 
-fun MethodDescriptor.isArraysCopyOfRangeIntrinsic(): Boolean {
+internal fun MethodDescriptor.isArraysCopyOfRangeIntrinsic(): Boolean {
     return (
         className == "java.util.Arrays" &&
         methodName.contains("copyOfRange") &&
@@ -48,7 +48,7 @@ fun MethodDescriptor.isArraysCopyOfRangeIntrinsic(): Boolean {
 
 // TODO: java 8 does not have `@HotSpotIntrinsicCandidate`/`@IntrinsicCandidate` annotations
 //  add all tracked intrinsics here
-fun MethodDescriptor.isTrackedIntrinsic(): Boolean =
+internal fun MethodDescriptor.isTrackedIntrinsic(): Boolean =
     isArraysCopyOfIntrinsic() ||
     isArraysCopyOfRangeIntrinsic()
 

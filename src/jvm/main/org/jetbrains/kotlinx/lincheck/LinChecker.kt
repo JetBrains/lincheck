@@ -319,7 +319,7 @@ fun <O : Options<O, *>> O.check(testClass: KClass<*>) = check(testClass)
  * @param testClass Tested class.
  * @return [LincheckFailure] if a failure is discovered, null otherwise.
  */
-fun <O : Options<O, *>> O.checkImpl(testClass: Class<*>): LincheckFailure? =
+internal fun <O : Options<O, *>> O.checkImpl(testClass: Class<*>): LincheckFailure? =
     @Suppress("DEPRECATION")
     LinChecker(testClass, this).checkImpl()
 

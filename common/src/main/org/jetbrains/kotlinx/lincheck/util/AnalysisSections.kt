@@ -43,7 +43,7 @@ import sun.nio.ch.lincheck.ThreadDescriptor
  * Local sections: [NORMAL], [SILENT].
  * Propagating sections: [SILENT_PROPAGATING], [ATOMIC], [IGNORED].
  */
-enum class AnalysisSectionType {
+internal enum class AnalysisSectionType {
 
     /**
      * Normal section without special handling.
@@ -94,10 +94,10 @@ enum class AnalysisSectionType {
     IGNORED,
 }
 
-fun AnalysisSectionType.isCallStackPropagating() =
+internal fun AnalysisSectionType.isCallStackPropagating() =
     this >= AnalysisSectionType.SILENT_PROPAGATING
 
-fun AnalysisSectionType.isSilent() =
+internal fun AnalysisSectionType.isSilent() =
     this == AnalysisSectionType.SILENT         ||
     this == AnalysisSectionType.SILENT_PROPAGATING
 
@@ -105,14 +105,14 @@ fun AnalysisSectionType.isSilent() =
 /**
  * Enables analysis for the current thread.
  */
-fun enableAnalysis() {
+internal fun enableAnalysis() {
     Injections.enableAnalysis()
 }
 
 /**
  * Disables analysis for the current thread.
  */
-fun disableAnalysis() {
+internal fun disableAnalysis() {
     Injections.disableAnalysis()
 }
 
@@ -122,7 +122,7 @@ fun disableAnalysis() {
  * Does not affect the current thread if it is untracked
  * (e.g. not registered in the Lincheck strategy).
  */
-fun enterIgnoredSection() {
+internal fun enterIgnoredSection() {
     Injections.enterIgnoredSection()
 }
 
@@ -132,7 +132,7 @@ fun enterIgnoredSection() {
  * Does not affect the current thread if it is untracked
  * (e.g. not registered in the Lincheck strategy).
  */
-fun leaveIgnoredSection() {
+internal fun leaveIgnoredSection() {
     Injections.leaveIgnoredSection()
 }
 
@@ -146,7 +146,7 @@ fun leaveIgnoredSection() {
  * @param block the code to execute within the ignored section.
  * @return result of the [block] invocation.
  */
-inline fun <R> runInsideIgnoredSection(block: () -> R): R {
+internal inline fun <R> runInsideIgnoredSection(block: () -> R): R {
     val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: return block()
     desc.enterIgnoredSection()
     try {
@@ -164,7 +164,7 @@ inline fun <R> runInsideIgnoredSection(block: () -> R): R {
  * @return result of [block] invocation.
  * @throws IllegalStateException if the method is called not from an ignored section.
  */
-inline fun <R> runOutsideIgnoredSection(block: () -> R): R {
+internal inline fun <R> runOutsideIgnoredSection(block: () -> R): R {
     val descriptor = ThreadDescriptor.getCurrentThreadDescriptor()
     if (
         descriptor == null ||
@@ -196,7 +196,7 @@ inline fun <R> runOutsideIgnoredSection(block: () -> R): R {
  *                        standard collections and concurrent collections are hidden,
  *                        concurrent collections are muted.
  */
-class AnalysisProfile(val analyzeStdLib: Boolean) {
+internal class AnalysisProfile(val analyzeStdLib: Boolean) {
 
     /**
      * Determines whether a given class and method should be transformed (instrumented) for analysis.

@@ -10,37 +10,37 @@
 
 package org.jetbrains.kotlinx.lincheck.util
 
-fun Boolean.ensureTrue(): Boolean {
+internal fun Boolean.ensureTrue(): Boolean {
     // TODO: add contracts?
     check(this == true)
     return this
 }
 
-fun Boolean.ensureFalse(): Boolean {
+internal fun Boolean.ensureFalse(): Boolean {
     // TODO: add contracts?
     check(this == false)
     return this
 }
 
-inline fun<T> T.ensure(predicate: (T) -> Boolean): T {
+internal inline fun<T> T.ensure(predicate: (T) -> Boolean): T {
     // TODO: add contracts?
     check(predicate(this))
     return this
 }
 
-inline fun<T> T.ensure(predicate: (T) -> Boolean, lazyMessage: (T?) -> Any): T {
+internal inline fun<T> T.ensure(predicate: (T) -> Boolean, lazyMessage: (T?) -> Any): T {
     // TODO: add contracts?
     check(predicate(this)) { lazyMessage(this) }
     return this
 }
 
-fun<T> T?.ensureNull(): T? {
+internal fun<T> T?.ensureNull(): T? {
     // TODO: add contracts?
     check(this == null)
     return this
 }
 
-fun<T> T?.ensureNull(lazyMessage: (T?) -> Any): T? {
+internal fun<T> T?.ensureNull(lazyMessage: (T?) -> Any): T? {
     // TODO: add contracts?
     check(this == null) { lazyMessage(this) }
     return this

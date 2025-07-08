@@ -10,13 +10,13 @@
 
 package org.jetbrains.kotlinx.lincheck.trace
 
-val TRACE_CONTEXT: TraceContext = TraceContext()
+internal val TRACE_CONTEXT: TraceContext = TraceContext()
 
-const val UNKNOWN_CODE_LOCATION_ID = -1
+internal const val UNKNOWN_CODE_LOCATION_ID = -1
 
 private val EMPTY_STACK_TRACE = StackTraceElement("", "", "", 0)
 
-class TraceContext {
+internal class TraceContext {
     private val locations = ArrayList<StackTraceElement>()
     private val classes = IndexedPool<ClassDescriptor>()
     private val methods = IndexedPool<MethodDescriptor>()

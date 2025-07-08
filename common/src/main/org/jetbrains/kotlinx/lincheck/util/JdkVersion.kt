@@ -14,7 +14,7 @@ package org.jetbrains.kotlinx.lincheck.util
 /**
  * Represents a set of Java Development Kit (JDK) major versions since JDK 6.
  */
-enum class JdkVersion {
+internal  enum class JdkVersion {
     JDK_6, JDK_7, JDK_8, JDK_9, JDK_10, JDK_11, JDK_12, JDK_13, JDK_14, JDK_15,
     JDK_16, JDK_17, JDK_18, JDK_19, JDK_20, JDK_21, JDK_22, JDK_23, JDK_24, JDK_25;
     override fun toString(): String {
@@ -22,13 +22,13 @@ enum class JdkVersion {
     }
 }
 
-val DEFAULT_TEST_JDK_VERSION = JdkVersion.JDK_17
+internal val DEFAULT_TEST_JDK_VERSION = JdkVersion.JDK_17
 
 /**
  * Determines the current JDK version based on the `java.specification.version` system property.
  * If the system property indicates an unsupported JDK version, an error is thrown.
  */
-val jdkVersion: JdkVersion = run {
+internal val jdkVersion: JdkVersion = run {
     val jdkVersion = System.getProperty("java.specification.version")
     // java.specification.version is "1.x" for Java prior to 8 and "x" for the newer ones
     when {
@@ -64,4 +64,4 @@ val jdkVersion: JdkVersion = run {
 /**
  * Indicates whether the current Java Development Kit (JDK) version is JDK 8.
  */
-val isJdk8 = (jdkVersion == JdkVersion.JDK_8)
+internal val isJdk8 = (jdkVersion == JdkVersion.JDK_8)

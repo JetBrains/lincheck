@@ -13,15 +13,15 @@ package org.jetbrains.kotlinx.lincheck.util
 // Trace agent modes
 private const val TRACE_DEBUGGER_MODE_PROPERTY = "lincheck.traceDebuggerMode"
 private const val TRACE_RECORDER_MODE_PROPERTY = "lincheck.traceRecorderMode"
-val isInTraceDebuggerMode by lazy { System.getProperty(TRACE_DEBUGGER_MODE_PROPERTY, "false").toBoolean() }
-val isInTraceRecorderMode by lazy { System.getProperty(TRACE_RECORDER_MODE_PROPERTY, "false").toBoolean() }
+internal val isInTraceDebuggerMode by lazy { System.getProperty(TRACE_DEBUGGER_MODE_PROPERTY, "false").toBoolean() }
+internal val isInTraceRecorderMode by lazy { System.getProperty(TRACE_RECORDER_MODE_PROPERTY, "false").toBoolean() }
 
 
 // Idea plugin flags
 /**
  * Internal property to check that trace point IDs are in a strict sequential order.
  */
-val eventIdStrictOrderingCheck =
+internal val eventIdStrictOrderingCheck =
     System.getProperty("lincheck.debug.withEventIdSequentialCheck") != null
 
 /**
@@ -29,7 +29,7 @@ val eventIdStrictOrderingCheck =
  * We will call `ideaPluginEnabled` method only once
  * and so on the plugin side the callback will be called also only once.
  */
-val ideaPluginEnabled by lazy { ideaPluginEnabled() }
+internal val ideaPluginEnabled by lazy { ideaPluginEnabled() }
 
 /**
  * Debugger replaces the result of this method to `true` if idea plugin is enabled.
@@ -42,5 +42,5 @@ private fun ideaPluginEnabled(): Boolean {
 /**
  * Test if the given class name corresponds to a Java lambda class.
  */
-fun isJavaLambdaClass(className: String): Boolean =
+internal fun isJavaLambdaClass(className: String): Boolean =
     className.contains("\$\$Lambda")

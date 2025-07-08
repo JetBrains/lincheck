@@ -10,17 +10,17 @@
 
 package org.jetbrains.kotlinx.lincheck.trace
 
-data class ClassDescriptor(
+internal data class ClassDescriptor(
     val name: String,
 )
 
-data class MethodSignature(val name: String, val methodType: Types.MethodType) {
+internal data class MethodSignature(val name: String, val methodType: Types.MethodType) {
     override fun toString(): String {
         return "$name$methodType"
     }
 }
 
-data class MethodDescriptor(
+internal data class MethodDescriptor(
     private val context: TraceContext,
     val classId: Int,
     val methodSignature: MethodSignature
@@ -35,7 +35,7 @@ data class MethodDescriptor(
     override fun toString(): String = "$className.$methodSignature"
 }
 
-data class FieldDescriptor(
+internal data class FieldDescriptor(
     private val context: TraceContext,
     val classId: Int,
     val fieldName: String,
@@ -45,6 +45,6 @@ data class FieldDescriptor(
     val className: String get() = context.getClassDescriptor(classId).name
 }
 
-data class VariableDescriptor(
+internal data class VariableDescriptor(
     val name: String,
 )

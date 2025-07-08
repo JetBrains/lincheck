@@ -27,6 +27,10 @@ tasks {
     named<KotlinCompile>("compileTestKotlin") {
         setupKotlinToolchain(project)
     }
+
+    withType<KotlinCompile> {
+        getAccessToInternalDefinitionsOf(project(":common"))
+    }
 }
 
 val jar = tasks.jar {

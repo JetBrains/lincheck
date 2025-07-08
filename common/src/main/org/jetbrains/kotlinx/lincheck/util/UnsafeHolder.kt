@@ -15,7 +15,7 @@ import java.lang.reflect.Field
 import java.lang.reflect.Modifier
 import java.util.concurrent.ConcurrentHashMap
 
-object UnsafeHolder {
+internal object UnsafeHolder {
     val UNSAFE: Unsafe = try {
         val unsafeField = Unsafe::class.java.getDeclaredField("theUnsafe")
         unsafeField.isAccessible = true
@@ -29,7 +29,7 @@ val fieldOffsetCache = ConcurrentHashMap<Field, Long>()
 val fieldBaseObjectCache = ConcurrentHashMap<Field, Any>()
 
 @Suppress("DEPRECATION")
-inline fun <T> readFieldViaUnsafe(obj: Any?, field: Field, getter: Unsafe.(Any?, Long) -> T): T {
+internal inline fun <T> readFieldViaUnsafe(obj: Any?, field: Field, getter: Unsafe.(Any?, Long) -> T): T {
     if (Modifier.isStatic(field.modifiers)) {
         val base = fieldBaseObjectCache.computeIfAbsent(field) {
             UnsafeHolder.UNSAFE.staticFieldBase(it)
@@ -46,7 +46,7 @@ inline fun <T> readFieldViaUnsafe(obj: Any?, field: Field, getter: Unsafe.(Any?,
     }
 }
 
-fun readFieldViaUnsafe(obj: Any?, field: Field): Any? {
+internal fun readFieldViaUnsafe(obj: Any?, field: Field): Any? {
     if (!field.type.isPrimitive) {
         return readFieldViaUnsafe(obj, field, Unsafe::getObject)
     }
@@ -67,7 +67,7 @@ fun readFieldViaUnsafe(obj: Any?, field: Field): Any? {
  * Reads a [field] of the owner object [obj] via Unsafe,
  * in case of failure fallbacks into reading the field via reflection.
  */
-fun readFieldSafely(obj: Any?, field: Field): Result<Any?> =
+internal fun readFieldSafely(obj: Any?, field: Field): Result<Any?> =
     // we wrap an unsafe read into `runCatching` to handle `UnsupportedOperationException`,
     // which can be thrown, for instance, when attempting to read
     // a field of a hidden or record class (starting from Java 15);
@@ -87,7 +87,7 @@ fun readFieldSafely(obj: Any?, field: Field): Result<Any?> =
         Logger.debug(exception)
     }
 
-fun readArrayElementViaUnsafe(arr: Any, index: Int): Any? {
+internal fun readArrayElementViaUnsafe(arr: Any, index: Int): Any? {
     val offset = getArrayElementOffsetViaUnsafe(arr, index)
     val componentType = arr::class.java.componentType
 
@@ -108,7 +108,7 @@ fun readArrayElementViaUnsafe(arr: Any, index: Int): Any? {
     }
 }
 
-fun getArrayElementOffsetViaUnsafe(arr: Any, index: Int): Long {
+internal fun getArrayElementOffsetViaUnsafe(arr: Any, index: Int): Long {
     val clazz = arr::class.java
     val baseOffset = UnsafeHolder.UNSAFE.arrayBaseOffset(clazz).toLong()
     val indexScale = UnsafeHolder.UNSAFE.arrayIndexScale(clazz).toLong()
@@ -116,7 +116,7 @@ fun getArrayElementOffsetViaUnsafe(arr: Any, index: Int): Long {
 }
 
 @Suppress("DEPRECATION")
-inline fun writeFieldViaUnsafe(obj: Any?, field: Field, value: Any?, setter: Unsafe.(Any?, Long, Any?) -> Unit) {
+internal inline fun writeFieldViaUnsafe(obj: Any?, field: Field, value: Any?, setter: Unsafe.(Any?, Long, Any?) -> Unit) {
     if (Modifier.isStatic(field.modifiers)) {
         val base = UnsafeHolder.UNSAFE.staticFieldBase(field)
         val offset = UnsafeHolder.UNSAFE.staticFieldOffset(field)
@@ -128,7 +128,7 @@ inline fun writeFieldViaUnsafe(obj: Any?, field: Field, value: Any?, setter: Uns
 }
 
 @Suppress("NAME_SHADOWING")
-fun writeFieldViaUnsafe(obj: Any?, field: Field, value: Any?) {
+internal fun writeFieldViaUnsafe(obj: Any?, field: Field, value: Any?) {
     if (!field.type.isPrimitive) {
         return writeFieldViaUnsafe(obj, field, value, Unsafe::putObject)
     }
@@ -145,7 +145,7 @@ fun writeFieldViaUnsafe(obj: Any?, field: Field, value: Any?) {
     }
 }
 
-fun writeArrayElementViaUnsafe(arr: Any, index: Int, value: Any?): Any? {
+internal fun writeArrayElementViaUnsafe(arr: Any, index: Int, value: Any?): Any? {
     val offset = getArrayElementOffsetViaUnsafe(arr, index)
     val componentType = arr::class.java.componentType
 
@@ -167,7 +167,7 @@ fun writeArrayElementViaUnsafe(arr: Any, index: Int, value: Any?): Any? {
 }
 
 @Suppress("DEPRECATION")
-fun getFieldOffsetViaUnsafe(field: Field): Long {
+internal fun getFieldOffsetViaUnsafe(field: Field): Long {
     return if (Modifier.isStatic(field.modifiers)) {
         UnsafeHolder.UNSAFE.staticFieldOffset(field)
     }
@@ -180,7 +180,7 @@ private val fieldNameByOffsetCache = ConcurrentHashMap<Pair<Class<*>, Long>, Str
 private val NULL_FIELD_NAME = ".+-  NULL  -+." // cannot store `null` in the cache.
 
 @Suppress("DEPRECATION")
-fun findFieldNameByOffsetViaUnsafe(targetType: Class<*>, offset: Long): String? =
+internal fun findFieldNameByOffsetViaUnsafe(targetType: Class<*>, offset: Long): String? =
     fieldNameByOffsetCache.getOrPut(targetType to offset) {
         findFieldNameByOffsetViaUnsafeImpl(targetType, offset) ?: NULL_FIELD_NAME
     }.let { if (it == NULL_FIELD_NAME) null else it }

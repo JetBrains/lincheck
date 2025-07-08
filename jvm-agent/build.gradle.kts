@@ -42,6 +42,10 @@ tasks {
         setupKotlinToolchain(project)
     }
 
+    withType<KotlinCompile> {
+        getAccessToInternalDefinitionsOf(project(":common"))
+    }
+
     withType<Jar> {
         dependsOn(":bootstrapJar")
     }

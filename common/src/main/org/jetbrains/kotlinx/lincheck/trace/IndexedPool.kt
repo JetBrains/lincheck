@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.trace
 
-class IndexedPool<T> {
+internal class IndexedPool<T> {
     private val items = mutableListOf<T>()
     private val index = hashMapOf<T, Int>()
 

@@ -16,6 +16,7 @@ import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.kotlin.dsl.provideDelegate
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import java.nio.file.Paths
 
 fun KotlinJvmProjectExtension.configureKotlin() {
     compilerOptions {
@@ -51,4 +52,17 @@ private fun KotlinCompile.setupKotlinToolchain(javaToolchains: JavaToolchainServ
     kotlinJavaToolchain.toolchain.use(javaToolchains.launcherFor {
         languageVersion.set(JavaLanguageVersion.of(jdkToolchainVersion))
     })
+}
+
+fun KotlinCompile.getAccessToInternalDefinitionsOf(vararg projects: Project) {
+    projects.forEach { project ->
+        val mainSourceSet = project.extensions
+            .getByType(JavaPluginExtension::class.java).sourceSets
+            .getByName("main").output.classesDirs
+        val jarArchive = Paths.get(project.buildDir.absolutePath, "libs",
+            if (project.name == "lincheck") project.name + "-" + project.version + ".jar"
+            else project.name + ".jar"
+        ).toFile()
+        friendPaths.from(mainSourceSet + jarArchive)
+    }
 }
