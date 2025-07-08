@@ -8,9 +8,9 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.strategy.native_calls.io
+package org.jetbrains.kotlinx.lincheck.strategy.nativecalls.io
 
-import org.jetbrains.kotlinx.lincheck.strategy.native_calls.ReplayableMutableInstance
+import org.jetbrains.kotlinx.lincheck.strategy.nativecalls.ReplayableMutableInstance
 import java.util.ArrayList
 
 /**

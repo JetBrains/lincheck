@@ -8,7 +8,7 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.strategy.native_calls.io
+package org.jetbrains.kotlinx.lincheck.strategy.nativecalls.io
 
 import org.jetbrains.kotlinx.lincheck.trace.MethodSignature
 import org.jetbrains.kotlinx.lincheck.trace.Types

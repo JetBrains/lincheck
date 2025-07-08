@@ -8,11 +8,11 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.strategy.native_calls.io
+package org.jetbrains.kotlinx.lincheck.strategy.nativecalls.io
 
-import org.jetbrains.kotlinx.lincheck.strategy.native_calls.DeterministicMethodDescriptor
-import org.jetbrains.kotlinx.lincheck.strategy.native_calls.MethodCallInfo
-import org.jetbrains.kotlinx.lincheck.strategy.native_calls.ReplayableMutableInstance
+import org.jetbrains.kotlinx.lincheck.strategy.nativecalls.DeterministicMethodDescriptor
+import org.jetbrains.kotlinx.lincheck.strategy.nativecalls.MethodCallInfo
+import org.jetbrains.kotlinx.lincheck.strategy.nativecalls.ReplayableMutableInstance
 import sun.nio.ch.lincheck.Injections
 import java.nio.file.DirectoryStream
 import java.nio.file.Path

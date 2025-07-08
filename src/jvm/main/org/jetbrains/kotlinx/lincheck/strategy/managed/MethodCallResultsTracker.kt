@@ -11,8 +11,8 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.util.Logger
-import org.jetbrains.kotlinx.lincheck.strategy.native_calls.MethodCallInfo
-import org.jetbrains.kotlinx.lincheck.strategy.native_calls.ReplayableMutableInstance
+import org.jetbrains.kotlinx.lincheck.strategy.nativecalls.MethodCallInfo
+import org.jetbrains.kotlinx.lincheck.strategy.nativecalls.ReplayableMutableInstance
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 

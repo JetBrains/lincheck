@@ -8,13 +8,13 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.strategy.native_calls.io
+package org.jetbrains.kotlinx.lincheck.strategy.nativecalls.io
 
-import org.jetbrains.kotlinx.lincheck.strategy.native_calls.DeterministicMethodDescriptor
-import org.jetbrains.kotlinx.lincheck.strategy.native_calls.MethodCallInfo
-import org.jetbrains.kotlinx.lincheck.strategy.native_calls.PureDeterministicMethodDescriptor
-import org.jetbrains.kotlinx.lincheck.strategy.native_calls.io.Java.Io.Stream
-import org.jetbrains.kotlinx.lincheck.strategy.native_calls.io.Java.Io.closeableMethods
+import org.jetbrains.kotlinx.lincheck.strategy.nativecalls.DeterministicMethodDescriptor
+import org.jetbrains.kotlinx.lincheck.strategy.nativecalls.MethodCallInfo
+import org.jetbrains.kotlinx.lincheck.strategy.nativecalls.PureDeterministicMethodDescriptor
+import org.jetbrains.kotlinx.lincheck.strategy.nativecalls.io.Java.Io.Stream
+import org.jetbrains.kotlinx.lincheck.strategy.nativecalls.io.Java.Io.closeableMethods
 import org.jetbrains.kotlinx.lincheck.trace.Types.ObjectType
 import java.io.FileDescriptor
 import java.io.FileInputStream
