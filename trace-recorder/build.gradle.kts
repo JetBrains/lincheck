@@ -51,5 +51,5 @@ tasks {
 registerTraceAgentTasks(
     fatJarName = "trace-recorder-fat",
     fatJarTaskName = "traceRecorderFatJar",
-    premainClass = "org.jetbrains.kotlinx.lincheck.traceagent.TraceRecorderAgent"
+    premainClass = "org.jetbrains.kotlinx.lincheck.trace.recorder.TraceRecorderAgent"
 )

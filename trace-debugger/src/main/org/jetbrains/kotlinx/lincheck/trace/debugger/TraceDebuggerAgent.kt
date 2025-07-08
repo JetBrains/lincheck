@@ -8,8 +8,10 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.traceagent
+package org.jetbrains.kotlinx.lincheck.trace.debugger
 
+import org.jetbrains.kotlinx.lincheck.traceagent.TraceAgentParameters
+import org.jetbrains.kotlinx.lincheck.traceagent.TraceAgentTransformer
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.MODEL_CHECKING
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.transformation.isInstrumentationInitialized
