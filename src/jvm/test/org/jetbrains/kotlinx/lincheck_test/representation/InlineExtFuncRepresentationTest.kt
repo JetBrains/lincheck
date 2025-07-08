@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
+import org.jetbrains.kotlinx.lincheck.util.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.util.isJdk8
 import org.junit.Assume.assumeFalse
 import org.junit.Before
@@ -24,7 +24,7 @@ class InlineExtFuncRepresentationTest: BaseTraceRepresentationTest("inline_ext_f
         // cannot run this test, as it has different output on JDK-8,
         // but due to https://github.com/JetBrains/lincheck/issues/500
         // we cannot set trace-debugger & JDK-8 specific expected output file
-        assumeFalse(isInTraceDebuggerMode)
+        assumeFalse(isInTraceDebuggerMode || isJdk8)
     }
 
     @Suppress("NOTHING_TO_INLINE")

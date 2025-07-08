@@ -25,8 +25,9 @@ sourceSets {
         val byteBuddyVersion: String by project
 
         compileOnly(project(":bootstrap"))
-        api(project(":"))
-        api(project(":jvm-agent"))
+        implementation(project(":"))
+        implementation(project(":common"))
+        implementation(project(":jvm-agent"))
 
         api("org.jetbrains.kotlin:kotlin-stdlib:${kotlinVersion}")
         api("org.jetbrains.kotlin:kotlin-stdlib-common:${kotlinVersion}")

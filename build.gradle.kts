@@ -135,9 +135,9 @@ sourceSets {
         val atomicfuVersion: String by project
 
         compileOnly(project(":bootstrap"))
-        api(project(":jvm-agent"))
-        api(project(":common"))
-        api(project(":trace"))
+        api(project(":common")) // TODO: contains some classes from public lincheck API, refactor so that it does not expose essentially internal classes
+        implementation(project(":jvm-agent"))
+        implementation(project(":trace"))
 
         api("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
         api("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion")
