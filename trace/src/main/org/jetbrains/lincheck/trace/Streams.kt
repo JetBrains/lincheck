@@ -182,7 +182,7 @@ internal class PositionCalculatingOutputStream(
         position += len
     }
 
-    override fun flush() = out.flush()
+    override fun flush(): Unit = out.flush()
 
-    override fun close() = out.close()
+    override fun close(): Unit = out.close()
 }

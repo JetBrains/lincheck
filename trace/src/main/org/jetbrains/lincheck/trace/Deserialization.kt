@@ -30,12 +30,12 @@ private typealias TracePointReader = (DataInput, TraceContext, CodeLocationsCont
 
 private interface TracepointConsumer {
     fun tracePointRead(parent: TRMethodCallTracePoint?, tracePoint: TRTracePoint)
-    fun footerStarted(tracePoint: TRMethodCallTracePoint) = Unit
+    fun footerStarted(tracePoint: TRMethodCallTracePoint) {}
 }
 
 private interface BlockConsumer {
-    fun blockStarted(threadId: Int) = Unit
-    fun blockEnded(threadId: Int) = Unit
+    fun blockStarted(threadId: Int) {}
+    fun blockEnded(threadId: Int) {}
 }
 
 private class DataBlock(
@@ -137,9 +137,9 @@ private class CodeLocationsContext {
     private val stringCache: MutableList<String?> = ArrayList()
     private val shallowSTEs: MutableList<ShallowStackTraceElement?> = ArrayList()
 
-    fun loadString(id: Int, value: String) = load(stringCache, id, value)
+    fun loadString(id: Int, value: String): Unit = load(stringCache, id, value)
 
-    fun loadCodeLocation(id: Int, value: ShallowStackTraceElement) = load(shallowSTEs, id, value)
+    fun loadCodeLocation(id: Int, value: ShallowStackTraceElement): Unit = load(shallowSTEs, id, value)
 
     fun restoreAllCodeLocations(context: TraceContext) {
         shallowSTEs.forEachIndexed { id, value ->
@@ -248,7 +248,7 @@ class LazyTraceReader(
         }
     }
 
-    fun loadChild(parent: TRMethodCallTracePoint, childIdx: Int) = loadChildrenRange(parent, childIdx, 1)
+    fun loadChild(parent: TRMethodCallTracePoint, childIdx: Int): Unit = loadChildrenRange(parent, childIdx, 1)
 
     fun loadChildrenRange(parent: TRMethodCallTracePoint, from: Int, count: Int) {
         require(from in 0 ..< parent.events.size) { "From index $from must be in range 0..<${parent.events.size}" }
@@ -518,10 +518,16 @@ class LazyTraceReader(
     }
 }
 
-fun loadRecordedTrace(inp: InputStream): Pair<TraceContext, List<TRTracePoint>> {
+data class TraceWithContext(
+    val context: TraceContext,
+    val roots: List<TRTracePoint>
+)
+
+fun loadRecordedTrace(inp: InputStream): TraceWithContext {
     DataInputStream(inp.buffered(INPUT_BUFFER_SIZE)).use { input ->
         checkDataHeader(input)
 
+        // TODO: Create empty fresh context
         val context = TRACE_CONTEXT
         val roots = mutableMapOf<Int, MutableList<TRTracePoint>>()
 
@@ -549,7 +555,7 @@ fun loadRecordedTrace(inp: InputStream): Pair<TraceContext, List<TRTracePoint>> 
             }
         }
 
-        return context to roots.values.map { it.first() }
+        return TraceWithContext(context, roots.values.map { it.first() })
     }
 }
 

@@ -166,7 +166,7 @@ internal fun DataInput.readVariableDescriptor(): VariableDescriptor {
 }
 
 
-internal fun DataOutput.writeKind(value: ObjectKind) = writeByte(value.ordinal)
+internal fun DataOutput.writeKind(value: ObjectKind): Unit = writeByte(value.ordinal)
 
 internal fun DataInput.readKind(): ObjectKind {
     val ordinal = readByte()

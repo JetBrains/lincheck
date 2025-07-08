@@ -534,8 +534,8 @@ private class DirectTraceWriter (
 }
 
 class MemoryTraceCollecting: TraceCollectingStrategy {
-    override fun registerCurrentThread(threadId: Int) = Unit
-    override fun finishCurrentThread() = Unit
+    override fun registerCurrentThread(threadId: Int) {}
+    override fun finishCurrentThread() {}
 
     override fun tracePointCreated(
         parent: TRMethodCallTracePoint?,
@@ -544,13 +544,13 @@ class MemoryTraceCollecting: TraceCollectingStrategy {
         parent?.addChild(created)
     }
 
-    override fun callEnded(callTracepoint: TRMethodCallTracePoint) = Unit
+    override fun callEnded(callTracepoint: TRMethodCallTracePoint) {}
 
     /**
      * Do nothing.
      * Trace collected in memory can be saved by external means, if needed.
      */
-    override fun traceEnded() = Unit
+    override fun traceEnded() {}
 }
 
 class FileStreamingTraceCollecting(
@@ -672,23 +672,23 @@ class FileStreamingTraceCollecting(
 
     override fun isClassDescriptorSaved(id: Int): Boolean = seenClassDescriptors.isSet(id)
 
-    override fun markClassDescriptorSaved(id: Int) = seenClassDescriptors.set(id)
+    override fun markClassDescriptorSaved(id: Int): Unit = seenClassDescriptors.set(id)
 
     override fun isMethodDescriptorSaved(id: Int): Boolean = seenMethodDescriptors.isSet(id)
 
-    override fun markMethodDescriptorSaved(id: Int) = seenMethodDescriptors.set(id)
+    override fun markMethodDescriptorSaved(id: Int): Unit = seenMethodDescriptors.set(id)
 
     override fun isFieldDescriptorSaved(id: Int): Boolean = seenFieldDescriptors.isSet(id)
 
-    override fun markFieldDescriptorSaved(id: Int) = seenFieldDescriptors.set(id)
+    override fun markFieldDescriptorSaved(id: Int): Unit = seenFieldDescriptors.set(id)
 
     override fun isVariableDescriptorSaved(id: Int): Boolean = seenVariableDescriptors.isSet(id)
 
-    override fun markVariableDescriptorSaved(id: Int) = seenVariableDescriptors.set(id)
+    override fun markVariableDescriptorSaved(id: Int): Unit = seenVariableDescriptors.set(id)
 
     override fun isCodeLocationSaved(id: Int): Boolean = seenCodeLocations.isSet(id)
 
-    override fun markCodeLocationSaved(id: Int) = seenCodeLocations.set(id)
+    override fun markCodeLocationSaved(id: Int): Unit = seenCodeLocations.set(id)
 
     override fun isStringSaved(value: String): Int {
         val id = stringCache.computeIfAbsent(value) { _ -> -stringIdGenerator.getAndIncrement() }
