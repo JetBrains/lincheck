@@ -11,7 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.trace.recorder.transformers
 
 import org.jetbrains.kotlinx.lincheck.transformation.*
-import org.jetbrains.kotlinx.lincheck.trace.TRACE_CONTEXT
+import org.jetbrains.lincheck.trace.TRACE_CONTEXT
 import org.jetbrains.kotlinx.lincheck.transformation.transformers.MethodCallTransformerBase
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type.*

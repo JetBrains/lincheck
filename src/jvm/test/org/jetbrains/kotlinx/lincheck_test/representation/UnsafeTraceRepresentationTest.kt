@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
+import org.jetbrains.lincheck.util.UnsafeHolder
 
 
 class UnsafeTraceRepresentationTest : BaseTraceRepresentationTest("unsafe_representation_trace") {

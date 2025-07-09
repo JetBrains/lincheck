@@ -9,9 +9,9 @@
  */
 package org.jetbrains.kotlinx.lincheck.runner
 
-import kotlinx.atomicfu.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.lincheck.util.runInsideIgnoredSection
 import sun.nio.ch.lincheck.TestThread
 import java.io.*
 import java.lang.*

@@ -11,7 +11,7 @@
 package org.jetbrains.kotlinx.lincheck_test.representation.trace.debugger
 
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.kotlinx.lincheck.util.isInTraceDebuggerMode
+import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck_test.representation.BaseTraceRepresentationTest
 import org.jetbrains.kotlinx.lincheck_test.trace.debugger.NotRandom
 import org.junit.Assume.assumeTrue

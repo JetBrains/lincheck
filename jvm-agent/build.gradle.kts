@@ -79,7 +79,7 @@ publishing {
 
             configureMavenPublication {
                 name.set(jvmAgentArtifactId)
-                description.set("Lincheck jvm agent library")
+                description.set("Lincheck JVM agent instrumentation library")
             }
         }
     }

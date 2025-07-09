@@ -8,7 +8,7 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.util
+package org.jetbrains.lincheck.util
 
 import sun.misc.Unsafe
 import java.lang.reflect.Field

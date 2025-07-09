@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
-import org.jetbrains.kotlinx.lincheck.trace.CodeLocations
+import org.jetbrains.lincheck.descriptors.CodeLocations
 import org.jetbrains.kotlinx.lincheck.trace.recorder.transformers.MethodCallMinimalTransformer
 import org.jetbrains.kotlinx.lincheck.trace.recorder.transformers.ObjectCreationMinimalTransformer
 import org.objectweb.asm.*
@@ -18,9 +18,9 @@ import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.commons.*
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
 import org.jetbrains.kotlinx.lincheck.transformation.transformers.*
-import org.jetbrains.kotlinx.lincheck.util.Logger
-import org.jetbrains.kotlinx.lincheck.util.ideaPluginEnabled
-import org.jetbrains.kotlinx.lincheck.util.isInTraceDebuggerMode
+import org.jetbrains.lincheck.util.Logger
+import org.jetbrains.lincheck.util.ideaPluginEnabled
+import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import sun.nio.ch.lincheck.*
 
 internal class LincheckClassVisitor(

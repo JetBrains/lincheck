@@ -13,7 +13,7 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.kotlinx.lincheck.trace.Trace
-import org.jetbrains.kotlinx.lincheck.util.AnalysisProfile
+import org.jetbrains.lincheck.util.AnalysisProfile
 import org.jetbrains.lincheck.datastructures.ManagedCTestConfiguration.Companion.DEFAULT_STDLIB_ANALYSIS_ENABLED
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import java.util.concurrent.TimeoutException

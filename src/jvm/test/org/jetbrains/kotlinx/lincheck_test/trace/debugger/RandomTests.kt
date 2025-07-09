@@ -11,8 +11,8 @@
 package org.jetbrains.kotlinx.lincheck_test.trace.debugger
 
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.kotlinx.lincheck.util.JdkVersion
-import org.jetbrains.kotlinx.lincheck.util.jdkVersion
+import org.jetbrains.lincheck.util.JdkVersion
+import org.jetbrains.lincheck.util.jdkVersion
 import org.junit.Assume.assumeFalse
 import org.junit.Before
 import java.util.concurrent.ThreadLocalRandom

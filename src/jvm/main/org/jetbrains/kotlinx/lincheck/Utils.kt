@@ -13,6 +13,7 @@ import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.annotations.DummySequentialSpecification
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.lincheck.util.runOutsideIgnoredSection
 import sun.nio.ch.lincheck.*
 import java.io.PrintWriter
 import java.io.StringWriter

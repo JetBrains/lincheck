@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import sun.nio.ch.lincheck.WeakIdentityReference
 import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.lincheck.util.isJavaLambdaClass
 import kotlin.coroutines.Continuation
 import java.lang.ref.ReferenceQueue
 import java.lang.ref.WeakReference
@@ -343,7 +344,7 @@ private data class ClassNameRepresentation(
 private fun Any.getSpecialClassNameRepresentation(): ClassNameRepresentation? = when {
     this is Thread                      -> ClassNameRepresentation("Thread", Thread::class.java)
     this is Continuation<*>             -> ClassNameRepresentation("Continuation", Continuation::class.java)
-    isJavaLambdaClass(javaClass.name)   -> ClassNameRepresentation("Lambda", Lambda::class.java)
+    isJavaLambdaClass(javaClass.name) -> ClassNameRepresentation("Lambda", Lambda::class.java)
     else                                -> null
 }
 

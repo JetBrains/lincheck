@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
-import org.jetbrains.kotlinx.lincheck.util.isJavaLambdaClass
+import org.jetbrains.lincheck.util.isJavaLambdaClass
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.ANEWARRAY
 import org.objectweb.asm.Type.*

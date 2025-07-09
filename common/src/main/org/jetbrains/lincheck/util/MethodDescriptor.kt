@@ -8,10 +8,10 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.util
+package org.jetbrains.lincheck.util
 
-import org.jetbrains.kotlinx.lincheck.trace.MethodDescriptor
-import org.jetbrains.kotlinx.lincheck.trace.Types
+import org.jetbrains.lincheck.descriptors.MethodDescriptor
+import org.jetbrains.lincheck.descriptors.Types
 
 internal fun MethodDescriptor.isArraysCopyOfIntrinsic(): Boolean {
     return (

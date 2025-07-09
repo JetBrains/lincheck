@@ -10,8 +10,6 @@
 
 package org.jetbrains.lincheck.trace
 
-import org.jetbrains.kotlinx.lincheck.trace.TRACE_CONTEXT
-import org.jetbrains.kotlinx.lincheck.trace.TraceContext
 import org.jetbrains.kotlinx.lincheck.tracedata.openNewFile
 import java.io.OutputStream
 import java.io.PrintStream

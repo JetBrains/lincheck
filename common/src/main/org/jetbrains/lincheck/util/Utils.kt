@@ -8,7 +8,7 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.util
+package org.jetbrains.lincheck.util
 
 // Trace agent modes
 private const val TRACE_DEBUGGER_MODE_PROPERTY = "lincheck.traceDebuggerMode"

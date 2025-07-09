@@ -11,8 +11,8 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
-import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
-import org.jetbrains.kotlinx.lincheck.util.findFieldNameByOffsetViaUnsafe
+import org.jetbrains.lincheck.util.UnsafeHolder
+import org.jetbrains.lincheck.util.findFieldNameByOffsetViaUnsafe
 
 /**
  * Helper object to provide the field name and the owner of the Unsafe method call.

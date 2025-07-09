@@ -11,8 +11,8 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
-import org.jetbrains.kotlinx.lincheck.util.findFieldNameByOffsetViaUnsafe
-import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
+import org.jetbrains.lincheck.util.findFieldNameByOffsetViaUnsafe
+import org.jetbrains.lincheck.util.readFieldViaUnsafe
 import sun.misc.Unsafe
 import java.lang.reflect.Field
 

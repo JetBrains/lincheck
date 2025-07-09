@@ -64,7 +64,7 @@ publishing {
 
             configureMavenPublication {
                 name.set(commonArtifactId)
-                description.set("Lincheck common classes library")
+                description.set("Lincheck common components library")
             }
         }
     }

@@ -9,10 +9,9 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.transformation
 
-import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck.util.isInTraceDebuggerMode
+import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import org.junit.*
 import java.util.*
 import java.util.concurrent.*

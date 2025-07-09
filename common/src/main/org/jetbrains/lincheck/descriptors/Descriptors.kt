@@ -8,19 +8,21 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.trace
+package org.jetbrains.lincheck.descriptors
 
-internal data class ClassDescriptor(
+import org.jetbrains.lincheck.trace.TraceContext
+
+data class ClassDescriptor(
     val name: String,
 )
 
-internal data class MethodSignature(val name: String, val methodType: Types.MethodType) {
+data class MethodSignature(val name: String, val methodType: Types.MethodType) {
     override fun toString(): String {
         return "$name$methodType"
     }
 }
 
-internal data class MethodDescriptor(
+data class MethodDescriptor(
     private val context: TraceContext,
     val classId: Int,
     val methodSignature: MethodSignature
@@ -35,7 +37,7 @@ internal data class MethodDescriptor(
     override fun toString(): String = "$className.$methodSignature"
 }
 
-internal data class FieldDescriptor(
+data class FieldDescriptor(
     private val context: TraceContext,
     val classId: Int,
     val fieldName: String,
@@ -45,6 +47,6 @@ internal data class FieldDescriptor(
     val className: String get() = context.getClassDescriptor(classId).name
 }
 
-internal data class VariableDescriptor(
+data class VariableDescriptor(
     val name: String,
 )

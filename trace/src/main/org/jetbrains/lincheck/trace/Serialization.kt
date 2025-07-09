@@ -10,14 +10,11 @@
 
 package org.jetbrains.lincheck.trace
 
-import org.jetbrains.kotlinx.lincheck.trace.ClassDescriptor
-import org.jetbrains.kotlinx.lincheck.trace.FieldDescriptor
-import org.jetbrains.kotlinx.lincheck.trace.MethodDescriptor
-import org.jetbrains.kotlinx.lincheck.trace.TRACE_CONTEXT
-import org.jetbrains.kotlinx.lincheck.trace.TraceContext
-import org.jetbrains.kotlinx.lincheck.trace.UNKNOWN_CODE_LOCATION_ID
-import org.jetbrains.kotlinx.lincheck.trace.VariableDescriptor
 import org.jetbrains.kotlinx.lincheck.tracedata.*
+import org.jetbrains.lincheck.descriptors.ClassDescriptor
+import org.jetbrains.lincheck.descriptors.FieldDescriptor
+import org.jetbrains.lincheck.descriptors.MethodDescriptor
+import org.jetbrains.lincheck.descriptors.VariableDescriptor
 import java.io.*
 import java.nio.ByteBuffer
 import java.util.concurrent.ConcurrentHashMap

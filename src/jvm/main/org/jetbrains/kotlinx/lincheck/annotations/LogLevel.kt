@@ -9,7 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.annotations
 
-import org.jetbrains.kotlinx.lincheck.util.LoggingLevel
+import org.jetbrains.lincheck.util.LoggingLevel
 import java.lang.annotation.Inherited
 
 /**

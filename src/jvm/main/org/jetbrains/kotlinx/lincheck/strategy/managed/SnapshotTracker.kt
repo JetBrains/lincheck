@@ -14,6 +14,10 @@ import org.jetbrains.kotlinx.lincheck.classCache
 import org.jetbrains.kotlinx.lincheck.findField
 import org.jetbrains.kotlinx.lincheck.strategy.managed.SnapshotTracker.MemoryNode.*
 import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.lincheck.util.readArrayElementViaUnsafe
+import org.jetbrains.lincheck.util.readFieldSafely
+import org.jetbrains.lincheck.util.writeArrayElementViaUnsafe
+import org.jetbrains.lincheck.util.writeFieldViaUnsafe
 import java.lang.Class
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier

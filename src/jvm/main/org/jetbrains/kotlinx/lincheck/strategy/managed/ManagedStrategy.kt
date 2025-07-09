@@ -35,13 +35,28 @@ import kotlin.coroutines.Continuation
 import java.util.concurrent.TimeoutException
 import kotlinx.coroutines.CancellableContinuation
 import org.jetbrains.lincheck.GeneralPurposeModelCheckingWrapper
-import org.jetbrains.kotlinx.lincheck.trace.CodeLocations
-import org.jetbrains.kotlinx.lincheck.trace.FieldDescriptor
-import org.jetbrains.kotlinx.lincheck.trace.TRACE_CONTEXT
-import org.jetbrains.kotlinx.lincheck.trace.Types
-import org.jetbrains.kotlinx.lincheck.util.isArraysCopyOfIntrinsic
-import org.jetbrains.kotlinx.lincheck.util.isArraysCopyOfRangeIntrinsic
+import org.jetbrains.lincheck.descriptors.CodeLocations
+import org.jetbrains.lincheck.descriptors.FieldDescriptor
+import org.jetbrains.lincheck.trace.TRACE_CONTEXT
+import org.jetbrains.lincheck.descriptors.Types
+import org.jetbrains.lincheck.util.isArraysCopyOfIntrinsic
+import org.jetbrains.lincheck.util.isArraysCopyOfRangeIntrinsic
 import org.jetbrains.lincheck.datastructures.ManagedStrategyGuarantee
+import org.jetbrains.lincheck.analysis.ShadowStackFrame
+import org.jetbrains.lincheck.util.AnalysisProfile
+import org.jetbrains.lincheck.util.AnalysisSectionType
+import org.jetbrains.lincheck.util.Logger
+import org.jetbrains.lincheck.util.disableAnalysis
+import org.jetbrains.lincheck.util.enableAnalysis
+import org.jetbrains.lincheck.util.ensure
+import org.jetbrains.lincheck.util.enterIgnoredSection
+import org.jetbrains.lincheck.util.eventIdStrictOrderingCheck
+import org.jetbrains.lincheck.util.isCallStackPropagating
+import org.jetbrains.lincheck.util.isInTraceDebuggerMode
+import org.jetbrains.lincheck.util.isSilent
+import org.jetbrains.lincheck.util.leaveIgnoredSection
+import org.jetbrains.lincheck.util.readFieldSafely
+import org.jetbrains.lincheck.util.runInsideIgnoredSection
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 import kotlin.Result as KResult
 import org.objectweb.asm.commons.Method.getMethod as getAsmMethod
@@ -183,7 +198,7 @@ internal abstract class ManagedStrategy(
     private val analysisSectionStack = mutableThreadMapOf<MutableList<AnalysisSectionType>>()
 
     /**
-     * In case when the plugin is enabled, we also enable [eventIdStrictOrderingCheck] property and check
+     * In case when the plugin is enabled, we also enable [org.jetbrains.lincheck.util.eventIdStrictOrderingCheck] property and check
      * that event ids provided to the [beforeEvent] method
      * and corresponding trace points are sequentially ordered.
      * But we do not add a [MethodCallTracePoint] for the coroutine resumption.
@@ -339,14 +354,15 @@ internal abstract class ManagedStrategy(
     override fun beforePart(part: ExecutionPart) = runInsideIgnoredSection {
         traceCollector?.addTracePointInternal(SectionDelimiterTracePoint(part))
         val nextThread = when (part) {
-            INIT        -> 0
-            PARALLEL    -> {
+            INIT -> 0
+            PARALLEL -> {
                 // initialize artificial switch point to choose among available threads
                 onSwitchPoint(iThread = -1)
                 chooseThread(iThread = -1)
             }
-            POST        -> 0
-            VALIDATION  -> 0
+
+            POST -> 0
+            VALIDATION -> 0
         }
         loopDetector.beforePart(part, nextThread)
         threadScheduler.scheduleThread(nextThread)
@@ -1102,7 +1118,11 @@ internal abstract class ManagedStrategy(
         parkingTracker.park(threadId)
         // Forbid spurious wake-ups if inside silent sections.
         val allowSpuriousWakeUp = shouldAllowSpuriousUnpark(threadId, codeLocation)
-        while (parkingTracker.waitUnpark(threadId, allowSpuriousWakeUp) && !threadScheduler.areAllThreadsFinishedOrAborted()) {
+        while (parkingTracker.waitUnpark(
+                threadId,
+                allowSpuriousWakeUp
+            ) && !threadScheduler.areAllThreadsFinishedOrAborted()
+        ) {
             tryAbortingUserThreads(threadId, BlockingReason.Parked)
             onSwitchPoint(threadId)
             // Switch to another thread and wait till an unpark event happens.
@@ -1294,87 +1314,90 @@ internal abstract class ManagedStrategy(
         loopDetector.afterRead(value)
     }
 
-    override fun afterReadArrayElement(array: Any, index: Int, codeLocation: Int, value: Any?) = runInsideIgnoredSection {
-        if (collectTrace) {
+    override fun afterReadArrayElement(array: Any, index: Int, codeLocation: Int, value: Any?) =
+        runInsideIgnoredSection {
+            if (collectTrace) {
+                val iThread = threadScheduler.getCurrentThreadId()
+                val valueRepresentation = objectTracker.getObjectRepresentation(value)
+                val typeRepresentation = objectFqTypeName(value)
+                if (shouldTrackArrayAccess(array)) {
+                    val tracePoint = ReadTracePoint(
+                        ownerRepresentation = null,
+                        iThread = iThread,
+                        actorId = currentActorId[iThread]!!,
+                        fieldName = "${objectTracker.getObjectRepresentation(array)}[$index]",
+                        codeLocation = codeLocation,
+                        isLocal = false,
+                        valueRepresentation = valueRepresentation,
+                        valueType = typeRepresentation,
+                    )
+                    traceCollector?.addTracePointInternal(tracePoint)
+                }
+            }
+            loopDetector.afterRead(value)
+        }
+
+    override fun beforeWriteField(obj: Any?, value: Any?, codeLocation: Int, fieldId: Int): Boolean =
+        runInsideIgnoredSection {
+            val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
+            if (!fieldDescriptor.isStatic && obj == null) {
+                // Ignore, NullPointerException will be thrown
+                return false
+            }
+            updateSnapshotOnFieldAccess(obj, fieldDescriptor.className, fieldDescriptor.fieldName)
+            objectTracker.registerObjectLink(fromObject = obj, toObject = value)
+            if (!shouldTrackFieldAccess(obj, fieldDescriptor)) {
+                return false
+            }
             val iThread = threadScheduler.getCurrentThreadId()
-            val valueRepresentation = objectTracker.getObjectRepresentation(value)
-            val typeRepresentation = objectFqTypeName(value)
-            if (shouldTrackArrayAccess(array)) {
-                val tracePoint = ReadTracePoint(
+            val tracePoint = if (collectTrace) {
+                WriteTracePoint(
+                    ownerRepresentation = getFieldOwnerName(obj, fieldDescriptor),
+                    iThread = iThread,
+                    actorId = currentActorId[iThread]!!,
+                    fieldName = fieldDescriptor.fieldName,
+                    codeLocation = codeLocation,
+                    isLocal = false,
+                ).also {
+                    it.initializeWrittenValue(objectTracker.getObjectRepresentation(value), objectFqTypeName(value))
+                }
+            } else {
+                null
+            }
+            newSwitchPoint(iThread, codeLocation)
+            traceCollector?.addTracePointInternal(tracePoint)
+            loopDetector.beforeWriteField(obj, value)
+            return true
+        }
+
+    override fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int): Boolean =
+        runInsideIgnoredSection {
+            updateSnapshotOnArrayElementAccess(array, index)
+            objectTracker.registerObjectLink(fromObject = array, toObject = value)
+
+            if (!shouldTrackArrayAccess(array)) {
+                return false
+            }
+            val iThread = threadScheduler.getCurrentThreadId()
+            val tracePoint = if (collectTrace) {
+                WriteTracePoint(
                     ownerRepresentation = null,
                     iThread = iThread,
                     actorId = currentActorId[iThread]!!,
                     fieldName = "${objectTracker.getObjectRepresentation(array)}[$index]",
                     codeLocation = codeLocation,
                     isLocal = false,
-                    valueRepresentation = valueRepresentation,
-                    valueType = typeRepresentation,
-                )
-                traceCollector?.addTracePointInternal(tracePoint)
+                ).also {
+                    it.initializeWrittenValue(objectTracker.getObjectRepresentation(value), objectFqTypeName(value))
+                }
+            } else {
+                null
             }
+            newSwitchPoint(iThread, codeLocation)
+            traceCollector?.addTracePointInternal(tracePoint)
+            loopDetector.beforeWriteArrayElement(array, index, value)
+            true
         }
-        loopDetector.afterRead(value)
-    }
-
-    override fun beforeWriteField(obj: Any?, value: Any?, codeLocation: Int, fieldId: Int): Boolean = runInsideIgnoredSection {
-        val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
-        if (!fieldDescriptor.isStatic && obj == null) {
-            // Ignore, NullPointerException will be thrown
-            return false
-        }
-        updateSnapshotOnFieldAccess(obj, fieldDescriptor.className, fieldDescriptor.fieldName)
-        objectTracker.registerObjectLink(fromObject = obj, toObject = value)
-        if (!shouldTrackFieldAccess(obj, fieldDescriptor)) {
-            return false
-        }
-        val iThread = threadScheduler.getCurrentThreadId()
-        val tracePoint = if (collectTrace) {
-            WriteTracePoint(
-                ownerRepresentation = getFieldOwnerName(obj, fieldDescriptor),
-                iThread = iThread,
-                actorId = currentActorId[iThread]!!,
-                fieldName = fieldDescriptor.fieldName,
-                codeLocation = codeLocation,
-                isLocal = false,
-            ).also {
-                it.initializeWrittenValue(objectTracker.getObjectRepresentation(value), objectFqTypeName(value))
-            }
-        } else {
-            null
-        }
-        newSwitchPoint(iThread, codeLocation)
-        traceCollector?.addTracePointInternal(tracePoint)
-        loopDetector.beforeWriteField(obj, value)
-        return true
-    }
-
-    override fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int): Boolean = runInsideIgnoredSection {
-        updateSnapshotOnArrayElementAccess(array, index)
-        objectTracker.registerObjectLink(fromObject = array, toObject = value)
-
-        if (!shouldTrackArrayAccess(array)) {
-            return false
-        }
-        val iThread = threadScheduler.getCurrentThreadId()
-        val tracePoint = if (collectTrace) {
-            WriteTracePoint(
-                ownerRepresentation = null,
-                iThread = iThread,
-                actorId = currentActorId[iThread]!!,
-                fieldName = "${objectTracker.getObjectRepresentation(array)}[$index]",
-                codeLocation = codeLocation,
-                isLocal = false,
-            ).also {
-                it.initializeWrittenValue(objectTracker.getObjectRepresentation(value), objectFqTypeName(value))
-            }
-        } else {
-            null
-        }
-        newSwitchPoint(iThread, codeLocation)
-        traceCollector?.addTracePointInternal(tracePoint)
-        loopDetector.beforeWriteArrayElement(array, index, value)
-        true
-    }
 
     override fun afterWrite() {
         if (collectTrace) {
@@ -1491,13 +1514,15 @@ internal abstract class ManagedStrategy(
     private fun Injections.HandlePojo.toAsmHandle(): Handle =
         Handle(tag, owner, name, desc, isInterface)
 
-    override fun getNextTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker): TraceDebuggerEventId = runInsideIgnoredSection {
-        traceDebuggerEventTrackers[tracker]?.getNextId() ?: 0
-    }
+    override fun getNextTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker): TraceDebuggerEventId =
+        runInsideIgnoredSection {
+            traceDebuggerEventTrackers[tracker]?.getNextId() ?: 0
+        }
 
-    override fun advanceCurrentTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker, oldId: TraceDebuggerEventId): Unit = runInsideIgnoredSection {
-        traceDebuggerEventTrackers[tracker]?.advanceCurrentId(oldId)
-    }
+    override fun advanceCurrentTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker, oldId: TraceDebuggerEventId): Unit =
+        runInsideIgnoredSection {
+            traceDebuggerEventTrackers[tracker]?.advanceCurrentId(oldId)
+        }
 
     /**
      * Tracks a specific field of an [obj], if the [obj] is either `null` (which means that field is static),
@@ -1651,8 +1676,10 @@ internal abstract class ManagedStrategy(
         // since there is already a switch point between the suspension point and resumption
         if (methodSection == AnalysisSectionType.ATOMIC &&
             // do not create a trace point on resumption
-            !isResumptionMethodCall(threadId, methodDescriptor.className,
-                methodDescriptor.methodName, params, atomicMethodDescriptor)
+            !isResumptionMethodCall(
+                threadId, methodDescriptor.className,
+                methodDescriptor.methodName, params, atomicMethodDescriptor
+            )
         ) {
             // create a switch point
             newSwitchPoint(threadId, codeLocation)
@@ -1660,7 +1687,13 @@ internal abstract class ManagedStrategy(
             traceCollector?.checkActiveLockDetected()
             // create a trace point
             val tracePoint = addBeforeMethodCallTracePoint(
-                threadId, receiver, codeLocation, methodId, methodDescriptor.className, methodDescriptor.methodName, params,
+                threadId,
+                receiver,
+                codeLocation,
+                methodId,
+                methodDescriptor.className,
+                methodDescriptor.methodName,
+                params,
                 atomicMethodDescriptor,
                 MethodCallTracePoint.CallType.NORMAL,
             )
@@ -1714,9 +1747,15 @@ internal abstract class ManagedStrategy(
         }
 
         if (isInTraceDebuggerMode && isFirstReplay && deterministicMethodDescriptor != null) {
-            newResult = deterministicMethodDescriptor.saveFirstResultWithCast(receiver, params, KResult.success(result)) {
-                nativeMethodCallStatesTracker.setState(descriptorId, deterministicMethodDescriptor.methodCallInfo, it)
-            }.getOrElse { error("Unexpected replacement success -> failure:\n$result\n${KResult.failure<Any?>(it)}") }
+            newResult =
+                deterministicMethodDescriptor.saveFirstResultWithCast(receiver, params, KResult.success(result)) {
+                    nativeMethodCallStatesTracker.setState(
+                        descriptorId,
+                        deterministicMethodDescriptor.methodCallInfo,
+                        it
+                    )
+                }
+                    .getOrElse { error("Unexpected replacement success -> failure:\n$result\n${KResult.failure<Any?>(it)}") }
         }
         val threadId = threadScheduler.getCurrentThreadId()
         // check if the called method is an atomics API method
@@ -1737,12 +1776,20 @@ internal abstract class ManagedStrategy(
             // we should probably refactor and fix that, because it is very inconvenient
             if (callStackTrace[threadId]!!.isNotEmpty()) {
                 val tracePoint = callStackTrace[threadId]!!.last().tracePoint
-                when  {
+                when {
                     result == Unit -> tracePoint.initializeVoidReturnedValue()
                     result == Injections.VOID_RESULT -> tracePoint.initializeVoidReturnedValue()
-                    result == COROUTINE_SUSPENDED && isSuspendFunction(methodDescriptor.className, methodDescriptor.methodName, params) ->
+                    result == COROUTINE_SUSPENDED && isSuspendFunction(
+                        methodDescriptor.className,
+                        methodDescriptor.methodName,
+                        params
+                    ) ->
                         tracePoint.initializeCoroutineSuspendedResult()
-                    else -> tracePoint.initializeReturnedValue(objectTracker.getObjectRepresentation(result), objectFqTypeName(result))
+
+                    else -> tracePoint.initializeReturnedValue(
+                        objectTracker.getObjectRepresentation(result),
+                        objectFqTypeName(result)
+                    )
                 }
                 afterMethodCall(threadId, tracePoint)
                 traceCollector?.addStateRepresentation()
@@ -1771,7 +1818,8 @@ internal abstract class ManagedStrategy(
             newThrowable = deterministicMethodDescriptor.saveFirstResult(receiver, params, KResult.failure(throwable)) {
                 nativeMethodCallStatesTracker.setState(descriptorId, deterministicMethodDescriptor.methodCallInfo, it)
             }.let { newResult ->
-                newResult.exceptionOrNull() ?: error("Unexpected replacement failure -> success:\n$throwable\n$newResult")
+                newResult.exceptionOrNull()
+                    ?: error("Unexpected replacement failure -> success:\n$throwable\n$newResult")
             }
         }
         val threadId = threadScheduler.getCurrentThreadId()
@@ -2645,24 +2693,25 @@ internal class ManagedStrategyRunner(
         }
     }
 
-    override fun <T> cancelByLincheck(cont: CancellableContinuation<T>, promptCancellation: Boolean): CancellationResult = runInsideIgnoredSection {
-        // Create a cancellation trace point before `cancel`, so that cancellation trace point
-        // precede the events in `onCancellation` handler.
-        val cancellationTracePoint = managedStrategy.createAndLogCancellationTracePoint()
-        try {
-            // Call the `cancel` method.
-            val cancellationResult = super.cancelByLincheck(cont, promptCancellation)
-            // Pass the result to `cancellationTracePoint`.
-            cancellationTracePoint?.initializeCancellationResult(cancellationResult)
-            // Invoke `strategy.afterCoroutineCancelled` if the coroutine was cancelled successfully.
-            if (cancellationResult != CANCELLATION_FAILED)
-                managedStrategy.afterCoroutineCancelled()
-            return cancellationResult
-        } catch (e: Throwable) {
-            cancellationTracePoint?.initializeException(e)
-            throw e // throw further
+    override fun <T> cancelByLincheck(cont: CancellableContinuation<T>, promptCancellation: Boolean): CancellationResult =
+        runInsideIgnoredSection {
+            // Create a cancellation trace point before `cancel`, so that cancellation trace point
+            // precede the events in `onCancellation` handler.
+            val cancellationTracePoint = managedStrategy.createAndLogCancellationTracePoint()
+            try {
+                // Call the `cancel` method.
+                val cancellationResult = super.cancelByLincheck(cont, promptCancellation)
+                // Pass the result to `cancellationTracePoint`.
+                cancellationTracePoint?.initializeCancellationResult(cancellationResult)
+                // Invoke `strategy.afterCoroutineCancelled` if the coroutine was cancelled successfully.
+                if (cancellationResult != CANCELLATION_FAILED)
+                    managedStrategy.afterCoroutineCancelled()
+                return cancellationResult
+            } catch (e: Throwable) {
+                cancellationTracePoint?.initializeException(e)
+                throw e // throw further
+            }
         }
-    }
 }
 
 private fun TracePoint.isActorMethodCallTracePoint() =

@@ -13,6 +13,7 @@ package org.jetbrains.kotlinx.lincheck.strategy
 import sun.nio.ch.lincheck.TestThread
 import sun.nio.ch.lincheck.ThreadDescriptor
 import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.lincheck.util.ensureNull
 
 /**
  * Enumeration representing the various states of a thread.

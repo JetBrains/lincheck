@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import org.jetbrains.kotlinx.lincheck.util.Logger
+import org.jetbrains.lincheck.util.Logger
 import org.jetbrains.kotlinx.lincheck.strategy.nativecalls.MethodCallInfo
 import org.jetbrains.kotlinx.lincheck.strategy.nativecalls.ReplayableMutableInstance
 import java.util.concurrent.ConcurrentHashMap

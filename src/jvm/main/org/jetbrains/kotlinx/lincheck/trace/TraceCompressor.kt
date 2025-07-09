@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.trace
 
-import org.jetbrains.kotlinx.lincheck.util.AnalysisProfile
+import org.jetbrains.lincheck.util.AnalysisProfile
 
 
 internal fun SingleThreadedTable<TraceNode>.compressTrace() = this

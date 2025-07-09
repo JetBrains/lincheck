@@ -8,13 +8,13 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.trace
+package org.jetbrains.lincheck.descriptors
 
 import java.util.ArrayList
 import java.util.Objects
 import kotlin.math.max
 
-internal object Types {
+object Types {
     private fun convertAsmTypeName(className: String): Type {
         when (className) {
             "V" -> return VOID_TYPE

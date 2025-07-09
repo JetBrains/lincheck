@@ -8,7 +8,7 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.util
+package org.jetbrains.lincheck.util
 
 internal fun Boolean.ensureTrue(): Boolean {
     // TODO: add contracts?

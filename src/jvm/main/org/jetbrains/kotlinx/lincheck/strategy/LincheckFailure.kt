@@ -13,7 +13,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.trace.Trace
-import org.jetbrains.kotlinx.lincheck.util.AnalysisProfile
+import org.jetbrains.lincheck.util.AnalysisProfile
 
 sealed class LincheckFailure(
     val scenario: ExecutionScenario,

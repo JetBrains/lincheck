@@ -14,9 +14,9 @@ import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.lincheck.datastructures.ManagedOptions
-import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
-import org.jetbrains.kotlinx.lincheck.util.getArrayElementOffsetViaUnsafe
-import org.jetbrains.kotlinx.lincheck.util.getFieldOffsetViaUnsafe
+import org.jetbrains.lincheck.util.UnsafeHolder
+import org.jetbrains.lincheck.util.getArrayElementOffsetViaUnsafe
+import org.jetbrains.lincheck.util.getFieldOffsetViaUnsafe
 import kotlin.random.Random
 import kotlin.reflect.jvm.javaField
 

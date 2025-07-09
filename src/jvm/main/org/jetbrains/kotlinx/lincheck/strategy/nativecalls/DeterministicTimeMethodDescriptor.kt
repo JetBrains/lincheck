@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.nativecalls
 
-import org.jetbrains.kotlinx.lincheck.trace.Types
+import org.jetbrains.lincheck.descriptors.Types
 
 internal fun getDeterministicTimeMethodDescriptorOrNull(
     methodCallInfo: MethodCallInfo

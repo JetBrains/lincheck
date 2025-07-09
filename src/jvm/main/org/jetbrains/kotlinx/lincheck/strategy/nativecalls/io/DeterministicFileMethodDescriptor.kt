@@ -15,7 +15,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.nativecalls.MethodCallInfo
 import org.jetbrains.kotlinx.lincheck.strategy.nativecalls.PureDeterministicMethodDescriptor
 import org.jetbrains.kotlinx.lincheck.strategy.nativecalls.io.Java.Io.Stream
 import org.jetbrains.kotlinx.lincheck.strategy.nativecalls.io.Java.Io.closeableMethods
-import org.jetbrains.kotlinx.lincheck.trace.Types.ObjectType
+import org.jetbrains.lincheck.descriptors.Types.ObjectType
 import java.io.FileDescriptor
 import java.io.FileInputStream
 import java.io.FileOutputStream

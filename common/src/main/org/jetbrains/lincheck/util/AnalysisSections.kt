@@ -8,9 +8,9 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.util
+package org.jetbrains.lincheck.util
 
-import org.jetbrains.kotlinx.lincheck.util.AnalysisSectionType.*
+import org.jetbrains.lincheck.util.AnalysisSectionType.*
 import sun.nio.ch.lincheck.Injections
 import sun.nio.ch.lincheck.ThreadDescriptor
 

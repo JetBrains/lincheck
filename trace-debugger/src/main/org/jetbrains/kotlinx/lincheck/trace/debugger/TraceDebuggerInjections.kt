@@ -20,7 +20,7 @@ import org.jetbrains.lincheck.datastructures.scenario
 import org.jetbrains.lincheck.datastructures.forClasses
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
-import org.jetbrains.kotlinx.lincheck.util.LoggingLevel
+import org.jetbrains.lincheck.util.LoggingLevel
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import java.io.File
 import java.lang.reflect.Method

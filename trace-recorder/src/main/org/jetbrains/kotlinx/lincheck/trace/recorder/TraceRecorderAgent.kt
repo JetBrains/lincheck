@@ -15,8 +15,8 @@ import org.jetbrains.kotlinx.lincheck.trace.agent.TraceAgentTransformer
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.transformation.isInstrumentationInitialized
 import org.jetbrains.kotlinx.lincheck.transformation.isTraceJavaAgentAttached
-import org.jetbrains.kotlinx.lincheck.util.isInTraceDebuggerMode
-import org.jetbrains.kotlinx.lincheck.util.isInTraceRecorderMode
+import org.jetbrains.lincheck.util.isInTraceDebuggerMode
+import org.jetbrains.lincheck.util.isInTraceRecorderMode
 import java.lang.instrument.Instrumentation
 
 /**

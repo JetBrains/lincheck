@@ -10,8 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder.UNSAFE
-import org.jetbrains.kotlinx.lincheck.util.findFieldNameByOffsetViaUnsafe
+import org.jetbrains.lincheck.util.UnsafeHolder.UNSAFE
+import org.jetbrains.lincheck.util.findFieldNameByOffsetViaUnsafe
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater
 import java.util.concurrent.atomic.AtomicLongFieldUpdater
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater

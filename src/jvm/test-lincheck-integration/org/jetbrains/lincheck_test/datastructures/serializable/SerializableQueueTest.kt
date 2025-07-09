@@ -12,7 +12,7 @@ package org.jetbrains.lincheck_test.datastructures.serializable
 
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck.util.isInTraceDebuggerMode
+import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck_test.*
 import org.jetbrains.lincheck.datastructures.Options
 import org.jetbrains.lincheck.datastructures.verifier.SerializabilityVerifier

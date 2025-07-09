@@ -14,10 +14,11 @@ import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.INSTRUMEN
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentationMode
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentedClasses
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
-import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.lincheck.util.AnalysisProfile
+import org.jetbrains.lincheck.util.Logger
+import org.jetbrains.lincheck.util.runInsideIgnoredSection
 import org.objectweb.asm.*
 import org.objectweb.asm.tree.ClassNode
-import org.objectweb.asm.util.TraceClassVisitor
 import java.lang.instrument.ClassFileTransformer
 import java.security.ProtectionDomain
 import java.util.concurrent.ConcurrentHashMap
@@ -70,7 +71,8 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             // do not re-transform already instrumented classes
             internalClassName.toCanonicalClassName() !in instrumentedClasses &&
             // always transform eagerly instrumented classes
-            !isEagerlyInstrumentedClass(internalClassName.toCanonicalClassName())) {
+            !isEagerlyInstrumentedClass(internalClassName.toCanonicalClassName())
+        ) {
             return null
         }
         return transformImpl(loader, internalClassName, classBytes)

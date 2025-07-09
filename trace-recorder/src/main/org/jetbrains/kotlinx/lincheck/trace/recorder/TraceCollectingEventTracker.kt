@@ -10,11 +10,11 @@
 
 package org.jetbrains.kotlinx.lincheck.trace.recorder
 
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ShadowStackFrame
-import org.jetbrains.kotlinx.lincheck.trace.TRACE_CONTEXT
+import org.jetbrains.lincheck.analysis.ShadowStackFrame
+import org.jetbrains.lincheck.trace.TRACE_CONTEXT
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
-import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.trace.*
+import org.jetbrains.lincheck.util.*
 import sun.nio.ch.lincheck.*
 import java.lang.invoke.CallSite
 import java.util.concurrent.ConcurrentHashMap
@@ -259,9 +259,10 @@ class TraceCollectingEventTracker(
         return 0
     }
 
-    override fun advanceCurrentTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker, oldId: Long) = runInsideIgnoredSection {
-        System.err.println("Trace Recorder mode doesn't support Trace Debugger-specific instrumentation")
-    }
+    override fun advanceCurrentTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker, oldId: Long) =
+        runInsideIgnoredSection {
+            System.err.println("Trace Recorder mode doesn't support Trace Debugger-specific instrumentation")
+        }
 
     override fun getCachedInvokeDynamicCallSite(
         name: String,
@@ -439,7 +440,8 @@ class TraceCollectingEventTracker(
         params: Array<Any?>,
         result: Any?
     ): Any? = runInsideIgnoredSection {
-        val threadData = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTrackerData as? ThreadData? ?: return result
+        val threadData =
+            ThreadDescriptor.getCurrentThreadDescriptor()?.eventTrackerData as? ThreadData? ?: return result
         val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
 
         val tracePoint = threadData.popStackFrame()

@@ -18,8 +18,8 @@ import org.jetbrains.kotlinx.lincheck.trace.ObstructionFreedomViolationExecution
 import org.jetbrains.kotlinx.lincheck.trace.SpinCycleStartTracePoint
 import org.jetbrains.kotlinx.lincheck.trace.SwitchEventTracePoint
 import org.jetbrains.kotlinx.lincheck.trace.TracePoint
-import org.jetbrains.kotlinx.lincheck.util.isInTraceDebuggerMode
-import org.jetbrains.kotlinx.lincheck.trace.UNKNOWN_CODE_LOCATION_ID
+import org.jetbrains.lincheck.util.isInTraceDebuggerMode
+import org.jetbrains.lincheck.trace.UNKNOWN_CODE_LOCATION_ID
 import org.jetbrains.lincheck.datastructures.ManagedCTestConfiguration
 
 /**
@@ -624,7 +624,7 @@ internal class LoopDetector(
     }
 
     /**
-     * Represents either a regular code location [RegularCodeLocationIdentity], determined by [org.jetbrains.kotlinx.lincheck.trace.CodeLocations], or
+     * Represents either a regular code location [RegularCodeLocationIdentity], determined by [org.jetbrains.lincheck.descriptors.CodeLocations], or
      * a value [ValueRepresentationIdentity] (i.e. parameter, receiver written/read value) hashcode.
      */
     private sealed interface CodeIdentity {

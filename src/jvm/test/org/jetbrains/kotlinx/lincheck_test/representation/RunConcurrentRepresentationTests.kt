@@ -10,8 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.util.isInTraceDebuggerMode
-import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
+import org.jetbrains.lincheck.util.isInTraceDebuggerMode
+import org.jetbrains.lincheck.util.UnsafeHolder
 import org.jetbrains.kotlinx.lincheck_test.gpmc.*
 import org.jetbrains.kotlinx.lincheck_test.util.*
 import java.util.concurrent.*
@@ -21,8 +21,8 @@ import kotlinx.coroutines.channels.Channel
 import org.jetbrains.lincheck.Lincheck.runConcurrentTestInternal
 import org.jetbrains.lincheck.LincheckAssertionError
 import org.jetbrains.lincheck.LincheckSettings
-import org.jetbrains.kotlinx.lincheck.util.JdkVersion
-import org.jetbrains.kotlinx.lincheck.util.jdkVersion
+import org.jetbrains.lincheck.util.JdkVersion
+import org.jetbrains.lincheck.util.jdkVersion
 import kotlin.concurrent.thread
 import org.junit.*
 import org.junit.Assume.assumeFalse

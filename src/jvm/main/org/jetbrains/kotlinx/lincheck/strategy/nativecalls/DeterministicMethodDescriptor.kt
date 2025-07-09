@@ -11,8 +11,8 @@
 package org.jetbrains.kotlinx.lincheck.strategy.nativecalls
 
 import org.jetbrains.kotlinx.lincheck.strategy.nativecalls.io.getDeterministicFileMethodDescriptorOrNull
-import org.jetbrains.kotlinx.lincheck.trace.MethodSignature
-import org.jetbrains.kotlinx.lincheck.trace.Types
+import org.jetbrains.lincheck.descriptors.MethodSignature
+import org.jetbrains.lincheck.descriptors.Types
 
 internal data class MethodCallInfo(
     val ownerType: Types.ObjectType,

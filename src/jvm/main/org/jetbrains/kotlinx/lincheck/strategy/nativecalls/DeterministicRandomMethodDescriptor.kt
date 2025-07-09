@@ -10,8 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.nativecalls
 
-import org.jetbrains.kotlinx.lincheck.trace.MethodSignature
-import org.jetbrains.kotlinx.lincheck.trace.Types
+import org.jetbrains.lincheck.descriptors.MethodSignature
+import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.kotlinx.lincheck.util.toMethodSignature
 import sun.nio.ch.lincheck.InjectedRandom
 import sun.nio.ch.lincheck.Injections

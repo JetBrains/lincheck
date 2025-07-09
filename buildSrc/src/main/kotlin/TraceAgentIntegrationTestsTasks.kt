@@ -68,6 +68,14 @@ fun Project.registerTraceAgentIntegrationTestsPrerequisites() {
     }
 }
 
+/**
+ * This function is required to copy `trace-recorder-fat.jar` and `trace-debugger-fat.jar` files from
+ * the corresponding projects into the lincheck's build directory. This allows integration tests to see
+ * the fat-jars and add paths to them via `-javaagent` VM flag.
+ *
+ * @param fromProject trace-debugger/recorder project from which to copy the fat-jar.
+ * @param fatJarName expected fat-jar name.
+ */
 fun Project.copyTraceAgentFatJar(fromProject: Project, fatJarName: String): TaskProvider<Copy> {
     val copyTraceAgentFatJar = tasks.register<Copy>("${fromProject.name}_copyAgentFatJar") {
         dependsOn(traceAgentIntegrationTestsPrerequisites)

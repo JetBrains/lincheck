@@ -14,6 +14,8 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.lincheck.util.isInTraceDebuggerMode
+import org.jetbrains.lincheck.util.isJavaLambdaClass
 import java.lang.ref.WeakReference
 import java.lang.reflect.*
 import java.util.*
@@ -500,7 +502,7 @@ internal class LocalObjectManager(
                 wasLocal ||
                 // lambdas do not appear in localObjects because its class is generated at runtime,
                 // so we do not instrument its constructor (<init> blocks) invocations
-                isJavaLambdaClass(obj.javaClass.name)
+                        isJavaLambdaClass(obj.javaClass.name)
             )
         }
     }
