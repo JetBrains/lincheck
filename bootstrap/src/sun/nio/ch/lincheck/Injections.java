@@ -25,30 +25,6 @@ public class Injections {
     // Used in the verification phase to store a suspended continuation.
     public static Object lastSuspendedCancellableContinuationDuringVerification = null;
 
-    /**
-     * Mark value of {@link #requestedBeforeEventId} field to skip calls to {@link #beforeEvent}.
-     */
-    private static final int DO_NOT_TRIGGER_BEFORE_EVENT = -1;
-
-    /**
-     * Mark value of {@link #requestedBeforeEventId} field to always call {@link #beforeEvent}.
-     */
-    private static final int STOP_AT_NEXT_EVENT_ID = -2;
-
-    /**
-     * This field is updated from the debugger to request a specific ID.
-     * <p>
-     * Initially not triggered, then it is updated from the debugger to the desired ID.
-     */
-    @SuppressWarnings({"FieldMayBeFinal", "FieldCanBeLocal"})
-    private static int requestedBeforeEventId = DO_NOT_TRIGGER_BEFORE_EVENT;
-
-    /**
-     * This field is used by the debugger to have a fast source of current ID.
-     */
-    @SuppressWarnings({"FieldCanBeLocal", "unused"})
-    private static int currentEventId = -1;
-
     public static EventTracker getEventTracker() {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) {
@@ -615,6 +591,30 @@ public class Injections {
 
     // == Methods required for the IDEA Plugin integration ==
 
+    /**
+     * Mark value of {@link #requestedBeforeEventId} field to skip calls to {@link #beforeEvent}.
+     */
+    private static final int DO_NOT_TRIGGER_BEFORE_EVENT = -1;
+
+    /**
+     * Mark value of {@link #requestedBeforeEventId} field to always call {@link #beforeEvent}.
+     */
+    private static final int STOP_AT_NEXT_EVENT_ID = -2;
+
+    /**
+     * This field is updated from the debugger to request a specific event ID.
+     * <p>
+     * Initially not triggered, then it is updated from the debugger to the desired event ID.
+     */
+    @SuppressWarnings({"FieldMayBeFinal", "FieldCanBeLocal"})
+    private static int requestedBeforeEventId = DO_NOT_TRIGGER_BEFORE_EVENT;
+
+    /**
+     * This field is used by the debugger to have a fast source of current event ID.
+     */
+    @SuppressWarnings({"FieldCanBeLocal", "unused"})
+    private static int currentEventId = -1;
+
     public static boolean shouldInvokeBeforeEvent() {
         return getEventTracker().shouldInvokeBeforeEvent();
     }
@@ -652,6 +652,8 @@ public class Injections {
         getEventTracker().setLastMethodCallEventId();
     }
 
+    // == Methods for bypassing JDK-8 specific restrictions on MethodHandles.Lookup ==
+
     /**
      * Attempts to retrieve the Class object associated with the given class name.
      * If the class is not found, it returns null instead of throwing an exception.
@@ -667,7 +669,6 @@ public class Injections {
             return null;
         }
     }
-
 
     private static Constructor<MethodHandles.Lookup> lookUpPrivateConstructor = null;
 
