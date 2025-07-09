@@ -394,7 +394,7 @@ internal fun GeneratorAdapter.invokeBeforeEvent(debugMessage: String) = invokeIn
         },
         thenClause = {
             push(debugMessage)
-            invokeStatic(Injections::getNextEventId)
+            invokeStatic(Injections::getCurrentEventId)
             dup()
             ifStatement(
                 condition = {

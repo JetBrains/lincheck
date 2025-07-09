@@ -615,6 +615,12 @@ public class Injections {
     @SuppressWarnings({"FieldCanBeLocal", "unused"})
     private static int currentEventId = -1;
 
+    /**
+     * Determines whether a {@link #beforeEvent} hook should be invoked.
+     * Queries the event tracker to determine if it currently requests {@link #beforeEvent} processing.
+     *
+     * @return true if the {@link #beforeEvent} method should be invoked before the event, false otherwise
+     */
     public static boolean shouldInvokeBeforeEvent() {
         return getEventTracker().shouldInvokeBeforeEvent();
     }
@@ -625,24 +631,34 @@ public class Injections {
      * It greatly improves the performance as the debugger installs a breakpoint into {@link #beforeEvent} method,
      * so each call leads to unnecessary lincheck/debugger communication.
      *
-     * @param eventId current id value
-     * @return whether the current point should lead to {@link #beforeEvent} call
+     * @param eventId current id value.
+     * @return whether the current event id is equal to the requested id.
      */
     public static boolean isBeforeEventRequested(int eventId) {
         int requestedId = requestedBeforeEventId;
         return requestedId == STOP_AT_NEXT_EVENT_ID || requestedId == eventId;
     }
 
+    /**
+     * This method is invoked before the event with specified id occurs.
+     * <p>
+     *
+     * IDEA plugin installs a breakpoint on this method
+     * to stop the debugger right before the specified event.
+     *
+     * @param eventId the unique identifier of the event.
+     * @param type type of the next event. Used only for debug purposes.
+     */
     public static void beforeEvent(int eventId, String type) {
-        // IDEA plugin installs breakpoint to this method
         getEventTracker().beforeEvent(eventId, type);
     }
 
     /**
-     * Gets current ID and sets it into {@link #currentEventId}.
+     * Requests current event ID from the event tracker and sets it into {@link #currentEventId}.
+     *
      * @param type type of the next event. Used only for debug purposes.
      */
-    public static int getNextEventId(String type) {
+    public static int getCurrentEventId(String type) {
         int eventId = getEventTracker().getEventId();
         currentEventId = eventId;
         return eventId;
