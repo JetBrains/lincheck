@@ -159,7 +159,7 @@ private class CodeLocationsContext {
     }
 
     private fun <T> load(container: MutableList<T?>, id: Int, value: T) {
-        while (container.size < id) {
+        while (container.size <= id) {
             container.add(null)
         }
         container[id] = value
