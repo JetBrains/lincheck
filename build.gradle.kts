@@ -136,7 +136,7 @@ sourceSets {
         val atomicfuVersion: String by project
 
         compileOnly(project(":bootstrap"))
-        api(project(":common")) // TODO: contains some classes from public lincheck API, refactor so that it does not expose essentially internal classes
+        api(project(":common"))
         implementation(project(":jvm-agent"))
         implementation(project(":trace"))
 
@@ -442,7 +442,6 @@ val sourcesJar = tasks.register<Jar>("sourcesJar") {
 val javadocJar = createJavadocJar("src/jvm/main")
 
 tasks.withType<Jar> {
-    // TODO: should bootstrap.jar be put in jvm-agent jar?
     dependsOn(":bootstrapJar")
 
     manifest {

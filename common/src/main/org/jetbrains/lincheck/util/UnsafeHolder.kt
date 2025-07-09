@@ -25,8 +25,8 @@ internal object UnsafeHolder {
     }
 }
 
-val fieldOffsetCache = ConcurrentHashMap<Field, Long>()
-val fieldBaseObjectCache = ConcurrentHashMap<Field, Any>()
+private val fieldOffsetCache = ConcurrentHashMap<Field, Long>()
+private val fieldBaseObjectCache = ConcurrentHashMap<Field, Any>()
 
 @Suppress("DEPRECATION")
 internal inline fun <T> readFieldViaUnsafe(obj: Any?, field: Field, getter: Unsafe.(Any?, Long) -> T): T {
