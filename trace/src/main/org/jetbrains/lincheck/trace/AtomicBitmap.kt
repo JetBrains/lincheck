@@ -16,7 +16,7 @@ import kotlin.math.max
 private const val ATOMIC_SIZE_BITS = Long.SIZE_BITS                          // Bits in one atomic array cell (Long)
 private const val ATOMIC_SIZE_BYTES = Long.SIZE_BYTES                        // Bytes in one atomic array cell (Long)
 private const val ATOMIC_SIZE_SHIFT = 6                                      // log2(ATOMIC_SIZE_BITS)
-private const val ATOMIC_BIT_MASK = (1 shl ATOMIC_SIZE_SHIFT)                // Mask to have a reminder for division by ATOMIC_SIZE_BITS
+private const val ATOMIC_BIT_MASK = (1 shl ATOMIC_SIZE_SHIFT) - 1            // Mask to have a reminder for division by ATOMIC_SIZE_BITS
 private const val ATOMIC_CHUNK_BYTES = 4096                                  // One chunk in bytes (typical page)
 private const val ATOMIC_CHUNK_SIZE = ATOMIC_CHUNK_BYTES / ATOMIC_SIZE_BYTES // One chunk in cells
 private const val ATOMIC_CHUNK_BITS = ATOMIC_CHUNK_SIZE * ATOMIC_SIZE_BYTES  // One chunk in bits
