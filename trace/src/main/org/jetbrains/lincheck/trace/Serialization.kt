@@ -10,263 +10,735 @@
 
 package org.jetbrains.lincheck.trace
 
-import java.io.*
+import org.jetbrains.kotlinx.lincheck.tracedata.*
+import java.io.Closeable
+import java.io.DataOutput
+import java.io.DataOutputStream
+import java.io.OutputStream
+import java.nio.ByteBuffer
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.math.absoluteValue
 
-private const val OUTPUT_BUFFER_SIZE: Int = 16*1024*1024
+// Buffer for saving trace in one piece
+private const val OUTPUT_BUFFER_SIZE: Int = 16 * 1024 * 1024
 
-const val TRACE_MAGIC : Long = 0x706e547124ee5f70L
-const val TRACE_VERSION : Long = 6
+// 1 MiB
+private const val PER_THREAD_DATA_BUFFER_SIZE: Int = 1024 * 1024
 
-fun saveRecorderTrace(out: OutputStream, context: TraceContext, rootCallsPerThread: List<TRTracePoint>) {
-    check(context == TRACE_CONTEXT) { "Now only global TRACE_CONTEXT is supported" }
-    DataOutputStream(out.buffered(OUTPUT_BUFFER_SIZE)).use { output ->
-        output.writeLong(TRACE_MAGIC)
-        output.writeLong(TRACE_VERSION)
+// When flush per-thread data block?
+private const val DATA_FLUSH_THRESHOLD: Int = 1024
 
-        val codeLocationsStringPool = internalizeCodeLocationStrings(context)
+/**
+ * It is a strategy to collect trace: it can be full-track in memory or streaming to a file on-the-fly
+ */
+interface TraceCollectingStrategy {
+    /**
+     * Register current thread in strategy.
+     */
+    fun registerCurrentThread(threadId: Int)
 
-        saveCache(output, context.classDescriptors, DataOutput::writeClassDescriptor)
-        saveCache(output, context.methodDescriptors, DataOutput::writeMethodDescriptor)
-        saveCache(output, context.fieldDescriptors, DataOutput::writeFieldDescriptor)
-        saveCache(output, context.variableDescriptors, DataOutput::writeVariableDescriptor)
-        saveCache(output, codeLocationsStringPool.content, DataOutput::writeUTF)
+    /**
+     * Mark the thread as finished in strategy.
+     */
+    fun finishCurrentThread()
 
-        saveCodeLocations(output, context.codeLocations, context,codeLocationsStringPool)
+    /**
+     * Must be called when a new tracepoint is created.
+     *
+     * @param parent Current top of the call stack, if exists.
+     * @param created New tracepoint
+     */
+    fun tracePointCreated(parent: TRMethodCallTracePoint?, created: TRTracePoint)
 
-        output.writeInt(rootCallsPerThread.size)
-        rootCallsPerThread.forEach { root ->
-            root.save(output)
+    /**
+     * Must be called when the method call is ended and the call stack is popped.
+     *
+     * @param callTracepoint tracepoint popped from the call stack.
+     */
+    fun callEnded(callTracepoint: TRMethodCallTracePoint)
+
+    /**
+     * Must be called when trace is finished
+     */
+    fun traceEnded()
+}
+
+
+/**
+ * It is a strategy to save one tracepoint.
+ */
+internal interface TraceWriter : DataOutput, Closeable {
+    /**
+     * Saves dependencies of [TRObject], if needed.
+     * This must be called before [startWriteAnyTracepoint] for all used [TRObject]s.
+     */
+    fun preWriteTRObject(value: TRObject?)
+
+    /**
+     * Saves [TRObject] itself.
+     * Must be called after [startWriteAnyTracepoint] or [startWriteContainerTracepointFooter].
+     */
+    fun writeTRObject(value: TRObject?)
+
+    /**
+     * Marks the beginning of a tracepoint (before the first byte of tracepoint is written).
+     */
+    fun startWriteAnyTracepoint()
+
+    /**
+     * Marks the end of the leaf (fix-sized) tracepoint.
+     */
+    fun endWriteLeafTracepoint()
+
+    /**
+     * Mark the end of the container tracepoint's header (now only TRMethodCallTracepoint is a container one).
+     */
+    fun endWriteContainerTracepointHeader(id: Int)
+
+    /**
+     * Mark the beginning of container tracepoint's footer (After all children are saved).
+     */
+    fun startWriteContainerTracepointFooter(id: Int)
+
+    /**
+     * Marks the end of container tracepoint's footer.
+     */
+    fun endWriteContainerTracepointFooter()
+
+    /**
+     * Write [ClassDescriptor] from context referred by given `id`, if needed.
+     * This must be called before [startWriteAnyTracepoint] or [startWriteContainerTracepointFooter] for all used class descriptors.
+     */
+    fun writeClassDescriptor(id: Int)
+
+    /**
+     * Write [MethodDescriptor] from context referred by given `id`, if needed.
+     * This must be called before [startWriteAnyTracepoint] or [startWriteContainerTracepointFooter] for all used method descriptors.
+     */
+    fun writeMethodDescriptor(id: Int)
+
+    /**
+     * Write [FieldDescriptor] from context referred by given `id`, if needed.
+     * This must be called before [startWriteAnyTracepoint] or [startWriteContainerTracepointFooter] for all used field descriptors.
+     */
+    fun writeFieldDescriptor(id: Int)
+
+    /**
+     * Write [VariableDescriptor] from context referred by given `id` if needed.
+     * This must be called before [startWriteAnyTracepoint] or [startWriteContainerTracepointFooter] for all used variable descriptors.
+     */
+    fun writeVariableDescriptor(id: Int)
+
+    /**
+     * Write [StackTraceElement] from context referred by given code location `id`, if needed.
+     * This must be called before [startWriteAnyTracepoint] or [startWriteContainerTracepointFooter] for all used code locations.
+     */
+    fun writeCodeLocation(id: Int)
+}
+
+/**
+ * Interface to check and mark if a given piece of reference data was already stored.
+ */
+private interface ContextSavingState {
+    fun isClassDescriptorSaved(id: Int): Boolean
+    fun markClassDescriptorSaved(id: Int)
+    fun isMethodDescriptorSaved(id: Int): Boolean
+    fun markMethodDescriptorSaved(id: Int)
+    fun isFieldDescriptorSaved(id: Int): Boolean
+    fun markFieldDescriptorSaved(id: Int)
+    fun isVariableDescriptorSaved(id: Int): Boolean
+    fun markVariableDescriptorSaved(id: Int)
+    fun isCodeLocationSaved(id: Int): Boolean
+    fun markCodeLocationSaved(id: Int)
+
+    /**
+     * Return positive string id if it was stored already and negative string id if it should be stored
+     * with absolute value of this id.
+     */
+    fun isStringSaved(value: String): Int
+
+    /**
+     * Mark string as stored. Do nothing if string was not passed tp [isStringSaved].
+     */
+    fun markStringSaved(value: String)
+}
+
+private sealed class TraceWriterBase(
+    private val context: TraceContext,
+    private val contextState: ContextSavingState,
+    protected val data: DataOutputStream
+): TraceWriter, DataOutput by data {
+    // Stack of "container" tracepoints
+    private val containerStack = mutableListOf<Pair<Int, Long>>()
+
+    private var inTracepointBody = false
+
+    protected abstract val currentDataPosition: Long
+    protected abstract val writerId: Int
+
+    override fun close() {
+        data.writeKind(ObjectKind.EOF)
+        data.close()
+
+        writeIndexCell(ObjectKind.EOF,-1, -1, -1)
+    }
+
+    override fun preWriteTRObject(value: TRObject?) {
+        check(!inTracepointBody) { "Cannot write TRObject dependency into tracepoint body" }
+        if (value == null || value.isPrimitive || value.isSpecial) return
+        writeClassDescriptor(value.classNameId)
+    }
+
+    override fun writeTRObject(value: TRObject?) {
+        check(inTracepointBody) { "Cannot write TRObject outside tracepoint body" }
+        data.writeTRObject(value)
+    }
+
+    override fun startWriteAnyTracepoint() {
+        check(!inTracepointBody) { "Cannot start nested tracepoint body" }
+        data.writeKind(ObjectKind.TRACEPOINT)
+        inTracepointBody = true
+    }
+
+    override fun endWriteLeafTracepoint() {
+        check(inTracepointBody) { "Cannot end tracepoint body not in tracepoint" }
+        inTracepointBody = false
+    }
+
+    override fun endWriteContainerTracepointHeader(id: Int) {
+        check(inTracepointBody) { "Cannot end tracepoint header not in tracepoint" }
+        inTracepointBody = false
+
+        // Store where container content starts
+        containerStack.add(id to currentDataPosition)
+    }
+
+    override fun startWriteContainerTracepointFooter(id: Int) {
+        check(!inTracepointBody) { "Cannot start nested tracepoint footer" }
+        inTracepointBody = true
+
+        check(containerStack.isNotEmpty()) {
+            "Calls endWriteContainerTracepointHeader(?) / startWriteContainerTracepointFooter($id) are not balanced"
+        }
+        val (storedId, startPos) = containerStack.removeLast()
+        check(id == storedId) {
+            "Calls endWriteContainerTracepointHeader($storedId) / startWriteContainerTracepointFooter($id) are not balanced"
+        }
+        writeIndexCell(ObjectKind.TRACEPOINT, id, startPos, currentDataPosition)
+
+        // Start object
+        data.writeKind(ObjectKind.TRACEPOINT_FOOTER)
+    }
+
+    override fun endWriteContainerTracepointFooter() {
+        check(inTracepointBody) { "Cannot end tracepoint footer not in tracepoint" }
+        inTracepointBody = false
+    }
+
+    override fun writeClassDescriptor(id: Int) {
+        check(!inTracepointBody) { "Cannot save reference data inside tracepoint" }
+        if (contextState.isClassDescriptorSaved(id)) return
+        // Write class descriptor into data and position into index
+        val position = currentDataPosition
+        data.writeKind(ObjectKind.CLASS_DESCRIPTOR)
+        data.writeInt(id)
+        data.writeClassDescriptor(context.getClassDescriptor(id))
+        contextState.markClassDescriptorSaved(id)
+
+        writeIndexCell(ObjectKind.CLASS_DESCRIPTOR, id, position, -1)
+    }
+
+    override fun writeMethodDescriptor(id: Int) {
+        check(!inTracepointBody) { "Cannot save reference data inside tracepoint" }
+        if (contextState.isMethodDescriptorSaved(id)) return
+        val descriptor = context.getMethodDescriptor(id)
+        writeClassDescriptor(descriptor.classId)
+
+        // Write method descriptor into data and position into index
+        val position = currentDataPosition
+        data.writeKind(ObjectKind.METHOD_DESCRIPTOR)
+        data.writeInt(id)
+        data.writeMethodDescriptor(descriptor)
+        contextState.markMethodDescriptorSaved(id)
+
+        writeIndexCell(ObjectKind.METHOD_DESCRIPTOR, id, position, -1)
+    }
+
+    override fun writeFieldDescriptor(id: Int) {
+        check(!inTracepointBody) { "Cannot save reference data inside tracepoint" }
+        if (contextState.isFieldDescriptorSaved(id)) return
+        val descriptor = context.getFieldDescriptor(id)
+        writeClassDescriptor(descriptor.classId)
+        // Write field descriptor into data and position into index
+        val position = currentDataPosition
+        data.writeKind(ObjectKind.FIELD_DESCRIPTOR)
+        data.writeInt(id)
+        data.writeFieldDescriptor(descriptor)
+        contextState.markFieldDescriptorSaved(id)
+
+        writeIndexCell(ObjectKind.FIELD_DESCRIPTOR, id, position, -1)
+    }
+
+    override fun writeVariableDescriptor(id: Int) {
+        check(!inTracepointBody) { "Cannot save reference data inside tracepoint" }
+        if (contextState.isVariableDescriptorSaved(id)) return
+        // Write variable descriptor into data and position into index
+        val position = currentDataPosition
+        data.writeKind(ObjectKind.VARIABLE_DESCRIPTOR)
+        data.writeInt(id)
+        data.writeVariableDescriptor(context.getVariableDescriptor(id))
+        contextState.markVariableDescriptorSaved(id)
+
+        writeIndexCell(ObjectKind.VARIABLE_DESCRIPTOR, id, position, -1)
+    }
+
+    override fun writeCodeLocation(id: Int) {
+        check(!inTracepointBody) { "Cannot save reference data inside tracepoint" }
+        if (id == UNKNOWN_CODE_LOCATION_ID) return
+        if (contextState.isCodeLocationSaved(id)) return
+
+        val codeLocation = context.stackTrace(id)
+        // All strings only once. It will have duplications with class and method descriptors,
+        // but size loss is negligible and this way is simplier
+        val fileNameId = writeString(codeLocation.fileName)
+        val classNameId = writeString(codeLocation.className)
+        val methodNameId = writeString(codeLocation.methodName)
+
+        // Code location into data and position into index
+        val position = currentDataPosition
+        data.writeKind(ObjectKind.CODE_LOCATION)
+        data.writeInt(id)
+        data.writeInt(fileNameId)
+        data.writeInt(classNameId)
+        data.writeInt(methodNameId)
+        data.writeInt(codeLocation.lineNumber)
+        contextState.markCodeLocationSaved(id)
+
+        writeIndexCell(ObjectKind.CODE_LOCATION, id, position, -1)
+    }
+
+    protected fun writeString(value: String?): Int {
+        check(!inTracepointBody) { "Cannot save reference data inside tracepoint" }
+        if (value == null) return -1
+
+        val id = contextState.isStringSaved(value)
+        if (id > 0) return id
+
+        val position = currentDataPosition
+        data.writeKind(ObjectKind.STRING)
+        data.writeInt(-id)
+        data.writeUTF(value)
+        contextState.markStringSaved(value)
+
+        // It cannot fail
+        writeIndexCell(ObjectKind.STRING, -id, position, -1)
+
+        return -id
+    }
+
+    protected abstract fun writeIndexCell(kind: ObjectKind, id: Int, startPos: Long, endPos: Long)
+}
+
+internal data class IndexCell(
+    val kind: ObjectKind,
+    val id: Int,
+    val startPos: Long,
+    val endPos: Long
+)
+
+private interface BlockSaver {
+    fun saveDataAndIndexBlock(writerId: Int, logicalBlockStart: Long, dataBlock: ByteBuffer, indexList: List<IndexCell>)
+}
+
+private class BufferedTraceWriter (
+    override val writerId: Int,
+    context: TraceContext,
+    contextState: ContextSavingState,
+    private val storage: BlockSaver,
+    private val dataStream: ByteBufferOutputStream = ByteBufferOutputStream(PER_THREAD_DATA_BUFFER_SIZE)
+) : TraceWriterBase(
+    context = context,
+    contextState = contextState,
+    data = DataOutputStream(dataStream)
+) {
+    private var currentStartDataPosition: Long = 0
+    private val index = mutableListOf<IndexCell>()
+
+    override val currentDataPosition: Long get() = currentStartDataPosition + dataStream.position()
+
+    override fun close() {
+        flush()
+        super.close()
+    }
+
+    override fun endWriteLeafTracepoint() {
+        super.endWriteLeafTracepoint()
+        maybeFlushData()
+    }
+
+    override fun endWriteContainerTracepointFooter() {
+        super.endWriteContainerTracepointFooter()
+        maybeFlushData()
+    }
+
+    override fun writeIndexCell(kind: ObjectKind, id: Int, startPos: Long, endPos: Long) {
+        index.add(IndexCell(kind, id, startPos, endPos))
+    }
+
+    fun flush() {
+        val logicalStart = currentStartDataPosition
+        currentStartDataPosition += dataStream.position()
+        storage.saveDataAndIndexBlock(writerId, logicalStart, dataStream.getBuffer(), index)
+        dataStream.reset()
+        index.clear()
+    }
+
+    private fun maybeFlushData() {
+        if (dataStream.available() < DATA_FLUSH_THRESHOLD) {
+            flush()
         }
     }
 }
 
-fun loadRecordedTrace(inp: InputStream): Pair<TraceContext, List<TRTracePoint>> {
-    DataInputStream(inp.buffered(OUTPUT_BUFFER_SIZE)).use { input ->
-        val magic = input.readLong()
-        if (magic != TRACE_MAGIC) {
-            error("Wrong magic 0x${(magic.toString(16))}, expected ${TRACE_MAGIC.toString(16)}")
+private class SimpleContextSavingState: ContextSavingState {
+    private var seenClassDescriptors = BooleanArray(1024)
+    private var seenMethodDescriptors = BooleanArray(1024)
+    private var seenFieldDescriptors = BooleanArray(1024)
+    private var seenVariableDescriptors = BooleanArray(1024)
+    private var seenCodeLocations = BooleanArray(65536)
+    private val stringCache = mutableMapOf<String, Int>()
+
+    override fun isClassDescriptorSaved(id: Int): Boolean {
+        return id < seenClassDescriptors.size && seenClassDescriptors[id]
+    }
+
+    override fun markClassDescriptorSaved(id: Int) {
+        seenClassDescriptors = ensureSize(seenClassDescriptors, id)
+        seenClassDescriptors[id] = true
+    }
+
+    override fun isMethodDescriptorSaved(id: Int): Boolean {
+        return id < seenMethodDescriptors.size && seenMethodDescriptors[id]
+    }
+
+    override fun markMethodDescriptorSaved(id: Int) {
+        seenMethodDescriptors = ensureSize(seenMethodDescriptors, id)
+        seenMethodDescriptors[id] = true
+    }
+
+    override fun isFieldDescriptorSaved(id: Int): Boolean {
+        return id < seenFieldDescriptors.size && seenFieldDescriptors[id]
+    }
+
+    override fun markFieldDescriptorSaved(id: Int) {
+        seenFieldDescriptors = ensureSize(seenFieldDescriptors, id)
+        seenFieldDescriptors[id] = true
+    }
+
+    override fun isVariableDescriptorSaved(id: Int): Boolean {
+        return id < seenVariableDescriptors.size && seenVariableDescriptors[id]
+    }
+
+    override fun markVariableDescriptorSaved(id: Int) {
+        seenVariableDescriptors = ensureSize(seenVariableDescriptors, id)
+        seenVariableDescriptors[id] = true
+    }
+
+    override fun isCodeLocationSaved(id: Int): Boolean {
+        return id < seenCodeLocations.size && seenCodeLocations[id]
+    }
+
+    override fun markCodeLocationSaved(id: Int) {
+        seenCodeLocations = ensureSize(seenCodeLocations, id)
+        seenCodeLocations[id] = true
+    }
+
+    override fun isStringSaved(value: String): Int {
+        val id = stringCache[value]
+        if (id != null && id > 0) {
+            return id
         }
-
-        val version = input.readLong()
-        if (version != TRACE_VERSION) {
-            error("Wrong version $version (expected $TRACE_VERSION)")
-        }
-
-        val context = TRACE_CONTEXT // TraceContext()
-        loadCache(input, context::restoreClassDescriptor, DataInput::readClassDescriptor)
-        loadCache(input, context::restoreMethodDescriptor, { readMethodDescriptor(context) })
-        loadCache(input, context::restoreFieldDescriptor, { readFieldDescriptor(context) })
-        loadCache(input, context::restoreVariableDescriptor, DataInput::readVariableDescriptor)
-
-        val codeLocationsStringPool = IndexedPool<String>()
-        loadCache(input, codeLocationsStringPool::getOrCreateId, DataInput::readUTF)
-        loadCodeLocations(input, context,codeLocationsStringPool)
-
-
-        val threadNum = input.readInt()
-        val roots = mutableListOf<TRMethodCallTracePoint>()
-        repeat(threadNum) {
-            roots.add(loadTRTracePoint(input) as TRMethodCallTracePoint)
-        }
-        return context to roots
+        stringCache[value] = -(stringCache.size + 1)
+        return -stringCache.size
     }
-}
 
-private fun <V> saveCache(output: DataOutput, cache: List<V>, writer: DataOutput.(V) -> Unit) {
-    output.writeInt(cache.size)
-    cache.forEach {
-        output.writer(it)
-    }
-}
-
-
-private fun <V> loadCache(input: DataInput, setter: (V) -> Unit, reader: DataInput.() -> V) {
-    val count = input.readInt()
-    repeat(count) {
-        setter(input.reader())
-    }
-}
-
-private fun internalizeCodeLocationStrings(context: TraceContext): IndexedPool<String> {
-    val pool = IndexedPool<String>()
-    context.codeLocations.forEach {
-        // Maybe, this class missed in cache?
-        context.getOrCreateClassId(it.className.toCanonicalClassName())
-
-        pool.getOrCreateId(it.methodName)
-        val fn = it.fileName
-        if (fn != null) {
-            pool.getOrCreateId(fn)
+    override fun markStringSaved(value: String) {
+        val id = stringCache[value]
+        if (id != null && id < 0) {
+            stringCache[value] = -id
         }
     }
-    return pool
-}
 
-private fun saveCodeLocations(output: DataOutput, locations: List<StackTraceElement>, context: TraceContext, stringCache: IndexedPool<String>) {
-    output.writeInt(locations.size)
-    locations.forEach {
-        output.writeStackTraceElement(it, context, stringCache)
+    private fun ensureSize(map: BooleanArray, id: Int): BooleanArray {
+        if (id < map.size) return map
+        val newlen = Integer.max(id + 16, map.size + map.size / 2)
+        return map.copyOf(newlen)
     }
 }
 
-private fun loadCodeLocations(input: DataInput, context: TraceContext, stringCache: IndexedPool<String>) {
-    val count = input.readInt()
-    repeat(count) {
-        CodeLocations.newCodeLocation(input.readStackTraceElement(context, stringCache))
-    }
-}
+private class DirectTraceWriter (
+    dataStream: OutputStream,
+    indexStream: OutputStream,
+    context: TraceContext,
+    private val pos: PositionCalculatingOutputStream = PositionCalculatingOutputStream(dataStream)
+) : TraceWriterBase(
+    context = context,
+    contextState = SimpleContextSavingState(),
+    data = DataOutputStream(pos)
+) {
+    private val index = DataOutputStream(indexStream)
 
-private fun DataOutput.writeType(value: Types.Type) {
-    when (value) {
-        is Types.ArrayType -> {
-            writeByte(0)
-            writeType(value.elementType)
+    private var currentWriterId: Int = 0
+    private var currentBlockStart: Long = 0 // with header
+    private var currentDataStart: Long = 0 // after header
+
+    override val currentDataPosition: Long get() = pos.currentPosition - currentDataStart
+    override val writerId: Int get() = currentWriterId
+
+    init {
+        data.writeLong(TRACE_MAGIC)
+        data.writeLong(TRACE_VERSION)
+
+        index.writeLong(INDEX_MAGIC)
+        index.writeLong(TRACE_VERSION)
+    }
+
+    override fun close() {
+        super.close()
+        index.writeLong(INDEX_MAGIC)
+        index.close()
+    }
+
+    override fun writeIndexCell(kind: ObjectKind, id: Int, startPos: Long, endPos: Long) {
+        if (kind == ObjectKind.TRACEPOINT) {
+            index.writeIndexCell(kind, id, startPos, endPos)
+        } else {
+            index.writeIndexCell(kind, id, startPos + currentDataStart, endPos + currentDataStart)
         }
-        is Types.BooleanType -> writeByte(1)
-        is Types.ByteType -> writeByte(2)
-        is Types.CharType -> writeByte(3)
-        is Types.DoubleType -> writeByte(4)
-        is Types.FloatType -> writeByte(5)
-        is Types.IntType -> writeByte(6)
-        is Types.LongType -> writeByte(7)
-        is Types.ObjectType -> {
-            writeByte(8)
-            writeUTF(value.className)
+    }
+
+    fun startNewRoot(id: Int) {
+        currentWriterId = id
+        currentBlockStart = pos.currentPosition
+        data.writeKind(ObjectKind.BLOCK_START)
+        data.writeInt(id)
+        currentDataStart = pos.currentPosition
+    }
+
+    fun endRoot() {
+        val endPos = pos.currentPosition
+        data.writeKind(ObjectKind.BLOCK_END)
+        index.writeIndexCell(ObjectKind.BLOCK_START, currentWriterId, currentBlockStart, endPos)
+    }
+}
+
+class MemoryTraceCollecting: TraceCollectingStrategy {
+    override fun registerCurrentThread(threadId: Int) {}
+    override fun finishCurrentThread() {}
+
+    override fun tracePointCreated(
+        parent: TRMethodCallTracePoint?,
+        created: TRTracePoint
+    ) {
+        parent?.addChild(created)
+    }
+
+    override fun callEnded(callTracepoint: TRMethodCallTracePoint) {}
+
+    /**
+     * Do nothing.
+     * Trace collected in memory can be saved by external means, if needed.
+     */
+    override fun traceEnded() {}
+}
+
+class FileStreamingTraceCollecting(
+    dataStream: OutputStream,
+    indexStream: OutputStream,
+    val context: TraceContext
+): TraceCollectingStrategy, ContextSavingState {
+    constructor(baseFileName: String, context: TraceContext) :
+            this(
+                dataStream = openNewFile(baseFileName),
+                indexStream = openNewFile(baseFileName + INDEX_FILENAME_SUFFIX),
+                context = context
+            )
+
+    private val pos: PositionCalculatingOutputStream = PositionCalculatingOutputStream(dataStream)
+    private val data: DataOutputStream = DataOutputStream(pos)
+    private val index: DataOutputStream = DataOutputStream(indexStream.buffered(OUTPUT_BUFFER_SIZE))
+
+    private var seenClassDescriptors = AtomicBitmap()
+    private var seenMethodDescriptors = AtomicBitmap()
+    private var seenFieldDescriptors = AtomicBitmap()
+    private var seenVariableDescriptors = AtomicBitmap()
+    private var seenCodeLocations = AtomicBitmap()
+    private val stringCache = ConcurrentHashMap<String, Int>()
+    private val stringIdGenerator = AtomicInteger(1)
+
+    private val writers = ConcurrentHashMap<Thread, BufferedTraceWriter>()
+
+    init {
+        data.writeLong(TRACE_MAGIC)
+        data.writeLong(TRACE_VERSION)
+
+        index.writeLong(INDEX_MAGIC)
+        index.writeLong(TRACE_VERSION)
+    }
+
+    override fun registerCurrentThread(threadId: Int) {
+        val t = Thread.currentThread()
+        if (writers[t] != null) return
+        writers[t] = BufferedTraceWriter(
+            writerId = threadId,
+            context = context,
+            contextState = this,
+            // This is needed to work around visibility problems
+            storage = object : BlockSaver {
+                override fun saveDataAndIndexBlock(writerId: Int, logicalBlockStart: Long, dataBlock: ByteBuffer, indexList: List<IndexCell>) =
+                    saveDataAndIndexBlockImpl(writerId, logicalBlockStart,dataBlock, indexList)
+            }
+        )
+    }
+
+    override fun finishCurrentThread() {
+        val writer = writers[Thread.currentThread()] ?: return
+        writer.flush()
+    }
+
+    override fun tracePointCreated(
+        parent: TRMethodCallTracePoint?,
+        created: TRTracePoint
+    ) {
+        val writer = writers[Thread.currentThread()] ?: return
+        try {
+            created.save(writer)
+        } catch (_: BufferOverflowException) {
+            // Flush current buffers, start over
+            writer.flush()
+            created.save(writer)
         }
-        is Types.ShortType ->writeByte(9)
-        is Types.VoidType -> writeByte(10)
+    }
+
+    override fun callEnded(callTracepoint: TRMethodCallTracePoint) {
+        val writer = writers[Thread.currentThread()] ?: return
+        try {
+            callTracepoint.saveFooter(writer)
+        } catch (_: BufferOverflowException) {
+            // Flush current buffers, start over
+            writer.flush()
+            callTracepoint.saveFooter(writer)
+        }
+    }
+
+    override fun traceEnded() {
+        writers.values.forEach { it.close() }
+
+        data.writeKind(ObjectKind.EOF)
+        data.close()
+
+        index.writeIndexCell(ObjectKind.EOF, -1, -1, -1)
+        index.writeLong(INDEX_MAGIC)
+        index.close()
+    }
+
+    // This is a synchronization point for all real stream writes
+    @Synchronized
+    private fun saveDataAndIndexBlockImpl(writerId: Int, logicalBlockStart: Long, dataBlock: ByteBuffer, indexList: List<IndexCell>) {
+        val startPosition = pos.currentPosition
+        data.writeKind(ObjectKind.BLOCK_START)
+        data.writeInt(writerId)
+        val indexShift = pos.currentPosition - logicalBlockStart
+        data.write(dataBlock.array(), 0, dataBlock.limit())
+        val endPosition = pos.currentPosition
+        data.writeKind(ObjectKind.BLOCK_END)
+        data.flush()
+
+        index.writeIndexCell(ObjectKind.BLOCK_START, writerId, startPosition, endPosition)
+        indexList.forEach {
+            if (it.kind == ObjectKind.TRACEPOINT) {
+                // Trace points indices are in "local" offsets, as they should be loaded
+                // from interleaving per-thread blocks
+                index.writeIndexCell(it.kind, it.id, it.startPos, it.endPos)
+            } else {
+                // All other objects are in "global" offsets as they cannot be split between blocks
+                // and can be loaded without taking blocks in consideration
+                index.writeIndexCell(it.kind, it.id, it.startPos + indexShift, it.endPos + indexShift)
+            }
+        }
+        index.flush()
+    }
+
+    override fun isClassDescriptorSaved(id: Int): Boolean = seenClassDescriptors.isSet(id)
+
+    override fun markClassDescriptorSaved(id: Int): Unit = seenClassDescriptors.set(id)
+
+    override fun isMethodDescriptorSaved(id: Int): Boolean = seenMethodDescriptors.isSet(id)
+
+    override fun markMethodDescriptorSaved(id: Int): Unit = seenMethodDescriptors.set(id)
+
+    override fun isFieldDescriptorSaved(id: Int): Boolean = seenFieldDescriptors.isSet(id)
+
+    override fun markFieldDescriptorSaved(id: Int): Unit = seenFieldDescriptors.set(id)
+
+    override fun isVariableDescriptorSaved(id: Int): Boolean = seenVariableDescriptors.isSet(id)
+
+    override fun markVariableDescriptorSaved(id: Int): Unit = seenVariableDescriptors.set(id)
+
+    override fun isCodeLocationSaved(id: Int): Boolean = seenCodeLocations.isSet(id)
+
+    override fun markCodeLocationSaved(id: Int): Unit = seenCodeLocations.set(id)
+
+    override fun isStringSaved(value: String): Int {
+        val id = stringCache.computeIfAbsent(value) { _ -> -stringIdGenerator.getAndIncrement() }
+        return id
+    }
+
+    override fun markStringSaved(value: String) {
+        // Make positive!
+        stringCache.compute(value) { _, v -> v?.absoluteValue }
     }
 }
 
-private fun DataOutput.writeMethodType(value: Types.MethodType) {
-    writeType(value.returnType)
-    writeInt(value.argumentTypes.size)
-    value.argumentTypes.forEach {
-        writeType(it)
-    }
-}
-
-private fun DataInput.readType(): Types.Type {
-    val type = readByte()
-    return when (type.toInt()) {
-        0 -> Types.ArrayType(readType())
-        1 -> Types.BooleanType()
-        2 -> Types.ByteType()
-        3 -> Types.CharType()
-        4 -> Types.DoubleType()
-        5 -> Types.FloatType()
-        6 -> Types.IntType()
-        7 -> Types.LongType()
-        8 -> Types.ObjectType(readUTF())
-        9 -> Types.ShortType()
-        10 -> Types.VoidType()
-        else -> error("Unknown Type id $type")
-    }
-}
-
-private fun DataInput.readMethodType(): Types.MethodType {
-    val returnType = readType()
-    val count = readInt()
-    val argumentTypes = mutableListOf<Types.Type>()
-    repeat(count) {
-        argumentTypes.add(readType())
-    }
-    return Types.MethodType(argumentTypes, returnType)
-}
-
-private fun DataOutput.writeClassDescriptor(value: ClassDescriptor) {
-    writeUTF(value.name)
-}
-
-private fun DataInput.readClassDescriptor(): ClassDescriptor {
-    return ClassDescriptor(readUTF())
-}
-
-private fun DataOutput.writeMethodDescriptor(value: MethodDescriptor) {
-   writeInt(value.classId)
-   writeMethodSignature(value.methodSignature)
-}
-
-private fun DataInput.readMethodDescriptor(context: TraceContext): MethodDescriptor {
-    return MethodDescriptor(context,readInt(), readMethodSignature())
-}
-
-private fun DataOutput.writeMethodSignature(value: MethodSignature) {
-    writeUTF(value.name)
-    writeMethodType(value.methodType)
-}
-
-private fun DataInput.readMethodSignature(): MethodSignature {
-    return MethodSignature(readUTF(), readMethodType())
-}
-
-private fun DataOutput.writeFieldDescriptor(value: FieldDescriptor) {
-    writeInt(value.classId)
-    writeUTF(value.fieldName)
-    writeBoolean(value.isStatic)
-    writeBoolean(value.isFinal)
-}
-
-private fun DataInput.readFieldDescriptor(context: TraceContext): FieldDescriptor {
-    return FieldDescriptor(
+/**
+ * Top-level function to save full-depth recorded trace old-style (all in once)
+ */
+fun saveRecorderTrace(baseFileName: String, context: TraceContext, rootCallsPerThread: List<TRTracePoint>) =
+    saveRecorderTrace(
+        data = openNewFile(baseFileName).buffered(OUTPUT_BUFFER_SIZE),
+        index = openNewFile(baseFileName + INDEX_FILENAME_SUFFIX).buffered(OUTPUT_BUFFER_SIZE),
         context = context,
-        classId = readInt(),
-        fieldName = readUTF(),
-        isStatic = readBoolean(),
-        isFinal = readBoolean()
+        rootCallsPerThread = rootCallsPerThread
     )
-}
 
-private fun DataOutput.writeVariableDescriptor(value: VariableDescriptor) {
-    writeUTF(value.name)
-}
+fun saveRecorderTrace(data: OutputStream, index: OutputStream, context: TraceContext, rootCallsPerThread: List<TRTracePoint>) {
+    check(context == TRACE_CONTEXT) { "Now only global TRACE_CONTEXT is supported" }
 
-private fun DataInput.readVariableDescriptor(): VariableDescriptor {
-    return VariableDescriptor(readUTF())
-}
-
-private fun DataOutput.writeStackTraceElement(value: StackTraceElement, context: TraceContext, stringCache: IndexedPool<String>) {
-    writeInternalizedString(value.className.toCanonicalClassName(), { name -> context.getOrCreateClassId(name) })
-    writeInternalizedString(value.methodName, stringCache::getOrCreateId)
-    writeInternalizedString(value.fileName, stringCache::getOrCreateId)
-    writeInt(value.lineNumber)
-}
-
-private fun DataInput.readStackTraceElement(context: TraceContext, stringCache: IndexedPool<String>): StackTraceElement {
-    val className = readInternalizedString({ id -> context.getClassDescriptor(id).name  })?.toInternalClassName()
-    val methodName = readInternalizedString(stringCache::get)
-    val fileName = readInternalizedString(stringCache::get)
-    val lineNumber = readInt()
-    return StackTraceElement(className, methodName, fileName, lineNumber)
-}
-
-private fun DataOutput.writeInternalizedString(value: String?, internalizer: (String) -> Int?) {
-    if (value == null) {
-        writeInt(-1)
-    } else {
-        writeInt(internalizer(value) ?: -1)
+    DirectTraceWriter(data, index, context).use { tw ->
+        rootCallsPerThread.forEachIndexed { id, root ->
+            tw.startNewRoot(id)
+            saveTRTracepoint(tw, root)
+            tw.endRoot()
+        }
     }
 }
 
-private fun DataInput.readInternalizedString(internalizer: (Int) -> String?): String? {
-    val id = readInt()
-    if (id < 0) {
-        return null
-    } else {
-        return internalizer(id)
+private fun saveTRTracepoint(writer: TraceWriter, tracepoint: TRTracePoint) {
+    tracepoint.save(writer)
+    if (tracepoint is TRMethodCallTracePoint) {
+        tracepoint.events.forEach {
+            if (it != null) {
+                saveTRTracepoint(writer, it)
+            }
+        }
+        tracepoint.saveFooter(writer)
     }
 }
 
-/**
- * Converts a string representing a class name in internal format (e.g., "com/example/MyClass")
- * into a canonical class name format with (e.g., "com.example.MyClass").
- */
-private fun String.toCanonicalClassName() =
-    this.replace('/', '.')
-
-/**
- * Converts a string representing a class name in canonical format (e.g., "com.example.MyClass")
- * into an internal class name format with (e.g., "com/example/MyClass").
- */
-private fun String.toInternalClassName() =
-    this.replace('.', '/')
+private fun DataOutputStream.writeIndexCell(kind: ObjectKind, id: Int, startPos: Long, endPos: Long) {
+    writeByte(kind.ordinal)
+    writeInt(id)
+    writeLong(startPos)
+    writeLong(endPos)
+}
