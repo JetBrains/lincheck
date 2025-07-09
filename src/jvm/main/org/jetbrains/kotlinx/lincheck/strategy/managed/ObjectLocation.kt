@@ -14,7 +14,7 @@ abstract class ObjectLocation
 
 data class StaticFieldLocation(
     val className: String
-)
+) : ObjectLocation()
 
 data class ObjectFieldLocation(
     val className: String,
