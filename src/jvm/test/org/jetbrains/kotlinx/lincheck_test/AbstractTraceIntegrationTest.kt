@@ -46,7 +46,7 @@ abstract class AbstractTraceIntegrationTest {
                         val options = task as JavaForkOptions
                         val jvmArgs = options.jvmArgs?.toMutableList() ?: mutableListOf()
                         jvmArgs.addAll(listOf(${extraJvmArgs.joinToString(", ") { "\"$it\"" }}))
-                        jvmArgs.add("-javaagent:${pathToFatJar.absolutePath}=$testClassName,$testMethodName,${fileToDump.absolutePath}${if (extraAgentArgs.isNotEmpty()) ",${extraAgentArgs.joinToString(",")}" else ""}")
+                        jvmArgs.add("-javaagent:${pathToFatJar.absolutePath.escape()}=$testClassName,$testMethodName,${fileToDump.absolutePath.escape()}${if (extraAgentArgs.isNotEmpty()) ",${extraAgentArgs.joinToString(",")}" else ""}")
                         options.jvmArgs = jvmArgs
                     }
                 }
@@ -54,7 +54,7 @@ abstract class AbstractTraceIntegrationTest {
         """.trimIndent()
     }
 
-    private fun getGolderDataFileFor(testClassName: String, testMethodName: String): File {
+    private fun getGoldenDataFileFor(testClassName: String, testMethodName: String): File {
         val projectName = File(projectPath).name
         return File(Paths.get(testSourcesPath, "resources", "integrationTestData", projectName, "${testClassName}_$testMethodName.txt").toString())
     }
@@ -126,7 +126,7 @@ abstract class AbstractTraceIntegrationTest {
 
         // TODO decide how to test: with gold data or run twice?
         if (checkRepresentation) { // otherwise we just want to make sure that tests do not fail
-            val expectedOutput = getGolderDataFileFor(testClassName, testMethodName)
+            val expectedOutput = getGoldenDataFileFor(testClassName, testMethodName)
             if (expectedOutput.exists()) {
                 Assert.assertEquals(expectedOutput.readText(), tmpFile.readText())
             } else {
@@ -226,7 +226,7 @@ abstract class AbstractTraceIntegrationTest {
                             val classpath = project.configurations.findByName("jvmTestRuntimeClasspath")
                             if (classpath != null) {
                                 val classpathString = classpath.files.joinToString(File.pathSeparator)
-                                val outputFile = File("${outputFile.absolutePath}")
+                                val outputFile = File("${outputFile.absolutePath.escape()}")
                                 outputFile.writeText(classpathString)
                             }
                         }
@@ -312,3 +312,5 @@ abstract class AbstractTraceIntegrationTest {
 
 private val File.systemIndependentPath: String
     get() = this.absolutePath.replace(File.separatorChar, '/')
+
+private fun String.escape(): String = this.replace("\\", "\\\\")
