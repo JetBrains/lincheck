@@ -15,7 +15,8 @@ import org.jetbrains.kotlinx.lincheck.util.*
 abstract class ObjectLocation
 
 data class StaticFieldLocation(
-    val className: String
+    val className: String,
+    val fieldName: String,
 ) : ObjectLocation()
 
 data class ObjectFieldLocation(
@@ -40,58 +41,55 @@ internal fun AtomicMethodDescriptor.getUnsafeAccessLocation(receiver: Any, argum
     require(arguments.size >= 2) {
         "Expected at least 2 arguments, but got ${arguments.size}"
     }
-
-    val firstParameter = arguments[0]
-    val secondParameter = arguments[1]
-
-    if (secondParameter is Long) {
-        if (firstParameter is Class<*>) {
-            // The First parameter is a Class object in case of static field access.
-            val fieldName = findFieldNameByOffsetViaUnsafe(firstParameter, secondParameter)
-                ?: return ObjectAccessMethodInfo(
-                    obj = null,
-                    location = StaticFieldLocation("Unknown"),
-                    arguments = arguments.drop(2)
-                )
-
-            return ObjectAccessMethodInfo(
-                obj = null,
-                location = StaticFieldLocation(firstParameter.name),
-                arguments = arguments.drop(2)
-            )
-        } else if (firstParameter != null && firstParameter::class.java.isArray) {
-            // The First parameter is an Array in case of array cell access.
-            val unsafe = UnsafeHolder.UNSAFE
-            val arrayBaseOffset = unsafe.arrayBaseOffset(firstParameter::class.java)
-            val arrayIndexScale = unsafe.arrayIndexScale(firstParameter::class.java)
-            val index = (secondParameter - arrayBaseOffset) / arrayIndexScale
-
-            return ObjectAccessMethodInfo(
-                obj = firstParameter,
-                location = ArrayIndexLocation(index.toInt()),
-                arguments = arguments.drop(2)
-            )
-        } else if (firstParameter != null) {
-            // Then is an instance method call.
-            val fieldName = findFieldNameByOffsetViaUnsafe(firstParameter::class.java, secondParameter)
-                ?: return ObjectAccessMethodInfo(
-                    obj = firstParameter,
-                    location = ObjectFieldLocation(firstParameter::class.java.name, "Unknown"),
-                    arguments = arguments.drop(2)
-                )
-
-            return ObjectAccessMethodInfo(
-                obj = firstParameter,
-                location = ObjectFieldLocation(firstParameter::class.java.name, fieldName),
-                arguments = arguments.drop(2)
-            )
-        }
+    require(arguments[1] is Long) {
+        "Expected memory offset to be Long, but got ${arguments[1]?.javaClass?.name ?: "null"}"
     }
 
-    // Default case for unrecognized patterns
-    return ObjectAccessMethodInfo(
-        obj = null,
-        location = StaticFieldLocation("Unknown"),
-        arguments = arguments.toList()
-    )
+    val targetObject = arguments[0]
+    val memoryOffset = arguments[1] as Long
+    val remainingArguments = arguments.drop(2)
+
+    return when {
+        // Array access case
+        targetObject != null && targetObject::class.java.isArray -> {
+            val unsafe = UnsafeHolder.UNSAFE
+            val arrayBaseOffset = unsafe.arrayBaseOffset(targetObject::class.java)
+            val arrayIndexScale = unsafe.arrayIndexScale(targetObject::class.java)
+            val index = ((memoryOffset - arrayBaseOffset) / arrayIndexScale).toInt()
+            ObjectAccessMethodInfo(
+                obj = targetObject,
+                location = ArrayIndexLocation(index),
+                arguments = remainingArguments
+            )
+        }
+
+        // Static field access case
+        targetObject is Class<*> -> {
+            val fieldName = findFieldNameByOffsetViaUnsafe(targetObject, memoryOffset)
+                ?: error("Failed to find field name by offset $memoryOffset")
+            ObjectAccessMethodInfo(
+                obj = null,
+                location = StaticFieldLocation(
+                    className = targetObject.name,
+                    fieldName = fieldName,
+                ),
+                arguments = remainingArguments
+            )
+        }
+
+        // Instance field access case
+        targetObject != null -> {
+            val className = targetObject::class.java.name
+            val fieldName = findFieldNameByOffsetViaUnsafe(targetObject::class.java, memoryOffset)
+                ?: error("Failed to find field name by offset $memoryOffset")
+            ObjectAccessMethodInfo(
+                obj = targetObject,
+                location = ObjectFieldLocation(className, fieldName),
+                arguments = remainingArguments
+            )
+        }
+
+        // Unexpected case
+        else -> error("Failed to determine unsafe object access location")
+    }
 }
