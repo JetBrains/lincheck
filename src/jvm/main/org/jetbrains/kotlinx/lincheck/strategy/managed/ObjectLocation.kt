@@ -11,9 +11,6 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.util.*
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater
-import java.util.concurrent.atomic.AtomicLongFieldUpdater
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 
 abstract class ObjectLocation
 
@@ -137,3 +134,4 @@ internal fun AtomicMethodDescriptor.getAtomicFieldUpdaterAccessLocation(receiver
         error("Failed to extract field information from atomic field updater: ${t.message}")
     }
 }
+
