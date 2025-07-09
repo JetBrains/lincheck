@@ -233,8 +233,6 @@ internal abstract class ManagedStrategy(
 
     // Symbolizes that the `SpinCycleStartTracePoint` was added into the trace.
     private var spinCycleStartAdded = false
-    // Stores the accumulated call stack after the start of spin cycle
-    private val spinCycleMethodCallsStackTraces: MutableList<List<CallStackTraceElement>> = mutableListOf()
 
     internal val analysisProfile: AnalysisProfile = AnalysisProfile(
         analyzeStdLib = settings.analyzeStdLib
