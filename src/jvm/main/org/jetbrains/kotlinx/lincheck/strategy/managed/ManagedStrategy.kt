@@ -2531,6 +2531,16 @@ internal abstract class ManagedStrategy(
                isRegisteredThread()
     }
 
+    /* This method is used in the IDEA plugin communication protocol.
+     * IDEA plugin installs a breakpoint on this method to stop the debugger right before the specified event.
+     *
+     * CONTRACT: when IDEA plugin is enabled, instrumentation injects a call to `beforeEvent`
+     *   after each injected `beforeX` method (e.g., `beforeReadField`, `beforeWriteField`, etc.)
+     *   but before the actual event itself.
+     *   As such, the plugin assumes that each injected `beforeX` method
+     *   advances the `currentEventId` counter by 1,
+     *   to ensure that each "event" has a unique id.
+     */
     override fun beforeEvent(eventId: Int, type: String) {
         ideaPluginBeforeEvent(eventId, type)
     }
