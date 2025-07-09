@@ -197,40 +197,6 @@ internal abstract class ManagedStrategy(
     // TODO: handle coroutine resumptions (i.e., unify with `suspendedFunctionsStack`)
     private val analysisSectionStack = mutableThreadMapOf<MutableList<AnalysisSectionType>>()
 
-    /**
-     * In case when the plugin is enabled, we also enable [org.jetbrains.lincheck.util.eventIdStrictOrderingCheck] property and check
-     * that event ids provided to the [beforeEvent] method
-     * and corresponding trace points are sequentially ordered.
-     * But we do not add a [MethodCallTracePoint] for the coroutine resumption.
-     * So this field just tracks if the last [onMethodCall] invocation was actually a coroutine resumption.
-     * In this case, we just skip the next [beforeEvent] call.
-     *
-     * So this is a hack to make the plugin integration working without refactoring too much code.
-     *
-     * In more detail: when the resumption is called, a lot of stuff is happening under the hood.
-     * In particular, a suspend fun is called with the given completion object.
-     * [MethodCallTransformer] instruments this call as it instruments other method calls,
-     * however, in case of resumption this suspend fun call should not create new trace point.
-     * [MethodCallTransformer] does not know about it, it always injects beforeEvent call regardless:
-     *
-     * ```
-     * invokeStatic(Injections::beforeMethodCall)
-     * invokeBeforeEventIfPluginEnabled("method call $methodName", setMethodEventId = true)
-     * ```
-     *
-     * Therefore, to "skip" this beforeEvent call following resumption call to suspend fun,
-     * we use this `skipNextBeforeEvent` flag.
-     *
-     * A better approach would be to refactor a code, and instead just assign eventId-s directly to trace points.
-     * Methods like `beforeMethodCall` then can return `eventId` of the created trace point,
-     * or something like `-1` in case when no trace point is created.
-     * Then subsequent beforeEvent call can just take this `eventId` from the stack.
-     *
-     * TODO: refactor this --- we should have a more reliable way
-     *   to communicate coroutine resumption event to the plugin.
-     */
-    private var skipNextBeforeEvent = false
-
     // Symbolizes that the `SpinCycleStartTracePoint` was added into the trace.
     private var spinCycleStartAdded = false
 
@@ -2109,8 +2075,6 @@ internal abstract class ManagedStrategy(
                 callStackTrace.addAll(resumedStackTrace)
                 resumedStackTrace.forEach { pushShadowStackFrame(it.instance) }
             }
-            // since we are in resumption, skip the next ` beforeEvent ` call
-            skipNextBeforeEvent = true
             return null
         }
         val callId = callStackTraceElementId++
@@ -2546,23 +2510,10 @@ internal abstract class ManagedStrategy(
         // that should be invoked only outside the ignored section.
         // However, we cannot add `!inIgnoredSection` check here
         // as the instrumented code might call `enterIgnoredSection` just before this call.
-        return inIdeaPluginReplayMode && collectTrace &&
-                suddenInvocationResult == null &&
-                isRegisteredThread() &&
-                !shouldSkipNextBeforeEvent()
-    }
-
-    /**
-     * Indicates if the next [beforeEvent] method call should be skipped.
-     *
-     * @see skipNextBeforeEvent
-     */
-    private fun shouldSkipNextBeforeEvent(): Boolean {
-        val skipBeforeEvent = skipNextBeforeEvent
-        if (skipNextBeforeEvent) {
-            skipNextBeforeEvent = false
-        }
-        return skipBeforeEvent
+        return inIdeaPluginReplayMode &&
+               collectTrace &&
+               suddenInvocationResult == null &&
+               isRegisteredThread()
     }
 
     protected fun resetEventIdProvider() {
