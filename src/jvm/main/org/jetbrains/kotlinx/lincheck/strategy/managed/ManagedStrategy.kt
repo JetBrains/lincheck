@@ -1252,8 +1252,7 @@ internal abstract class ManagedStrategy(
     override fun beforeReadField(obj: Any?, codeLocation: Int, fieldId: Int): Unit = runInsideIgnoredSection {
         val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
         if (!fieldDescriptor.isStatic && obj == null) {
-            // Ignore, NullPointerException will be thrown
-            return
+            return // ignore, `NullPointerException` will be thrown
         }
         updateSnapshotOnFieldAccess(obj, fieldDescriptor.className, fieldDescriptor.fieldName)
         // We need to ensure all the classes related to the reading object are instrumented.
@@ -1271,7 +1270,8 @@ internal abstract class ManagedStrategy(
     }
 
     /** Returns <code>true</code> if a switch point is created. */
-    override fun beforeReadArrayElement(array: Any, index: Int, codeLocation: Int): Unit = runInsideIgnoredSection {
+    override fun beforeReadArrayElement(array: Any?, index: Int, codeLocation: Int): Unit = runInsideIgnoredSection {
+        if (array == null) return // ignore, `NullPointerException` will be thrown
         updateSnapshotOnArrayElementAccess(array, index)
         if (!shouldTrackArrayAccess(array)) {
             return
@@ -1309,7 +1309,7 @@ internal abstract class ManagedStrategy(
         loopDetector.afterRead(value)
     }
 
-    override fun afterReadArrayElement(array: Any, index: Int, codeLocation: Int, value: Any?) =
+    override fun afterReadArrayElement(array: Any?, index: Int, codeLocation: Int, value: Any?) =
         runInsideIgnoredSection {
             if (collectTrace) {
                 val eventId = getNextEventId()
@@ -1340,8 +1340,7 @@ internal abstract class ManagedStrategy(
         val threadId = threadScheduler.getCurrentThreadId()
         val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
         if (!fieldDescriptor.isStatic && obj == null) {
-            // Ignore, NullPointerException will be thrown
-            return
+            return // ignore, `NullPointerException` will be thrown
         }
         updateSnapshotOnFieldAccess(obj, fieldDescriptor.className, fieldDescriptor.fieldName)
         objectTracker.registerObjectLink(fromObject = obj, toObject = value)
@@ -1368,10 +1367,13 @@ internal abstract class ManagedStrategy(
         loopDetector.beforeWriteField(obj, value)
     }
 
-    override fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int): Unit =
+    override fun beforeWriteArrayElement(array: Any?, index: Int, value: Any?, codeLocation: Int): Unit =
         runInsideIgnoredSection {
             val eventId = getNextEventId()
         val threadId = threadScheduler.getCurrentThreadId()
+        if (array == null) {
+            return // ignore, `NullPointerException` will be thrown
+        }
         updateSnapshotOnArrayElementAccess(array, index)
         objectTracker.registerObjectLink(fromObject = array, toObject = value)
         if (!shouldTrackArrayAccess(array)) {
@@ -2535,9 +2537,10 @@ internal abstract class ManagedStrategy(
      * IDEA plugin installs a breakpoint on this method to stop the debugger right before the specified event.
      *
      * CONTRACT: when IDEA plugin is enabled, instrumentation injects a call to `beforeEvent`
-     *   after each injected `beforeX` method (e.g., `beforeReadField`, `beforeWriteField`, etc.)
+     *   after each injected method that can potentially create trace point
+     *   (e.g., `afterReadField`, `beforeWriteField`, etc.),
      *   but before the actual event itself.
-     *   As such, the plugin assumes that each injected `beforeX` method
+     *   As such, the plugin assumes that each such injected method
      *   advances the `currentEventId` counter by 1,
      *   to ensure that each "event" has a unique id.
      */

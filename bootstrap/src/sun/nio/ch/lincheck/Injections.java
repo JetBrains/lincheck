@@ -308,7 +308,6 @@ public class Injections {
      * @return whether the trace point was created
      */
     public static void beforeReadArray(Object array, int index, int codeLocation) {
-        if (array == null) return; // Ignore, NullPointerException will be thrown
         getEventTracker().beforeReadArrayElement(array, index, codeLocation);
     }
 
@@ -345,7 +344,6 @@ public class Injections {
      * Called from the instrumented code before any array cell write.
      */
     public static void beforeWriteArray(Object array, int index, Object value, int codeLocation) {
-        if (array == null) return; // Ignore, NullPointerException will be thrown
         getEventTracker().beforeWriteArrayElement(array, index, value, codeLocation);
     }
 
