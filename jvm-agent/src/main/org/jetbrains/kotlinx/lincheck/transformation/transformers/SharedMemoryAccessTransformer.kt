@@ -64,19 +64,12 @@ internal class SharedMemoryAccessTransformer(
                         push(fieldId)
                         // STACK: null, codeLocation, fieldId
                         invokeStatic(Injections::beforeReadField)
-                        // STACK: shouldTracePointCreated
-                        val shouldAddTracePoint = newLocal(BOOLEAN_TYPE).also { storeLocal(it) }
                         // STACK: <empty>
                         visitFieldInsn(opcode, owner, fieldName, desc)
                         // STACK: value
                         invokeAfterReadField(null, fieldId, getType(desc))
                         // STACK: value
-                        ifStatement(
-                            condition = { loadLocal(shouldAddTracePoint) },
-                            thenClause = {
-                                invokeBeforeEventIfPluginEnabled("read static field")
-                            }
-                        )
+                        invokeBeforeEventIfPluginEnabled("read static field")
                         // STACK: value
                     }
                 )
@@ -103,19 +96,12 @@ internal class SharedMemoryAccessTransformer(
                         push(fieldId)
                         // STACK: obj, obj, codeLocation, fieldId
                         invokeStatic(Injections::beforeReadField)
-                        // STACK: obj, shouldTracePointCreated
-                        val shouldAddTracePoint = newLocal(BOOLEAN_TYPE).also { storeLocal(it) }
                         // STACK: obj
                         visitFieldInsn(opcode, owner, fieldName, desc)
-                        // STACK: value
+                        // STACK: obj
                         invokeAfterReadField(ownerLocal, fieldId, getType(desc))
                         // STACK: value
-                        ifStatement(
-                            condition = { loadLocal(shouldAddTracePoint) },
-                            thenClause = {
-                                invokeBeforeEventIfPluginEnabled("read field")
-                            },
-                        )
+                        invokeBeforeEventIfPluginEnabled("read field")
                         // STACK: value
                     }
                 )
@@ -145,13 +131,8 @@ internal class SharedMemoryAccessTransformer(
                         push(fieldId)
                         // STACK: value, null, value, codeLocation, fieldId
                         invokeStatic(Injections::beforeWriteField)
-                        // STACK: value, isTracePointCreated
-                        ifStatement(
-                            condition = { /* already on stack */ },
-                            thenClause = {
-                                invokeBeforeEventIfPluginEnabled("write static field")
-                            }
-                        )
+                        // STACK: value
+                        invokeBeforeEventIfPluginEnabled("write static field")
                         // STACK: value
                         visitFieldInsn(opcode, owner, fieldName, desc)
                         // STACK: <empty>
@@ -185,13 +166,8 @@ internal class SharedMemoryAccessTransformer(
                         push(fieldId)
                         // STACK: obj, obj, value, codeLocation, fieldId
                         invokeStatic(Injections::beforeWriteField)
-                        // STACK: obj, isTracePointCreated
-                        ifStatement(
-                            condition = { /* already on stack */ },
-                            thenClause = {
-                                invokeBeforeEventIfPluginEnabled("write field")
-                            }
-                        )
+                        // STACK: obj
+                        invokeBeforeEventIfPluginEnabled("write field")
                         // STACK: obj
                         loadLocal(valueLocal)
                         // STACK: obj, value
@@ -227,8 +203,6 @@ internal class SharedMemoryAccessTransformer(
                         loadNewCodeLocationId()
                         // STACK: array: Array, index: Int, codeLocation: Int
                         invokeStatic(Injections::beforeReadArray)
-                        // STACK: shouldTracePointCreated
-                        val shouldAddTracePoint = newLocal(BOOLEAN_TYPE).also { storeLocal(it) }
                         // STACK: <empty>
                         loadLocal(arrayLocal)
                         loadLocal(indexLocal)
@@ -237,12 +211,8 @@ internal class SharedMemoryAccessTransformer(
                         // STACK: value
                         invokeAfterReadArray(arrayLocal, indexLocal, arrayElementType)
                         // STACK: value
-                        ifStatement(
-                            condition = { loadLocal(shouldAddTracePoint) },
-                            thenClause = {
-                                invokeBeforeEventIfPluginEnabled("read array")
-                            }
-                        )
+                        invokeBeforeEventIfPluginEnabled("read array")
+                        // STACK: value
                     }
                 )
             }
@@ -265,12 +235,7 @@ internal class SharedMemoryAccessTransformer(
                         loadNewCodeLocationId()
                         // STACK: array: Array, index: Int, array: Array, index: Int, value: Object, codeLocation: Int
                         invokeStatic(Injections::beforeWriteArray)
-                        ifStatement(
-                            condition = { /* already on stack */ },
-                            thenClause = {
-                                invokeBeforeEventIfPluginEnabled("write array")
-                            }
-                        )
+                        invokeBeforeEventIfPluginEnabled("write array")
                         // STACK: array: Array, index: Int
                         loadLocal(valueLocal)
                         // STACK: array: Array, index: Int, value: Object

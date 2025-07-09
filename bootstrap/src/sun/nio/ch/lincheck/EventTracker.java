@@ -58,13 +58,13 @@ public interface EventTracker {
 
     void updateSnapshotBeforeConstructorCall(Object[] objs);
 
-    boolean beforeReadField(Object obj, int codeLocation, int fieldId);
-    boolean beforeReadArrayElement(Object array, int index, int codeLocation);
+    void beforeReadField(Object obj, int codeLocation, int fieldId);
+    void beforeReadArrayElement(Object array, int index, int codeLocation);
     void afterReadField(Object obj, int codeLocation, int fieldId, Object value);
     void afterReadArrayElement(Object array, int index, int codeLocation, Object value);
 
-    boolean beforeWriteField(Object obj, Object value, int codeLocation, int fieldId);
-    boolean beforeWriteArrayElement(Object array, int index, Object value, int codeLocation);
+    void beforeWriteField(Object obj, Object value, int codeLocation, int fieldId);
+    void beforeWriteArrayElement(Object array, int index, Object value, int codeLocation);
     void afterWrite();
 
     void afterLocalRead(int codeLocation, int variableId, Object value);

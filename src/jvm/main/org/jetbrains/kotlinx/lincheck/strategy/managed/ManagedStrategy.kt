@@ -1238,11 +1238,11 @@ internal abstract class ManagedStrategy(
     /**
      * Returns `true` if a switch point is created.
      */
-    override fun beforeReadField(obj: Any?, codeLocation: Int, fieldId: Int): Boolean = runInsideIgnoredSection {
+    override fun beforeReadField(obj: Any?, codeLocation: Int, fieldId: Int): Unit = runInsideIgnoredSection {
         val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
         if (!fieldDescriptor.isStatic && obj == null) {
             // Ignore, NullPointerException will be thrown
-            return false
+            return
         }
         updateSnapshotOnFieldAccess(obj, fieldDescriptor.className, fieldDescriptor.fieldName)
         // We need to ensure all the classes related to the reading object are instrumented.
@@ -1252,24 +1252,22 @@ internal abstract class ManagedStrategy(
         }
         // Do not track accesses to untracked objects
         if (!shouldTrackFieldAccess(obj, fieldDescriptor)) {
-            return false
+            return
         }
         val iThread = threadScheduler.getCurrentThreadId()
         newSwitchPoint(iThread, codeLocation)
         loopDetector.beforeReadField(obj)
-        return true
     }
 
     /** Returns <code>true</code> if a switch point is created. */
-    override fun beforeReadArrayElement(array: Any, index: Int, codeLocation: Int): Boolean = runInsideIgnoredSection {
+    override fun beforeReadArrayElement(array: Any, index: Int, codeLocation: Int): Unit = runInsideIgnoredSection {
         updateSnapshotOnArrayElementAccess(array, index)
         if (!shouldTrackArrayAccess(array)) {
-            return false
+            return
         }
         val iThread = threadScheduler.getCurrentThreadId()
         newSwitchPoint(iThread, codeLocation)
         loopDetector.beforeReadArrayElement(array, index)
-        return true
     }
 
     override fun afterReadField(obj: Any?, codeLocation: Int, fieldId: Int, value: Any?) = runInsideIgnoredSection {
@@ -1323,17 +1321,17 @@ internal abstract class ManagedStrategy(
             loopDetector.afterRead(value)
         }
 
-    override fun beforeWriteField(obj: Any?, value: Any?, codeLocation: Int, fieldId: Int): Boolean =
+    override fun beforeWriteField(obj: Any?, value: Any?, codeLocation: Int, fieldId: Int): Unit =
         runInsideIgnoredSection {
             val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
             if (!fieldDescriptor.isStatic && obj == null) {
                 // Ignore, NullPointerException will be thrown
-                return false
+                return
             }
             updateSnapshotOnFieldAccess(obj, fieldDescriptor.className, fieldDescriptor.fieldName)
             objectTracker.registerObjectLink(fromObject = obj, toObject = value)
             if (!shouldTrackFieldAccess(obj, fieldDescriptor)) {
-                return false
+                return
             }
             val iThread = threadScheduler.getCurrentThreadId()
             val tracePoint = if (collectTrace) {
@@ -1342,28 +1340,27 @@ internal abstract class ManagedStrategy(
                 iThread = iThread,
                 actorId = currentActorId[iThread]!!,
                 ownerRepresentation = getFieldOwnerName(obj, fieldDescriptor),
-                    fieldName = fieldDescriptor.fieldName,
-                    codeLocation = codeLocation,
-                    isLocal = false,
-                ).also {
-                    it.initializeWrittenValue(objectTracker.getObjectRepresentation(value), objectFqTypeName(value))
-                }
-            } else {
-                null
+                fieldName = fieldDescriptor.fieldName,
+                codeLocation = codeLocation,
+                isLocal = false,
+            ).also {
+                it.initializeWrittenValue(objectTracker.getObjectRepresentation(value), objectFqTypeName(value))
             }
-            newSwitchPoint(iThread, codeLocation)
-            traceCollector?.addTracePointInternal(tracePoint)
-            loopDetector.beforeWriteField(obj, value)
-            return true
+        } else {
+            null
         }
+        newSwitchPoint(iThread, codeLocation)
+        traceCollector?.addTracePointInternal(tracePoint)
+        loopDetector.beforeWriteField(obj, value)
+    }
 
-    override fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int): Boolean =
+    override fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int): Unit =
         runInsideIgnoredSection {
             updateSnapshotOnArrayElementAccess(array, index)
             objectTracker.registerObjectLink(fromObject = array, toObject = value)
 
             if (!shouldTrackArrayAccess(array)) {
-                return false
+                return
             }
             val iThread = threadScheduler.getCurrentThreadId()
             val tracePoint = if (collectTrace) {
@@ -1372,20 +1369,19 @@ internal abstract class ManagedStrategy(
                 iThread = iThread,
                 actorId = currentActorId[iThread]!!,
                 ownerRepresentation = null,
-                    fieldName = "${objectTracker.getObjectRepresentation(array)}[$index]",
-                    codeLocation = codeLocation,
-                    isLocal = false,
-                ).also {
-                    it.initializeWrittenValue(objectTracker.getObjectRepresentation(value), objectFqTypeName(value))
-                }
-            } else {
-                null
+                fieldName = "${objectTracker.getObjectRepresentation(array)}[$index]",
+                codeLocation = codeLocation,
+                isLocal = false,
+            ).also {
+                it.initializeWrittenValue(objectTracker.getObjectRepresentation(value), objectFqTypeName(value))
             }
-            newSwitchPoint(iThread, codeLocation)
-            traceCollector?.addTracePointInternal(tracePoint)
-            loopDetector.beforeWriteArrayElement(array, index, value)
-            true
+        } else {
+            null
         }
+        newSwitchPoint(iThread, codeLocation)
+        traceCollector?.addTracePointInternal(tracePoint)
+        loopDetector.beforeWriteArrayElement(array, index, value)
+    }
 
     override fun afterWrite() {
         if (collectTrace) {

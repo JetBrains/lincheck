@@ -298,8 +298,8 @@ public class Injections {
      *
      * @return whether the trace point was created
      */
-    public static boolean beforeReadField(Object obj, int codeLocation, int fieldId) {
-        return getEventTracker().beforeReadField(obj, codeLocation, fieldId);
+    public static void beforeReadField(Object obj, int codeLocation, int fieldId) {
+        getEventTracker().beforeReadField(obj, codeLocation, fieldId);
     }
 
     /**
@@ -307,9 +307,9 @@ public class Injections {
      *
      * @return whether the trace point was created
      */
-    public static boolean beforeReadArray(Object array, int index, int codeLocation) {
-        if (array == null) return false; // Ignore, NullPointerException will be thrown
-        return getEventTracker().beforeReadArrayElement(array, index, codeLocation);
+    public static void beforeReadArray(Object array, int index, int codeLocation) {
+        if (array == null) return; // Ignore, NullPointerException will be thrown
+        getEventTracker().beforeReadArrayElement(array, index, codeLocation);
     }
 
     public static void afterLocalRead(int codeLocation, int variableId, Object value) {
@@ -336,21 +336,17 @@ public class Injections {
 
     /**
      * Called from the instrumented code before each field write.
-     *
-     * @return whether the trace point was created
      */
-    public static boolean beforeWriteField(Object obj, Object value, int codeLocation, int fieldId) {
-        return getEventTracker().beforeWriteField(obj, value, codeLocation, fieldId);
+    public static void beforeWriteField(Object obj, Object value, int codeLocation, int fieldId) {
+        getEventTracker().beforeWriteField(obj, value, codeLocation, fieldId);
     }
 
     /**
      * Called from the instrumented code before any array cell write.
-     *
-     * @return whether the trace point was created
      */
-    public static boolean beforeWriteArray(Object array, int index, Object value, int codeLocation) {
-        if (array == null) return false; // Ignore, NullPointerException will be thrown
-        return getEventTracker().beforeWriteArrayElement(array, index, value, codeLocation);
+    public static void beforeWriteArray(Object array, int index, Object value, int codeLocation) {
+        if (array == null) return; // Ignore, NullPointerException will be thrown
+        getEventTracker().beforeWriteArrayElement(array, index, value, codeLocation);
     }
 
     /**
