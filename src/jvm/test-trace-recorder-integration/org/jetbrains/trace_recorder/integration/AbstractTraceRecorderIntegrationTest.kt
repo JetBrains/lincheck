@@ -32,7 +32,7 @@ abstract class AbstractTraceRecorderIntegrationTest : AbstractTraceIntegrationTe
                 "-XX:+UnlockExperimentalVMOptions",
                 "-XX:hashCode=2"
             ),
-            extraAgentArgs.plus("verbose"),
+            extraAgentArgs.plus("text").plus("verbose"),
             gradleCommands,
             checkRepresentation
         )
