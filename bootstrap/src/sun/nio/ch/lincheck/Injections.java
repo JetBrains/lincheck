@@ -28,7 +28,6 @@ public class Injections {
     /**
      * Mark value of {@link #requestedBeforeEventId} field to skip calls to {@link #beforeEvent}.
      */
-    @SuppressWarnings("unused")
     private static final int DO_NOT_TRIGGER_BEFORE_EVENT = -1;
 
     /**
@@ -624,7 +623,8 @@ public class Injections {
      * This method is introduced for performance purposes.
      * Instead of calling {@link #beforeEvent} on every event, we call it only at the requested point.
      * It greatly improves the performance as the debugger installs a breakpoint into {@link #beforeEvent} method,
-     * so each call leads to unnecessary lincheck-debugger communication.
+     * so each call leads to unnecessary lincheck/debugger communication.
+     *
      * @param eventId current id value
      * @return whether the current point should lead to {@link #beforeEvent} call
      */
