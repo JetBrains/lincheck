@@ -192,16 +192,6 @@ fun SourceSet.configureClasspath() {
     runtimeClasspath += sourceSets.main.get().output + sourceSets.test.get().output
 }
 
-//fun KotlinCompile.getAccessToInternalDefinitionsOf(vararg projects: Project) {
-//    println("Friend paths before: ${friendPaths.asPath}")
-//    projects.forEach { project ->
-//        val mainSourceSet = project.sourceSets.main.get().output.files
-//        val jarArchive = Paths.get(project.buildDir.absolutePath, "libs", project.name + ".jar").toFile()
-//        friendPaths.setFrom(friendPaths.files + mainSourceSet + jarArchive)
-//    }
-//    println("Friend paths after: ${friendPaths.asPath}")
-//}
-
 tasks {
     named<JavaCompile>("compileTestJava") {
         setupJavaToolchain(project)
@@ -233,12 +223,6 @@ tasks {
 
     withType<KotlinCompile> {
         getAccessToInternalDefinitionsOf(project(":common"))
-//        friendPaths.setFrom(
-//            friendPaths.files +
-//            project.sourceSets.named("lincheckIntegrationTest").get().output.files
-////            project.sourceSets.named("traceDebuggerIntegrationTest").get().output.files +
-////            project.sourceSets.named("traceRecorderIntegrationTest").get().output.files
-//        )
     }
 }
 
