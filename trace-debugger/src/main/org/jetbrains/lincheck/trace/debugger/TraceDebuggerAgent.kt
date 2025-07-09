@@ -8,10 +8,11 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.trace.recorder
+package org.jetbrains.lincheck.trace.debugger
 
 import org.jetbrains.kotlinx.lincheck.trace.agent.TraceAgentParameters
 import org.jetbrains.kotlinx.lincheck.trace.agent.TraceAgentTransformer
+import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.MODEL_CHECKING
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.transformation.isInstrumentationInitialized
 import org.jetbrains.kotlinx.lincheck.transformation.isTraceJavaAgentAttached
@@ -19,27 +20,21 @@ import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import org.jetbrains.lincheck.util.isInTraceRecorderMode
 import java.lang.instrument.Instrumentation
 
-/**
- * Agent that is set as `premain` entry class for fat trace debugger jar archive.
- * This archive when attached to the jvm process expects also a `-Dlincheck.traceDebuggerMode=true` or
- * `-Dlincheck.traceRecorderMode=true` in order to enable trace debugging plugin or trace recorder functionality
- * accordingly.
- */
-internal object TraceRecorderAgent {
+object TraceDebuggerAgent {
     @JvmStatic
     fun premain(agentArgs: String?, inst: Instrumentation) {
         /*
-         * Static agent requires Trace Recorder mode.
+         * Static agent requires Trace Debugger mode.
          * For now, the mode is selected by system property.
-         * If you want to run Trace Recorder, you must set `-Dlincheck.traceRecorderMode=true`.
+         * If you want to run Trace Debugger, you must set `-Dlincheck.traceDebuggerMode=true`.
          *
          * It is an error not to set it.
          */
         // Check if one of the required parameters is set.
-        check(isInTraceRecorderMode) {
+        check(isInTraceDebuggerMode) {
             "When lincheck agent is attached to process, " +
-            "mode should be selected by VM parameter `lincheck.traceRecorderMode`. It is expected to be `true`. " +
-            "Rerun with `-Dlincheck.traceRecorderMode=true`."
+            "mode should be selected by VM parameter `lincheck.traceDebuggerMode`. It is expected to be `true`. " +
+            "Rerun with `-Dlincheck.traceDebuggerMode=true`"
         }
         // Check that only one parameter is set: one of two must be `false`
         check(!isInTraceDebuggerMode || !isInTraceRecorderMode) {
@@ -52,10 +47,9 @@ internal object TraceRecorderAgent {
         LincheckJavaAgent.instrumentation = inst
         isTraceJavaAgentAttached = true
         isInstrumentationInitialized = true
-        // We are in Trace Recorder mode (by exclusion)
-        // This adds turn-on and turn-off of tracing to the method in question
-        LincheckJavaAgent.instrumentation.addTransformer(TraceAgentTransformer(::TraceRecorderMethodTransformer), true)
-        // This prepares instrumentation of all future classes
-        TraceRecorderInjections.prepareTraceRecorder()
+        // We are in Trace debugger mode
+        LincheckJavaAgent.instrumentation.addTransformer(TraceAgentTransformer(::TraceDebuggerMethodTransformer), true)
+        // Trace debugger uses regular lincheck MODEL_CHECKING mode
+        LincheckJavaAgent.install(MODEL_CHECKING)
     }
 }

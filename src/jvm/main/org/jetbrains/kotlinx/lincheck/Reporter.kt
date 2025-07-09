@@ -14,7 +14,7 @@ import sun.nio.ch.lincheck.TestThread
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.trace.appendTrace
-import org.jetbrains.lincheck.util.LoggingLevel
+import org.jetbrains.lincheck.util.*
 import org.jetbrains.lincheck.util.LoggingLevel.*
 import org.jetbrains.lincheck.GeneralPurposeModelCheckingWrapper
 import java.io.*

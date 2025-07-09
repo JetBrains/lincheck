@@ -11,6 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.jetbrains.lincheck.util.isInLincheckPackage
 import org.objectweb.asm.Type
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
@@ -166,8 +167,7 @@ internal abstract class MethodCallTransformerBase(
     }
 
     protected fun isIgnoredMethod(className: String) =
-        className.startsWith("sun/nio/ch/lincheck/") ||
-        className.startsWith("org/jetbrains/kotlinx/lincheck/") ||
+        isInLincheckPackage(className.toCanonicalClassName()) ||
         className == "kotlin/jvm/internal/Intrinsics" ||
         className == "java/util/Objects" ||
         className == "java/lang/String" ||
