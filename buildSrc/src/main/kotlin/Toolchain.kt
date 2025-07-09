@@ -17,6 +17,7 @@ import org.gradle.kotlin.dsl.provideDelegate
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.nio.file.Paths
+import kotlin.text.get
 
 fun KotlinJvmProjectExtension.configureKotlin() {
     compilerOptions {
@@ -59,7 +60,7 @@ fun KotlinCompile.getAccessToInternalDefinitionsOf(vararg projects: Project) {
         val mainSourceSet = project.extensions
             .getByType(JavaPluginExtension::class.java).sourceSets
             .getByName("main").output.classesDirs
-        val jarArchive = Paths.get(project.buildDir.absolutePath, "libs",
+        val jarArchive = Paths.get(project.layout.buildDirectory.get().asFile.absolutePath, "libs",
             if (project.name == "lincheck") project.name + "-" + project.version + ".jar"
             else project.name + ".jar"
         ).toFile()

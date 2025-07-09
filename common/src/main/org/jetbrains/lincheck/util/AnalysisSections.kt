@@ -308,6 +308,10 @@ internal class AnalysisProfile(val analyzeStdLib: Boolean) {
     @Suppress("UNUSED_PARAMETER") // methodName is here for uniformity and might become useful in the future
     fun shouldBeHidden(className: String, methodName: String): Boolean = 
         !analyzeStdLib && (isConcurrentCollectionsLibrary(className) || isCollectionsLibrary(className))
+
+    companion object {
+        val DEFAULT = AnalysisProfile(analyzeStdLib = true)
+    }
 }
 
 private val COLLECTION_LIBRARIES = setOf(

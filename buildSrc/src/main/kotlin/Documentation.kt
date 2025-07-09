@@ -26,7 +26,6 @@ fun Project.createJavadocJar(mainSourceSetPath: String = "src/main"): TaskProvid
     }
 
     val javadocJar = tasks.register<Jar>("javadocJar") {
-        archiveBaseName.set(this@createJavadocJar.name)
         dependsOn(dokkaHtml)
         from("${layout.buildDirectory.get()}/javadoc")
         archiveClassifier.set("javadoc")

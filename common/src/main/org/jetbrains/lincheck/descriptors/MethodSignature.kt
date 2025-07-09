@@ -8,10 +8,8 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.util
+package org.jetbrains.lincheck.descriptors
 
-import org.jetbrains.lincheck.descriptors.MethodSignature
-import org.jetbrains.lincheck.descriptors.Types
 import org.objectweb.asm.commons.Method
 
 

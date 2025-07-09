@@ -13,9 +13,8 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.kotlinx.lincheck.trace.Trace
-import org.jetbrains.lincheck.util.AnalysisProfile
-import org.jetbrains.lincheck.datastructures.ManagedCTestConfiguration.Companion.DEFAULT_STDLIB_ANALYSIS_ENABLED
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
+import org.jetbrains.lincheck.util.AnalysisProfile
 import java.util.concurrent.TimeoutException
 import java.io.Closeable
 
@@ -146,7 +145,7 @@ fun Strategy.runIteration(invocations: Int, verifier: Verifier): LincheckFailure
  * @return failure, if invocation results are incorrect, null otherwise.
  */
 fun Strategy.verify(result: InvocationResult, verifier: Verifier): LincheckFailure? {
-    val analysisProfile = if (this is ManagedStrategy) this.analysisProfile else DEFAULT_ANALYSIS_PROFILE
+    val analysisProfile = if (this is ManagedStrategy) this.analysisProfile else AnalysisProfile.DEFAULT
     return when (result) {
         is SpinCycleFoundAndReplayRequired -> null
         is CompletedInvocationResult ->
@@ -157,5 +156,3 @@ fun Strategy.verify(result: InvocationResult, verifier: Verifier): LincheckFailu
             result.toLincheckFailure(scenario, tryCollectTrace(result), analysisProfile)
     }
 }
-
-private val DEFAULT_ANALYSIS_PROFILE = AnalysisProfile(analyzeStdLib = DEFAULT_STDLIB_ANALYSIS_ENABLED)

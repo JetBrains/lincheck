@@ -12,7 +12,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.nativecalls
 
 import org.jetbrains.lincheck.descriptors.MethodSignature
 import org.jetbrains.lincheck.descriptors.Types
-import org.jetbrains.kotlinx.lincheck.util.toMethodSignature
+import org.jetbrains.lincheck.descriptors.toMethodSignature
 import sun.nio.ch.lincheck.InjectedRandom
 import sun.nio.ch.lincheck.Injections
 import java.lang.reflect.Modifier
