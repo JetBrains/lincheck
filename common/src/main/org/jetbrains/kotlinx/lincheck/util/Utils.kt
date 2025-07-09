@@ -16,6 +16,12 @@ private const val TRACE_RECORDER_MODE_PROPERTY = "lincheck.traceRecorderMode"
 internal val isInTraceDebuggerMode by lazy { System.getProperty(TRACE_DEBUGGER_MODE_PROPERTY, "false").toBoolean() }
 internal val isInTraceRecorderMode by lazy { System.getProperty(TRACE_RECORDER_MODE_PROPERTY, "false").toBoolean() }
 
+// Transformation utilities
+/**
+ * Test if the given class name corresponds to a Java lambda class.
+ */
+internal fun isJavaLambdaClass(className: String): Boolean =
+    className.contains("\$\$Lambda")
 
 // Idea plugin flags
 /**
@@ -38,9 +44,3 @@ private fun ideaPluginEnabled(): Boolean {
     // treat as enabled in tests if we want so
     return eventIdStrictOrderingCheck
 }
-
-/**
- * Test if the given class name corresponds to a Java lambda class.
- */
-internal fun isJavaLambdaClass(className: String): Boolean =
-    className.contains("\$\$Lambda")
