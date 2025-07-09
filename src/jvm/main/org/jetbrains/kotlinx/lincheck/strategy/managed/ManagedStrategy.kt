@@ -178,7 +178,11 @@ internal abstract class ManagedStrategy(
     // Stores current event id
     private var currentEventId = -1
 
+    // current interleaving replay number
     protected var replayNumber = 0L
+
+    // Is first replay within one invocation
+    private val isFirstReplay get() = replayNumber == 1L
 
     /**
      * For each thread, represents a shadow stack used to reflect the program's actual stack.
@@ -216,9 +220,6 @@ internal abstract class ManagedStrategy(
     internal fun closeTraceDebuggerTrackers() {
         traceDebuggerEventTrackers.values.forEach { it.close() }
     }
-
-    // Is first replay within one invocation
-    private val isFirstReplay get() = replayNumber == 1L
 
     private fun createRunner(): ManagedStrategyRunner =
         ManagedStrategyRunner(
@@ -2494,14 +2495,6 @@ internal abstract class ManagedStrategy(
         inIdeaPluginReplayMode = true
     }
 
-    override fun beforeEvent(eventId: Int, type: String) {
-        ideaPluginBeforeEvent(eventId, type)
-    }
-
-    override fun getCurrentEventId(): Int = currentEventId
-
-    private fun getNextEventId(): Int = ++currentEventId
-
     override fun shouldInvokeBeforeEvent(): Boolean {
         // We do not check `inIgnoredSection` here because this method is called from instrumented code
         // that should be invoked only outside the ignored section.
@@ -2512,6 +2505,14 @@ internal abstract class ManagedStrategy(
                suddenInvocationResult == null &&
                isRegisteredThread()
     }
+
+    override fun beforeEvent(eventId: Int, type: String) {
+        ideaPluginBeforeEvent(eventId, type)
+    }
+
+    override fun getCurrentEventId(): Int = currentEventId
+
+    private fun getNextEventId(): Int = ++currentEventId
 
     fun enumerateObjects(): Map<Any, Int> {
         return objectTracker.enumerateAllObjects()
