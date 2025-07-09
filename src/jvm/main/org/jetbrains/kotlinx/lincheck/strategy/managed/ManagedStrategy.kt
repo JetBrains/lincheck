@@ -352,7 +352,6 @@ internal abstract class ManagedStrategy(
     // == BASIC STRATEGY METHODS ==
 
     override fun beforePart(part: ExecutionPart) = runInsideIgnoredSection {
-        traceCollector?.addTracePointInternal(SectionDelimiterTracePoint(part))
         val nextThread = when (part) {
             INIT -> 0
             PARALLEL -> {
@@ -364,7 +363,12 @@ internal abstract class ManagedStrategy(
             POST -> 0
             VALIDATION -> 0
         }
+        val tracePoint = SectionDelimiterTracePoint(
+            eventId = getNextEventId(),
+            executionPart = part,
+        )
         loopDetector.beforePart(part, nextThread)
+        traceCollector?.addTracePointInternal(tracePoint)
         threadScheduler.scheduleThread(nextThread)
     }
 
@@ -763,7 +767,7 @@ internal abstract class ManagedStrategy(
         if (isTestThread(currentThreadId)) return
 
         val threadRunTracePoint = callStackTrace[currentThreadId]?.firstOrNull()?.tracePoint
-        val threadEndTracePoint = threadRunTracePoint?.let { MethodReturnTracePoint(it) }
+        val threadEndTracePoint = threadRunTracePoint?.let { MethodReturnTracePoint(getNextEventId(), it) }
         if (threadEndTracePoint != null) traceCollector?.addTracePoint(threadEndTracePoint)
         disableAnalysis()
         onThreadFinish(currentThreadId)
@@ -1008,7 +1012,8 @@ internal abstract class ManagedStrategy(
         // TODO rewrite. This will create an additional return trace point if actor's thread was aborted
         val className = actor.method.declaringClass.name
         val methodName = actor.method.name
-        val tracePoint = MethodCallTracePoint(
+        val actorStartTracePoint = MethodCallTracePoint(
+            eventId = getNextEventId(),
             iThread = iThread,
             actorId = currentActorId[iThread]!!,
             className = className,
@@ -1018,7 +1023,8 @@ internal abstract class ManagedStrategy(
             callType = MethodCallTracePoint.CallType.ACTOR,
             isSuspend = isSuspendFunction(className, methodName, actor.arguments.toTypedArray())
         )
-        traceCollector?.addTracePointInternal(MethodReturnTracePoint(tracePoint))
+        val actorFinishTracePoint = MethodReturnTracePoint(getNextEventId(), actorStartTracePoint)
+        traceCollector?.addTracePointInternal(actorFinishTracePoint)
 
         // This is a hack to guarantee correct stepping in the plugin.
         // When stepping out to the TestThreadExecution class, stepping continues unproductively.
@@ -1031,6 +1037,7 @@ internal abstract class ManagedStrategy(
         val iThread = threadScheduler.getCurrentThreadId()
         val tracePoint = if (collectTrace) {
             MonitorEnterTracePoint(
+                eventId = getNextEventId(),
                 iThread = iThread,
                 actorId = currentActorId[iThread]!!,
                 codeLocation = codeLocation
@@ -1079,6 +1086,7 @@ internal abstract class ManagedStrategy(
         }
         if (collectTrace) {
             val tracePoint = MonitorExitTracePoint(
+                eventId = getNextEventId(),
                 iThread = iThread,
                 actorId = currentActorId[iThread]!!,
                 codeLocation = codeLocation
@@ -1091,6 +1099,7 @@ internal abstract class ManagedStrategy(
         val threadId = threadScheduler.getCurrentThreadId()
         val tracePoint = if (collectTrace) {
             ParkTracePoint(
+                eventId = getNextEventId(),
                 iThread = threadId,
                 actorId = currentActorId[threadId]!!,
                 codeLocation = codeLocation
@@ -1160,6 +1169,7 @@ internal abstract class ManagedStrategy(
         unblockParkedThread(unparkedThreadId)
         if (collectTrace) {
             val tracePoint = UnparkTracePoint(
+                eventId = getNextEventId(),
                 iThread = currentThreadId,
                 actorId = currentActorId[currentThreadId]!!,
                 codeLocation = codeLocation
@@ -1172,6 +1182,7 @@ internal abstract class ManagedStrategy(
         val iThread = threadScheduler.getCurrentThreadId()
         val tracePoint = if (collectTrace) {
             WaitTracePoint(
+                eventId = getNextEventId(),
                 iThread = iThread,
                 actorId = currentActorId[iThread]!!,
                 codeLocation = codeLocation
@@ -1214,6 +1225,7 @@ internal abstract class ManagedStrategy(
         monitorTracker.notify(iThread, monitor, notifyAll = notifyAll)
         if (collectTrace) {
             val tracePoint = NotifyTracePoint(
+                eventId = getNextEventId(),
                 iThread = iThread,
                 actorId = currentActorId[iThread]!!,
                 codeLocation = codeLocation
@@ -1306,9 +1318,10 @@ internal abstract class ManagedStrategy(
             val typeRepresentation = objectFqTypeName(value)
             if (shouldTrackFieldAccess(obj, fieldDescriptor)) {
                 val tracePoint = ReadTracePoint(
-                    ownerRepresentation = getFieldOwnerName(obj, fieldDescriptor),
+                    eventId = getNextEventId(),
                     iThread = iThread,
                     actorId = currentActorId[iThread]!!,
+                    ownerRepresentation = getFieldOwnerName(obj, fieldDescriptor),
                     fieldName = fieldDescriptor.fieldName,
                     codeLocation = codeLocation,
                     isLocal = false,
@@ -1329,9 +1342,10 @@ internal abstract class ManagedStrategy(
                 val typeRepresentation = objectFqTypeName(value)
                 if (shouldTrackArrayAccess(array)) {
                     val tracePoint = ReadTracePoint(
-                        ownerRepresentation = null,
-                        iThread = iThread,
-                        actorId = currentActorId[iThread]!!,
+                        eventId = getNextEventId(),
+                    iThread = iThread,
+                    actorId = currentActorId[iThread]!!,
+                    ownerRepresentation = null,
                         fieldName = "${objectTracker.getObjectRepresentation(array)}[$index]",
                         codeLocation = codeLocation,
                         isLocal = false,
@@ -1359,9 +1373,10 @@ internal abstract class ManagedStrategy(
             val iThread = threadScheduler.getCurrentThreadId()
             val tracePoint = if (collectTrace) {
                 WriteTracePoint(
-                    ownerRepresentation = getFieldOwnerName(obj, fieldDescriptor),
-                    iThread = iThread,
-                    actorId = currentActorId[iThread]!!,
+                    eventId = getNextEventId(),
+                iThread = iThread,
+                actorId = currentActorId[iThread]!!,
+                ownerRepresentation = getFieldOwnerName(obj, fieldDescriptor),
                     fieldName = fieldDescriptor.fieldName,
                     codeLocation = codeLocation,
                     isLocal = false,
@@ -1388,9 +1403,10 @@ internal abstract class ManagedStrategy(
             val iThread = threadScheduler.getCurrentThreadId()
             val tracePoint = if (collectTrace) {
                 WriteTracePoint(
-                    ownerRepresentation = null,
-                    iThread = iThread,
-                    actorId = currentActorId[iThread]!!,
+                    eventId = getNextEventId(),
+                iThread = iThread,
+                actorId = currentActorId[iThread]!!,
+                ownerRepresentation = null,
                     fieldName = "${objectTracker.getObjectRepresentation(array)}[$index]",
                     codeLocation = codeLocation,
                     isLocal = false,
@@ -2084,7 +2100,7 @@ internal abstract class ManagedStrategy(
             // have empty resumption part or were already resumed before,
             // so we remove them from the suspended methods stack.
             suspendedMethodStack.subList(0, elementIndex).forEach { element ->
-                val returnTracePoint = MethodReturnTracePoint(element.tracePoint)
+                val returnTracePoint = MethodReturnTracePoint(getNextEventId(), element.tracePoint)
                 traceCollector?.addTracePointInternal(returnTracePoint)
             }
             suspendedMethodStack.subList(0, elementIndex + 1).clear()
@@ -2137,8 +2153,8 @@ internal abstract class ManagedStrategy(
         atomicMethodDescriptor: AtomicMethodDescriptor?,
         callType: MethodCallTracePoint.CallType,
     ): MethodCallTracePoint {
-        val callStackTrace = callStackTrace[iThread]!!
         val tracePoint = MethodCallTracePoint(
+            eventId = getNextEventId(),
             iThread = iThread,
             actorId = currentActorId[iThread]!!,
             className = className,
@@ -2409,7 +2425,7 @@ internal abstract class ManagedStrategy(
 
         popShadowStackFrame()
         callStackTrace.removeLast()
-        traceCollector?.addTracePointInternal(MethodReturnTracePoint(tracePoint))
+        traceCollector?.addTracePointInternal(MethodReturnTracePoint(getNextEventId(), tracePoint))
     }
 
     /**
@@ -2419,7 +2435,11 @@ internal abstract class ManagedStrategy(
         if (collectTrace) {
             val iThread = threadScheduler.getCurrentThreadId()
             val actorId = currentActorId[iThread] ?: Int.MIN_VALUE
-            val cancellationTracePoint = CoroutineCancellationTracePoint(iThread, actorId)
+            val cancellationTracePoint = CoroutineCancellationTracePoint(
+                eventId = getNextEventId(),
+                iThread = iThread,
+                actorId = actorId,
+            )
             traceCollector?.addTracePointInternal(cancellationTracePoint)
             return cancellationTracePoint
         }
@@ -2429,26 +2449,24 @@ internal abstract class ManagedStrategy(
     // == TRACE COLLECTOR EXTENSION METHODS ==
 
     private fun TraceCollector.addTracePointInternal(tracePoint: TracePoint?) {
-        // tracePoint can be null here if trace is not available, e.g. in case of suspension
+        // tracePoint can be null here if trace is not available, e.g., in case of suspension
         if (tracePoint == null) return
 
-        if (tracePoint !is SectionDelimiterTracePoint && !tracePoint.isActorMethodCallTracePoint() &&
-            tracePoint !is MethodCallTracePoint && tracePoint !is MethodReturnTracePoint)
-        {
+        if (tracePoint !is SectionDelimiterTracePoint &&
+            tracePoint !is MethodCallTracePoint &&
+            tracePoint !is MethodReturnTracePoint &&
+            !tracePoint.isActorMethodCallTracePoint()
+        ) {
             checkActiveLockDetected()
         }
-
         addTracePoint(tracePoint)
-
-        if (!tracePoint.isActorMethodCallTracePoint() && tracePoint !is MethodReturnTracePoint) {
-            setBeforeEventId(tracePoint)
-        }
     }
 
     private fun TraceCollector.newSwitch(reason: SwitchReason) {
         val threadId = threadScheduler.getCurrentThreadId()
         addTracePoint(
             SwitchEventTracePoint(
+                eventId = getNextEventId(),
                 iThread = threadId,
                 actorId = currentActorId[threadId]!!,
                 reason = reason,
@@ -2472,6 +2490,7 @@ internal abstract class ManagedStrategy(
         if (!spinCycleStartAdded) {
             addTracePoint(
                 SpinCycleStartTracePoint(
+                    eventId = getNextEventId(),
                     iThread = threadId,
                     actorId = currentActorId[threadId]!!,
                     callStackTrace = callStackTrace[threadId]!!,
@@ -2487,6 +2506,7 @@ internal abstract class ManagedStrategy(
         // use call stack trace of the previous trace point
         traceCollector?.addTracePoint(
             StateRepresentationTracePoint(
+                eventId = getNextEventId(),
                 iThread = threadId,
                 actorId = currentActorId[threadId]!!,
                 stateRepresentation = stateRepresentation,
@@ -2498,6 +2518,7 @@ internal abstract class ManagedStrategy(
         val threadId = threadScheduler.getCurrentThreadId()
         addTracePoint(
             ObstructionFreedomViolationExecutionAbortTracePoint(
+                eventId = getNextEventId(),
                 iThread = threadId,
                 actorId = currentActorId[threadId]!!,
                 callStackTrace = callStackTrace[threadId]!!
@@ -2520,33 +2541,7 @@ internal abstract class ManagedStrategy(
      */
     override fun getEventId(): Int = eventIdProvider.currentId()
 
-    /**
-     * This method generates and sets separate event id for the last method call.
-     * Method call trace points are not added to the event list by default, so their event ids are not set otherwise.
-     */
-    // TODO drop; we have every event in a list, most probably we can set these IDs later on during graph construction
-    override fun setLastMethodCallEventId() {
-        val currentThreadId = threadScheduler.getCurrentThreadId()
-        val lastMethodCall = callStackTrace[currentThreadId]!!.lastOrNull()?.tracePoint ?: return
-        setBeforeEventId(lastMethodCall)
-    }
-
-    /**
-     * Set eventId of the [tracePoint] right after it is added to the trace.
-     */
-    private fun setBeforeEventId(tracePoint: TracePoint) {
-        if (shouldInvokeBeforeEvent()) {
-            // Method calls and atomic method calls share the same trace points
-            if (tracePoint.eventId == -1
-                && tracePoint !is CoroutineCancellationTracePoint
-                && tracePoint !is ObstructionFreedomViolationExecutionAbortTracePoint
-                && tracePoint !is SpinCycleStartTracePoint
-                && tracePoint !is SectionDelimiterTracePoint
-            ) {
-                tracePoint.eventId = eventIdProvider.nextId()
-            }
-        }
-    }
+    private fun getNextEventId(): Int = -1 // TODO: implement
 
     override fun shouldInvokeBeforeEvent(): Boolean {
         // We do not check `inIgnoredSection` here because this method is called from instrumented code

@@ -87,5 +87,4 @@ public interface EventTracker {
     boolean shouldInvokeBeforeEvent();
     void beforeEvent(int eventId, String type);
     int getEventId();
-    void setLastMethodCallEventId();
 }

@@ -530,10 +530,6 @@ class TraceCollectingEventTracker(
         return -1
     }
 
-    override fun setLastMethodCallEventId() = runInsideIgnoredSection {
-        System.err.println("Trace Recorder mode doesn't support IDEA Plugin integration")
-    }
-
     private var startTime = System.currentTimeMillis()
 
     fun enableTrace() {
