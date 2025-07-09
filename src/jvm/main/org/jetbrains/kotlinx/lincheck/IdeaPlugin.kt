@@ -400,7 +400,8 @@ private data class ExceptionProcessingResult(
  *   Used to collect the data about the test instance, object numbers, threads, and continuations.
  */
 private fun visualize(strategy: ManagedStrategy) = runCatching {
-    if (strategy.executionMode == GENERAL_PURPOSE_MODEL_CHECKER) return@runCatching
+    // state visualization is only applied in data structures testing mode
+    if (strategy.executionMode != ExecutionMode.DATA_STRUCTURES) return@runCatching
 
     val runner = strategy.runner as ParallelThreadsRunner
     val allThreads = strategy.getRegisteredThreads()
