@@ -10,8 +10,8 @@
 
 package org.jetbrains.lincheck.trace
 
-internal class IndexedPool<T> {
-    private val items = mutableListOf<T>()
+class IndexedPool<T> {
+    private val items = mutableListOf<T?>()
     private val index = hashMapOf<T, Int>()
 
     @Synchronized

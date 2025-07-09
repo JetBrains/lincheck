@@ -28,7 +28,7 @@ private val EVENT_ID_GENERATOR = AtomicInteger(0)
 
 var INJECTIONS_VOID_OBJECT: Any? = null
 
-internal sealed class TRTracePoint(
+sealed class TRTracePoint(
     val codeLocationId: Int,
     val threadId: Int,
     val eventId: Int
@@ -53,7 +53,7 @@ internal sealed class TRTracePoint(
 }
 
 // Only trace point which is "container"
-internal class TRMethodCallTracePoint(
+class TRMethodCallTracePoint(
     threadId: Int,
     codeLocationId: Int,
     val methodId: Int,
@@ -207,7 +207,7 @@ internal class TRMethodCallTracePoint(
     }
 }
 
-internal sealed class TRFieldTracePoint(
+sealed class TRFieldTracePoint(
     threadId: Int,
     codeLocationId: Int,
     val fieldId: Int,
@@ -259,7 +259,7 @@ internal sealed class TRFieldTracePoint(
     }
 }
 
-internal class TRReadTracePoint(
+class TRReadTracePoint(
     threadId: Int,
     codeLocationId: Int,
     fieldId: Int,
@@ -283,7 +283,7 @@ internal class TRReadTracePoint(
     }
 }
 
-internal class TRWriteTracePoint(
+class TRWriteTracePoint(
     threadId: Int,
     codeLocationId: Int,
     fieldId: Int,
@@ -307,7 +307,7 @@ internal class TRWriteTracePoint(
     }
 }
 
-internal sealed class TRLocalVariableTracePoint(
+sealed class TRLocalVariableTracePoint(
     threadId: Int,
     codeLocationId: Int,
     val localVariableId: Int,
@@ -345,7 +345,7 @@ internal sealed class TRLocalVariableTracePoint(
     }
 }
 
-internal class TRReadLocalVariableTracePoint(
+class TRReadLocalVariableTracePoint(
     threadId: Int,
     codeLocationId: Int,
     localVariableId: Int,
@@ -367,7 +367,7 @@ internal class TRReadLocalVariableTracePoint(
     }
 }
 
-internal class TRWriteLocalVariableTracePoint(
+class TRWriteLocalVariableTracePoint(
     threadId: Int,
     codeLocationId: Int,
     localVariableId: Int,

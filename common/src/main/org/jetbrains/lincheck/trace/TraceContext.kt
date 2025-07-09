@@ -17,14 +17,14 @@ import org.jetbrains.lincheck.descriptors.MethodSignature
 import org.jetbrains.lincheck.descriptors.VariableDescriptor
 import org.jetbrains.lincheck.descriptors.Types
 
-internal val TRACE_CONTEXT: TraceContext = TraceContext()
+val TRACE_CONTEXT: TraceContext = TraceContext()
 
-internal const val UNKNOWN_CODE_LOCATION_ID = -1
+const val UNKNOWN_CODE_LOCATION_ID = -1
 
 private val EMPTY_STACK_TRACE = StackTraceElement("", "", "", 0)
 
 class TraceContext {
-    private val locations = ArrayList<StackTraceElement>()
+    private val locations = ArrayList<StackTraceElement?>()
     private val classes = IndexedPool<ClassDescriptor>()
     private val methods = IndexedPool<MethodDescriptor>()
     private val fields = IndexedPool<FieldDescriptor>()

@@ -13,16 +13,16 @@ package org.jetbrains.lincheck.util
 // Trace agent modes
 private const val TRACE_DEBUGGER_MODE_PROPERTY = "lincheck.traceDebuggerMode"
 private const val TRACE_RECORDER_MODE_PROPERTY = "lincheck.traceRecorderMode"
-internal val isInTraceDebuggerMode by lazy { System.getProperty(TRACE_DEBUGGER_MODE_PROPERTY, "false").toBoolean() }
-internal val isInTraceRecorderMode by lazy { System.getProperty(TRACE_RECORDER_MODE_PROPERTY, "false").toBoolean() }
+val isInTraceDebuggerMode by lazy { System.getProperty(TRACE_DEBUGGER_MODE_PROPERTY, "false").toBoolean() }
+val isInTraceRecorderMode by lazy { System.getProperty(TRACE_RECORDER_MODE_PROPERTY, "false").toBoolean() }
 
 // Transformation utilities
-internal fun isInLincheckPackage(className: String) =
+fun isInLincheckPackage(className: String) =
     className.startsWith(LINCHECK_PACKAGE_NAME) ||
     className.startsWith(LINCHECK_KOTLINX_PACKAGE_NAME) ||
     className.startsWith(LINCHECK_BOOTSTRAP_PACKAGE_NAME)
 
-internal val StackTraceElement.isLincheckInternals get() =
+val StackTraceElement.isLincheckInternals get() =
     this.className.startsWith(LINCHECK_PACKAGE_NAME) ||
     this.className.startsWith(LINCHECK_KOTLINX_PACKAGE_NAME)
 
@@ -34,7 +34,7 @@ internal const val LINCHECK_BOOTSTRAP_PACKAGE_NAME  = "sun.nio.ch.lincheck."
 /**
  * Test if the given class name corresponds to a Java lambda class.
  */
-internal fun isJavaLambdaClass(className: String): Boolean =
+fun isJavaLambdaClass(className: String): Boolean =
     className.contains("\$\$Lambda")
 
 // Idea plugin flags
@@ -49,7 +49,7 @@ internal val eventIdStrictOrderingCheck =
  * We will call `ideaPluginEnabled` method only once
  * and so on the plugin side the callback will be called also only once.
  */
-internal val ideaPluginEnabled by lazy { ideaPluginEnabled() }
+val ideaPluginEnabled by lazy { ideaPluginEnabled() }
 
 /**
  * Debugger replaces the result of this method to `true` if idea plugin is enabled.

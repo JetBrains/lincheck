@@ -14,19 +14,19 @@ import java.io.*
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
-internal object Logger {
+object Logger {
     private val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss.SSS")
 
     private val logFile: File? = System.getProperty("lincheck.logFile")?.let { fileName ->
         File(fileName).also { runCatching { initFile(it) }.getOrNull() }
     }
 
-    private val logWriter: Writer = BufferedWriter(
+    val logWriter: Writer = BufferedWriter(
         if (logFile != null) FileWriter(logFile)
         else System.err.writer()
     )
 
-    private val logLevel: LoggingLevel = System.getProperty("lincheck.logLevel")?.uppercase()?.let {
+    val logLevel: LoggingLevel = System.getProperty("lincheck.logLevel")?.uppercase()?.let {
         runCatching { LoggingLevel.valueOf(it) }.getOrElse { DEFAULT_LOG_LEVEL }
     } ?: DEFAULT_LOG_LEVEL
 
@@ -46,13 +46,13 @@ internal object Logger {
 
     fun debug(e: Throwable) = log(LoggingLevel.DEBUG, e)
 
-    private inline fun log(logLevel: LoggingLevel, lazyMessage: () -> String) {
+    inline fun log(logLevel: LoggingLevel, lazyMessage: () -> String) {
         if (logLevel >= this.logLevel) {
             write(logLevel, lazyMessage(), logWriter)
         }
     }
 
-    private fun write(logLevel: LoggingLevel, s: String, writer: Writer) {
+    fun write(logLevel: LoggingLevel, s: String, writer: Writer) {
         try {
             writer.write("[${logLevel.name}] $s$LINE_SEPARATOR")
             writer.flush()
@@ -70,10 +70,6 @@ internal object Logger {
         }
     }
 
-    private fun getCurrentTimeStamp(): String {
-        return formatter.format(LocalDateTime.now())
-    }
-
     private fun initFile(file: File) {
         // create parent directories
         file.parentFile?.let { if (!it.exists()) it.mkdirs() }
@@ -86,7 +82,7 @@ internal object Logger {
 
 private val LINE_SEPARATOR = System.lineSeparator()
 
-@JvmField internal val DEFAULT_LOG_LEVEL = LoggingLevel.WARN
+@JvmField val DEFAULT_LOG_LEVEL = LoggingLevel.WARN
 
 enum class LoggingLevel {
     DEBUG, INFO, WARN, ERROR, OFF

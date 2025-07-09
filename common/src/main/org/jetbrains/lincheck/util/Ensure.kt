@@ -10,37 +10,37 @@
 
 package org.jetbrains.lincheck.util
 
-internal fun Boolean.ensureTrue(): Boolean {
+fun Boolean.ensureTrue(): Boolean {
     // TODO: add contracts?
     check(this == true)
     return this
 }
 
-internal fun Boolean.ensureFalse(): Boolean {
+fun Boolean.ensureFalse(): Boolean {
     // TODO: add contracts?
     check(this == false)
     return this
 }
 
-internal inline fun<T> T.ensure(predicate: (T) -> Boolean): T {
+inline fun<T> T.ensure(predicate: (T) -> Boolean): T {
     // TODO: add contracts?
     check(predicate(this))
     return this
 }
 
-internal inline fun<T> T.ensure(predicate: (T) -> Boolean, lazyMessage: (T?) -> Any): T {
+inline fun<T> T.ensure(predicate: (T) -> Boolean, lazyMessage: (T?) -> Any): T {
     // TODO: add contracts?
     check(predicate(this)) { lazyMessage(this) }
     return this
 }
 
-internal fun<T> T?.ensureNull(): T? {
+fun<T> T?.ensureNull(): T? {
     // TODO: add contracts?
     check(this == null)
     return this
 }
 
-internal fun<T> T?.ensureNull(lazyMessage: (T?) -> Any): T? {
+fun<T> T?.ensureNull(lazyMessage: (T?) -> Any): T? {
     // TODO: add contracts?
     check(this == null) { lazyMessage(this) }
     return this

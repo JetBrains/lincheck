@@ -8,15 +8,9 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.tracedata
+package org.jetbrains.lincheck.trace
 
-import org.jetbrains.lincheck.trace.ClassDescriptor
-import org.jetbrains.lincheck.trace.FieldDescriptor
-import org.jetbrains.lincheck.trace.MethodDescriptor
-import org.jetbrains.lincheck.trace.MethodSignature
-import org.jetbrains.lincheck.trace.TraceContext
-import org.jetbrains.lincheck.trace.Types
-import org.jetbrains.lincheck.trace.VariableDescriptor
+import org.jetbrains.lincheck.descriptors.*
 import java.io.DataInput
 import java.io.DataOutput
 import java.io.File
