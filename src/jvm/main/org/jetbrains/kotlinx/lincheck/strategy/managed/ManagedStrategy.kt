@@ -868,6 +868,13 @@ internal abstract class ManagedStrategy(
     }
 
     /**
+     * Checks if [threadId] is a `TestThread` instance (threads created and managed by lincheck itself).
+     */
+    private fun isTestThread(threadId: Int): Boolean {
+        return threadId in (0 ..< nThreads)
+    }
+
+    /**
      * Aborts all threads in case if all `TestThread`s are in state `FINISHED`
      * and all running user threads are `LiveLocked` or `Parked`.
      *
@@ -2405,8 +2412,6 @@ internal abstract class ManagedStrategy(
         traceCollector?.addTracePointInternal(MethodReturnTracePoint(tracePoint))
     }
 
-    // == LOGGING METHODS ==
-
     /**
      * Creates a new [CoroutineCancellationTracePoint].
      */
@@ -2421,89 +2426,8 @@ internal abstract class ManagedStrategy(
         return null
     }
 
-    fun enableReplayModeForIdeaPlugin() {
-        inIdeaPluginReplayMode = true
-    }
-
-    override fun beforeEvent(eventId: Int, type: String) {
-        ideaPluginBeforeEvent(eventId, type)
-    }
-
-    /**
-     * This method is called before [beforeEvent] method call to provide current event (trace point) id.
-     */
-    override fun getEventId(): Int = eventIdProvider.currentId()
-
-    /**
-     * This method generates and sets separate event id for the last method call.
-     * Method call trace points are not added to the event list by default, so their event ids are not set otherwise.
-     */
-    // TODO drop; we have every event in a list, most probably we can set these IDs later on during graph construction
-    override fun setLastMethodCallEventId() {
-        val currentThreadId = threadScheduler.getCurrentThreadId()
-        val lastMethodCall = callStackTrace[currentThreadId]!!.lastOrNull()?.tracePoint ?: return
-        setBeforeEventId(lastMethodCall)
-    }
-
-    /**
-     * Set eventId of the [tracePoint] right after it is added to the trace.
-     */
-    private fun setBeforeEventId(tracePoint: TracePoint) {
-        if (shouldInvokeBeforeEvent()) {
-            // Method calls and atomic method calls share the same trace points
-            if (tracePoint.eventId == -1
-                && tracePoint !is CoroutineCancellationTracePoint
-                && tracePoint !is ObstructionFreedomViolationExecutionAbortTracePoint
-                && tracePoint !is SpinCycleStartTracePoint
-                && tracePoint !is SectionDelimiterTracePoint
-            ) {
-                tracePoint.eventId = eventIdProvider.nextId()
-            }
-        }
-    }
-
-    override fun shouldInvokeBeforeEvent(): Boolean {
-        // We do not check `inIgnoredSection` here because this method is called from instrumented code
-        // that should be invoked only outside the ignored section.
-        // However, we cannot add `!inIgnoredSection` check here
-        // as the instrumented code might call `enterIgnoredSection` just before this call.
-        return inIdeaPluginReplayMode && collectTrace &&
-                suddenInvocationResult == null &&
-                isRegisteredThread() &&
-                !shouldSkipNextBeforeEvent()
-    }
-
-    /**
-     * Indicates if the next [beforeEvent] method call should be skipped.
-     *
-     * @see skipNextBeforeEvent
-     */
-    private fun shouldSkipNextBeforeEvent(): Boolean {
-        val skipBeforeEvent = skipNextBeforeEvent
-        if (skipNextBeforeEvent) {
-            skipNextBeforeEvent = false
-        }
-        return skipBeforeEvent
-    }
-
-    protected fun resetEventIdProvider() {
-        eventIdProvider = EventIdProvider()
-    }
-
-    fun enumerateObjects(): Map<Any, Int> {
-        return objectTracker.enumerateAllObjects()
-    }
-
-    // == UTILITY METHODS ==
-
-    /**
-     * Checks if [threadId] is a `TestThread` instance (threads created and managed by lincheck itself).
-     */
-    private fun isTestThread(threadId: Int): Boolean {
-        return threadId in (0 ..< nThreads)
-    }
-
     // == TRACE COLLECTOR EXTENSION METHODS ==
+
     private fun TraceCollector.addTracePointInternal(tracePoint: TracePoint?) {
         // tracePoint can be null here if trace is not available, e.g. in case of suspension
         if (tracePoint == null) return
@@ -2581,6 +2505,80 @@ internal abstract class ManagedStrategy(
         )
     }
 
+    // == IDEA PLUGIN INTEGRATION METHODS ==
+
+    fun enableReplayModeForIdeaPlugin() {
+        inIdeaPluginReplayMode = true
+    }
+
+    override fun beforeEvent(eventId: Int, type: String) {
+        ideaPluginBeforeEvent(eventId, type)
+    }
+
+    /**
+     * This method is called before [beforeEvent] method call to provide current event (trace point) id.
+     */
+    override fun getEventId(): Int = eventIdProvider.currentId()
+
+    /**
+     * This method generates and sets separate event id for the last method call.
+     * Method call trace points are not added to the event list by default, so their event ids are not set otherwise.
+     */
+    // TODO drop; we have every event in a list, most probably we can set these IDs later on during graph construction
+    override fun setLastMethodCallEventId() {
+        val currentThreadId = threadScheduler.getCurrentThreadId()
+        val lastMethodCall = callStackTrace[currentThreadId]!!.lastOrNull()?.tracePoint ?: return
+        setBeforeEventId(lastMethodCall)
+    }
+
+    /**
+     * Set eventId of the [tracePoint] right after it is added to the trace.
+     */
+    private fun setBeforeEventId(tracePoint: TracePoint) {
+        if (shouldInvokeBeforeEvent()) {
+            // Method calls and atomic method calls share the same trace points
+            if (tracePoint.eventId == -1
+                && tracePoint !is CoroutineCancellationTracePoint
+                && tracePoint !is ObstructionFreedomViolationExecutionAbortTracePoint
+                && tracePoint !is SpinCycleStartTracePoint
+                && tracePoint !is SectionDelimiterTracePoint
+            ) {
+                tracePoint.eventId = eventIdProvider.nextId()
+            }
+        }
+    }
+
+    override fun shouldInvokeBeforeEvent(): Boolean {
+        // We do not check `inIgnoredSection` here because this method is called from instrumented code
+        // that should be invoked only outside the ignored section.
+        // However, we cannot add `!inIgnoredSection` check here
+        // as the instrumented code might call `enterIgnoredSection` just before this call.
+        return inIdeaPluginReplayMode && collectTrace &&
+                suddenInvocationResult == null &&
+                isRegisteredThread() &&
+                !shouldSkipNextBeforeEvent()
+    }
+
+    /**
+     * Indicates if the next [beforeEvent] method call should be skipped.
+     *
+     * @see skipNextBeforeEvent
+     */
+    private fun shouldSkipNextBeforeEvent(): Boolean {
+        val skipBeforeEvent = skipNextBeforeEvent
+        if (skipNextBeforeEvent) {
+            skipNextBeforeEvent = false
+        }
+        return skipBeforeEvent
+    }
+
+    protected fun resetEventIdProvider() {
+        eventIdProvider = EventIdProvider()
+    }
+
+    fun enumerateObjects(): Map<Any, Int> {
+        return objectTracker.enumerateAllObjects()
+    }
 
     /**
      * Utility class to set trace point ids for the Lincheck Plugin.
