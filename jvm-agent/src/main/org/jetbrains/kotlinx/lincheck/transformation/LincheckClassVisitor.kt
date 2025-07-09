@@ -311,11 +311,10 @@ internal open class ManagedStrategyMethodVisitor(
      * Injects `beforeEvent` method invocation if IDEA plugin is enabled.
      *
      * @param type type of the event, needed just for debugging.
-     * @param setMethodEventId a flag that identifies that method call event id set is required
      */
-    protected fun invokeBeforeEventIfPluginEnabled(type: String, setMethodEventId: Boolean = false) {
+    protected fun invokeBeforeEventIfPluginEnabled(type: String) {
         if (ideaPluginEnabled) {
-            adapter.invokeBeforeEvent(type, setMethodEventId)
+            adapter.invokeBeforeEvent(type)
         }
     }
 

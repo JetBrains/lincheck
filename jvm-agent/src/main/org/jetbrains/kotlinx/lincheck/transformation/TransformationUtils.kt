@@ -383,21 +383,16 @@ private val Type.requiresBoxing: Boolean
     get() = !(sort == OBJECT || sort == ARRAY)
 
 /**
- * Adds invocation of [beforeEvent] method.
- * This method **must** be called from the user code, as [beforeEvent] must be called from the user code due to the contract
- * between the Lincheck IDEA plugin and Lincheck.
- *
- * @param setMethodEventId a flag that identifies that method call event id set is required
+ * Adds invocation of [sun.nio.ch.lincheck.Injections.beforeEvent] method.
+ * The injected method **must** be called from the user code due to the contract
+ * between the IDEA plugin and Lincheck.
  */
-internal fun GeneratorAdapter.invokeBeforeEvent(debugMessage: String, setMethodEventId: Boolean) = invokeInsideIgnoredSection {
+internal fun GeneratorAdapter.invokeBeforeEvent(debugMessage: String) = invokeInsideIgnoredSection {
     ifStatement(
         condition = {
             invokeStatic(Injections::shouldInvokeBeforeEvent)
         },
         thenClause = {
-            if (setMethodEventId) {
-                invokeStatic(Injections::setLastMethodCallEventId)
-            }
             push(debugMessage)
             invokeStatic(Injections::getNextEventId)
             dup()

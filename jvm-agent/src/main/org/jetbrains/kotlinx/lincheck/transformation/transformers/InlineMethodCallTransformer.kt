@@ -143,7 +143,7 @@ internal class InlineMethodCallTransformer(
             }
         }
         invokeStatic(Injections::onInlineMethodCall)
-        invokeBeforeEventIfPluginEnabled("inline method call $inlineMethodName in $methodName", setMethodEventId = true)
+        invokeBeforeEventIfPluginEnabled("inline method call $inlineMethodName in $methodName")
     }
 
     private fun runWithoutLocalVariablesTracking(block: GeneratorAdapter.() -> Unit) {

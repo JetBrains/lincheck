@@ -648,10 +648,6 @@ public class Injections {
         return eventId;
     }
 
-    public static void setLastMethodCallEventId() {
-        // TODO: remove
-    }
-
     // == Methods for bypassing JDK-8 specific restrictions on MethodHandles.Lookup ==
 
     /**
