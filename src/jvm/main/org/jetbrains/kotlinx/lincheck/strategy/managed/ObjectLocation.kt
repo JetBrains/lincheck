@@ -11,6 +11,9 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.util.*
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater
+import java.util.concurrent.atomic.AtomicLongFieldUpdater
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 
 abstract class ObjectLocation
 
@@ -91,5 +94,46 @@ internal fun AtomicMethodDescriptor.getUnsafeAccessLocation(receiver: Any, argum
 
         // Unexpected case
         else -> error("Failed to determine unsafe object access location")
+    }
+}
+
+internal fun AtomicMethodDescriptor.getAtomicFieldUpdaterAccessLocation(receiver: Any, arguments: Array<Any?>): ObjectAccessMethodInfo {
+    require(apiKind == AtomicApiKind.ATOMIC_FIELD_UPDATER) {
+        "Method is not an AtomicFieldUpdater method: $this"
+    }
+    require(isAtomicFieldUpdater(receiver)) {
+        "Receiver is not a recognized Atomic*FieldUpdater type: ${receiver.javaClass.name}"
+    }
+    require(arguments.isNotEmpty()) {
+        "Expected at least 1 argument, but got ${arguments.size}"
+    }
+
+    val targetObject = arguments[0]
+    val remainingArguments = arguments.drop(1)
+
+    // Extract the private offset value and find the matching field.
+    // Cannot use neither reflection nor MethodHandles.Lookup, as they lead to a warning
+    try {
+        // extract `targetType`
+        val tclassField = receiver.javaClass.getDeclaredField("tclass")
+        val tclassOffset = UnsafeHolder.UNSAFE.objectFieldOffset(tclassField)
+        val targetType = UnsafeHolder.UNSAFE.getObject(receiver, tclassOffset) as Class<*>
+        // extract offset
+        val offsetField = receiver.javaClass.getDeclaredField("offset")
+        val offset = UnsafeHolder.UNSAFE.getLong(receiver, UnsafeHolder.UNSAFE.objectFieldOffset(offsetField))
+        // lookup field name
+        val fieldName = findFieldNameByOffsetViaUnsafe(targetType, offset)
+            ?: error("Failed to find field name by offset $offset in ${targetType.name}")
+
+        return ObjectAccessMethodInfo(
+            obj = targetObject,
+            location = ObjectFieldLocation(
+                className = targetType.name,
+                fieldName = fieldName
+            ),
+            arguments = remainingArguments
+        )
+    } catch (t: Throwable) {
+        error("Failed to extract field information from atomic field updater: ${t.message}")
     }
 }
