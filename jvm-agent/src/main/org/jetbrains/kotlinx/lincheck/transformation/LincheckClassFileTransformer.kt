@@ -16,6 +16,7 @@ import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumen
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
 import org.jetbrains.lincheck.util.AnalysisProfile
 import org.jetbrains.lincheck.util.Logger
+import org.jetbrains.lincheck.util.isThreadContainerClass
 import org.jetbrains.lincheck.util.runInsideIgnoredSection
 import org.objectweb.asm.*
 import org.objectweb.asm.tree.ClassNode

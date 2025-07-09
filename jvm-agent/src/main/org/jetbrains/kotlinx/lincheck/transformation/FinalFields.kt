@@ -45,7 +45,7 @@ internal object FinalFields {
      */
     fun addFinalField(internalClassName: String, fieldName: String) {
         val fields = classToFieldsMap.computeIfAbsent(internalClassName) { HashMap() }
-        fields[fieldName] = FieldInfo.FINAL
+        fields[fieldName] = FinalFields.FieldInfo.FINAL
     }
 
     /**
@@ -53,7 +53,7 @@ internal object FinalFields {
      */
     fun addMutableField(internalClassName: String, fieldName: String) {
         val fields = classToFieldsMap.computeIfAbsent(internalClassName) { HashMap() }
-        fields[fieldName] = FieldInfo.MUTABLE
+        fields[fieldName] = FinalFields.FieldInfo.MUTABLE
     }
 
     /**
@@ -62,12 +62,12 @@ internal object FinalFields {
     fun isFinalField(internalClassName: String, fieldName: String): Boolean {
         val fields = classToFieldsMap.computeIfAbsent(internalClassName) { HashMap() }
         // Fast-path, in case we already have information about this field.
-        fields[fieldName]?.let { return it == FieldInfo.FINAL }
+        fields[fieldName]?.let { return it == FinalFields.FieldInfo.FINAL }
         // If we haven't processed this class yet, fall back to a slow-path, reading the class byte-code.
         collectFieldInformation(internalClassName, fieldName, fields)
         // Here we must have information about this field, as we scanned all the hierarchy of this class.
         val fieldInfo = fields[fieldName] ?: error("Internal error: can't find field with $fieldName in class $internalClassName")
-        return fieldInfo == FieldInfo.FINAL
+        return fieldInfo == FinalFields.FieldInfo.FINAL
     }
 
     /**
@@ -86,8 +86,8 @@ internal object FinalFields {
         // Scan class.
         classReader.accept(visitor, 0)
         // Store information about all final and mutable fields.
-        visitor.finalFields.forEach { field -> fields[field] = FieldInfo.FINAL }
-        visitor.mutableFields.forEach { field -> fields[field] = FieldInfo.MUTABLE }
+        visitor.finalFields.forEach { field -> fields[field] = FinalFields.FieldInfo.FINAL }
+        visitor.mutableFields.forEach { field -> fields[field] = FinalFields.FieldInfo.MUTABLE }
         // If the field is found - return it.
         if (fieldName in visitor.finalFields || fieldName in visitor.mutableFields) return true
         // If field is not present in this class - search in the superclass recursively.

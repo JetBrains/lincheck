@@ -502,7 +502,7 @@ internal class LocalObjectManager(
                 wasLocal ||
                 // lambdas do not appear in localObjects because its class is generated at runtime,
                 // so we do not instrument its constructor (<init> blocks) invocations
-                        isJavaLambdaClass(obj.javaClass.name)
+                isJavaLambdaClass(obj.javaClass.name)
             )
         }
     }

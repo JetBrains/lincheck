@@ -37,6 +37,14 @@ internal const val LINCHECK_BOOTSTRAP_PACKAGE_NAME  = "sun.nio.ch.lincheck."
 fun isJavaLambdaClass(className: String): Boolean =
     className.contains("\$\$Lambda")
 
+/**
+ * Tests if the provided [className] represents one of jdk internal [ThreadContainer] classes
+ * that use [JavaLangAccess.start] API to start threads.
+ */
+fun isThreadContainerClass(className: String): Boolean =
+    className == "jdk.internal.vm.SharedThreadContainer"  ||
+    className == "jdk.internal.misc.ThreadFlock"
+
 // Idea plugin flags
 /**
  * Internal property to check that trace point IDs are in a strict sequential order.

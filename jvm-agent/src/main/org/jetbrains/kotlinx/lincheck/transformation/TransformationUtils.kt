@@ -564,14 +564,6 @@ private val isThreadSubclassMap = ConcurrentHashMap<String, Boolean>()
 private const val JAVA_THREAD_CLASSNAME = "java.lang.Thread"
 
 /**
- * Tests if the provided [className] represents one of jdk internal [ThreadContainer] classes
- * that use [JavaLangAccess.start] API to start threads.
- */
-internal fun isThreadContainerClass(className: String): Boolean =
-    className == "jdk.internal.vm.SharedThreadContainer"  ||
-    className == "jdk.internal.misc.ThreadFlock"
-
-/**
  * Determines whether the given class name corresponds to an internal coroutine-related class.
  */
 internal fun isCoroutineInternalClass(className: String): Boolean =

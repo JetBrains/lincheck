@@ -396,13 +396,3 @@ private fun isJavaExecutorService(className: String) =
     className.startsWith("java.util.concurrent.AbstractExecutorService") ||
     className.startsWith("java.util.concurrent.ThreadPoolExecutor") ||
     className.startsWith("java.util.concurrent.ForkJoinPool")
-
-/**
- * Tests if the provided [className] represents one of jdk internal [ThreadContainer] classes
- * that use [JavaLangAccess.start] API to start threads.
- *
- * *Note*: this is a copy of the same method in `jvm-agent` module.
- */
-private fun isThreadContainerClass(className: String): Boolean =
-    className == "jdk.internal.vm.SharedThreadContainer"  ||
-    className == "jdk.internal.misc.ThreadFlock"

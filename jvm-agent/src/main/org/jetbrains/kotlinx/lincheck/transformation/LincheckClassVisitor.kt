@@ -21,6 +21,7 @@ import org.jetbrains.kotlinx.lincheck.transformation.transformers.*
 import org.jetbrains.lincheck.util.Logger
 import org.jetbrains.lincheck.util.ideaPluginEnabled
 import org.jetbrains.lincheck.util.isInTraceDebuggerMode
+import org.jetbrains.lincheck.util.isThreadContainerClass
 import sun.nio.ch.lincheck.*
 
 internal class LincheckClassVisitor(

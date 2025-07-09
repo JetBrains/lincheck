@@ -33,11 +33,11 @@ buildscript {
 plugins {
     java
     kotlin("jvm")
-    id("kotlinx.team.infra") version "0.4.0-dev-80"
     id("org.jetbrains.kotlinx.atomicfu")
     id("signing")
     id("maven-publish")
     id("org.jetbrains.dokka")
+    id("kotlinx.team.infra") version "0.4.0-dev-80"
 }
 
 repositories {

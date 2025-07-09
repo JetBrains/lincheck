@@ -10,8 +10,7 @@
 
 package org.jetbrains.lincheck.descriptors
 
-import java.util.ArrayList
-import java.util.Objects
+import java.util.*
 import kotlin.math.max
 
 object Types {
