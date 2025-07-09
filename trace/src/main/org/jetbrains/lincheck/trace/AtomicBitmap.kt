@@ -65,7 +65,7 @@ internal class AtomicBitmap {
         do {
             val value = ch.get(idx)
             val newValue = value or bit
-        } while (ch.compareAndSet(idx, value, newValue))
+        } while (!ch.compareAndSet(idx, value, newValue))
     }
 
     @Synchronized
