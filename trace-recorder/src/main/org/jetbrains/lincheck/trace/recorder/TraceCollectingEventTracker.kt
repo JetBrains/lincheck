@@ -525,7 +525,7 @@ class TraceCollectingEventTracker(
         System.err.println("Trace Recorder mode doesn't support IDEA Plugin integration")
     }
 
-    override fun getEventId(): Int = runInsideIgnoredSection {
+    override fun getCurrentEventId(): Int = runInsideIgnoredSection {
         System.err.println("Trace Recorder mode doesn't support IDEA Plugin integration")
         return -1
     }

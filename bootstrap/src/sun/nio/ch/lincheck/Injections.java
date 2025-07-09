@@ -659,7 +659,7 @@ public class Injections {
      * @param type type of the next event. Used only for debug purposes.
      */
     public static int getCurrentEventId(String type) {
-        int eventId = getEventTracker().getEventId();
+        int eventId = getEventTracker().getCurrentEventId();
         currentEventId = eventId;
         return eventId;
     }

@@ -175,8 +175,8 @@ internal abstract class ManagedStrategy(
     // User-specified guarantees on specific function, which can be considered as atomic or ignored.
     private val userDefinedGuarantees: List<ManagedStrategyGuarantee>? = settings.guarantees
 
-    // Utility class for the plugin integration to provide ids for each trace point
-    private var eventIdProvider = EventIdProvider()
+    // Stores current event id
+    private var currentEventId = -1
 
     protected var replayNumber = 0L
 
@@ -260,6 +260,7 @@ internal abstract class ManagedStrategy(
         monitorTracker.reset()
         parkingTracker.reset()
         constants.clear()
+        currentEventId = -1
         resetThreads()
     }
 
@@ -305,7 +306,6 @@ internal abstract class ManagedStrategy(
 
     protected open fun initializeReplay() {
         resetTraceDebuggerTrackerIds()
-        resetEventIdProvider()
     }
 
     internal fun doReplay(): InvocationResult {
@@ -2498,12 +2498,9 @@ internal abstract class ManagedStrategy(
         ideaPluginBeforeEvent(eventId, type)
     }
 
-    /**
-     * This method is called before [beforeEvent] method call to provide current event (trace point) id.
-     */
-    override fun getEventId(): Int = eventIdProvider.currentId()
+    override fun getCurrentEventId(): Int = currentEventId
 
-    private fun getNextEventId(): Int = -1 // TODO: implement
+    private fun getNextEventId(): Int = ++currentEventId
 
     override fun shouldInvokeBeforeEvent(): Boolean {
         // We do not check `inIgnoredSection` here because this method is called from instrumented code
@@ -2516,75 +2513,8 @@ internal abstract class ManagedStrategy(
                isRegisteredThread()
     }
 
-    protected fun resetEventIdProvider() {
-        eventIdProvider = EventIdProvider()
-    }
-
     fun enumerateObjects(): Map<Any, Int> {
         return objectTracker.enumerateAllObjects()
-    }
-
-    /**
-     * Utility class to set trace point ids for the Lincheck Plugin.
-     *
-     * It's methods have the following contract:
-     *
-     * [nextId] must be called first of after [currentId] call,
-     *
-     * [currentId] must be called only after [nextId] call.
-     */
-    private class EventIdProvider {
-
-        /**
-         * ID of the previous event.
-         */
-        private var lastId = -1
-
-        // The properties below are needed only for debug purposes to provide an informative message
-        // if ids are now strictly sequential.
-        private var lastVisited = -1
-        private var lastGeneratedId: Int? = null
-        private var lastIdReturnedAsCurrent: Int? = null
-
-        /**
-         * Generates the id for the next trace point.
-         */
-        fun nextId(): Int {
-            val nextId = ++lastId
-            if (eventIdStrictOrderingCheck) {
-                if (lastVisited + 1 != nextId) {
-                    val lastRead = lastIdReturnedAsCurrent
-                    if (lastRead == null) {
-                        error("Create nextEventId $nextId readNextEventId has never been called")
-                    } else {
-                        error("Create nextEventId $nextId but last read event is $lastVisited, last read value is $lastIdReturnedAsCurrent")
-                    }
-                }
-                lastGeneratedId = nextId
-            }
-            return nextId
-        }
-
-        /**
-         * Returns the last generated id.
-         * Also, if [eventIdStrictOrderingCheck] is enabled, checks that.
-         */
-        fun currentId(): Int {
-            val id = lastId
-            if (eventIdStrictOrderingCheck) {
-                if (lastVisited + 1 != id) {
-                    val lastIncrement = lastGeneratedId
-                    if (lastIncrement == null) {
-                        error("ReadNextEventId is called while nextEventId has never been called")
-                    } else {
-                        error("ReadNextEventId $id after previous value $lastVisited, last incremented value is $lastIncrement")
-                    }
-                }
-                lastVisited = id
-                lastIdReturnedAsCurrent = id
-            }
-            return id
-        }
     }
 }
 
