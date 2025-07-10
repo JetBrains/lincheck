@@ -22,6 +22,7 @@ import java.net.URLClassLoader
 import java.nio.file.Paths
 
 abstract class AbstractTraceIntegrationTest {
+    abstract val fatJarName: String
     abstract val projectPath: String
 
     // Store the runtime classpath URLs
@@ -34,7 +35,7 @@ abstract class AbstractTraceIntegrationTest {
         extraJvmArgs: List<String>,
         extraAgentArgs: List<String>,
     ): String {
-        val pathToFatJar = File(Paths.get("..", "..", /* enter the root project dir */ "build", "libs", "lincheck-fat.jar").toString())
+        val pathToFatJar = File(Paths.get("build", "libs", fatJarName).toString())
         return """
             gradle.taskGraph.whenReady {
                 val jvmTasks = allTasks.filter { task -> task is JavaForkOptions }
@@ -53,7 +54,7 @@ abstract class AbstractTraceIntegrationTest {
 
     private fun getGoldenDataFileFor(testClassName: String, testMethodName: String): File {
         val projectName = File(projectPath).name
-        return File(Paths.get("src", "test", "resources", "integrationTestData", projectName, "${testClassName}_$testMethodName.txt").toString())
+        return File(Paths.get("src", "main", "resources", "integrationTestData", projectName, "${testClassName}_$testMethodName.txt").toString())
     }
 
     private fun createInitScriptAsTempFile(content: String): File {

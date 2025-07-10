@@ -8,11 +8,12 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.test.trace.debugger
+package org.jetbrains.test.trace.recorder
 
 import AbstractTraceIntegrationTest
 
-abstract class AbstractTraceDebuggerIntegrationTest : AbstractTraceIntegrationTest() {
+abstract class AbstractTraceRecorderIntegrationTest : AbstractTraceIntegrationTest() {
+    override val fatJarName: String = "trace-recorder-fat.jar"
 
     final override fun runGradleTest(
         testClassName: String,
@@ -26,12 +27,15 @@ abstract class AbstractTraceDebuggerIntegrationTest : AbstractTraceIntegrationTe
             testClassName,
             testMethodName,
             extraJvmArgs + listOf(
-                "-Dlincheck.traceDebuggerMode=true",
+                "-Dlincheck.traceRecorderMode=true",
                 "-XX:+UnlockExperimentalVMOptions",
                 "-XX:hashCode=2"
             ),
-            extraAgentArgs,
-            gradleCommands
+            extraAgentArgs
+                .plus("text")
+                .plus("verbose"),
+            gradleCommands,
+            checkRepresentation
         )
     }
 }

@@ -1,16 +1,16 @@
 sourceSets {
-    test {
-        java.srcDirs("src/test")
+    main {
+        java.srcDirs("src/main")
     }
 
     dependencies {
         val junitVersion: String by project
         val jctoolsVersion: String by project
 
-        testImplementation(project(":"))
-        testImplementation(rootProject.sourceSets["test"].output)
-        testImplementation("junit:junit:$junitVersion")
-        testImplementation("org.jctools:jctools-core:$jctoolsVersion")
+        implementation(project(":"))
+        implementation(rootProject.sourceSets["test"].output)
+        implementation("junit:junit:$junitVersion")
+        implementation("org.jctools:jctools-core:$jctoolsVersion")
     }
 }
 
@@ -20,8 +20,8 @@ tasks {
         configureJvmTestCommon(project)
         group = "verification"
 
-        testClassesDirs = sourceSets["test"].output.classesDirs
-        classpath = sourceSets["test"].runtimeClasspath
+        testClassesDirs = sourceSets["main"].output.classesDirs
+        classpath = sourceSets["main"].runtimeClasspath
 
         enableAssertions = true
         testLogging.showStandardStreams = true

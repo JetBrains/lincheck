@@ -10,7 +10,6 @@
 
 package org.jetbrains.lincheck_test.guide
 
-import org.jetbrains.kotlinx.lincheck.util.LoggingLevel
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.datastructures.Operation
 import org.junit.Test
