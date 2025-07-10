@@ -133,7 +133,7 @@ tasks {
         configureJvmTestCommon(project)
         group = "verification"
         // TODO: do I need these explicit include's?
-        include("org/jetbrains/trace_debugger_test/*")
+        include("org/jetbrains/test/trace/debugger/*")
 
         testClassesDirs = sourceSets["traceDebuggerIntegrationTest"].output.classesDirs
         classpath = sourceSets["traceDebuggerIntegrationTest"].runtimeClasspath
@@ -145,7 +145,7 @@ tasks {
     val traceRecorderIntegrationTest = register<Test>("traceRecorderIntegrationTest") {
         configureJvmTestCommon(project)
         group = "verification"
-        include("org/jetbrains/trace_recorder_test/*")
+        include("org/jetbrains/test/trace/recorder/*")
 
         testClassesDirs = sourceSets["traceRecorderIntegrationTest"].output.classesDirs
         classpath = sourceSets["traceRecorderIntegrationTest"].runtimeClasspath
