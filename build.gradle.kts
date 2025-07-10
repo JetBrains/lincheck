@@ -1,3 +1,13 @@
+/*
+ * Lincheck
+ *
+ * Copyright (C) 2019 - 2025 JetBrains s.r.o.
+ *
+ * This Source Code Form is subject to the terms of the
+ * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
+ * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -130,6 +140,7 @@ tasks {
     named<JavaCompile>("compileTestJava") {
         setupJavaToolchain(project)
     }
+
     named<KotlinCompile>("compileTestKotlin") {
         setupKotlinToolchain(project)
     }
@@ -138,7 +149,6 @@ tasks {
         getAccessToInternalDefinitionsOf(project(":common"))
     }
 }
-
 
 tasks.withType<Test> {
     javaLauncher.set(

@@ -8,13 +8,12 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.test.trace.debugger
+package org.jetbrains.trace.recorder.test
 
-import org.junit.Ignore
 import org.junit.Test
 import java.nio.file.Paths
 
-class TraceDebuggerExamplesTraceDebuggerIntegrationTest: AbstractTraceDebuggerIntegrationTest() {
+class TraceDebuggerExamplesTraceRecorderIntegrationTest : AbstractTraceRecorderIntegrationTest() {
     override val projectPath: String = Paths.get("build", "integrationTestProjects", "TraceDebuggerExamples").toString()
 
     @Test
@@ -26,13 +25,13 @@ class TraceDebuggerExamplesTraceDebuggerIntegrationTest: AbstractTraceDebuggerIn
         )
     }
 
-    @Ignore("`class.java.declaredMethods` call returns nondeterministic results")
-    @Test
-    fun `org_examples_integration_bugs_ReflectionTest sortMethods`() {
-        runGradleTest(
-            testClassName = "org.examples.integration.bugs.ReflectionTest",
-            testMethodName = "sortMethods",
-            gradleCommands = listOf(":test"),
+    @Test // actually runs the same test as above, but via the `runGradleTests` call
+    fun `org_examples_integration_bugs_LinkedHashSetTest`() {
+        runGradleTests(
+            testClassNamePrefix = "org.examples.integration.bugs.LinkedHashSetTest",
+            gradleBuildCommands = listOf(":compileTestKotlin"),
+            gradleTestCommands = listOf(":test"),
+            checkRepresentation = false,
         )
     }
 }

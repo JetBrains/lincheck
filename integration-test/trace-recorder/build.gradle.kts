@@ -32,7 +32,6 @@ tasks {
     val traceRecorderIntegrationTest = register<Test>("traceRecorderIntegrationTest") {
         configureJvmTestCommon(project)
         group = "verification"
-        include("org/jetbrains/test/trace/recorder/*")
 
         testClassesDirs = sourceSets["main"].output.classesDirs
         classpath = sourceSets["main"].runtimeClasspath
