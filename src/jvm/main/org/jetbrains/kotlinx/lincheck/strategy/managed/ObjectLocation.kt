@@ -11,8 +11,6 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.util.*
-import org.jetbrains.kotlinx.lincheck.util.AtomicApiKind
-import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
 
 abstract class ObjectLocation
 
