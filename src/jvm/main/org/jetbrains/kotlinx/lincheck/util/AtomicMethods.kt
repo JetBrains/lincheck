@@ -341,6 +341,15 @@ internal fun isVarHandle(obj: Any?): Boolean {
 internal fun isVarHandleClass(className: String) =
     className == "java.lang.invoke.VarHandle"
 
+internal fun isVarHandleArrayClass(className: String) =
+    className in varHandleArrayClassNames
+
+internal fun isVarHandleStaticFieldClass(className: String) =
+    className in varHandleStaticFieldClassNames
+
+internal fun isVarHandleInstanceFieldClass(className: String) =
+    className in varHandleInstanceFieldClassNames
+
 internal fun isVarHandleMethod(className: String, methodName: String) =
     isVarHandleClass(className) && methodName in varHandleMethods
 
