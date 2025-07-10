@@ -20,7 +20,7 @@ Exception stack traces:
 #1: java.lang.IllegalArgumentException: Random range is empty: [1, 1).
 	at kotlin.random.RandomKt.checkRangeBounds(Random.kt:378)
 	at kotlin.random.Random.nextInt(Random.kt:65)
-	at org.jetbrains.kotlinx.lincheck_test.representation.trace_debugger.FailingCustomRandomCallRepresentationTest.operation(RandomRepresentationTests.kt:40)
+	at org.jetbrains.kotlinx.lincheck_test.representation.trace.debugger.FailingCustomRandomCallRepresentationTest.operation(RandomRepresentationTests.kt:40)
 	at java.base/java.lang.Thread.run(Thread.java:840)
 
 Detailed trace:

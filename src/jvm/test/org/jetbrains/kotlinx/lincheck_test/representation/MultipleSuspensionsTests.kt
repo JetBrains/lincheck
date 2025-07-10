@@ -18,7 +18,7 @@ import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import org.jetbrains.kotlinx.lincheck.util.ensure
+import org.jetbrains.lincheck.util.ensure
 import org.junit.Test
 
 /**

@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.gpmc
 
-import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
+import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import kotlin.concurrent.thread
 import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.ConcurrentHashMap

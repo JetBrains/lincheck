@@ -10,16 +10,16 @@
 
 import org.gradle.api.Project
 import org.gradle.api.tasks.TaskProvider
-import org.gradle.jvm.tasks.Jar
+import org.gradle.api.tasks.bundling.Jar
 import org.jetbrains.dokka.gradle.DokkaTask
 import org.gradle.kotlin.dsl.*
 
-fun Project.createJavadocJar(): TaskProvider<Jar> {
+fun Project.createJavadocJar(mainSourceSetPath: String = "src/main"): TaskProvider<Jar> {
     val dokkaHtml = tasks.named<DokkaTask>("dokkaHtml") {
         outputDirectory.set(file("${layout.buildDirectory.get()}/javadoc"))
         dokkaSourceSets {
             named("main") {
-                sourceRoots.from(file("src/jvm/main"))
+                sourceRoots.from(file(mainSourceSetPath))
                 reportUndocumented.set(false)
             }
         }

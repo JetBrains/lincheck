@@ -11,7 +11,7 @@
 package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution
-import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.lincheck.util.runInsideIgnoredSection
 
 /**
  * This classloader is mostly used by runner to separate parallel iterations,

@@ -14,6 +14,7 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategySettings
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
+import org.jetbrains.lincheck.util.AnalysisProfile
 
 /**
  * Options for the managed strategy.
@@ -136,7 +137,7 @@ abstract class ManagedCTestConfiguration(
         const val DEFAULT_HANGING_DETECTION_THRESHOLD = 101
         const val DEFAULT_LIVELOCK_EVENTS_THRESHOLD = 10001
 
-        const val DEFAULT_STDLIB_ANALYSIS_ENABLED = true
+        val DEFAULT_STDLIB_ANALYSIS_ENABLED = AnalysisProfile.DEFAULT.analyzeStdLib
 
         val DEFAULT_GUARANTEES = listOf<ManagedStrategyGuarantee>()
     }

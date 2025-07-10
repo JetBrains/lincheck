@@ -20,7 +20,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.trace.*
-import org.jetbrains.lincheck.trace.*
 import org.jetbrains.kotlinx.lincheck.util.ThreadMap
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import org.jetbrains.lincheck.GeneralPurposeModelCheckingWrapper
@@ -481,25 +480,4 @@ private fun createContinuationToThreadIdMap(threads: Array<TestThread>): Array<A
         array.add(thread.threadId)
     }
     return array.toTypedArray()
-}
-
-/**
- * Internal property to check that trace point IDs are in a strict sequential order.
- */
-internal val eventIdStrictOrderingCheck =
-    System.getProperty("lincheck.debug.withEventIdSequentialCheck") != null
-
-/**
- * This property on the top level serves as a cache.
- * We will call `ideaPluginEnabled` method only once
- * and so on the plugin side the callback will be called also only once.
- */
-internal val ideaPluginEnabled by lazy { ideaPluginEnabled() }
-
-/**
- * Debugger replaces the result of this method to `true` if idea plugin is enabled.
- */
-private fun ideaPluginEnabled(): Boolean {
-    // treat as enabled in tests if we want so
-    return eventIdStrictOrderingCheck
 }

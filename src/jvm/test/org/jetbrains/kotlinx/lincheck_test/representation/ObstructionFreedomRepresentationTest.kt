@@ -13,7 +13,7 @@ package org.jetbrains.kotlinx.lincheck_test.representation
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
+import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck_test.util.*
 import org.jetbrains.lincheck.datastructures.ManagedCTestConfiguration
 

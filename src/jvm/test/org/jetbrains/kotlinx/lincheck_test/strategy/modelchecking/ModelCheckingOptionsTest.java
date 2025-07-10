@@ -10,7 +10,7 @@
 package org.jetbrains.kotlinx.lincheck_test.strategy.modelchecking;
 
 import org.jetbrains.kotlinx.lincheck.LinChecker;
-import org.jetbrains.kotlinx.lincheck.util.LoggingLevel;
+import org.jetbrains.lincheck.util.LoggingLevel;
 import org.jetbrains.lincheck.datastructures.Operation;
 import org.jetbrains.kotlinx.lincheck.execution.RandomExecutionGenerator;
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions;

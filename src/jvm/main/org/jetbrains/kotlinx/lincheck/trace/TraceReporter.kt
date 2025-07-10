@@ -17,6 +17,7 @@ import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.recomputeSpinCycleStartCallStack
 import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.lincheck.util.AnalysisProfile
 import kotlin.math.max
 
 internal typealias SingleThreadedTable<T> = List<SingleThreadedSection<T>>

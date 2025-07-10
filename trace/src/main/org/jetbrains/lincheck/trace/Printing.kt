@@ -10,7 +10,6 @@
 
 package org.jetbrains.lincheck.trace
 
-import org.jetbrains.kotlinx.lincheck.tracedata.openNewFile
 import java.io.OutputStream
 import java.io.PrintStream
 

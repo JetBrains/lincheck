@@ -10,6 +10,9 @@
 
 package org.jetbrains.kotlinx.lincheck.util
 
+import org.jetbrains.lincheck.util.readArrayElementViaUnsafe
+import org.jetbrains.lincheck.util.readFieldSafely
+import org.jetbrains.lincheck.util.readFieldViaUnsafe
 import java.util.concurrent.atomic.*
 import kotlin.reflect.jvm.jvmName
 import java.lang.reflect.*

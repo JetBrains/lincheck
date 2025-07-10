@@ -24,6 +24,7 @@ import java.net.URLClassLoader
 import java.nio.file.Paths
 
 abstract class AbstractTraceIntegrationTest {
+    abstract val fatJarName: String
     abstract val projectPath: String
     protected abstract val testSourcesPath: String
 
@@ -37,7 +38,8 @@ abstract class AbstractTraceIntegrationTest {
         extraJvmArgs: List<String>,
         extraAgentArgs: List<String>,
     ): String {
-        val pathToFatJar = File(Paths.get("build", "libs", "lincheck-fat.jar").toString())
+        val pathToFatJar = File(Paths.get("build", "libs", fatJarName).toString())
+        check(pathToFatJar.exists()) { "Agent fat-jar not found at '${pathToFatJar.absolutePath}'" }
         return """
             gradle.taskGraph.whenReady {
                 val jvmTasks = allTasks.filter { task -> task is JavaForkOptions }
@@ -117,11 +119,14 @@ abstract class AbstractTraceIntegrationTest {
                 .addArguments(
                     "--init-script",
                     createInitScriptAsTempFile(buildGradleInitScriptToDumpTrace(testClassName, testMethodName, tmpFile, extraJvmArgs, extraAgentArgs)).absolutePath,
-                ).forTasks(
+                )
+                .forTasks(
                     *gradleCommands.toTypedArray(),
                     "--tests",
                     "$testClassName.$testMethodName",
-                ).run()
+                )
+                .setStandardError(System.err)
+                .run()
         }
 
         // TODO decide how to test: with gold data or run twice?
@@ -136,7 +141,7 @@ abstract class AbstractTraceIntegrationTest {
                     Assert.fail("The gold data file was created. Please rerun the test.")
                 } else {
                     Assert.fail(
-                        "The gold data file was not found. " +
+                        "The gold data file was not found at '${expectedOutput.absolutePath}'. " +
                         "Please rerun the test with \"overwriteRepresentationTestsOutput\" option enabled."
                     )
                 }

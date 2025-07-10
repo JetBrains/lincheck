@@ -20,6 +20,9 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.lincheck.util.ensure
+import org.jetbrains.lincheck.util.runInsideIgnoredSection
+import org.jetbrains.lincheck.util.runOutsideIgnoredSection
 import sun.nio.ch.lincheck.*
 import java.lang.reflect.*
 import java.util.concurrent.*
@@ -134,22 +137,23 @@ internal open class ParallelThreadsRunner(
 
             // We need to run this code in an ignored section,
             // as it is called in the testing code but should not be analyzed.
-            override fun <T> interceptContinuation(continuation: Continuation<T>): Continuation<T> = runInsideIgnoredSection {
-                return Continuation(StoreExceptionHandler() + Job()) { result ->
-                    runInsideIgnoredSection {
-                        // decrement completed or suspended threads only if the operation was not cancelled
-                        if (!result.cancelledByLincheck()) {
-                            completedOrSuspendedThreads.decrementAndGet()
-                            if (!trySetResumedStatus(iThread, actorId)) {
-                                // already cancelled via prompt cancellation, increment the counter back
-                                completedOrSuspendedThreads.incrementAndGet()
+            override fun <T> interceptContinuation(continuation: Continuation<T>): Continuation<T> =
+                runInsideIgnoredSection {
+                    return Continuation(StoreExceptionHandler() + Job()) { result ->
+                        runInsideIgnoredSection {
+                            // decrement completed or suspended threads only if the operation was not cancelled
+                            if (!result.cancelledByLincheck()) {
+                                completedOrSuspendedThreads.decrementAndGet()
+                                if (!trySetResumedStatus(iThread, actorId)) {
+                                    // already cancelled via prompt cancellation, increment the counter back
+                                    completedOrSuspendedThreads.incrementAndGet()
+                                }
+                                @Suppress("UNCHECKED_CAST")
+                                resWithCont.set(result to continuation as Continuation<Any?>)
                             }
-                            @Suppress("UNCHECKED_CAST")
-                            resWithCont.set(result to continuation as Continuation<Any?>)
                         }
                     }
                 }
-            }
         }
     }
 

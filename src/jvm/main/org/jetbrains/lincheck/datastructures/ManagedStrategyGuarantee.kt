@@ -9,7 +9,7 @@
  */
 package org.jetbrains.lincheck.datastructures
 
-import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.lincheck.util.AnalysisSectionType
 import kotlin.reflect.*
 
 /**

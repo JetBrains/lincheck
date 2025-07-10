@@ -10,6 +10,12 @@
 
 package org.jetbrains.lincheck.trace
 
+import org.jetbrains.lincheck.descriptors.CodeLocations
+import org.jetbrains.lincheck.descriptors.FieldDescriptor
+import org.jetbrains.lincheck.descriptors.MethodDescriptor
+import org.jetbrains.lincheck.descriptors.VariableDescriptor
+import org.jetbrains.lincheck.descriptors.Types
+import org.jetbrains.lincheck.util.isJavaLambdaClass
 import java.io.DataInput
 import java.io.DataOutput
 import java.math.BigDecimal
@@ -540,13 +546,6 @@ data class TRObject internal constructor (
             if (isJavaLambdaClass(it)) it.substringBeforeLast('/')
             else it
         }
-
-    /**
-    * Test if the given class name corresponds to a Java lambda class.
-    */
-    // TODO: remove duplication with `org.jetbrains.kotlinx.lincheck.utils` after we extract `common` module
-    private fun isJavaLambdaClass(className: String): Boolean =
-        className.contains("\$\$Lambda")
 }
 
 private const val TR_OBJECT_NULL_CLASSNAME = -1

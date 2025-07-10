@@ -15,6 +15,7 @@ import kotlinx.atomicfu.AtomicBooleanArray
 import kotlinx.atomicfu.AtomicIntArray
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceMethodType.*
 import org.jetbrains.kotlinx.lincheck.util.findInstanceFieldReferringTo
+import org.jetbrains.lincheck.analysis.ShadowStackFrame
 import java.lang.reflect.Modifier
 import java.util.concurrent.atomic.AtomicIntegerArray
 import java.util.concurrent.atomic.AtomicLongArray

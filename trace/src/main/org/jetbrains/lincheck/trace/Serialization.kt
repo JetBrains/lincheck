@@ -10,11 +10,11 @@
 
 package org.jetbrains.lincheck.trace
 
-import org.jetbrains.kotlinx.lincheck.tracedata.*
-import java.io.Closeable
-import java.io.DataOutput
-import java.io.DataOutputStream
-import java.io.OutputStream
+import org.jetbrains.lincheck.descriptors.ClassDescriptor
+import org.jetbrains.lincheck.descriptors.FieldDescriptor
+import org.jetbrains.lincheck.descriptors.MethodDescriptor
+import org.jetbrains.lincheck.descriptors.VariableDescriptor
+import java.io.*
 import java.nio.ByteBuffer
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger

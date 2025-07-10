@@ -1,12 +1,25 @@
-import org.gradle.jvm.tasks.Jar
-import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import org.jetbrains.dokka.gradle.DokkaTask
+/*
+ * Lincheck
+ *
+ * Copyright (C) 2019 - 2025 JetBrains s.r.o.
+ *
+ * This Source Code Form is subject to the terms of the
+ * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
+ * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.asRequestBody
-import java.util.*
+import org.gradle.kotlin.dsl.invoke
+import org.gradle.kotlin.dsl.java
+import org.gradle.kotlin.dsl.kotlin
+import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import java.nio.file.Paths
+import java.util.Base64
+
 
 buildscript {
     repositories {
@@ -38,6 +51,33 @@ kotlin {
 
 java {
     configureJava()
+}
+
+subprojects {
+    plugins.apply("java")
+    plugins.apply("org.jetbrains.kotlin.jvm")
+
+    kotlin {
+        configureKotlin()
+    }
+
+    java {
+        configureJava()
+    }
+}
+
+/*
+ * Unfortunately, Lincheck was affected by the following bug in atomicfu
+ * (at the latest version 0.27.0 at the time when this comment was written):
+ * https://github.com/Kotlin/kotlinx-atomicfu/issues/525.
+ *
+ * To bypass the bug, the solution is to disable post-compilation JVM bytecode transformation
+ * and enable only the JVM-IR transformation at the Kotlin compilation stage.
+ *
+ * See also https://github.com/JetBrains/lincheck/issues/668 for a more detailed description of the bug.
+ */
+atomicfu {
+    transformJvm = false
 }
 
 sourceSets {
@@ -96,7 +136,10 @@ sourceSets {
         val atomicfuVersion: String by project
 
         compileOnly(project(":bootstrap"))
-        api(project(":trace"))
+        api(project(":common")) // TODO: `api` is used here in order to allow users of `lincheck` to access `LoggingLevel` enum class stored there,
+                                //  but later this enum will be marked as deprecated and then hidden, after that `api` should be changed to `implementation`
+        implementation(project(":jvm-agent"))
+        implementation(project(":trace"))
 
         api("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
         api("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion")
@@ -178,6 +221,10 @@ tasks {
     named<KotlinCompile>("compileTraceRecorderIntegrationTestKotlin") {
         setupKotlinToolchain(project)
     }
+
+    withType<KotlinCompile> {
+        getAccessToInternalDefinitionsOf(project(":common"))
+    }
 }
 
 // add an association to main and test modules to enable access to `internal` APIs inside integration tests:
@@ -201,19 +248,6 @@ fun KotlinCompilation<*>.configureAssociation() {
     associateWith(test)
 }
 
-/*
- * Unfortunately, Lincheck was affected by the following bug in atomicfu
- * (at the latest version 0.27.0 at the time when this comment was written):
- * https://github.com/Kotlin/kotlinx-atomicfu/issues/525.
- *
- * To bypass the bug, the solution is to disable post-compilation JVM bytecode transformation
- * and enable only the JVM-IR transformation at the Kotlin compilation stage.
- *
- * See also https://github.com/JetBrains/lincheck/issues/668 for a more detailed description of the bug.
- */
-atomicfu {
-    transformJvm = false
-}
 
 tasks.withType<Test> {
     javaLauncher.set(
@@ -281,10 +315,10 @@ tasks {
         if (!ideaActive) {
             // We need to be able to run these tests in IntelliJ IDEA.
             // Unfortunately, the current Gradle support doesn't detect
-            // the `jvmTestIsolated` and `trace[Debugger/Recorder]IntegrationTest` tasks.
+            // the `testIsolated` and `trace[Debugger/Recorder]IntegrationTest` tasks.
             exclude("**/*IsolatedTest*")
-            exclude("org/jetbrains/trace_debugger/integration/*")
-            exclude("org/jetbrains/trace_recorder/integration/*")
+            exclude("org/jetbrains/trace/debugger/integration/*")
+            exclude("org/jetbrains/trace/recorder/integration/*")
         }
         // Do not run JdkUnsafeTraceRepresentationTest on Java 12 or earlier,
         // as this test relies on specific ConcurrentHashMap implementation.
@@ -340,28 +374,31 @@ tasks {
 
     registerTraceAgentIntegrationTestsPrerequisites()
 
+    val copyTraceDebuggerFatJar = copyTraceAgentFatJar(project(":trace-debugger"), "trace-debugger-fat.jar")
+    val copyTraceRecorderFatJar = copyTraceAgentFatJar(project(":trace-recorder"), "trace-recorder-fat.jar")
+
     val traceDebuggerIntegrationTest = register<Test>("traceDebuggerIntegrationTest") {
         configureJvmTestCommon()
         group = "verification"
-        include("org/jetbrains/trace_debugger/integration/*")
+        include("org/jetbrains/trace/debugger/integration/*")
 
         testClassesDirs = sourceSets["traceDebuggerIntegrationTest"].output.classesDirs
         classpath = sourceSets["traceDebuggerIntegrationTest"].runtimeClasspath
 
         outputs.upToDateWhen { false } // Always run tests when called
-        dependsOn(traceAgentIntegrationTestsPrerequisites)
+        dependsOn(copyTraceDebuggerFatJar)
     }
 
     val traceRecorderIntegrationTest = register<Test>("traceRecorderIntegrationTest") {
         configureJvmTestCommon()
         group = "verification"
-        include("org/jetbrains/trace_recorder/integration/*")
+        include("org/jetbrains/trace/recorder/integration/*")
 
         testClassesDirs = sourceSets["traceRecorderIntegrationTest"].output.classesDirs
         classpath = sourceSets["traceRecorderIntegrationTest"].runtimeClasspath
 
         outputs.upToDateWhen { false } // Always run tests when called
-        dependsOn(traceAgentIntegrationTestsPrerequisites)
+        dependsOn(copyTraceRecorderFatJar)
     }
 
     check {
@@ -369,12 +406,10 @@ tasks {
     }
 }
 
-registerTraceAgentTasks()
-
 val bootstrapJar = tasks.register<Copy>("bootstrapJar") {
     dependsOn(":bootstrap:jar")
     from(file("${project(":bootstrap").layout.buildDirectory.get()}/libs/bootstrap.jar"))
-    into(file("${layout.buildDirectory.get()}/resources/main"))
+    into(file("${project(":jvm-agent").layout.buildDirectory.get()}/resources/main"))
 }
 
 val jar = tasks.named<Jar>("jar") {
@@ -389,10 +424,10 @@ val sourcesJar = tasks.register<Jar>("sourcesJar") {
     archiveClassifier.set("sources")
 }
 
-val javadocJar = createJavadocJar()
+val javadocJar = createJavadocJar("src/jvm/main")
 
 tasks.withType<Jar> {
-    dependsOn(bootstrapJar)
+    dependsOn(":bootstrapJar")
 
     manifest {
         val inceptionYear: String by project
@@ -410,7 +445,7 @@ tasks.withType<Jar> {
 }
 
 tasks.named("processResources").configure {
-    dependsOn(bootstrapJar)
+    dependsOn(":bootstrapJar")
 }
 
 publishing {
@@ -458,6 +493,8 @@ tasks {
     val packSonatypeCentralBundle by registering(Zip::class) {
         group = "publishing"
 
+        dependsOn(":common:publishMavenPublicationToArtifactsRepository")
+        dependsOn(":jvm-agent:publishMavenPublicationToArtifactsRepository")
         dependsOn(":trace:publishMavenPublicationToArtifactsRepository")
         dependsOn(":publishMavenPublicationToArtifactsRepository")
 

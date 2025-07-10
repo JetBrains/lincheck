@@ -10,7 +10,7 @@
 
 package org.jetbrains.lincheck_test.datastructures.linearizable
 
-import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
+import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
 import org.jetbrains.lincheck.datastructures.IntGen
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions

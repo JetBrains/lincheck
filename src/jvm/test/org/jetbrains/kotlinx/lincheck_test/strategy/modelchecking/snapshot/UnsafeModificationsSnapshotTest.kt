@@ -14,9 +14,9 @@ import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.lincheck.datastructures.ManagedOptions
-import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
-import org.jetbrains.kotlinx.lincheck.util.getArrayElementOffsetViaUnsafe
-import org.jetbrains.kotlinx.lincheck.util.getFieldOffsetViaUnsafe
+import org.jetbrains.lincheck.util.UnsafeHolder
+import org.jetbrains.lincheck.util.getArrayElementOffsetViaUnsafe
+import org.jetbrains.lincheck.util.getFieldOffsetViaUnsafe
 import kotlin.random.Random
 import kotlin.reflect.jvm.javaField
 
@@ -36,10 +36,10 @@ class UnsafeModificationsSnapshotTest : AbstractSnapshotTest() {
 
     private val U = UnsafeHolder.UNSAFE
     private val valueBase = U.staticFieldBase(UnsafeModificationsSnapshotTest.Companion::value.javaField!!)
-    private val valueOffset = getFieldOffsetViaUnsafe(UnsafeModificationsSnapshotTest.Companion::value.javaField!!)
+    private val valueOffset = getFieldOffsetViaUnsafe(Companion::value.javaField!!)
 
     private val refBase = U.staticFieldBase(UnsafeModificationsSnapshotTest.Companion::ref.javaField!!)
-    private val refOffset = getFieldOffsetViaUnsafe(UnsafeModificationsSnapshotTest.Companion::ref.javaField!!)
+    private val refOffset = getFieldOffsetViaUnsafe(Companion::ref.javaField!!)
 
     class UnsafeModificationsVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : SnapshotVerifier() {
         override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {

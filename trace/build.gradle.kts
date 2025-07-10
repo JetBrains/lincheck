@@ -2,8 +2,6 @@ import org.gradle.kotlin.dsl.named
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    java
-    kotlin("jvm")
     id("maven-publish")
     id("org.jetbrains.dokka")
 }
@@ -12,17 +10,13 @@ repositories {
     mavenCentral()
 }
 
-kotlin {
-    configureKotlin()
-}
-
-java {
-    configureJava()
-}
-
 sourceSets {
     main {
         java.srcDirs("src/main")
+    }
+
+    dependencies {
+        implementation(project(":common"))
     }
 }
 
@@ -32,6 +26,10 @@ tasks {
     }
     named<KotlinCompile>("compileTestKotlin") {
         setupKotlinToolchain(project)
+    }
+
+    withType<KotlinCompile> {
+        getAccessToInternalDefinitionsOf(project(":common"))
     }
 }
 
