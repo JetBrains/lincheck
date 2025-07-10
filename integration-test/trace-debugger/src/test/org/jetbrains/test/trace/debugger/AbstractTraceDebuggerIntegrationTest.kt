@@ -13,7 +13,6 @@ package org.jetbrains.test.trace.debugger
 import AbstractTraceIntegrationTest
 
 abstract class AbstractTraceDebuggerIntegrationTest : AbstractTraceIntegrationTest() {
-    override val testSourcesPath = "trace-debugger"
 
     final override fun runGradleTest(
         testClassName: String,

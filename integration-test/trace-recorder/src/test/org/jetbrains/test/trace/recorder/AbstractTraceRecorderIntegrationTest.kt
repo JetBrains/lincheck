@@ -13,7 +13,6 @@ package org.jetbrains.test.trace.recorder
 import AbstractTraceIntegrationTest
 
 abstract class AbstractTraceRecorderIntegrationTest : AbstractTraceIntegrationTest() {
-    override val testSourcesPath = "trace-recorder"
 
     final override fun runGradleTest(
         testClassName: String,

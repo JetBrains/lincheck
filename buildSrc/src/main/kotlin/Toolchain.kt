@@ -59,10 +59,14 @@ fun KotlinCompile.getAccessToInternalDefinitionsOf(vararg projects: Project) {
         val mainSourceSet = project.extensions
             .getByType(JavaPluginExtension::class.java).sourceSets
             .getByName("main").output.classesDirs
+        val testSourceSet = project.extensions
+            .getByType(JavaPluginExtension::class.java).sourceSets
+            .getByName("test").output.classesDirs
+
         val jarArchive = Paths.get(project.layout.buildDirectory.get().asFile.absolutePath, "libs",
             if (project.name == "lincheck") project.name + "-" + project.version + ".jar"
             else project.name + ".jar"
         ).toFile()
-        friendPaths.from(mainSourceSet + jarArchive)
+        friendPaths.from(mainSourceSet + testSourceSet + jarArchive)
     }
 }
