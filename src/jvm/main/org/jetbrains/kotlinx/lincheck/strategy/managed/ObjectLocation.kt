@@ -11,6 +11,9 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.util.*
+import java.util.concurrent.ConcurrentHashMap
+import sun.misc.Unsafe
+
 
 abstract class ObjectLocation
 
@@ -164,23 +167,19 @@ internal fun AtomicMethodDescriptor.getVarHandleAccessLocation(varHandle: Any, a
 
         // Static field access case
         isVarHandleStaticFieldClass(varHandleClassName) -> {
-            // For static field access, we need to extract the field information from the VarHandle
             try {
-                val baseField = varHandle.javaClass.getDeclaredField("base")
-                val baseOffset = UnsafeHolder.UNSAFE.objectFieldOffset(baseField)
-                val ownerClass = UnsafeHolder.UNSAFE.getObject(varHandle, baseOffset) as Class<*>
-
-                val fieldOffsetField = varHandle.javaClass.getDeclaredField("fieldOffset")
-                val fieldOffsetOffset = UnsafeHolder.UNSAFE.objectFieldOffset(fieldOffsetField)
-                val fieldOffset = UnsafeHolder.UNSAFE.getLong(varHandle, fieldOffsetOffset)
-
-                val fieldName = findFieldNameByOffsetViaUnsafe(ownerClass, fieldOffset)
-                    ?: error("Failed to find field name by offset $fieldOffset in ${ownerClass.name}")
+                val extractor = varHandleStaticFieldExtractors.computeIfAbsent(varHandle.javaClass) {
+                    VarHandleStaticFieldExtractor(it)
+                }
+                val receiverType = extractor.extractBase(varHandle)
+                val fieldOffset = extractor.extractFieldOffset(varHandle)
+                val fieldName = findFieldNameByOffsetViaUnsafe(receiverType, fieldOffset)
+                    ?: error("Failed to find field name by offset $fieldOffset in ${receiverType.name}")
 
                 ObjectAccessMethodInfo(
                     obj = null,
                     location = StaticFieldLocation(
-                        className = ownerClass.name,
+                        className = receiverType.name,
                         fieldName = fieldName
                     ),
                     arguments = arguments.toList()
@@ -195,28 +194,23 @@ internal fun AtomicMethodDescriptor.getVarHandleAccessLocation(varHandle: Any, a
             require(arguments.isNotEmpty()) {
                 "Expected at least 1 argument for instance field VarHandle, but got ${arguments.size}"
             }
-
-            val targetObject = arguments[0]
-            require(targetObject != null) {
+            require(arguments[0] != null) {
                 "Target object cannot be null for instance field VarHandle"
             }
-
             try {
-                val receiverTypeField = varHandle.javaClass.getDeclaredField("receiverType")
-                val receiverTypeOffset = UnsafeHolder.UNSAFE.objectFieldOffset(receiverTypeField)
-                val ownerType = UnsafeHolder.UNSAFE.getObject(varHandle, receiverTypeOffset) as Class<*>
-
-                val fieldOffsetField = varHandle.javaClass.getDeclaredField("fieldOffset")
-                val fieldOffsetOffset = UnsafeHolder.UNSAFE.objectFieldOffset(fieldOffsetField)
-                val fieldOffset = UnsafeHolder.UNSAFE.getLong(varHandle, fieldOffsetOffset)
-
-                val fieldName = findFieldNameByOffsetViaUnsafe(ownerType, fieldOffset)
-                    ?: error("Failed to find field name by offset $fieldOffset in ${ownerType.name}")
+                val targetObject = arguments[0]
+                val extractor = varHandleInstanceFieldExtractors.computeIfAbsent(varHandle.javaClass) {
+                    VarHandleInstanceFieldExtractor(it)
+                }
+                val receiverType = extractor.extractReceiverType(varHandle)
+                val fieldOffset = extractor.extractFieldOffset(varHandle)
+                val fieldName = findFieldNameByOffsetViaUnsafe(receiverType, fieldOffset)
+                    ?: error("Failed to find field name by offset $fieldOffset in ${receiverType.name}")
 
                 ObjectAccessMethodInfo(
                     obj = targetObject,
                     location = ObjectFieldLocation(
-                        className = ownerType.name,
+                        className = receiverType.name,
                         fieldName = fieldName
                     ),
                     arguments = arguments.drop(1)
@@ -230,3 +224,32 @@ internal fun AtomicMethodDescriptor.getVarHandleAccessLocation(varHandle: Any, a
         else -> error("Unsupported VarHandle type: $varHandleClassName")
     }
 }
+
+private class VarHandleStaticFieldExtractor(private val varHandleClass: Class<*>) {
+    private val baseField = varHandleClass.getDeclaredField("base")
+    private val fieldOffsetField = varHandleClass.getDeclaredField("fieldOffset")
+
+    fun extractBase(varHandle: Any): Class<*> {
+        return readFieldViaUnsafe(varHandle, baseField, Unsafe::getObject) as Class<*>
+    }
+
+    fun extractFieldOffset(varHandle: Any): Long {
+        return readFieldViaUnsafe(varHandle, fieldOffsetField, Unsafe::getLong)
+    }
+}
+
+private class VarHandleInstanceFieldExtractor(private val varHandleClass: Class<*>) {
+    private val receiverTypeField = varHandleClass.getDeclaredField("receiverType")
+    private val fieldOffsetField = varHandleClass.getDeclaredField("fieldOffset")
+
+    fun extractReceiverType(varHandle: Any): Class<*> {
+        return readFieldViaUnsafe(varHandle, receiverTypeField, Unsafe::getObject) as Class<*>
+    }
+
+    fun extractFieldOffset(varHandle: Any): Long {
+        return readFieldViaUnsafe(varHandle, fieldOffsetField, Unsafe::getLong)
+    }
+}
+
+private val varHandleStaticFieldExtractors = ConcurrentHashMap<Class<*>, VarHandleStaticFieldExtractor>()
+private val varHandleInstanceFieldExtractors = ConcurrentHashMap<Class<*>, VarHandleInstanceFieldExtractor>()
