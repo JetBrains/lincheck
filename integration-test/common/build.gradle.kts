@@ -17,7 +17,6 @@ sourceSets {
         api("junit:junit:$junitVersion")
         api("org.jctools:jctools-core:$jctoolsVersion")
         api("io.mockk:mockk:${mockkVersion}")
-
         implementation(rootProject.sourceSets["test"].output)
         implementation("org.gradle:gradle-tooling-api:${gradleToolingApiVersion}")
     }
