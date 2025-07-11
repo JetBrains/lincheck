@@ -490,6 +490,17 @@ signing {
 }
 
 tasks {
+    val publishToSpacePackages by registering {
+        group = "publishing"
+        println("Publishing all artifacts to Space Packages repository...")
+        dependsOn(
+            ":common:publishMavenPublicationToSpacePackagesRepository",
+            ":jvm-agent:publishMavenPublicationToSpacePackagesRepository",
+            ":trace:publishMavenPublicationToSpacePackagesRepository",
+            ":publishMavenPublicationToSpacePackagesRepository"
+        )
+    }
+
     val packSonatypeCentralBundle by registering(Zip::class) {
         group = "publishing"
 
