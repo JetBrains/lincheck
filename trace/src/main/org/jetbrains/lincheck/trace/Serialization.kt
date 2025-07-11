@@ -324,7 +324,7 @@ private sealed class TraceWriterBase(
         writeIndexCell(ObjectKind.CODE_LOCATION, id, position, -1)
     }
 
-    protected fun writeString(value: String?): Int {
+    protected open fun writeString(value: String?): Int {
         check(!inTracepointBody) { "Cannot save reference data inside tracepoint" }
         if (value == null) return -1
 
@@ -363,6 +363,10 @@ private interface BlockSaver {
     fun saveDataAndIndexBlock(writerId: Int, logicalBlockStart: Long, dataBlock: ByteBuffer, indexList: List<IndexCell>)
 }
 
+
+// Leave some space for metadata
+private const val MAX_STRING_SIZE = PER_THREAD_DATA_BUFFER_SIZE - 1024
+
 private class BufferedTraceWriter (
     override val writerId: Int,
     context: TraceContext,
@@ -399,6 +403,12 @@ private class BufferedTraceWriter (
         // Rollback to here in case of overflow, as the index cell is written after all
         // object data, it means that object is in data buffer completely.
         dataStream.mark()
+    }
+
+    // Cut string to half a buffer size
+    override fun writeString(value: String?): Int {
+        val trimmedValue = if ((value?.length ?: 0) > MAX_STRING_SIZE) value?.substring(0, MAX_STRING_SIZE) else value
+        return super.writeString(trimmedValue)
     }
 
     fun mark() {
