@@ -33,6 +33,10 @@ tasks {
         configureJvmTestCommon(project)
         group = "verification"
 
+        // We cannot put integration tests in the 'test' source set because they will
+        // be run together with unit tests on the ':test' task, which we don't want.
+        // Thus, all integration tests use 'main' source set instead and manually
+        // set up test classes location.
         testClassesDirs = sourceSets["main"].output.classesDirs
         classpath = sourceSets["main"].runtimeClasspath
 
