@@ -46,6 +46,7 @@ fun Project.registerTraceAgentTasks(fatJarName: String, fatJarTaskName: String, 
         })
 
         manifest {
+            appendMetaAttributes(project)
             attributes(
                 mapOf(
                     "Premain-Class" to premainClass,
