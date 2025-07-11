@@ -138,14 +138,14 @@ internal class LincheckClassVisitor(
         mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
         mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
         if (methodName == "<clinit>") {
-            mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
+            mv = IgnoredSectionWrapperTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
         }
         // Wrap `ClassLoader::loadClass` calls into ignored sections
         // to ensure their code is not analyzed by the Lincheck.
         if (isClassLoaderClassName(className.toCanonicalClassName())) {
             if (isLoadClassMethod(methodName, desc)) {
-                mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
+                mv = IgnoredSectionWrapperTransformer(fileName, className, methodName, mv.newAdapter())
             }
             return mv
         }
@@ -160,14 +160,14 @@ internal class LincheckClassVisitor(
             if (methodName == "start") {
                 mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
             } else {
-                mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
+                mv = IgnoredSectionWrapperTransformer(fileName, className, methodName, mv.newAdapter())
             }
             return mv
         }
         // Wrap `MethodHandles.Lookup.findX` and related methods into ignored sections
         // to ensure their code is not analyzed by the Lincheck.
         if (isIgnoredMethodHandleMethod(className.toCanonicalClassName(), methodName)) {
-            mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
+            mv = IgnoredSectionWrapperTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
         }
         /* Wrap all methods of the ` StackTraceElement ` class into ignored sections.
@@ -183,7 +183,7 @@ internal class LincheckClassVisitor(
          *   - https://github.com/JetBrains/lincheck/issues/419
          */
         if (isStackTraceElementClass(className.toCanonicalClassName())) {
-            mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
+            mv = IgnoredSectionWrapperTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
         }
         // Wrap IntelliJ IDEA runtime agent's methods into ignored section.
@@ -332,7 +332,7 @@ internal open class ManagedStrategyMethodVisitor(
     }
 }
 
-private class WrapMethodInIgnoredSectionTransformer(
+private class IgnoredSectionWrapperTransformer(
     fileName: String,
     className: String,
     methodName: String,
