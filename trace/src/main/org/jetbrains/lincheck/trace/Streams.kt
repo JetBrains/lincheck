@@ -157,6 +157,14 @@ internal class ByteBufferOutputStream(
         buffer.clear()
     }
 
+    fun mark() {
+        buffer.mark()
+    }
+
+    fun rollback() {
+        buffer.reset()
+    }
+
     fun position(): Int = buffer.position()
 }
 

@@ -138,11 +138,11 @@ class TRMethodCallTracePoint(
     internal fun saveFooter(out: TraceWriter) {
         out.preWriteTRObject(result)
 
-        // Mark this as container tracepoint which could have children and will have footer
-        out.startWriteContainerTracepointFooter(eventId)
+        // Mark this as a container tracepoint footer
+        out.startWriteContainerTracepointFooter()
         out.writeTRObject(result)
         out.writeUTF(exceptionClassName ?: "")
-        out.endWriteContainerTracepointFooter()
+        out.endWriteContainerTracepointFooter(eventId)
     }
 
     internal fun loadFooter(inp: DataInput) {
