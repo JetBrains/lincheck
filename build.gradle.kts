@@ -12,14 +12,9 @@ import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.asRequestBody
-import org.gradle.kotlin.dsl.invoke
-import org.gradle.kotlin.dsl.java
-import org.gradle.kotlin.dsl.kotlin
-import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
+import org.gradle.jvm.tasks.Jar
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import java.nio.file.Paths
-import java.util.Base64
-
+import java.util.*
 
 buildscript {
     repositories {
@@ -104,29 +99,6 @@ sourceSets {
         }
     }
 
-    create("lincheckIntegrationTest") {
-        java.srcDir("src/jvm/test-lincheck-integration")
-        configureClasspath()
-    }
-
-    create("traceDebuggerIntegrationTest") {
-        java.srcDir("src/jvm/test-trace-debugger-integration")
-        configureClasspath()
-
-        resources {
-            srcDir("src/jvm/test-trace-debugger-integration/resources")
-        }
-    }
-
-    create("traceRecorderIntegrationTest") {
-        java.srcDir("src/jvm/test-trace-recorder-integration")
-        configureClasspath()
-
-        resources {
-            srcDir("src/jvm/test-trace-recorder-integration/resources")
-        }
-    }
-
     dependencies {
         // main
         val kotlinVersion: String by project
@@ -155,70 +127,21 @@ sourceSets {
         val junitVersion: String by project
         val jctoolsVersion: String by project
         val mockkVersion: String by project
-        val slf4jVersion: String by project
         val gradleToolingApiVersion: String by project
 
         testImplementation("junit:junit:$junitVersion")
         testImplementation("org.jctools:jctools-core:$jctoolsVersion")
         testImplementation("io.mockk:mockk:${mockkVersion}")
         testImplementation("org.gradle:gradle-tooling-api:${gradleToolingApiVersion}")
-
-        // lincheckIntegrationTest
-        val lincheckIntegrationTestImplementation by configurations
-
-        lincheckIntegrationTestImplementation(rootProject)
-        lincheckIntegrationTestImplementation("junit:junit:$junitVersion")
-        lincheckIntegrationTestImplementation("org.jctools:jctools-core:$jctoolsVersion")
-
-        // traceDebuggerIntegrationTest
-        val traceDebuggerIntegrationTestImplementation by configurations
-        val traceDebuggerIntegrationTestRuntimeOnly by configurations
-
-        traceDebuggerIntegrationTestImplementation("junit:junit:$junitVersion")
-        traceDebuggerIntegrationTestImplementation("org.gradle:gradle-tooling-api:${gradleToolingApiVersion}")
-        traceDebuggerIntegrationTestRuntimeOnly("org.slf4j:slf4j-simple:$slf4jVersion")
-
-        // traceRecorderIntegrationTest
-        val traceRecorderIntegrationTestImplementation by configurations
-        val traceRecorderIntegrationTestRuntimeOnly by configurations
-
-        traceRecorderIntegrationTestImplementation("junit:junit:$junitVersion")
-        traceRecorderIntegrationTestImplementation("org.gradle:gradle-tooling-api:${gradleToolingApiVersion}")
-        traceRecorderIntegrationTestRuntimeOnly("org.slf4j:slf4j-simple:$slf4jVersion")
     }
-}
-
-fun SourceSet.configureClasspath() {
-    compileClasspath += sourceSets.main.get().output + sourceSets.test.get().output
-    runtimeClasspath += sourceSets.main.get().output + sourceSets.test.get().output
 }
 
 tasks {
     named<JavaCompile>("compileTestJava") {
         setupJavaToolchain(project)
     }
+
     named<KotlinCompile>("compileTestKotlin") {
-        setupKotlinToolchain(project)
-    }
-
-    named<JavaCompile>("compileLincheckIntegrationTestJava") {
-        setupJavaToolchain(project)
-    }
-    named<KotlinCompile>("compileLincheckIntegrationTestKotlin") {
-        setupKotlinToolchain(project)
-    }
-
-    named<JavaCompile>("compileTraceDebuggerIntegrationTestJava") {
-        setupJavaToolchain(project)
-    }
-    named<KotlinCompile>("compileTraceDebuggerIntegrationTestKotlin") {
-        setupKotlinToolchain(project)
-    }
-
-    named<JavaCompile>("compileTraceRecorderIntegrationTestJava") {
-        setupJavaToolchain(project)
-    }
-    named<KotlinCompile>("compileTraceRecorderIntegrationTestKotlin") {
         setupKotlinToolchain(project)
     }
 
@@ -226,28 +149,6 @@ tasks {
         getAccessToInternalDefinitionsOf(project(":common"))
     }
 }
-
-// add an association to main and test modules to enable access to `internal` APIs inside integration tests:
-// https://kotlinlang.org/docs/gradle-configure-project.html#associate-compiler-tasks
-kotlin {
-    target.compilations.named("lincheckIntegrationTest") {
-        configureAssociation()
-    }
-    target.compilations.named("traceDebuggerIntegrationTest") {
-        configureAssociation()
-    }
-    target.compilations.named("traceRecorderIntegrationTest") {
-        configureAssociation()
-    }
-}
-
-fun KotlinCompilation<*>.configureAssociation() {
-    val main by target.compilations.getting
-    val test by target.compilations.getting
-    associateWith(main)
-    associateWith(test)
-}
-
 
 tasks.withType<Test> {
     javaLauncher.set(
@@ -263,53 +164,8 @@ tasks.withType<Test> {
 }
 
 tasks {
-    fun Test.configureJvmTestCommon() {
-        maxParallelForks = 1
-        maxHeapSize = "6g"
-
-        val instrumentAllClasses: String by project
-        if (instrumentAllClasses.toBoolean()) {
-            systemProperty("lincheck.instrumentAllClasses", "true")
-        }
-        // The `overwriteRepresentationTestsOutput` flag is used to automatically repair representation tests.
-        // Representation tests work by comparing an actual output of the test (execution trace in most cases)
-        // with the expected output stored in a file (which is kept in resources).
-        // Normally, if the actual and expected outputs differ, the test fails,
-        // but when this flag is set, instead the expected output is overwritten with the actual output.
-        // This helps to quickly repair the tests when the output difference is non-essential
-        // or when the output logic actually has changed in the code.
-        // The test system relies on that the gradle test task is run from the root directory of the project,
-        // to search for the directory where the expected output files are stored.
-        //
-        // PLEASE USE CAREFULLY: always first verify that the changes in the output are expected!
-        val overwriteRepresentationTestsOutput: String by project
-        if (overwriteRepresentationTestsOutput.toBoolean()) {
-            systemProperty("lincheck.overwriteRepresentationTestsOutput", "true")
-        }
-        val extraArgs = mutableListOf<String>()
-        val withEventIdSequentialCheck: String by project
-        if (withEventIdSequentialCheck.toBoolean()) {
-            extraArgs.add("-Dlincheck.debug.withEventIdSequentialCheck=true")
-        }
-        val testInTraceDebuggerMode: String by project
-        if (testInTraceDebuggerMode.toBoolean()) {
-            extraArgs.add("-Dlincheck.traceDebuggerMode=true")
-            exclude("**/lincheck_test/guide/*")
-        }
-        val dumpTransformedSources: String by project
-        if (dumpTransformedSources.toBoolean()) {
-            extraArgs.add("-Dlincheck.dumpTransformedSources=true")
-        }
-        extraArgs.add("-Dlincheck.version=$version")
-
-        findProperty("lincheck.logFile")?.let { extraArgs.add("-Dlincheck.logFile=${it as String}") }
-        findProperty("lincheck.logLevel")?.let { extraArgs.add("-Dlincheck.logLevel=${it as String}") }
-
-        jvmArgs(extraArgs)
-    }
-
     test {
-        configureJvmTestCommon()
+        configureJvmTestCommon(project)
 
         val ideaActive = System.getProperty("idea.active") == "true"
         if (!ideaActive) {
@@ -317,8 +173,6 @@ tasks {
             // Unfortunately, the current Gradle support doesn't detect
             // the `testIsolated` and `trace[Debugger/Recorder]IntegrationTest` tasks.
             exclude("**/*IsolatedTest*")
-            exclude("org/jetbrains/trace/debugger/integration/*")
-            exclude("org/jetbrains/trace/recorder/integration/*")
         }
         // Do not run JdkUnsafeTraceRepresentationTest on Java 12 or earlier,
         // as this test relies on specific ConcurrentHashMap implementation.
@@ -349,56 +203,13 @@ tasks {
         testClassesDirs = test.get().testClassesDirs
         classpath = test.get().classpath
 
-        configureJvmTestCommon()
+        configureJvmTestCommon(project)
 
         enableAssertions = true
         testLogging.showStandardStreams = true
         outputs.upToDateWhen { false } // Always run tests when called
 
         forkEvery = 1
-    }
-
-    // TODO: rename to match trace-debugger/recorder gradle task naming pattern to 'lincheckIntegrationTest'
-    val lincheckIntegrationTest = register<Test>("integrationTest") {
-        group = "verification"
-
-        testClassesDirs = sourceSets["lincheckIntegrationTest"].output.classesDirs
-        classpath = sourceSets["lincheckIntegrationTest"].runtimeClasspath
-
-        configureJvmTestCommon()
-
-        enableAssertions = true
-        testLogging.showStandardStreams = true
-        outputs.upToDateWhen { false } // Always run tests when called
-    }
-
-    registerTraceAgentIntegrationTestsPrerequisites()
-
-    val copyTraceDebuggerFatJar = copyTraceAgentFatJar(project(":trace-debugger"), "trace-debugger-fat.jar")
-    val copyTraceRecorderFatJar = copyTraceAgentFatJar(project(":trace-recorder"), "trace-recorder-fat.jar")
-
-    val traceDebuggerIntegrationTest = register<Test>("traceDebuggerIntegrationTest") {
-        configureJvmTestCommon()
-        group = "verification"
-        include("org/jetbrains/trace/debugger/integration/*")
-
-        testClassesDirs = sourceSets["traceDebuggerIntegrationTest"].output.classesDirs
-        classpath = sourceSets["traceDebuggerIntegrationTest"].runtimeClasspath
-
-        outputs.upToDateWhen { false } // Always run tests when called
-        dependsOn(copyTraceDebuggerFatJar)
-    }
-
-    val traceRecorderIntegrationTest = register<Test>("traceRecorderIntegrationTest") {
-        configureJvmTestCommon()
-        group = "verification"
-        include("org/jetbrains/trace/recorder/integration/*")
-
-        testClassesDirs = sourceSets["traceRecorderIntegrationTest"].output.classesDirs
-        classpath = sourceSets["traceRecorderIntegrationTest"].runtimeClasspath
-
-        outputs.upToDateWhen { false } // Always run tests when called
-        dependsOn(copyTraceRecorderFatJar)
     }
 
     check {
