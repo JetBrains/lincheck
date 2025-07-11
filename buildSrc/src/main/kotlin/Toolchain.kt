@@ -9,10 +9,12 @@
  */
 
 import org.gradle.api.Project
+import org.gradle.api.java.archives.Manifest
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.jvm.toolchain.JavaToolchainService
+import org.gradle.kotlin.dsl.attributes
 import org.gradle.kotlin.dsl.provideDelegate
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
@@ -66,4 +68,18 @@ fun KotlinCompile.getAccessToInternalDefinitionsOf(vararg projects: Project) {
         ).toFile()
         friendPaths.from(mainSourceSet + jarArchive)
     }
+}
+
+fun Manifest.appendMetaAttributes(project: Project) {
+    val inceptionYear: String by project
+    val lastCopyrightYear: String by project
+    val version: String by project
+    attributes(
+        "Copyright" to
+                "Copyright (C) 2015 - 2019 Devexperts, LLC\n"
+                + " ".repeat(29) + // additional space to fill to the 72-character length of JAR manifest file
+                "Copyright (C) $inceptionYear - $lastCopyrightYear JetBrains, s.r.o.",
+        // This attribute let us get the version from the code.
+        "Implementation-Version" to version
+    )
 }
