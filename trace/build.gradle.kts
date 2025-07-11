@@ -15,8 +15,14 @@ sourceSets {
         java.srcDirs("src/main")
     }
 
+    test {
+        java.srcDir("src/test")
+    }
+
     dependencies {
         implementation(project(":common"))
+
+        testImplementation(project(":common"))
     }
 }
 
