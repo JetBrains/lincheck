@@ -501,6 +501,16 @@ tasks {
         )
     }
 
+    // publishing trace artifact only (and its dependencies) required as IntelliJ plugin dependencies
+    val publishTraceArtifactToSpacePackages by registering {
+        group = "publishing"
+        println("Publishing all artifacts to Space Packages repository...")
+        dependsOn(
+            ":common:publishMavenPublicationToSpacePackagesRepository",
+            ":trace:publishMavenPublicationToSpacePackagesRepository",
+        )
+    }
+
     val packSonatypeCentralBundle by registering(Zip::class) {
         group = "publishing"
 
