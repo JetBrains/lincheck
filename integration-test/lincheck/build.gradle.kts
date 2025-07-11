@@ -8,6 +8,8 @@ sourceSets {
         val jctoolsVersion: String by project
 
         implementation(project(":"))
+        // Lincheck integration tests depend on `AbstractLincheckTest`
+        // which is defined in root project's 'test' source set
         implementation(rootProject.sourceSets["test"].output)
         implementation("junit:junit:$junitVersion")
         implementation("org.jctools:jctools-core:$jctoolsVersion")
