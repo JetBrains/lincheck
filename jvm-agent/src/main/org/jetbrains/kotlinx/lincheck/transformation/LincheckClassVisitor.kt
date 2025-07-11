@@ -332,41 +332,6 @@ internal open class ManagedStrategyMethodVisitor(
     }
 }
 
-private class IgnoredSectionWrapperTransformer(
-    fileName: String,
-    className: String,
-    methodName: String,
-    adapter: GeneratorAdapter,
-) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
-
-    private val tryBlock: Label = adapter.newLabel()
-    private val catchBlock: Label = adapter.newLabel()
-
-    override fun visitCode() = adapter.run {
-        visitCode()
-        invokeStatic(Injections::enterIgnoredSection)
-        visitTryCatchBlock(tryBlock, catchBlock, catchBlock, null)
-        visitLabel(tryBlock)
-    }
-
-    override fun visitInsn(opcode: Int) = adapter.run {
-        when (opcode) {
-            ARETURN, DRETURN, FRETURN, IRETURN, LRETURN, RETURN -> {
-                invokeStatic(Injections::leaveIgnoredSection)
-            }
-        }
-        visitInsn(opcode)
-    }
-
-    override fun visitMaxs(maxStack: Int, maxLocals: Int) = adapter.run {
-        visitLabel(catchBlock)
-        invokeStatic(Injections::leaveIgnoredSection)
-        visitInsn(ATHROW)
-        visitMaxs(maxStack, maxLocals)
-    }
-
-}
-
 private fun isLoadClassMethod(methodName: String, desc: String) =
     methodName == "loadClass" && desc == "(Ljava/lang/String;)Ljava/lang/Class;"
 
