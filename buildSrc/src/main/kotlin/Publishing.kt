@@ -9,10 +9,13 @@
  */
 
 import org.gradle.api.Project
+import org.gradle.api.java.archives.Manifest
 import org.gradle.api.publish.maven.tasks.AbstractPublishToMaven
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPom
 import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.kotlin.dsl.attributes
+import org.gradle.kotlin.dsl.provideDelegate
 import org.gradle.plugins.signing.SigningExtension
 import org.gradle.plugins.signing.SigningPlugin
 import java.net.URI
@@ -120,3 +123,17 @@ private fun Project.getSigningProperty(name: String): String? =
     (findProperty(name) as? String).also {
         if (it == null) logger.warn("Property `$name` is not specified, artifact signing is not enabled.")
     }
+
+fun Manifest.appendMetaAttributes(project: Project) {
+    val inceptionYear: String by project
+    val lastCopyrightYear: String by project
+    val version: String by project
+    attributes(
+        "Copyright" to
+                "Copyright (C) 2015 - 2019 Devexperts, LLC\n"
+                + " ".repeat(29) + // additional space to fill to the 72-character length of JAR manifest file
+                "Copyright (C) $inceptionYear - $lastCopyrightYear JetBrains, s.r.o.",
+        // This attribute let us get the version from the code.
+        "Implementation-Version" to version
+    )
+}
