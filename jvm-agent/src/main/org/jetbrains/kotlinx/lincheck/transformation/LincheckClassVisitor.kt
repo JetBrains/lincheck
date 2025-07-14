@@ -74,16 +74,17 @@ internal class LincheckClassVisitor(
         signature: String?,
         exceptions: Array<String>?
     ): MethodVisitor {
-        var mv = super.visitMethod(access, methodName, desc, signature, exceptions)
-        if (access and ACC_NATIVE != 0) {
-            Logger.debug { "Skipping transformation of the native method $className.$methodName" }
-            return mv
-        }
+        val isStatic = (access and ACC_STATIC != 0)
+        val isNative = (access and ACC_NATIVE != 0)
 
         fun MethodVisitor.newAdapter() = GeneratorAdapter(this, access, methodName, desc)
         fun MethodVisitor.newNonRemappingAdapter() = GeneratorAdapterWithoutLocals(this, access, methodName, desc)
 
-        val isStatic = access and ACC_STATIC != 0
+        var mv = super.visitMethod(access, methodName, desc, signature, exceptions)
+        if (isNative) {
+            Logger.debug { "Skipping transformation of the native method $className.$methodName" }
+            return mv
+        }
 
         if (instrumentationMode == STRESS) {
             return if (methodName != "<clinit>" && methodName != "<init>") {
