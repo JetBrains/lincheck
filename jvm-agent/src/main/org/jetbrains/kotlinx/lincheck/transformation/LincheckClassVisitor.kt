@@ -296,40 +296,6 @@ internal class LincheckClassVisitor(
 
         return mv
     }
-
-}
-
-internal open class LincheckBaseMethodVisitor(
-    protected val fileName: String,
-    protected val className: String,
-    protected val methodName: String,
-    val adapter: GeneratorAdapter
-) : MethodVisitor(ASM_API, adapter) {
-    private var lineNumber = 0
-
-    /**
-     * Injects `beforeEvent` method invocation if IDEA plugin is enabled.
-     *
-     * @param type type of the event, needed just for debugging.
-     */
-    protected fun invokeBeforeEventIfPluginEnabled(type: String) {
-        if (ideaPluginEnabled) {
-            adapter.invokeBeforeEvent(type)
-        }
-    }
-
-    protected fun loadNewCodeLocationId() {
-        val stackTraceElement = StackTraceElement(className, methodName, fileName, lineNumber)
-        val codeLocationId = CodeLocations.newCodeLocation(stackTraceElement)
-        adapter.push(codeLocationId)
-    }
-
-    protected fun isKnownLineNumber(): Boolean = lineNumber > 0
-
-    override fun visitLineNumber(line: Int, start: Label) {
-        lineNumber = line
-        super.visitLineNumber(line, start)
-    }
 }
 
 private fun isLoadClassMethod(methodName: String, desc: String) =
