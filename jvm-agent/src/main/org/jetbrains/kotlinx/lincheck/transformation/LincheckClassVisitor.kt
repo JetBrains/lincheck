@@ -76,6 +76,7 @@ internal class LincheckClassVisitor(
     ): MethodVisitor {
         val isStatic = (access and ACC_STATIC != 0)
         val isNative = (access and ACC_NATIVE != 0)
+        val isSynchronized = (access and ACC_SYNCHRONIZED != 0)
         val locals = methods[methodName + desc] ?: MethodVariables()
 
         fun MethodVisitor.newAdapter() = GeneratorAdapter(this, access, methodName, desc)
@@ -236,7 +237,7 @@ internal class LincheckClassVisitor(
             mv = IntrinsicCandidateMethodFilter(className, methodName, desc, intrinsicDelegateVisitor.newAdapter(), mv.newAdapter())
             return mv
         }
-        if (access and ACC_SYNCHRONIZED != 0) {
+        if (isSynchronized) {
             mv = SynchronizedMethodTransformer(fileName, className, methodName, mv.newAdapter(), classVersion)
         }
 
