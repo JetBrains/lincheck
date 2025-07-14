@@ -296,8 +296,7 @@ internal class LincheckClassVisitor(
         methodVisitor: MethodVisitor,
     ): MethodVisitor {
         var mv = methodVisitor
-        fun MethodVisitor.newAdapter() =
-            this.createGeneratorAdapter(access, methodName, descriptor)
+        fun MethodVisitor.newAdapter() = GeneratorAdapter(this, access, methodName, descriptor)
         val isSynchronized = (access and ACC_SYNCHRONIZED != 0)
         if (isSynchronized) {
             mv = SynchronizedMethodTransformer(fileName, className, methodName, mv.newAdapter(), classVersion)
@@ -314,8 +313,7 @@ internal class LincheckClassVisitor(
         descriptor: String,
         methodVisitor: MethodVisitor,
     ): MethodVisitor {
-        fun MethodVisitor.newAdapter() =
-            this.createGeneratorAdapter(access, methodName, descriptor)
+        fun MethodVisitor.newAdapter() = GeneratorAdapter(this, access, methodName, descriptor)
         // this transformer is required because snapshot tracker currently
         // does not trace memory accesses inside constructors
         val st = ConstructorArgumentsSnapshotTrackerTransformer(
@@ -330,9 +328,4 @@ internal class LincheckClassVisitor(
         sv.analyzer = aa
         return aa
     }
-
-    private fun MethodVisitor.createGeneratorAdapter(access: Int, methodName: String, descriptor: String) =
-        GeneratorAdapter(this, access, methodName, descriptor)
-
-
 }
