@@ -22,6 +22,7 @@ import java.math.BigDecimal
 import java.math.BigInteger
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.roundToInt
 
 private val EVENT_ID_GENERATOR = AtomicInteger(0)
@@ -573,6 +574,10 @@ fun TRObjectOrVoid(obj: Any?): TRObject? =
     if (obj == INJECTIONS_VOID_OBJECT) TR_OBJECT_VOID
     else TRObjectOrNull(obj)
 
+
+private fun trimString(s: CharSequence): String = s.take(min(50, s.length)).toString()
+
+
 fun TRObject(obj: Any): TRObject {
     return when (obj) {
         is Byte -> TRObject(TR_OBJECT_P_BYTE, 0, obj)
@@ -582,8 +587,8 @@ fun TRObject(obj: Any): TRObject {
         is Float -> TRObject(TR_OBJECT_P_FLOAT, 0, obj)
         is Double -> TRObject(TR_OBJECT_P_DOUBLE, 0, obj)
         is Char -> TRObject(TR_OBJECT_P_CHAR, 0, obj)
-        is String -> TRObject(TR_OBJECT_P_STRING, 0, obj)
-        is CharSequence -> TRObject(TR_OBJECT_P_STRING, 0, obj.toString())
+        is String -> TRObject(TR_OBJECT_P_STRING, 0, trimString(obj))
+        is CharSequence -> TRObject(TR_OBJECT_P_STRING, 0, trimString(obj))
         is Unit -> TRObject(TR_OBJECT_P_UNIT, 0, obj)
         is Boolean -> TRObject(TR_OBJECT_P_BOOLEAN, 0, obj)
         // Render these types to strings for simplicity
