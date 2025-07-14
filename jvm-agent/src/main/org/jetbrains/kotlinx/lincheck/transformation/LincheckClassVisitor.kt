@@ -10,7 +10,6 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
-import org.jetbrains.lincheck.descriptors.CodeLocations
 import org.jetbrains.kotlinx.lincheck.trace.recorder.transformers.MethodCallMinimalTransformer
 import org.jetbrains.kotlinx.lincheck.trace.recorder.transformers.ObjectCreationMinimalTransformer
 import org.objectweb.asm.*
@@ -116,12 +115,7 @@ internal class LincheckClassVisitor(
             // `SharedMemoryAccessTransformer` goes first because it relies on `AnalyzerAdapter`,
             // which should be put in front of the byte-code transformer chain,
             // so that it can correctly analyze the byte-code and compute required type-information
-            mv = run {
-                val sharedMemoryAccessTransformer = SharedMemoryAccessTransformer(fileName, className, methodName, mv.newAdapter())
-                val analyzerAdapter = AnalyzerAdapter(className, access, methodName, desc, sharedMemoryAccessTransformer)
-                sharedMemoryAccessTransformer.analyzer = analyzerAdapter
-                analyzerAdapter
-            }
+            mv = applySharedMemoryAccessTransformer(access, methodName, desc, mv)
             mv = LocalVariablesAccessTransformer(fileName, className, methodName, mv.newAdapter(), desc, isStatic, locals)
 
             // Inline method call transformer relies on the original variables' indices, so it should go before (in FIFO order)
@@ -231,13 +225,7 @@ internal class LincheckClassVisitor(
                     fileName, className, methodName, classVersion, mv.newAdapter()
                 )
             }
-            mv = run {
-                val st = ConstructorArgumentsSnapshotTrackerTransformer(fileName, className, methodName, mv.newAdapter(), classVisitor::isInstanceOf)
-                val sv = SharedMemoryAccessTransformer(fileName, className, methodName, st.newAdapter())
-                val aa = AnalyzerAdapter(className, access, methodName, desc, sv)
-                sv.analyzer = aa
-                aa
-            }
+            mv = applySharedMemoryAccessTransformer(access, methodName, desc, mv)
             return mv
         }
         mv = CoroutineCancellabilitySupportTransformer(mv, access, className, methodName, desc)
@@ -281,13 +269,8 @@ internal class LincheckClassVisitor(
         // `SharedMemoryAccessTransformer` goes first because it relies on `AnalyzerAdapter`,
         // which should be put in front of the byte-code transformer chain,
         // so that it can correctly analyze the byte-code and compute required type-information
-        mv = run {
-            val st = ConstructorArgumentsSnapshotTrackerTransformer(fileName, className, methodName, mv.newAdapter(), classVisitor::isInstanceOf)
-            val sv = SharedMemoryAccessTransformer(fileName, className, methodName, st.newAdapter())
-            val aa = AnalyzerAdapter(className, access, methodName, desc, sv)
-            sv.analyzer = aa
-            aa
-        }
+        mv = applySharedMemoryAccessTransformer(access, methodName, desc, mv)
+
         val locals = methods[methodName + desc] ?: MethodVariables()
 
         mv = LocalVariablesAccessTransformer(fileName, className, methodName, mv.newAdapter(), desc, isStatic, locals)
@@ -310,4 +293,32 @@ internal class LincheckClassVisitor(
 
         return mv
     }
+
+    private fun applySharedMemoryAccessTransformer(
+        access: Int,
+        methodName: String,
+        descriptor: String,
+        methodVisitor: LincheckBaseMethodVisitor
+    ): AnalyzerAdapter {
+        fun MethodVisitor.newAdapter() =
+            this.createGeneratorAdapter(access, methodName, descriptor)
+        // this transformer is required because snapshot tracker currently
+        // does not trace memory accesses inside constructors
+        val st = ConstructorArgumentsSnapshotTrackerTransformer(
+            fileName,
+            className,
+            methodName,
+            methodVisitor.newAdapter(),
+            classVisitor::isInstanceOf
+        )
+        val sv = SharedMemoryAccessTransformer(fileName, className, methodName, st.newAdapter())
+        val aa = AnalyzerAdapter(className, access, methodName, descriptor, sv)
+        sv.analyzer = aa
+        return aa
+    }
+
+    private fun MethodVisitor.createGeneratorAdapter(access: Int, methodName: String, descriptor: String) =
+        GeneratorAdapter(this, access, methodName, descriptor)
+
+
 }
