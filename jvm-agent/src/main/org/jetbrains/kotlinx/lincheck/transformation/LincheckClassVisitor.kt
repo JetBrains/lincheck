@@ -87,11 +87,12 @@ internal class LincheckClassVisitor(
         }
 
         if (instrumentationMode == STRESS) {
-            return if (methodName != "<clinit>" && methodName != "<init>") {
-                CoroutineCancellabilitySupportTransformer(mv, access, className, methodName, desc)
-            } else {
-                mv
-            }
+            if (methodName == "<clinit>" || methodName == "<init>") return mv
+
+            // in Stress mode we apply only `CoroutineCancellabilitySupportTransformer`
+            // to track coroutine suspension points
+            mv = CoroutineCancellabilitySupportTransformer(mv, access, className, methodName, desc)
+            return mv
         }
 
         if (instrumentationMode == TRACE_RECORDING) {
