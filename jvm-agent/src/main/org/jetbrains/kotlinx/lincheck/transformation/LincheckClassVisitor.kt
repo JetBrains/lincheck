@@ -288,7 +288,7 @@ internal class LincheckClassVisitor(
         methodName: String,
         descriptor: String,
         methodVisitor: MethodVisitor,
-    ): MethodVisitor? {
+    ): MethodVisitor {
         var mv = methodVisitor
         fun MethodVisitor.newAdapter() =
             this.createGeneratorAdapter(access, methodName, descriptor)
