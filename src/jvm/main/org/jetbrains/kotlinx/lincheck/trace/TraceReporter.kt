@@ -155,7 +155,10 @@ internal class TraceReporter(
                 (it is MethodReturnTracePoint) ||
                 it is SpinCycleStartTracePoint
             }
-            val isThreadJoinSwitch = (remainingTracePoints.firstOrNull()?.isThreadJoin() == true)
+            val isThreadJoinSwitch = (movedTracePoints.lastOrNull()?.isThreadJoin() == true) &&
+                // check that Thread.join() call has return value set, otherwise it is a hung join
+                (movedTracePoints.last() as MethodCallTracePoint).returnedValue != ReturnedValueResult.NoValue
+
             if (currentThreadNextTracePointPosition == newTrace.size || shouldRemoveRemainingTracePoints && !isThreadJoinSwitch) {
                 // handle the case when the switch point is the last event in the thread
                 val methodReturnTracePointsRange = if (methodCallTracePoints.isNotEmpty())

@@ -201,13 +201,13 @@ internal class LincheckClassVisitor(
             mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
             return mv
         }
+        mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
 
         // `coverageDelegateVisitor` must not capture `MethodCallTransformer`
         // (to filter static method calls inserted by coverage library)
         val coverageDelegateVisitor: MethodVisitor = mv
         mv = MethodCallTransformer(fileName, className, methodName, mv.newAdapter())
 
-        mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
         mv = applySynchronizationTrackingTransformers(access, methodName, desc, mv)
 
         mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
