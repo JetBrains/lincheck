@@ -299,7 +299,7 @@ internal class LincheckClassVisitor(
 
 }
 
-internal open class ManagedStrategyMethodVisitor(
+internal open class LincheckBaseMethodVisitor(
     protected val fileName: String,
     protected val className: String,
     protected val methodName: String,
