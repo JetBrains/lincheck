@@ -654,6 +654,12 @@ internal fun isJavaLangAccessClass(className: String): Boolean =
     className == "jdk.internal.access.JavaLangAccess"
 
 /**
+ * Checks whether the given method corresponds to the `toString()` Java method.
+ */
+internal fun isToStringMethod(methodName: String, desc: String) =
+    methodName == "toString" && desc == "()Ljava/lang/String;"
+
+/**
  * Extracts the simple class name from a fully qualified canonical class name.
  */
 fun String.toSimpleClassName() =

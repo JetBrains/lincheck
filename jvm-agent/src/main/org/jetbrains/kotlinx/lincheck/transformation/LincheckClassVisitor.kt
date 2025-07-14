@@ -203,11 +203,25 @@ internal class LincheckClassVisitor(
         if (isCoroutineInternalClass(className.toCanonicalClassName())) {
             return mv
         }
-        // Debugger implicitly evaluates toString for variables rendering
-        // We need to disable breakpoints in such a case, as the numeration will break.
-        // Breakpoints are disabled as we do not instrument toString and enter an ignored section,
-        // so there are no beforeEvents inside.
-        if ((methodName == "<init>" && !isInTraceDebuggerMode) || ideaPluginEnabled && methodName == "toString" && desc == "()Ljava/lang/String;") {
+        // Debugger implicitly evaluates `toString()` for variables rendering.
+        // We need to ensure there are no `beforeEvents` calls inside `toString()`
+        // to ensure the event numeration will remain the same.
+        if (ideaPluginEnabled && isToStringMethod(methodName, desc)) {
+            mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
+            // TODO: replace with proper instrumentation mode for debugger, don't use globals
+            if (isInTraceDebuggerMode) {
+                // Lincheck does not support true identity hash codes (it always uses zeroes),
+                // so there is no need for the `DeterministicInvokeDynamicTransformer` there.
+                mv = DeterministicInvokeDynamicTransformer(
+                    fileName, className, methodName, classVersion, mv.newAdapter()
+                )
+            }
+            return mv
+        }
+        // Currently, constructors are treated in a special way to avoid problems
+        // with `VerificationError` due to leaking this problem,
+        // see: https://github.com/JetBrains/lincheck/issues/424
+        if ((methodName == "<init>" && !isInTraceDebuggerMode)) {
             mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
             // TODO: replace with proper instrumentation mode for debugger, don't use globals
             if (isInTraceDebuggerMode) {
