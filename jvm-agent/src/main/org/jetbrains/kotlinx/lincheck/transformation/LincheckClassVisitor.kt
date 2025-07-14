@@ -151,18 +151,17 @@ internal class LincheckClassVisitor(
             mv = IgnoredSectionWrapperTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
         }
-        /* Wrap all methods of the ` StackTraceElement ` class into ignored sections.
-         * Although `StackTraceElement` own bytecode should not be instrumented,
-         * it may call functions from `java.util` classes (e.g., `HashMap`),
-         * which can be instrumented and analyzed.
-         * At the same time, `StackTraceElement` methods can be called almost at any point
-         * (e.g., when an exception is thrown and its stack trace is being collected),
-         * and we should ensure that these calls are not analyzed by Lincheck.
-         *
-         * See the following issues:
-         *   - https://github.com/JetBrains/lincheck/issues/376
-         *   - https://github.com/JetBrains/lincheck/issues/419
-         */
+        // Wrap all methods of the ` StackTraceElement ` class into ignored sections.
+        // Although `StackTraceElement` own bytecode should not be instrumented,
+        // it may call functions from `java.util` classes (e.g., `HashMap`),
+        // which can be instrumented and analyzed.
+        // At the same time, `StackTraceElement` methods can be called almost at any point
+        // (e.g., when an exception is thrown and its stack trace is being collected),
+        // and we should ensure that these calls are not analyzed by Lincheck.
+        //
+        // See the following issues:
+        //   - https://github.com/JetBrains/lincheck/issues/376
+        //   - https://github.com/JetBrains/lincheck/issues/419
         if (isStackTraceElementClass(className.toCanonicalClassName())) {
             mv = IgnoredSectionWrapperTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
@@ -172,10 +171,8 @@ internal class LincheckClassVisitor(
             mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
         }
-        /*
-         * Instrumentation of `java.util.Arrays` class causes some subtle flaky bugs.
-         * See details in https://github.com/JetBrains/lincheck/issues/717.
-         */
+        // Instrumentation of `java.util.Arrays` class causes some subtle flaky bugs.
+        // See details in https://github.com/JetBrains/lincheck/issues/717.
         if (isJavaUtilArraysClass(className.toCanonicalClassName())) {
             // `java.util.Arrays` contains intrinsic methods --- we need to process them
             mv = IntrinsicCandidateMethodFilter(className, methodName, desc, intrinsicDelegateVisitor.newAdapter(), mv.newAdapter())
