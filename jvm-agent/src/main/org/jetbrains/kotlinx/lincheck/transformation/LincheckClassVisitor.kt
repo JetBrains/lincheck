@@ -22,6 +22,7 @@ import org.jetbrains.lincheck.util.ideaPluginEnabled
 import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import org.jetbrains.lincheck.util.isThreadContainerClass
 import org.jetbrains.lincheck.util.isIntellijRuntimeAgentClass
+import org.jetbrains.lincheck.util.isThreadContainerThreadStartMethod
 import sun.nio.ch.lincheck.*
 
 internal class LincheckClassVisitor(
@@ -133,36 +134,7 @@ internal class LincheckClassVisitor(
         mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
         mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
 
-        if (methodName == "<clinit>") {
-            mv = IgnoredSectionWrapperTransformer(fileName, className, methodName, mv.newAdapter())
-            return mv
-        }
-        // Wrap `ClassLoader::loadClass` calls into ignored sections
-        // to ensure their code is not analyzed by the Lincheck.
-        if (isClassLoaderClassName(className.toCanonicalClassName())) {
-            if (isLoadClassMethod(methodName, desc)) {
-                mv = IgnoredSectionWrapperTransformer(fileName, className, methodName, mv.newAdapter())
-            }
-            return mv
-        }
-        // Wrap `MethodHandles.Lookup.findX` and related methods into ignored sections
-        // to ensure their code is not analyzed by the Lincheck.
-        if (isIgnoredMethodHandleMethod(className.toCanonicalClassName(), methodName)) {
-            mv = IgnoredSectionWrapperTransformer(fileName, className, methodName, mv.newAdapter())
-            return mv
-        }
-        // Wrap all methods of the ` StackTraceElement ` class into ignored sections.
-        // Although `StackTraceElement` own bytecode should not be instrumented,
-        // it may call functions from `java.util` classes (e.g., `HashMap`),
-        // which can be instrumented and analyzed.
-        // At the same time, `StackTraceElement` methods can be called almost at any point
-        // (e.g., when an exception is thrown and its stack trace is being collected),
-        // and we should ensure that these calls are not analyzed by Lincheck.
-        //
-        // See the following issues:
-        //   - https://github.com/JetBrains/lincheck/issues/376
-        //   - https://github.com/JetBrains/lincheck/issues/419
-        if (isStackTraceElementClass(className.toCanonicalClassName())) {
+        if (shouldWrapInIgnoredSection(className, methodName, desc)) {
             mv = IgnoredSectionWrapperTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
         }
@@ -180,21 +152,6 @@ internal class LincheckClassVisitor(
         }
         // Do not instrument coroutines' internals machinery
         if (isCoroutineInternalClass(className.toCanonicalClassName())) {
-            return mv
-        }
-        // In some newer versions of JDK, `ThreadPoolExecutor` uses
-        // the internal `ThreadContainer` classes to manage threads in the pool;
-        // This class, in turn, has the method `start`,
-        // that does not directly call `Thread.start` to start a thread,
-        // but instead uses internal API `JavaLangAccess.start`.
-        // To detect threads started in this way, we instrument this class
-        // and inject the appropriate hook on calls to the `JavaLangAccess.start` method.
-        if (isThreadContainerClass(className.toCanonicalClassName())) {
-            if (methodName == "start") {
-                mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
-            } else {
-                mv = IgnoredSectionWrapperTransformer(fileName, className, methodName, mv.newAdapter())
-            }
             return mv
         }
         // Debugger implicitly evaluates `toString()` for variables rendering.
@@ -230,11 +187,23 @@ internal class LincheckClassVisitor(
         }
         mv = CoroutineCancellabilitySupportTransformer(mv, access, className, methodName, desc)
         mv = CoroutineDelaySupportTransformer(fileName, className, methodName, mv.newAdapter())
+
         // For `java.lang.Thread` class, we only apply `ThreadTransformer` and skip all other transformations
         if (isThreadClass(className.toCanonicalClassName())) {
             mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
             // Must appear last in the code, to completely hide intrinsic candidate methods from all transformers
             mv = IntrinsicCandidateMethodFilter(className, methodName, desc, intrinsicDelegateVisitor.newAdapter(), mv.newAdapter())
+            return mv
+        }
+        // In some newer versions of JDK, `ThreadPoolExecutor` uses
+        // the internal `ThreadContainer` classes to manage threads in the pool;
+        // This class, in turn, has the method `start`,
+        // that does not directly call `Thread.start` to start a thread,
+        // but instead uses internal API `JavaLangAccess.start`.
+        // To detect threads started in this way, we instrument this class
+        // and inject the appropriate hook on calls to the `JavaLangAccess.start` method.
+        if (isThreadContainerThreadStartMethod(className.toCanonicalClassName(), methodName)) {
+            mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
             return mv
         }
 
@@ -281,6 +250,39 @@ internal class LincheckClassVisitor(
         mv = IntrinsicCandidateMethodFilter(className, methodName, desc, intrinsicDelegateVisitor.newAdapter(), mv.newNonRemappingAdapter())
 
         return mv
+    }
+
+    private fun shouldWrapInIgnoredSection(className: String, methodName: String, descriptor: String): Boolean {
+        // Wrap static initialization blocks into ignored sections.
+        if (methodName == "<clinit>")
+            return true
+        // Wrap `ClassLoader::loadClass(className)` calls into ignored sections
+        // to ensure their code is not analyzed by the Lincheck.
+        if (isClassLoaderClassName(className.toCanonicalClassName()) && isLoadClassMethod(methodName, descriptor))
+            return true
+        // Wrap `MethodHandles.Lookup.findX` and related methods into ignored sections
+        // to ensure their code is not analyzed by the Lincheck.
+        if (isIgnoredMethodHandleMethod(className.toCanonicalClassName(), methodName))
+            return true
+        // Wrap all methods of the ` StackTraceElement ` class into ignored sections.
+        // Although `StackTraceElement` own bytecode should not be instrumented,
+        // it may call functions from `java.util` classes (e.g., `HashMap`),
+        // which can be instrumented and analyzed.
+        // At the same time, `StackTraceElement` methods can be called almost at any point
+        // (e.g., when an exception is thrown and its stack trace is being collected),
+        // and we should ensure that these calls are not analyzed by Lincheck.
+        //
+        // See the following issues:
+        //   - https://github.com/JetBrains/lincheck/issues/376
+        //   - https://github.com/JetBrains/lincheck/issues/419
+        if (isStackTraceElementClass(className.toCanonicalClassName()))
+            return true
+        // Ignore methods of JDK 20+ `ThreadContainer` classes, except `start` method.
+        if (isThreadContainerClass(className.toCanonicalClassName()) &&
+            !isThreadContainerThreadStartMethod(className.toCanonicalClassName(), methodName))
+            return true
+
+        return false
     }
 
     private fun applySynchronizationTrackingTransformers(
