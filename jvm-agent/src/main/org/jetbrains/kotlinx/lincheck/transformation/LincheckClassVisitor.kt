@@ -281,6 +281,9 @@ internal class LincheckClassVisitor(
     }
 
     private fun shouldNotInstrument(className: String, methodName: String, descriptor: String): Boolean {
+        // Do not instrument `ClassLoader` methods.
+        if (isClassLoaderClassName(className.toCanonicalClassName()))
+            return true
         // Instrumentation of `java.util.Arrays` class causes some subtle flaky bugs.
         // See details in https://github.com/JetBrains/lincheck/issues/717.
         if (isJavaUtilArraysClass(className.toCanonicalClassName()))
