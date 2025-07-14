@@ -11,7 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import sun.nio.ch.lincheck.Injections
-import org.jetbrains.kotlinx.lincheck.transformation.ManagedStrategyMethodVisitor
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckBaseMethodVisitor
 import org.jetbrains.kotlinx.lincheck.transformation.invokeStatic
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.Opcodes.*
@@ -22,7 +22,7 @@ internal class IgnoredSectionWrapperTransformer(
     className: String,
     methodName: String,
     adapter: GeneratorAdapter,
-) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
+) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter) {
 
     private val tryBlock: Label = adapter.newLabel()
     private val catchBlock: Label = adapter.newLabel()

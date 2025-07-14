@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
-import org.jetbrains.kotlinx.lincheck.transformation.ManagedStrategyMethodVisitor
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckBaseMethodVisitor
 import org.jetbrains.kotlinx.lincheck.transformation.invokeIfInAnalyzedCode
 import org.jetbrains.kotlinx.lincheck.transformation.invokeStatic
 import org.objectweb.asm.commons.GeneratorAdapter
@@ -29,7 +29,7 @@ internal class ConstantHashCodeTransformer(
     className: String,
     methodName: String,
     adapter: GeneratorAdapter,
-) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
+) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter) {
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
         when {
             name == "hashCode" && desc == "()I" -> {

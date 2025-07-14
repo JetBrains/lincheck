@@ -26,7 +26,7 @@ internal class LocalVariablesAccessTransformer(
     desc: String,
     isStatic: Boolean,
     private val locals: MethodVariables
-) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
+) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter) {
     private var turnoffTransform = false
     private val numberOfLocals = convertAsmMethodType(desc).argumentTypes.size  + if (isStatic) 0 else 1
 

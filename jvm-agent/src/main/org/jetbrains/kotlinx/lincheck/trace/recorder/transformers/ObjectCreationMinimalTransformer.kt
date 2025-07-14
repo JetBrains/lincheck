@@ -32,7 +32,7 @@ internal class ObjectCreationMinimalTransformer(
     className: String,
     methodName: String,
     adapter: GeneratorAdapter
-) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
+) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter) {
     override fun visitTypeInsn(opcode: Int, type: String) = adapter.run {
         if (opcode == NEW && shouldTransform(type.toCanonicalClassName(), InstrumentationMode.TRACE_RECORDING)) {
             invokeIfInAnalyzedCode(
