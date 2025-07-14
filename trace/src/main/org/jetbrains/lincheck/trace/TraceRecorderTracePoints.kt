@@ -65,7 +65,7 @@ class TRMethodCallTracePoint(
     var result: TRObject? = null
     var exceptionClassName: String? = null
 
-    private val children: MutableList<TRTracePoint?> = ArrayList(16)
+    private val children: ChunkedList<TRTracePoint> = ChunkedList()
     private var childrenAddresses: LongArray = LongArray(16)
 
     // TODO Make parametrized
@@ -112,7 +112,7 @@ class TRMethodCallTracePoint(
     }
 
     fun unloadAllChildren() {
-        children.fill(null)
+        children.forgetAll()
     }
 
     override fun save(out: TraceWriter) {
