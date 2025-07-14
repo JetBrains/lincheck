@@ -200,9 +200,8 @@ internal class LincheckClassVisitor(
         }
 
         mv = MethodCallTransformer(fileName, className, methodName, mv.newAdapter())
-        mv = applySynchronizationTrackingTransformers(access, methodName, desc, mv)
-
         mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
+
         // TODO: replace with proper instrumentation mode for debugger, don't use globals
         if (isInTraceDebuggerMode) {
             // Lincheck does not support true identity hash codes (it always uses zeroes),
@@ -214,6 +213,8 @@ internal class LincheckClassVisitor(
             // and substitute them with constant.
             mv = ConstantHashCodeTransformer(fileName, className, methodName, mv.newAdapter())
         }
+
+        mv = applySynchronizationTrackingTransformers(access, methodName, desc, mv)
 
         // `SharedMemoryAccessTransformer` goes first because it relies on `AnalyzerAdapter`,
         // which should be put in front of the byte-code transformer chain,
@@ -311,7 +312,7 @@ internal class LincheckClassVisitor(
         access: Int,
         methodName: String,
         descriptor: String,
-        methodVisitor: LincheckBaseMethodVisitor
+        methodVisitor: MethodVisitor,
     ): MethodVisitor {
         fun MethodVisitor.newAdapter() =
             this.createGeneratorAdapter(access, methodName, descriptor)
