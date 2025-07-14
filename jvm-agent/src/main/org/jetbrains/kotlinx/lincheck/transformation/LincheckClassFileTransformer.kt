@@ -170,6 +170,8 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         (instrumentationMode != TRACE_RECORDING && isMethodHandleRelatedClass(className)) ||
         // `StackTraceElement` class, to wrap all its methods into the ignored section.
         isStackTraceElementClass(className) ||
+        // IntelliJ runtime agents, to wrap all their methods into the ignored section.
+        isIntellijRuntimeAgentClass(className) ||
         // `ThreadContainer` classes, to detect threads started in the thread containers.
         isThreadContainerClass(className) ||
         // TODO: instead of eagerly instrumenting `DispatchedContinuation`

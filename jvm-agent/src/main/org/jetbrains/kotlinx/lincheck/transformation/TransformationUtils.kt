@@ -651,6 +651,24 @@ internal fun isJavaUtilArraysClass(className: String): Boolean =
 internal fun isJavaLangAccessClass(className: String): Boolean =
     className == "jdk.internal.access.JavaLangAccess"
 
+/**
+ * Checks if the given class name belongs to the IntelliJ runtime debugger agent package.
+ */
+internal fun isIntellijRuntimeDebuggerAgentClass(className: String) =
+    className.startsWith("com.intellij.rt.debugger.agent")
+
+/**
+ * Checks if the given class name belongs to the IntelliJ runtime coverage agent package.
+ */
+internal fun isIntellijRuntimeCoverageAgentClass(className: String) =
+    className.startsWith("com.intellij.rt.coverage")
+
+/**
+ * Checks if the given class name belongs to the IntelliJ runtime agents.
+ */
+internal fun isIntellijRuntimeAgentClass(className: String) =
+    isIntellijRuntimeDebuggerAgentClass(className) || isIntellijRuntimeCoverageAgentClass(className)
+
 
 /**
  * Extracts the simple class name from a fully qualified canonical class name.

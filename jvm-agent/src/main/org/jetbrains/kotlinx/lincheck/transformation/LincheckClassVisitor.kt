@@ -185,6 +185,11 @@ internal class LincheckClassVisitor(
             mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
         }
+        // Wrap IntelliJ IDEA runtime agent's methods into ignored section.
+        if (isIntellijRuntimeAgentClass(className.toCanonicalClassName())) {
+            mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
+            return mv
+        }
         /*
          * Instrumentation of `java.util.Arrays` class causes some subtle flaky bugs.
          * See details in https://github.com/JetBrains/lincheck/issues/717.
