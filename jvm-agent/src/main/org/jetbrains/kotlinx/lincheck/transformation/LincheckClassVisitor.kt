@@ -178,6 +178,7 @@ internal class LincheckClassVisitor(
             mv = IntrinsicCandidateMethodFilter(className, methodName, desc, intrinsicDelegateVisitor.newAdapter(), mv.newAdapter())
             return mv
         }
+        // Do not instrument coroutines' internals machinery
         if (isCoroutineInternalClass(className.toCanonicalClassName())) {
             return mv
         }
