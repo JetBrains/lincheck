@@ -180,28 +180,20 @@ internal class LincheckClassVisitor(
             mv = applySharedMemoryAccessTransformer(access, methodName, desc, mv)
             return mv
         }
+
         mv = CoroutineCancellabilitySupportTransformer(mv, access, className, methodName, desc)
         mv = CoroutineDelaySupportTransformer(fileName, className, methodName, mv.newAdapter())
 
-        // For `java.lang.Thread` class, we only apply `ThreadTransformer` and skip all other transformations
-        if (isThreadClass(className.toCanonicalClassName())) {
-            mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
+        mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
+        // For `java.lang.Thread` class (and `ThreadContainer.start()` method),
+        // we only apply `ThreadTransformer` and skip all other transformations
+        if (isThreadClass(className.toCanonicalClassName()) ||
+            isThreadContainerThreadStartMethod(className.toCanonicalClassName(), methodName)
+        ) {
             // Must appear last in the code, to completely hide intrinsic candidate methods from all transformers
             mv = IntrinsicCandidateMethodFilter(className, methodName, desc, intrinsicDelegateVisitor.newAdapter(), mv.newAdapter())
             return mv
         }
-        // In some newer versions of JDK, `ThreadPoolExecutor` uses
-        // the internal `ThreadContainer` classes to manage threads in the pool;
-        // This class, in turn, has the method `start`,
-        // that does not directly call `Thread.start` to start a thread,
-        // but instead uses internal API `JavaLangAccess.start`.
-        // To detect threads started in this way, we instrument this class
-        // and inject the appropriate hook on calls to the `JavaLangAccess.start` method.
-        if (isThreadContainerThreadStartMethod(className.toCanonicalClassName(), methodName)) {
-            mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
-            return mv
-        }
-        mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
 
         // `coverageDelegateVisitor` must not capture `MethodCallTransformer`
         // (to filter static method calls inserted by coverage library)
