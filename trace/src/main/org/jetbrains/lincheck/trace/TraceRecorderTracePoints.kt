@@ -66,7 +66,7 @@ class TRMethodCallTracePoint(
     var exceptionClassName: String? = null
 
     private val children: ChunkedList<TRTracePoint> = ChunkedList()
-    private var childrenAddresses: LongArray = LongArray(16)
+    private var childrenAddresses: AddressIndex = AddressIndex.create()
 
     // TODO Make parametrized
     val methodDescriptor: MethodDescriptor get() = TRACE_CONTEXT.getMethodDescriptor(methodId)
@@ -80,18 +80,12 @@ class TRMethodCallTracePoint(
     val events: List<TRTracePoint?> get() = children
 
     internal fun addChildAddress(address: Long) {
-        if (childrenAddresses.size == children.size) {
-            childrenAddresses = childrenAddresses.copyOf(max(children.size + 1, (children.size * 1.25).roundToInt()))
-        }
-        childrenAddresses[children.size] = address
+        childrenAddresses = childrenAddresses.add(address)
         children.add(null)
     }
 
     internal fun addChild(child: TRTracePoint, address: Long = -1) {
-        if (childrenAddresses.size == children.size) {
-            childrenAddresses = childrenAddresses.copyOf(max(children.size + 1, (children.size * 1.25).roundToInt()))
-        }
-        childrenAddresses[children.size] = address
+        childrenAddresses = childrenAddresses.add(address)
         children.add(child)
     }
 
