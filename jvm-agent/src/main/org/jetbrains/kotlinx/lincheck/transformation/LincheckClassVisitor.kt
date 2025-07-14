@@ -76,7 +76,6 @@ internal class LincheckClassVisitor(
     ): MethodVisitor {
         val isStatic = (access and ACC_STATIC != 0)
         val isNative = (access and ACC_NATIVE != 0)
-        val isSynchronized = (access and ACC_SYNCHRONIZED != 0)
         val locals = methods[methodName + desc] ?: MethodVariables()
 
         fun MethodVisitor.newAdapter() = GeneratorAdapter(this, access, methodName, desc)
@@ -244,12 +243,7 @@ internal class LincheckClassVisitor(
         mv = MethodCallTransformer(fileName, className, methodName, mv.newAdapter())
 
         mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
-        if (isSynchronized) {
-            mv = SynchronizedMethodTransformer(fileName, className, methodName, mv.newAdapter(), classVersion)
-        }
-        mv = MonitorTransformer(fileName, className, methodName, mv.newAdapter())
-        mv = WaitNotifyTransformer(fileName, className, methodName, mv.newAdapter())
-        mv = ParkingTransformer(fileName, className, methodName, mv.newAdapter())
+        mv = applySynchronizationTrackingTransformers(access, methodName, desc, mv)
 
         mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
         // TODO: replace with proper instrumentation mode for debugger, don't use globals
@@ -285,6 +279,25 @@ internal class LincheckClassVisitor(
         // Must appear last in the code, to completely hide intrinsic candidate methods from all transformers
         mv = IntrinsicCandidateMethodFilter(className, methodName, desc, intrinsicDelegateVisitor.newAdapter(), mv.newNonRemappingAdapter())
 
+        return mv
+    }
+
+    private fun applySynchronizationTrackingTransformers(
+        access: Int,
+        methodName: String,
+        descriptor: String,
+        methodVisitor: MethodVisitor,
+    ): MethodVisitor? {
+        var mv = methodVisitor
+        fun MethodVisitor.newAdapter() =
+            this.createGeneratorAdapter(access, methodName, descriptor)
+        val isSynchronized = (access and ACC_SYNCHRONIZED != 0)
+        if (isSynchronized) {
+            mv = SynchronizedMethodTransformer(fileName, className, methodName, mv.newAdapter(), classVersion)
+        }
+        mv = MonitorTransformer(fileName, className, methodName, mv.newAdapter())
+        mv = WaitNotifyTransformer(fileName, className, methodName, mv.newAdapter())
+        mv = ParkingTransformer(fileName, className, methodName, mv.newAdapter())
         return mv
     }
 
