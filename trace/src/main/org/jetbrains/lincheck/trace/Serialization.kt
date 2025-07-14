@@ -99,12 +99,12 @@ internal interface TraceWriter : DataOutput, Closeable {
     /**
      * Mark the beginning of container tracepoint's footer (After all children are saved).
      */
-    fun startWriteContainerTracepointFooter(id: Int)
+    fun startWriteContainerTracepointFooter()
 
     /**
      * Marks the end of container tracepoint's footer.
      */
-    fun endWriteContainerTracepointFooter()
+    fun endWriteContainerTracepointFooter(id: Int)
 
     /**
      * Write [ClassDescriptor] from context referred by given `id`, if needed.
@@ -173,6 +173,7 @@ private sealed class TraceWriterBase(
     private val containerStack = mutableListOf<Pair<Int, Long>>()
 
     private var inTracepointBody = false
+    private var footerPosition: Long = -1
 
     protected abstract val currentDataPosition: Long
     protected abstract val writerId: Int
@@ -214,26 +215,31 @@ private sealed class TraceWriterBase(
         containerStack.add(id to currentDataPosition)
     }
 
-    override fun startWriteContainerTracepointFooter(id: Int) {
+    override fun startWriteContainerTracepointFooter() {
         check(!inTracepointBody) { "Cannot start nested tracepoint footer" }
         inTracepointBody = true
+        footerPosition = currentDataPosition
 
         check(containerStack.isNotEmpty()) {
-            "Calls endWriteContainerTracepointHeader(?) / startWriteContainerTracepointFooter($id) are not balanced"
+            "Calls endWriteContainerTracepointHeader() / startWriteContainerTracepointFooter() are not balanced"
         }
-        val (storedId, startPos) = containerStack.removeLast()
-        check(id == storedId) {
-            "Calls endWriteContainerTracepointHeader($storedId) / startWriteContainerTracepointFooter($id) are not balanced"
-        }
-        writeIndexCell(ObjectKind.TRACEPOINT, id, startPos, currentDataPosition)
 
         // Start object
         data.writeKind(ObjectKind.TRACEPOINT_FOOTER)
     }
 
-    override fun endWriteContainerTracepointFooter() {
+    override fun endWriteContainerTracepointFooter(id: Int) {
         check(inTracepointBody) { "Cannot end tracepoint footer not in tracepoint" }
+        check(footerPosition >= 0) { "Cannot end tracepoint footer not in tracepoint footer" }
+
+        val (storedId, startPos) = containerStack.removeLast()
+        check(id == storedId) {
+            "Calls endWriteContainerTracepointHeader($storedId) / startWriteContainerTracepointFooter($id) are not balanced"
+        }
+        writeIndexCell(ObjectKind.TRACEPOINT, id, startPos, footerPosition)
+
         inTracepointBody = false
+        footerPosition = -1
     }
 
     override fun writeClassDescriptor(id: Int) {
@@ -318,7 +324,7 @@ private sealed class TraceWriterBase(
         writeIndexCell(ObjectKind.CODE_LOCATION, id, position, -1)
     }
 
-    protected fun writeString(value: String?): Int {
+    protected open fun writeString(value: String?): Int {
         check(!inTracepointBody) { "Cannot save reference data inside tracepoint" }
         if (value == null) return -1
 
@@ -337,6 +343,12 @@ private sealed class TraceWriterBase(
         return -id
     }
 
+    protected fun resetTracepointState() {
+        inTracepointBody = false
+        footerPosition = -1
+    }
+
+
     protected abstract fun writeIndexCell(kind: ObjectKind, id: Int, startPos: Long, endPos: Long)
 }
 
@@ -350,6 +362,10 @@ internal data class IndexCell(
 private interface BlockSaver {
     fun saveDataAndIndexBlock(writerId: Int, logicalBlockStart: Long, dataBlock: ByteBuffer, indexList: List<IndexCell>)
 }
+
+
+// Leave some space for metadata
+private const val MAX_STRING_SIZE = PER_THREAD_DATA_BUFFER_SIZE - 1024
 
 private class BufferedTraceWriter (
     override val writerId: Int,
@@ -377,13 +393,31 @@ private class BufferedTraceWriter (
         maybeFlushData()
     }
 
-    override fun endWriteContainerTracepointFooter() {
-        super.endWriteContainerTracepointFooter()
+    override fun endWriteContainerTracepointFooter(id: Int) {
+        super.endWriteContainerTracepointFooter(id)
         maybeFlushData()
     }
 
     override fun writeIndexCell(kind: ObjectKind, id: Int, startPos: Long, endPos: Long) {
         index.add(IndexCell(kind, id, startPos, endPos))
+        // Rollback to here in case of overflow, as the index cell is written after all
+        // object data, it means that object is in data buffer completely.
+        dataStream.mark()
+    }
+
+    // Cut string to half a buffer size
+    override fun writeString(value: String?): Int {
+        val trimmedValue = if ((value?.length ?: 0) > MAX_STRING_SIZE) value?.substring(0, MAX_STRING_SIZE) else value
+        return super.writeString(trimmedValue)
+    }
+
+    fun mark() {
+        dataStream.mark()
+    }
+
+    fun rollback() {
+        resetTracepointState()
+        dataStream.rollback()
     }
 
     fun flush() {
@@ -613,9 +647,11 @@ class FileStreamingTraceCollecting(
     ) {
         val writer = writers[Thread.currentThread()] ?: return
         try {
+            writer.mark()
             created.save(writer)
         } catch (_: BufferOverflowException) {
             // Flush current buffers, start over
+            writer.rollback()
             writer.flush()
             created.save(writer)
         }
@@ -624,9 +660,11 @@ class FileStreamingTraceCollecting(
     override fun callEnded(callTracepoint: TRMethodCallTracePoint) {
         val writer = writers[Thread.currentThread()] ?: return
         try {
+            writer.mark()
             callTracepoint.saveFooter(writer)
         } catch (_: BufferOverflowException) {
             // Flush current buffers, start over
+            writer.rollback()
             writer.flush()
             callTracepoint.saveFooter(writer)
         }
