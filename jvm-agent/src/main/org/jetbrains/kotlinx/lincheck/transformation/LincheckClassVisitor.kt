@@ -237,21 +237,21 @@ internal class LincheckClassVisitor(
             mv = IntrinsicCandidateMethodFilter(className, methodName, desc, intrinsicDelegateVisitor.newAdapter(), mv.newAdapter())
             return mv
         }
-        if (isSynchronized) {
-            mv = SynchronizedMethodTransformer(fileName, className, methodName, mv.newAdapter(), classVersion)
-        }
 
         // `coverageDelegateVisitor` must not capture `MethodCallTransformer`
         // (to filter static method calls inserted by coverage library)
         val coverageDelegateVisitor: MethodVisitor = mv
         mv = MethodCallTransformer(fileName, className, methodName, mv.newAdapter())
 
+        mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
+        if (isSynchronized) {
+            mv = SynchronizedMethodTransformer(fileName, className, methodName, mv.newAdapter(), classVersion)
+        }
         mv = MonitorTransformer(fileName, className, methodName, mv.newAdapter())
         mv = WaitNotifyTransformer(fileName, className, methodName, mv.newAdapter())
         mv = ParkingTransformer(fileName, className, methodName, mv.newAdapter())
-        mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
 
-        mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
+        mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
         // TODO: replace with proper instrumentation mode for debugger, don't use globals
         if (isInTraceDebuggerMode) {
             // Lincheck does not support true identity hash codes (it always uses zeroes),
