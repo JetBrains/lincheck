@@ -300,8 +300,3 @@ internal class LincheckClassVisitor(
 
 private fun isLoadClassMethod(methodName: String, desc: String) =
     methodName == "loadClass" && desc == "(Ljava/lang/String;)Ljava/lang/Class;"
-
-// Set storing canonical names of the classes that call internal coroutine functions;
-// it is used to optimize class re-transformation in stress mode by remembering
-// exactly what classes need to be re-transformed (only the coroutines calling classes)
-internal val coroutineCallingClasses = HashSet<String>()
