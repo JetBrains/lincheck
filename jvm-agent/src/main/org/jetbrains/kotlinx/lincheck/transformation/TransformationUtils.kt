@@ -608,6 +608,13 @@ internal fun isClassLoaderClassName(className: String): Boolean =
     className.contains("ClassLoader")
 
 /**
+ * Checks if the given method name and descriptor correspond to
+ * the `ClassLoader.loadClass(String name)` method.
+ */
+internal fun isLoadClassMethod(methodName: String, desc: String) =
+    methodName == "loadClass" && desc == "(Ljava/lang/String;)Ljava/lang/Class;"
+
+/**
  * Determines if a given class name represents a method handle related class,
  * that is one of the following classes:
  *   - [MethodHandle]
