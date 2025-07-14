@@ -297,6 +297,3 @@ internal class LincheckClassVisitor(
         return mv
     }
 }
-
-private fun isLoadClassMethod(methodName: String, desc: String) =
-    methodName == "loadClass" && desc == "(Ljava/lang/String;)Ljava/lang/Class;"
