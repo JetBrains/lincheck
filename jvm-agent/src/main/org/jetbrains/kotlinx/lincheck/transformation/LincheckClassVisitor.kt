@@ -145,21 +145,6 @@ internal class LincheckClassVisitor(
             }
             return mv
         }
-        // In some newer versions of JDK, `ThreadPoolExecutor` uses
-        // the internal `ThreadContainer` classes to manage threads in the pool;
-        // This class, in turn, has the method `start`,
-        // that does not directly call `Thread.start` to start a thread,
-        // but instead uses internal API `JavaLangAccess.start`.
-        // To detect threads started in this way, we instrument this class
-        // and inject the appropriate hook on calls to the `JavaLangAccess.start` method.
-        if (isThreadContainerClass(className.toCanonicalClassName())) {
-            if (methodName == "start") {
-                mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
-            } else {
-                mv = IgnoredSectionWrapperTransformer(fileName, className, methodName, mv.newAdapter())
-            }
-            return mv
-        }
         // Wrap `MethodHandles.Lookup.findX` and related methods into ignored sections
         // to ensure their code is not analyzed by the Lincheck.
         if (isIgnoredMethodHandleMethod(className.toCanonicalClassName(), methodName)) {
@@ -197,6 +182,21 @@ internal class LincheckClassVisitor(
             return mv
         }
         if (isCoroutineInternalClass(className.toCanonicalClassName())) {
+            return mv
+        }
+        // In some newer versions of JDK, `ThreadPoolExecutor` uses
+        // the internal `ThreadContainer` classes to manage threads in the pool;
+        // This class, in turn, has the method `start`,
+        // that does not directly call `Thread.start` to start a thread,
+        // but instead uses internal API `JavaLangAccess.start`.
+        // To detect threads started in this way, we instrument this class
+        // and inject the appropriate hook on calls to the `JavaLangAccess.start` method.
+        if (isThreadContainerClass(className.toCanonicalClassName())) {
+            if (methodName == "start") {
+                mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
+            } else {
+                mv = IgnoredSectionWrapperTransformer(fileName, className, methodName, mv.newAdapter())
+            }
             return mv
         }
         // Debugger implicitly evaluates `toString()` for variables rendering.
