@@ -184,6 +184,11 @@ internal class LincheckClassVisitor(
             mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
         }
+        // Wrap IntelliJ IDEA debugger agent's methods into ignored section.
+        if (isDebuggerAgentClass(className.toCanonicalClassName())) {
+            mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
+            return mv
+        }
         /*
          * Instrumentation of `java.util.Arrays` class causes some subtle flaky bugs.
          * See details in https://github.com/JetBrains/lincheck/issues/717.
@@ -363,6 +368,9 @@ private class WrapMethodInIgnoredSectionTransformer(
 
 private fun isLoadClassMethod(methodName: String, desc: String) =
     methodName == "loadClass" && desc == "(Ljava/lang/String;)Ljava/lang/Class;"
+
+internal fun isDebuggerAgentClass(className: String) =
+    className.startsWith("com.intellij.rt.debugger.agent")
 
 // Set storing canonical names of the classes that call internal coroutine functions;
 // it is used to optimize class re-transformation in stress mode by remembering

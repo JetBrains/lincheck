@@ -166,6 +166,8 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         (instrumentationMode != TRACE_RECORDING && isMethodHandleRelatedClass(className)) ||
         // `StackTraceElement` class, to wrap all its methods into the ignored section.
         isStackTraceElementClass(className) ||
+        // Debugger agent, to wrap all its methods into the ignored section.
+        isDebuggerAgentClass(className) ||
         // `ThreadContainer` classes, to detect threads started in the thread containers.
         isThreadContainerClass(className) ||
         // TODO: instead of eagerly instrumenting `DispatchedContinuation`
