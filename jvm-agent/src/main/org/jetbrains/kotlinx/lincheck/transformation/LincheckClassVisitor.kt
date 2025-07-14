@@ -143,17 +143,12 @@ internal class LincheckClassVisitor(
             mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
         }
-        // Instrumentation of `java.util.Arrays` class causes some subtle flaky bugs.
-        // See details in https://github.com/JetBrains/lincheck/issues/717.
-        if (isJavaUtilArraysClass(className.toCanonicalClassName())) {
-            // `java.util.Arrays` contains intrinsic methods --- we need to process them
+        if (shouldNotInstrument(className, methodName, desc)) {
+            // Must appear last in the code, to completely hide intrinsic candidate methods from all transformers
             mv = IntrinsicCandidateMethodFilter(className, methodName, desc, intrinsicDelegateVisitor.newAdapter(), mv.newAdapter())
             return mv
         }
-        // Do not instrument coroutines' internals machinery
-        if (isCoroutineInternalClass(className.toCanonicalClassName())) {
-            return mv
-        }
+
         // Debugger implicitly evaluates `toString()` for variables rendering.
         // We need to ensure there are no `beforeEvents` calls inside `toString()`
         // to ensure the event numeration will remain the same.
@@ -280,6 +275,18 @@ internal class LincheckClassVisitor(
         // Ignore methods of JDK 20+ `ThreadContainer` classes, except `start` method.
         if (isThreadContainerClass(className.toCanonicalClassName()) &&
             !isThreadContainerThreadStartMethod(className.toCanonicalClassName(), methodName))
+            return true
+
+        return false
+    }
+
+    private fun shouldNotInstrument(className: String, methodName: String, descriptor: String): Boolean {
+        // Instrumentation of `java.util.Arrays` class causes some subtle flaky bugs.
+        // See details in https://github.com/JetBrains/lincheck/issues/717.
+        if (isJavaUtilArraysClass(className.toCanonicalClassName()))
+            return true
+        // Do not instrument coroutines' internals machinery
+        if (isCoroutineInternalClass(className.toCanonicalClassName()))
             return true
 
         return false
