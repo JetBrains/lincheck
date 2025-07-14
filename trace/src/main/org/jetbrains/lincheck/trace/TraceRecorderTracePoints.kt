@@ -575,8 +575,9 @@ fun TRObjectOrVoid(obj: Any?): TRObject? =
     else TRObjectOrNull(obj)
 
 
-private fun trimString(s: CharSequence): String = s.take(min(50, s.length)).toString()
+const val MAX_TROBJECT_STRING_LENGTH = 50
 
+private fun trimString(s: CharSequence): String = s.take(MAX_TROBJECT_STRING_LENGTH).toString()
 
 fun TRObject(obj: Any): TRObject {
     return when (obj) {
