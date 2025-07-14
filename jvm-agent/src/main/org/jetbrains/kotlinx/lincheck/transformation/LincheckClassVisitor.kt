@@ -305,7 +305,7 @@ internal class LincheckClassVisitor(
         methodName: String,
         descriptor: String,
         methodVisitor: LincheckBaseMethodVisitor
-    ): AnalyzerAdapter {
+    ): MethodVisitor {
         fun MethodVisitor.newAdapter() =
             this.createGeneratorAdapter(access, methodName, descriptor)
         // this transformer is required because snapshot tracker currently
