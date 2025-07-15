@@ -17,6 +17,8 @@ import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption
 import kotlin.io.path.Path
+import kotlin.math.max
+import kotlin.math.roundToInt
 
 private const val INPUT_BUFFER_SIZE: Int = 16 * 1024 * 1024
 
@@ -171,7 +173,7 @@ class LazyTraceReader(
 ) : Closeable {
 
     private fun interface TracepointRegistrator {
-        fun register(indexInParent: Int, tracePoint: TRTracePoint, physicalOffset: Long): Unit
+        fun register(indexInParent: Int, tracePoint: TRTracePoint, physicalOffset: Long)
     }
 
     constructor(baseFileName: String) :
@@ -186,7 +188,7 @@ class LazyTraceReader(
     private val dataStream: SeekableInputStream
     private val data: SeekableDataInput
     private val dataBlocks = mutableMapOf<Int, MutableList<DataBlock>>()
-    private val callTracepointChildren = mutableMapOf<Int, Pair<Long, Long>>()
+    private var callTracepointChildren = LongArray(2048)
 
     init {
         val channel = Files.newByteChannel(Path(dataFileName), StandardOpenOption.READ)
@@ -243,9 +245,12 @@ class LazyTraceReader(
     }
 
     fun loadAllChildren(parent: TRMethodCallTracePoint) {
-        val positions = callTracepointChildren[parent.eventId]
+        val start = getChildrenStart(parent.eventId)
             ?: error("TRMethodCallTracePoint ${parent.eventId} is not found in index")
-        data.seek(calculatePhysicalOffset(parent.threadId, positions.first))
+        val end = getChildrenEnd(parent.eventId)
+            ?: error("TRMethodCallTracePoint ${parent.eventId} is not found in index")
+
+        data.seek(calculatePhysicalOffset(parent.threadId, start))
 
         loadTracePoints(
             threadId = parent.threadId,
@@ -257,8 +262,8 @@ class LazyTraceReader(
         )
 
         val actualFooterPos = data.position() - 1 // 1 is size of object kind
-        check(actualFooterPos == calculatePhysicalOffset(parent.threadId, positions.second)) {
-            "Input contains broken data: expected Tracepoint Footer for event ${parent.eventId} at position ${positions.second}, got $actualFooterPos"
+        check(actualFooterPos == calculatePhysicalOffset(parent.threadId, end)) {
+            "Input contains broken data: expected Tracepoint Footer for event ${parent.eventId} at position $end, got $actualFooterPos"
         }
     }
 
@@ -361,7 +366,7 @@ class LazyTraceReader(
                     if (kind == ObjectKind.EOF) break
 
                     if (kind == ObjectKind.TRACEPOINT) {
-                        callTracepointChildren[id] = start to end
+                        setChildrenAddresses(id, start, end)
                     } else {
                         // Check kind
                         data.seek(start)
@@ -423,17 +428,14 @@ class LazyTraceReader(
                     if (tracePoint is TRMethodCallTracePoint) {
                         // We are in the last saved block in
                         val childrenStart = calculateLogicalOffset(tracePoint.threadId,data.position())
-                        callTracepointChildren[tracePoint.eventId] = childrenStart to Long.MAX_VALUE
+                        setChildrenStart(tracePoint.eventId, childrenStart)
                     }
                 }
 
                 override fun footerStarted(tracePoint: TRMethodCallTracePoint) {
-                    val partialPair = callTracepointChildren[tracePoint.eventId]
-                    check(partialPair != null) { "Thread ${tracePoint.threadId} doesn't have start of children mark" }
-                    check(partialPair.second == Long.MAX_VALUE) { "Thread ${tracePoint.threadId} already have full address range" }
                     // -1 is here because Kind is already read
                     val childrenEnd = calculateLogicalOffset(tracePoint.threadId,data.position() - 1)
-                    callTracepointChildren[tracePoint.eventId] = partialPair.first to childrenEnd
+                    setChildrenEnd(tracePoint.eventId, childrenEnd)
                 }
             },
             blockConsumer = object : BlockConsumer {
@@ -461,15 +463,17 @@ class LazyTraceReader(
             return tracePoint
         }
 
-        val positions = callTracepointChildren[tracePoint.eventId]
+        val start = getChildrenStart(tracePoint.eventId)
+            ?: error("Tracepoint ${tracePoint.eventId} is not known in index")
+        val end = getChildrenEnd(tracePoint.eventId)
             ?: error("Tracepoint ${tracePoint.eventId} is not known in index")
 
-        val checkFor = calculatePhysicalOffset(tracePoint.threadId, positions.first)
+        val checkFor = calculatePhysicalOffset(tracePoint.threadId, start)
         check(data.position() == checkFor) {
-            "TRMethodCallTracePoint ${tracePoint.eventId} has wrong start position in index: ${positions.first} / $checkFor, expected ${data.position()}"
+            "TRMethodCallTracePoint ${tracePoint.eventId} has wrong start position in index: $start / $checkFor, expected ${data.position()}"
         }
 
-        val skipTo = calculatePhysicalOffset(tracePoint.threadId, positions.second)
+        val skipTo = calculatePhysicalOffset(tracePoint.threadId, end)
         data.seek(skipTo)
 
         val kind = data.readKind()
@@ -489,12 +493,12 @@ class LazyTraceReader(
             return tracePoint
         }
 
-        val positions = callTracepointChildren[tracePoint.eventId]
+        val start = getChildrenStart(tracePoint.eventId)
             ?: error("Tracepoint ${tracePoint.eventId} is not known in index")
 
-        val checkFor = calculatePhysicalOffset(tracePoint.threadId, positions.first)
+        val checkFor = calculatePhysicalOffset(tracePoint.threadId, start)
         check(data.position() == checkFor) {
-            "TRMethodCallTracePoint ${tracePoint.eventId} has wrong start position in index: ${positions.first} / $checkFor, expected ${data.position()}"
+            "TRMethodCallTracePoint ${tracePoint.eventId} has wrong start position in index: $start / $checkFor, expected ${data.position()}"
         }
 
         // Read tracepoints truly shallow
@@ -532,6 +536,46 @@ class LazyTraceReader(
         val blocks = dataBlocks[threadId] ?: error("ThreadId $threadId is not found in block list")
         val blockIdx = blocks.binarySearch { it.compareWithPhysicalOffset(physicalOffset) }
         return if (blockIdx < 0) null else blockIdx
+    }
+
+    private fun getChildrenStart(pointId: Int): Long? {
+        val idx = pointId shl 1
+        if (idx + 1 >= callTracepointChildren.size) return null
+        if (callTracepointChildren[idx] <= 0) return null
+        return callTracepointChildren[idx]
+    }
+
+    private fun setChildrenStart(pointId: Int, address: Long) {
+        val idx = pointId shl 1
+        ensurePositionsArraySize(idx)
+        callTracepointChildren[idx] = address
+    }
+
+    private fun getChildrenEnd(pointId: Int): Long? {
+        val idx = pointId shl 1
+        if (idx + 1 >= callTracepointChildren.size) return null
+        if (callTracepointChildren[idx + 1] <= 0) return null
+        return callTracepointChildren[idx + 1]
+    }
+
+    private fun setChildrenEnd(pointId: Int, address: Long) {
+        val idx = pointId shl 1
+        ensurePositionsArraySize(idx)
+        callTracepointChildren[idx + 1] = address
+    }
+
+    private fun setChildrenAddresses(pointId: Int, start: Long, end: Long) {
+        val idx = pointId shl 1
+        ensurePositionsArraySize(idx)
+        callTracepointChildren[idx] = start
+        callTracepointChildren[idx + 1] = end
+    }
+
+    private fun ensurePositionsArraySize(idx: Int) {
+        if (idx + 1 >= callTracepointChildren.size) {
+            val newSize = max(idx + 2, (callTracepointChildren.size * 1.25).roundToInt())
+            callTracepointChildren = callTracepointChildren.copyOf(newSize)
+        }
     }
 
     private companion object {
