@@ -12,279 +12,279 @@ All operations above the horizontal line | ----- | happen before those below the
 ---
 
 The following interleaving leads to the error:
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                   Thread 1                                                   |                                                               Thread 2                                                               |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| deposit(1, 6): 6                                                                                             |                                                                                                                                      |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| transfer(1, 2, 5)                                                                                            |                                                                                                                                      |
-|   lock.lock() at EmptyColumnAfterMinimizeTest.transfer(EmptyColumnAfterMinimizeTest.kt:55)                   |                                                                                                                                      |
-|   Array<Number>#1[1] ➜ Number#1 at EmptyColumnAfterMinimizeTest.transfer(EmptyColumnAfterMinimizeTest.kt:56) |                                                                                                                                      |
-|   Array<Number>#1[2] ➜ Number#2 at EmptyColumnAfterMinimizeTest.transfer(EmptyColumnAfterMinimizeTest.kt:57) |                                                                                                                                      |
-|   from.getValue(): 6 at EmptyColumnAfterMinimizeTest.transfer(EmptyColumnAfterMinimizeTest.kt:58)            |                                                                                                                                      |
-|   switch                                                                                                     |                                                                                                                                      |
-|                                                                                                              | withdraw(1, 4): -3                                                                                                                   |
-|                                                                                                              |   Array<Number>#1[1] ➜ Number#1 at EmptyColumnAfterMinimizeTest.withdraw(EmptyColumnAfterMinimizeTest.kt:46)                         |
-|                                                                                                              |   account.getValue(): 6 at EmptyColumnAfterMinimizeTest.withdraw(EmptyColumnAfterMinimizeTest.kt:47)                                 |
-|                                                                                                              |   lock.lock() at EmptyColumnAfterMinimizeTest.withdraw(EmptyColumnAfterMinimizeTest.kt:48)                                           |
-|                                                                                                              |     sync.lock() at ReentrantLock.lock(ReentrantLock.java:322)                                                                        |
-|                                                                                                              |       initialTryLock(): false at ReentrantLock.Sync.lock(ReentrantLock.java:152)                                                     |
-|                                                                                                              |       acquire(1) at ReentrantLock.Sync.lock(ReentrantLock.java:153)                                                                  |
-|                                                                                                              |         tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:937)                              |
-|                                                                                                              |         acquire(null, 1, false, false, false, 0): 1 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:938)       |
-|                                                                                                              |           Thread.currentThread(): Thread#2 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:638)                |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           node.prev ➜ null at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:656)                                |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           node.waiter = Thread#2 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:697)                          |
-|                                                                                                              |           tail ➜ null at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:698)                                     |
-|                                                                                                              |           node.setPrevRelaxed(null) at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:699)                       |
-|                                                                                                              |           tryInitializeHead() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:701)                             |
-|                                                                                                              |           node.prev ➜ null at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:656)                                |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           node.waiter = Thread#2 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:697)                          |
-|                                                                                                              |           tail ➜ ExclusiveNode#2 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:698)                          |
-|                                                                                                              |           node.setPrevRelaxed(ExclusiveNode#2) at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:699)            |
-|                                                                                                              |           casTail(ExclusiveNode#2, ExclusiveNode#1): true at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:702) |
-|                                                                                                              |           t.next = ExclusiveNode#1 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:705)                        |
-|                                                                                                              |           node.prev ➜ ExclusiveNode#2 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:656)                     |
-|                                                                                                              |           head ➜ ExclusiveNode#2 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:656)                          |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           node.status ➜ 0 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:709)                                 |
-|                                                                                                              |           node.status = 1 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:710)                                 |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           node.status ➜ 1 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:709)                                 |
-|                                                                                                              |           LockSupport.park(NonfairSync#1) at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:715)                 |
-|                                                                                                              |           node.clearStatus() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:720)                              |
-|                                                                                                              |           Thread.interrupted(): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:721)                     |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           node.status ➜ 0 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:709)                                 |
-|                                                                                                              |           node.status = 1 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:710)                                 |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           node.status ➜ 1 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:709)                                 |
-|                                                                                                              |           LockSupport.park(NonfairSync#1) at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:715)                 |
-|                                                                                                              |           node.clearStatus() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:720)                              |
-|                                                                                                              |           Thread.interrupted(): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:721)                     |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           node.status ➜ 0 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:709)                                 |
-|                                                                                                              |           node.status = 1 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:710)                                 |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           node.status ➜ 1 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:709)                                 |
-|                                                                                                              |           LockSupport.park(NonfairSync#1) at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:715)                 |
-|                                                                                                              |           node.clearStatus() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:720)                              |
-|                                                                                                              |           Thread.interrupted(): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:721)                     |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           node.status ➜ 0 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:709)                                 |
-|                                                                                                              |           node.status = 1 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:710)                                 |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           node.status ➜ 1 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:709)                                 |
-|                                                                                                              |           LockSupport.park(NonfairSync#1) at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:715)                 |
-|                                                                                                              |           node.clearStatus() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:720)                              |
-|                                                                                                              |           Thread.interrupted(): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:721)                     |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           node.status ➜ 0 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:709)                                 |
-|                                                                                                              |           node.status = 1 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:710)                                 |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           node.status ➜ 1 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:709)                                 |
-|                                                                                                              |           LockSupport.park(NonfairSync#1) at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:715)                 |
-|                                                                                                              |           node.clearStatus() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:720)                              |
-|                                                                                                              |           Thread.interrupted(): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:721)                     |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           node.status ➜ 0 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:709)                                 |
-|                                                                                                              |           node.status = 1 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:710)                                 |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           node.status ➜ 1 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:709)                                 |
-|                                                                                                              |           LockSupport.park(NonfairSync#1) at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:715)                 |
-|                                                                                                              |           node.clearStatus() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:720)                              |
-|                                                                                                              |           Thread.interrupted(): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:721)                     |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           tryAcquire(1): false at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                            |
-|                                                                                                              |           Thread.onSpinWait() at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:708)                             |
-|                                                                                                              |           switch (reason: active lock detected)                                                                                      |
-|   from.getValue(): 6 at EmptyColumnAfterMinimizeTest.transfer(EmptyColumnAfterMinimizeTest.kt:59)            |                                                                                                                                      |
-|   from.setValue(1) at EmptyColumnAfterMinimizeTest.transfer(EmptyColumnAfterMinimizeTest.kt:59)              |                                                                                                                                      |
-|   to.getValue(): 0 at EmptyColumnAfterMinimizeTest.transfer(EmptyColumnAfterMinimizeTest.kt:60)              |                                                                                                                                      |
-|   to.setValue(5) at EmptyColumnAfterMinimizeTest.transfer(EmptyColumnAfterMinimizeTest.kt:60)                |                                                                                                                                      |
-|   lock.unlock() at EmptyColumnAfterMinimizeTest.transfer(EmptyColumnAfterMinimizeTest.kt:55)                 |                                                                                                                                      |
-|   result: void                                                                                               |                                                                                                                                      |
-|                                                                                                              |           tryAcquire(1): true at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:672)                             |
-|                                                                                                              |           node.prev = null at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:679)                                |
-|                                                                                                              |           head = ExclusiveNode#1 at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:680)                          |
-|                                                                                                              |           pred.next = null at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:681)                                |
-|                                                                                                              |           node.waiter = null at AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:682)                              |
-|                                                                                                              |   account.getValue(): 1 at EmptyColumnAfterMinimizeTest.withdraw(EmptyColumnAfterMinimizeTest.kt:49)                                 |
-|                                                                                                              |   account.setValue(-3) at EmptyColumnAfterMinimizeTest.withdraw(EmptyColumnAfterMinimizeTest.kt:49)                                  |
-|                                                                                                              |   account.getValue(): -3 at EmptyColumnAfterMinimizeTest.withdraw(EmptyColumnAfterMinimizeTest.kt:50)                                |
-|                                                                                                              |   lock.unlock() at EmptyColumnAfterMinimizeTest.withdraw(EmptyColumnAfterMinimizeTest.kt:50)                                         |
-|                                                                                                              |   result: -3                                                                                                                         |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------------------------------------------------------------------- |
+|            Thread 1             |                         Thread 2                          |
+| ------------------------------------------------------------------------------------------- |
+| deposit(1, 6): 6                |                                                           |
+| ------------------------------------------------------------------------------------------- |
+| transfer(1, 2, 5)               |                                                           |
+|   lock.lock()                   |                                                           |
+|   Array<Number>#1[1] ➜ Number#1 |                                                           |
+|   Array<Number>#1[2] ➜ Number#2 |                                                           |
+|   from.getValue(): 6            |                                                           |
+|   switch                        |                                                           |
+|                                 | withdraw(1, 4): -3                                        |
+|                                 |   Array<Number>#1[1] ➜ Number#1                           |
+|                                 |   account.getValue(): 6                                   |
+|                                 |   lock.lock()                                             |
+|                                 |     sync.lock()                                           |
+|                                 |       initialTryLock(): false                             |
+|                                 |       acquire(1)                                          |
+|                                 |         tryAcquire(1): false                              |
+|                                 |         acquire(null, 1, false, false, false, 0): 1       |
+|                                 |           Thread.currentThread(): Thread#2                |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           node.prev ➜ null                                |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           node.waiter = Thread#2                          |
+|                                 |           tail ➜ null                                     |
+|                                 |           node.setPrevRelaxed(null)                       |
+|                                 |           tryInitializeHead()                             |
+|                                 |           node.prev ➜ null                                |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           node.waiter = Thread#2                          |
+|                                 |           tail ➜ ExclusiveNode#2                          |
+|                                 |           node.setPrevRelaxed(ExclusiveNode#2)            |
+|                                 |           casTail(ExclusiveNode#2, ExclusiveNode#1): true |
+|                                 |           t.next = ExclusiveNode#1                        |
+|                                 |           node.prev ➜ ExclusiveNode#2                     |
+|                                 |           head ➜ ExclusiveNode#2                          |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           node.status ➜ 0                                 |
+|                                 |           node.status = 1                                 |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           node.status ➜ 1                                 |
+|                                 |           LockSupport.park(NonfairSync#1)                 |
+|                                 |           node.clearStatus()                              |
+|                                 |           Thread.interrupted(): false                     |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           node.status ➜ 0                                 |
+|                                 |           node.status = 1                                 |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           node.status ➜ 1                                 |
+|                                 |           LockSupport.park(NonfairSync#1)                 |
+|                                 |           node.clearStatus()                              |
+|                                 |           Thread.interrupted(): false                     |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           node.status ➜ 0                                 |
+|                                 |           node.status = 1                                 |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           node.status ➜ 1                                 |
+|                                 |           LockSupport.park(NonfairSync#1)                 |
+|                                 |           node.clearStatus()                              |
+|                                 |           Thread.interrupted(): false                     |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           node.status ➜ 0                                 |
+|                                 |           node.status = 1                                 |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           node.status ➜ 1                                 |
+|                                 |           LockSupport.park(NonfairSync#1)                 |
+|                                 |           node.clearStatus()                              |
+|                                 |           Thread.interrupted(): false                     |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           node.status ➜ 0                                 |
+|                                 |           node.status = 1                                 |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           node.status ➜ 1                                 |
+|                                 |           LockSupport.park(NonfairSync#1)                 |
+|                                 |           node.clearStatus()                              |
+|                                 |           Thread.interrupted(): false                     |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           node.status ➜ 0                                 |
+|                                 |           node.status = 1                                 |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           node.status ➜ 1                                 |
+|                                 |           LockSupport.park(NonfairSync#1)                 |
+|                                 |           node.clearStatus()                              |
+|                                 |           Thread.interrupted(): false                     |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           tryAcquire(1): false                            |
+|                                 |           Thread.onSpinWait()                             |
+|                                 |           switch (reason: active lock detected)           |
+|   from.getValue(): 6            |                                                           |
+|   from.setValue(1)              |                                                           |
+|   to.getValue(): 0              |                                                           |
+|   to.setValue(5)                |                                                           |
+|   lock.unlock()                 |                                                           |
+|   result: void                  |                                                           |
+|                                 |           tryAcquire(1): true                             |
+|                                 |           node.prev = null                                |
+|                                 |           head = ExclusiveNode#1                          |
+|                                 |           pred.next = null                                |
+|                                 |           node.waiter = null                              |
+|                                 |   account.getValue(): 1                                   |
+|                                 |   account.setValue(-3)                                    |
+|                                 |   account.getValue(): -3                                  |
+|                                 |   lock.unlock()                                           |
+|                                 |   result: -3                                              |
+| ------------------------------------------------------------------------------------------- |
 
 Detailed trace:
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -6,23 +6,23 @@
 | ------------------------- |
 
 The following interleaving leads to the error:
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                         Thread 1                                                         |                                                         Thread 2                                                         |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                                                          | operation()                                                                                                              |
-|                                                                                                                          |   MONITORENTER at ObstructionFreedomSynchronizedRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:61) |
-|                                                                                                                          |   switch                                                                                                                 |
-| operation()                                                                                                              |                                                                                                                          |
-|   MONITORENTER at ObstructionFreedomSynchronizedRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:61) |                                                                                                                          |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------- |
+|    Thread 1    |    Thread 2    |
+| ------------------------------- |
+|                | operation()    |
+|                |   MONITORENTER |
+|                |   switch       |
+| operation()    |                |
+|   MONITORENTER |                |
+| ------------------------------- |
 
 Detailed trace:
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                         Thread 1                                                         |                                                         Thread 2                                                         |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                                                                          | operation()                                                                                                              |
-|                                                                                                                          |   MONITORENTER at ObstructionFreedomSynchronizedRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:61) |
+|                                                                                                                          |   MONITORENTER at ObstructionFreedomSynchronizedRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:67) |
 |                                                                                                                          |   switch                                                                                                                 |
 | operation()                                                                                                              |                                                                                                                          |
-|   MONITORENTER at ObstructionFreedomSynchronizedRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:61) |                                                                                                                          |
+|   MONITORENTER at ObstructionFreedomSynchronizedRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:67) |                                                                                                                          |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
