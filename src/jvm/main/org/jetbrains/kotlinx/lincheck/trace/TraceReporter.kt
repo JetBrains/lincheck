@@ -67,7 +67,7 @@ internal class TraceReporter(
         // Turn graph into chronological sequence of calls and events, for verbose and simple trace.
         val flattenedShort: SingleThreadedTable<TraceNode> = graph.flattenNodes(ShortTraceFlattenPolicy()).reorder()
         val flattenedVerbose: SingleThreadedTable<TraceNode> = graph.flattenNodes(VerboseTraceFlattenPolicy()).reorder()
-        appendTraceTable(TRACE_TITLE, trace, failure, flattenedShort)
+        appendTraceTable(TRACE_TITLE, trace, failure, flattenedShort, showStackTraceElements = false)
         appendLine()
 
         if (!isGeneralPurposeModelCheckingScenario(failure.scenario)) {
@@ -75,15 +75,8 @@ internal class TraceReporter(
         }
 
         // if empty trace show only the first
-        withShowingStackTraceElements {
-            if (flattenedVerbose.sumOf { it.size } != 1) {
-                appendTraceTable(
-                    DETAILED_TRACE_TITLE,
-                    trace,
-                    failure,
-                    flattenedVerbose
-                )
-            }
+        if (flattenedVerbose.sumOf { it.size } != 1) {
+            appendTraceTable(DETAILED_TRACE_TITLE, trace, failure, flattenedVerbose)
         }
     }
 
@@ -293,10 +286,10 @@ internal class TraceReporter(
 /**
  * Appends trace table to [Appendable]
  */
-internal fun Appendable.appendTraceTable(title: String, trace: Trace, failure: LincheckFailure?, graph: SingleThreadedTable<TraceNode>) {
+internal fun Appendable.appendTraceTable(title: String, trace: Trace, failure: LincheckFailure?, graph: SingleThreadedTable<TraceNode>, showStackTraceElements: Boolean = true) {
     appendLine(title)
     val traceRepresentationSplitted = splitInColumns(trace.threadNames.size, graph)
-    val stringTable = traceNodeTableToString(traceRepresentationSplitted)
+    val stringTable = traceNodeTableToString(traceRepresentationSplitted, showStackTraceElements)
     val layout = ExecutionLayout(
         nThreads = trace.threadNames.size,
         interleavingSections = stringTable,
@@ -383,7 +376,7 @@ private const val START_SPIN_CYCLE = -2
  * Prints all cells of the [MultiThreadedTable] to string representation.
  * Prepends spin cycle visualization where needed.
  */
-private fun traceNodeTableToString(table: MultiThreadedTable<TraceNode?>): MultiThreadedTable<String> =
+private fun traceNodeTableToString(table: MultiThreadedTable<TraceNode?>, showStackTraceElements: Boolean = true): MultiThreadedTable<String> =
     table.map tableMap@{ section -> section.map sectionMap@{ column ->
         var spinCycleDepth = NO_SPIN_CYCLE
         var additionalSpace = column
@@ -399,27 +392,32 @@ private fun traceNodeTableToString(table: MultiThreadedTable<TraceNode?>): Multi
             // If begin of spin cycle
             if (spinCycleDepth == START_SPIN_CYCLE) {
                 spinCycleDepth = node.callDepth
-                return@map "  ".repeat((virtualCallDepth - 2).coerceAtLeast(0)) + "┌╶> " + node.toString()
+                val prefix = "  ".repeat((virtualCallDepth - 2).coerceAtLeast(0)) + "┌╶> "
+                return@map prefix + node.toStringImpl(withLocation = showStackTraceElements)
             }
 
             // If spinc cycle detected change state. Next iteration will start visualization
-            if (node is EventNode && node.tracePoint is SpinCycleStartTracePoint) spinCycleDepth = START_SPIN_CYCLE
+            if (node is EventNode && node.tracePoint is SpinCycleStartTracePoint) {
+                spinCycleDepth = START_SPIN_CYCLE
+            }
 
             // If end of spin cycle
-            if (spinCycleDepth >= 0 && node is EventNode
-                && (node.tracePoint is ObstructionFreedomViolationExecutionAbortTracePoint || node.tracePoint is SwitchEventTracePoint)) {
+            if (spinCycleDepth >= 0 && node is EventNode &&
+                (node.tracePoint is ObstructionFreedomViolationExecutionAbortTracePoint || node.tracePoint is SwitchEventTracePoint)
+            ) {
                 spinCycleDepth = NO_SPIN_CYCLE
                 val prefix = "  ".repeat((virtualSpinCycleDepth - 2).coerceAtLeast(0)) + "└╶╶╶" + "╶╶".repeat(max(virtualCallDepth - virtualSpinCycleDepth, 0))
-                return@map  prefix.dropLast(1) + " " + node.toString()
+                return@map prefix.dropLast(1) + " " + node.toStringImpl(withLocation = showStackTraceElements)
             }
 
             // If during spin cycle
             if (spinCycleDepth >= 0) {
-                return@map "  ".repeat((virtualSpinCycleDepth - 2).coerceAtLeast(0)) + "|   " + "  ".repeat(max(virtualCallDepth - virtualSpinCycleDepth, 0)) + node.toString()
+                val prefix = "  ".repeat((virtualSpinCycleDepth - 2).coerceAtLeast(0)) + "|   " + "  ".repeat(max(virtualCallDepth - virtualSpinCycleDepth, 0))
+                return@map prefix + node.toStringImpl(withLocation = showStackTraceElements)
             }
 
             // Default
-            return@map "  ".repeat(virtualCallDepth) + node.toString()
+            return@map "  ".repeat(virtualCallDepth) + node.toStringImpl(withLocation = showStackTraceElements)
         }
     }
 }
