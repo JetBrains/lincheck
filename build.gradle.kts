@@ -12,6 +12,7 @@ import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.util.*
@@ -365,6 +366,43 @@ tasks {
                 println("Upload result: ${response.body!!.string()}")
                 if (statusCode != 201) {
                     error("Upload error to Central repository. Status code $statusCode.")
+                }
+            }
+        }
+    }
+
+    val queryCentralPortalPublicationStatus by registering {
+        group = "publishing"
+
+        doLast {
+            val uriBase = "https://central.sonatype.com/api/v1/publisher/status"
+            val deploymentId = rootProject.extra["deploymentId"] as String?
+                ?: error("deploymentId is not set up")
+            val uri = "$uriBase?id=$deploymentId"
+
+            val userName = System.getenv("MVN_CLIENT_USERNAME")
+            val token = System.getenv("MVN_CLIENT_PASSWORD")
+            if (userName == null || token == null) {
+                logger.error("Sonatype central portal credentials are not set up, skipping querying publication status")
+                return@doLast
+            }
+
+            val base64Auth = Base64.getEncoder().encode("$userName:$token".toByteArray()).toString(Charsets.UTF_8)
+
+            println("Sending request to $uri...")
+
+            val client = OkHttpClient()
+            val request = Request.Builder()
+                .url(uri)
+                .header("Authorization", "Bearer $base64Auth")
+                .post("".toRequestBody())
+                .build()
+            client.newCall(request).execute().use { response ->
+                val statusCode = response.code
+                println("Query status code: $statusCode")
+                println("Response: ${response.body!!.string()}")
+                if (statusCode != 200) {
+                    error("Query error to Central repository. Status code $statusCode.")
                 }
             }
         }
