@@ -651,7 +651,6 @@ internal fun isJavaUtilArraysClass(className: String): Boolean =
 internal fun isJavaLangAccessClass(className: String): Boolean =
     className == "jdk.internal.access.JavaLangAccess"
 
-
 /**
  * Extracts the simple class name from a fully qualified canonical class name.
  */

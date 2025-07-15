@@ -45,7 +45,27 @@ fun isThreadContainerClass(className: String): Boolean =
     className == "jdk.internal.vm.SharedThreadContainer"  ||
     className == "jdk.internal.misc.ThreadFlock"
 
+/**
+ * Checks if the given class name belongs to the IntelliJ runtime debugger agent package.
+ */
+fun isIntellijRuntimeDebuggerAgentClass(className: String) =
+    className.startsWith("com.intellij.rt.debugger.agent")
+
+/**
+ * Checks if the given class name belongs to the IntelliJ runtime coverage agent package.
+ */
+fun isIntellijRuntimeCoverageAgentClass(className: String) =
+    className.startsWith("com.intellij.rt.coverage")
+
+/**
+ * Checks if the given class name belongs to the IntelliJ runtime agents.
+ */
+fun isIntellijRuntimeAgentClass(className: String) =
+    isIntellijRuntimeDebuggerAgentClass(className) || isIntellijRuntimeCoverageAgentClass(className)
+
+
 // Idea plugin flags
+
 /**
  * Internal property to check that trace point IDs are in a strict sequential order.
  */

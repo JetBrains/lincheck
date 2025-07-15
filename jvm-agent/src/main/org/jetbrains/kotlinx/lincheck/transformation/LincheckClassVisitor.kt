@@ -22,6 +22,7 @@ import org.jetbrains.lincheck.util.Logger
 import org.jetbrains.lincheck.util.ideaPluginEnabled
 import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import org.jetbrains.lincheck.util.isThreadContainerClass
+import org.jetbrains.lincheck.util.isIntellijRuntimeAgentClass
 import sun.nio.ch.lincheck.*
 
 internal class LincheckClassVisitor(
@@ -182,6 +183,11 @@ internal class LincheckClassVisitor(
          *   - https://github.com/JetBrains/lincheck/issues/419
          */
         if (isStackTraceElementClass(className.toCanonicalClassName())) {
+            mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
+            return mv
+        }
+        // Wrap IntelliJ IDEA runtime agent's methods into ignored section.
+        if (isIntellijRuntimeAgentClass(className.toCanonicalClassName())) {
             mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
         }

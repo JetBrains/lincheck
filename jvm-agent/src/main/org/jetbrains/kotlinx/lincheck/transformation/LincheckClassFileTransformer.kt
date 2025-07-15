@@ -14,9 +14,10 @@ import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.INSTRUMEN
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentationMode
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentedClasses
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
-import org.jetbrains.lincheck.util.AnalysisProfile
 import org.jetbrains.lincheck.util.Logger
+import org.jetbrains.lincheck.util.AnalysisProfile
 import org.jetbrains.lincheck.util.isThreadContainerClass
+import org.jetbrains.lincheck.util.isIntellijRuntimeAgentClass
 import org.jetbrains.lincheck.util.runInsideIgnoredSection
 import org.objectweb.asm.*
 import org.objectweb.asm.tree.ClassNode
@@ -170,6 +171,8 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         (instrumentationMode != TRACE_RECORDING && isMethodHandleRelatedClass(className)) ||
         // `StackTraceElement` class, to wrap all its methods into the ignored section.
         isStackTraceElementClass(className) ||
+        // IntelliJ runtime agents, to wrap all their methods into the ignored section.
+        isIntellijRuntimeAgentClass(className) ||
         // `ThreadContainer` classes, to detect threads started in the thread containers.
         isThreadContainerClass(className) ||
         // TODO: instead of eagerly instrumenting `DispatchedContinuation`
