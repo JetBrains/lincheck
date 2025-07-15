@@ -7,23 +7,23 @@
 
 
 The following interleaving leads to the error:
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                 Thread 1                                                                  |                                                                 Thread 2                                                                  |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                                                                           |   two(): <hung>                                                                                                                           |
-|                                                                                                                                           |     meaninglessActions1() at RecursiveTwoThreadsSpinLockTest.two(RecursiveSpinLockTest.kt:250)                                            |
-|                                                                                                                                           |     switch                                                                                                                                |
-|   one(): <hung>                                                                                                                           |                                                                                                                                           |
-|     meaninglessActions2() at RecursiveTwoThreadsSpinLockTest.one(RecursiveSpinLockTest.kt:239)                                            |                                                                                                                                           |
-|     /* The following events repeat infinitely: */                                                                                         |                                                                                                                                           |
-| ┌╶> meaninglessActions1() at RecursiveTwoThreadsSpinLockTest.one(RecursiveSpinLockTest.kt:240)                                            |                                                                                                                                           |
-| |     sharedState2.compareAndSet(false, true): false at RecursiveTwoThreadsSpinLockTest.meaninglessActions1(RecursiveSpinLockTest.kt:260) |                                                                                                                                           |
-| └╶╶╶╶ switch (reason: active lock detected)                                                                                               |                                                                                                                                           |
-|                                                                                                                                           |     /* The following events repeat infinitely: */                                                                                         |
-|                                                                                                                                           | ┌╶> meaninglessActions2() at RecursiveTwoThreadsSpinLockTest.two(RecursiveSpinLockTest.kt:251)                                            |
-|                                                                                                                                           | |     sharedState1.compareAndSet(false, true): false at RecursiveTwoThreadsSpinLockTest.meaninglessActions2(RecursiveSpinLockTest.kt:265) |
-|                                                                                                                                           | └╶╶╶╶ switch (reason: active lock detected)                                                                                               |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ----------------------------------------------------------------------------------------------------------- |
+|                       Thread 1                       |                       Thread 2                       |
+| ----------------------------------------------------------------------------------------------------------- |
+|                                                      |   two(): <hung>                                      |
+|                                                      |     meaninglessActions1()                            |
+|                                                      |     switch                                           |
+|   one(): <hung>                                      |                                                      |
+|     meaninglessActions2()                            |                                                      |
+|     /* The following events repeat infinitely: */    |                                                      |
+| ┌╶> meaninglessActions1()                            |                                                      |
+| |     sharedState2.compareAndSet(false, true): false |                                                      |
+| └╶╶╶╶ switch (reason: active lock detected)          |                                                      |
+|                                                      |     /* The following events repeat infinitely: */    |
+|                                                      | ┌╶> meaninglessActions2()                            |
+|                                                      | |     sharedState1.compareAndSet(false, true): false |
+|                                                      | └╶╶╶╶ switch (reason: active lock detected)          |
+| ----------------------------------------------------------------------------------------------------------- |
 All unfinished threads are in deadlock
 
 Detailed trace:

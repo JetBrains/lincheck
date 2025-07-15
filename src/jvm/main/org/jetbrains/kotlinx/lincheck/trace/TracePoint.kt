@@ -17,6 +17,18 @@ import org.jetbrains.kotlinx.lincheck.strategy.BlockingReason
 import org.jetbrains.kotlinx.lincheck.util.ThreadId
 import org.jetbrains.lincheck.descriptors.CodeLocations
 
+private var SHOW_STACK_TRACE_ELEMENTS = false
+
+internal fun withShowingStackTraceElements(block: () -> Unit) {
+    val old = SHOW_STACK_TRACE_ELEMENTS
+    SHOW_STACK_TRACE_ELEMENTS = true
+    try {
+        block()
+    } finally {
+        SHOW_STACK_TRACE_ELEMENTS = old
+    }
+}
+
 data class Trace(
     val trace: List<TracePoint>,
     val threadNames: List<String>,
@@ -121,7 +133,7 @@ internal abstract class CodeLocationTracePoint(
 
     protected abstract fun toStringCompact(): String
     override fun toStringImpl(withLocation: Boolean): String {
-        return toStringCompact() + if (withLocation) " at ${stackTraceElement.compress()}" else ""
+        return toStringCompact() + if (withLocation && SHOW_STACK_TRACE_ELEMENTS) " at ${stackTraceElement.compress()}" else ""
     }
 }
 

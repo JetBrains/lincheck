@@ -7,41 +7,41 @@
 
 
 The following interleaving leads to the error:
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                      Thread 1                                                       |                                                                  Thread 2                                                                  |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| trigger()                                                                                                           |                                                                                                                                            |
-|   counter.incrementAndGet(): 1 at RecursiveSpinLockTwoStepRecursionEventsTest.trigger(RecursiveSpinLockTest.kt:186) |                                                                                                                                            |
-|   switch                                                                                                            |                                                                                                                                            |
-|                                                                                                                     |   causesSpinLock(): <hung>                                                                                                                 |
-|                                                                                                                     |     counter.get(): 1 at RecursiveSpinLockTwoStepRecursionEventsTest.causesSpinLock(RecursiveSpinLockTest.kt:192)                           |
-|                                                                                                                     |     /* The following events repeat infinitely: */                                                                                          |
-|                                                                                                                     | ┌╶> outerRecursiveSpinCycle() at RecursiveSpinLockTwoStepRecursionEventsTest.causesSpinLock(RecursiveSpinLockTest.kt:193)                  |
-|                                                                                                                     | |     deadSpinCycleRecursive() at RecursiveSpinLockTwoStepRecursionEventsTest.outerRecursiveSpinCycle(RecursiveSpinLockTest.kt:198)        |
-|                                                                                                                     | |       getSharedVariable(): false at RecursiveSpinLockTwoStepRecursionEventsTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:203)     |
-|                                                                                                                     | |       action(false): true at RecursiveSpinLockTwoStepRecursionEventsTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:204)            |
-|                                                                                                                     | |       getSharedVariable(): true at RecursiveSpinLockTwoStepRecursionEventsTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:203)      |
-|                                                                                                                     | |       action(true): true at RecursiveSpinLockTwoStepRecursionEventsTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:204)             |
-|                                                                                                                     | |       getSharedVariable(): false at RecursiveSpinLockTwoStepRecursionEventsTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:203)     |
-|                                                                                                                     | |       action(false): true at RecursiveSpinLockTwoStepRecursionEventsTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:204)            |
-|                                                                                                                     | |       getSharedVariable(): true at RecursiveSpinLockTwoStepRecursionEventsTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:203)      |
-|                                                                                                                     | |       action(true): true at RecursiveSpinLockTwoStepRecursionEventsTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:204)             |
-|                                                                                                                     | └╶╶╶╶╶╶ switch (reason: active lock detected)                                                                                              |
-|   counter.decrementAndGet(): 0 at RecursiveSpinLockTwoStepRecursionEventsTest.trigger(RecursiveSpinLockTest.kt:187) |                                                                                                                                            |
-|   result: void                                                                                                      |                                                                                                                                            |
-|                                                                                                                     |         /* The following events repeat infinitely: */                                                                                      |
-|                                                                                                                     |     ┌╶> outerRecursiveSpinCycle() at RecursiveSpinLockTwoStepRecursionEventsTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:206)      |
-|                                                                                                                     |     |     deadSpinCycleRecursive() at RecursiveSpinLockTwoStepRecursionEventsTest.outerRecursiveSpinCycle(RecursiveSpinLockTest.kt:198)    |
-|                                                                                                                     |     |       getSharedVariable(): false at RecursiveSpinLockTwoStepRecursionEventsTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:203) |
-|                                                                                                                     |     |       action(false): true at RecursiveSpinLockTwoStepRecursionEventsTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:204)        |
-|                                                                                                                     |     |       getSharedVariable(): true at RecursiveSpinLockTwoStepRecursionEventsTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:203)  |
-|                                                                                                                     |     |       action(true): true at RecursiveSpinLockTwoStepRecursionEventsTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:204)         |
-|                                                                                                                     |     |       getSharedVariable(): false at RecursiveSpinLockTwoStepRecursionEventsTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:203) |
-|                                                                                                                     |     |       action(false): true at RecursiveSpinLockTwoStepRecursionEventsTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:204)        |
-|                                                                                                                     |     |       getSharedVariable(): true at RecursiveSpinLockTwoStepRecursionEventsTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:203)  |
-|                                                                                                                     |     |       action(true): true at RecursiveSpinLockTwoStepRecursionEventsTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:204)         |
-|                                                                                                                     |     └╶╶╶╶╶╶ switch (reason: active lock detected)                                                                                          |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| -------------------------------------------------------------------------------------- |
+|            Thread 1            |                       Thread 2                        |
+| -------------------------------------------------------------------------------------- |
+| trigger()                      |                                                       |
+|   counter.incrementAndGet(): 1 |                                                       |
+|   switch                       |                                                       |
+|                                |   causesSpinLock(): <hung>                            |
+|                                |     counter.get(): 1                                  |
+|                                |     /* The following events repeat infinitely: */     |
+|                                | ┌╶> outerRecursiveSpinCycle()                         |
+|                                | |     deadSpinCycleRecursive()                        |
+|                                | |       getSharedVariable(): false                    |
+|                                | |       action(false): true                           |
+|                                | |       getSharedVariable(): true                     |
+|                                | |       action(true): true                            |
+|                                | |       getSharedVariable(): false                    |
+|                                | |       action(false): true                           |
+|                                | |       getSharedVariable(): true                     |
+|                                | |       action(true): true                            |
+|                                | └╶╶╶╶╶╶ switch (reason: active lock detected)         |
+|   counter.decrementAndGet(): 0 |                                                       |
+|   result: void                 |                                                       |
+|                                |         /* The following events repeat infinitely: */ |
+|                                |     ┌╶> outerRecursiveSpinCycle()                     |
+|                                |     |     deadSpinCycleRecursive()                    |
+|                                |     |       getSharedVariable(): false                |
+|                                |     |       action(false): true                       |
+|                                |     |       getSharedVariable(): true                 |
+|                                |     |       action(true): true                        |
+|                                |     |       getSharedVariable(): false                |
+|                                |     |       action(false): true                       |
+|                                |     |       getSharedVariable(): true                 |
+|                                |     |       action(true): true                        |
+|                                |     └╶╶╶╶╶╶ switch (reason: active lock detected)     |
+| -------------------------------------------------------------------------------------- |
 All unfinished threads are in deadlock
 
 Detailed trace:

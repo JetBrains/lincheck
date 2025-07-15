@@ -49,7 +49,7 @@ internal class TraceReporter(
     private val trace = trace.deepCopy()
     private val resultProvider = ExecutionResultsProvider(results, failure, exceptionStackTraces)
     val graph: SingleThreadedTable<TraceNode>
-    
+
     init {
         // Prepares trace by: 
         // - removing validation section (in case of no validation failure)
@@ -62,20 +62,29 @@ internal class TraceReporter(
 
          graph = traceToCollapsedGraph(fixedTrace, failure.analysisProfile, failure.scenario)
     }
-    
+
     fun appendTrace(app: Appendable) = with(app) {
         // Turn graph into chronological sequence of calls and events, for verbose and simple trace.
         val flattenedShort: SingleThreadedTable<TraceNode> = graph.flattenNodes(ShortTraceFlattenPolicy()).reorder()
         val flattenedVerbose: SingleThreadedTable<TraceNode> = graph.flattenNodes(VerboseTraceFlattenPolicy()).reorder()
         appendTraceTable(TRACE_TITLE, trace, failure, flattenedShort)
         appendLine()
-        
+
         if (!isGeneralPurposeModelCheckingScenario(failure.scenario)) {
             appendExceptionsStackTracesBlock(exceptionStackTraces)
         }
-        
+
         // if empty trace show only the first
-        if (flattenedVerbose.sumOf { it.size } != 1) appendTraceTable(DETAILED_TRACE_TITLE, trace, failure, flattenedVerbose)
+        withShowingStackTraceElements {
+            if (flattenedVerbose.sumOf { it.size } != 1) {
+                appendTraceTable(
+                    DETAILED_TRACE_TITLE,
+                    trace,
+                    failure,
+                    flattenedVerbose
+                )
+            }
+        }
     }
 
     /**
@@ -330,7 +339,7 @@ internal fun List<MethodCallTracePoint>.isEqualStackTrace(other: List<MethodCall
 private fun removeGPMCLambda(graph: SingleThreadedTable<TraceNode>): SingleThreadedTable<TraceNode> {
     check(graph.size == 1) { "When in GPMC mode only one scenario section is expected" }
     check(graph[0].isNotEmpty()) { "When in GPMC mode atleast one actor is expected (the run() call to be precise)" }
-    return graph.map { section -> 
+    return graph.map { section ->
         val first = section.first()
         if (first !is CallNode) return@map section
         if (first.children.isEmpty()) return@map listOf(first.createResultNodeForEmptyActor())
@@ -358,8 +367,8 @@ private fun removeGPMCLambda(graph: SingleThreadedTable<TraceNode>): SingleThrea
 private fun splitInColumns(nThreads: Int, flattened: SingleThreadedTable<TraceNode>): MultiThreadedTable<TraceNode?> =
     flattened.map { section ->
         val multiThreadedSection = List<MutableList<TraceNode?>>(nThreads) { mutableListOf() }
-        section.forEach { node -> 
-            repeat(nThreads) { i -> 
+        section.forEach { node ->
+            repeat(nThreads) { i ->
                 if (i == node.iThread) multiThreadedSection[i].add(node)
                 else multiThreadedSection[i].add(null)
             }
@@ -374,25 +383,25 @@ private const val START_SPIN_CYCLE = -2
  * Prints all cells of the [MultiThreadedTable] to string representation.
  * Prepends spin cycle visualization where needed.
  */
-private fun traceNodeTableToString(table: MultiThreadedTable<TraceNode?>): MultiThreadedTable<String> = 
-    table.map tableMap@{ section -> section.map sectionMap@{ column -> 
+private fun traceNodeTableToString(table: MultiThreadedTable<TraceNode?>): MultiThreadedTable<String> =
+    table.map tableMap@{ section -> section.map sectionMap@{ column ->
         var spinCycleDepth = NO_SPIN_CYCLE
         var additionalSpace = column
             .firstOrNull { it is EventNode && it.tracePoint is SpinCycleStartTracePoint }
             ?.let { max(0, 2 - it.callDepth) } ?: 0
-                
-        // TraceNode to string        
+
+        // TraceNode to string
         column.map { node ->
             if (node == null) return@map ""
             val virtualCallDepth = additionalSpace + node.callDepth
             val virtualSpinCycleDepth = additionalSpace + spinCycleDepth
-            
+
             // If begin of spin cycle
             if (spinCycleDepth == START_SPIN_CYCLE) {
                 spinCycleDepth = node.callDepth
                 return@map "  ".repeat((virtualCallDepth - 2).coerceAtLeast(0)) + "┌╶> " + node.toString()
             }
-            
+
             // If spinc cycle detected change state. Next iteration will start visualization
             if (node is EventNode && node.tracePoint is SpinCycleStartTracePoint) spinCycleDepth = START_SPIN_CYCLE
 
@@ -403,12 +412,12 @@ private fun traceNodeTableToString(table: MultiThreadedTable<TraceNode?>): Multi
                 val prefix = "  ".repeat((virtualSpinCycleDepth - 2).coerceAtLeast(0)) + "└╶╶╶" + "╶╶".repeat(max(virtualCallDepth - virtualSpinCycleDepth, 0))
                 return@map  prefix.dropLast(1) + " " + node.toString()
             }
-            
+
             // If during spin cycle
             if (spinCycleDepth >= 0) {
                 return@map "  ".repeat((virtualSpinCycleDepth - 2).coerceAtLeast(0)) + "|   " + "  ".repeat(max(virtualCallDepth - virtualSpinCycleDepth, 0)) + node.toString()
             }
-            
+
             // Default
             return@map "  ".repeat(virtualCallDepth) + node.toString()
         }
@@ -420,7 +429,7 @@ private fun traceNodeTableToString(table: MultiThreadedTable<TraceNode?>): Multi
  * Helper class to provider execution results, including a validation function result
  */
 private class ExecutionResultsProvider(
-    result: ExecutionResult?, 
+    result: ExecutionResult?,
     val failure: LincheckFailure,
     val exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>,
 ) {
@@ -451,7 +460,7 @@ private class ExecutionResultsProvider(
 
     private fun firstThreadActorCount(failure: ValidationFailure): Int =
         failure.scenario.initExecution.size + failure.scenario.parallelExecution[0].size + failure.scenario.postExecution.size
-    
+
     private fun actorNodeResultRepresentation(
         result: Result?,
     ): ReturnedValueResult.ActorResult {

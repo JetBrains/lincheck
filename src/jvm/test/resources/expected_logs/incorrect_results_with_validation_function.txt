@@ -6,28 +6,28 @@
 | ------------------- |
 
 The following interleaving leads to the error:
-| ----------------------------------------------------------------------------------------------------------------------- |
-| Thread 1 |                                                   Thread 2                                                   |
-| ----------------------------------------------------------------------------------------------------------------------- |
-|          | inc(): 0                                                                                                     |
-|          |   counter ➜ 0 at IncorrectResultsFailureWithCorrectValidationFunctionTest.inc(ValidationFunctionTests.kt:82) |
-|          |   switch                                                                                                     |
-| inc(): 0 |                                                                                                              |
-|          |   counter = 1 at IncorrectResultsFailureWithCorrectValidationFunctionTest.inc(ValidationFunctionTests.kt:82) |
-|          |   result: 0                                                                                                  |
-| ----------------------------------------------------------------------------------------------------------------------- |
+| ------------------------ |
+| Thread 1 |   Thread 2    |
+| ------------------------ |
+|          | inc(): 0      |
+|          |   counter ➜ 0 |
+|          |   switch      |
+| inc(): 0 |               |
+|          |   counter = 1 |
+|          |   result: 0   |
+| ------------------------ |
 
 Detailed trace:
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                   Thread 1                                                   |                                                   Thread 2                                                   |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                                                              | inc(): 0                                                                                                     |
-|                                                                                                              |   counter ➜ 0 at IncorrectResultsFailureWithCorrectValidationFunctionTest.inc(ValidationFunctionTests.kt:82) |
+|                                                                                                              |   counter ➜ 0 at IncorrectResultsFailureWithCorrectValidationFunctionTest.inc(ValidationFunctionTests.kt:83) |
 |                                                                                                              |   switch                                                                                                     |
 | inc(): 0                                                                                                     |                                                                                                              |
-|   counter ➜ 0 at IncorrectResultsFailureWithCorrectValidationFunctionTest.inc(ValidationFunctionTests.kt:82) |                                                                                                              |
-|   counter = 1 at IncorrectResultsFailureWithCorrectValidationFunctionTest.inc(ValidationFunctionTests.kt:82) |                                                                                                              |
+|   counter ➜ 0 at IncorrectResultsFailureWithCorrectValidationFunctionTest.inc(ValidationFunctionTests.kt:83) |                                                                                                              |
+|   counter = 1 at IncorrectResultsFailureWithCorrectValidationFunctionTest.inc(ValidationFunctionTests.kt:83) |                                                                                                              |
 |   result: 0                                                                                                  |                                                                                                              |
-|                                                                                                              |   counter = 1 at IncorrectResultsFailureWithCorrectValidationFunctionTest.inc(ValidationFunctionTests.kt:82) |
+|                                                                                                              |   counter = 1 at IncorrectResultsFailureWithCorrectValidationFunctionTest.inc(ValidationFunctionTests.kt:83) |
 |                                                                                                              |   result: 0                                                                                                  |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

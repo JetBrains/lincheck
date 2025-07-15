@@ -10,41 +10,41 @@
 | ------------------------------- |
 
 The following interleaving leads to the error:
-| --------------------------------------------------------------------------------------------------------------------------- |
-|    Thread 1    |                                                  Thread 2                                                  |
-| --------------------------------------------------------------------------------------------------------------------------- |
-|                | operation(): 3                                                                                             |
-|                |   counter ➜ AtomicInteger#1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:33)    |
-|                |   counter.incrementAndGet(): 1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:33) |
-|                |   STATE: 1                                                                                                 |
-|                |   counter ➜ AtomicInteger#1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:34)    |
-|                |   switch                                                                                                   |
-| operation(): 2 |                                                                                                            |
-| STATE: 3       |                                                                                                            |
-|                |   counter.getAndIncrement(): 3 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:34) |
-|                |   STATE: 4                                                                                                 |
-|                |   result: 3                                                                                                |
-| --------------------------------------------------------------------------------------------------------------------------- |
+| ----------------------------------------------- |
+|    Thread 1    |            Thread 2            |
+| ----------------------------------------------- |
+|                | operation(): 3                 |
+|                |   counter ➜ AtomicInteger#1    |
+|                |   counter.incrementAndGet(): 1 |
+|                |   STATE: 1                     |
+|                |   counter ➜ AtomicInteger#1    |
+|                |   switch                       |
+| operation(): 2 |                                |
+| STATE: 3       |                                |
+|                |   counter.getAndIncrement(): 3 |
+|                |   STATE: 4                     |
+|                |   result: 3                    |
+| ----------------------------------------------- |
 
 Detailed trace:
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                  Thread 1                                                  |                                                  Thread 2                                                  |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                                                            | operation(): 3                                                                                             |
-|                                                                                                            |   counter ➜ AtomicInteger#1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:33)    |
-|                                                                                                            |   counter.incrementAndGet(): 1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:33) |
+|                                                                                                            |   counter ➜ AtomicInteger#1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:36)    |
+|                                                                                                            |   counter.incrementAndGet(): 1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:36) |
 |                                                                                                            |   STATE: 1                                                                                                 |
-|                                                                                                            |   counter ➜ AtomicInteger#1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:34)    |
+|                                                                                                            |   counter ➜ AtomicInteger#1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:37)    |
 |                                                                                                            |   switch                                                                                                   |
 | operation(): 2                                                                                             |                                                                                                            |
-|   counter ➜ AtomicInteger#1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:33)    |                                                                                                            |
-|   counter.incrementAndGet(): 2 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:33) |                                                                                                            |
+|   counter ➜ AtomicInteger#1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:36)    |                                                                                                            |
+|   counter.incrementAndGet(): 2 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:36) |                                                                                                            |
 |   STATE: 2                                                                                                 |                                                                                                            |
-|   counter ➜ AtomicInteger#1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:34)    |                                                                                                            |
-|   counter.getAndIncrement(): 2 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:34) |                                                                                                            |
+|   counter ➜ AtomicInteger#1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:37)    |                                                                                                            |
+|   counter.getAndIncrement(): 2 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:37) |                                                                                                            |
 |   STATE: 3                                                                                                 |                                                                                                            |
 |   result: 2                                                                                                |                                                                                                            |
-|                                                                                                            |   counter.getAndIncrement(): 3 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:34) |
+|                                                                                                            |   counter.getAndIncrement(): 3 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:37) |
 |                                                                                                            |   STATE: 4                                                                                                 |
 |                                                                                                            |   result: 3                                                                                                |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

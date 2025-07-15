@@ -6,19 +6,19 @@
 | ----------------------------------------- |
 
 The following interleaving leads to the error:
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|      Thread 1       |                                                                                   Thread 2                                                                                    |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                     | incTwiceAndGet(): 4                                                                                                                                                           |
-|                     |   incAndGet(): 1 at SwitchAsFirstMethodEventTest.incTwiceAndGet(SwitchAsFirstMethodEventTest.kt:54)                                                                           |
-|                     |   incAndGet(): 4 at SwitchAsFirstMethodEventTest.incTwiceAndGet(SwitchAsFirstMethodEventTest.kt:55)                                                                           |
-|                     |     incAndGetImpl(): 4 at SwitchAsFirstMethodEventTest.incAndGet(SwitchAsFirstMethodEventTest.kt:58)                                                                          |
-|                     |       SwitchAsFirstMethodEventTest.getCounter$volatile$FU(): AtomicIntegerFieldUpdaterImpl#1 at SwitchAsFirstMethodEventTest.incAndGetImpl(SwitchAsFirstMethodEventTest.kt:0) |
-|                     |       switch                                                                                                                                                                  |
-| incTwiceAndGet(): 3 |                                                                                                                                                                               |
-|                     |       counter.incrementAndGet(): 4 at SwitchAsFirstMethodEventTest.incAndGetImpl(SwitchAsFirstMethodEventTest.kt:60)                                                          |
-|                     |   result: 4                                                                                                                                                                   |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------------------------------------------------------------------------------------------ |
+|      Thread 1       |                                           Thread 2                                           |
+| ------------------------------------------------------------------------------------------------------------------ |
+|                     | incTwiceAndGet(): 4                                                                          |
+|                     |   incAndGet(): 1                                                                             |
+|                     |   incAndGet(): 4                                                                             |
+|                     |     incAndGetImpl(): 4                                                                       |
+|                     |       SwitchAsFirstMethodEventTest.getCounter$volatile$FU(): AtomicIntegerFieldUpdaterImpl#1 |
+|                     |       switch                                                                                 |
+| incTwiceAndGet(): 3 |                                                                                              |
+|                     |       counter.incrementAndGet(): 4                                                           |
+|                     |   result: 4                                                                                  |
+| ------------------------------------------------------------------------------------------------------------------ |
 
 Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

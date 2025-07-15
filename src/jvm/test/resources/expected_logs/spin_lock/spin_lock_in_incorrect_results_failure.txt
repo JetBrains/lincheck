@@ -12,19 +12,19 @@ in each of the parallel threads seen at the beginning of the current operation
 ---
 
 The following interleaving leads to the error:
-| ------------------------------------------------------------------------------------------------------------ |
-| Thread 1 |                                             Thread 2                                              |
-| ------------------------------------------------------------------------------------------------------------ |
-|          |   c()                                                                                             |
-|          |     /* The following events repeat infinitely: */                                                 |
-|          | ┌╶> bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:326) |
-|          | └╶╶ switch (reason: active lock detected)                                                         |
-| a()      |                                                                                                   |
-| b()      |                                                                                                   |
-|          |     bStarted ➜ true at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:326)  |
-|          |     result: void                                                                                  |
-|          |   d(): 0                                                                                          |
-| ------------------------------------------------------------------------------------------------------------ |
+| ------------------------------------------------------------ |
+| Thread 1 |                     Thread 2                      |
+| ------------------------------------------------------------ |
+|          |   c()                                             |
+|          |     /* The following events repeat infinitely: */ |
+|          | ┌╶> bStarted ➜ false                              |
+|          | └╶╶ switch (reason: active lock detected)         |
+| a()      |                                                   |
+| b()      |                                                   |
+|          |     bStarted ➜ true                               |
+|          |     result: void                                  |
+|          |   d(): 0                                          |
+| ------------------------------------------------------------ |
 
 Detailed trace:
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -32,13 +32,13 @@ Detailed trace:
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                                                |   c()                                                                                             |
 |                                                                                                |     /* The following events repeat infinitely: */                                                 |
-|                                                                                                | ┌╶> bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:326) |
+|                                                                                                | ┌╶> bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:357) |
 |                                                                                                | └╶╶ switch (reason: active lock detected)                                                         |
 | a()                                                                                            |                                                                                                   |
 | b()                                                                                            |                                                                                                   |
-|   bStarted = true at SpinlockInIncorrectResultsWithClocksTest.b(SpinlockEventsCutTests.kt:321) |                                                                                                   |
+|   bStarted = true at SpinlockInIncorrectResultsWithClocksTest.b(SpinlockEventsCutTests.kt:352) |                                                                                                   |
 |   result: void                                                                                 |                                                                                                   |
-|                                                                                                |     bStarted ➜ true at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:326)  |
+|                                                                                                |     bStarted ➜ true at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:357)  |
 |                                                                                                |     result: void                                                                                  |
 |                                                                                                |   d(): 0                                                                                          |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

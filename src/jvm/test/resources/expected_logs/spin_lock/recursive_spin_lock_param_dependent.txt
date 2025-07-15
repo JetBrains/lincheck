@@ -7,17 +7,17 @@
 
 
 The following interleaving leads to the error:
-| ------------------------------------------------------------------------------------------------------------------------- |
-|                                                         Thread 1                                                          |
-| ------------------------------------------------------------------------------------------------------------------------- |
-|   actorMethod(): <hung>                                                                                                   |
-|     b(false) at RecursiveParametersDependentSpinLockTest.actorMethod(RecursiveSpinLockTest.kt:292)                        |
-|     /* The following events repeat infinitely: */                                                                         |
-| ┌╶> b(true) at RecursiveParametersDependentSpinLockTest.actorMethod(RecursiveSpinLockTest.kt:293)                         |
-| |     value.compareAndSet(false, true): false at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:298) |
-| |     c(): true at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:299)                               |
-| └╶╶╶╶ switch (reason: active lock detected)                                                                               |
-| ------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------------------------- |
+|                     Thread 1                      |
+| ------------------------------------------------- |
+|   actorMethod(): <hung>                           |
+|     b(false)                                      |
+|     /* The following events repeat infinitely: */ |
+| ┌╶> b(true)                                       |
+| |     value.compareAndSet(false, true): false     |
+| |     c(): true                                   |
+| └╶╶╶╶ switch (reason: active lock detected)       |
+| ------------------------------------------------- |
 All unfinished threads are in deadlock
 
 Detailed trace:

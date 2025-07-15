@@ -7,39 +7,39 @@
 
 
 The following interleaving leads to the error:
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                   Thread 1                                                   |                                                            Thread 2                                                             |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| trigger()                                                                                                    |                                                                                                                                 |
-|   counter.incrementAndGet(): 1 at RecursiveSpinLockWithInnerEventsTest.trigger(RecursiveSpinLockTest.kt:135) |                                                                                                                                 |
-|   switch                                                                                                     |                                                                                                                                 |
-|                                                                                                              |   causesSpinLock(): <hung>                                                                                                      |
-|                                                                                                              |     counter.get(): 1 at RecursiveSpinLockWithInnerEventsTest.causesSpinLock(RecursiveSpinLockTest.kt:141)                       |
-|                                                                                                              |     /* The following events repeat infinitely: */                                                                               |
-|                                                                                                              | ┌╶> deadSpinCycleRecursive() at RecursiveSpinLockWithInnerEventsTest.causesSpinLock(RecursiveSpinLockTest.kt:142)               |
-|                                                                                                              | |     getSharedVariable(): false at RecursiveSpinLockWithInnerEventsTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:148)   |
-|                                                                                                              | |     action(false): true at RecursiveSpinLockWithInnerEventsTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:149)          |
-|                                                                                                              | |     getSharedVariable(): true at RecursiveSpinLockWithInnerEventsTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:148)    |
-|                                                                                                              | |     action(true): true at RecursiveSpinLockWithInnerEventsTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:149)           |
-|                                                                                                              | |     getSharedVariable(): false at RecursiveSpinLockWithInnerEventsTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:148)   |
-|                                                                                                              | |     action(false): true at RecursiveSpinLockWithInnerEventsTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:149)          |
-|                                                                                                              | |     getSharedVariable(): true at RecursiveSpinLockWithInnerEventsTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:148)    |
-|                                                                                                              | |     action(true): true at RecursiveSpinLockWithInnerEventsTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:149)           |
-|                                                                                                              | └╶╶╶╶ switch (reason: active lock detected)                                                                                     |
-|   counter.decrementAndGet(): 0 at RecursiveSpinLockWithInnerEventsTest.trigger(RecursiveSpinLockTest.kt:136) |                                                                                                                                 |
-|   result: void                                                                                               |                                                                                                                                 |
-|                                                                                                              |       /* The following events repeat infinitely: */                                                                             |
-|                                                                                                              |   ┌╶> deadSpinCycleRecursive() at RecursiveSpinLockWithInnerEventsTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:151)     |
-|                                                                                                              |   |     getSharedVariable(): false at RecursiveSpinLockWithInnerEventsTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:148) |
-|                                                                                                              |   |     action(false): true at RecursiveSpinLockWithInnerEventsTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:149)        |
-|                                                                                                              |   |     getSharedVariable(): true at RecursiveSpinLockWithInnerEventsTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:148)  |
-|                                                                                                              |   |     action(true): true at RecursiveSpinLockWithInnerEventsTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:149)         |
-|                                                                                                              |   |     getSharedVariable(): false at RecursiveSpinLockWithInnerEventsTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:148) |
-|                                                                                                              |   |     action(false): true at RecursiveSpinLockWithInnerEventsTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:149)        |
-|                                                                                                              |   |     getSharedVariable(): true at RecursiveSpinLockWithInnerEventsTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:148)  |
-|                                                                                                              |   |     action(true): true at RecursiveSpinLockWithInnerEventsTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:149)         |
-|                                                                                                              |   └╶╶╶╶ switch (reason: active lock detected)                                                                                   |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------------------------------------------------------------ |
+|            Thread 1            |                      Thread 2                       |
+| ------------------------------------------------------------------------------------ |
+| trigger()                      |                                                     |
+|   counter.incrementAndGet(): 1 |                                                     |
+|   switch                       |                                                     |
+|                                |   causesSpinLock(): <hung>                          |
+|                                |     counter.get(): 1                                |
+|                                |     /* The following events repeat infinitely: */   |
+|                                | ┌╶> deadSpinCycleRecursive()                        |
+|                                | |     getSharedVariable(): false                    |
+|                                | |     action(false): true                           |
+|                                | |     getSharedVariable(): true                     |
+|                                | |     action(true): true                            |
+|                                | |     getSharedVariable(): false                    |
+|                                | |     action(false): true                           |
+|                                | |     getSharedVariable(): true                     |
+|                                | |     action(true): true                            |
+|                                | └╶╶╶╶ switch (reason: active lock detected)         |
+|   counter.decrementAndGet(): 0 |                                                     |
+|   result: void                 |                                                     |
+|                                |       /* The following events repeat infinitely: */ |
+|                                |   ┌╶> deadSpinCycleRecursive()                      |
+|                                |   |     getSharedVariable(): false                  |
+|                                |   |     action(false): true                         |
+|                                |   |     getSharedVariable(): true                   |
+|                                |   |     action(true): true                          |
+|                                |   |     getSharedVariable(): false                  |
+|                                |   |     action(false): true                         |
+|                                |   |     getSharedVariable(): true                   |
+|                                |   |     action(true): true                          |
+|                                |   └╶╶╶╶ switch (reason: active lock detected)       |
+| ------------------------------------------------------------------------------------ |
 All unfinished threads are in deadlock
 
 Detailed trace:
