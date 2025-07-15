@@ -332,12 +332,17 @@ tasks {
 
         doLast {
             val uriBase = "https://central.sonatype.com/api/v1/publisher/upload"
-            val publishingType = "USER_MANAGED"
+            val publishingType = "AUTOMATIC"
             val deploymentName = "${project.name}-$version"
             val uri = "$uriBase?name=$deploymentName&publishingType=$publishingType"
 
-            val userName = rootProject.extra["centralPortalUserName"] as String
-            val token = rootProject.extra["centralPortalToken"] as String
+            val userName = System.getenv("MVN_CLIENT_USERNAME")
+            val token = System.getenv("MVN_CLIENT_PASSWORD")
+            if (userName == null || token == null) {
+                logger.error("Sonatype central portal credentials are not set up, skipping publishing")
+                return@doLast
+            }
+
             val base64Auth = Base64.getEncoder().encode("$userName:$token".toByteArray()).toString(Charsets.UTF_8)
             val bundleFile = packSonatypeCentralBundle.get().archiveFile.get().asFile
 
