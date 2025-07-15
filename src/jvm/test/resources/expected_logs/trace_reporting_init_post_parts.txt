@@ -14,29 +14,29 @@ All operations above the horizontal line | ----- | happen before those below the
 ---
 
 The following interleaving leads to the error:
-| -------------------------------------------------------------------------------------------------------------- |
-|  Thread 1   |                                             Thread 2                                             |
-| -------------------------------------------------------------------------------------------------------------- |
-| enterInit() |                                                                                                  |
-| -------------------------------------------------------------------------------------------------------------- |
-|             | bar()                                                                                            |
-|             |   a ➜ 0 at TraceReportingTest.bar(TraceReportingTest.kt:41)                                      |
-|             |   a = 1 at TraceReportingTest.bar(TraceReportingTest.kt:41)                                      |
-|             |   a ➜ 1 at TraceReportingTest.bar(TraceReportingTest.kt:41)                                      |
-|             |   a = 2 at TraceReportingTest.bar(TraceReportingTest.kt:41)                                      |
-|             |   uselessIncrements(2): false at TraceReportingTest.bar(TraceReportingTest.kt:43)                |
-|             |   intermediateMethod() at TraceReportingTest.bar(TraceReportingTest.kt:44)                       |
-|             |     resetFlag() at TraceReportingTest.intermediateMethod(TraceReportingTest.kt:48)               |
-|             |       MONITORENTER at TraceReportingTest.resetFlag(TraceReportingTest.kt:0)                      |
-|             |       canEnterForbiddenSection = true at TraceReportingTest.resetFlag(TraceReportingTest.kt:53)  |
-|             |       switch                                                                                     |
-| foo(): 1    |                                                                                                  |
-|             |       canEnterForbiddenSection = false at TraceReportingTest.resetFlag(TraceReportingTest.kt:54) |
-|             |       MONITOREXIT at TraceReportingTest.resetFlag(TraceReportingTest.kt:55)                      |
-|             |   result: void                                                                                   |
-| -------------------------------------------------------------------------------------------------------------- |
-| enterPost() |                                                                                                  |
-| -------------------------------------------------------------------------------------------------------------- |
+| ---------------------------------------------------- |
+|  Thread 1   |                Thread 2                |
+| ---------------------------------------------------- |
+| enterInit() |                                        |
+| ---------------------------------------------------- |
+|             | bar()                                  |
+|             |   a ➜ 0                                |
+|             |   a = 1                                |
+|             |   a ➜ 1                                |
+|             |   a = 2                                |
+|             |   uselessIncrements(2): false          |
+|             |   intermediateMethod()                 |
+|             |     resetFlag()                        |
+|             |       MONITORENTER                     |
+|             |       canEnterForbiddenSection = true  |
+|             |       switch                           |
+| foo(): 1    |                                        |
+|             |       canEnterForbiddenSection = false |
+|             |       MONITOREXIT                      |
+|             |   result: void                         |
+| ---------------------------------------------------- |
+| enterPost() |                                        |
+| ---------------------------------------------------- |
 
 Detailed trace:
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -45,7 +45,8 @@ internal abstract class TraceNode(var callDepth: Int, val eventNumber: Int, open
         node.parent = this
     }
 
-    abstract override fun toString(): String
+    internal abstract fun toStringImpl(withLocation: Boolean): String
+    override fun toString(): String = toStringImpl(withLocation = true)
 
     // Sets call depth of this (sub)tree
     fun setCallDepthOfTree(depth: Int) {
@@ -96,7 +97,10 @@ internal class EventNode(
     tracePoint: TracePoint,
     eventNumber: Int,
 ): TraceNode(callDepth, eventNumber, tracePoint) {
-    override fun toString(): String = tracePoint.toString()
+
+    override fun toStringImpl(withLocation: Boolean): String =
+        tracePoint.toStringImpl(withLocation)
+
     override fun copy(): TraceNode = EventNode(callDepth, tracePoint, eventNumber)
 }
 
@@ -109,7 +113,9 @@ internal class CallNode(
     val isRootCall get() = callDepth == 0
     var returnEventNumber: Int = -1
 
-    override fun toString(): String = tracePoint.toString()
+    override fun toStringImpl(withLocation: Boolean): String =
+        tracePoint.toStringImpl(withLocation)
+
     override fun copy(): TraceNode = CallNode(callDepth, tracePoint, eventNumber)
         .also { it.returnEventNumber = returnEventNumber}
     
@@ -120,7 +126,10 @@ internal class CallNode(
 // Is not part of initial graph, is only added during flattening or for empty GPMC result
 internal class ResultNode(callDepth: Int, val actorResult: ReturnedValueResult.ActorResult, eventNumber: Int, tracePoint: TracePoint)
     : TraceNode(callDepth, eventNumber, tracePoint) {
-    override fun toString(): String = "result: ${actorResult.resultRepresentation}"
+
+    override fun toStringImpl(withLocation: Boolean): String =
+        "result: ${actorResult.resultRepresentation}"
+
     override fun copy(): TraceNode = ResultNode(callDepth, actorResult, eventNumber, tracePoint)
 }
 

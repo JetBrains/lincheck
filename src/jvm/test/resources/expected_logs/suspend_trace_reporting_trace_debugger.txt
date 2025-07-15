@@ -6,41 +6,41 @@
 | ----------------------- |
 
 The following interleaving leads to the error:
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-|                                                                Thread 1                                                                 |                                                      Thread 2                                                      |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-|                                                                                                                                         | bar(): -1                                                                                                          |
-|                                                                                                                                         |   ResultKt.throwOnFailure(null) at SuspendTraceReportingTest.bar(SuspendTraceReportingTest.kt:36)                  |
-|                                                                                                                                         |   barStarted = true at SuspendTraceReportingTest.bar(SuspendTraceReportingTest.kt:38)                              |
-|                                                                                                                                         |   lock.lock(null) [suspendable: Continuation#1] at SuspendTraceReportingTest.bar(SuspendTraceReportingTest.kt:194) |
-|                                                                                                                                         |   counter ➜ 0 at SuspendTraceReportingTest.bar(SuspendTraceReportingTest.kt:40)                                    |
-|                                                                                                                                         |   counter = 1 at SuspendTraceReportingTest.bar(SuspendTraceReportingTest.kt:40)                                    |
-|                                                                                                                                         |   lock.unlock(null) at SuspendTraceReportingTest.bar(SuspendTraceReportingTest.kt:198)                             |
-|                                                                                                                                         |     isLocked(): true at MutexImpl.unlock(Mutex.kt:213)                                                             |
-|                                                                                                                                         |     owner.get(): null at MutexImpl.unlock(Mutex.kt:215)                                                            |
-|                                                                                                                                         |     MutexKt.access$getNO_OWNER$p(): <NO_OWNER> at MutexImpl.unlock(Mutex.kt:216)                                   |
-|                                                                                                                                         |     MutexKt.access$getNO_OWNER$p(): <NO_OWNER> at MutexImpl.unlock(Mutex.kt:220)                                   |
-|                                                                                                                                         |     switch                                                                                                         |
-| foo()                                                                                                                                   |                                                                                                                    |
-|   ResultKt.throwOnFailure(null) at SuspendTraceReportingTest.foo(SuspendTraceReportingTest.kt:27)                                       |                                                                                                                    |
-|   barStarted ➜ true at SuspendTraceReportingTest.foo(SuspendTraceReportingTest.kt:29)                                                   |                                                                                                                    |
-|   canEnterForbiddenBlock = true at SuspendTraceReportingTest.foo(SuspendTraceReportingTest.kt:29)                                       |                                                                                                                    |
-|   lock.lock(null) [suspendable: Continuation#2]: COROUTINE_SUSPENDED at SuspendTraceReportingTest.foo(SuspendTraceReportingTest.kt:184) |                                                                                                                    |
-|     tryLock(null): false at MutexImpl.lock(Mutex.kt:0)                                                                                  |                                                                                                                    |
-|     lockSuspend(null) [suspendable: Continuation#2]: COROUTINE_SUSPENDED at MutexImpl.lock(Mutex.kt:0)                                  |                                                                                                                    |
-|     switch (reason: coroutine is suspended)                                                                                             |                                                                                                                    |
-|                                                                                                                                         |     owner.compareAndSet(null, <NO_OWNER>): true at MutexImpl.unlock(Mutex.kt:220)                                  |
-|                                                                                                                                         |     release() at MutexImpl.unlock(Mutex.kt:222)                                                                    |
-|                                                                                                                                         |   canEnterForbiddenBlock ➜ true at SuspendTraceReportingTest.bar(SuspendTraceReportingTest.kt:42)                  |
-|                                                                                                                                         |   Boxing.boxInt(-1): -1 at SuspendTraceReportingTest.bar(SuspendTraceReportingTest.kt:42)                          |
-|                                                                                                                                         |   result: -1                                                                                                       |
-|   ResultKt.throwOnFailure(Unit) at SuspendTraceReportingTest.foo(SuspendTraceReportingTest.kt:27)                                       |                                                                                                                    |
-|   counter ➜ 1 at SuspendTraceReportingTest.foo(SuspendTraceReportingTest.kt:31)                                                         |                                                                                                                    |
-|   counter = 2 at SuspendTraceReportingTest.foo(SuspendTraceReportingTest.kt:31)                                                         |                                                                                                                    |
-|   lock.unlock(null) at SuspendTraceReportingTest.foo(SuspendTraceReportingTest.kt:188)                                                  |                                                                                                                    |
-|   canEnterForbiddenBlock = false at SuspendTraceReportingTest.foo(SuspendTraceReportingTest.kt:33)                                      |                                                                                                                    |
-|   result: void                                                                                                                          |                                                                                                                    |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| -------------------------------------------------------------------------------------------------------------------------- |
+|                                 Thread 1                                 |                    Thread 2                     |
+| -------------------------------------------------------------------------------------------------------------------------- |
+|                                                                          | bar(): -1                                       |
+|                                                                          |   ResultKt.throwOnFailure(null)                 |
+|                                                                          |   barStarted = true                             |
+|                                                                          |   lock.lock(null) [suspendable: Continuation#1] |
+|                                                                          |   counter ➜ 0                                   |
+|                                                                          |   counter = 1                                   |
+|                                                                          |   lock.unlock(null)                             |
+|                                                                          |     isLocked(): true                            |
+|                                                                          |     owner.get(): null                           |
+|                                                                          |     MutexKt.access$getNO_OWNER$p(): <NO_OWNER>  |
+|                                                                          |     MutexKt.access$getNO_OWNER$p(): <NO_OWNER>  |
+|                                                                          |     switch                                      |
+| foo()                                                                    |                                                 |
+|   ResultKt.throwOnFailure(null)                                          |                                                 |
+|   barStarted ➜ true                                                      |                                                 |
+|   canEnterForbiddenBlock = true                                          |                                                 |
+|   lock.lock(null) [suspendable: Continuation#2]: COROUTINE_SUSPENDED     |                                                 |
+|     tryLock(null): false                                                 |                                                 |
+|     lockSuspend(null) [suspendable: Continuation#2]: COROUTINE_SUSPENDED |                                                 |
+|     switch (reason: coroutine is suspended)                              |                                                 |
+|                                                                          |     owner.compareAndSet(null, <NO_OWNER>): true |
+|                                                                          |     release()                                   |
+|                                                                          |   canEnterForbiddenBlock ➜ true                 |
+|                                                                          |   Boxing.boxInt(-1): -1                         |
+|                                                                          |   result: -1                                    |
+|   ResultKt.throwOnFailure(Unit)                                          |                                                 |
+|   counter ➜ 1                                                            |                                                 |
+|   counter = 2                                                            |                                                 |
+|   lock.unlock(null)                                                      |                                                 |
+|   canEnterForbiddenBlock = false                                         |                                                 |
+|   result: void                                                           |                                                 |
+| -------------------------------------------------------------------------------------------------------------------------- |
 
 Detailed trace:
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

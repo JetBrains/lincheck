@@ -6,21 +6,21 @@
 | ---------------------------------------- |
 
 The following interleaving leads to the error:
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                    Thread 1                                     |                                                                     Thread 2                                                                      |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| trigger()                                                                       |                                                                                                                                                   |
-|   allowed = true at SuspendedNotAwokeTest.trigger(SuspendedNotAwokeTest.kt:32)  |                                                                                                                                                   |
-|   switch                                                                        |                                                                                                                                                   |
-|                                                                                 | operation(): Suspended                                                                                                                            |
-|                                                                                 |   allowed ➜ true at SuspendedNotAwokeTest.operation(SuspendedNotAwokeTest.kt:38)                                                                  |
-|                                                                                 |   neverWakeUpChannel.receive() [suspendable: Continuation#1]: COROUTINE_SUSPENDED at SuspendedNotAwokeTest.operation(SuspendedNotAwokeTest.kt:39) |
-|                                                                                 |     BufferedChannel.receive$suspendImpl(BufferedChannel#1, Continuation#1): COROUTINE_SUSPENDED at BufferedChannel.receive(BufferedChannel.kt:0)  |
-|                                                                                 |     switch (reason: coroutine is suspended)                                                                                                       |
-|   allowed = false at SuspendedNotAwokeTest.trigger(SuspendedNotAwokeTest.kt:33) |                                                                                                                                                   |
-|   result: void                                                                  |                                                                                                                                                   |
-|                                                                                 |   result: Suspended                                                                                                                               |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------------------------------------------------------------------------------------------- |
+|     Thread 1      |                                            Thread 2                                             |
+| ------------------------------------------------------------------------------------------------------------------- |
+| trigger()         |                                                                                                 |
+|   allowed = true  |                                                                                                 |
+|   switch          |                                                                                                 |
+|                   | operation(): Suspended                                                                          |
+|                   |   allowed ➜ true                                                                                |
+|                   |   neverWakeUpChannel.receive() [suspendable: Continuation#1]: COROUTINE_SUSPENDED               |
+|                   |     BufferedChannel.receive$suspendImpl(BufferedChannel#1, Continuation#1): COROUTINE_SUSPENDED |
+|                   |     switch (reason: coroutine is suspended)                                                     |
+|   allowed = false |                                                                                                 |
+|   result: void    |                                                                                                 |
+|                   |   result: Suspended                                                                             |
+| ------------------------------------------------------------------------------------------------------------------- |
 
 Detailed trace:
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

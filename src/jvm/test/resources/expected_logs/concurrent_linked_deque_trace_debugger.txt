@@ -13,25 +13,25 @@ All operations above the horizontal line | ----- | happen before those below the
 ---
 
 The following interleaving leads to the error:
-| -------------------------------------------------------------------------------------------------------------------------- |
-|                                                  Thread 1                                                  |   Thread 2    |
-| -------------------------------------------------------------------------------------------------------------------------- |
-| addLast(1)                                                                                                 |               |
-| -------------------------------------------------------------------------------------------------------------------------- |
-| pollFirst(): 1                                                                                             |               |
-|   deque.pollFirst(): 1 at ConcurrentLinkedDequeTest.pollFirst(ConcurrentLinkedDequeTest.kt:30)             |               |
-|     first(): Node#2 at ConcurrentLinkedDeque.pollFirst(ConcurrentLinkedDeque.java:915)                     |               |
-|     p.item ➜ null at ConcurrentLinkedDeque.pollFirst(ConcurrentLinkedDeque.java:917)                       |               |
-|     p.next ➜ Node#1 at ConcurrentLinkedDeque.pollFirst(ConcurrentLinkedDeque.java:925)                     |               |
-|     p.item ➜ 1 at ConcurrentLinkedDeque.pollFirst(ConcurrentLinkedDeque.java:917)                          |               |
-|     first.prev ➜ null at ConcurrentLinkedDeque.pollFirst(ConcurrentLinkedDeque.java:919)                   |               |
-|     switch                                                                                                 |               |
-|                                                                                                            | addFirst(0)   |
-|                                                                                                            | peekLast(): 1 |
-|     p.item.compareAndSet(1, null): true at ConcurrentLinkedDeque.pollFirst(ConcurrentLinkedDeque.java:920) |               |
-|     unlink(Node#1) at ConcurrentLinkedDeque.pollFirst(ConcurrentLinkedDeque.java:921)                      |               |
-|   result: 1                                                                                                |               |
-| -------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------------------------------- |
+|                Thread 1                 |   Thread 2    |
+| ------------------------------------------------------- |
+| addLast(1)                              |               |
+| ------------------------------------------------------- |
+| pollFirst(): 1                          |               |
+|   deque.pollFirst(): 1                  |               |
+|     first(): Node#2                     |               |
+|     p.item ➜ null                       |               |
+|     p.next ➜ Node#1                     |               |
+|     p.item ➜ 1                          |               |
+|     first.prev ➜ null                   |               |
+|     switch                              |               |
+|                                         | addFirst(0)   |
+|                                         | peekLast(): 1 |
+|     p.item.compareAndSet(1, null): true |               |
+|     unlink(Node#1)                      |               |
+|   result: 1                             |               |
+| ------------------------------------------------------- |
 
 Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

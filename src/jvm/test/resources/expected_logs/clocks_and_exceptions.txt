@@ -28,35 +28,35 @@ The number next to an exception name helps you find its stack trace provided aft
 ---
 
 The following interleaving leads to the error:
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-|                                                         Thread 1                                                          |                Thread 2                |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| operation2()                                                                                                              |                                        |
-| operation1()                                                                                                              |                                        |
-| operation1()                                                                                                              |                                        |
-| operation2()                                                                                                              |                                        |
-| operation2()                                                                                                              |                                        |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| operation1()                                                                                                              |                                        |
-| operation1()                                                                                                              |                                        |
-|   canEnterForbiddenSection = true at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:29)  |                                        |
-|   switch                                                                                                                  |                                        |
-|                                                                                                                           | operation2(): IllegalStateException #1 |
-|                                                                                                                           | operation1()                           |
-|   canEnterForbiddenSection = false at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:30) |                                        |
-|   result: void                                                                                                            |                                        |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| operation1()                                                                                                              |                                        |
-| operation1()                                                                                                              |                                        |
-| operation1()                                                                                                              |                                        |
-| operation2()                                                                                                              |                                        |
-| operation1()                                                                                                              |                                        |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| --------------------------------------------------------------------------- |
+|              Thread 1              |                Thread 2                |
+| --------------------------------------------------------------------------- |
+| operation2()                       |                                        |
+| operation1()                       |                                        |
+| operation1()                       |                                        |
+| operation2()                       |                                        |
+| operation2()                       |                                        |
+| --------------------------------------------------------------------------- |
+| operation1()                       |                                        |
+| operation1()                       |                                        |
+|   canEnterForbiddenSection = true  |                                        |
+|   switch                           |                                        |
+|                                    | operation2(): IllegalStateException #1 |
+|                                    | operation1()                           |
+|   canEnterForbiddenSection = false |                                        |
+|   result: void                     |                                        |
+| --------------------------------------------------------------------------- |
+| operation1()                       |                                        |
+| operation1()                       |                                        |
+| operation1()                       |                                        |
+| operation2()                       |                                        |
+| operation1()                       |                                        |
+| --------------------------------------------------------------------------- |
 
 Exception stack traces:
 #1: java.lang.IllegalStateException: Violating exception
 	at org.jetbrains.kotlinx.lincheck_test.representation.ClocksWithExceptionsInOutputTest.operation2(ClocksWithExceptionsInOutputTest.kt:34)
-	at java.base/java.lang.Thread.run(Thread.java:840)
+	at java.base/java.lang.Thread.run(Thread.java:833)
 
 Detailed trace:
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

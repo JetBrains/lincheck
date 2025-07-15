@@ -21,6 +21,7 @@ internal fun SingleThreadedTable<TraceNode>.compressTrace() = this
     .compressUserThreadRun()
     .compressThreadStart()
     .removeCoroutinesCoreSuffix()
+    .removeAssertionsKtOwnerName()
     .compressInlineIV()
     .compressDollarThis()
     .replaceNestedClassDollar()
@@ -199,6 +200,13 @@ private fun SingleThreadedTable<TraceNode>.removeCoroutinesCoreSuffix() = compre
         (node.tracePoint as CodeLocationTracePoint).stackTraceElement = newStackTraceElement
     }
 
+    node
+}
+
+private fun SingleThreadedTable<TraceNode>.removeAssertionsKtOwnerName() = compressNodes { node ->
+    if (node is CallNode && (node.tracePoint.ownerName == "kotlin.test.AssertionsKt" || node.tracePoint.className == "org.junit.jupiter.api.Assertions")) {
+        node.tracePoint.updateOwnerName(null)
+    }
     node
 }
 
