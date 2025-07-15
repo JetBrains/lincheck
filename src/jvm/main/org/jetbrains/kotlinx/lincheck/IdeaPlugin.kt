@@ -25,7 +25,7 @@ import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import org.jetbrains.lincheck.GeneralPurposeModelCheckingWrapper
 import java.lang.reflect.Method
 
-const val MINIMAL_PLUGIN_VERSION = "0.11"
+const val MINIMAL_PLUGIN_VERSION = "0.19"
 
 // ============== This methods are used by debugger from IDEA plugin to communicate with Lincheck ============== //
 
