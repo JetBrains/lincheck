@@ -22,6 +22,7 @@ import org.jetbrains.lincheck.util.Logger
 import org.jetbrains.lincheck.util.ideaPluginEnabled
 import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import org.jetbrains.lincheck.util.isThreadContainerClass
+import org.jetbrains.lincheck.util.isIntellijRuntimeAgentClass
 import sun.nio.ch.lincheck.*
 
 internal class LincheckClassVisitor(
