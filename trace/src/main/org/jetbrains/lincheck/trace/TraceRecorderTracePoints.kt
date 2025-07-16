@@ -141,6 +141,8 @@ class TRMethodCallTracePoint(
     }
 
     internal fun loadFooter(inp: DataInput) {
+        childrenAddresses.finishWrite()
+
         result = inp.readTRObject()
         exceptionClassName = inp.readUTF()
         if (exceptionClassName?.isEmpty() ?: true) {

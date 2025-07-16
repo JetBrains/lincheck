@@ -13,12 +13,11 @@ package org.jetbrains.lincheck.trace
 import java.io.Closeable
 import java.io.DataInput
 import java.io.DataInputStream
+import java.io.IOException
 import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption
 import kotlin.io.path.Path
-import kotlin.math.max
-import kotlin.math.roundToInt
 
 private const val INPUT_BUFFER_SIZE: Int = 16 * 1024 * 1024
 
@@ -47,7 +46,7 @@ private class DataBlock(
         private set
 
     /**
-     * Accumulated data size: sum of sizes of all data blocks in this thread before this block.
+     * Accumulated data size: sum of all data blocks' sizes in this thread before this block.
      */
     val accDataSize: Long
 
@@ -188,7 +187,7 @@ class LazyTraceReader(
     private val dataStream: SeekableInputStream
     private val data: SeekableDataInput
     private val dataBlocks = mutableMapOf<Int, MutableList<DataBlock>>()
-    private var callTracepointChildren = LongArray(2048)
+    private var callTracepointChildren = RangeIndex.create()
 
     init {
         val channel = Files.newByteChannel(Path(dataFileName), StandardOpenOption.READ)
@@ -210,7 +209,10 @@ class LazyTraceReader(
     }
 
     fun readRoots(): List<TRTracePoint> {
+        var start = System.currentTimeMillis()
         loadContext()
+        System.err.println("Context loaded in ${System.currentTimeMillis() - start} ms")
+        start = System.currentTimeMillis()
 
         val roots = mutableMapOf<Int, TRTracePoint>()
 
@@ -240,14 +242,13 @@ class LazyTraceReader(
                 roots[threadId] = tracepoints.first()
             }
         }
+        System.err.println("Roots loaded ${System.currentTimeMillis() - start} ms")
 
         return roots.entries.sortedBy { it.key }.map { (_, tracePoint) -> tracePoint }
     }
 
     fun loadAllChildren(parent: TRMethodCallTracePoint) {
-        val start = getChildrenStart(parent.eventId)
-            ?: error("TRMethodCallTracePoint ${parent.eventId} is not found in index")
-        val end = getChildrenEnd(parent.eventId)
+        val (start, end) = callTracepointChildren[parent.eventId]
             ?: error("TRMethodCallTracePoint ${parent.eventId} is not found in index")
 
         data.seek(calculatePhysicalOffset(parent.threadId, start))
@@ -314,13 +315,13 @@ class LazyTraceReader(
                 return
             }
             val block = blocks.getOrNull(blockIdx + 1)
-                ?: error("Thread ${threadId} doesn't have enough data blocks")
+                ?: error("Thread $threadId doesn't have enough data blocks")
 
             data.seek(block.physicalStart)
             kind = data.readKind()
-            check(kind == ObjectKind.BLOCK_START) { "Thread ${threadId} block $blockIdx has invalid start: $kind" }
+            check(kind == ObjectKind.BLOCK_START) { "Thread $threadId block $blockIdx has invalid start: $kind" }
             val id = data.readInt()
-            check(id == threadId) { "Thread ${threadId} block $blockIdx has invalid id: $id" }
+            check(id == threadId) { "Thread $threadId block $blockIdx has invalid id: $id" }
             // Ready to continue reading
         }
     }
@@ -356,6 +357,7 @@ class LazyTraceReader(
                 }
 
                 var objNum = 0
+                var tps = 0
                 val codeLocs = CodeLocationsContext()
                 while (true) {
                     val kind = index.readKind()
@@ -366,7 +368,8 @@ class LazyTraceReader(
                     if (kind == ObjectKind.EOF) break
 
                     if (kind == ObjectKind.TRACEPOINT) {
-                        setChildrenAddresses(id, start, end)
+                        tps++
+                        callTracepointChildren.addRange(id, start, end)
                     } else {
                         // Check kind
                         data.seek(start)
@@ -400,12 +403,13 @@ class LazyTraceReader(
                     }
                     objNum++
                 }
+                callTracepointChildren.finishIndex()
                 codeLocs.restoreAllCodeLocations(context)
                 val magicEnd = index.readLong()
                 if (magicEnd != INDEX_MAGIC) {
                     error("Wrong final index magic 0x${(magic.toString(16))}, expected ${TRACE_MAGIC.toString(16)}")
                 }
-            } catch (t: Throwable) {
+            } catch (t: IOException) {
                 System.err.println("TraceRecorder: Error reading index for $dataFileName: ${t.message}")
                 return false
             }
@@ -428,14 +432,14 @@ class LazyTraceReader(
                     if (tracePoint is TRMethodCallTracePoint) {
                         // We are in the last saved block in
                         val childrenStart = calculateLogicalOffset(tracePoint.threadId,data.position())
-                        setChildrenStart(tracePoint.eventId, childrenStart)
+                        callTracepointChildren.addStart(tracePoint.eventId, childrenStart)
                     }
                 }
 
                 override fun footerStarted(tracePoint: TRMethodCallTracePoint) {
                     // -1 is here because Kind is already read
                     val childrenEnd = calculateLogicalOffset(tracePoint.threadId,data.position() - 1)
-                    setChildrenEnd(tracePoint.eventId, childrenEnd)
+                    callTracepointChildren.setEnd(tracePoint.eventId, childrenEnd)
                 }
             },
             blockConsumer = object : BlockConsumer {
@@ -454,6 +458,7 @@ class LazyTraceReader(
 
             }
         )
+        callTracepointChildren.finishIndex()
     }
 
     private fun readTracePointShallow(): TRTracePoint {
@@ -463,10 +468,8 @@ class LazyTraceReader(
             return tracePoint
         }
 
-        val start = getChildrenStart(tracePoint.eventId)
-            ?: error("Tracepoint ${tracePoint.eventId} is not known in index")
-        val end = getChildrenEnd(tracePoint.eventId)
-            ?: error("Tracepoint ${tracePoint.eventId} is not known in index")
+        val (start, end) = callTracepointChildren[tracePoint.eventId]
+            ?: error("TRMethodCallTracePoint ${tracePoint.eventId} is not found in index")
 
         val checkFor = calculatePhysicalOffset(tracePoint.threadId, start)
         check(data.position() == checkFor) {
@@ -493,7 +496,7 @@ class LazyTraceReader(
             return tracePoint
         }
 
-        val start = getChildrenStart(tracePoint.eventId)
+        val (start, _) = callTracepointChildren[tracePoint.eventId]
             ?: error("Tracepoint ${tracePoint.eventId} is not known in index")
 
         val checkFor = calculatePhysicalOffset(tracePoint.threadId, start)
@@ -536,46 +539,6 @@ class LazyTraceReader(
         val blocks = dataBlocks[threadId] ?: error("ThreadId $threadId is not found in block list")
         val blockIdx = blocks.binarySearch { it.compareWithPhysicalOffset(physicalOffset) }
         return if (blockIdx < 0) null else blockIdx
-    }
-
-    private fun getChildrenStart(pointId: Int): Long? {
-        val idx = pointId shl 1
-        if (idx + 1 >= callTracepointChildren.size) return null
-        if (callTracepointChildren[idx] <= 0) return null
-        return callTracepointChildren[idx]
-    }
-
-    private fun setChildrenStart(pointId: Int, address: Long) {
-        val idx = pointId shl 1
-        ensurePositionsArraySize(idx)
-        callTracepointChildren[idx] = address
-    }
-
-    private fun getChildrenEnd(pointId: Int): Long? {
-        val idx = pointId shl 1
-        if (idx + 1 >= callTracepointChildren.size) return null
-        if (callTracepointChildren[idx + 1] <= 0) return null
-        return callTracepointChildren[idx + 1]
-    }
-
-    private fun setChildrenEnd(pointId: Int, address: Long) {
-        val idx = pointId shl 1
-        ensurePositionsArraySize(idx)
-        callTracepointChildren[idx + 1] = address
-    }
-
-    private fun setChildrenAddresses(pointId: Int, start: Long, end: Long) {
-        val idx = pointId shl 1
-        ensurePositionsArraySize(idx)
-        callTracepointChildren[idx] = start
-        callTracepointChildren[idx + 1] = end
-    }
-
-    private fun ensurePositionsArraySize(idx: Int) {
-        if (idx + 1 >= callTracepointChildren.size) {
-            val newSize = max(idx + 2, (callTracepointChildren.size * 1.25).roundToInt())
-            callTracepointChildren = callTracepointChildren.copyOf(newSize)
-        }
     }
 
     private companion object {
@@ -707,15 +670,19 @@ private fun loadTracePointDeep(
     val kind = loadObjects(input, context, codeLocs, true) { input, context, stringCache ->
         loadTracePointDeep(input, context, stringCache, stack, consumer)
     }
-    if (kind == ObjectKind.TRACEPOINT_FOOTER) {
-        check(tracePoint == stack.removeLast()) { "Tracepoint reading stack corruption" }
-        consumer.footerStarted(tracePoint)
-        tracePoint.loadFooter(input)
-    } else if (kind == ObjectKind.BLOCK_END) {
-        return false
-    } else {
-        System.err.println("TraceRecorder: Unexpected object kind $kind when loading tracepoints")
-        return false
+    when (kind) {
+        ObjectKind.TRACEPOINT_FOOTER -> {
+            check(tracePoint == stack.removeLast()) { "Tracepoint reading stack corruption" }
+            consumer.footerStarted(tracePoint)
+            tracePoint.loadFooter(input)
+        }
+        ObjectKind.BLOCK_END -> {
+            return false
+        }
+        else -> {
+            System.err.println("TraceRecorder: Unexpected object kind $kind when loading tracepoints")
+            return false
+        }
     }
     return true
 }
@@ -735,7 +702,7 @@ private fun loadObjects(
             ObjectKind.VARIABLE_DESCRIPTOR -> loadVariableDescriptor(input, context, restore)
             ObjectKind.STRING -> loadString(input, codeLocs, restore)
             ObjectKind.CODE_LOCATION -> loadCodeLocation(input, codeLocs, restore)
-            // Tracepoint reader returns "true" if read is complete and "false" if it encountered end of block
+            // Tracepoint reader returns "true" if a read is complete and "false" if it encountered the end of the block
             ObjectKind.TRACEPOINT -> if (!tracePointReader(input, context, codeLocs)) return ObjectKind.BLOCK_END
             ObjectKind.TRACEPOINT_FOOTER, // Children read or skipped by recursion into tracePointReader
             ObjectKind.BLOCK_START, // Should not happen, really
