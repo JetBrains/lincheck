@@ -28,7 +28,7 @@ internal class ChunkedList<T>: List<T?>, RandomAccess {
             return true
         }
         // Ok, we need to add it
-        val chunk = totalSize shl CHUNK_SHIFT
+        val chunk = totalSize shr CHUNK_SHIFT
         val idx = totalSize and CHUNK_MASK
         val ch = prepareChunk(chunk, idx)
         ch[idx] = element
@@ -52,10 +52,10 @@ internal class ChunkedList<T>: List<T?>, RandomAccess {
         checkRange(from)
         checkRange(to - 1)
 
-        val fromChunk = from shl CHUNK_SHIFT
+        val fromChunk = from shr CHUNK_SHIFT
         val fromIdx = from and CHUNK_MASK
 
-        val toChunk = (to - 1) shl CHUNK_SHIFT
+        val toChunk = (to - 1) shr CHUNK_SHIFT
         val toIdx = (to - 1) and CHUNK_MASK
 
         // Check if we remove from the very first element in the first chunk
@@ -77,7 +77,7 @@ internal class ChunkedList<T>: List<T?>, RandomAccess {
 
     operator fun set(index: Int, element: T?) {
         checkRange(index)
-        val chunk = index shl CHUNK_SHIFT
+        val chunk = index shr CHUNK_SHIFT
         val idx = index and CHUNK_MASK
 
         // Don't create a chunk to put null
@@ -112,7 +112,7 @@ internal class ChunkedList<T>: List<T?>, RandomAccess {
 
     override fun get(index: Int): T? {
         checkRange(index)
-        val chunk = index shl CHUNK_SHIFT
+        val chunk = index shr CHUNK_SHIFT
         val idx = index and CHUNK_MASK
         if (chunk >= chunks.size) {
             return null
