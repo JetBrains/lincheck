@@ -369,7 +369,7 @@ class LazyTraceReader(
 
                     if (kind == ObjectKind.TRACEPOINT) {
                         tps++
-                        callTracepointChildren.addRange(id, start, end)
+                        callTracepointChildren = callTracepointChildren.addRange(id, start, end)
                     } else {
                         // Check kind
                         data.seek(start)
@@ -439,7 +439,7 @@ class LazyTraceReader(
                 override fun footerStarted(tracePoint: TRMethodCallTracePoint) {
                     // -1 is here because Kind is already read
                     val childrenEnd = calculateLogicalOffset(tracePoint.threadId,data.position() - 1)
-                    callTracepointChildren.setEnd(tracePoint.eventId, childrenEnd)
+                    callTracepointChildren = callTracepointChildren.setEnd(tracePoint.eventId, childrenEnd)
                 }
             },
             blockConsumer = object : BlockConsumer {

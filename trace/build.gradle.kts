@@ -20,10 +20,7 @@ sourceSets {
     }
 
     dependencies {
-        val sqliteVersion: String by project.rootProject
         implementation(project(":common"))
-
-        implementation("org.xerial:sqlite-jdbc:$sqliteVersion")
 
         testImplementation(project(":common"))
     }

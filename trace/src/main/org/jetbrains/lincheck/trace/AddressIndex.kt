@@ -10,15 +10,8 @@
 
 package org.jetbrains.lincheck.trace
 
-import java.nio.ByteBuffer
-import java.nio.channels.SeekableByteChannel
 import java.nio.file.Files
-import java.nio.file.StandardOpenOption.DELETE_ON_CLOSE
-import java.nio.file.StandardOpenOption.READ
-import java.nio.file.StandardOpenOption.TRUNCATE_EXISTING
-import java.nio.file.StandardOpenOption.WRITE
 import kotlin.math.min
-import kotlin.math.roundToInt
 
 internal sealed class AddressIndex {
     var size: Int = 0
@@ -34,7 +27,7 @@ internal sealed class AddressIndex {
     }
 }
 
-internal class NullAddressIndex: AddressIndex() {
+private class NullAddressIndex: AddressIndex() {
     override fun get(index: Int): Long = -1L
 
     override fun add(address: Long): AddressIndex {
@@ -51,9 +44,9 @@ internal class NullAddressIndex: AddressIndex() {
 }
 
 // 1 MiB of memory, max
-private const val MAX_MEM_INDEX_SIZE = 131072
+private const val MAX_MEM_INDEX_SIZE = 1024 * 1024 / Long.SIZE_BYTES
 
-internal class MemoryAddressIndex: AddressIndex() {
+private class MemoryAddressIndex: AddressIndex() {
     private var storage: LongArray = LongArray(16)
 
     override fun get(index: Int): Long {
@@ -65,12 +58,12 @@ internal class MemoryAddressIndex: AddressIndex() {
         if (address < 0) return this
 
         if (size == MAX_MEM_INDEX_SIZE) {
-            val fileIndex = FileAddressIndex(this.storage, size)
+            val fileIndex = MemoryMapAddressIndex(this.storage, size)
             fileIndex.add(address)
             return fileIndex
         }
         if (size == storage.size) {
-            storage = storage.copyOf(min(MAX_MEM_INDEX_SIZE, (size * 1.25).roundToInt()))
+            storage = storage.copyOf(min(MAX_MEM_INDEX_SIZE, size * 2))
         }
         storage[size] = address
         size++
@@ -80,27 +73,23 @@ internal class MemoryAddressIndex: AddressIndex() {
 }
 
 private const val LONG_SIZE_SHIFT = 3 // log2(Long.SIZE_BYTES)
+private const val MMAP_SEGMENT_SIZE = MAX_MEM_INDEX_SIZE * Long.SIZE_BYTES
 
-internal class FileAddressIndex(
+private class MemoryMapAddressIndex(
     copyFrom: LongArray,
     count: Int
 ) : AddressIndex() {
-    private val storage: SeekableByteChannel
-
-    private var bufferStart: Int = 0
-    private var bufferCount: Int = 0
-    private val buffer: ByteBuffer = ByteBuffer.allocate(MAX_MEM_INDEX_SIZE shl LONG_SIZE_SHIFT)
+    private val storage: MemMapTemporaryStorage
     private var writeFinished = false
 
     init {
         val tmp = Files.createTempFile("trace-recorder-method-call-index", ".idx")
-        storage = Files.newByteChannel(tmp, TRUNCATE_EXISTING, DELETE_ON_CLOSE, READ, WRITE)
+        storage = MemMapTemporaryStorage(tmp, MMAP_SEGMENT_SIZE)
 
-        val prestored = ByteBuffer.allocate(count * Long.SIZE_BYTES)
-        prestored.asLongBuffer().put(copyFrom, 0, count)
-        storage.write(prestored)
+        val seg = storage.prepareSegment(0)
+        check(seg.capacity() >= count * Long.SIZE_BYTES) { "Internal error: wrong buffer size" }
+        seg.asLongBuffer().put(copyFrom, 0, count)
 
-        bufferStart = count
         size = count
     }
 
@@ -108,40 +97,27 @@ internal class FileAddressIndex(
         check(writeFinished) { "Cannot read from unfinished index" }
         require(index in 0 ..< size) { "Index: $index, Size: $size" }
 
-        if (index in bufferStart ..< bufferStart + bufferCount) {
-            return buffer.getLong((index - bufferStart) shl LONG_SIZE_SHIFT)
-        }
+        val offset = index.toLong() shl LONG_SIZE_SHIFT
+        val segment = storage.getSegment(offset) ?: return -1
+        val segOff = storage.getOffsetInSegment(offset)
 
-        buffer.clear()
-        bufferStart = index
-        storage.position(bufferStart.toLong() shl LONG_SIZE_SHIFT)
-        storage.read(buffer)
-        bufferCount = buffer.position() shr LONG_SIZE_SHIFT
-        buffer.flip()
-        return buffer.getLong(0)
+        return segment.getLong(segOff)
     }
 
     override fun add(address: Long): AddressIndex {
         check(!writeFinished) { "Cannot write to finished index" }
-        if (buffer.remaining() == 0) {
-            buffer.flip()
-            // We don't need seek, as nothing could move position from last write
-            storage.write(buffer)
-            bufferStart = size
-            buffer.clear()
-        }
-        buffer.putLong(address)
+
+        val offset = size.toLong() shl LONG_SIZE_SHIFT
+        val segment = storage.prepareSegment(offset)
+        val segOff = storage.getOffsetInSegment(offset)
+        segment.putLong(segOff, address)
         size++
+
         return this
     }
 
     override fun finishWrite() {
         if (writeFinished) return
-        buffer.flip()
-        storage.write(buffer)
-        buffer.clear()
-        bufferStart = 0
-        bufferCount = 0
         writeFinished = true
     }
 }
