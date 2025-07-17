@@ -214,7 +214,7 @@ internal class ChunkedList<T>: List<T?>, RandomAccess {
             return get(idx++)
         }
 
-        override fun hasNext(): Boolean = idx < totalSize - 1
+        override fun hasNext(): Boolean = idx < totalSize
 
         override fun hasPrevious(): Boolean  = idx > 0
 
