@@ -1331,7 +1331,6 @@ internal abstract class ManagedStrategy(
     }
 
     override fun beforeWriteField(obj: Any?, value: Any?, codeLocation: Int, fieldId: Int): Unit = runInsideIgnoredSection {
-        val eventId = getNextEventId()
         val threadId = threadScheduler.getCurrentThreadId()
         val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
         if (!fieldDescriptor.isStatic && obj == null) {
@@ -1340,8 +1339,13 @@ internal abstract class ManagedStrategy(
         updateSnapshotOnFieldAccess(obj, fieldDescriptor.className, fieldDescriptor.fieldName)
         objectTracker.registerObjectLink(fromObject = obj, toObject = value)
         if (!shouldTrackFieldAccess(obj, fieldDescriptor)) {
+            getNextEventId() // increment event id as required by the method's contract
             return
         }
+        newSwitchPoint(threadId, codeLocation)
+
+        // TODO: consider moving trace point addition to `afterWriteArrayElement`.
+        val eventId = getNextEventId()
         val tracePoint = if (collectTrace) {
             WriteTracePoint(
                 eventId = eventId,
@@ -1357,13 +1361,11 @@ internal abstract class ManagedStrategy(
         } else {
             null
         }
-        newSwitchPoint(threadId, codeLocation)
         traceCollector?.addTracePointInternal(tracePoint)
         loopDetector.beforeWriteField(obj, value)
     }
 
     override fun beforeWriteArrayElement(array: Any?, index: Int, value: Any?, codeLocation: Int): Unit = runInsideIgnoredSection {
-        val eventId = getNextEventId()
         val threadId = threadScheduler.getCurrentThreadId()
         if (array == null) {
             return // ignore, `NullPointerException` will be thrown
@@ -1371,8 +1373,13 @@ internal abstract class ManagedStrategy(
         updateSnapshotOnArrayElementAccess(array, index)
         objectTracker.registerObjectLink(fromObject = array, toObject = value)
         if (!shouldTrackArrayAccess(array)) {
+            getNextEventId() // increment event id as required by the method's contract
             return
         }
+        newSwitchPoint(threadId, codeLocation)
+
+        // TODO: consider moving trace point addition to `afterWriteArrayElement`.
+        val eventId = getNextEventId()
         val tracePoint = if (collectTrace) {
             WriteTracePoint(
                 eventId = eventId,
@@ -1388,7 +1395,6 @@ internal abstract class ManagedStrategy(
         } else {
             null
         }
-        newSwitchPoint(threadId, codeLocation)
         traceCollector?.addTracePointInternal(tracePoint)
         loopDetector.beforeWriteArrayElement(array, index, value)
     }
