@@ -231,7 +231,7 @@ abstract class AbstractTraceIntegrationTest {
 
                             if (classpath != null) {
                                 val classpathString = classpath.files.joinToString(File.pathSeparator)
-                                val outputFile = File("${outputFile.absolutePath}")
+                                val outputFile = File("${outputFile.absolutePath.escape()}")
                                 outputFile.writeText(classpathString)
                             }
                         }
