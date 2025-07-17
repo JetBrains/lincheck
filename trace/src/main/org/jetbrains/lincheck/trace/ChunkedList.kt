@@ -159,7 +159,8 @@ internal class ChunkedList<T>: List<T?>, RandomAccess {
 
     override fun subList(fromIndex: Int, toIndex: Int): List<T?> {
         checkRange(fromIndex)
-        checkRange(toIndex)
+        if (toIndex !in 0.. totalSize)
+            throw IndexOutOfBoundsException("Index: $toIndex, Size: $totalSize")
         require(fromIndex <= toIndex) { "fromIndex: $fromIndex > toIndex: $toIndex" }
 
         return object : AbstractList<T?>(), RandomAccess {
