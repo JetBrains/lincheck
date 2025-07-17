@@ -138,6 +138,9 @@ internal class LincheckClassVisitor(
         mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
         mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
 
+        // NOTE: `shouldWrapInIgnoredSection` should be before `shouldNotInstrument`,
+        //       otherwise we may incorrectly forget to add some ignored sections
+        //       and start tracking events in unexpected places
         if (shouldWrapInIgnoredSection(className, methodName, desc)) {
             mv = IgnoredSectionWrapperTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
