@@ -21,7 +21,7 @@ fun main(args: Array<String>) {
 
     // eagerLoadAndPrintTrace("<path to binary file>")
 
-    lazyLoadAndPrintTrace("C:\\home\\lev\\dada\\tests.stress.set.PersistentHashSetTest_containsTests12483937858569643790.bin")
+    // lazyLoadAndPrintTrace("<path to binary file>")
 }
 
 private fun eagerLoadAndPrintTrace(fileName: String) {
