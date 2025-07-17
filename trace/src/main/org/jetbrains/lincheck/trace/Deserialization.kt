@@ -209,10 +209,10 @@ class LazyTraceReader(
     }
 
     fun readRoots(): List<TRTracePoint> {
-        var start = System.currentTimeMillis()
+        // var start = System.currentTimeMillis()
         loadContext()
-        System.err.println("Context loaded in ${System.currentTimeMillis() - start} ms")
-        start = System.currentTimeMillis()
+        // System.err.println("Context loaded in ${System.currentTimeMillis() - start} ms")
+        // start = System.currentTimeMillis()
 
         val roots = mutableMapOf<Int, TRTracePoint>()
 
@@ -242,7 +242,7 @@ class LazyTraceReader(
                 roots[threadId] = tracepoints.first()
             }
         }
-        System.err.println("Roots loaded ${System.currentTimeMillis() - start} ms")
+        // System.err.println("Roots loaded ${System.currentTimeMillis() - start} ms")
 
         return roots.entries.sortedBy { it.key }.map { (_, tracePoint) -> tracePoint }
     }
