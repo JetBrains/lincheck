@@ -1306,34 +1306,32 @@ internal abstract class ManagedStrategy(
         loopDetector.afterRead(value)
     }
 
-    override fun afterReadArrayElement(array: Any?, index: Int, codeLocation: Int, value: Any?) =
-        runInsideIgnoredSection {
-            if (collectTrace) {
-                val eventId = getNextEventId()
+    override fun afterReadArrayElement(array: Any?, index: Int, codeLocation: Int, value: Any?) = runInsideIgnoredSection {
+        if (collectTrace) {
+            val eventId = getNextEventId()
             val threadId = threadScheduler.getCurrentThreadId()
-                val valueRepresentation = objectTracker.getObjectRepresentation(value)
-                val typeRepresentation = objectFqTypeName(value)
-                if (shouldTrackArrayAccess(array)) {
-                    val tracePoint = ReadTracePoint(
-                        eventId = eventId,
+            val valueRepresentation = objectTracker.getObjectRepresentation(value)
+            val typeRepresentation = objectFqTypeName(value)
+            if (shouldTrackArrayAccess(array)) {
+                val tracePoint = ReadTracePoint(
+                    eventId = eventId,
                     iThread = threadId,
                     actorId = currentActorId[threadId]!!,
                     ownerRepresentation = null,
-                        fieldName = "${objectTracker.getObjectRepresentation(array)}[$index]",
-                        codeLocation = codeLocation,
-                        isLocal = false,
-                        valueRepresentation = valueRepresentation,
-                        valueType = typeRepresentation,
-                    )
-                    traceCollector?.addTracePointInternal(tracePoint)
-                }
+                    fieldName = "${objectTracker.getObjectRepresentation(array)}[$index]",
+                    codeLocation = codeLocation,
+                    isLocal = false,
+                    valueRepresentation = valueRepresentation,
+                    valueType = typeRepresentation,
+                )
+                traceCollector?.addTracePointInternal(tracePoint)
             }
-            loopDetector.afterRead(value)
         }
+        loopDetector.afterRead(value)
+    }
 
-    override fun beforeWriteField(obj: Any?, value: Any?, codeLocation: Int, fieldId: Int): Unit =
-        runInsideIgnoredSection {
-            val eventId = getNextEventId()
+    override fun beforeWriteField(obj: Any?, value: Any?, codeLocation: Int, fieldId: Int): Unit = runInsideIgnoredSection {
+        val eventId = getNextEventId()
         val threadId = threadScheduler.getCurrentThreadId()
         val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
         if (!fieldDescriptor.isStatic && obj == null) {
@@ -1364,9 +1362,8 @@ internal abstract class ManagedStrategy(
         loopDetector.beforeWriteField(obj, value)
     }
 
-    override fun beforeWriteArrayElement(array: Any?, index: Int, value: Any?, codeLocation: Int): Unit =
-        runInsideIgnoredSection {
-            val eventId = getNextEventId()
+    override fun beforeWriteArrayElement(array: Any?, index: Int, value: Any?, codeLocation: Int): Unit = runInsideIgnoredSection {
+        val eventId = getNextEventId()
         val threadId = threadScheduler.getCurrentThreadId()
         if (array == null) {
             return // ignore, `NullPointerException` will be thrown
