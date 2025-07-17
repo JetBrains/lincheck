@@ -1344,7 +1344,7 @@ internal abstract class ManagedStrategy(
         }
         newSwitchPoint(threadId, codeLocation)
 
-        // TODO: consider moving trace point addition to `afterWriteArrayElement`.
+        // TODO: consider moving trace point addition to `afterWriteField`.
         val eventId = getNextEventId()
         val tracePoint = if (collectTrace) {
             WriteTracePoint(
