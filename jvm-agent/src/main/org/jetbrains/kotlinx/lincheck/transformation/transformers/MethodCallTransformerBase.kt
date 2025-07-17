@@ -89,7 +89,7 @@ internal abstract class MethodCallTransformerBase(
         // STACK: codeLocation, methodId, receiver?, argumentsArray
         invokeStatic(Injections::onMethodCall)
         // STACK: deterministicCallDescriptor
-        invokeBeforeEventIfPluginEnabled("method call ${this@MethodCallTransformerBase.methodName}", setMethodEventId = true)
+        invokeBeforeEventIfPluginEnabled("method call ${this@MethodCallTransformerBase.methodName}")
     }
 
     protected fun GeneratorAdapter.processMethodCallReturn(

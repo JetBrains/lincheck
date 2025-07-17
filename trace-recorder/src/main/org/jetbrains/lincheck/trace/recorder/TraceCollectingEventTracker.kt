@@ -290,19 +290,19 @@ class TraceCollectingEventTracker(
         obj: Any?,
         codeLocation: Int,
         fieldId: Int
-    ): Boolean  = runInsideIgnoredSection {
+    ): Unit = runInsideIgnoredSection {
         val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
         if (fieldDescriptor.isStatic) {
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
         }
-        return false
+        return
     }
 
     override fun beforeReadArrayElement(
         array: Any,
         index: Int,
         codeLocation: Int
-    ): Boolean = false
+    ) {}
 
     override fun afterReadField(obj: Any?, codeLocation: Int, fieldId: Int, value: Any?) {
         val threadData = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTrackerData as? ThreadData? ?: return
@@ -334,14 +334,14 @@ class TraceCollectingEventTracker(
         value: Any?,
         codeLocation: Int,
         fieldId: Int
-    ): Boolean = runInsideIgnoredSection {
+    ): Unit = runInsideIgnoredSection {
         val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
         if (!fieldDescriptor.isStatic && obj == null) {
             // Ignore, NullPointerException will be thrown
-            return false
+            return
         }
 
-        val threadData = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTrackerData as? ThreadData? ?: return false
+        val threadData = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTrackerData as? ThreadData? ?: return
         val tracePoint = TRWriteTracePoint(
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
@@ -350,7 +350,6 @@ class TraceCollectingEventTracker(
             value = TRObjectOrNull(value)
         )
         strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
-        return false
     }
 
     override fun beforeWriteArrayElement(
@@ -358,8 +357,8 @@ class TraceCollectingEventTracker(
         index: Int,
         value: Any?,
         codeLocation: Int
-    ): Boolean = runInsideIgnoredSection {
-        val threadData = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTrackerData as? ThreadData? ?: return false
+    ): Unit = runInsideIgnoredSection {
+        val threadData = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTrackerData as? ThreadData? ?: return
         val tracePoint = TRWriteArrayTracePoint(
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
@@ -368,7 +367,6 @@ class TraceCollectingEventTracker(
             value = TRObjectOrNull(value)
         )
         strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
-        return false
     }
 
     override fun afterWrite() = Unit
@@ -525,13 +523,9 @@ class TraceCollectingEventTracker(
         System.err.println("Trace Recorder mode doesn't support IDEA Plugin integration")
     }
 
-    override fun getEventId(): Int = runInsideIgnoredSection {
+    override fun getCurrentEventId(): Int = runInsideIgnoredSection {
         System.err.println("Trace Recorder mode doesn't support IDEA Plugin integration")
         return -1
-    }
-
-    override fun setLastMethodCallEventId() = runInsideIgnoredSection {
-        System.err.println("Trace Recorder mode doesn't support IDEA Plugin integration")
     }
 
     private var startTime = System.currentTimeMillis()

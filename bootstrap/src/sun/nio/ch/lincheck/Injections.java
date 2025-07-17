@@ -25,31 +25,6 @@ public class Injections {
     // Used in the verification phase to store a suspended continuation.
     public static Object lastSuspendedCancellableContinuationDuringVerification = null;
 
-    /**
-     * Mark value of {@link #requestedBeforeEventId} field to skip calls to {@link #beforeEvent}.
-     */
-    @SuppressWarnings("unused")
-    private static final int DO_NOT_TRIGGER_BEFORE_EVENT = -1;
-
-    /**
-     * Mark value of {@link #requestedBeforeEventId} field to always call {@link #beforeEvent}.
-     */
-    private static final int STOP_AT_NEXT_EVENT_ID = -2;
-
-    /**
-     * This field is updated from the debugger to request a specific ID.
-     * <p>
-     * Initially not triggered, then it is updated from the debugger to the desired ID.
-     */
-    @SuppressWarnings({"FieldMayBeFinal", "FieldCanBeLocal"})
-    private static int requestedBeforeEventId = DO_NOT_TRIGGER_BEFORE_EVENT;
-
-    /**
-     * This field is used by the debugger to have a fast source of current ID.
-     */
-    @SuppressWarnings({"FieldCanBeLocal", "unused"})
-    private static int currentEventId = -1;
-
     public static EventTracker getEventTracker() {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) {
@@ -323,8 +298,8 @@ public class Injections {
      *
      * @return whether the trace point was created
      */
-    public static boolean beforeReadField(Object obj, int codeLocation, int fieldId) {
-        return getEventTracker().beforeReadField(obj, codeLocation, fieldId);
+    public static void beforeReadField(Object obj, int codeLocation, int fieldId) {
+        getEventTracker().beforeReadField(obj, codeLocation, fieldId);
     }
 
     /**
@@ -332,9 +307,8 @@ public class Injections {
      *
      * @return whether the trace point was created
      */
-    public static boolean beforeReadArray(Object array, int index, int codeLocation) {
-        if (array == null) return false; // Ignore, NullPointerException will be thrown
-        return getEventTracker().beforeReadArrayElement(array, index, codeLocation);
+    public static void beforeReadArray(Object array, int index, int codeLocation) {
+        getEventTracker().beforeReadArrayElement(array, index, codeLocation);
     }
 
     public static void afterLocalRead(int codeLocation, int variableId, Object value) {
@@ -361,21 +335,16 @@ public class Injections {
 
     /**
      * Called from the instrumented code before each field write.
-     *
-     * @return whether the trace point was created
      */
-    public static boolean beforeWriteField(Object obj, Object value, int codeLocation, int fieldId) {
-        return getEventTracker().beforeWriteField(obj, value, codeLocation, fieldId);
+    public static void beforeWriteField(Object obj, Object value, int codeLocation, int fieldId) {
+        getEventTracker().beforeWriteField(obj, value, codeLocation, fieldId);
     }
 
     /**
      * Called from the instrumented code before any array cell write.
-     *
-     * @return whether the trace point was created
      */
-    public static boolean beforeWriteArray(Object array, int index, Object value, int codeLocation) {
-        if (array == null) return false; // Ignore, NullPointerException will be thrown
-        return getEventTracker().beforeWriteArrayElement(array, index, value, codeLocation);
+    public static void beforeWriteArray(Object array, int index, Object value, int codeLocation) {
+        getEventTracker().beforeWriteArrayElement(array, index, value, codeLocation);
     }
 
     /**
@@ -616,6 +585,36 @@ public class Injections {
 
     // == Methods required for the IDEA Plugin integration ==
 
+    /**
+     * Mark value of {@link #requestedBeforeEventId} field to skip calls to {@link #beforeEvent}.
+     */
+    private static final int DO_NOT_TRIGGER_BEFORE_EVENT = -1;
+
+    /**
+     * Mark value of {@link #requestedBeforeEventId} field to always call {@link #beforeEvent}.
+     */
+    private static final int STOP_AT_NEXT_EVENT_ID = -2;
+
+    /**
+     * This field is updated from the debugger to request a specific event ID.
+     * <p>
+     * Initially not triggered, then it is updated from the debugger to the desired event ID.
+     */
+    @SuppressWarnings({"FieldMayBeFinal", "FieldCanBeLocal"})
+    private static int requestedBeforeEventId = DO_NOT_TRIGGER_BEFORE_EVENT;
+
+    /**
+     * This field is used by the debugger to have a fast source of current event ID.
+     */
+    @SuppressWarnings({"FieldCanBeLocal", "unused"})
+    private static int currentEventId = -1;
+
+    /**
+     * Determines whether a {@link #beforeEvent} hook should be invoked.
+     * Queries the event tracker to determine if it currently requests {@link #beforeEvent} processing.
+     *
+     * @return true if the {@link #beforeEvent} method should be invoked before the event, false otherwise
+     */
     public static boolean shouldInvokeBeforeEvent() {
         return getEventTracker().shouldInvokeBeforeEvent();
     }
@@ -624,33 +623,42 @@ public class Injections {
      * This method is introduced for performance purposes.
      * Instead of calling {@link #beforeEvent} on every event, we call it only at the requested point.
      * It greatly improves the performance as the debugger installs a breakpoint into {@link #beforeEvent} method,
-     * so each call leads to unnecessary lincheck-debugger communication.
-     * @param eventId current id value
-     * @return whether the current point should lead to {@link #beforeEvent} call
+     * so each call leads to unnecessary lincheck/debugger communication.
+     *
+     * @param eventId current id value.
+     * @return whether the current event id is equal to the requested id.
      */
     public static boolean isBeforeEventRequested(int eventId) {
         int requestedId = requestedBeforeEventId;
         return requestedId == STOP_AT_NEXT_EVENT_ID || requestedId == eventId;
     }
 
+    /**
+     * This method is invoked before the event with specified id occurs.
+     * <p>
+     *
+     * IDEA plugin installs a breakpoint on this method
+     * to stop the debugger right before the specified event.
+     *
+     * @param eventId the unique identifier of the event.
+     * @param type type of the next event. Used only for debug purposes.
+     */
     public static void beforeEvent(int eventId, String type) {
-        // IDEA plugin installs breakpoint to this method
         getEventTracker().beforeEvent(eventId, type);
     }
 
     /**
-     * Gets current ID and sets it into {@link #currentEventId}.
+     * Requests current event ID from the event tracker and sets it into {@link #currentEventId}.
+     *
      * @param type type of the next event. Used only for debug purposes.
      */
-    public static int getNextEventId(String type) {
-        int eventId = getEventTracker().getEventId();
+    public static int getCurrentEventId(String type) {
+        int eventId = getEventTracker().getCurrentEventId();
         currentEventId = eventId;
         return eventId;
     }
 
-    public static void setLastMethodCallEventId() {
-        getEventTracker().setLastMethodCallEventId();
-    }
+    // == Methods for bypassing JDK-8 specific restrictions on MethodHandles.Lookup ==
 
     /**
      * Attempts to retrieve the Class object associated with the given class name.
@@ -667,7 +675,6 @@ public class Injections {
             return null;
         }
     }
-
 
     private static Constructor<MethodHandles.Lookup> lookUpPrivateConstructor = null;
 
