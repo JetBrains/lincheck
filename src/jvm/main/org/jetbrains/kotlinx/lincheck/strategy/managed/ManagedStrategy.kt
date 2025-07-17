@@ -50,7 +50,6 @@ import org.jetbrains.lincheck.util.disableAnalysis
 import org.jetbrains.lincheck.util.enableAnalysis
 import org.jetbrains.lincheck.util.ensure
 import org.jetbrains.lincheck.util.enterIgnoredSection
-import org.jetbrains.lincheck.util.eventIdStrictOrderingCheck
 import org.jetbrains.lincheck.util.isCallStackPropagating
 import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import org.jetbrains.lincheck.util.isSilent
@@ -1003,8 +1002,10 @@ internal abstract class ManagedStrategy(
     }
 
     override fun beforeLock(codeLocation: Int): Unit = runInsideIgnoredSection {
-        val eventId = getNextEventId()
         val threadId = threadScheduler.getCurrentThreadId()
+        newSwitchPoint(threadId, codeLocation)
+
+        val eventId = getNextEventId()
         val tracePoint = if (collectTrace) {
             MonitorEnterTracePoint(
                 eventId = eventId,
@@ -1015,7 +1016,6 @@ internal abstract class ManagedStrategy(
         } else {
             null
         }
-        newSwitchPoint(threadId, codeLocation)
         traceCollector?.addTracePointInternal(tracePoint)
     }
 
@@ -1042,7 +1042,6 @@ internal abstract class ManagedStrategy(
     }
 
     override fun unlock(monitor: Any, codeLocation: Int): Unit = runInsideIgnoredSection {
-        val eventId = getNextEventId()
         val threadId = threadScheduler.getCurrentThreadId()
         // We need to be extremely careful with the MONITOREXIT instruction,
         // as it can be put into a recursive "finally" block, releasing
@@ -1055,6 +1054,8 @@ internal abstract class ManagedStrategy(
         if (isReleased) {
             unblockAcquiringThreads(threadId, monitor)
         }
+
+        val eventId = getNextEventId()
         if (collectTrace) {
             val tracePoint = MonitorExitTracePoint(
                 eventId = eventId,
@@ -1067,8 +1068,13 @@ internal abstract class ManagedStrategy(
     }
 
     override fun beforePark(codeLocation: Int): Unit = runInsideIgnoredSection {
-        val eventId = getNextEventId()
         val threadId = threadScheduler.getCurrentThreadId()
+        // Instead of fairly supporting the park/unpark semantics,
+        // we simply add a new switch point here, thus, also
+        // emulating spurious wake-ups.
+        newSwitchPoint(threadId, codeLocation)
+
+        val eventId = getNextEventId()
         val tracePoint = if (collectTrace) {
             ParkTracePoint(
                 eventId = eventId,
@@ -1079,10 +1085,6 @@ internal abstract class ManagedStrategy(
         } else {
             null
         }
-        // Instead of fairly supporting the park/unpark semantics,
-        // we simply add a new switch point here, thus, also
-        // emulating spurious wake-ups.
-        newSwitchPoint(threadId, codeLocation)
         traceCollector?.addTracePointInternal(tracePoint)
     }
 
@@ -1135,11 +1137,12 @@ internal abstract class ManagedStrategy(
     }
 
     override fun unpark(thread: Thread, codeLocation: Int): Unit = runInsideIgnoredSection {
-        val eventId = getNextEventId()
         val threadId = threadScheduler.getCurrentThreadId()
         val unparkedThreadId = threadScheduler.getThreadId(thread)
         parkingTracker.unpark(threadId, unparkedThreadId)
         unblockParkedThread(unparkedThreadId)
+
+        val eventId = getNextEventId()
         if (collectTrace) {
             val tracePoint = UnparkTracePoint(
                 eventId = eventId,
@@ -1152,8 +1155,10 @@ internal abstract class ManagedStrategy(
     }
 
     override fun beforeWait(codeLocation: Int): Unit = runInsideIgnoredSection {
-        val eventId = getNextEventId()
         val threadId = threadScheduler.getCurrentThreadId()
+        newSwitchPoint(threadId, codeLocation)
+
+        val eventId = getNextEventId()
         val tracePoint = if (collectTrace) {
             WaitTracePoint(
                 eventId = eventId,
@@ -1164,7 +1169,6 @@ internal abstract class ManagedStrategy(
         } else {
             null
         }
-        newSwitchPoint(threadId, codeLocation)
         traceCollector?.addTracePointInternal(tracePoint)
     }
 
@@ -1196,9 +1200,10 @@ internal abstract class ManagedStrategy(
     }
 
     override fun notify(monitor: Any, codeLocation: Int, notifyAll: Boolean): Unit = runInsideIgnoredSection {
-        val eventId = getNextEventId()
         val threadId = threadScheduler.getCurrentThreadId()
         monitorTracker.notify(threadId, monitor, notifyAll = notifyAll)
+
+        val eventId = getNextEventId()
         if (collectTrace) {
             val tracePoint = NotifyTracePoint(
                 eventId = eventId,
@@ -1261,8 +1266,8 @@ internal abstract class ManagedStrategy(
         if (!shouldTrackFieldAccess(obj, fieldDescriptor)) {
             return
         }
-        val iThread = threadScheduler.getCurrentThreadId()
-        newSwitchPoint(iThread, codeLocation)
+        val threadId = threadScheduler.getCurrentThreadId()
+        newSwitchPoint(threadId, codeLocation)
         loopDetector.beforeReadField(obj)
     }
 
@@ -1273,8 +1278,8 @@ internal abstract class ManagedStrategy(
         if (!shouldTrackArrayAccess(array)) {
             return
         }
-        val iThread = threadScheduler.getCurrentThreadId()
-        newSwitchPoint(iThread, codeLocation)
+        val threadId = threadScheduler.getCurrentThreadId()
+        newSwitchPoint(threadId, codeLocation)
         loopDetector.beforeReadArrayElement(array, index)
     }
 
@@ -1636,7 +1641,6 @@ internal abstract class ManagedStrategy(
         val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
         // process method effect on the static memory snapshot
         processMethodEffectOnStaticSnapshot(receiver, params)
-        val eventId = getNextEventId()
         val threadId = threadScheduler.getCurrentThreadId()
         // re-throw abort error if the thread was aborted
         if (threadScheduler.isAborted(threadId)) {
@@ -1687,6 +1691,7 @@ internal abstract class ManagedStrategy(
             // check for livelock and create the method call trace point
             traceCollector?.checkActiveLockDetected()
             // create a trace point
+            val eventId = getNextEventId()
             val tracePoint = addBeforeMethodCallTracePoint(
                 eventId = eventId,
                 threadId = threadId,
@@ -1705,25 +1710,25 @@ internal abstract class ManagedStrategy(
             loopDetector.beforeAtomicMethodCall(codeLocation, params)
         } else {
             // handle non-atomic methods
-            if (collectTrace) {
-                // check for livelock and create the method call trace point
-                traceCollector?.checkActiveLockDetected()
-                // create a trace point
-                val tracePoint = addBeforeMethodCallTracePoint(
-                    eventId = eventId,
-                    threadId = threadId,
-                    owner = receiver,
-                    codeLocation = codeLocation,
-                    methodId = methodId,
-                    className = methodDescriptor.className,
-                    methodName = methodDescriptor.methodName,
-                    methodParams = params,
-                    atomicMethodDescriptor = atomicMethodDescriptor,
-                    callType = MethodCallTracePoint.CallType.NORMAL,
-                )
-                // add trace point to the trace
-                traceCollector?.addTracePointInternal(tracePoint)
-            }
+
+            // check for livelock and create the method call trace point
+            traceCollector?.checkActiveLockDetected()
+            // create a trace point
+            val eventId = getNextEventId()
+            val tracePoint = addBeforeMethodCallTracePoint(
+                eventId = eventId,
+                threadId = threadId,
+                owner = receiver,
+                codeLocation = codeLocation,
+                methodId = methodId,
+                className = methodDescriptor.className,
+                methodName = methodDescriptor.methodName,
+                methodParams = params,
+                atomicMethodDescriptor = atomicMethodDescriptor,
+                callType = MethodCallTracePoint.CallType.NORMAL,
+            )
+            // add trace point to the trace
+            traceCollector?.addTracePointInternal(tracePoint)
             // notify loop detector about the method call
             if (methodSection < AnalysisSectionType.ATOMIC) {
                 loopDetector.beforeMethodCall(codeLocation, params)
@@ -1763,7 +1768,7 @@ internal abstract class ManagedStrategy(
                         it
                     )
                 }
-                    .getOrElse { error("Unexpected replacement success -> failure:\n$result\n${KResult.failure<Any?>(it)}") }
+                .getOrElse { error("Unexpected replacement success -> failure:\n$result\n${KResult.failure<Any?>(it)}") }
         }
         val threadId = threadScheduler.getCurrentThreadId()
         // check if the called method is an atomics API method
@@ -1863,12 +1868,12 @@ internal abstract class ManagedStrategy(
         codeLocation: Int,
         owner: Any?,
     ) = runInsideIgnoredSection {
-        val eventId = getNextEventId()
         val threadId = threadScheduler.getCurrentThreadId()
         val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
         if (threadScheduler.isAborted(threadId)) {
             threadScheduler.abortCurrentThread()
         }
+        val eventId = getNextEventId()
         if (collectTrace) {
             traceCollector!!.checkActiveLockDetected()
             val tracePoint = addBeforeMethodCallTracePoint(
@@ -2418,8 +2423,8 @@ internal abstract class ManagedStrategy(
      * Creates a new [CoroutineCancellationTracePoint].
      */
     internal fun createAndLogCancellationTracePoint(): CoroutineCancellationTracePoint? {
+        val eventId = getNextEventId()
         if (collectTrace) {
-            val eventId = getNextEventId()
             val threadId = threadScheduler.getCurrentThreadId()
             val actorId = currentActorId[threadId] ?: Int.MIN_VALUE
             val cancellationTracePoint = CoroutineCancellationTracePoint(
