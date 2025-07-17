@@ -10,6 +10,16 @@
 
 package org.jetbrains.lincheck.trace
 
+import java.nio.ByteBuffer
+import java.nio.channels.FileChannel
+import java.nio.channels.SeekableByteChannel
+import java.nio.file.Files
+import java.nio.file.StandardOpenOption
+import java.nio.file.StandardOpenOption.DELETE_ON_CLOSE
+import java.nio.file.StandardOpenOption.READ
+import java.nio.file.StandardOpenOption.SPARSE
+import java.nio.file.StandardOpenOption.TRUNCATE_EXISTING
+import java.nio.file.StandardOpenOption.WRITE
 import java.sql.Connection
 import java.sql.DriverManager
 import java.sql.PreparedStatement
@@ -26,7 +36,100 @@ internal sealed class RangeIndex {
     abstract fun finishIndex()
 
     companion object {
-        fun create(): RangeIndex = SQLiteRangeIndex()
+        fun create(): RangeIndex = MemMapRangeIndex()
+    }
+}
+
+// 128MiB segments
+private const val MMAP_SEGMENT_SIZE = 128*1024*1024
+private const val MMAP_SEGMENT_SHIFT = 27 // log2(MMAP_SEGMENT_SIZE)
+private const val MMAP_SEGMENT_MASK = (1L shl MMAP_SEGMENT_SHIFT) - 1
+
+private const val CELL_SIZE = Long.SIZE_BYTES + Long.SIZE_BYTES
+private const val CELL_SHIFT = 4 // log2(CELL_SIZE)
+
+private class MemMapRangeIndex: RangeIndex() {
+    private val openRanges = mutableMapOf<Int, Long>()
+    private val storage: FileChannel
+    private val segments = mutableListOf<ByteBuffer?>()
+    private var closed = false
+
+    init {
+        val tmp = Files.createTempFile("trace-recorder-method-calls-range-index", ".idx")
+        storage = FileChannel.open(tmp, TRUNCATE_EXISTING, SPARSE, DELETE_ON_CLOSE, READ, WRITE)
+    }
+
+
+    override operator fun get(id: Int): Range? {
+        require(id >= 0) { "Id $id must be non-negative" }
+        check(closed) { "Index is not closed properly yet" }
+
+        val globOff = id.toLong() shl CELL_SHIFT
+
+        val segIdx = id shr (MMAP_SEGMENT_SHIFT - CELL_SHIFT)
+        val segment = segments.getOrNull(segIdx) ?: return null
+
+        val segOff = (globOff and MMAP_SEGMENT_MASK).toInt()
+
+        return Range(segment.getLong(segOff), segment.getLong(segOff + Long.SIZE_BYTES))
+    }
+
+    override fun addRange(id: Int, start: Long, end: Long) {
+        check(!closed) { "Index already closed." }
+        require(id >= 0) { "Id $id must be non-negative" }
+        require(start >= 0) { "Id $id: Start $start must be non-negative" }
+        require(end >= start) { "Id $id: End $end must be larger or equal than start $start" }
+
+        val globOff = id.toLong() shl CELL_SHIFT
+
+        val segIdx = id shr (MMAP_SEGMENT_SHIFT - CELL_SHIFT)
+        val segment = prepareSegment(segIdx)
+
+        val segOff = (globOff and MMAP_SEGMENT_MASK).toInt()
+
+        segment.putLong(segOff, start)
+        segment.putLong(segOff + Long.SIZE_BYTES, end)
+    }
+
+    override fun addStart(id: Int, start: Long) {
+        check(!closed) { "Index already closed." }
+        require(id >= 0) { "Id $id must be non-negative" }
+        require(start >= 0) { "Id $id: Start $start must be non-negative" }
+        check(openRanges[id] == null) { "Id $id must be unique in range index" }
+        openRanges[id] = start
+    }
+
+    override fun setEnd(id: Int, end: Long) {
+        check(!closed) { "Index already closed." }
+        val start = openRanges.remove(id)
+        check(start != null) { "Id $id must have start already" }
+        addRange(id, start, end)
+    }
+
+    override fun finishIndex() {
+        if (closed) return
+        check(openRanges.isEmpty()) { "Index has some non-finished ranges" }
+        closed = true
+    }
+
+    private fun prepareSegment(idx: Int): ByteBuffer {
+        val segment = segments.getOrNull(idx)
+        if (segment != null) return segment
+
+        while (idx >= segments.size) {
+            segments.add(null)
+        }
+
+        val segmentStart: Long = idx.toLong() * MMAP_SEGMENT_SIZE
+        val afterSize: Long = segmentStart + MMAP_SEGMENT_SIZE
+
+        if (storage.size() < afterSize) {
+            storage.truncate(afterSize)
+        }
+
+        val rv = storage.map(FileChannel.MapMode.READ_WRITE, segmentStart, MMAP_SEGMENT_SIZE.toLong())
+        segments[idx] = rv
+        return rv
     }
 }
 
