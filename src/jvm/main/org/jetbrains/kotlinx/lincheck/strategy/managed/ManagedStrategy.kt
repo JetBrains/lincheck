@@ -317,6 +317,12 @@ internal abstract class ManagedStrategy(
     // == BASIC STRATEGY METHODS ==
 
     override fun beforePart(part: ExecutionPart) = runInsideIgnoredSection {
+        val tracePoint = SectionDelimiterTracePoint(
+            eventId = getNextEventId(),
+            executionPart = part,
+        )
+        traceCollector?.addTracePointInternal(tracePoint)
+
         val nextThread = when (part) {
             INIT -> 0
             PARALLEL -> {
@@ -324,16 +330,10 @@ internal abstract class ManagedStrategy(
                 onSwitchPoint(iThread = -1)
                 chooseThread(iThread = -1)
             }
-
             POST -> 0
             VALIDATION -> 0
         }
-        val tracePoint = SectionDelimiterTracePoint(
-            eventId = getNextEventId(),
-            executionPart = part,
-        )
         loopDetector.beforePart(part, nextThread)
-        traceCollector?.addTracePointInternal(tracePoint)
         threadScheduler.scheduleThread(nextThread)
     }
 
