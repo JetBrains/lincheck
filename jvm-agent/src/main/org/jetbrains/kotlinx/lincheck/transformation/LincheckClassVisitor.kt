@@ -145,11 +145,6 @@ internal class LincheckClassVisitor(
             mv = IgnoredSectionWrapperTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
         }
-        // Wrap IntelliJ IDEA runtime agent's methods into ignored section.
-        if (isIntellijRuntimeAgentClass(className.toCanonicalClassName())) {
-            mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
-            return mv
-        }
         if (shouldNotInstrument(className, methodName, desc)) {
             // Must appear last in the code, to completely hide intrinsic candidate methods from all transformers
             mv = IntrinsicCandidateMethodFilter(className, methodName, desc, intrinsicDelegateVisitor.newAdapter(), mv.newAdapter())
@@ -272,6 +267,9 @@ internal class LincheckClassVisitor(
         // Ignore methods of JDK 20+ `ThreadContainer` classes, except `start` method.
         if (isThreadContainerClass(className.toCanonicalClassName()) &&
             !isThreadContainerThreadStartMethod(className.toCanonicalClassName(), methodName))
+            return true
+        // Wrap IntelliJ IDEA runtime agent's methods into ignored section.
+        if (isIntellijRuntimeAgentClass(className.toCanonicalClassName()))
             return true
 
         return false
