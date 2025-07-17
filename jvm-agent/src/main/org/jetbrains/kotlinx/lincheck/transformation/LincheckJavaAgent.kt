@@ -18,6 +18,7 @@ import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumen
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.transformedClassesStress
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.isEagerlyInstrumentedClass
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.shouldTransform
+import org.jetbrains.kotlinx.lincheck.transformation.transformers.coroutineCallingClasses
 import org.jetbrains.lincheck.util.isJavaLambdaClass
 import org.jetbrains.lincheck.util.isJdk8
 import org.jetbrains.lincheck.util.readFieldSafely

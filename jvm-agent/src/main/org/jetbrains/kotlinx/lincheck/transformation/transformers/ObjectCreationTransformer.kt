@@ -26,7 +26,7 @@ internal class ObjectCreationTransformer(
     className: String,
     methodName: String,
     adapter: GeneratorAdapter
-) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
+) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter) {
 
     /* To track object creation, this transformer inserts `Injections::afterNewObjectCreation` calls
      * after an object is allocated and initialized.

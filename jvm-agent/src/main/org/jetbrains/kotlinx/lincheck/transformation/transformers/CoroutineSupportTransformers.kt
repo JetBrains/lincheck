@@ -41,8 +41,12 @@ internal class CoroutineCancellabilitySupportTransformer(
         }
         super.visitMethodInsn(opcode, owner, name, desc, itf)
     }
-
 }
+
+// Set storing canonical names of the classes that call internal coroutine functions;
+// it is used to optimize class re-transformation in stress mode by remembering
+// exactly what classes need to be re-transformed (only the coroutines calling classes)
+internal val coroutineCallingClasses = HashSet<String>()
 
 /**
  * [CoroutineDelaySupportTransformer] substitutes each invocation of [kotlinx.coroutines.delay] function with
@@ -56,7 +60,7 @@ internal class CoroutineDelaySupportTransformer(
     className: String,
     methodName: String,
     adapter: GeneratorAdapter,
-) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
+) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter) {
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
         if (!isCoroutineDelay(owner, name, desc)) {

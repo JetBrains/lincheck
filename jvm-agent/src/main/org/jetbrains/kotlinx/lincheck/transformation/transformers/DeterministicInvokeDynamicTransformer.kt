@@ -42,7 +42,7 @@ internal class DeterministicInvokeDynamicTransformer(
     methodName: String,
     private val classVersion: Int,
     adapter: GeneratorAdapter
-) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
+) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter) {
     override fun visitInvokeDynamicInsn(
         name: String,
         descriptor: String,
