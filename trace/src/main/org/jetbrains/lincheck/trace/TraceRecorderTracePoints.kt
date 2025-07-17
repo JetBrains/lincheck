@@ -15,7 +15,6 @@ import org.jetbrains.lincheck.descriptors.FieldDescriptor
 import org.jetbrains.lincheck.descriptors.MethodDescriptor
 import org.jetbrains.lincheck.descriptors.VariableDescriptor
 import org.jetbrains.lincheck.descriptors.Types
-import org.jetbrains.lincheck.util.isJavaLambdaClass
 import java.io.DataInput
 import java.io.DataOutput
 import java.math.BigDecimal
@@ -155,32 +154,11 @@ class TRMethodCallTracePoint(
     }
 
     override fun toText(verbose: Boolean): String {
-        val md = methodDescriptor
         val sb = StringBuilder()
-        if (obj != null) {
-            sb.append(obj.adornedRepresentation())
-        } else {
-            sb.append(md.className.substringAfterLast("."))
-        }
-        sb.append('.')
-            .append(md.methodName)
-            .append('(')
+        TRMethodCallTracePointPrettifier(point = this, parameters, methodDescriptor)
+            .removeCoroutinesCoreSuffix()
+            .dump(sb, verbose)
 
-        parameters.forEachIndexed { i, it ->
-            if (i != 0) {
-                sb.append(", ")
-            }
-            sb.append(it.toString())
-        }
-        sb.append(')')
-        if (exceptionClassName != null) {
-            sb.append(": threw ")
-            sb.append(exceptionClassName)
-        } else if (result != TR_OBJECT_VOID) {
-            sb.append(": ")
-            sb.append(result.toString())
-        }
-        sb.append(codeLocationId, verbose)
         return sb.toString()
     }
 
@@ -216,7 +194,7 @@ sealed class TRFieldTracePoint(
     val value: TRObject?,
     eventId: Int
 ) : TRTracePoint(codeLocationId, threadId, eventId) {
-    protected abstract val directionSymbol: String
+    abstract val directionSymbol: String
 
     // TODO Make parametrized
     val fieldDescriptor: FieldDescriptor get() = TRACE_CONTEXT.getFieldDescriptor(fieldId)
@@ -243,19 +221,12 @@ sealed class TRFieldTracePoint(
     }
 
     override fun toText(verbose: Boolean): String {
-        val fd = fieldDescriptor
         val sb = StringBuilder()
-        if (obj != null) {
-            sb.append(obj.adornedRepresentation())
-        } else {
-            sb.append(fd.className.substringAfterLast("."))
-        }
-        sb.append('.')
-            .append(fd.fieldName)
-            .append(directionSymbol)
-            .append(value.toString())
+        TRFieldTracePointPrettifier(this)
+            .compressLambdaCaptureSyntheticField()
+            .removeVolatileDollar()
+            .dump(sb, verbose)
 
-        sb.append(codeLocationId, verbose)
         return sb.toString()
     }
 }
@@ -315,7 +286,7 @@ sealed class TRLocalVariableTracePoint(
     val value: TRObject?,
     eventId: Int
 ) : TRTracePoint(codeLocationId, threadId, eventId) {
-    protected abstract val directionSymbol: String
+    abstract val directionSymbol: String
 
     // TODO Make parametrized
     val variableDescriptor: VariableDescriptor get() = TRACE_CONTEXT.getVariableDescriptor(localVariableId)
@@ -335,13 +306,13 @@ sealed class TRLocalVariableTracePoint(
     }
 
     override fun toText(verbose: Boolean): String {
-        val vd = variableDescriptor
         val sb = StringBuilder()
-        sb.append(vd.name)
-            .append(directionSymbol)
-            .append(value.toString())
+        TRLocalVariableTracePointPrettifier(point = this, variableDescriptor)
+            .removeInlineIV()
+            .removeDollarThis()
+            .removeLeadingDollar()
+            .dump(sb, verbose)
 
-        sb.append(codeLocationId, verbose)
         return sb.toString()
     }
 }
@@ -413,21 +384,6 @@ sealed class TRArrayTracePoint(
         out.preWriteTRObject(array)
         out.preWriteTRObject(value)
     }
-
-    override fun toText(verbose: Boolean): String {
-        val sb = StringBuilder()
-        sb.append(array.className.substringAfterLast("."))
-            .append('@')
-            .append(array.identityHashCode)
-            .append('[')
-            .append(index)
-            .append("]")
-            .append(directionSymbol)
-            .append(value.toString())
-
-        sb.append(codeLocationId, verbose)
-        return sb.toString()
-    }
 }
 
 class TRReadArrayTracePoint(
@@ -439,6 +395,19 @@ class TRReadArrayTracePoint(
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
 ) : TRArrayTracePoint(threadId, codeLocationId, array, index, value, eventId) {
     override val directionSymbol: String get() = " → "
+
+    override fun toText(verbose: Boolean): String {
+        val sb = StringBuilder()
+        sb.append(array)
+            .append('[')
+            .append(index)
+            .append("]")
+            .append(directionSymbol)
+            .append(value.toString())
+
+        sb.append(codeLocationId, verbose)
+        return sb.toString()
+    }
 
     internal companion object {
         fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRReadArrayTracePoint {
@@ -466,9 +435,7 @@ class TRWriteArrayTracePoint(
 
     override fun toText(verbose: Boolean): String {
         val sb = StringBuilder()
-        sb.append(array.className.substringAfterLast("."))
-            .append('@')
-            .append(array.identityHashCode)
+        sb.append(array)
             .append('[')
             .append(index)
             .append("] ← ")
@@ -543,10 +510,9 @@ data class TRObject internal constructor (
         adornedClassNameRepresentation(className) + "@" + identityHashCode
 
     private fun adornedClassNameRepresentation(className: String): String =
-        className.substringAfterLast(".").let {
-            if (isJavaLambdaClass(it)) it.substringBeforeLast('/')
-            else it
-        }
+        className.substringAfterLast(".")
+            .let(::removeJavaLambdaRuntimeAddress)
+            .let(::replaceNestedClassDollar)
 }
 
 private const val TR_OBJECT_NULL_CLASSNAME = -1
@@ -657,7 +623,7 @@ internal fun DataInput.readTRObject(): TRObject? {
     }
 }
 
-private fun <V: Appendable> V.append(codeLocationId: Int, verbose: Boolean): V {
+internal fun <V: Appendable> V.append(codeLocationId: Int, verbose: Boolean): V {
     if (!verbose) return this
     val cl = CodeLocations.stackTrace(codeLocationId)
     append(" at ").append(cl.fileName).append(':').append(cl.lineNumber.toString())

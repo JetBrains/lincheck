@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.trace
 
+import org.jetbrains.lincheck.trace.replaceNestedClassDollar
 import org.jetbrains.lincheck.util.AnalysisProfile
 
 
@@ -315,7 +316,7 @@ private fun SingleThreadedTable<TraceNode>.compressDollarThis() = compressNodes 
  */
 private fun SingleThreadedTable<TraceNode>.replaceNestedClassDollar() = compressNodes { node ->
     if (node is CallNode && node.tracePoint.ownerName != null) {
-        val newOwner = fixNestedClassDollar(node.tracePoint.ownerName!!)
+        val newOwner = replaceNestedClassDollar(node.tracePoint.ownerName!!)
         node.tracePoint.updateOwnerName(newOwner)
     }
     node
@@ -413,19 +414,7 @@ private fun String.removeStackTraceNestedClassDollarSigns(): String {
     val after = this.substringAfter('.', "")
     if (after.isEmpty()) return before
 
-    return "${fixNestedClassDollar(before)}.$after"
-}
-
-/**
- * Remove nested class dollars from string (if present).
- */
-private fun fixNestedClassDollar(nestedClassRepresentation: String): String {
-    val before = nestedClassRepresentation.substringBefore('$')
-    val after = nestedClassRepresentation.substringAfter('$', "")
-    if (after.isEmpty()) return nestedClassRepresentation
-    val firstPart = if (before.isNotEmpty() && before[0].isUpperCase() && after[0].isUpperCase()) "$before."
-    else "$before$"
-    return firstPart + fixNestedClassDollar(after)
+    return "${replaceNestedClassDollar(before)}.$after"
 }
 
 internal fun SingleThreadedTable<TraceNode>.collapseLibraries(analysisProfile: AnalysisProfile) = compressNodes { node ->
