@@ -1246,9 +1246,6 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    /**
-     * Returns `true` if a switch point is created.
-     */
     override fun beforeReadField(obj: Any?, codeLocation: Int, fieldId: Int): Unit = runInsideIgnoredSection {
         val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
         if (!fieldDescriptor.isStatic && obj == null) {
