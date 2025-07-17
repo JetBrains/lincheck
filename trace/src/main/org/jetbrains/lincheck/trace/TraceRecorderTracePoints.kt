@@ -549,23 +549,23 @@ data class TRObject internal constructor (
         }
 }
 
-private const val TR_OBJECT_NULL_CLASSNAME = -1
+const val TR_OBJECT_NULL_CLASSNAME = -1
 val TR_OBJECT_NULL = TRObject(TR_OBJECT_NULL_CLASSNAME, 0, null)
 
-private const val TR_OBJECT_VOID_CLASSNAME = -2
+const val TR_OBJECT_VOID_CLASSNAME = -2
 val TR_OBJECT_VOID = TRObject(TR_OBJECT_VOID_CLASSNAME, 0, null)
 
-private const val TR_OBJECT_P_BYTE = TR_OBJECT_VOID_CLASSNAME - 1
-private const val TR_OBJECT_P_SHORT = TR_OBJECT_P_BYTE - 1
-private const val TR_OBJECT_P_INT = TR_OBJECT_P_SHORT - 1
-private const val TR_OBJECT_P_LONG = TR_OBJECT_P_INT - 1
-private const val TR_OBJECT_P_FLOAT = TR_OBJECT_P_LONG - 1
-private const val TR_OBJECT_P_DOUBLE = TR_OBJECT_P_FLOAT - 1
-private const val TR_OBJECT_P_CHAR = TR_OBJECT_P_DOUBLE - 1
-private const val TR_OBJECT_P_STRING = TR_OBJECT_P_CHAR - 1
-private const val TR_OBJECT_P_UNIT = TR_OBJECT_P_STRING - 1
-private const val TR_OBJECT_P_RAW_STRING = TR_OBJECT_P_UNIT - 1
-private const val TR_OBJECT_P_BOOLEAN = TR_OBJECT_P_RAW_STRING - 1
+const val TR_OBJECT_P_BYTE = TR_OBJECT_VOID_CLASSNAME - 1
+const val TR_OBJECT_P_SHORT = TR_OBJECT_P_BYTE - 1
+const val TR_OBJECT_P_INT = TR_OBJECT_P_SHORT - 1
+const val TR_OBJECT_P_LONG = TR_OBJECT_P_INT - 1
+const val TR_OBJECT_P_FLOAT = TR_OBJECT_P_LONG - 1
+const val TR_OBJECT_P_DOUBLE = TR_OBJECT_P_FLOAT - 1
+const val TR_OBJECT_P_CHAR = TR_OBJECT_P_DOUBLE - 1
+const val TR_OBJECT_P_STRING = TR_OBJECT_P_CHAR - 1
+const val TR_OBJECT_P_UNIT = TR_OBJECT_P_STRING - 1
+const val TR_OBJECT_P_RAW_STRING = TR_OBJECT_P_UNIT - 1
+const val TR_OBJECT_P_BOOLEAN = TR_OBJECT_P_RAW_STRING - 1
 
 fun TRObjectOrNull(obj: Any?): TRObject? =
     obj?.let { TRObject(it) }
