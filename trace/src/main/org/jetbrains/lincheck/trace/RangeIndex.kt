@@ -10,88 +10,22 @@
 
 package org.jetbrains.lincheck.trace
 
-import java.nio.ByteBuffer
-import java.nio.channels.FileChannel
-import java.nio.channels.SeekableByteChannel
 import java.nio.file.Files
-import java.nio.file.StandardOpenOption
-import java.nio.file.StandardOpenOption.DELETE_ON_CLOSE
-import java.nio.file.StandardOpenOption.READ
-import java.nio.file.StandardOpenOption.SPARSE
-import java.nio.file.StandardOpenOption.TRUNCATE_EXISTING
-import java.nio.file.StandardOpenOption.WRITE
-import java.sql.Connection
-import java.sql.DriverManager
-import java.sql.PreparedStatement
 import kotlin.math.min
 import kotlin.math.roundToInt
 
 internal data class Range(val start: Long, val end: Long)
 
-internal sealed class RangeIndex {
+internal sealed class RangeIndex(
+    aOpenRanges: MutableMap<Int, Long>,
+) {
+    protected val openRanges: MutableMap<Int, Long> = aOpenRanges
+    protected var closed = false
+
     abstract operator fun get(id: Int): Range?
-    abstract fun addRange(id: Int, start: Long, end: Long)
-    abstract fun addStart(id: Int, start: Long)
-    abstract fun setEnd(id: Int, end: Long)
-    abstract fun finishIndex()
+    abstract fun addRange(id: Int, start: Long, end: Long): RangeIndex
 
-    companion object {
-        fun create(): RangeIndex = MemMapRangeIndex()
-    }
-}
-
-// 128MiB segments
-private const val MMAP_SEGMENT_SIZE = 128*1024*1024
-private const val MMAP_SEGMENT_SHIFT = 27 // log2(MMAP_SEGMENT_SIZE)
-private const val MMAP_SEGMENT_MASK = (1L shl MMAP_SEGMENT_SHIFT) - 1
-
-private const val CELL_SIZE = Long.SIZE_BYTES + Long.SIZE_BYTES
-private const val CELL_SHIFT = 4 // log2(CELL_SIZE)
-
-private class MemMapRangeIndex: RangeIndex() {
-    private val openRanges = mutableMapOf<Int, Long>()
-    private val storage: FileChannel
-    private val segments = mutableListOf<ByteBuffer?>()
-    private var closed = false
-
-    init {
-        val tmp = Files.createTempFile("trace-recorder-method-calls-range-index", ".idx")
-        storage = FileChannel.open(tmp, TRUNCATE_EXISTING, SPARSE, DELETE_ON_CLOSE, READ, WRITE)
-    }
-
-
-    override operator fun get(id: Int): Range? {
-        require(id >= 0) { "Id $id must be non-negative" }
-        check(closed) { "Index is not closed properly yet" }
-
-        val globOff = id.toLong() shl CELL_SHIFT
-
-        val segIdx = id shr (MMAP_SEGMENT_SHIFT - CELL_SHIFT)
-        val segment = segments.getOrNull(segIdx) ?: return null
-
-        val segOff = (globOff and MMAP_SEGMENT_MASK).toInt()
-
-        return Range(segment.getLong(segOff), segment.getLong(segOff + Long.SIZE_BYTES))
-    }
-
-    override fun addRange(id: Int, start: Long, end: Long) {
-        check(!closed) { "Index already closed." }
-        require(id >= 0) { "Id $id must be non-negative" }
-        require(start >= 0) { "Id $id: Start $start must be non-negative" }
-        require(end >= start) { "Id $id: End $end must be larger or equal than start $start" }
-
-        val globOff = id.toLong() shl CELL_SHIFT
-
-        val segIdx = id shr (MMAP_SEGMENT_SHIFT - CELL_SHIFT)
-        val segment = prepareSegment(segIdx)
-
-        val segOff = (globOff and MMAP_SEGMENT_MASK).toInt()
-
-        segment.putLong(segOff, start)
-        segment.putLong(segOff + Long.SIZE_BYTES, end)
-    }
-
-    override fun addStart(id: Int, start: Long) {
+    fun addStart(id: Int, start: Long) {
         check(!closed) { "Index already closed." }
         require(id >= 0) { "Id $id must be non-negative" }
         require(start >= 0) { "Id $id: Start $start must be non-negative" }
@@ -99,135 +33,33 @@ private class MemMapRangeIndex: RangeIndex() {
         openRanges[id] = start
     }
 
-    override fun setEnd(id: Int, end: Long) {
+    fun setEnd(id: Int, end: Long): RangeIndex {
         check(!closed) { "Index already closed." }
         val start = openRanges.remove(id)
         check(start != null) { "Id $id must have start already" }
-        addRange(id, start, end)
+        return addRange(id, start, end)
     }
 
-    override fun finishIndex() {
+    open fun finishIndex() {
         if (closed) return
         check(openRanges.isEmpty()) { "Index has some non-finished ranges" }
         closed = true
     }
 
-    private fun prepareSegment(idx: Int): ByteBuffer {
-        val segment = segments.getOrNull(idx)
-        if (segment != null) return segment
-
-        while (idx >= segments.size) {
-            segments.add(null)
-        }
-
-        val segmentStart: Long = idx.toLong() * MMAP_SEGMENT_SIZE
-        val afterSize: Long = segmentStart + MMAP_SEGMENT_SIZE
-
-        if (storage.size() < afterSize) {
-            storage.truncate(afterSize)
-        }
-
-        val rv = storage.map(FileChannel.MapMode.READ_WRITE, segmentStart, MMAP_SEGMENT_SIZE.toLong())
-        segments[idx] = rv
-        return rv
-    }
-}
-
-private const val SQL_BATCH_SIZE = 100000
-
-private class SQLiteRangeIndex: RangeIndex() {
     companion object {
-        val TABLE_NAME = "ranges"
-        val INIT_STATEMENTS = listOf(
-            "CREATE TABLE $TABLE_NAME (" +
-                "id INTEGER PRIMARY KEY," +
-                "start INTEGER NOT NULL," +
-                "end INTEGER NOT NULL" +
-            ")"
-        )
-        val INSERT_SQL = "INSERT INTO $TABLE_NAME (id, start, end) VALUES (?, ? ,?)"
-        val UPDATE_SQL = "UPDATE $TABLE_NAME SET end = ? WHERE id = ?"
-        val SELECT_SQL = "SELECT start, end FROM $TABLE_NAME WHERE id = ?"
-    }
-
-    val connection: Connection = DriverManager.getConnection("jdbc:sqlite:")
-    val insert: PreparedStatement
-    val update: PreparedStatement
-    val select: PreparedStatement
-
-    var batchSize = 0
-
-    init {
-        connection.createStatement().use { stmt ->
-            INIT_STATEMENTS.forEach { sql -> stmt.executeUpdate(sql) }
-        }
-        insert = connection.prepareStatement(INSERT_SQL)
-        update = connection.prepareStatement(UPDATE_SQL)
-        select = connection.prepareStatement(SELECT_SQL)
-        connection.autoCommit = false
-    }
-
-    override fun get(id: Int): Range? {
-        select.setInt(1, id)
-        if (!select.execute()) return null
-        val rs = select.resultSet
-        if (!rs.next()) return null
-        return Range(rs.getLong(1), rs.getLong(2))
-    }
-
-    override fun addRange(id: Int, start: Long, end: Long) {
-        insert.setInt(1, id)
-        insert.setLong(2, start)
-        insert.setLong(3, end)
-        insert.addBatch()
-        batchSize++
-        if (batchSize == SQL_BATCH_SIZE) {
-            insert.executeBatch()
-            connection.commit()
-            batchSize = 0
-        }
-    }
-
-    override fun addStart(id: Int, start: Long) {
-        insert.setInt(1, id)
-        insert.setLong(2, start)
-        insert.setLong(3, -1)
-        insert.addBatch()
-        batchSize++
-        if (batchSize == SQL_BATCH_SIZE) {
-            insert.executeBatch()
-            connection.commit()
-            batchSize = 0
-        }
-    }
-
-    override fun setEnd(id: Int, end: Long) {
-        if (batchSize > 0) {
-            insert.executeBatch()
-            connection.commit()
-            batchSize = 0
-        }
-
-        update.setInt(1, id)
-        update.setLong(2, end)
-        update.executeUpdate()
-        connection.commit()
-    }
-
-    override fun finishIndex() {
-        if (batchSize > 0) {
-            insert.executeBatch()
-            connection.commit()
-            batchSize = 0
-        }
-        connection.autoCommit = true
+        fun create(): RangeIndex = HashMapRangeIndex()
     }
 }
 
-private class HashMapRangeIndex: RangeIndex() {
-    private val openRanges = mutableMapOf<Int, Long>()
+
+// The size of one element in a hash map is about 36 bytes/entry + object itself is 16, and Range header another 16,
+// so, it is like 68 bytes per entry (for 2 longs!), and 2 longs are 16, so lets say 80 bytes.
+// Spent no more than 80MByte for all points, so approximately 1,000,000 elements top.
+
+private const val MAX_HASHMAP_SIZE = 1_000_000
+
+private class HashMapRangeIndex: RangeIndex(mutableMapOf()) {
     private val map = mutableMapOf<Int, Range>()
-    private var closed = false
 
     override operator fun get(id: Int): Range? {
         require(id >= 0) { "Id $id must be non-negative" }
@@ -235,203 +67,65 @@ private class HashMapRangeIndex: RangeIndex() {
         return map[id]
     }
 
-    override fun addRange(id: Int, start: Long, end: Long) {
+    override fun addRange(id: Int, start: Long, end: Long): RangeIndex {
         check(!closed) { "Index already closed." }
         require(id >= 0) { "Id $id must be non-negative" }
         require(start >= 0) { "Id $id: Start $start must be non-negative" }
         require(end >= start) { "Id $id: End $end must be larger or equal than start $start" }
 
+        if (map.size >= MAX_HASHMAP_SIZE) {
+            val newIndex = MemMapRangeIndex(openRanges)
+            map.forEach { (id, range) -> newIndex.addRange(id, range.start, range.end) }
+            return newIndex.addRange(id, start, end)
+        }
+
         map[id] = Range(start, end)
-    }
-
-    override fun addStart(id: Int, start: Long) {
-        check(!closed) { "Index already closed." }
-        require(id >= 0) { "Id $id must be non-negative" }
-        require(start >= 0) { "Id $id: Start $start must be non-negative" }
-        check(openRanges[id] == null) { "Id $id must be unique in range index" }
-        openRanges[id] = start
-    }
-
-    override fun setEnd(id: Int, end: Long) {
-        check(!closed) { "Index already closed." }
-        val start = openRanges.remove(id)
-        check(start != null) { "Id $id must have start already" }
-        addRange(id, start, end)
-    }
-
-    override fun finishIndex() {
-        if (closed) return
-        check(openRanges.isEmpty()) { "Index has some non-finished ranges" }
-        closed = true
+        return this
     }
 }
 
-private const val INITIAL_SIZE = 1024
-private const val QUICKSORT_NO_REC = 16
-private const val QUICKSORT_MEDIAN_OF_9 = 128
 
-private class ThreeArraysRangeIndex: RangeIndex() {
-    private val openRanges = mutableMapOf<Int, Long>()
-    private var ids = IntArray(INITIAL_SIZE)
-    private var start = LongArray(INITIAL_SIZE)
-    private var end = LongArray(INITIAL_SIZE)
-    private var size = 0
-    private var closed = false
+// 128MiB segments
+private const val MMAP_SEGMENT_SIZE = 128*1024*1024
+private const val CELL_SIZE = Long.SIZE_BYTES + Long.SIZE_BYTES
+private const val CELL_SHIFT = 4 // log2(CELL_SIZE)
+
+private class MemMapRangeIndex(
+    openRanges: MutableMap<Int, Long>,
+): RangeIndex(openRanges)
+{
+    private val storage: MemMapTemporaryStorage
+
+    init {
+        val tmp = Files.createTempFile("trace-recorder-method-calls-range-index", ".idx")
+        storage = MemMapTemporaryStorage(tmp, MMAP_SEGMENT_SIZE)
+    }
+
 
     override operator fun get(id: Int): Range? {
         require(id >= 0) { "Id $id must be non-negative" }
         check(closed) { "Index is not closed properly yet" }
 
-        val idx = ids.binarySearch(id, 0, size)
-        if (idx < 0) return null
-        return Range(start[idx], end[idx])
+        val globOff = id.toLong() shl CELL_SHIFT
+        val segment = storage.getSegment(globOff) ?: return null
+        val segOff = storage.getOffsetInSegment(globOff)
+
+        return Range(segment.getLong(segOff), segment.getLong(segOff + Long.SIZE_BYTES))
     }
 
-    override fun addRange(id: Int, start: Long, end: Long) {
+    override fun addRange(id: Int, start: Long, end: Long): RangeIndex {
         check(!closed) { "Index already closed." }
         require(id >= 0) { "Id $id must be non-negative" }
         require(start >= 0) { "Id $id: Start $start must be non-negative" }
         require(end >= start) { "Id $id: End $end must be larger or equal than start $start" }
 
-        ensureCapacity()
-        this.ids[size] = id
-        this.start[size] = start
-        this.end[size] = end
-        size++
-    }
+        val globOff = id.toLong() shl CELL_SHIFT
+        val segment = storage.prepareSegment(globOff)
+        val segOff = storage.getOffsetInSegment(globOff)
 
-    override fun addStart(id: Int, start: Long) {
-        check(!closed) { "Index already closed." }
-        require(id >= 0) { "Id $id must be non-negative" }
-        require(start >= 0) { "Id $id: Start $start must be non-negative" }
-        check(openRanges[id] == null) { "Id $id must be unique in range index" }
-        openRanges[id] = start
-   }
+        segment.putLong(segOff, start)
+        segment.putLong(segOff + Long.SIZE_BYTES, end)
 
-    override fun setEnd(id: Int, end: Long) {
-        check(!closed) { "Index already closed." }
-        val start = openRanges.remove(id)
-        check(start != null) { "Id $id must have start already" }
-        addRange(id, start, end)
-    }
-
-    override fun finishIndex() {
-        if (closed) return
-        check(openRanges.isEmpty()) { "Index has some non-finished ranges" }
-        quickSort(0, size)
-        closed = true
-    }
-
-    private fun ensureCapacity() {
-        if (size < ids.size) return
-
-        val newSize = (ids.size * 1.25).roundToInt()
-        ids = ids.copyOf(newSize)
-        start = start.copyOf(newSize)
-        end = end.copyOf(newSize)
-    }
-
-    private fun quickSort(from: Int, to: Int) {
-        val len = to - from
-        // Insertion sort on smallest arrays
-        if (len < QUICKSORT_NO_REC) {
-            for (i in from..<to) {
-                var j = i
-                while (j > from && (ids[j - 1].compareTo(ids[j])) > 0) {
-                    swap(j, j - 1)
-                    j--
-                }
-            }
-            return
-        }
-
-        // Choose a partition element, v
-        var m = from + len / 2 // Small arrays, middle element
-        var l = from
-        var n = to - 1
-        if (len > QUICKSORT_MEDIAN_OF_9) { // Big arrays, pseudomedian of 9
-            val s = len / 8
-            l = med3(l, l + s, l + 2 * s)
-            m = med3(m - s, m, m + s)
-            n = med3(n - 2 * s, n - s, n)
-        }
-        m = med3(l, m, n) // Mid-size, med of 3
-
-        // int v = x[m];
-        var a = from
-        var b = a
-        var c = to - 1
-        // Establish Invariant: v* (<v)* (>v)* v*
-        var d = c
-        while (true) {
-            var comparison = 0
-            while (b <= c && (ids[b].compareTo(ids[m])).also { comparison = it } <= 0) {
-                if (comparison == 0) {
-                    // Fix reference to pivot if necessary
-                    if (a == m) m = b
-                    else if (b == m) m = a
-                    swap(a++, b)
-                }
-                b++
-            }
-            while (c >= b && (ids[c].compareTo(ids[m])).also { comparison = it } >= 0) {
-                if (comparison == 0) {
-                    // Fix reference to pivot if necessary
-                    if (c == m) m = d
-                    else if (d == m) m = c
-                    swap(c, d--)
-                }
-                c--
-            }
-            if (b > c) break
-            // Fix reference to pivot if necessary
-            if (b == m) m = d
-            else if (c == m) m = c
-            swap(b++, c--)
-        }
-
-        // Swap partition elements back to middle
-        var s: Int
-        s = min(a - from, b - a)
-        swap( from, b - s, s)
-        s = min(d - c, to - d - 1)
-        swap( b, to - s, s)
-
-        // Recursively sort non-partition-elements
-        if (((b - a).also { s = it }) > 1) quickSort(from, from + s)
-        if (((d - c).also { s = it }) > 1) quickSort(to - s, to)
-    }
-
-    private fun swap(a: Int, b: Int, n: Int) {
-        var a = a
-        var b = b
-        var i = 0
-        while (i < n) {
-            swap(a, b)
-            i++
-            a++
-            b++
-        }
-    }
-    
-    private fun swap(a: Int, b: Int) {
-        val i = ids[a]
-        ids[a] = ids[b]
-        ids[b] = i
-        
-        val s = start[a]
-        start[a] = start[b]
-        start[b] = s
-
-        val e = end[a]
-        end[a] = end[b]
-        end[b] = e
-    }
-    
-    private fun med3(a: Int, b: Int, c: Int): Int {
-        val ab: Int = ids[a].compareTo(ids[b])
-        val ac: Int = ids[a].compareTo(ids[c])
-        val bc: Int = ids[b].compareTo(ids[c])
-        return (if (ab < 0) (if (bc < 0) b else if (ac < 0) c else a) else (if (bc > 0) b else if (ac > 0) c else a))
+        return this
     }
 }
