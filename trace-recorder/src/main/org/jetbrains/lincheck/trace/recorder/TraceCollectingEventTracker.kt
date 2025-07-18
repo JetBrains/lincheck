@@ -425,6 +425,8 @@ class TraceCollectingEventTracker(
         strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
         threadData.pushStackFrame(tracePoint, receiver)
 
+        System.err.println("+++ Call Normal Method with Id $methodId (${tracePoint.className}.${tracePoint.methodName})")
+
         // if the method has certain guarantees, enter the corresponding section
         threadData.enterAnalysisSection(methodSection)
         return null
@@ -443,6 +445,14 @@ class TraceCollectingEventTracker(
         val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
 
         val tracePoint = threadData.popStackFrame()
+
+        if (tracePoint.methodId != methodId) {
+            val md = TRACE_CONTEXT.getMethodDescriptor(methodId)
+            System.err.println("??? Returns Normal Method with Id $methodId (${md.className}.${md.methodName}) but on stack ${tracePoint.methodId} (${tracePoint.className}.${tracePoint.methodName})")
+        } else {
+            System.err.println("--- Returns Normal Method with Id $methodId (${tracePoint.className}.${tracePoint.methodName})")
+        }
+
         tracePoint.result = TRObjectOrVoid(result)
         strategy.callEnded(tracePoint)
 
@@ -463,6 +473,15 @@ class TraceCollectingEventTracker(
         val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
 
         val tracePoint = threadData.popStackFrame()
+
+        if (tracePoint.methodId != methodId) {
+            val md = TRACE_CONTEXT.getMethodDescriptor(methodId)
+            System.err.println("??? Exception Normal Method with Id $methodId (${md.className}.${md.methodName}) but on stack ${tracePoint.methodId} (${tracePoint.className}.${tracePoint.methodName})")
+        } else {
+            System.err.println("--- Exception Normal Method with Id $methodId (${tracePoint.className}.${tracePoint.methodName})")
+        }
+
+
         tracePoint.exceptionClassName = t.javaClass.name
         strategy.callEnded(tracePoint)
 
@@ -486,11 +505,18 @@ class TraceCollectingEventTracker(
         )
         strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
         threadData.pushStackFrame(tracePoint, owner)
+        System.err.println("+++ Call Inline Method with Id $methodId (${tracePoint.className}.${tracePoint.methodName})")
     }
 
     override fun onInlineMethodCallReturn(methodId: Int): Unit = runInsideIgnoredSection {
         val threadData = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTrackerData as? ThreadData? ?: return
         val tracePoint = threadData.popStackFrame()
+        if (tracePoint.methodId != methodId) {
+            val md = TRACE_CONTEXT.getMethodDescriptor(methodId)
+            System.err.println("??? Returns Inline Method with Id $methodId (${md.className}.${md.methodName}) but on stack ${tracePoint.methodId} (${tracePoint.className}.${tracePoint.methodName})")
+        } else {
+            System.err.println("--- Returns Inline Method with Id $methodId (${tracePoint.className}.${tracePoint.methodName})")
+        }
         tracePoint.result = TR_OBJECT_VOID
         strategy.callEnded(tracePoint)
     }
