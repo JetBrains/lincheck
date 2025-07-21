@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
+import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.Label
 import org.objectweb.asm.Type
 
@@ -64,4 +65,14 @@ data class MethodVariables(val variables: LocalVariablesMap = emptyMap()) {
     fun hasVarByName(name: String): Boolean = varsByName.containsKey(name)
 
     fun getActiveVar(index: StackSlotIndex): String = activeVars.first { it.index == index }.name
+
+    fun getActiveVars(): List<LocalVariableInfo> =
+        activeVariables.toList()
+            .sortedBy { it.index }
+            .ensure {
+                it.forEachIndexed { i, info ->
+                    if (i != info.index) return@ensure false
+                }
+                return@ensure true
+            }
 }

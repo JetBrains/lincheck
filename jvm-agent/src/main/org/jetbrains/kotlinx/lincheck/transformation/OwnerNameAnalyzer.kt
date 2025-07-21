@@ -92,12 +92,25 @@ class OwnerNameAnalyzerAdapter protected constructor(
         stack = mutableListOf<String?>()
 
         val isStatic = (access and Opcodes.ACC_STATIC == 0)
-        if (!isStatic) {
-            locals!!.add("this")
+        val argumentTypes = Type.getArgumentTypes(descriptor)
+        maxLocals = (if (isStatic) 0 else 1) + argumentTypes.size
+    }
+
+    override fun visitLabel(label: Label?) {
+        super.visitLabel(label)
+        if (this.locals != null) {
+            this.locals!!.clear()
+            this.stack!!.clear()
+        } else {
+            this.locals = mutableListOf()
+            this.stack = mutableListOf()
         }
 
-        val argumentTypes = Type.getArgumentTypes(descriptor)
-        maxLocals = locals!!.size + argumentTypes.size
+        val activeVars = methodVariables.getActiveVars()
+        setActiveLocalVariableNames(activeVars)
+
+        maxLocals = max(maxLocals, this.locals!!.size)
+        maxStack = max(maxStack, this.stack!!.size)
     }
 
     override fun visitFrame(
@@ -120,9 +133,17 @@ class OwnerNameAnalyzerAdapter protected constructor(
             this.locals = mutableListOf()
             this.stack = mutableListOf()
         }
-        // TODO: Actually compute the variable names
-        // visitFrameTypes(numLocal, local, this.locals!!)
-        // visitFrameTypes(numStack, stack, this.stack!!)
+
+        val activeVars = methodVariables.getActiveVars()
+        check(activeVars.size == numLocal) {
+            """
+                Unexpected number of active local variables: ${activeVars.size}. 
+                Number of local variables declared in the frame: $numLocal.
+            """.trimIndent()
+        }
+
+        setActiveLocalVariableNames(activeVars)
+        initializeStack(numStack, stack)
 
         maxLocals = max(maxLocals, this.locals!!.size)
         maxStack = max(maxStack, this.stack!!.size)
@@ -214,10 +235,6 @@ class OwnerNameAnalyzerAdapter protected constructor(
             this.locals = null
             this.stack = null
         }
-    }
-
-    override fun visitLabel(label: Label?) {
-        super.visitLabel(label)
     }
 
     override fun visitLdcInsn(value: Any?) {
@@ -693,14 +710,21 @@ class OwnerNameAnalyzerAdapter protected constructor(
         }
     }
 
-    companion object {
-        private fun visitFrameTypes(numTypes: Int, frameTypes: Array<Any?>, result: MutableList<Any?>) {
-            for (i in 0 ..< numTypes) {
-                val frameType = frameTypes[i]
-                result.add(frameType)
-                if (frameType === Opcodes.LONG || frameType === Opcodes.DOUBLE) {
-                    result.add(Opcodes.TOP)
-                }
+    private fun setActiveLocalVariableNames(localVariables: List<LocalVariableInfo>) {
+        for (i in localVariables.indices) {
+            locals!!.add(localVariables[i].name)
+            if (localVariables[i].type.stackSlotSize == 2) {
+                locals!!.add(null)
+            }
+        }
+    }
+
+    private fun initializeStack(numTypes: Int, types: Array<Any?>) {
+        for (i in 0 ..< numTypes) {
+            val type = types[i]
+            stack!!.add(null)
+            if (type === Opcodes.LONG || type === Opcodes.DOUBLE) {
+                stack!!.add(null)
             }
         }
     }
