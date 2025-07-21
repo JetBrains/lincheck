@@ -107,22 +107,11 @@ class OwnerNameAnalyzerAdapter protected constructor(
         uninitializedTypes = HashMap<Any?, Any?>()
 
         val isStatic = (access and Opcodes.ACC_STATIC == 0)
-
         if (!isStatic) {
             locals!!.add("this")
         }
 
-        // TODO: initialize method argument names
         val argumentTypes = Type.getArgumentTypes(descriptor)
-        for (i in argumentTypes.indices) {
-            val argumentType = argumentTypes[i]
-            when {
-                argumentType.stackSlotSize == 2 -> {}
-                argumentType.stackSlotSize == 1 -> {}
-                else -> error("")
-            }
-        }
-
         maxLocals = locals!!.size + argumentTypes.size
     }
 
@@ -146,7 +135,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
             this.locals = mutableListOf()
             this.stack = mutableListOf()
         }
-        TODO("Actually compute the variable names")
+        // TODO: Actually compute the variable names
         // visitFrameTypes(numLocal, local, this.locals!!)
         // visitFrameTypes(numStack, stack, this.stack!!)
 
@@ -232,30 +221,6 @@ class OwnerNameAnalyzerAdapter protected constructor(
             return
         }
         pop(descriptor)
-
-        // TODO: we don't need this?
-        // if (opcode != Opcodes.INVOKESTATIC) {
-        //     val value = pop()
-        //     if (opcode == Opcodes.INVOKESPECIAL && name == "<init>") {
-        //         val initializedValue: Any?
-        //         if (value === Opcodes.UNINITIALIZED_THIS) {
-        //             initializedValue = this.owner
-        //         } else {
-        //             initializedValue = owner
-        //         }
-        //         for (i in locals!!.indices) {
-        //             if (locals!![i] === value) {
-        //                 locals!![i] = initializedValue
-        //             }
-        //         }
-        //         for (i in stack!!.indices) {
-        //             if (stack!![i] === value) {
-        //                 stack!![i] = initializedValue
-        //             }
-        //         }
-        //     }
-        // }
-
         push(null)
 
         labels = null
@@ -412,43 +377,6 @@ class OwnerNameAnalyzerAdapter protected constructor(
         stack!!.add(ownerName)
         maxStack = max(maxStack, stack!!.size)
     }
-
-    // TODO: we don't need it?
-    // private fun pushDescriptor(fieldOrMethodDescriptor: String?) {
-    //     val descriptor =
-    //         if (fieldOrMethodDescriptor?.get(0) == '(')
-    //             Type.getReturnType(fieldOrMethodDescriptor).descriptor
-    //         else
-    //             fieldOrMethodDescriptor
-    //     when (descriptor?.get(0)) {
-    //         'V' -> return
-    //         'Z', 'C', 'B', 'S', 'I' -> {
-    //             push(Opcodes.INTEGER)
-    //             return
-    //         }
-    //
-    //         'F' -> {
-    //             push(Opcodes.FLOAT)
-    //             return
-    //         }
-    //
-    //         'J' -> {
-    //             push(Opcodes.LONG)
-    //             push(Opcodes.TOP)
-    //             return
-    //         }
-    //
-    //         'D' -> {
-    //             push(Opcodes.DOUBLE)
-    //             push(Opcodes.TOP)
-    //             return
-    //         }
-    //
-    //         '[' -> push(descriptor)
-    //         'L' -> push(descriptor.substring(1, descriptor.length - 1))
-    //         else -> throw AssertionError()
-    //     }
-    // }
 
     private fun pop(): String? {
         return stack!!.removeAt(stack!!.size - 1)
