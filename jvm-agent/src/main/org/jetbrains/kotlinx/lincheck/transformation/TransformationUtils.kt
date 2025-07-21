@@ -415,6 +415,11 @@ internal fun isPrimitive(type: Type): Boolean {
     }
 }
 
+internal val Type.stackSlotSize: Int get() = when (this) {
+    LONG_TYPE, DOUBLE_TYPE -> 2
+    else -> 1
+}
+
 private fun getSuperclassName(internalClassName: String): String? {
     class SuperclassClassVisitor : ClassVisitor(ASM_API) {
         var internalSuperclassName: String? = null

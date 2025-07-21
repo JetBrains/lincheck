@@ -23,7 +23,8 @@ class OwnerNameAnalyzerAdapter protected constructor(
     access: Int,
     name: String?,
     descriptor: String,
-    methodVisitor: MethodVisitor?
+    methodVisitor: MethodVisitor?,
+    val methodVariables: MethodVariables,
 ) : MethodVisitor(api, methodVisitor) {
     /**
      * TODO: update the documentation
@@ -36,7 +37,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
      * NEW instruction that created this uninitialized value). This field is null for
      * unreachable instructions.
      */
-    var locals: MutableList<Any?>?
+    var locals: MutableList<String?>?
 
     /**
      * TODO: update the documentation
@@ -49,7 +50,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
      * NEW instruction that created this uninitialized value). This field is null for
      * unreachable instructions.
      */
-    var stack: MutableList<Any?>?
+    var stack: MutableList<String?>?
 
     /** The labels that designate the next instruction to be visited. May be null.  */
     private var labels: MutableList<Label?>? = null
@@ -62,7 +63,8 @@ class OwnerNameAnalyzerAdapter protected constructor(
      * that created the currently uninitialized types, and the associated internal name represents the
      * NEW operand, i.e. the final, initialized type value.
      */
-    var uninitializedTypes: MutableMap<Any?, Any?>
+    // TODO: do we need this?
+    var uninitializedTypes: MutableMap<Any?, Any?> // TODO: refactor --- put actual types
 
     /** The maximum stack size of this method.  */
     private var maxStack = 0
@@ -85,8 +87,9 @@ class OwnerNameAnalyzerAdapter protected constructor(
         access: Int,
         name: String?,
         descriptor: String,
-        methodVisitor: MethodVisitor?
-    ) : this( /* latest api = */Opcodes.ASM9, owner, access, name, descriptor, methodVisitor)
+        methodVisitor: MethodVisitor?,
+        methodVariables: MethodVariables,
+    ) : this( /* latest api = */Opcodes.ASM9, owner, access, name, descriptor, methodVisitor, methodVariables)
 
     /**
      * Constructs a new [OwnerNameAnalyzerAdapter].
@@ -99,37 +102,28 @@ class OwnerNameAnalyzerAdapter protected constructor(
      * @param methodVisitor the method visitor to which this adapter delegates calls. May be null.
      */
     init {
-        locals = ArrayList<Any?>()
-        stack = ArrayList<Any?>()
+        locals = mutableListOf<String?>()
+        stack = mutableListOf<String?>()
         uninitializedTypes = HashMap<Any?, Any?>()
 
-        if ((access and Opcodes.ACC_STATIC) == 0) {
-            if ("<init>" == name) {
-                locals!!.add(Opcodes.UNINITIALIZED_THIS)
-            } else {
-                locals!!.add(owner)
+        val isStatic = (access and Opcodes.ACC_STATIC == 0)
+
+        if (!isStatic) {
+            locals!!.add("this")
+        }
+
+        // TODO: initialize method argument names
+        val argumentTypes = Type.getArgumentTypes(descriptor)
+        for (i in argumentTypes.indices) {
+            val argumentType = argumentTypes[i]
+            when {
+                argumentType.stackSlotSize == 2 -> {}
+                argumentType.stackSlotSize == 1 -> {}
+                else -> error("")
             }
         }
-        for (argumentType in Type.getArgumentTypes(descriptor)) {
-            when (argumentType.getSort()) {
-                Type.BOOLEAN, Type.CHAR, Type.BYTE, Type.SHORT, Type.INT -> locals!!.add(Opcodes.INTEGER)
-                Type.FLOAT -> locals!!.add(Opcodes.FLOAT)
-                Type.LONG -> {
-                    locals!!.add(Opcodes.LONG)
-                    locals!!.add(Opcodes.TOP)
-                }
 
-                Type.DOUBLE -> {
-                    locals!!.add(Opcodes.DOUBLE)
-                    locals!!.add(Opcodes.TOP)
-                }
-
-                Type.ARRAY -> locals!!.add(argumentType.getDescriptor())
-                Type.OBJECT -> locals!!.add(argumentType.getInternalName())
-                else -> throw AssertionError()
-            }
-        }
-        maxLocals = locals!!.size
+        maxLocals = locals!!.size + argumentTypes.size
     }
 
     override fun visitFrame(
@@ -139,7 +133,9 @@ class OwnerNameAnalyzerAdapter protected constructor(
         numStack: Int,
         stack: Array<Any?>
     ) {
-        require(type == Opcodes.F_NEW) { "AnalyzerAdapter only accepts expanded frames (see ClassReader.EXPAND_FRAMES)" }
+        require(type == Opcodes.F_NEW) {
+            "OwnerNameAnalyzerAdapter only accepts expanded frames (see ClassReader.EXPAND_FRAMES)"
+        }
 
         super.visitFrame(type, numLocal, local, numStack, stack)
 
@@ -147,11 +143,13 @@ class OwnerNameAnalyzerAdapter protected constructor(
             this.locals!!.clear()
             this.stack!!.clear()
         } else {
-            this.locals = ArrayList<Any?>()
-            this.stack = ArrayList<Any?>()
+            this.locals = mutableListOf()
+            this.stack = mutableListOf()
         }
-        Companion.visitFrameTypes(numLocal, local, this.locals!!)
-        Companion.visitFrameTypes(numStack, stack, this.stack!!)
+        TODO("Actually compute the variable names")
+        // visitFrameTypes(numLocal, local, this.locals!!)
+        // visitFrameTypes(numStack, stack, this.stack!!)
+
         maxLocals = max(maxLocals, this.locals!!.size)
         maxStack = max(maxStack, this.stack!!.size)
     }
@@ -172,8 +170,12 @@ class OwnerNameAnalyzerAdapter protected constructor(
 
     override fun visitVarInsn(opcode: Int, varIndex: Int) {
         super.visitVarInsn(opcode, varIndex)
-        val isLongOrDouble =
-            opcode == Opcodes.LLOAD || opcode == Opcodes.DLOAD || opcode == Opcodes.LSTORE || opcode == Opcodes.DSTORE
+        val isLongOrDouble = ( // TODO: extract and refactor
+            opcode == Opcodes.LLOAD  ||
+            opcode == Opcodes.DLOAD  ||
+            opcode == Opcodes.LSTORE ||
+            opcode == Opcodes.DSTORE
+        )
         maxLocals = max(maxLocals, varIndex + (if (isLongOrDouble) 2 else 1))
         execute(opcode, varIndex, null)
     }
@@ -182,7 +184,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
         if (opcode == Opcodes.NEW) {
             if (labels == null) {
                 val label = Label()
-                labels = ArrayList<Label?>(3)
+                labels = ArrayList<Label?>(3) // TODO: investigate why 3?
                 labels!!.add(label)
                 if (mv != null) {
                     mv.visitLabel(label)
@@ -196,11 +198,9 @@ class OwnerNameAnalyzerAdapter protected constructor(
         execute(opcode, 0, type)
     }
 
-    override fun visitFieldInsn(
-        opcode: Int, owner: String?, name: String?, descriptor: String
-    ) {
+    override fun visitFieldInsn(opcode: Int, owner: String?, name: String?, descriptor: String) {
         super.visitFieldInsn(opcode, owner, name, descriptor)
-        execute(opcode, 0, descriptor)
+        execute(opcode, 0, fieldName = name, descriptor = descriptor)
     }
 
     override fun visitMethodInsn(
@@ -223,28 +223,32 @@ class OwnerNameAnalyzerAdapter protected constructor(
             return
         }
         pop(descriptor)
-        if (opcode != Opcodes.INVOKESTATIC) {
-            val value = pop()
-            if (opcode == Opcodes.INVOKESPECIAL && name == "<init>") {
-                val initializedValue: Any?
-                if (value === Opcodes.UNINITIALIZED_THIS) {
-                    initializedValue = this.owner
-                } else {
-                    initializedValue = owner
-                }
-                for (i in locals!!.indices) {
-                    if (locals!![i] === value) {
-                        locals!![i] = initializedValue
-                    }
-                }
-                for (i in stack!!.indices) {
-                    if (stack!![i] === value) {
-                        stack!![i] = initializedValue
-                    }
-                }
-            }
-        }
-        pushDescriptor(descriptor)
+
+        // TODO: we don't need this?
+        // if (opcode != Opcodes.INVOKESTATIC) {
+        //     val value = pop()
+        //     if (opcode == Opcodes.INVOKESPECIAL && name == "<init>") {
+        //         val initializedValue: Any?
+        //         if (value === Opcodes.UNINITIALIZED_THIS) {
+        //             initializedValue = this.owner
+        //         } else {
+        //             initializedValue = owner
+        //         }
+        //         for (i in locals!!.indices) {
+        //             if (locals!![i] === value) {
+        //                 locals!![i] = initializedValue
+        //             }
+        //         }
+        //         for (i in stack!!.indices) {
+        //             if (stack!![i] === value) {
+        //                 stack!![i] = initializedValue
+        //             }
+        //         }
+        //     }
+        // }
+
+        push(null)
+
         labels = null
     }
 
@@ -260,7 +264,8 @@ class OwnerNameAnalyzerAdapter protected constructor(
             return
         }
         pop(descriptor)
-        pushDescriptor(descriptor)
+        push(null)
+
         labels = null
     }
 
@@ -276,7 +281,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
     override fun visitLabel(label: Label?) {
         super.visitLabel(label)
         if (labels == null) {
-            labels = ArrayList<Label?>(3)
+            labels = ArrayList<Label?>(3) // TODO: investigate why 3?
         }
         labels!!.add(label)
     }
@@ -287,34 +292,46 @@ class OwnerNameAnalyzerAdapter protected constructor(
             labels = null
             return
         }
-        if (value is Int) {
-            push(Opcodes.INTEGER)
-        } else if (value is Long) {
-            push(Opcodes.LONG)
-            push(Opcodes.TOP)
-        } else if (value is Float) {
-            push(Opcodes.FLOAT)
-        } else if (value is Double) {
-            push(Opcodes.DOUBLE)
-            push(Opcodes.TOP)
-        } else if (value is String) {
-            push("java/lang/String")
-        } else if (value is Type) {
-            val sort = value.sort
-            if (sort == Type.OBJECT || sort == Type.ARRAY) {
-                push("java/lang/Class")
-            } else if (sort == Type.METHOD) {
-                push("java/lang/invoke/MethodType")
-            } else {
-                throw IllegalArgumentException()
+        // TODO: need to investigate how to lookup constant name (if available)
+        when (value) {
+            is Int -> {
+                push(null) // TODO
             }
-        } else if (value is Handle) {
-            push("java/lang/invoke/MethodHandle")
-        } else if (value is ConstantDynamic) {
-            pushDescriptor(value.descriptor)
-        } else {
-            throw IllegalArgumentException()
+            is Long -> {
+                push(null) // TODO
+                push(null) // TODO
+            }
+            is Float -> {
+                push(null) // TODO
+            }
+            is Double -> {
+                push(null) // TODO
+                push(null) // TODO
+            }
+            is String -> {
+                push(null) // TODO
+            }
+            is Type -> {
+                val sort = value.sort
+                when (sort) {
+                    Type.OBJECT, Type.ARRAY -> {
+                        push(null) // TODO
+                    }
+                    Type.METHOD -> {
+                        push(null) // TODO
+                    }
+                    else -> throw IllegalArgumentException()
+                }
+            }
+            is Handle -> {
+                push(null) // TODO
+            }
+            is ConstantDynamic -> {
+                push(value.name) // TODO: this one should be fine
+            }
+            else -> throw IllegalArgumentException()
         }
+        
         labels = null
     }
 
@@ -354,9 +371,8 @@ class OwnerNameAnalyzerAdapter protected constructor(
         index: Int
     ) {
         val firstDescriptorChar = descriptor[0]
-        maxLocals = max(
-            maxLocals, index + (if (firstDescriptorChar == 'J' || firstDescriptorChar == 'D') 2 else 1)
-        )
+        val stackSlotSize = (if (firstDescriptorChar == 'J' || firstDescriptorChar == 'D') 2 else 1)
+        maxLocals = max(maxLocals, index + stackSlotSize)
         super.visitLocalVariable(name, descriptor, signature, start, end, index)
     }
 
@@ -369,61 +385,63 @@ class OwnerNameAnalyzerAdapter protected constructor(
     }
 
     // -----------------------------------------------------------------------------------------------
-    private fun get(local: Int): Any? {
+
+    private fun get(local: Int): String? {
         maxLocals = max(maxLocals, local + 1)
-        return if (local < locals!!.size) locals!![local] else Opcodes.TOP
+        return if (local < locals!!.size) locals!![local] else null
     }
 
-    private fun set(local: Int, type: Any?) {
+    private fun set(local: Int, ownerName: String?) {
         maxLocals = max(maxLocals, local + 1)
         while (local >= locals!!.size) {
-            locals!!.add(Opcodes.TOP)
+            locals!!.add(null)
         }
-        locals!!.set(local, type)
+        locals!![local] = ownerName
     }
 
-    private fun push(type: Any?) {
-        stack!!.add(type)
+    private fun push(ownerName: String?) {
+        stack!!.add(ownerName)
         maxStack = max(maxStack, stack!!.size)
     }
 
-    private fun pushDescriptor(fieldOrMethodDescriptor: String?) {
-        val descriptor =
-            if (fieldOrMethodDescriptor?.get(0) == '(')
-                Type.getReturnType(fieldOrMethodDescriptor).descriptor
-            else
-                fieldOrMethodDescriptor
-        when (descriptor?.get(0)) {
-            'V' -> return
-            'Z', 'C', 'B', 'S', 'I' -> {
-                push(Opcodes.INTEGER)
-                return
-            }
+    // TODO: we don't need it?
+    // private fun pushDescriptor(fieldOrMethodDescriptor: String?) {
+    //     val descriptor =
+    //         if (fieldOrMethodDescriptor?.get(0) == '(')
+    //             Type.getReturnType(fieldOrMethodDescriptor).descriptor
+    //         else
+    //             fieldOrMethodDescriptor
+    //     when (descriptor?.get(0)) {
+    //         'V' -> return
+    //         'Z', 'C', 'B', 'S', 'I' -> {
+    //             push(Opcodes.INTEGER)
+    //             return
+    //         }
+    //
+    //         'F' -> {
+    //             push(Opcodes.FLOAT)
+    //             return
+    //         }
+    //
+    //         'J' -> {
+    //             push(Opcodes.LONG)
+    //             push(Opcodes.TOP)
+    //             return
+    //         }
+    //
+    //         'D' -> {
+    //             push(Opcodes.DOUBLE)
+    //             push(Opcodes.TOP)
+    //             return
+    //         }
+    //
+    //         '[' -> push(descriptor)
+    //         'L' -> push(descriptor.substring(1, descriptor.length - 1))
+    //         else -> throw AssertionError()
+    //     }
+    // }
 
-            'F' -> {
-                push(Opcodes.FLOAT)
-                return
-            }
-
-            'J' -> {
-                push(Opcodes.LONG)
-                push(Opcodes.TOP)
-                return
-            }
-
-            'D' -> {
-                push(Opcodes.DOUBLE)
-                push(Opcodes.TOP)
-                return
-            }
-
-            '[' -> push(descriptor)
-            'L' -> push(descriptor.substring(1, descriptor.length - 1))
-            else -> throw AssertionError()
-        }
-    }
-
-    private fun pop(): Any? {
+    private fun pop(): String? {
         return stack!!.removeAt(stack!!.size - 1)
     }
 
@@ -435,8 +453,8 @@ class OwnerNameAnalyzerAdapter protected constructor(
         }
     }
 
-    private fun pop(descriptor: String?) {
-        val firstDescriptorChar = descriptor?.get(0)
+    private fun pop(descriptor: String) {
+        val firstDescriptorChar = descriptor[0]
         if (firstDescriptorChar == '(') {
             var numSlots = 0
             val types = Type.getArgumentTypes(descriptor)
@@ -451,7 +469,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
         }
     }
 
-    private fun execute(opcode: Int, intArg: Int, stringArg: String?) {
+    private fun execute(opcode: Int, intArg: Int, fieldName: String? = null, descriptor: String? = null) {
         require(!(opcode == Opcodes.JSR || opcode == Opcodes.RET)) { "JSR/RET are not supported" }
         if (this.locals == null) {
             labels = null
@@ -460,91 +478,134 @@ class OwnerNameAnalyzerAdapter protected constructor(
         val value1: Any?
         val value2: Any?
         val value3: Any?
-        val t4: Any?
+        val value4: Any?
         when (opcode) {
-            Opcodes.NOP, Opcodes.INEG, Opcodes.LNEG, Opcodes.FNEG, Opcodes.DNEG, Opcodes.I2B, Opcodes.I2C, Opcodes.I2S, Opcodes.GOTO, Opcodes.RETURN -> {}
-            Opcodes.ACONST_NULL -> push(Opcodes.NULL)
-            Opcodes.ICONST_M1, Opcodes.ICONST_0, Opcodes.ICONST_1, Opcodes.ICONST_2, Opcodes.ICONST_3, Opcodes.ICONST_4, Opcodes.ICONST_5, Opcodes.BIPUSH, Opcodes.SIPUSH -> push(
-                Opcodes.INTEGER
-            )
+
+            Opcodes.NOP,
+            Opcodes.INEG, Opcodes.LNEG, Opcodes.FNEG, Opcodes.DNEG,
+            Opcodes.I2B, Opcodes.I2C, Opcodes.I2S,
+            Opcodes.GOTO, Opcodes.RETURN ->
+                {}
+
+            Opcodes.ACONST_NULL -> {
+                push(null)
+            }
+
+            Opcodes.ICONST_M1,
+            Opcodes.ICONST_0, Opcodes.ICONST_1, Opcodes.ICONST_2,
+            Opcodes.ICONST_3, Opcodes.ICONST_4, Opcodes.ICONST_5,
+            Opcodes.BIPUSH, Opcodes.SIPUSH -> {
+                push(null)
+            }
 
             Opcodes.LCONST_0, Opcodes.LCONST_1 -> {
-                push(Opcodes.LONG)
-                push(Opcodes.TOP)
+                push(null)
+                push(null)
             }
 
-            Opcodes.FCONST_0, Opcodes.FCONST_1, Opcodes.FCONST_2 -> push(Opcodes.FLOAT)
+            Opcodes.FCONST_0, Opcodes.FCONST_1, Opcodes.FCONST_2 -> {
+                push(null)
+            }
+
             Opcodes.DCONST_0, Opcodes.DCONST_1 -> {
-                push(Opcodes.DOUBLE)
-                push(Opcodes.TOP)
+                push(null)
+                push(null)
             }
 
-            Opcodes.ILOAD, Opcodes.FLOAD, Opcodes.ALOAD -> push(get(intArg))
+            Opcodes.ILOAD, Opcodes.FLOAD, Opcodes.ALOAD -> {
+                val localVarName = methodVariables.getActiveVar(intArg)
+                push(localVarName)
+            }
+
             Opcodes.LLOAD, Opcodes.DLOAD -> {
-                push(get(intArg))
-                push(Opcodes.TOP)
+                val localVarName = methodVariables.getActiveVar(intArg)
+                push(localVarName)
+                push(null)
             }
 
-            Opcodes.LALOAD, Opcodes.D2L -> {
+            Opcodes.D2L, Opcodes.L2D -> {
                 pop(2)
-                push(Opcodes.LONG)
-                push(Opcodes.TOP)
+                push(null)
+                push(null)
             }
 
-            Opcodes.DALOAD, Opcodes.L2D -> {
+            Opcodes.LALOAD -> {
                 pop(2)
-                push(Opcodes.DOUBLE)
-                push(Opcodes.TOP)
+                // TODO: can we do better?
+                push(null)
+                push(null)
+            }
+
+            Opcodes.DALOAD -> {
+                pop(2)
+                // TODO: can we do better?
+                push(null)
+                push(null)
             }
 
             Opcodes.AALOAD -> {
-                pop(1)
-                value1 = pop()
-                if (value1 is String) {
-                    pushDescriptor(value1.substring(1))
-                } else if (value1 === Opcodes.NULL) {
-                    push(value1)
-                } else {
-                    push("java/lang/Object")
-                }
+                pop()  // index
+                pop()  // array
+                // TODO: can we do better?
+                push(null)
             }
 
             Opcodes.ISTORE, Opcodes.FSTORE, Opcodes.ASTORE -> {
                 value1 = pop()
                 set(intArg, value1)
-                if (intArg > 0) {
-                    value2 = get(intArg - 1)
-                    if (value2 === Opcodes.LONG || value2 === Opcodes.DOUBLE) {
-                        set(intArg - 1, Opcodes.TOP)
-                    }
-                }
+
+                // TODO: we probably don't need this?
+                //    It checks for assignment of second-word of long/double local var,
+                //    which should not be possible for valid bytecode?
+                // if (intArg > 0) {
+                //     value2 = get(intArg - 1)
+                //     if (value2 === Opcodes.LONG || value2 === Opcodes.DOUBLE) {
+                //         set(intArg - 1, null)
+                //     }
+                // }
             }
 
             Opcodes.LSTORE, Opcodes.DSTORE -> {
                 pop(1)
                 value1 = pop()
                 set(intArg, value1)
-                set(intArg + 1, Opcodes.TOP)
-                if (intArg > 0) {
-                    value2 = get(intArg - 1)
-                    if (value2 === Opcodes.LONG || value2 === Opcodes.DOUBLE) {
-                        set(intArg - 1, Opcodes.TOP)
-                    }
-                }
+                set(intArg + 1, null)
+
+                // TODO: we probably don't need this?
+                //    It checks for assignment of second-word of long/double local var,
+                //    which should not be possible for valid bytecode?
+                // if (intArg > 0) {
+                //     value2 = get(intArg - 1)
+                //     if (value2 === Opcodes.LONG || value2 === Opcodes.DOUBLE) {
+                //         set(intArg - 1, Opcodes.TOP)
+                //     }
+                // }
             }
 
-            Opcodes.IASTORE, Opcodes.BASTORE, Opcodes.CASTORE, Opcodes.SASTORE, Opcodes.FASTORE, Opcodes.AASTORE -> pop(
-                3
-            )
+            Opcodes.IASTORE, Opcodes.BASTORE, Opcodes.CASTORE, Opcodes.SASTORE, Opcodes.FASTORE, Opcodes.AASTORE -> {
+                pop(3)
+            }
 
-            Opcodes.LASTORE, Opcodes.DASTORE -> pop(4)
-            Opcodes.POP, Opcodes.IFEQ, Opcodes.IFNE, Opcodes.IFLT, Opcodes.IFGE, Opcodes.IFGT, Opcodes.IFLE, Opcodes.IRETURN, Opcodes.FRETURN, Opcodes.ARETURN, Opcodes.TABLESWITCH, Opcodes.LOOKUPSWITCH, Opcodes.ATHROW, Opcodes.MONITORENTER, Opcodes.MONITOREXIT, Opcodes.IFNULL, Opcodes.IFNONNULL -> pop(
-                1
-            )
+            Opcodes.LASTORE, Opcodes.DASTORE -> {
+                pop(4)
+            }
 
-            Opcodes.POP2, Opcodes.IF_ICMPEQ, Opcodes.IF_ICMPNE, Opcodes.IF_ICMPLT, Opcodes.IF_ICMPGE, Opcodes.IF_ICMPGT, Opcodes.IF_ICMPLE, Opcodes.IF_ACMPEQ, Opcodes.IF_ACMPNE, Opcodes.LRETURN, Opcodes.DRETURN -> pop(
-                2
-            )
+            Opcodes.POP,
+            Opcodes.IFEQ, Opcodes.IFNE, Opcodes.IFLT, Opcodes.IFGE, Opcodes.IFGT, Opcodes.IFLE,
+            Opcodes.IFNULL, Opcodes.IFNONNULL,
+            Opcodes.IRETURN, Opcodes.FRETURN, Opcodes.ARETURN, Opcodes.ATHROW,
+            Opcodes.TABLESWITCH, Opcodes.LOOKUPSWITCH,
+            Opcodes.MONITORENTER, Opcodes.MONITOREXIT, -> {
+                pop(1)
+            }
+
+            Opcodes.POP2,
+            Opcodes.IF_ICMPEQ, Opcodes.IF_ICMPNE,
+            Opcodes.IF_ICMPLT, Opcodes.IF_ICMPGE, Opcodes.IF_ICMPGT, Opcodes.IF_ICMPLE,
+            Opcodes.IF_ACMPEQ, Opcodes.IF_ACMPNE,
+            Opcodes.LRETURN, Opcodes.DRETURN -> {
+                pop(2)
+            }
 
             Opcodes.DUP -> {
                 value1 = pop()
@@ -594,10 +655,10 @@ class OwnerNameAnalyzerAdapter protected constructor(
                 value1 = pop()
                 value2 = pop()
                 value3 = pop()
-                t4 = pop()
+                value4 = pop()
                 push(value2)
                 push(value1)
-                push(t4)
+                push(value4)
                 push(value3)
                 push(value2)
                 push(value1)
@@ -610,103 +671,129 @@ class OwnerNameAnalyzerAdapter protected constructor(
                 push(value2)
             }
 
-            Opcodes.IALOAD, Opcodes.BALOAD, Opcodes.CALOAD, Opcodes.SALOAD, Opcodes.IADD, Opcodes.ISUB, Opcodes.IMUL, Opcodes.IDIV, Opcodes.IREM, Opcodes.IAND, Opcodes.IOR, Opcodes.IXOR, Opcodes.ISHL, Opcodes.ISHR, Opcodes.IUSHR, Opcodes.L2I, Opcodes.D2I, Opcodes.FCMPL, Opcodes.FCMPG -> {
+            Opcodes.IALOAD, Opcodes.BALOAD, Opcodes.CALOAD, Opcodes.SALOAD,
+            Opcodes.IADD, Opcodes.ISUB, Opcodes.IMUL, Opcodes.IDIV, Opcodes.IREM,
+            Opcodes.IAND, Opcodes.IOR, Opcodes.IXOR, Opcodes.ISHL, Opcodes.ISHR, Opcodes.IUSHR,
+            Opcodes.L2I, Opcodes.D2I,
+            Opcodes.FCMPL, Opcodes.FCMPG -> {
                 pop(2)
-                push(Opcodes.INTEGER)
+                push(null)
             }
 
             Opcodes.LADD, Opcodes.LSUB, Opcodes.LMUL, Opcodes.LDIV, Opcodes.LREM, Opcodes.LAND, Opcodes.LOR, Opcodes.LXOR -> {
                 pop(4)
-                push(Opcodes.LONG)
-                push(Opcodes.TOP)
+                push(null)
+                push(null)
             }
 
             Opcodes.FALOAD, Opcodes.FADD, Opcodes.FSUB, Opcodes.FMUL, Opcodes.FDIV, Opcodes.FREM, Opcodes.L2F, Opcodes.D2F -> {
                 pop(2)
-                push(Opcodes.FLOAT)
+                push(null)
             }
 
             Opcodes.DADD, Opcodes.DSUB, Opcodes.DMUL, Opcodes.DDIV, Opcodes.DREM -> {
                 pop(4)
-                push(Opcodes.DOUBLE)
-                push(Opcodes.TOP)
+                push(null)
+                push(null)
             }
 
             Opcodes.LSHL, Opcodes.LSHR, Opcodes.LUSHR -> {
                 pop(3)
-                push(Opcodes.LONG)
-                push(Opcodes.TOP)
+                push(null)
+                push(null)
             }
 
-            Opcodes.IINC -> set(intArg, Opcodes.INTEGER)
+            Opcodes.IINC
+                -> {}
+
             Opcodes.I2L, Opcodes.F2L -> {
                 pop(1)
-                push(Opcodes.LONG)
-                push(Opcodes.TOP)
+                push(null)
+                push(null)
             }
 
             Opcodes.I2F -> {
                 pop(1)
-                push(Opcodes.FLOAT)
+                push(null)
             }
 
             Opcodes.I2D, Opcodes.F2D -> {
                 pop(1)
-                push(Opcodes.DOUBLE)
-                push(Opcodes.TOP)
+                push(null)
+                push(null)
             }
 
-            Opcodes.F2I, Opcodes.ARRAYLENGTH, Opcodes.INSTANCEOF -> {
+            Opcodes.F2I -> {
                 pop(1)
-                push(Opcodes.INTEGER)
+                push(null)
             }
 
             Opcodes.LCMP, Opcodes.DCMPL, Opcodes.DCMPG -> {
                 pop(4)
-                push(Opcodes.INTEGER)
+                push(null)
             }
 
-            Opcodes.GETSTATIC -> pushDescriptor(stringArg)
-            Opcodes.PUTSTATIC -> pop(stringArg)
+            Opcodes.GETSTATIC -> {
+                push(fieldName)
+            }
+
+            Opcodes.PUTSTATIC -> {
+                pop(descriptor!!)
+            }
+
             Opcodes.GETFIELD -> {
-                pop(1)
-                pushDescriptor(stringArg)
+                pop(1) // TODO: should we use the object name?
+                push(fieldName)
             }
 
             Opcodes.PUTFIELD -> {
-                pop(stringArg)
+                pop(descriptor!!)
                 pop()
             }
 
-            Opcodes.NEW -> push(labels!!.get(0))
+            Opcodes.NEW -> {
+                push(null)
+            }
+
             Opcodes.NEWARRAY -> {
                 pop()
                 when (intArg) {
-                    Opcodes.T_BOOLEAN -> pushDescriptor("[Z")
-                    Opcodes.T_CHAR -> pushDescriptor("[C")
-                    Opcodes.T_BYTE -> pushDescriptor("[B")
-                    Opcodes.T_SHORT -> pushDescriptor("[S")
-                    Opcodes.T_INT -> pushDescriptor("[I")
-                    Opcodes.T_FLOAT -> pushDescriptor("[F")
-                    Opcodes.T_DOUBLE -> pushDescriptor("[D")
-                    Opcodes.T_LONG -> pushDescriptor("[J")
+                    Opcodes.T_BOOLEAN, Opcodes.T_BYTE, Opcodes.T_CHAR,
+                    Opcodes.T_SHORT, Opcodes.T_INT, Opcodes.T_FLOAT -> {
+                        push(null)
+                    }
+
+                    Opcodes.T_DOUBLE, Opcodes.T_LONG -> {
+                        push(null)
+                        push(null)
+                    }
+
                     else -> throw IllegalArgumentException("Invalid array type " + intArg)
                 }
             }
 
             Opcodes.ANEWARRAY -> {
                 pop()
-                pushDescriptor("[" + Type.getObjectType(stringArg))
-            }
-
-            Opcodes.CHECKCAST -> {
-                pop()
-                pushDescriptor(Type.getObjectType(stringArg).getDescriptor())
+                push(null)
             }
 
             Opcodes.MULTIANEWARRAY -> {
                 pop(intArg)
-                pushDescriptor(stringArg)
+                push(null)
+            }
+
+            Opcodes.ARRAYLENGTH -> {
+                // TODO: can we do better?
+                push(null)
+            }
+
+            Opcodes.INSTANCEOF -> {
+                push(null)
+            }
+
+            Opcodes.CHECKCAST -> {
+                value1 = pop()
+                push(value1)
             }
 
             else -> throw IllegalArgumentException("Invalid opcode " + opcode)
@@ -715,10 +802,8 @@ class OwnerNameAnalyzerAdapter protected constructor(
     }
 
     companion object {
-        private fun visitFrameTypes(
-            numTypes: Int, frameTypes: Array<Any?>, result: MutableList<Any?>
-        ) {
-            for (i in 0..<numTypes) {
+        private fun visitFrameTypes(numTypes: Int, frameTypes: Array<Any?>, result: MutableList<Any?>) {
+            for (i in 0 ..< numTypes) {
                 val frameType = frameTypes[i]
                 result.add(frameType)
                 if (frameType === Opcodes.LONG || frameType === Opcodes.DOUBLE) {
