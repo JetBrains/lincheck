@@ -159,7 +159,7 @@ class TRMethodCallTracePoint(
 
     override fun toText(verbose: Boolean): String {
         val sb = StringBuilder()
-        methodCallTracePointPrinter.print(sb, tracePoint = this, verbose, methodDescriptor)
+        methodCallTracePointPrinter.print(sb, tracePoint = this, verbose)
         return sb.toString()
     }
 
@@ -308,7 +308,7 @@ sealed class TRLocalVariableTracePoint(
 
     override fun toText(verbose: Boolean): String {
         val sb = StringBuilder()
-        localVariableTracePointPrinter.print(sb, tracePoint = this, verbose, variableDescriptor)
+        localVariableTracePointPrinter.print(sb, tracePoint = this, verbose)
         return sb.toString()
     }
 }
