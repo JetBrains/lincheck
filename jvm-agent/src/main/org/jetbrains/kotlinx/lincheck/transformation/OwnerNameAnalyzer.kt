@@ -14,7 +14,7 @@ import org.objectweb.asm.*
 import kotlin.math.max
 
 /**
- * TODO
+ * TODO: update the documentation
  */
 class OwnerNameAnalyzerAdapter protected constructor(
     api: Int,
@@ -26,6 +26,8 @@ class OwnerNameAnalyzerAdapter protected constructor(
     methodVisitor: MethodVisitor?
 ) : MethodVisitor(api, methodVisitor) {
     /**
+     * TODO: update the documentation
+     *
      * The local variable slots for the current execution frame. Primitive types are represented by
      * [Opcodes.TOP], [Opcodes.INTEGER], [Opcodes.FLOAT], [Opcodes.LONG],
      * [Opcodes.DOUBLE],[Opcodes.NULL] or [Opcodes.UNINITIALIZED_THIS] (long and
@@ -37,6 +39,8 @@ class OwnerNameAnalyzerAdapter protected constructor(
     var locals: MutableList<Any?>?
 
     /**
+     * TODO: update the documentation
+     *
      * The operand stack slots for the current execution frame. Primitive types are represented by
      * [Opcodes.TOP], [Opcodes.INTEGER], [Opcodes.FLOAT], [Opcodes.LONG],
      * [Opcodes.DOUBLE],[Opcodes.NULL] or [Opcodes.UNINITIALIZED_THIS] (long and
@@ -51,6 +55,8 @@ class OwnerNameAnalyzerAdapter protected constructor(
     private var labels: MutableList<Label?>? = null
 
     /**
+     * TODO: update the documentation
+     *
      * The uninitialized types in the current execution frame. This map associates internal names to
      * Label objects (see [Type.getInternalName]). Each label designates a NEW instruction
      * that created the currently uninitialized types, and the associated internal name represents the
@@ -65,7 +71,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
     private var maxLocals: Int
 
     /**
-     * Constructs a new [AnalyzerAdapter]. *Subclasses must not use this constructor*.
+     * Constructs a new [OwnerNameAnalyzerAdapter]. *Subclasses must not use this constructor*.
      * Instead, they must use the [.AnalyzerAdapter] version.
      *
      * @param owner the owner's class name.
@@ -83,7 +89,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
     ) : this( /* latest api = */Opcodes.ASM9, owner, access, name, descriptor, methodVisitor)
 
     /**
-     * Constructs a new [AnalyzerAdapter].
+     * Constructs a new [OwnerNameAnalyzerAdapter].
      *
      * @param api the ASM API version implemented by this visitor. Must be one of the `ASM`*x* values in [Opcodes].
      * @param owner the owner's class name.
@@ -227,13 +233,13 @@ class OwnerNameAnalyzerAdapter protected constructor(
                     initializedValue = owner
                 }
                 for (i in locals!!.indices) {
-                    if (locals!!.get(i) === value) {
-                        locals!!.set(i, initializedValue)
+                    if (locals!![i] === value) {
+                        locals!![i] = initializedValue
                     }
                 }
                 for (i in stack!!.indices) {
-                    if (stack!!.get(i) === value) {
-                        stack!!.set(i, initializedValue)
+                    if (stack!![i] === value) {
+                        stack!![i] = initializedValue
                     }
                 }
             }
@@ -294,7 +300,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
         } else if (value is String) {
             push("java/lang/String")
         } else if (value is Type) {
-            val sort = value.getSort()
+            val sort = value.sort
             if (sort == Type.OBJECT || sort == Type.ARRAY) {
                 push("java/lang/Class")
             } else if (sort == Type.METHOD) {
@@ -305,7 +311,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
         } else if (value is Handle) {
             push("java/lang/invoke/MethodHandle")
         } else if (value is ConstantDynamic) {
-            pushDescriptor(value.getDescriptor())
+            pushDescriptor(value.descriptor)
         } else {
             throw IllegalArgumentException()
         }
@@ -347,7 +353,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
         end: Label?,
         index: Int
     ) {
-        val firstDescriptorChar = descriptor.get(0)
+        val firstDescriptorChar = descriptor[0]
         maxLocals = max(
             maxLocals, index + (if (firstDescriptorChar == 'J' || firstDescriptorChar == 'D') 2 else 1)
         )
@@ -365,7 +371,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
     // -----------------------------------------------------------------------------------------------
     private fun get(local: Int): Any? {
         maxLocals = max(maxLocals, local + 1)
-        return if (local < locals!!.size) locals!!.get(local) else Opcodes.TOP
+        return if (local < locals!!.size) locals!![local] else Opcodes.TOP
     }
 
     private fun set(local: Int, type: Any?) {
@@ -435,7 +441,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
             var numSlots = 0
             val types = Type.getArgumentTypes(descriptor)
             for (type in types) {
-                numSlots += type.getSize()
+                numSlots += type.size
             }
             pop(numSlots)
         } else if (firstDescriptorChar == 'J' || firstDescriptorChar == 'D') {
