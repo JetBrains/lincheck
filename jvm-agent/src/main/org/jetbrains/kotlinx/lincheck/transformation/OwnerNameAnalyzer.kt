@@ -52,20 +52,6 @@ class OwnerNameAnalyzerAdapter protected constructor(
      */
     var stack: MutableList<String?>?
 
-    /** The labels that designate the next instruction to be visited. May be null.  */
-    private var labels: MutableList<Label?>? = null
-
-    /**
-     * TODO: update the documentation
-     *
-     * The uninitialized types in the current execution frame. This map associates internal names to
-     * Label objects (see [Type.getInternalName]). Each label designates a NEW instruction
-     * that created the currently uninitialized types, and the associated internal name represents the
-     * NEW operand, i.e. the final, initialized type value.
-     */
-    // TODO: do we need this?
-    var uninitializedTypes: MutableMap<Any?, Any?> // TODO: refactor --- put actual types
-
     /** The maximum stack size of this method.  */
     private var maxStack = 0
 
@@ -104,7 +90,6 @@ class OwnerNameAnalyzerAdapter protected constructor(
     init {
         locals = mutableListOf<String?>()
         stack = mutableListOf<String?>()
-        uninitializedTypes = HashMap<Any?, Any?>()
 
         val isStatic = (access and Opcodes.ACC_STATIC == 0)
         if (!isStatic) {
@@ -179,19 +164,6 @@ class OwnerNameAnalyzerAdapter protected constructor(
     }
 
     override fun visitTypeInsn(opcode: Int, type: String) {
-        if (opcode == Opcodes.NEW) {
-            if (labels == null) {
-                val label = Label()
-                labels = ArrayList<Label?>(3) // TODO: investigate why 3?
-                labels!!.add(label)
-                if (mv != null) {
-                    mv.visitLabel(label)
-                }
-            }
-            for (label in labels!!) {
-                uninitializedTypes.put(label, type)
-            }
-        }
         super.visitTypeInsn(opcode, type)
         execute(opcode, 0, type)
     }
@@ -214,16 +186,11 @@ class OwnerNameAnalyzerAdapter protected constructor(
             return
         }
         super.visitMethodInsn(opcodeAndSource, owner, name, descriptor, isInterface)
-        val opcode = opcodeAndSource and Opcodes.SOURCE_MASK.inv()
-
         if (this.locals == null) {
-            labels = null
             return
         }
         pop(descriptor)
         push(null)
-
-        labels = null
     }
 
     override fun visitInvokeDynamicInsn(
@@ -234,13 +201,10 @@ class OwnerNameAnalyzerAdapter protected constructor(
     ) {
         super.visitInvokeDynamicInsn(name, descriptor, bootstrapMethodHandle, *bootstrapMethodArguments)
         if (this.locals == null) {
-            labels = null
             return
         }
         pop(descriptor)
         push(null)
-
-        labels = null
     }
 
     override fun visitJumpInsn(opcode: Int, label: Label?) {
@@ -254,16 +218,11 @@ class OwnerNameAnalyzerAdapter protected constructor(
 
     override fun visitLabel(label: Label?) {
         super.visitLabel(label)
-        if (labels == null) {
-            labels = ArrayList<Label?>(3) // TODO: investigate why 3?
-        }
-        labels!!.add(label)
     }
 
     override fun visitLdcInsn(value: Any?) {
         super.visitLdcInsn(value)
         if (this.locals == null) {
-            labels = null
             return
         }
         // TODO: need to investigate how to lookup constant name (if available)
@@ -305,8 +264,6 @@ class OwnerNameAnalyzerAdapter protected constructor(
             }
             else -> throw IllegalArgumentException()
         }
-        
-        labels = null
     }
 
     override fun visitIincInsn(varIndex: Int, increment: Int) {
@@ -409,7 +366,6 @@ class OwnerNameAnalyzerAdapter protected constructor(
     private fun execute(opcode: Int, intArg: Int, fieldName: String? = null, descriptor: String? = null) {
         require(!(opcode == Opcodes.JSR || opcode == Opcodes.RET)) { "JSR/RET are not supported" }
         if (this.locals == null) {
-            labels = null
             return
         }
         val value1: Any?
@@ -735,7 +691,6 @@ class OwnerNameAnalyzerAdapter protected constructor(
 
             else -> throw IllegalArgumentException("Invalid opcode " + opcode)
         }
-        labels = null
     }
 
     companion object {
