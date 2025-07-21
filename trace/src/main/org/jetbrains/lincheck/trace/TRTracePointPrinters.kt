@@ -89,7 +89,6 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
 
 internal class DefaultTRMethodCallTracePointPrinter(): AbstractTRMethodCallTracePointPrinter() {
 
-    // TODO: get rid of allocation here and everywhere below
     fun print(dest: Appendable, tracePoint: TRMethodCallTracePoint, verbose: Boolean) =
         with(DefaultTRAppendable(dest)) {
             append(tracePoint)
