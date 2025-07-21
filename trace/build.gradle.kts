@@ -76,3 +76,5 @@ publishing {
         artifactsRepositoryUrl = rootProject.run { uri(layout.buildDirectory.dir("artifacts/maven")) }
     )
 }
+
+configureSigning()

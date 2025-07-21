@@ -11,9 +11,11 @@ Follow these steps to release a new `<version>` of Lincheck.
    `git merge origin/master`
 
 4. Replace `<old-version>` with `<version>`:
-   * in [gradle.properties](gradle.properties)
-   * in [docs/v.list](docs/v.list)
    * in [README.md](README.md)
+   * in [docs/v.list](docs/v.list) 
+   * in [gradle.properties](gradle.properties)
+   * in all the published subprojects (`common`, `jvm-agent`, `trace`) `gradle.properties` files 
+     * upon new Lincheck release, all subprojects should have the same version
 
 5. Commit the updated [`gradle.properties`](gradle.properties): <br>
    `git add gradle.properties README.md docs/v.list` <br>
@@ -45,6 +47,7 @@ After the task succeeds, the artifact should be uploaded to https://central.sona
     `git checkout develop`
 
 13. Update the version to the next `SNAPSHOT` one in [`gradle.properties`](gradle.properties).
+    * also update the version in all published subprojects `gradle.properties` files
 
 14. Commit and push the updated [`gradle.properties`](gradle.properties): <br>
    `git add gradle.properties` <br>

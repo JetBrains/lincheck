@@ -100,6 +100,9 @@ fun PublishingExtension.configureRepositories(artifactsRepositoryUrl: URI) {
 // Borrowed from https://github.com/Kotlin/kotlinx.team.infra/.
 // Currently we re-use the kotlin libraries key for signing.
 fun Project.configureSigning() {
+    val isUnderTeamCity = (System.getenv("TEAMCITY_VERSION") != null)
+    if (!isUnderTeamCity) return
+
     project.pluginManager.apply(SigningPlugin::class.java)
 
     val keyId = getSigningProperty("libs.sign.key.id") ?: return

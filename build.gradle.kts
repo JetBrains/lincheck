@@ -276,18 +276,12 @@ publishing {
     )
 }
 
+configureSigning()
+
 tasks.named("generateMetadataFileForMavenPublication") {
     dependsOn(jar)
     dependsOn(sourcesJar)
     dependsOn(javadocJar)
-}
-
-signing {
-    val isUnderTeamCity = (System.getenv("TEAMCITY_VERSION") != null)
-    if (isUnderTeamCity) {
-        configureSigning()
-        sign(publishing.publications)
-    }
 }
 
 tasks {
