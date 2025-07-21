@@ -29,7 +29,7 @@ interface TRAppendable {
     fun append(text: String?): TRAppendable
 }
 
-data class DefaultTRAppendable(val dest: Appendable): TRAppendable {
+internal data class DefaultTRAppendable(val dest: Appendable): TRAppendable {
     override fun append(text: String?): TRAppendable {
         dest.append(text)
         return this
@@ -50,19 +50,19 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
         appendResult(tracePoint)
     }
 
-    private fun TRAppendable.appendClassName(tracePoint: TRMethodCallTracePoint, methodDescriptor: MethodDescriptor) {
+    protected fun TRAppendable.appendClassName(tracePoint: TRMethodCallTracePoint, methodDescriptor: MethodDescriptor) {
         val className = tracePoint.obj?.adornedRepresentation() ?: methodDescriptor.className.substringAfterLast(".")
         appendClassName(className, tracePoint.obj)
     }
 
-    private fun TRAppendable.appendMethodName(methodDescriptor: MethodDescriptor) {
+    protected fun TRAppendable.appendMethodName(methodDescriptor: MethodDescriptor) {
         appendMethodName(
             methodDescriptor.methodName.removeCoroutinesCoreSuffix(),
             methodDescriptor
         )
     }
 
-    private fun TRAppendable.appendParameters(tracePoint: TRMethodCallTracePoint) {
+    protected fun TRAppendable.appendParameters(tracePoint: TRMethodCallTracePoint) {
         tracePoint.parameters.forEachIndexed { i, parameter ->
             if (i != 0) {
                 appendSpecialSymbol(",")
@@ -72,7 +72,7 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
         }
     }
 
-    private fun TRAppendable.appendResult(tracePoint: TRMethodCallTracePoint) {
+    protected fun TRAppendable.appendResult(tracePoint: TRMethodCallTracePoint) {
         if (tracePoint.exceptionClassName != null) {
             append(": ")
             appendKeyword("threw")
@@ -150,7 +150,7 @@ internal class DefaultTRFieldTracePointPrinter: AbstractTRFieldTracePointPrinter
 
 abstract class AbstractTRLocalVariableTracePointPrinter {
 
-    fun TRAppendable.append(tracePoint: TRLocalVariableTracePoint) {
+    protected fun TRAppendable.append(tracePoint: TRLocalVariableTracePoint) {
         val vd = tracePoint.variableDescriptor
 
         appendVariableName(vd.name.removeInlineIV().removeDollarThis().removeLeadingDollar(), vd)
@@ -178,7 +178,7 @@ internal class DefaultTRLocalVariableTracePointPrinter: AbstractTRLocalVariableT
 
 abstract class AbstractTRArrayTracePointPrinter {
 
-    fun TRAppendable.append(tracePoint: TRArrayTracePoint) {
+    protected fun TRAppendable.append(tracePoint: TRArrayTracePoint) {
         appendArray(tracePoint.array)
         appendSpecialSymbol("[")
         appendArrayIndex(tracePoint.index)
