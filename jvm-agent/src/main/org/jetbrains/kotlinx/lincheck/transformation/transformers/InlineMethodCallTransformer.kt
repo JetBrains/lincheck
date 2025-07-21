@@ -15,6 +15,7 @@ import org.jetbrains.lincheck.trace.TRACE_CONTEXT
 import org.jetbrains.lincheck.util.Logger
 import org.objectweb.asm.Label
 import org.objectweb.asm.Opcodes.*
+import org.objectweb.asm.Type
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
@@ -126,28 +127,47 @@ internal class InlineMethodCallTransformer(
 
     override fun visitJumpInsn(opcode: Int, label: Label) = adapter.run {
         // Maybe we jump out of the inline stack?
-        var topOfStack = inlineStack.lastOrNull()
+        val topOfStack = inlineStack.lastOrNull()
+        // we must not pop the static analysis stack here, as an inline method is not ended here!
         if (topOfStack != null && labelSorter.compare(topOfStack.second.labelIndexRange.second, label) <= 0) {
-            invokeIfInAnalyzedCode(
-                original = {},
-                instrumented = {
-                    // we must not pop static analysis stack here, as
-                    // inline method is not ended here!
-                    System.err.println(">>> $className.$methodName: JUMP $label STARTS")
-                    for (topOfStack in inlineStack.reversed()) {
-                        val (className, lvar) = topOfStack
-                        // This inline call covers this jump, stop "exiting"
-                        if (labelSorter.compare(topOfStack.second.labelIndexRange.second, label) > 0) {
-                            break
-                        }
-                        System.err.println("=== EXIT ${lvar.name} (${lvar.labelIndexRange.first} .. ${lvar.labelIndexRange.second})")
-                        push("~~~ Exit by Jump ${exits++}")
-                        invokeStatic(Injections::debugPrint)
-                        processInlineMethodCallReturn(className, lvar.inlineMethodName!!, lvar.labelIndexRange.first)
+            when (opcode) {
+                GOTO -> invokeIfInAnalyzedCode(
+                    original = {},
+                    instrumented = {
+                        exitFromInlineMethods { lvar -> labelSorter.compare(lvar.labelIndexRange.second, label) <= 0 }
                     }
-                    System.err.println("<<< $className.$methodName: JUMP $label ENDS")
+                )
+                IFEQ,
+                IFNE,
+                IFLT,
+                IFGE,
+                IFGT,
+                IFLE,
+                IFNULL,
+                IFNONNULL -> {
+                    // Duplicate one top category-1 value
+                    dup()
+                    invokeIfTrueAndInAnalyzedCode(opcode) {
+                        exitFromInlineMethods { lvar -> labelSorter.compare(lvar.labelIndexRange.second, label) <= 0 }
+                    }
                 }
-            )
+                IF_ICMPEQ,
+                IF_ICMPNE,
+                IF_ICMPLT,
+                IF_ICMPGE,
+                IF_ICMPGT,
+                IF_ICMPLE,
+                IF_ACMPEQ,
+                IF_ACMPNE -> {
+                    // Duplicate two top category-1 values
+                    dup2()
+                    invokeIfTrueAndInAnalyzedCode(opcode) {
+                        exitFromInlineMethods { lvar -> labelSorter.compare(lvar.labelIndexRange.second, label) <= 0 }
+                    }
+                }
+                JSR -> Unit
+                else -> error("Unknown conditional opcode $opcode")
+            }
         }
         visitJumpInsn(opcode, label)
     }
@@ -155,27 +175,29 @@ internal class InlineMethodCallTransformer(
     override fun visitInsn(opcode: Int) = adapter.run {
         when (opcode) {
             ARETURN, DRETURN, FRETURN, IRETURN, LRETURN, RETURN, ATHROW -> {
+                // we must not pop the static analysis stack here, as an inline method is not ended here!
                 if (inlineStack.isNotEmpty()) {
                     invokeIfInAnalyzedCode(
                         original = {},
                         instrumented = {
-                            // we must not pop or clear static analysis stack here, as
-                            // inline method is not ended here!
-                            System.err.println(">>> $className.$methodName: RETURN STARTS")
-                            for (topOfStack in inlineStack.reversed()) {
-                                val (className, lvar) = topOfStack
-                                System.err.println("=== EXIT ${lvar.name} (${lvar.labelIndexRange.first} .. ${lvar.labelIndexRange.second})")
-                                push("~~~ Exit by Return Or Throw ${exits++}")
-                                invokeStatic(Injections::debugPrint)
-                                processInlineMethodCallReturn(className,lvar.inlineMethodName!!, lvar.labelIndexRange.first)
-                            }
-                            System.err.println("<<< $className.$methodName: RETURN ENDS")
+                            exitFromInlineMethods { false }
                         }
                     )
                 }
             }
         }
         visitInsn(opcode)
+    }
+
+    private fun exitFromInlineMethods(stopHere: (LocalVariableInfo) -> Boolean) {
+        for (topOfStack in inlineStack.reversed()) {
+            val (className, lvar) = topOfStack
+            // This inline call covers this jump, stop "exiting"
+            if (stopHere(topOfStack.second)) {
+                break
+            }
+            processInlineMethodCallReturn(className, lvar.inlineMethodName!!, lvar.labelIndexRange.first)
+        }
     }
 
     override fun visitMaxs(maxStack: Int, maxLocals: Int) {
@@ -193,7 +215,7 @@ internal class InlineMethodCallTransformer(
     }
 
     @Suppress("UNUSED_PARAMETER")
-    private fun processInlineMethodCall(className: String?, inlineMethodName: String, ownerType: org.objectweb.asm.Type?, owner: Int?, startLabel: Label) = adapter.run {
+    private fun processInlineMethodCall(className: String?, inlineMethodName: String, ownerType: Type?, owner: Int?, startLabel: Label) = adapter.run {
         // Create a fake method descriptor
         val methodId = getPseudoMethodId(className, startLabel, inlineMethodName)
         System.err.println("@@@ $className / $startLabel / $inlineMethodName : $methodId")
@@ -234,4 +256,38 @@ internal class InlineMethodCallTransformer(
     // Maybe we will need to expand it later
     // Check inlined method name by marker variable name
     private fun isSupportedInline(lvar: LocalVariableInfo) = !lvar.name.endsWith("\$atomicfu")
+
+    private fun GeneratorAdapter.invokeIfTrueAndInAnalyzedCode(
+        ifOpcode: Int,
+        block: GeneratorAdapter.() -> Unit,
+    ) {
+        val falseLabel = Label()
+        // If opcode has needed arguments on the top of the stack
+        visitJumpInsn(invertJumpOpcode(ifOpcode), falseLabel)
+        invokeStatic(Injections::inAnalyzedCode)
+        visitJumpInsn(IFEQ, falseLabel)
+        block()
+        visitLabel(falseLabel)
+    }
+
+    private fun invertJumpOpcode(opcode: Int): Int =
+        when (opcode) {
+            IFEQ -> IFNE
+            IFNE -> IFEQ
+            IFLT -> IFGE
+            IFGE -> IFLT
+            IFGT -> IFLE
+            IFLE -> IFGT
+            IF_ICMPEQ -> IF_ICMPNE
+            IF_ICMPNE -> IF_ICMPEQ
+            IF_ICMPLT -> IF_ICMPGE
+            IF_ICMPGE -> IF_ICMPLT
+            IF_ICMPGT -> IF_ICMPLE
+            IF_ICMPLE -> IF_ICMPGT
+            IF_ACMPEQ -> IF_ACMPNE
+            IF_ACMPNE -> IF_ACMPEQ
+            IFNULL -> IFNONNULL
+            IFNONNULL -> IFNULL
+            else -> error("Unknown conitional opcode $opcode")
+        }
 }
