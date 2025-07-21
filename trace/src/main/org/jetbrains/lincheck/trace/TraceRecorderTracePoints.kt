@@ -28,6 +28,11 @@ private val EVENT_ID_GENERATOR = AtomicInteger(0)
 
 var INJECTIONS_VOID_OBJECT: Any? = null
 
+private val methodCallTracePointPrinter = DefaultTRMethodCallTracePointPrinter()
+private val fieldTracePointPrinter = DefaultTRFieldTracePointPrinter()
+private val localVariableTracePointPrinter = DefaultTRLocalVariableTracePointPrinter()
+private val arrayTracePointPrinter = DefaultTRArrayTracePointPrinter()
+
 sealed class TRTracePoint(
     val codeLocationId: Int,
     val threadId: Int,
@@ -155,10 +160,7 @@ class TRMethodCallTracePoint(
 
     override fun toText(verbose: Boolean): String {
         val sb = StringBuilder()
-        TRMethodCallTracePointPrettifier(point = this, parameters, methodDescriptor)
-            .removeCoroutinesCoreSuffix()
-            .dump(sb, verbose)
-
+        methodCallTracePointPrinter.print(sb, tracePoint = this, verbose, methodDescriptor)
         return sb.toString()
     }
 
@@ -222,11 +224,7 @@ sealed class TRFieldTracePoint(
 
     override fun toText(verbose: Boolean): String {
         val sb = StringBuilder()
-        TRFieldTracePointPrettifier(this)
-            .compressLambdaCaptureSyntheticField()
-            .removeVolatileDollar()
-            .dump(sb, verbose)
-
+        fieldTracePointPrinter.print(sb, tracePoint = this, verbose)
         return sb.toString()
     }
 }
@@ -307,12 +305,7 @@ sealed class TRLocalVariableTracePoint(
 
     override fun toText(verbose: Boolean): String {
         val sb = StringBuilder()
-        TRLocalVariableTracePointPrettifier(point = this, variableDescriptor)
-            .removeInlineIV()
-            .removeDollarThis()
-            .removeLeadingDollar()
-            .dump(sb, verbose)
-
+        localVariableTracePointPrinter.print(sb, tracePoint = this, verbose, variableDescriptor)
         return sb.toString()
     }
 }
@@ -369,7 +362,7 @@ sealed class TRArrayTracePoint(
     val value: TRObject?,
     eventId: Int
 ) : TRTracePoint(codeLocationId, threadId, eventId) {
-    protected abstract val directionSymbol: String
+    abstract val directionSymbol: String
 
     override fun save(out: TraceWriter) {
         super.save(out)
@@ -384,6 +377,12 @@ sealed class TRArrayTracePoint(
         out.preWriteTRObject(array)
         out.preWriteTRObject(value)
     }
+
+    override fun toText(verbose: Boolean): String {
+        val sb = StringBuilder()
+        arrayTracePointPrinter.print(sb, tracePoint = this, verbose)
+        return sb.toString()
+    }
 }
 
 class TRReadArrayTracePoint(
@@ -395,19 +394,6 @@ class TRReadArrayTracePoint(
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
 ) : TRArrayTracePoint(threadId, codeLocationId, array, index, value, eventId) {
     override val directionSymbol: String get() = " → "
-
-    override fun toText(verbose: Boolean): String {
-        val sb = StringBuilder()
-        sb.append(array)
-            .append('[')
-            .append(index)
-            .append("]")
-            .append(directionSymbol)
-            .append(value.toString())
-
-        sb.append(codeLocationId, verbose)
-        return sb.toString()
-    }
 
     internal companion object {
         fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRReadArrayTracePoint {
@@ -432,18 +418,6 @@ class TRWriteArrayTracePoint(
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
 ) : TRArrayTracePoint(threadId, codeLocationId, array, index, value, eventId) {
     override val directionSymbol: String get() = " ← "
-
-    override fun toText(verbose: Boolean): String {
-        val sb = StringBuilder()
-        sb.append(array)
-            .append('[')
-            .append(index)
-            .append("] ← ")
-            .append(value.toString())
-
-        sb.append(codeLocationId, verbose)
-        return sb.toString()
-    }
 
     internal companion object {
         fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRWriteArrayTracePoint {
