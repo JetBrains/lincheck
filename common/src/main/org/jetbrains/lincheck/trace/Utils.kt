@@ -16,12 +16,36 @@ import org.jetbrains.lincheck.util.isJavaLambdaClass
  * Replaces nested class dollars (if present) from string with dots.
  */
 fun replaceNestedClassDollar(nestedClassRepresentation: String): String {
-    val before = nestedClassRepresentation.substringBefore('$')
-    val after = nestedClassRepresentation.substringAfter('$', "")
-    if (after.isEmpty()) return nestedClassRepresentation
-    val firstPart = if (before.isNotEmpty() && before[0].isUpperCase() && after[0].isUpperCase()) "$before."
-    else "$before$"
-    return firstPart + replaceNestedClassDollar(after)
+    // If there's no dollar sign, return the original string
+    if (!nestedClassRepresentation.contains('$')) return nestedClassRepresentation
+
+    val result = StringBuilder()
+    var currentIndex = 0
+
+    while (currentIndex < nestedClassRepresentation.length) {
+        // Find the next dollar sign
+        val dollarIndex = nestedClassRepresentation.indexOf('$', currentIndex)
+        // If no more dollar signs, append the rest and break
+        if (dollarIndex == -1) {
+            result.append(nestedClassRepresentation.substring(currentIndex))
+            break
+        }
+        // Append the part before the dollar sign
+        val before = nestedClassRepresentation.substring(currentIndex, dollarIndex)
+        result.append(before)
+        // Check if this dollar separates nested class names
+        val afterDollarChar = nestedClassRepresentation[dollarIndex + 1]
+        val isNestedClassNameSeparator = before.isNotEmpty() && before[0].isUpperCase() && afterDollarChar.isUpperCase()
+        if (isNestedClassNameSeparator) {
+            result.append('.')
+        } else {
+            result.append('$')
+        }
+        // Move past the dollar sign
+        currentIndex = dollarIndex + 1
+    }
+
+    return result.toString()
 }
 
 /**

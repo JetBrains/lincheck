@@ -196,7 +196,7 @@ sealed class TRFieldTracePoint(
     val value: TRObject?,
     eventId: Int
 ) : TRTracePoint(codeLocationId, threadId, eventId) {
-    abstract val directionSymbol: String
+    internal abstract val directionSymbol: String
 
     // TODO Make parametrized
     val fieldDescriptor: FieldDescriptor get() = TRACE_CONTEXT.getFieldDescriptor(fieldId)
@@ -284,7 +284,7 @@ sealed class TRLocalVariableTracePoint(
     val value: TRObject?,
     eventId: Int
 ) : TRTracePoint(codeLocationId, threadId, eventId) {
-    abstract val directionSymbol: String
+    internal abstract val directionSymbol: String
 
     // TODO Make parametrized
     val variableDescriptor: VariableDescriptor get() = TRACE_CONTEXT.getVariableDescriptor(localVariableId)
@@ -362,7 +362,7 @@ sealed class TRArrayTracePoint(
     val value: TRObject?,
     eventId: Int
 ) : TRTracePoint(codeLocationId, threadId, eventId) {
-    abstract val directionSymbol: String
+    internal abstract val directionSymbol: String
 
     override fun save(out: TraceWriter) {
         super.save(out)
