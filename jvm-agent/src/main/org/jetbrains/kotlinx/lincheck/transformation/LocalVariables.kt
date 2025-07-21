@@ -26,7 +26,12 @@ internal fun List<LocalVariableInfo>.isUniqueVariable(): Boolean {
     return all { it.name == name && it.type == type }
 }
 
-data class LocalVariableInfo(val name: String, val index: Int, val labelIndexRange: Pair<Label, Label>, val type: Type) {
+data class LocalVariableInfo(
+    val name: String,
+    val index: Int,
+    val type: Type,
+    val labelIndexRange: Pair<Label, Label>
+) {
     val isInlineCallMarker = name.startsWith(INLINE_FUNC_PREFIX)
     val isInlineLambdaMarker = name.startsWith(INLINE_LAMBDA_PREFIX)
 
