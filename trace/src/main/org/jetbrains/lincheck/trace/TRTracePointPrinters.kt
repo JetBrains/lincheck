@@ -116,6 +116,7 @@ internal class DefaultTRFieldTracePointPrinter: AbstractTRFieldTracePointPrinter
 
     override fun Appendable.appendFieldName(tracePoint: TRFieldTracePoint, isLambdaCaptureSyntheticField: Boolean) {
         if (!isLambdaCaptureSyntheticField) {
+            append('.')
             append(tracePoint.name.removeVolatileDollar())
         }
     }
@@ -151,9 +152,7 @@ internal class DefaultTRLocalVariableTracePointPrinter: AbstractTRLocalVariableT
 
     private fun String.removeInlineIV(): String = removeSuffix("\$iv")
 
-    private fun String.removeDollarThis(): String =
-        if (this == "\$this") this
-        else removePrefix("\$this")
+    private fun String.removeDollarThis(): String = if (this == "\$this") this else removePrefix("\$this")
 
     private fun String.removeLeadingDollar(): String = removePrefix("$")
 }
