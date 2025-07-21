@@ -26,7 +26,7 @@ internal abstract class MethodCallTransformerBase(
     className: String,
     methodName: String,
     adapter: GeneratorAdapter,
-) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
+) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter) {
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
         // TODO: do not ignore <init>

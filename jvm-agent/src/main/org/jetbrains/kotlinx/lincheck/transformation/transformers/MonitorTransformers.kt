@@ -26,7 +26,7 @@ internal class MonitorTransformer(
     className: String,
     methodName: String,
     adapter: GeneratorAdapter,
-) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
+) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter) {
 
     override fun visitInsn(opcode: Int) = adapter.run {
         when (opcode) {
@@ -77,7 +77,7 @@ internal class SynchronizedMethodTransformer(
     methodName: String,
     adapter: GeneratorAdapter,
     private val classVersion: Int
-) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
+) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter) {
     private val isStatic: Boolean = this.adapter.access and ACC_STATIC != 0
     private val tryLabel = Label()
     private val catchLabel = Label()
@@ -167,7 +167,7 @@ internal class WaitNotifyTransformer(
     className: String,
     methodName: String,
     adapter: GeneratorAdapter,
-) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
+) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter) {
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
         if (opcode == INVOKEVIRTUAL) {

@@ -29,7 +29,7 @@ internal class SharedMemoryAccessTransformer(
     className: String,
     methodName: String,
     adapter: GeneratorAdapter,
-) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
+) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter) {
 
     lateinit var analyzer: AnalyzerAdapter
 

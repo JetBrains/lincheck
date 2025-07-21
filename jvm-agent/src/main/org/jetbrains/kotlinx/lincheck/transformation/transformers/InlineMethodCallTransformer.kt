@@ -29,7 +29,7 @@ internal class InlineMethodCallTransformer(
     adapter: GeneratorAdapter,
     val locals: MethodVariables,
     val localsTracker: LocalVariablesAccessTransformer?
-) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
+) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter) {
     private companion object {
         val objectType = getObjectType("java/lang/Object").className
         val contType = getObjectType("kotlin/coroutines/Continuation").className

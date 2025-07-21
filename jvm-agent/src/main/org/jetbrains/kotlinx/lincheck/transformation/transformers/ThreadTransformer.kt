@@ -31,7 +31,7 @@ internal class ThreadTransformer(
     methodName: String,
     private val desc: String,
     adapter: GeneratorAdapter,
-) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter)  {
+) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter)  {
 
     private val runMethodTryBlockStart: Label = adapter.newLabel()
     private val runMethodTryBlockEnd: Label = adapter.newLabel()
@@ -126,9 +126,13 @@ internal class ThreadTransformer(
             invokeStatic(Injections::threadJoin)
             // STACK: thread, millis?, nanos?
         }
-        // In some newer versions of JDK, some of the java library classes
-        // use internal API `JavaLangAccess.start` to start threads;
-        // so we instrument calls to this method to detect thread starts.
+        // In some newer versions of JDK, `ThreadPoolExecutor` uses
+        // the internal `ThreadContainer` classes to manage threads in the pool;
+        // This class, in turn, has the method `start`,
+        // that does not directly call `Thread.start` to start a thread,
+        // but instead uses internal API `JavaLangAccess.start`.
+        // To detect threads started in this way, we instrument this class
+        // and inject the appropriate hook on calls to the `JavaLangAccess.start` method.
         if (isJavaLangAccessThreadStartMethod(owner, name)) {
             // STACK: thread, threadContainer
             val threadContainerLocal = newLocal(OBJECT_TYPE)

@@ -45,6 +45,9 @@ fun isThreadContainerClass(className: String): Boolean =
     className == "jdk.internal.vm.SharedThreadContainer"  ||
     className == "jdk.internal.misc.ThreadFlock"
 
+fun isThreadContainerThreadStartMethod(className: String, methodName: String): Boolean =
+    isThreadContainerClass(className) && methodName == "start"
+
 /**
  * Checks if the given class name belongs to the IntelliJ runtime debugger agent package.
  */
