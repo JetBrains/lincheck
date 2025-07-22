@@ -92,26 +92,19 @@ class OwnerNameAnalyzerAdapter protected constructor(
         locals = mutableListOf<OwnerName?>()
         stack = mutableListOf<OwnerName?>()
 
-        val isStatic = (access and Opcodes.ACC_STATIC == 0)
-        val argumentTypes = Type.getArgumentTypes(descriptor)
-        maxLocals = (if (isStatic) 0 else 1) + argumentTypes.size
+        val isStatic = (access and ACC_STATIC != 0)
+        val argumentTypes = Type.getArgumentTypes(descriptor)!!
+        val localsTypes = if (isStatic) argumentTypes else arrayOf(OBJECT_TYPE) + argumentTypes
+
+        @Suppress("UNCHECKED_CAST")
+        initializeLocals(localsTypes.size, localsTypes as Array<Any?>)
+        maxLocals = localsTypes.size
     }
 
     override fun visitLabel(label: Label?) {
         super.visitLabel(label)
-        if (this.locals != null) {
-            this.locals!!.clear()
-            this.stack!!.clear()
-        } else {
-            this.locals = mutableListOf()
-            this.stack = mutableListOf()
-        }
-
         val activeVars = methodVariables.getActiveVars()
         setActiveLocalVariableNames(activeVars)
-
-        maxLocals = max(maxLocals, this.locals!!.size)
-        maxStack = max(maxStack, this.stack!!.size)
     }
 
     override fun visitFrame(
@@ -135,15 +128,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
             this.stack = mutableListOf()
         }
 
-        val activeVars = methodVariables.getActiveVars()
-        check(activeVars.size == numLocal) {
-            """
-                Unexpected number of active local variables: ${activeVars.size}. 
-                Number of local variables declared in the frame: $numLocal.
-            """.trimIndent()
-        }
-
-        setActiveLocalVariableNames(activeVars)
+        initializeLocals(numLocal, local)
         initializeStack(numStack, stack)
 
         maxLocals = max(maxLocals, this.locals!!.size)
@@ -166,7 +151,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
 
     override fun visitVarInsn(opcode: Int, varIndex: Int) {
         super.visitVarInsn(opcode, varIndex)
-        val stackSlotSize = if (opcode == Opcodes.RET) 1 else getLocalVarAccessOpcodeType(opcode).stackSlotSize
+        val stackSlotSize = if (opcode == Opcodes.RET) 1 else getLocalVarAccessOpcodeType(opcode).size
         maxLocals = max(maxLocals, varIndex + stackSlotSize)
         execute(opcode, varIndex, null)
     }
@@ -194,11 +179,20 @@ class OwnerNameAnalyzerAdapter protected constructor(
             return
         }
         super.visitMethodInsn(opcodeAndSource, owner, name, descriptor, isInterface)
+        val opcode = opcodeAndSource and Opcodes.SOURCE_MASK.inv()
+
         if (this.locals == null) {
             return
         }
+
+        val returnType = Type.getReturnType(descriptor)
         pop(descriptor)
-        push(null)
+        if (opcode != Opcodes.INVOKESTATIC) {
+            pop()
+        }
+        push(returnType.size)
+
+        Logger.info { "stack size (after) = ${stack?.size ?: -1}" }
     }
 
     override fun visitInvokeDynamicInsn(
@@ -211,8 +205,10 @@ class OwnerNameAnalyzerAdapter protected constructor(
         if (this.locals == null) {
             return
         }
+
+        val returnType = Type.getReturnType(descriptor)
         pop(descriptor)
-        push(null)
+        push(returnType.size)
     }
 
     override fun visitJumpInsn(opcode: Int, label: Label?) {
@@ -278,25 +274,35 @@ class OwnerNameAnalyzerAdapter protected constructor(
         execute(Opcodes.IINC, varIndex, null)
     }
 
-    override fun visitTableSwitchInsn(
-        min: Int, max: Int, dflt: Label?, vararg labels: Label?
-    ) {
+    override fun visitTableSwitchInsn(min: Int, max: Int, dflt: Label?, vararg labels: Label?) {
         super.visitTableSwitchInsn(min, max, dflt, *labels)
         execute(Opcodes.TABLESWITCH, 0, null)
         this.locals = null
         this.stack = null
+
+        Logger.info { "stack size (after) = ${stack?.size ?: -1}" }
     }
 
     override fun visitLookupSwitchInsn(dflt: Label?, keys: IntArray?, labels: Array<Label?>?) {
+        Logger.info { "Visiting lookup switch insn: dflt=$dflt, keys=${keys?.contentToString()}, labels=${labels?.contentToString()}" }
+        Logger.info { "stack size = ${stack?.size ?: -1}" }
+
         super.visitLookupSwitchInsn(dflt, keys, labels)
         execute(Opcodes.LOOKUPSWITCH, 0, null)
         this.locals = null
         this.stack = null
+
+        Logger.info { "stack size (after) = ${stack?.size ?: -1}" }
     }
 
     override fun visitMultiANewArrayInsn(descriptor: String, numDimensions: Int) {
+        Logger.info { "Visiting multi-anew array insn: descriptor=$descriptor, numDimensions=$numDimensions" }
+        Logger.info { "stack size = ${stack?.size ?: -1}" }
+
         super.visitMultiANewArrayInsn(descriptor, numDimensions)
         execute(Opcodes.MULTIANEWARRAY, numDimensions, descriptor)
+
+        Logger.info { "stack size (after) = ${stack?.size ?: -1}" }
     }
 
     override fun visitLocalVariable(
@@ -307,10 +313,15 @@ class OwnerNameAnalyzerAdapter protected constructor(
         end: Label?,
         index: Int
     ) {
+        Logger.info { "Visiting local variable: name=$name, descriptor=$descriptor, signature=$signature, start=$start, end=$end, index=$index" }
+        Logger.info { "stack size = ${stack?.size ?: -1}" }
+
         val firstDescriptorChar = descriptor[0]
         val stackSlotSize = (if (firstDescriptorChar == 'J' || firstDescriptorChar == 'D') 2 else 1)
         maxLocals = max(maxLocals, index + stackSlotSize)
         super.visitLocalVariable(name, descriptor, signature, start, end, index)
+
+        Logger.info { "stack size (after) = ${stack?.size ?: -1}" }
     }
 
     override fun visitMaxs(maxStack: Int, maxLocals: Int) {
@@ -338,6 +349,13 @@ class OwnerNameAnalyzerAdapter protected constructor(
 
     private fun push(ownerName: OwnerName?) {
         stack!!.add(ownerName)
+        maxStack = max(maxStack, stack!!.size)
+    }
+
+    private fun push(numSlots: Int) {
+        for (i in 0 until numSlots) {
+            stack!!.add(null)
+        }
         maxStack = max(maxStack, stack!!.size)
     }
 
@@ -389,13 +407,28 @@ class OwnerNameAnalyzerAdapter protected constructor(
             /* Local variable access instructions */
 
             Opcodes.ALOAD, Opcodes.ILOAD, Opcodes.FLOAD -> {
-                val localVarName = methodVariables.getActiveVar(intArg)
+                val localVarName = methodVariables.getActiveVar(intArg) ?: run {
+                    Logger.error {
+                        "Cannot find active var $intArg. Current active variables:\n" +
+                        methodVariables.getActiveVars().joinToString("\n") { "\t$it" }
+                    }
+                    push(null)
+                    return
+                }
                 val localVarAccess = LocalVariableAccess(localVarName)
                 push(OwnerName(localVarAccess))
             }
 
             Opcodes.LLOAD, Opcodes.DLOAD -> {
-                val localVarName = methodVariables.getActiveVar(intArg)
+                val localVarName = methodVariables.getActiveVar(intArg) ?: run {
+                    Logger.error {
+                        "Cannot find active var $intArg. Current active variables:\n" +
+                        methodVariables.getActiveVars().joinToString("\n") { "\t$it" }
+                    }
+                    push(null)
+                    push(null)
+                    return
+                }
                 val localVarAccess = LocalVariableAccess(localVarName)
                 push(OwnerName(localVarAccess))
                 push(null)
@@ -425,6 +458,8 @@ class OwnerNameAnalyzerAdapter protected constructor(
                 val fieldAccess = ObjectFieldAccess(className!!, fieldName!!)
                 if (ownerName != null) {
                     push(ownerName.concatenate(fieldAccess))
+                } else {
+                    push(null)
                 }
             }
 
@@ -434,17 +469,18 @@ class OwnerNameAnalyzerAdapter protected constructor(
             }
 
             /* Array access instructions */
-
             Opcodes.AALOAD,
             Opcodes.IALOAD, Opcodes.LALOAD, Opcodes.BALOAD, Opcodes.CALOAD, Opcodes.SALOAD,
             Opcodes.FALOAD, Opcodes.DALOAD -> {
-                val arrayName = pop()
                 val indexName = pop()
+                val arrayName = pop()
                 val arrayAccess = indexName?.let { ArrayElementByNameAccess(it) }
                 if (arrayAccess != null && arrayName != null) {
                     push(arrayName.concatenate(arrayAccess))
+                } else {
+                    push(null)
                 }
-                if (getArrayAccessOpcodeType(opcode).stackSlotSize == 2) {
+                if (getArrayAccessOpcodeType(opcode).size == 2) {
                     push(null)
                 }
             }
@@ -462,6 +498,8 @@ class OwnerNameAnalyzerAdapter protected constructor(
                 val arrayLengthAccess = ArrayLengthAccess
                 if (arrayName != null) {
                     push(arrayName.concatenate(arrayLengthAccess))
+                } else {
+                    push(null)
                 }
             }
 
@@ -473,19 +511,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
 
             Opcodes.NEWARRAY -> {
                 pop()
-                when (intArg) {
-                    Opcodes.T_BOOLEAN, Opcodes.T_BYTE, Opcodes.T_CHAR,
-                    Opcodes.T_SHORT, Opcodes.T_INT, Opcodes.T_FLOAT -> {
-                        push(null)
-                    }
-
-                    Opcodes.T_DOUBLE, Opcodes.T_LONG -> {
-                        push(null)
-                        push(null)
-                    }
-
-                    else -> throw IllegalArgumentException("Invalid array type " + intArg)
-                }
+                push(null)
             }
 
             Opcodes.ANEWARRAY -> {
@@ -501,6 +527,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
             /* Type casts */
 
             Opcodes.INSTANCEOF -> {
+                pop()
                 push(null)
             }
 
@@ -564,7 +591,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
                 pop(2)
             }
 
-            Opcodes.MONITORENTER, Opcodes.MONITOREXIT, -> {
+            Opcodes.MONITORENTER, Opcodes.MONITOREXIT -> {
                 pop(1)
             }
 
@@ -747,10 +774,19 @@ class OwnerNameAnalyzerAdapter protected constructor(
     }
 
     private fun setActiveLocalVariableNames(localVariables: List<LocalVariableInfo>) {
-        for (i in localVariables.indices) {
-            val localVarAccess = LocalVariableAccess(localVariables[i].name)
-            locals!!.add(OwnerName(localVarAccess))
-            if (localVariables[i].type.stackSlotSize == 2) {
+        if (this.locals == null) return
+        for (i in this.locals!!.indices) {
+            val localVarName = localVariables.find { it.index == i }?.name ?: continue
+            val localVarAccess = LocalVariableAccess(localVarName)
+            locals!![i] = OwnerName(localVarAccess)
+        }
+    }
+
+    private fun initializeLocals(numLocals: Int, localsTypes: Array<Any?> /* , localVariables: List<LocalVariableInfo> */) {
+        for (i in 0 ..< numLocals) {
+            val localType = localsTypes[i]
+            locals!!.add(null)
+            if (localType == Opcodes.LONG || localType == Opcodes.DOUBLE) {
                 locals!!.add(null)
             }
         }
