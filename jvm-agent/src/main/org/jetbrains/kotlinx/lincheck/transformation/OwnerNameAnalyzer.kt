@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.transformation
 
 import org.jetbrains.lincheck.descriptors.*
 import org.objectweb.asm.*
+import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import kotlin.math.max
 
 /**
@@ -92,7 +93,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
         locals = mutableListOf<OwnerName?>()
         stack = mutableListOf<OwnerName?>()
 
-        val isStatic = (access and ACC_STATIC != 0)
+        val isStatic = (access and Opcodes.ACC_STATIC != 0)
         val argumentTypes = Type.getArgumentTypes(descriptor)!!
         val localsTypes = if (isStatic) argumentTypes else arrayOf(OBJECT_TYPE) + argumentTypes
 
