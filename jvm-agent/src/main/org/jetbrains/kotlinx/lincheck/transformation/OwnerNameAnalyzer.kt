@@ -166,7 +166,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
 
     override fun visitVarInsn(opcode: Int, varIndex: Int) {
         super.visitVarInsn(opcode, varIndex)
-        val stackSlotSize = if (opcode == Opcodes.RET) 1 else getVarInsnOpcodeType(opcode).stackSlotSize
+        val stackSlotSize = if (opcode == Opcodes.RET) 1 else getLocalVarAccessOpcodeType(opcode).stackSlotSize
         maxLocals = max(maxLocals, varIndex + stackSlotSize)
         execute(opcode, varIndex, null)
     }
@@ -435,23 +435,18 @@ class OwnerNameAnalyzerAdapter protected constructor(
 
             /* Array access instructions */
 
-            Opcodes.AALOAD, Opcodes.IALOAD, Opcodes.BALOAD, Opcodes.CALOAD, Opcodes.SALOAD, Opcodes.FALOAD -> {
+            Opcodes.AALOAD,
+            Opcodes.IALOAD, Opcodes.LALOAD, Opcodes.BALOAD, Opcodes.CALOAD, Opcodes.SALOAD,
+            Opcodes.FALOAD, Opcodes.DALOAD -> {
                 val arrayName = pop()
                 val indexName = pop()
                 val arrayAccess = indexName?.let { ArrayElementByNameAccess(it) }
                 if (arrayAccess != null && arrayName != null) {
                     push(arrayName.concatenate(arrayAccess))
                 }
-            }
-
-            Opcodes.LALOAD, Opcodes.DALOAD -> {
-                val arrayName = pop()
-                val indexName = pop()
-                val arrayAccess = indexName?.let { ArrayElementByNameAccess(it) }
-                if (arrayAccess != null && arrayName != null) {
-                    push(arrayName.concatenate(arrayAccess))
+                if (getArrayAccessOpcodeType(opcode).stackSlotSize == 2) {
+                    push(null)
                 }
-                push(null)
             }
 
             Opcodes.IASTORE, Opcodes.BASTORE, Opcodes.CASTORE, Opcodes.SASTORE, Opcodes.FASTORE, Opcodes.AASTORE -> {
