@@ -65,8 +65,8 @@ class TRMethodCallTracePoint(
     var result: TRObject? = null
     var exceptionClassName: String? = null
 
-    private val children: MutableList<TRTracePoint?> = ArrayList(16)
-    private var childrenAddresses: LongArray = LongArray(16)
+    private val children: ChunkedList<TRTracePoint> = ChunkedList()
+    private val childrenAddresses: AddressIndex = AddressIndex.create()
 
     // TODO Make parametrized
     val methodDescriptor: MethodDescriptor get() = TRACE_CONTEXT.getMethodDescriptor(methodId)
@@ -80,18 +80,12 @@ class TRMethodCallTracePoint(
     val events: List<TRTracePoint?> get() = children
 
     internal fun addChildAddress(address: Long) {
-        if (childrenAddresses.size == children.size) {
-            childrenAddresses = childrenAddresses.copyOf(max(children.size + 1, (children.size * 1.25).roundToInt()))
-        }
-        childrenAddresses[children.size] = address
+        childrenAddresses.add(address)
         children.add(null)
     }
 
     internal fun addChild(child: TRTracePoint, address: Long = -1) {
-        if (childrenAddresses.size == children.size) {
-            childrenAddresses = childrenAddresses.copyOf(max(children.size + 1, (children.size * 1.25).roundToInt()))
-        }
-        childrenAddresses[children.size] = address
+        childrenAddresses.add(address)
         children.add(child)
     }
 
@@ -112,7 +106,7 @@ class TRMethodCallTracePoint(
     }
 
     fun unloadAllChildren() {
-        children.fill(null)
+        children.forgetAll()
     }
 
     override fun save(out: TraceWriter) {
@@ -147,6 +141,8 @@ class TRMethodCallTracePoint(
     }
 
     internal fun loadFooter(inp: DataInput) {
+        childrenAddresses.finishWrite()
+
         result = inp.readTRObject()
         exceptionClassName = inp.readUTF()
         if (exceptionClassName?.isEmpty() ?: true) {
