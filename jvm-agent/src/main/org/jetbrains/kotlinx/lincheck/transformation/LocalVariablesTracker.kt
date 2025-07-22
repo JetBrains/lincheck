@@ -21,7 +21,7 @@ internal class LocalVariablesTracker(
     val locals: MethodVariables
 ) : MethodVisitor(ASM_API, visitor) {
     override fun visitLabel(label: Label)  {
-        super.visitLabel(label)
         locals.visitLabel(label)
+        super.visitLabel(label)
     }
 }
