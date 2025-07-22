@@ -55,3 +55,21 @@ fun removeJavaLambdaRuntimeAddress(classNameRepresentation: String): String {
     if (!isJavaLambdaClass(classNameRepresentation)) return classNameRepresentation
     return classNameRepresentation.substringBeforeLast('/')
 }
+
+
+// Trace polishing functions
+fun String.hasCoroutinesCoreSuffix(): Boolean = endsWith("\$kotlinx_coroutines_core")
+
+fun String.removeCoroutinesCoreSuffix(): String = removeSuffix("\$kotlinx_coroutines_core")
+
+fun String.removeInlineIV(): String = removeSuffix("\$iv")
+
+fun String?.isExactDollarThis(): Boolean = equals("\$this")
+
+fun String.removeDollarThis(): String = if (isExactDollarThis()) this else removePrefix("\$this")
+
+fun String.removeLeadingDollar(): String = removePrefix("$")
+
+fun String.removeVolatileDollar(): String = removeSuffix("\$volatile")
+
+fun String.removeVolatileDollarFU(): String = removeSuffix("\$volatile\$FU")

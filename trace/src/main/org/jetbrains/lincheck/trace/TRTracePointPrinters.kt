@@ -82,7 +82,7 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
 
     protected fun TRAppendable.appendMethodName(methodDescriptor: MethodDescriptor): TRAppendable {
         appendMethodName(
-            methodDescriptor.methodName.removeCoroutinesCoreSuffix(),
+            methodDescriptor.methodName.prettifyMethodName(),
             methodDescriptor
         )
         return this
@@ -112,7 +112,8 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
         return this
     }
 
-    private fun String.removeCoroutinesCoreSuffix(): String = removeSuffix("\$kotlinx_coroutines_core")
+    private fun String.prettifyMethodName(): String = this
+        .removeCoroutinesCoreSuffix()
 }
 
 internal object DefaultTRMethodCallTracePointPrinter: AbstractTRMethodCallTracePointPrinter() {
@@ -158,7 +159,7 @@ abstract class AbstractTRFieldTracePointPrinter {
         if (!isLambdaCaptureSyntheticField) {
             appendSpecialSymbol(".")
             appendFieldName(
-                tracePoint.name.removeVolatileDollar(),
+                tracePoint.name.prettifyFieldName(),
                 tracePoint.fieldDescriptor
             )
         }
@@ -169,7 +170,8 @@ abstract class AbstractTRFieldTracePointPrinter {
         return tracePoint.className.startsWith("kotlin.jvm.internal.Ref$") && tracePoint.name == "element"
     }
 
-    private fun String.removeVolatileDollar(): String = removeSuffix("\$volatile\$FU")
+    private fun String.prettifyFieldName(): String = this
+        .removeVolatileDollarFU()
 }
 
 internal object DefaultTRFieldTracePointPrinter: AbstractTRFieldTracePointPrinter() {
@@ -191,7 +193,7 @@ abstract class AbstractTRLocalVariableTracePointPrinter {
     protected fun TRAppendable.append(tracePoint: TRLocalVariableTracePoint): TRAppendable {
         val vd = tracePoint.variableDescriptor
 
-        appendVariableName(vd.name.removeInlineIV().removeDollarThis().removeLeadingDollar(), vd)
+        appendVariableName(vd.name.prettifyVariableName(), vd)
         append(" ")
         appendSpecialSymbol(tracePoint.accessSymbol())
         append(" ")
@@ -199,11 +201,10 @@ abstract class AbstractTRLocalVariableTracePointPrinter {
         return this
     }
 
-    private fun String.removeInlineIV(): String = removeSuffix("\$iv")
-
-    private fun String.removeDollarThis(): String = if (this == "\$this") this else removePrefix("\$this")
-
-    private fun String.removeLeadingDollar(): String = removePrefix("$")
+    private fun String.prettifyVariableName(): String = this
+        .removeInlineIV()
+        .removeDollarThis()
+        .removeLeadingDollar()
 }
 
 internal object DefaultTRLocalVariableTracePointPrinter: AbstractTRLocalVariableTracePointPrinter() {
