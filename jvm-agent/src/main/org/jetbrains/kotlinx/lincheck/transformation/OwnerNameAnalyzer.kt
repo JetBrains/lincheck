@@ -390,13 +390,13 @@ class OwnerNameAnalyzerAdapter protected constructor(
 
             Opcodes.ALOAD, Opcodes.ILOAD, Opcodes.FLOAD -> {
                 val localVarName = methodVariables.getActiveVar(intArg)
-                val localVarAccess = LocalVariableAccessLocation(localVarName)
+                val localVarAccess = LocalVariableAccess(localVarName)
                 push(OwnerName(localVarAccess))
             }
 
             Opcodes.LLOAD, Opcodes.DLOAD -> {
                 val localVarName = methodVariables.getActiveVar(intArg)
-                val localVarAccess = LocalVariableAccessLocation(localVarName)
+                val localVarAccess = LocalVariableAccess(localVarName)
                 push(OwnerName(localVarAccess))
                 push(null)
             }
@@ -412,7 +412,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
             /* Field access instructions */
 
             Opcodes.GETSTATIC -> {
-                val fieldAccess = StaticFieldAccessLocation(className!!, fieldName!!)
+                val fieldAccess = StaticFieldAccess(className!!, fieldName!!)
                 push(OwnerName(fieldAccess))
             }
 
@@ -422,7 +422,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
 
             Opcodes.GETFIELD -> {
                 val ownerName = pop()
-                val fieldAccess = ObjectFieldAccessLocation(className!!, fieldName!!)
+                val fieldAccess = ObjectFieldAccess(className!!, fieldName!!)
                 if (ownerName != null) {
                     push(ownerName.concatenate(fieldAccess))
                 }
@@ -438,7 +438,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
             Opcodes.AALOAD, Opcodes.IALOAD, Opcodes.BALOAD, Opcodes.CALOAD, Opcodes.SALOAD, Opcodes.FALOAD -> {
                 val arrayName = pop()
                 val indexName = pop()
-                val arrayAccess = indexName?.let { ArrayElementByNameAccessLocation(it) }
+                val arrayAccess = indexName?.let { ArrayElementByNameAccess(it) }
                 if (arrayAccess != null && arrayName != null) {
                     push(arrayName.concatenate(arrayAccess))
                 }
@@ -447,7 +447,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
             Opcodes.LALOAD, Opcodes.DALOAD -> {
                 val arrayName = pop()
                 val indexName = pop()
-                val arrayAccess = indexName?.let { ArrayElementByNameAccessLocation(it) }
+                val arrayAccess = indexName?.let { ArrayElementByNameAccess(it) }
                 if (arrayAccess != null && arrayName != null) {
                     push(arrayName.concatenate(arrayAccess))
                 }
@@ -464,7 +464,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
 
             Opcodes.ARRAYLENGTH -> {
                 val arrayName = pop()
-                val arrayLengthAccess = ArrayLengthAccessLocation
+                val arrayLengthAccess = ArrayLengthAccess
                 if (arrayName != null) {
                     push(arrayName.concatenate(arrayLengthAccess))
                 }
@@ -753,7 +753,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
 
     private fun setActiveLocalVariableNames(localVariables: List<LocalVariableInfo>) {
         for (i in localVariables.indices) {
-            val localVarAccess = LocalVariableAccessLocation(localVariables[i].name)
+            val localVarAccess = LocalVariableAccess(localVariables[i].name)
             locals!!.add(OwnerName(localVarAccess))
             if (localVariables[i].type.stackSlotSize == 2) {
                 locals!!.add(null)
