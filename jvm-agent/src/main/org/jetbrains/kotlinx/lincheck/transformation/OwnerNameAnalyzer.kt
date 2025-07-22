@@ -389,23 +389,25 @@ class OwnerNameAnalyzerAdapter protected constructor(
             /* Local variable access instructions */
 
             Opcodes.ALOAD, Opcodes.ILOAD, Opcodes.FLOAD -> {
-                val localVarName = methodVariables.getActiveVar(intArg) ?: run {
+                val localVarName = methodVariables.getActiveVar(intArg)
+                if (localVarName != null) {
+                    val localVarAccess = LocalVariableAccess(localVarName)
+                    push(OwnerName(localVarAccess))
+                } else {
                     push(null)
-                    return
                 }
-                val localVarAccess = LocalVariableAccess(localVarName)
-                push(OwnerName(localVarAccess))
             }
 
             Opcodes.LLOAD, Opcodes.DLOAD -> {
-                val localVarName = methodVariables.getActiveVar(intArg) ?: run {
+                val localVarName = methodVariables.getActiveVar(intArg)
+                if (localVarName != null) {
+                    val localVarAccess = LocalVariableAccess(localVarName)
+                    push(OwnerName(localVarAccess))
+                    push(null)
+                } else {
                     push(null)
                     push(null)
-                    return
                 }
-                val localVarAccess = LocalVariableAccess(localVarName)
-                push(OwnerName(localVarAccess))
-                push(null)
             }
 
             Opcodes.ASTORE, Opcodes.ISTORE, Opcodes.FSTORE -> {
