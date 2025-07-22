@@ -40,6 +40,11 @@ data class ArrayElementByIndexAccessLocation(
     val index: Int
 ) : ArrayAccessLocation()
 
+data class ArrayElementByNameAccessLocation(
+    val indexAccessPath: AccessPath
+) : ArrayAccessLocation()
+
+data object ArrayLengthAccessLocation : ObjectAccessLocation()
 
 class AccessPath(val locations: List<AccessLocation>) {
 
@@ -58,6 +63,7 @@ class AccessPath(val locations: List<AccessLocation>) {
                 }
                 is StaticFieldAccessLocation -> {
                     with(builder) {
+                        append(location.className)
                         append(".")
                         append(location.fieldName)
                     }
@@ -74,6 +80,16 @@ class AccessPath(val locations: List<AccessLocation>) {
                         append(location.index)
                         append(']')
                     }
+                }
+                is ArrayElementByNameAccessLocation -> {
+                    with(builder) {
+                        append('[')
+                        append(location.indexAccessPath)
+                        append(']')
+                    }
+                }
+                is ArrayLengthAccessLocation -> {
+                    builder.append(".length")
                 }
             }
         }
