@@ -10,7 +10,9 @@
 
 package org.jetbrains.kotlinx.lincheck.trace
 
+import org.jetbrains.lincheck.trace.replaceNestedClassDollar
 import org.jetbrains.lincheck.util.AnalysisProfile
+import org.jetbrains.lincheck.trace.*
 
 
 internal fun SingleThreadedTable<TraceNode>.compressTrace() = this
@@ -125,8 +127,8 @@ private fun combineNodes(parent: CallNode, child: CallNode): TraceNode {
 
         val newNode = parent.copy()
         child.children.forEach { newNode.addChild(it) }
-    return newNode
-}
+        return newNode
+    }
 
     return parent
 }
@@ -185,15 +187,15 @@ private fun SingleThreadedTable<TraceNode>.compressSyntheticFieldAccess() = comp
  * ```
  */
 private fun SingleThreadedTable<TraceNode>.removeCoroutinesCoreSuffix() = compressNodes { node ->
-    if (node is CallNode && node.tracePoint.methodName.endsWith("\$kotlinx_coroutines_core")) {
-        node.tracePoint.methodName = node.tracePoint.methodName.removeSuffix("\$kotlinx_coroutines_core")
+    if (node is CallNode && node.tracePoint.methodName.hasCoroutinesCoreSuffix()) {
+        node.tracePoint.methodName = node.tracePoint.methodName.removeCoroutinesCoreSuffix()
     }
 
-    if (node.tracePoint is CodeLocationTracePoint && (node.tracePoint as CodeLocationTracePoint).stackTraceElement.methodName.endsWith("\$kotlinx_coroutines_core")) {
+    if (node.tracePoint is CodeLocationTracePoint && (node.tracePoint as CodeLocationTracePoint).stackTraceElement.methodName.hasCoroutinesCoreSuffix()) {
         val oldStackTraceElement = (node.tracePoint as CodeLocationTracePoint).stackTraceElement
         val newStackTraceElement = StackTraceElement(
             oldStackTraceElement.className,
-            oldStackTraceElement.methodName.removeSuffix("\$kotlinx_coroutines_core"),
+            oldStackTraceElement.methodName.removeCoroutinesCoreSuffix(),
             oldStackTraceElement.fileName,
             oldStackTraceElement.lineNumber,
         )
@@ -267,7 +269,7 @@ private fun SingleThreadedTable<TraceNode>.compressThreadStart() = compressNodes
  */
 private fun SingleThreadedTable<TraceNode>.compressInlineIV() = compressNodes { node ->
     if (node !is CallNode || node.tracePoint.ownerName == null) return@compressNodes node
-    node.tracePoint.updateOwnerName(node.tracePoint.ownerName!!.removeSuffix("\$iv"))
+    node.tracePoint.updateOwnerName(node.tracePoint.ownerName!!.removeInlineIV())
     node
 }
 
@@ -291,7 +293,7 @@ private fun SingleThreadedTable<TraceNode>.compressInlineIV() = compressNodes { 
  */
 private fun SingleThreadedTable<TraceNode>.compressDollarThis() = compressNodes { node ->
     if (node !is CallNode || node.tracePoint.ownerName == null) return@compressNodes node
-    if (node.tracePoint.ownerName == "\$this") node.tracePoint.updateOwnerName(null)
+    if (node.tracePoint.ownerName.isExactDollarThis()) node.tracePoint.updateOwnerName(null)
     node
 }
 
@@ -315,7 +317,7 @@ private fun SingleThreadedTable<TraceNode>.compressDollarThis() = compressNodes 
  */
 private fun SingleThreadedTable<TraceNode>.replaceNestedClassDollar() = compressNodes { node ->
     if (node is CallNode && node.tracePoint.ownerName != null) {
-        val newOwner = fixNestedClassDollar(node.tracePoint.ownerName!!)
+        val newOwner = replaceNestedClassDollar(node.tracePoint.ownerName!!)
         node.tracePoint.updateOwnerName(newOwner)
     }
     node
@@ -383,13 +385,13 @@ private fun SingleThreadedTable<TraceNode>.compressLambdaCaptureSyntheticField()
  */
 private fun SingleThreadedTable<TraceNode>.compressVolatileDollar() = compressNodes { node ->
     if (node is CallNode && node.tracePoint.ownerName != null) {
-        node.tracePoint.updateOwnerName(node.tracePoint.ownerName!!.removeSuffix("\$volatile"))
+        node.tracePoint.updateOwnerName(node.tracePoint.ownerName!!.removeVolatileDollar())
     }
 
     // TODO this can be removed after IJTD-151 is merged.
     //  Could also be fixed in TraceNodes.kt but would cause unnecessary conflicts.
     if (node is EventNode && node.tracePoint is MethodCallTracePoint && node.tracePoint.ownerName != null) {
-        node.tracePoint.updateOwnerName(node.tracePoint.ownerName!!.removeSuffix("\$volatile"))
+        node.tracePoint.updateOwnerName(node.tracePoint.ownerName!!.removeVolatileDollar())
     }
 
     node
@@ -413,19 +415,7 @@ private fun String.removeStackTraceNestedClassDollarSigns(): String {
     val after = this.substringAfter('.', "")
     if (after.isEmpty()) return before
 
-    return "${fixNestedClassDollar(before)}.$after"
-}
-
-/**
- * Remove nested class dollars from string (if present).
- */
-private fun fixNestedClassDollar(nestedClassRepresentation: String): String {
-    val before = nestedClassRepresentation.substringBefore('$')
-    val after = nestedClassRepresentation.substringAfter('$', "")
-    if (after.isEmpty()) return nestedClassRepresentation
-    val firstPart = if (before.isNotEmpty() && before[0].isUpperCase() && after[0].isUpperCase()) "$before."
-    else "$before$"
-    return firstPart + fixNestedClassDollar(after)
+    return "${replaceNestedClassDollar(before)}.$after"
 }
 
 internal fun SingleThreadedTable<TraceNode>.collapseLibraries(analysisProfile: AnalysisProfile) = compressNodes { node ->
