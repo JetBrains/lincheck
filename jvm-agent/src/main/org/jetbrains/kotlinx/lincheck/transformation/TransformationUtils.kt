@@ -413,11 +413,6 @@ internal fun isPrimitive(type: Type): Boolean {
     }
 }
 
-internal val Type.stackSlotSize: Int get() = when (this) {
-    LONG_TYPE, DOUBLE_TYPE -> 2
-    else -> 1
-}
-
 internal fun getLocalVarAccessOpcodeType(opcode: Int): Type = when (opcode) {
     ILOAD, ISTORE -> INT_TYPE
     LLOAD, LSTORE -> LONG_TYPE
