@@ -58,6 +58,8 @@ internal class InlineMethodCallTransformer(
             return
         }
 
+        System.err.println(">>> $className.$methodName: LABEL $label STARTS")
+
         // TODO Find a way to sort multiple marker variables with same start by end label
         val lvar = locals.inlinesStartAt(label).firstOrNull()
         // Sometimes Kotlin compiler generate "inline marker" inside inline function itself, which
@@ -69,6 +71,7 @@ internal class InlineMethodCallTransformer(
             //TODO Find out what the exact problem is here
             if (inlineName == "recoverStackTrace") {
                 super.visitLabel(label)
+                System.err.println("<<< $className.$methodName: LABEL $label ENDS")
                 return
             }
 
@@ -90,35 +93,38 @@ internal class InlineMethodCallTransformer(
             invokeIfInAnalyzedCode(
                 original = {},
                 instrumented = {
-                    System.err.println(">>> ${this@InlineMethodCallTransformer.className}.$methodName: LABEL $label STARTS")
                     System.err.println("=== ADD ${lvar.name} (${lvar.labelIndexRange.first} .. ${lvar.labelIndexRange.second})")
                     processInlineMethodCall(className, inlineName, clazz, thisLocal, label)
-                    System.err.println("<<< ${this@InlineMethodCallTransformer.className}.$methodName: LABEL $label ENDS")
                 }
             )
             super.visitLabel(label)
+            System.err.println("<<< $className.$methodName: LABEL $label ENDS")
             return
         }
-        // TODO Find a way to sort multiple marker variables with same start by end label
+
+        // One label could end several inline calls
         val topOfStack = inlineStack.lastOrNull()
         if (topOfStack?.second?.labelIndexRange?.second == label) {
-            val (className, lvar) = topOfStack
-            // Check that the stack is not broken against all possible labels in `locals`?
-            inlineStack.removeLast()
+            // Visit the label before all "exit" code as there could be jumps to this label to exit from this method.
+            // Jump instrumentation code doesn't insert exits for such jumps, as it will duplicate to a lot of code.
+            visitLabel(label)
+
+            var removeFromStack = 0
             invokeIfInAnalyzedCode(
                 original = {},
                 instrumented = {
-                    System.err.println(">>> $className.$methodName: LABEL $label STARTS")
-                    System.err.println("=== REMOVE ${lvar.name} (${lvar.labelIndexRange.first} .. ${lvar.labelIndexRange.second})")
-                    push("~~~ Exit by Label End ${exits++}")
-                    invokeStatic(Injections::debugPrint)
-                    processInlineMethodCallReturn(className, lvar.inlineMethodName!!, lvar.labelIndexRange.first)
-                    System.err.println("<<< $className.$methodName: LABEL $label ENDS")
+                    removeFromStack = exitFromInlineMethods("Exit with LABEL") { it.labelIndexRange.second != label }
                 }
             )
-            super.visitLabel(label)
+            // It is a true end of these inline methods, remove them from the static stack.
+            repeat(removeFromStack) {
+                val (_, lvar) = inlineStack.removeLast()
+                System.err.println("=== REMOVE ${lvar.name} (${lvar.labelIndexRange.first} .. ${lvar.labelIndexRange.second})")
+            }
+            System.err.println("<<< $className.$methodName: LABEL $label ENDS")
             return
         }
+        System.err.println("<<< $className.$methodName: LABEL $label ENDS")
 
         super.visitLabel(label)
     }
@@ -130,11 +136,12 @@ internal class InlineMethodCallTransformer(
         val topOfStack = inlineStack.lastOrNull()
         // we must not pop the static analysis stack here, as an inline method is not ended here!
         if (topOfStack != null && labelSorter.compare(topOfStack.second.labelIndexRange.second, label) <= 0) {
+            System.err.println("<<< $className.$methodName: JUMP $opcode TO $label STARTS")
             when (opcode) {
                 GOTO -> invokeIfInAnalyzedCode(
                     original = {},
                     instrumented = {
-                        exitFromInlineMethods { lvar -> labelSorter.compare(lvar.labelIndexRange.second, label) <= 0 }
+                        exitFromInlineMethods("Exit with GOTO") { lvar -> labelSorter.compare(lvar.labelIndexRange.second, label) <= 0 }
                     }
                 )
                 IFEQ,
@@ -148,7 +155,7 @@ internal class InlineMethodCallTransformer(
                     // Duplicate one top category-1 value
                     dup()
                     invokeIfTrueAndInAnalyzedCode(opcode) {
-                        exitFromInlineMethods { lvar -> labelSorter.compare(lvar.labelIndexRange.second, label) <= 0 }
+                        exitFromInlineMethods("Exit with IF ($opcode)") { lvar -> labelSorter.compare(lvar.labelIndexRange.second, label) <= 0 }
                     }
                 }
                 IF_ICMPEQ,
@@ -162,12 +169,13 @@ internal class InlineMethodCallTransformer(
                     // Duplicate two top category-1 values
                     dup2()
                     invokeIfTrueAndInAnalyzedCode(opcode) {
-                        exitFromInlineMethods { lvar -> labelSorter.compare(lvar.labelIndexRange.second, label) <= 0 }
+                        exitFromInlineMethods("Exit with IF_xCMP ($opcode)") { lvar -> labelSorter.compare(lvar.labelIndexRange.second, label) <= 0 }
                     }
                 }
                 JSR -> Unit
                 else -> error("Unknown conditional opcode $opcode")
             }
+            System.err.println("<<< $className.$methodName: JUMP $opcode TO $label ENDS")
         }
         visitJumpInsn(opcode, label)
     }
@@ -177,27 +185,36 @@ internal class InlineMethodCallTransformer(
             ARETURN, DRETURN, FRETURN, IRETURN, LRETURN, RETURN, ATHROW -> {
                 // we must not pop the static analysis stack here, as an inline method is not ended here!
                 if (inlineStack.isNotEmpty()) {
+                    System.err.println("<<< $className.$methodName: RETURN $opcode STARTS")
                     invokeIfInAnalyzedCode(
                         original = {},
                         instrumented = {
-                            exitFromInlineMethods { false }
+                            exitFromInlineMethods("Exit with RETURN ($opcode)") { false }
                         }
                     )
+                    System.err.println("<<< $className.$methodName: RETURN $opcode END")
                 }
             }
         }
         visitInsn(opcode)
     }
 
-    private fun exitFromInlineMethods(stopHere: (LocalVariableInfo) -> Boolean) {
+    private fun exitFromInlineMethods(msg: String, stopHere: (LocalVariableInfo) -> Boolean): Int {
+        var removed = 0
         for (topOfStack in inlineStack.reversed()) {
             val (className, lvar) = topOfStack
             // This inline call covers this jump, stop "exiting"
-            if (stopHere(topOfStack.second)) {
+            if (stopHere(lvar)) {
+                System.err.println("+++ BREAK AT ${lvar.name} (${lvar.labelIndexRange.first} .. ${lvar.labelIndexRange.second})")
                 break
             }
+            System.err.println("*** EXIT ${lvar.name} (${lvar.labelIndexRange.first} .. ${lvar.labelIndexRange.second})")
+            adapter.push("~~~ " + msg + " - " + lvar.inlineMethodName)
+            adapter.invokeStatic(Injections::debugPrint)
             processInlineMethodCallReturn(className, lvar.inlineMethodName!!, lvar.labelIndexRange.first)
+            removed++
         }
+        return removed
     }
 
     override fun visitMaxs(maxStack: Int, maxLocals: Int) {
