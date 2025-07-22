@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
+import org.jetbrains.lincheck.descriptors.*
 import org.objectweb.asm.*
 import kotlin.math.max
 
@@ -37,7 +38,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
      * NEW instruction that created this uninitialized value). This field is null for
      * unreachable instructions.
      */
-    var locals: MutableList<String?>?
+    var locals: MutableList<OwnerName?>?
 
     /**
      * TODO: update the documentation
@@ -50,7 +51,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
      * NEW instruction that created this uninitialized value). This field is null for
      * unreachable instructions.
      */
-    var stack: MutableList<String?>?
+    var stack: MutableList<OwnerName?>?
 
     /** The maximum stack size of this method.  */
     private var maxStack = 0
@@ -88,8 +89,8 @@ class OwnerNameAnalyzerAdapter protected constructor(
      * @param methodVisitor the method visitor to which this adapter delegates calls. May be null.
      */
     init {
-        locals = mutableListOf<String?>()
-        stack = mutableListOf<String?>()
+        locals = mutableListOf<OwnerName?>()
+        stack = mutableListOf<OwnerName?>()
 
         val isStatic = (access and Opcodes.ACC_STATIC == 0)
         val argumentTypes = Type.getArgumentTypes(descriptor)
@@ -177,7 +178,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
 
     override fun visitFieldInsn(opcode: Int, owner: String?, name: String?, descriptor: String) {
         super.visitFieldInsn(opcode, owner, name, descriptor)
-        execute(opcode, 0, fieldName = name, descriptor = descriptor)
+        execute(opcode, 0, className = owner, fieldName = name, descriptor = descriptor)
     }
 
     override fun visitMethodInsn(
@@ -263,7 +264,9 @@ class OwnerNameAnalyzerAdapter protected constructor(
                 push(null) // TODO
             }
             is ConstantDynamic -> {
-                push(value.name) // TODO: this one should be fine
+                push(null)
+                // TODO: adding constant name should be fine
+                // push(value.name)
             }
             else -> throw IllegalArgumentException()
         }
@@ -320,12 +323,12 @@ class OwnerNameAnalyzerAdapter protected constructor(
 
     // -----------------------------------------------------------------------------------------------
 
-    private fun get(local: Int): String? {
+    private fun get(local: Int): OwnerName? {
         maxLocals = max(maxLocals, local + 1)
         return if (local < locals!!.size) locals!![local] else null
     }
 
-    private fun set(local: Int, ownerName: String?) {
+    private fun set(local: Int, ownerName: OwnerName?) {
         maxLocals = max(maxLocals, local + 1)
         while (local >= locals!!.size) {
             locals!!.add(null)
@@ -333,12 +336,12 @@ class OwnerNameAnalyzerAdapter protected constructor(
         locals!![local] = ownerName
     }
 
-    private fun push(ownerName: String?) {
+    private fun push(ownerName: OwnerName?) {
         stack!!.add(ownerName)
         maxStack = max(maxStack, stack!!.size)
     }
 
-    private fun pop(): String? {
+    private fun pop(): OwnerName? {
         return stack!!.removeAt(stack!!.size - 1)
     }
 
@@ -366,7 +369,13 @@ class OwnerNameAnalyzerAdapter protected constructor(
         }
     }
 
-    private fun execute(opcode: Int, intArg: Int, fieldName: String? = null, descriptor: String? = null) {
+    private fun execute(
+        opcode: Int,
+        intArg: Int,
+        className: String? = null,
+        fieldName: String? = null,
+        descriptor: String? = null
+    ) {
         require(!(opcode == Opcodes.JSR || opcode == Opcodes.RET)) { "JSR/RET are not supported" }
         if (this.locals == null) {
             return
@@ -381,12 +390,14 @@ class OwnerNameAnalyzerAdapter protected constructor(
 
             Opcodes.ALOAD, Opcodes.ILOAD, Opcodes.FLOAD -> {
                 val localVarName = methodVariables.getActiveVar(intArg)
-                push(localVarName)
+                val localVarAccess = LocalVariableAccessLocation(localVarName)
+                push(OwnerName(localVarAccess))
             }
 
             Opcodes.LLOAD, Opcodes.DLOAD -> {
                 val localVarName = methodVariables.getActiveVar(intArg)
-                push(localVarName)
+                val localVarAccess = LocalVariableAccessLocation(localVarName)
+                push(OwnerName(localVarAccess))
                 push(null)
             }
 
@@ -401,7 +412,8 @@ class OwnerNameAnalyzerAdapter protected constructor(
             /* Field access instructions */
 
             Opcodes.GETSTATIC -> {
-                push(fieldName)
+                val fieldAccess = StaticFieldAccessLocation(className!!, fieldName!!)
+                push(OwnerName(fieldAccess))
             }
 
             Opcodes.PUTSTATIC -> {
@@ -409,8 +421,11 @@ class OwnerNameAnalyzerAdapter protected constructor(
             }
 
             Opcodes.GETFIELD -> {
-                pop(1) // TODO: should we use the object name?
-                push(fieldName)
+                val ownerName = pop()
+                val fieldAccess = ObjectFieldAccessLocation(className!!, fieldName!!)
+                if (ownerName != null) {
+                    push(ownerName.concatenate(fieldAccess))
+                }
             }
 
             Opcodes.PUTFIELD -> {
@@ -421,15 +436,21 @@ class OwnerNameAnalyzerAdapter protected constructor(
             /* Array access instructions */
 
             Opcodes.AALOAD, Opcodes.IALOAD, Opcodes.BALOAD, Opcodes.CALOAD, Opcodes.SALOAD, Opcodes.FALOAD -> {
-                // TODO: can we do better?
-                pop(2)
-                push(null)
+                val arrayName = pop()
+                val indexName = pop()
+                val arrayAccess = indexName?.let { ArrayElementByNameAccessLocation(it) }
+                if (arrayAccess != null && arrayName != null) {
+                    push(arrayName.concatenate(arrayAccess))
+                }
             }
 
             Opcodes.LALOAD, Opcodes.DALOAD -> {
-                // TODO: can we do better?
-                pop(2)
-                push(null)
+                val arrayName = pop()
+                val indexName = pop()
+                val arrayAccess = indexName?.let { ArrayElementByNameAccessLocation(it) }
+                if (arrayAccess != null && arrayName != null) {
+                    push(arrayName.concatenate(arrayAccess))
+                }
                 push(null)
             }
 
@@ -442,8 +463,11 @@ class OwnerNameAnalyzerAdapter protected constructor(
             }
 
             Opcodes.ARRAYLENGTH -> {
-                // TODO: can we do better?
-                push(null)
+                val arrayName = pop()
+                val arrayLengthAccess = ArrayLengthAccessLocation
+                if (arrayName != null) {
+                    push(arrayName.concatenate(arrayLengthAccess))
+                }
             }
 
             /* New object creation */
@@ -729,7 +753,8 @@ class OwnerNameAnalyzerAdapter protected constructor(
 
     private fun setActiveLocalVariableNames(localVariables: List<LocalVariableInfo>) {
         for (i in localVariables.indices) {
-            locals!!.add(localVariables[i].name)
+            val localVarAccess = LocalVariableAccessLocation(localVariables[i].name)
+            locals!!.add(OwnerName(localVarAccess))
             if (localVariables[i].type.stackSlotSize == 2) {
                 locals!!.add(null)
             }
