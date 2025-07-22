@@ -192,8 +192,6 @@ class OwnerNameAnalyzerAdapter protected constructor(
             pop()
         }
         push(returnType.size)
-
-        Logger.info { "stack size (after) = ${stack?.size ?: -1}" }
     }
 
     override fun visitInvokeDynamicInsn(
@@ -280,30 +278,18 @@ class OwnerNameAnalyzerAdapter protected constructor(
         execute(Opcodes.TABLESWITCH, 0, null)
         this.locals = null
         this.stack = null
-
-        Logger.info { "stack size (after) = ${stack?.size ?: -1}" }
     }
 
     override fun visitLookupSwitchInsn(dflt: Label?, keys: IntArray?, labels: Array<Label?>?) {
-        Logger.info { "Visiting lookup switch insn: dflt=$dflt, keys=${keys?.contentToString()}, labels=${labels?.contentToString()}" }
-        Logger.info { "stack size = ${stack?.size ?: -1}" }
-
         super.visitLookupSwitchInsn(dflt, keys, labels)
         execute(Opcodes.LOOKUPSWITCH, 0, null)
         this.locals = null
         this.stack = null
-
-        Logger.info { "stack size (after) = ${stack?.size ?: -1}" }
     }
 
     override fun visitMultiANewArrayInsn(descriptor: String, numDimensions: Int) {
-        Logger.info { "Visiting multi-anew array insn: descriptor=$descriptor, numDimensions=$numDimensions" }
-        Logger.info { "stack size = ${stack?.size ?: -1}" }
-
         super.visitMultiANewArrayInsn(descriptor, numDimensions)
         execute(Opcodes.MULTIANEWARRAY, numDimensions, descriptor)
-
-        Logger.info { "stack size (after) = ${stack?.size ?: -1}" }
     }
 
     override fun visitLocalVariable(
@@ -314,15 +300,10 @@ class OwnerNameAnalyzerAdapter protected constructor(
         end: Label?,
         index: Int
     ) {
-        Logger.info { "Visiting local variable: name=$name, descriptor=$descriptor, signature=$signature, start=$start, end=$end, index=$index" }
-        Logger.info { "stack size = ${stack?.size ?: -1}" }
-
         val firstDescriptorChar = descriptor[0]
         val stackSlotSize = (if (firstDescriptorChar == 'J' || firstDescriptorChar == 'D') 2 else 1)
         maxLocals = max(maxLocals, index + stackSlotSize)
         super.visitLocalVariable(name, descriptor, signature, start, end, index)
-
-        Logger.info { "stack size (after) = ${stack?.size ?: -1}" }
     }
 
     override fun visitMaxs(maxStack: Int, maxLocals: Int) {
@@ -409,10 +390,6 @@ class OwnerNameAnalyzerAdapter protected constructor(
 
             Opcodes.ALOAD, Opcodes.ILOAD, Opcodes.FLOAD -> {
                 val localVarName = methodVariables.getActiveVar(intArg) ?: run {
-                    Logger.error {
-                        "Cannot find active var $intArg. Current active variables:\n" +
-                        methodVariables.getActiveVars().joinToString("\n") { "\t$it" }
-                    }
                     push(null)
                     return
                 }
@@ -422,10 +399,6 @@ class OwnerNameAnalyzerAdapter protected constructor(
 
             Opcodes.LLOAD, Opcodes.DLOAD -> {
                 val localVarName = methodVariables.getActiveVar(intArg) ?: run {
-                    Logger.error {
-                        "Cannot find active var $intArg. Current active variables:\n" +
-                        methodVariables.getActiveVars().joinToString("\n") { "\t$it" }
-                    }
                     push(null)
                     push(null)
                     return
