@@ -90,7 +90,7 @@ class AccessPath(val locations: List<AccessLocation>) {
 
     companion object {
         fun validate(path: AccessPath) {
-            check(path.locations.isEmpty()) {
+            check(path.locations.isNotEmpty()) {
                 "Access path must not be empty"
             }
             check(path.locations.first()
