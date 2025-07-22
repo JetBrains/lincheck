@@ -760,7 +760,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
         for (i in 0 ..< numTypes) {
             val type = types[i]
             stack!!.add(null)
-            if (type === Opcodes.LONG || type === Opcodes.DOUBLE) {
+            if (type == Opcodes.LONG || type == Opcodes.DOUBLE) {
                 stack!!.add(null)
             }
         }
