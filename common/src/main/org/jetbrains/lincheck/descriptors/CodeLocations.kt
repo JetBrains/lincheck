@@ -12,6 +12,11 @@ package org.jetbrains.lincheck.descriptors
 
 import org.jetbrains.lincheck.trace.TRACE_CONTEXT
 
+class CodeLocation(
+    val stackTraceElement: StackTraceElement,
+    val accessPath: AccessPath? = null
+)
+
 /**
  * [CodeLocations] object is used to maintain the mapping between unique IDs and code locations.
  * When Lincheck detects an error in the model checking mode, it provides a detailed interleaving trace.
@@ -28,7 +33,8 @@ object CodeLocations {
      */
     @JvmStatic
     @Synchronized
-    fun newCodeLocation(stackTraceElement: StackTraceElement): Int = TRACE_CONTEXT.newCodeLocation(stackTraceElement)
+    fun newCodeLocation(stackTraceElement: StackTraceElement, accessPath: AccessPath? = null): Int =
+        TRACE_CONTEXT.newCodeLocation(stackTraceElement, accessPath)
 
     /**
      * Returns the [StackTraceElement] associated with the specified code location ID.
@@ -39,4 +45,8 @@ object CodeLocations {
     @JvmStatic
     @Synchronized
     fun stackTrace(codeLocationId: Int): StackTraceElement = TRACE_CONTEXT.stackTrace(codeLocationId)
+
+    @JvmStatic
+    @Synchronized
+    fun accessPath(codeLocationId: Int): AccessPath? = TRACE_CONTEXT.accessPath(codeLocationId)
 }
