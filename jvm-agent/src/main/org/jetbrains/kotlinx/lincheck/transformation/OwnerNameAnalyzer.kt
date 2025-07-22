@@ -405,35 +405,11 @@ class OwnerNameAnalyzerAdapter protected constructor(
             }
 
             Opcodes.ASTORE, Opcodes.ISTORE, Opcodes.FSTORE -> {
-                value1 = pop()
-                set(intArg, value1)
-
-                // TODO: we probably don't need this?
-                //    It checks for assignment of second-word of long/double local var,
-                //    which should not be possible for valid bytecode?
-                // if (intArg > 0) {
-                //     value2 = get(intArg - 1)
-                //     if (value2 === Opcodes.LONG || value2 === Opcodes.DOUBLE) {
-                //         set(intArg - 1, null)
-                //     }
-                // }
+                pop()
             }
 
             Opcodes.LSTORE, Opcodes.DSTORE -> {
-                pop(1)
-                value1 = pop()
-                set(intArg, value1)
-                set(intArg + 1, null)
-
-                // TODO: we probably don't need this?
-                //    It checks for assignment of second-word of long/double local var,
-                //    which should not be possible for valid bytecode?
-                // if (intArg > 0) {
-                //     value2 = get(intArg - 1)
-                //     if (value2 === Opcodes.LONG || value2 === Opcodes.DOUBLE) {
-                //         set(intArg - 1, Opcodes.TOP)
-                //     }
-                // }
+                pop(2)
             }
 
             /* Field access instructions */
