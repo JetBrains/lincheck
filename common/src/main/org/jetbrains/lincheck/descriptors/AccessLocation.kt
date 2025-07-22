@@ -14,29 +14,29 @@ abstract class AccessLocation
 abstract class ObjectAccessLocation : AccessLocation()
 abstract class ArrayAccessLocation : ObjectAccessLocation()
 
-data class LocalVariableAccessLocation(
+data class LocalVariableAccess(
     val variableName: String
 ) : AccessLocation()
 
-data class StaticFieldAccessLocation(
+data class StaticFieldAccess(
     val className: String,
     val fieldName: String,
 ) : ObjectAccessLocation()
 
-data class ObjectFieldAccessLocation(
+data class ObjectFieldAccess(
     val className: String,
     val fieldName: String,
 ) : ObjectAccessLocation()
 
-data class ArrayElementByIndexAccessLocation(
+data class ArrayElementByIndexAccess(
     val index: Int
 ) : ArrayAccessLocation()
 
-data class ArrayElementByNameAccessLocation(
+data class ArrayElementByNameAccess(
     val indexAccessPath: AccessPath
 ) : ArrayAccessLocation()
 
-data object ArrayLengthAccessLocation : ObjectAccessLocation()
+data object ArrayLengthAccess : ObjectAccessLocation()
 
 class AccessPath(val locations: List<AccessLocation>) {
 
@@ -50,37 +50,37 @@ class AccessPath(val locations: List<AccessLocation>) {
         val builder = StringBuilder()
         for (location in locations) {
             when (location) {
-                is LocalVariableAccessLocation -> {
+                is LocalVariableAccess -> {
                     builder.append(location.variableName)
                 }
-                is StaticFieldAccessLocation -> {
+                is StaticFieldAccess -> {
                     with(builder) {
                         append(location.className)
                         append(".")
                         append(location.fieldName)
                     }
                 }
-                is ObjectFieldAccessLocation -> {
+                is ObjectFieldAccess -> {
                     with(builder) {
                         append(".")
                         append(location.fieldName)
                     }
                 }
-                is ArrayElementByIndexAccessLocation -> {
+                is ArrayElementByIndexAccess -> {
                     with(builder) {
                         append('[')
                         append(location.index)
                         append(']')
                     }
                 }
-                is ArrayElementByNameAccessLocation -> {
+                is ArrayElementByNameAccess -> {
                     with(builder) {
                         append('[')
                         append(location.indexAccessPath)
                         append(']')
                     }
                 }
-                is ArrayLengthAccessLocation -> {
+                is ArrayLengthAccess -> {
                     builder.append(".length")
                 }
             }
@@ -94,12 +94,12 @@ class AccessPath(val locations: List<AccessLocation>) {
                 "Access path must not be empty"
             }
             check(path.locations.first()
-                .let { it is LocalVariableAccessLocation || it is StaticFieldAccessLocation }
+                .let { it is LocalVariableAccess || it is StaticFieldAccess }
             ) {
                 "Access path must start with local variable or static field access"
             }
             check(path.locations.drop(1)
-                .all { it !is LocalVariableAccessLocation && it !is StaticFieldAccessLocation }
+                .all { it !is LocalVariableAccess && it !is StaticFieldAccess }
             ) {
                 "Access path must not contain local variable or static field access in the middle"
             }
