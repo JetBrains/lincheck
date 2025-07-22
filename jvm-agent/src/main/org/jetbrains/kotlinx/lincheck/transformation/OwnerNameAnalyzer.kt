@@ -391,38 +391,9 @@ class OwnerNameAnalyzerAdapter protected constructor(
         val value4: Any?
         when (opcode) {
 
-            Opcodes.NOP,
-            Opcodes.INEG, Opcodes.LNEG, Opcodes.FNEG, Opcodes.DNEG,
-            Opcodes.I2B, Opcodes.I2C, Opcodes.I2S,
-            Opcodes.GOTO, Opcodes.RETURN ->
-                {}
+            /* Local variable access instructions */
 
-            Opcodes.ACONST_NULL -> {
-                push(null)
-            }
-
-            Opcodes.ICONST_M1,
-            Opcodes.ICONST_0, Opcodes.ICONST_1, Opcodes.ICONST_2,
-            Opcodes.ICONST_3, Opcodes.ICONST_4, Opcodes.ICONST_5,
-            Opcodes.BIPUSH, Opcodes.SIPUSH -> {
-                push(null)
-            }
-
-            Opcodes.LCONST_0, Opcodes.LCONST_1 -> {
-                push(null)
-                push(null)
-            }
-
-            Opcodes.FCONST_0, Opcodes.FCONST_1, Opcodes.FCONST_2 -> {
-                push(null)
-            }
-
-            Opcodes.DCONST_0, Opcodes.DCONST_1 -> {
-                push(null)
-                push(null)
-            }
-
-            Opcodes.ILOAD, Opcodes.FLOAD, Opcodes.ALOAD -> {
+            Opcodes.ALOAD, Opcodes.ILOAD, Opcodes.FLOAD -> {
                 val localVarName = methodVariables.getActiveVar(intArg)
                 push(localVarName)
             }
@@ -433,34 +404,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
                 push(null)
             }
 
-            Opcodes.D2L, Opcodes.L2D -> {
-                pop(2)
-                push(null)
-                push(null)
-            }
-
-            Opcodes.LALOAD -> {
-                pop(2)
-                // TODO: can we do better?
-                push(null)
-                push(null)
-            }
-
-            Opcodes.DALOAD -> {
-                pop(2)
-                // TODO: can we do better?
-                push(null)
-                push(null)
-            }
-
-            Opcodes.AALOAD -> {
-                pop()  // index
-                pop()  // array
-                // TODO: can we do better?
-                push(null)
-            }
-
-            Opcodes.ISTORE, Opcodes.FSTORE, Opcodes.ASTORE -> {
+            Opcodes.ASTORE, Opcodes.ISTORE, Opcodes.FSTORE -> {
                 value1 = pop()
                 set(intArg, value1)
 
@@ -492,6 +436,41 @@ class OwnerNameAnalyzerAdapter protected constructor(
                 // }
             }
 
+            /* Field access instructions */
+
+            Opcodes.GETSTATIC -> {
+                push(fieldName)
+            }
+
+            Opcodes.PUTSTATIC -> {
+                pop(descriptor!!)
+            }
+
+            Opcodes.GETFIELD -> {
+                pop(1) // TODO: should we use the object name?
+                push(fieldName)
+            }
+
+            Opcodes.PUTFIELD -> {
+                pop(descriptor!!)
+                pop()
+            }
+
+            /* Array access instructions */
+
+            Opcodes.AALOAD, Opcodes.IALOAD, Opcodes.BALOAD, Opcodes.CALOAD, Opcodes.SALOAD, Opcodes.FALOAD -> {
+                // TODO: can we do better?
+                pop(2)
+                push(null)
+            }
+
+            Opcodes.LALOAD, Opcodes.DALOAD -> {
+                // TODO: can we do better?
+                pop(2)
+                push(null)
+                push(null)
+            }
+
             Opcodes.IASTORE, Opcodes.BASTORE, Opcodes.CASTORE, Opcodes.SASTORE, Opcodes.FASTORE, Opcodes.AASTORE -> {
                 pop(3)
             }
@@ -500,20 +479,121 @@ class OwnerNameAnalyzerAdapter protected constructor(
                 pop(4)
             }
 
-            Opcodes.POP,
+            Opcodes.ARRAYLENGTH -> {
+                // TODO: can we do better?
+                push(null)
+            }
+
+            /* New object creation */
+
+            Opcodes.NEW -> {
+                push(null)
+            }
+
+            Opcodes.NEWARRAY -> {
+                pop()
+                when (intArg) {
+                    Opcodes.T_BOOLEAN, Opcodes.T_BYTE, Opcodes.T_CHAR,
+                    Opcodes.T_SHORT, Opcodes.T_INT, Opcodes.T_FLOAT -> {
+                        push(null)
+                    }
+
+                    Opcodes.T_DOUBLE, Opcodes.T_LONG -> {
+                        push(null)
+                        push(null)
+                    }
+
+                    else -> throw IllegalArgumentException("Invalid array type " + intArg)
+                }
+            }
+
+            Opcodes.ANEWARRAY -> {
+                pop()
+                push(null)
+            }
+
+            Opcodes.MULTIANEWARRAY -> {
+                pop(intArg)
+                push(null)
+            }
+
+            /* Type casts */
+
+            Opcodes.INSTANCEOF -> {
+                push(null)
+            }
+
+            Opcodes.CHECKCAST -> {
+                value1 = pop()
+                push(value1)
+            }
+
+            /* Constants */
+
+            Opcodes.ACONST_NULL -> {
+                push(null)
+            }
+
+            Opcodes.ICONST_M1,
+            Opcodes.ICONST_0, Opcodes.ICONST_1, Opcodes.ICONST_2,
+            Opcodes.ICONST_3, Opcodes.ICONST_4, Opcodes.ICONST_5,
+            Opcodes.BIPUSH, Opcodes.SIPUSH -> {
+                push(null)
+            }
+
+            Opcodes.LCONST_0, Opcodes.LCONST_1 -> {
+                push(null)
+                push(null)
+            }
+
+            Opcodes.FCONST_0, Opcodes.FCONST_1, Opcodes.FCONST_2 -> {
+                push(null)
+            }
+
+            Opcodes.DCONST_0, Opcodes.DCONST_1 -> {
+                push(null)
+                push(null)
+            }
+
+            /* Control-flow */
+
+            Opcodes.NOP, Opcodes.GOTO, Opcodes.RETURN
+                -> {}
+
+            Opcodes.IRETURN, Opcodes.FRETURN, Opcodes.ARETURN, Opcodes.ATHROW -> {
+                pop(1)
+            }
+
+            Opcodes.LRETURN, Opcodes.DRETURN -> {
+                pop(2)
+            }
+
             Opcodes.IFEQ, Opcodes.IFNE, Opcodes.IFLT, Opcodes.IFGE, Opcodes.IFGT, Opcodes.IFLE,
-            Opcodes.IFNULL, Opcodes.IFNONNULL,
-            Opcodes.IRETURN, Opcodes.FRETURN, Opcodes.ARETURN, Opcodes.ATHROW,
-            Opcodes.TABLESWITCH, Opcodes.LOOKUPSWITCH,
+            Opcodes.IFNULL, Opcodes.IFNONNULL -> {
+                pop(1)
+            }
+
+            Opcodes.TABLESWITCH, Opcodes.LOOKUPSWITCH -> {
+                pop(1)
+            }
+
+            Opcodes.IF_ICMPEQ, Opcodes.IF_ICMPNE,
+            Opcodes.IF_ICMPLT, Opcodes.IF_ICMPGE, Opcodes.IF_ICMPGT, Opcodes.IF_ICMPLE,
+            Opcodes.IF_ACMPEQ, Opcodes.IF_ACMPNE -> {
+                pop(2)
+            }
+
             Opcodes.MONITORENTER, Opcodes.MONITOREXIT, -> {
                 pop(1)
             }
 
-            Opcodes.POP2,
-            Opcodes.IF_ICMPEQ, Opcodes.IF_ICMPNE,
-            Opcodes.IF_ICMPLT, Opcodes.IF_ICMPGE, Opcodes.IF_ICMPGT, Opcodes.IF_ICMPLE,
-            Opcodes.IF_ACMPEQ, Opcodes.IF_ACMPNE,
-            Opcodes.LRETURN, Opcodes.DRETURN -> {
+            /* Stack manipulation */
+
+            Opcodes.POP -> {
+                pop(1)
+            }
+
+            Opcodes.POP2 -> {
                 pop(2)
             }
 
@@ -581,22 +661,33 @@ class OwnerNameAnalyzerAdapter protected constructor(
                 push(value2)
             }
 
-            Opcodes.IALOAD, Opcodes.BALOAD, Opcodes.CALOAD, Opcodes.SALOAD,
+            /* Arithmetic operations */
+
+            Opcodes.INEG, Opcodes.FNEG -> {
+                pop(1)
+                push(null)
+            }
+
+            Opcodes.LNEG, Opcodes.DNEG -> {
+                pop(2)
+                push(null)
+                push(null)
+            }
+
             Opcodes.IADD, Opcodes.ISUB, Opcodes.IMUL, Opcodes.IDIV, Opcodes.IREM,
-            Opcodes.IAND, Opcodes.IOR, Opcodes.IXOR, Opcodes.ISHL, Opcodes.ISHR, Opcodes.IUSHR,
-            Opcodes.L2I, Opcodes.D2I,
-            Opcodes.FCMPL, Opcodes.FCMPG -> {
+            Opcodes.IAND, Opcodes.IOR, Opcodes.IXOR, Opcodes.ISHL, Opcodes.ISHR, Opcodes.IUSHR -> {
                 pop(2)
                 push(null)
             }
 
-            Opcodes.LADD, Opcodes.LSUB, Opcodes.LMUL, Opcodes.LDIV, Opcodes.LREM, Opcodes.LAND, Opcodes.LOR, Opcodes.LXOR -> {
+            Opcodes.LADD, Opcodes.LSUB, Opcodes.LMUL, Opcodes.LDIV, Opcodes.LREM,
+            Opcodes.LAND, Opcodes.LOR, Opcodes.LXOR -> {
                 pop(4)
                 push(null)
                 push(null)
             }
 
-            Opcodes.FALOAD, Opcodes.FADD, Opcodes.FSUB, Opcodes.FMUL, Opcodes.FDIV, Opcodes.FREM, Opcodes.L2F, Opcodes.D2F -> {
+            Opcodes.FADD, Opcodes.FSUB, Opcodes.FMUL, Opcodes.FDIV, Opcodes.FREM -> {
                 pop(2)
                 push(null)
             }
@@ -616,14 +707,33 @@ class OwnerNameAnalyzerAdapter protected constructor(
             Opcodes.IINC
                 -> {}
 
-            Opcodes.I2L, Opcodes.F2L -> {
-                pop(1)
-                push(null)
+            /* Comparison operations */
+
+            Opcodes.FCMPL, Opcodes.FCMPG -> {
+                pop(2)
                 push(null)
             }
 
-            Opcodes.I2F -> {
+            Opcodes.LCMP, Opcodes.DCMPL, Opcodes.DCMPG -> {
+                pop(4)
+                push(null)
+            }
+
+            /* Numeric type conversions */
+
+            Opcodes.I2B, Opcodes.I2C, Opcodes.I2S -> {
                 pop(1)
+                push(null)
+            }
+
+            Opcodes.I2F, Opcodes.F2I -> {
+                pop(1)
+                push(null)
+            }
+
+            Opcodes.I2L, Opcodes.F2L -> {
+                pop(1)
+                push(null)
                 push(null)
             }
 
@@ -633,78 +743,23 @@ class OwnerNameAnalyzerAdapter protected constructor(
                 push(null)
             }
 
-            Opcodes.F2I -> {
-                pop(1)
+            Opcodes.L2I, Opcodes.D2I -> {
+                pop(2)
                 push(null)
             }
 
-            Opcodes.LCMP, Opcodes.DCMPL, Opcodes.DCMPG -> {
-                pop(4)
+            Opcodes.L2F, Opcodes.D2F -> {
+                pop(2)
                 push(null)
             }
 
-            Opcodes.GETSTATIC -> {
-                push(fieldName)
-            }
-
-            Opcodes.PUTSTATIC -> {
-                pop(descriptor!!)
-            }
-
-            Opcodes.GETFIELD -> {
-                pop(1) // TODO: should we use the object name?
-                push(fieldName)
-            }
-
-            Opcodes.PUTFIELD -> {
-                pop(descriptor!!)
-                pop()
-            }
-
-            Opcodes.NEW -> {
+            Opcodes.L2D, Opcodes.D2L -> {
+                pop(2)
+                push(null)
                 push(null)
             }
 
-            Opcodes.NEWARRAY -> {
-                pop()
-                when (intArg) {
-                    Opcodes.T_BOOLEAN, Opcodes.T_BYTE, Opcodes.T_CHAR,
-                    Opcodes.T_SHORT, Opcodes.T_INT, Opcodes.T_FLOAT -> {
-                        push(null)
-                    }
-
-                    Opcodes.T_DOUBLE, Opcodes.T_LONG -> {
-                        push(null)
-                        push(null)
-                    }
-
-                    else -> throw IllegalArgumentException("Invalid array type " + intArg)
-                }
-            }
-
-            Opcodes.ANEWARRAY -> {
-                pop()
-                push(null)
-            }
-
-            Opcodes.MULTIANEWARRAY -> {
-                pop(intArg)
-                push(null)
-            }
-
-            Opcodes.ARRAYLENGTH -> {
-                // TODO: can we do better?
-                push(null)
-            }
-
-            Opcodes.INSTANCEOF -> {
-                push(null)
-            }
-
-            Opcodes.CHECKCAST -> {
-                value1 = pop()
-                push(value1)
-            }
+            /* Other */
 
             else -> throw IllegalArgumentException("Invalid opcode " + opcode)
         }
