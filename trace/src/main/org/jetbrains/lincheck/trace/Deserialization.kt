@@ -10,6 +10,7 @@
 
 package org.jetbrains.lincheck.trace
 
+import org.jetbrains.lincheck.util.Logger
 import java.io.Closeable
 import java.io.DataInput
 import java.io.DataInputStream
@@ -187,7 +188,7 @@ class LazyTraceReader(
     private val dataStream: SeekableInputStream
     private val data: SeekableDataInput
     private val dataBlocks = mutableMapOf<Int, MutableList<DataBlock>>()
-    private var callTracepointChildren = RangeIndex.create()
+    private val callTracepointChildren = RangeIndex.create()
 
     init {
         val channel = Files.newByteChannel(Path(dataFileName), StandardOpenOption.READ)
@@ -209,10 +210,10 @@ class LazyTraceReader(
     }
 
     fun readRoots(): List<TRTracePoint> {
-        // var start = System.currentTimeMillis()
+        var start = System.currentTimeMillis()
         loadContext()
-        // System.err.println("Context loaded in ${System.currentTimeMillis() - start} ms")
-        // start = System.currentTimeMillis()
+        Logger.debug { "Context loaded in ${System.currentTimeMillis() - start} ms" }
+        start = System.currentTimeMillis()
 
         val roots = mutableMapOf<Int, TRTracePoint>()
 
@@ -242,7 +243,7 @@ class LazyTraceReader(
                 roots[threadId] = tracepoints.first()
             }
         }
-        // System.err.println("Roots loaded ${System.currentTimeMillis() - start} ms")
+        Logger.debug { "Roots loaded in ${System.currentTimeMillis() - start} ms" }
 
         return roots.entries.sortedBy { it.key }.map { (_, tracePoint) -> tracePoint }
     }
@@ -369,7 +370,7 @@ class LazyTraceReader(
 
                     if (kind == ObjectKind.TRACEPOINT) {
                         tps++
-                        callTracepointChildren = callTracepointChildren.addRange(id, start, end)
+                        callTracepointChildren.addRange(id, start, end)
                     } else {
                         // Check kind
                         data.seek(start)
@@ -439,7 +440,7 @@ class LazyTraceReader(
                 override fun footerStarted(tracePoint: TRMethodCallTracePoint) {
                     // -1 is here because Kind is already read
                     val childrenEnd = calculateLogicalOffset(tracePoint.threadId,data.position() - 1)
-                    callTracepointChildren = callTracepointChildren.setEnd(tracePoint.eventId, childrenEnd)
+                    callTracepointChildren.setEnd(tracePoint.eventId, childrenEnd)
                 }
             },
             blockConsumer = object : BlockConsumer {

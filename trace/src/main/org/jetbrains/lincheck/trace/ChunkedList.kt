@@ -37,17 +37,29 @@ internal class ChunkedList<T>: List<T?>, RandomAccess {
         return true
     }
 
+    /**
+     * Remove all elements and set the size to 0.
+     */
     fun clear() {
         chunks.clear()
         totalSize = 0
     }
 
+    /**
+     * Replace all elements with `null` but remember number of elements.
+     */
     fun forgetAll() {
         chunks.clear()
     }
 
+    /**
+     * Replace a stored element with `null`.
+     */
     fun forget(index: Int): Unit = set(index, null)
 
+    /**
+     * Replace a range of stored elements with `null`s.
+     */
     fun forget(from: Int, to: Int) {
         checkRange(from)
         checkRange(to - 1)
@@ -67,12 +79,22 @@ internal class ChunkedList<T>: List<T?>, RandomAccess {
             chunks[chunk] = null
         }
 
-        forgetInOneChunk(fromChunk, fromIdx, if (fromChunk == toChunk) toIdx else CHUNK_SIZE)
-        if (fromChunk != toChunk) {
-            forgetInOneChunk(toChunk, 0, toIdx)
+        if (fromChunk == toChunk) {
+            forget(fromChunk, fromIdx, toIdx)
+        } else {
+            forget(fromChunk, fromIdx, CHUNK_SIZE)
+            forget(toChunk, 0, toIdx)
         }
 
         cleanupTail()
+    }
+
+    private fun forget(chunk: Int, fromIdx: Int, toIdx: Int) {
+        val ch = chunks[chunk] ?: return
+        ch.subList(fromIdx, min(ch.size, toIdx)).fill(null)
+        if (ch.all { it == null }) {
+            chunks[chunk] = null
+        }
     }
 
     operator fun set(index: Int, element: T?) {
@@ -190,14 +212,6 @@ internal class ChunkedList<T>: List<T?>, RandomAccess {
         return ch
     }
 
-    private fun forgetInOneChunk(chunk: Int, fromIdx: Int, toIdx: Int) {
-        val ch = chunks[chunk] ?: return
-        ch.subList(fromIdx, min(ch.size, toIdx)).fill(null)
-        if (ch.all { it == null }) {
-            chunks[chunk] = null
-        }
-    }
-
     private fun cleanupTail() {
         while (chunks.isNotEmpty() && chunks.last() == null) {
             chunks.removeLast()
@@ -206,8 +220,7 @@ internal class ChunkedList<T>: List<T?>, RandomAccess {
 
     private inner class ChunkedListIterator(
         var idx: Int
-    ): ListIterator<T?>
-    {
+    ): ListIterator<T?> {
         override fun next(): T? {
             if (idx !in 0..<totalSize)
                 throw NoSuchElementException("Index: $idx, Size: $totalSize")
@@ -216,7 +229,7 @@ internal class ChunkedList<T>: List<T?>, RandomAccess {
 
         override fun hasNext(): Boolean = idx < totalSize
 
-        override fun hasPrevious(): Boolean  = idx > 0
+        override fun hasPrevious(): Boolean = idx > 0
 
         override fun previous(): T? {
             if (idx < 1)
