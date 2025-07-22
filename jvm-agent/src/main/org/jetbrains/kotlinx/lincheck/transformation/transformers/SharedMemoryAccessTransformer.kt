@@ -46,134 +46,45 @@ internal class SharedMemoryAccessTransformer(
         }
         when (opcode) {
             GETSTATIC -> {
-                // STACK: <empty>
                 invokeIfInAnalyzedCode(
                     original = {
                         visitFieldInsn(opcode, owner, fieldName, desc)
                     },
                     instrumented = {
-                        val fieldId = TRACE_CONTEXT.getOrCreateFieldId(
-                            className = owner.toCanonicalClassName(),
-                            fieldName = fieldName,
-                            isStatic = true,
-                            isFinal = FinalFields.isFinalField(owner, fieldName)
-                        )
-                        // STACK: <empty>
-                        pushNull()
-                        loadNewCodeLocationId()
-                        push(fieldId)
-                        // STACK: null, codeLocation, fieldId
-                        invokeStatic(Injections::beforeReadField)
-                        // STACK: <empty>
-                        visitFieldInsn(opcode, owner, fieldName, desc)
-                        // STACK: value
-                        invokeAfterReadField(null, fieldId, getType(desc))
-                        // STACK: value
-                        invokeBeforeEventIfPluginEnabled("read static field")
-                        // STACK: value
+                        processStaticFieldGet(owner, fieldName, opcode, desc)
                     }
                 )
             }
 
             GETFIELD -> {
-                // STACK: obj
                 invokeIfInAnalyzedCode(
                     original = {
                         visitFieldInsn(opcode, owner, fieldName, desc)
                     },
                     instrumented = {
-                        val fieldId = TRACE_CONTEXT.getOrCreateFieldId(
-                            className = owner.toCanonicalClassName(),
-                            fieldName = fieldName,
-                            isStatic = false,
-                            isFinal = FinalFields.isFinalField(owner, fieldName)
-                        )
-                        // STACK: obj
-                        val ownerLocal = newLocal(getType("L$owner;")).also { copyLocal(it) }
-                        loadLocal(ownerLocal)
-                        // STACK: obj, obj
-                        loadNewCodeLocationId()
-                        push(fieldId)
-                        // STACK: obj, obj, codeLocation, fieldId
-                        invokeStatic(Injections::beforeReadField)
-                        // STACK: obj
-                        visitFieldInsn(opcode, owner, fieldName, desc)
-                        // STACK: obj
-                        invokeAfterReadField(ownerLocal, fieldId, getType(desc))
-                        // STACK: value
-                        invokeBeforeEventIfPluginEnabled("read field")
-                        // STACK: value
+                        processInstanceFieldGet(owner, fieldName, opcode, desc)
                     }
                 )
             }
 
             PUTSTATIC -> {
-                // STACK: value
                 invokeIfInAnalyzedCode(
                     original = {
                         visitFieldInsn(opcode, owner, fieldName, desc)
                     },
                     instrumented = {
-                        val valueType = getType(desc)
-                        val fieldId = TRACE_CONTEXT.getOrCreateFieldId(
-                            className = owner.toCanonicalClassName(),
-                            fieldName = fieldName,
-                            isStatic = true,
-                            isFinal = FinalFields.isFinalField(owner, fieldName)
-                        )
-                        val valueLocal = newLocal(valueType) // we cannot use DUP as long/double require DUP2
-                        copyLocal(valueLocal)
-                        // STACK: value
-                        pushNull()
-                        loadLocal(valueLocal)
-                        box(valueType)
-                        loadNewCodeLocationId()
-                        push(fieldId)
-                        // STACK: value, null, value, codeLocation, fieldId
-                        invokeStatic(Injections::beforeWriteField)
-                        // STACK: value
-                        invokeBeforeEventIfPluginEnabled("write static field")
-                        // STACK: value
-                        visitFieldInsn(opcode, owner, fieldName, desc)
-                        // STACK: <empty>
-                        invokeStatic(Injections::afterWrite)
+                        processStaticFieldPut(desc, owner, fieldName, opcode)
                     }
                 )
             }
 
             PUTFIELD -> {
-                // STACK: obj, value
                 invokeIfInAnalyzedCode(
                     original = {
                         visitFieldInsn(opcode, owner, fieldName, desc)
                     },
                     instrumented = {
-                        val valueType = getType(desc)
-                        val fieldId = TRACE_CONTEXT.getOrCreateFieldId(
-                            className = owner.toCanonicalClassName(),
-                            fieldName = fieldName,
-                            isStatic = false,
-                            isFinal = FinalFields.isFinalField(owner, fieldName)
-                        )
-                        val valueLocal = newLocal(valueType) // we cannot use DUP as long/double require DUP2
-                        storeLocal(valueLocal)
-                        // STACK: obj
-                        dup()
-                        // STACK: obj, obj
-                        loadLocal(valueLocal)
-                        box(valueType)
-                        loadNewCodeLocationId()
-                        push(fieldId)
-                        // STACK: obj, obj, value, codeLocation, fieldId
-                        invokeStatic(Injections::beforeWriteField)
-                        // STACK: obj
-                        invokeBeforeEventIfPluginEnabled("write field")
-                        // STACK: obj
-                        loadLocal(valueLocal)
-                        // STACK: obj, value
-                        visitFieldInsn(opcode, owner, fieldName, desc)
-                        // STACK: <empty>
-                        invokeStatic(Injections::afterWrite)
+                        processInstanceFieldPut(desc, owner, fieldName, opcode)
                     }
                 )
             }
@@ -185,6 +96,107 @@ internal class SharedMemoryAccessTransformer(
         }
     }
 
+    private fun GeneratorAdapter.processStaticFieldGet(owner: String, fieldName: String, opcode: Int, desc: String) {
+        val fieldId = TRACE_CONTEXT.getOrCreateFieldId(
+            className = owner.toCanonicalClassName(),
+            fieldName = fieldName,
+            isStatic = true,
+            isFinal = FinalFields.isFinalField(owner, fieldName)
+        )
+        // STACK: <empty>
+        pushNull()
+        loadNewCodeLocationId()
+        push(fieldId)
+        // STACK: null, codeLocation, fieldId
+        invokeStatic(Injections::beforeReadField)
+        // STACK: <empty>
+        visitFieldInsn(opcode, owner, fieldName, desc)
+        // STACK: value
+        invokeAfterReadField(null, fieldId, getType(desc))
+        // STACK: value
+        invokeBeforeEventIfPluginEnabled("read static field")
+        // STACK: value
+    }
+
+    private fun GeneratorAdapter.processInstanceFieldGet(owner: String, fieldName: String, opcode: Int, desc: String) {
+        val fieldId = TRACE_CONTEXT.getOrCreateFieldId(
+            className = owner.toCanonicalClassName(),
+            fieldName = fieldName,
+            isStatic = false,
+            isFinal = FinalFields.isFinalField(owner, fieldName)
+        )
+        // STACK: obj
+        val ownerLocal = newLocal(getType("L$owner;")).also { copyLocal(it) }
+        loadLocal(ownerLocal)
+        // STACK: obj, obj
+        loadNewCodeLocationId()
+        push(fieldId)
+        // STACK: obj, obj, codeLocation, fieldId
+        invokeStatic(Injections::beforeReadField)
+        // STACK: obj
+        visitFieldInsn(opcode, owner, fieldName, desc)
+        // STACK: obj
+        invokeAfterReadField(ownerLocal, fieldId, getType(desc))
+        // STACK: value
+        invokeBeforeEventIfPluginEnabled("read field")
+        // STACK: value
+    }
+
+    private fun GeneratorAdapter.processStaticFieldPut(desc: String, owner: String, fieldName: String, opcode: Int) {
+        val valueType = getType(desc)
+        val fieldId = TRACE_CONTEXT.getOrCreateFieldId(
+            className = owner.toCanonicalClassName(),
+            fieldName = fieldName,
+            isStatic = true,
+            isFinal = FinalFields.isFinalField(owner, fieldName)
+        )
+        val valueLocal = newLocal(valueType) // we cannot use DUP as long/double require DUP2
+        copyLocal(valueLocal)
+        // STACK: value
+        pushNull()
+        loadLocal(valueLocal)
+        box(valueType)
+        loadNewCodeLocationId()
+        push(fieldId)
+        // STACK: value, null, value, codeLocation, fieldId
+        invokeStatic(Injections::beforeWriteField)
+        // STACK: value
+        invokeBeforeEventIfPluginEnabled("write static field")
+        // STACK: value
+        visitFieldInsn(opcode, owner, fieldName, desc)
+        // STACK: <empty>
+        invokeStatic(Injections::afterWrite)
+    }
+
+    private fun GeneratorAdapter.processInstanceFieldPut(desc: String, owner: String, fieldName: String, opcode: Int) {
+        val valueType = getType(desc)
+        val fieldId = TRACE_CONTEXT.getOrCreateFieldId(
+            className = owner.toCanonicalClassName(),
+            fieldName = fieldName,
+            isStatic = false,
+            isFinal = FinalFields.isFinalField(owner, fieldName)
+        )
+        val valueLocal = newLocal(valueType) // we cannot use DUP as long/double require DUP2
+        storeLocal(valueLocal)
+        // STACK: obj
+        dup()
+        // STACK: obj, obj
+        loadLocal(valueLocal)
+        box(valueType)
+        loadNewCodeLocationId()
+        push(fieldId)
+        // STACK: obj, obj, value, codeLocation, fieldId
+        invokeStatic(Injections::beforeWriteField)
+        // STACK: obj
+        invokeBeforeEventIfPluginEnabled("write field")
+        // STACK: obj
+        loadLocal(valueLocal)
+        // STACK: obj, value
+        visitFieldInsn(opcode, owner, fieldName, desc)
+        // STACK: <empty>
+        invokeStatic(Injections::afterWrite)
+    }
+
     override fun visitInsn(opcode: Int) = adapter.run {
         when (opcode) {
             AALOAD, LALOAD, FALOAD, DALOAD, IALOAD, BALOAD, CALOAD, SALOAD -> {
@@ -193,26 +205,7 @@ internal class SharedMemoryAccessTransformer(
                         visitInsn(opcode)
                     },
                     instrumented = {
-                        // STACK: array: Array, index: Int
-                        val arrayElementType = getArrayElementType(opcode)
-                        val indexLocal = newLocal(INT_TYPE).also { storeLocal(it) }
-                        val arrayLocal = newLocal(getType("[$arrayElementType")).also { storeLocal(it) }
-                        loadLocal(arrayLocal)
-                        loadLocal(indexLocal)
-                        // STACK: array: Array, index: Int
-                        loadNewCodeLocationId()
-                        // STACK: array: Array, index: Int, codeLocation: Int
-                        invokeStatic(Injections::beforeReadArray)
-                        // STACK: <empty>
-                        loadLocal(arrayLocal)
-                        loadLocal(indexLocal)
-                        // STACK: array: Array, index: Int
-                        visitInsn(opcode)
-                        // STACK: value
-                        invokeAfterReadArray(arrayLocal, indexLocal, arrayElementType)
-                        // STACK: value
-                        invokeBeforeEventIfPluginEnabled("read array")
-                        // STACK: value
+                        processArrayLoad(opcode)
                     }
                 )
             }
@@ -223,25 +216,7 @@ internal class SharedMemoryAccessTransformer(
                         visitInsn(opcode)
                     },
                     instrumented = {
-                        // STACK: array: Array, index: Int, value: Object
-                        val arrayElementType = getArrayElementType(opcode)
-                        val valueLocal = newLocal(arrayElementType) // we cannot use DUP as long/double require DUP2
-                        storeLocal(valueLocal)
-                        // STACK: array: Array, index: Int
-                        dup2()
-                        // STACK: array: Array, index: Int, array: Array, index: Int
-                        loadLocal(valueLocal)
-                        box(arrayElementType)
-                        loadNewCodeLocationId()
-                        // STACK: array: Array, index: Int, array: Array, index: Int, value: Object, codeLocation: Int
-                        invokeStatic(Injections::beforeWriteArray)
-                        invokeBeforeEventIfPluginEnabled("write array")
-                        // STACK: array: Array, index: Int
-                        loadLocal(valueLocal)
-                        // STACK: array: Array, index: Int, value: Object
-                        visitInsn(opcode)
-                        // STACK: <EMPTY>
-                        invokeStatic(Injections::afterWrite)
+                        processArrayStore(opcode)
                     }
                 )
             }
@@ -250,6 +225,51 @@ internal class SharedMemoryAccessTransformer(
                 visitInsn(opcode)
             }
         }
+    }
+
+    private fun GeneratorAdapter.processArrayLoad(opcode: Int) {
+        // STACK: array, index
+        val arrayElementType = getArrayElementType(opcode)
+        val indexLocal = newLocal(INT_TYPE).also { storeLocal(it) }
+        val arrayLocal = newLocal(getType("[$arrayElementType")).also { storeLocal(it) }
+        loadLocal(arrayLocal)
+        loadLocal(indexLocal)
+        // STACK: array, index
+        loadNewCodeLocationId()
+        // STACK: array, index, codeLocation
+        invokeStatic(Injections::beforeReadArray)
+        // STACK: <empty>
+        loadLocal(arrayLocal)
+        loadLocal(indexLocal)
+        // STACK: array, index
+        visitInsn(opcode)
+        // STACK: value
+        invokeAfterReadArray(arrayLocal, indexLocal, arrayElementType)
+        // STACK: value
+        invokeBeforeEventIfPluginEnabled("read array")
+        // STACK: value
+    }
+
+    private fun GeneratorAdapter.processArrayStore(opcode: Int) {
+        // STACK: array, index, value
+        val arrayElementType = getArrayElementType(opcode)
+        val valueLocal = newLocal(arrayElementType) // we cannot use DUP as long/double require DUP2
+        storeLocal(valueLocal)
+        // STACK: array, index
+        dup2()
+        // STACK: array, index, array, index
+        loadLocal(valueLocal)
+        box(arrayElementType)
+        loadNewCodeLocationId()
+        // STACK: array, index, array, index, value, codeLocation
+        invokeStatic(Injections::beforeWriteArray)
+        invokeBeforeEventIfPluginEnabled("write array")
+        // STACK: array, index
+        loadLocal(valueLocal)
+        // STACK: array, index, value
+        visitInsn(opcode)
+        // STACK: <empty>
+        invokeStatic(Injections::afterWrite)
     }
 
     private fun GeneratorAdapter.invokeAfterReadField(ownerLocal: Int?, fieldId: Int, valueType: Type) {
