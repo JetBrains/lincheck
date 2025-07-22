@@ -420,6 +420,15 @@ internal val Type.stackSlotSize: Int get() = when (this) {
     else -> 1
 }
 
+internal fun getVarInsnOpcodeType(opcode: Int): Type = when (opcode) {
+    Opcodes.ILOAD, Opcodes.ISTORE -> INT_TYPE
+    Opcodes.LLOAD, Opcodes.LSTORE -> LONG_TYPE
+    Opcodes.FLOAD, Opcodes.FSTORE -> FLOAT_TYPE
+    Opcodes.DLOAD, Opcodes.DSTORE -> DOUBLE_TYPE
+    Opcodes.ALOAD, Opcodes.ASTORE -> OBJECT_TYPE
+    else -> throw IllegalArgumentException("Invalid opcode: $opcode")
+}
+
 private fun getSuperclassName(internalClassName: String): String? {
     class SuperclassClassVisitor : ClassVisitor(ASM_API) {
         var internalSuperclassName: String? = null
