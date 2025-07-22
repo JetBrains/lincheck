@@ -35,6 +35,8 @@ internal class SharedMemoryAccessTransformer(
 
     lateinit var analyzer: AnalyzerAdapter
 
+    var ownerNameAnalyzer: OwnerNameAnalyzerAdapter? = null
+
     override fun visitFieldInsn(opcode: Int, owner: String, fieldName: String, desc: String) = adapter.run {
         if (
             isCoroutineInternalClass(owner.toCanonicalClassName()) ||
@@ -128,10 +130,11 @@ internal class SharedMemoryAccessTransformer(
             isFinal = FinalFields.isFinalField(owner, fieldName)
         )
         // STACK: obj
+        val ownerName = ownerNameAnalyzer?.stack?.get(0)
         val ownerLocal = newLocal(getType("L$owner;")).also { copyLocal(it) }
         loadLocal(ownerLocal)
         // STACK: obj, obj
-        loadNewCodeLocationId()
+        loadNewCodeLocationId(accessPath = ownerName)
         push(fieldId)
         // STACK: obj, obj, codeLocation, fieldId
         invokeStatic(Injections::beforeReadField)
@@ -234,10 +237,11 @@ internal class SharedMemoryAccessTransformer(
         val arrayElementType = getArrayElementType(opcode)
         val indexLocal = newLocal(INT_TYPE).also { storeLocal(it) }
         val arrayLocal = newLocal(getType("[$arrayElementType")).also { storeLocal(it) }
+        val ownerName = ownerNameAnalyzer?.stack?.get(1)
         loadLocal(arrayLocal)
         loadLocal(indexLocal)
         // STACK: array, index
-        loadNewCodeLocationId()
+        loadNewCodeLocationId(accessPath = ownerName)
         // STACK: array, index, codeLocation
         invokeStatic(Injections::beforeReadArray)
         // STACK: <empty>
