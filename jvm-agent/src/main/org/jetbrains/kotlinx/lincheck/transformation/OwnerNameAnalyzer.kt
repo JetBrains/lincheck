@@ -165,21 +165,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
 
     override fun visitVarInsn(opcode: Int, varIndex: Int) {
         super.visitVarInsn(opcode, varIndex)
-        // TODO: extract into function
-        val stackSlotSize = when (opcode) {
-            Opcodes.LLOAD, Opcodes.DLOAD,
-            Opcodes.LSTORE, Opcodes.DSTORE
-                -> 2
-
-            Opcodes.ILOAD,  Opcodes.FLOAD,  Opcodes.ALOAD,
-            Opcodes.ISTORE, Opcodes.FSTORE, Opcodes.ASTORE
-                -> 1
-
-            Opcodes.RET
-                -> 1
-
-            else -> throw IllegalArgumentException()
-        }
+        val stackSlotSize = if (opcode == Opcodes.RET) 1 else getVarInsnOpcodeType(opcode).stackSlotSize
         maxLocals = max(maxLocals, varIndex + stackSlotSize)
         execute(opcode, varIndex, null)
     }
