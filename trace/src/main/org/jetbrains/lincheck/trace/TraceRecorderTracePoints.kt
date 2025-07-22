@@ -15,6 +15,10 @@ import org.jetbrains.lincheck.descriptors.FieldDescriptor
 import org.jetbrains.lincheck.descriptors.MethodDescriptor
 import org.jetbrains.lincheck.descriptors.VariableDescriptor
 import org.jetbrains.lincheck.descriptors.Types
+import org.jetbrains.lincheck.trace.DefaultTRArrayTracePointPrinter.append
+import org.jetbrains.lincheck.trace.DefaultTRFieldTracePointPrinter.append
+import org.jetbrains.lincheck.trace.DefaultTRLocalVariableTracePointPrinter.append
+import org.jetbrains.lincheck.trace.DefaultTRMethodCallTracePointPrinter.append
 import java.io.DataInput
 import java.io.DataOutput
 import java.math.BigDecimal
@@ -26,11 +30,6 @@ import kotlin.math.roundToInt
 private val EVENT_ID_GENERATOR = AtomicInteger(0)
 
 var INJECTIONS_VOID_OBJECT: Any? = null
-
-private val methodCallTracePointPrinter = DefaultTRMethodCallTracePointPrinter()
-private val fieldTracePointPrinter = DefaultTRFieldTracePointPrinter()
-private val localVariableTracePointPrinter = DefaultTRLocalVariableTracePointPrinter()
-private val arrayTracePointPrinter = DefaultTRArrayTracePointPrinter()
 
 sealed class TRTracePoint(
     val codeLocationId: Int,
@@ -158,9 +157,7 @@ class TRMethodCallTracePoint(
     }
 
     override fun toText(verbose: Boolean): String {
-        val sb = StringBuilder()
-        methodCallTracePointPrinter.print(sb, tracePoint = this, verbose)
-        return sb.toString()
+        return StringBuilder().append(tracePoint = this, verbose).toString()
     }
 
     internal companion object {
@@ -223,9 +220,7 @@ sealed class TRFieldTracePoint(
     }
 
     override fun toText(verbose: Boolean): String {
-        val sb = StringBuilder()
-        fieldTracePointPrinter.print(sb, tracePoint = this, verbose)
-        return sb.toString()
+        return StringBuilder().append(tracePoint = this, verbose).toString()
     }
 }
 
@@ -307,9 +302,7 @@ sealed class TRLocalVariableTracePoint(
     }
 
     override fun toText(verbose: Boolean): String {
-        val sb = StringBuilder()
-        localVariableTracePointPrinter.print(sb, tracePoint = this, verbose)
-        return sb.toString()
+        return StringBuilder().append(tracePoint = this, verbose).toString()
     }
 }
 
@@ -385,9 +378,7 @@ sealed class TRArrayTracePoint(
     }
 
     override fun toText(verbose: Boolean): String {
-        val sb = StringBuilder()
-        arrayTracePointPrinter.print(sb, tracePoint = this, verbose)
-        return sb.toString()
+        return StringBuilder().append(tracePoint = this, verbose).toString()
     }
 }
 

@@ -126,8 +126,8 @@ private fun combineNodes(parent: CallNode, child: CallNode): TraceNode {
 
         val newNode = parent.copy()
         child.children.forEach { newNode.addChild(it) }
-    return newNode
-}
+        return newNode
+    }
 
     return parent
 }

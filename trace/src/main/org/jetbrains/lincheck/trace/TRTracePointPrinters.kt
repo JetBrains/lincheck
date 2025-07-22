@@ -29,11 +29,12 @@ interface TRAppendable {
     fun append(text: String?): TRAppendable
 }
 
-internal class DefaultTRAppendable: TRAppendable {
-    private lateinit var destination: Appendable
+internal object DefaultTRTextAppendable: TRAppendable {
+    private var destination: Appendable? = null
 
     override fun append(text: String?): TRAppendable {
-        destination.append(text)
+        check(destination != null) { "Before using DefaultTRTextAppendable adapter, setDestination() method must be called first with non-null destination." }
+        destination!!.append(text)
         return this
     }
 
@@ -46,6 +47,14 @@ internal class DefaultTRAppendable: TRAppendable {
      */
     fun setDestination(dest: Appendable): TRAppendable {
         destination = dest
+        return this
+    }
+
+    /**
+     * Sets [destination] to `null`.
+     */
+    fun reset(): TRAppendable {
+        destination = null
         return this
     }
 }
@@ -106,15 +115,17 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
     private fun String.removeCoroutinesCoreSuffix(): String = removeSuffix("\$kotlinx_coroutines_core")
 }
 
-internal class DefaultTRMethodCallTracePointPrinter(): AbstractTRMethodCallTracePointPrinter() {
-    private val app = DefaultTRAppendable()
+internal object DefaultTRMethodCallTracePointPrinter: AbstractTRMethodCallTracePointPrinter() {
 
-    fun print(dest: Appendable, tracePoint: TRMethodCallTracePoint, verbose: Boolean) =
-        with(app) {
-            setDestination(dest)
+    fun Appendable.append(tracePoint: TRMethodCallTracePoint, verbose: Boolean): Appendable {
+        with(DefaultTRTextAppendable) {
+            setDestination(this@append)
             append(tracePoint)
             append(tracePoint.codeLocationId, verbose)
+            reset()
         }
+        return this
+    }
 }
 
 
@@ -161,15 +172,17 @@ abstract class AbstractTRFieldTracePointPrinter {
     private fun String.removeVolatileDollar(): String = removeSuffix("\$volatile\$FU")
 }
 
-internal class DefaultTRFieldTracePointPrinter: AbstractTRFieldTracePointPrinter() {
-    private val app = DefaultTRAppendable()
+internal object DefaultTRFieldTracePointPrinter: AbstractTRFieldTracePointPrinter() {
 
-    fun print(dest: Appendable, tracePoint: TRFieldTracePoint, verbose: Boolean) =
-        with(app) {
-            setDestination(dest)
+    fun Appendable.append(tracePoint: TRFieldTracePoint, verbose: Boolean): Appendable {
+        with(DefaultTRTextAppendable) {
+            setDestination(this@append)
             append(tracePoint)
             append(tracePoint.codeLocationId, verbose)
+            reset()
         }
+        return this
+    }
 }
 
 
@@ -193,15 +206,17 @@ abstract class AbstractTRLocalVariableTracePointPrinter {
     private fun String.removeLeadingDollar(): String = removePrefix("$")
 }
 
-internal class DefaultTRLocalVariableTracePointPrinter: AbstractTRLocalVariableTracePointPrinter() {
-    private val app = DefaultTRAppendable()
+internal object DefaultTRLocalVariableTracePointPrinter: AbstractTRLocalVariableTracePointPrinter() {
 
-    fun print(dest: Appendable, tracePoint: TRLocalVariableTracePoint, verbose: Boolean) =
-        with(app) {
-            setDestination(dest)
+    fun Appendable.append(tracePoint: TRLocalVariableTracePoint, verbose: Boolean): Appendable {
+        with(DefaultTRTextAppendable) {
+            setDestination(this@append)
             append(tracePoint)
             append(tracePoint.codeLocationId, verbose)
+            reset()
         }
+        return this
+    }
 }
 
 abstract class AbstractTRArrayTracePointPrinter {
@@ -219,15 +234,16 @@ abstract class AbstractTRArrayTracePointPrinter {
     }
 }
 
-internal class DefaultTRArrayTracePointPrinter: AbstractTRArrayTracePointPrinter() {
-    private val app = DefaultTRAppendable()
+internal object DefaultTRArrayTracePointPrinter: AbstractTRArrayTracePointPrinter() {
 
-    fun print(dest: StringBuilder, tracePoint: TRArrayTracePoint, verbose: Boolean) {
-        with(app) {
-            setDestination(dest)
+    fun Appendable.append(tracePoint: TRArrayTracePoint, verbose: Boolean): Appendable {
+        with(DefaultTRTextAppendable) {
+            setDestination(this@append)
             append(tracePoint)
             append(tracePoint.codeLocationId, verbose)
+            reset()
         }
+        return this
     }
 }
 
