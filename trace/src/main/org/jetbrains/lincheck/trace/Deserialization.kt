@@ -243,7 +243,7 @@ class LazyTraceReader(
             loadTracePoints(
                 threadId = threadId,
                 maxRead = Integer.MAX_VALUE,
-                reader = { readTracePointWithPostprocessor(this::readTracePointWithChildAddresses) }, //this::readTracePointWithChildAddresses,
+                reader = { readTracePointWithPostprocessor(this::readTracePointWithChildAddresses) },
                 registrator = { _, tracePoint, _ ->
                     tracepoints.add(tracePoint)
                 }
@@ -271,7 +271,7 @@ class LazyTraceReader(
         loadTracePoints(
             threadId = parent.threadId,
             maxRead = Integer.MAX_VALUE,
-            reader = { readTracePointWithPostprocessor(this::readTracePointWithChildAddresses) }, //this::readTracePointWithChildAddresses,
+            reader = { readTracePointWithPostprocessor(this::readTracePointWithChildAddresses) },
             registrator = { idx, tracePoint, _ ->
                 println("Register child $idx of ${parent.toText(true)}: ${tracePoint.toText(true)}")
                 parent.loadChild(idx, tracePoint)
