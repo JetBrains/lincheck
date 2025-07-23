@@ -55,7 +55,7 @@ class AccessPath(val locations: List<AccessLocation>) {
                 }
                 is StaticFieldAccess -> {
                     with(builder) {
-                        append(location.className)
+                        append(location.className.substringAfterLast("."))
                         append(".")
                         append(location.fieldName)
                     }
