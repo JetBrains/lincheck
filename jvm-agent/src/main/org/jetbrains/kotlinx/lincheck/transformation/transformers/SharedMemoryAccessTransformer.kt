@@ -130,7 +130,9 @@ internal class SharedMemoryAccessTransformer(
             isFinal = FinalFields.isFinalField(owner, fieldName)
         )
         // STACK: obj
-        val ownerName = ownerNameAnalyzer?.stack?.get(0)
+        val ownerName = ownerNameAnalyzer?.stack?.let { stack ->
+            stack[stack.size - 1]
+        }
         val ownerLocal = newLocal(getType("L$owner;")).also { copyLocal(it) }
         loadLocal(ownerLocal)
         // STACK: obj, obj

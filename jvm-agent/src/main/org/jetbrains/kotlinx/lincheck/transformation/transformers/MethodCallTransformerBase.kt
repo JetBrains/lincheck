@@ -11,6 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.jetbrains.lincheck.descriptors.OwnerName
 import org.jetbrains.lincheck.util.isInLincheckPackage
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Type
@@ -80,10 +81,11 @@ internal abstract class MethodCallTransformerBase(
     protected fun GeneratorAdapter.processMethodCallEnter(
         methodId: Int,
         receiverLocal: Int?,
-        argumentsArrayLocal: Int
+        argumentsArrayLocal: Int,
+        ownerName: OwnerName? = null,
     ) {
         // STACK: <empty>
-        loadNewCodeLocationId()
+        loadNewCodeLocationId(accessPath = ownerName)
         // STACK: codeLocation
         push(methodId)
         pushReceiver(receiverLocal)
