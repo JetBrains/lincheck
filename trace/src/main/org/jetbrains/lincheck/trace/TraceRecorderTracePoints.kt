@@ -509,7 +509,7 @@ fun TRObjectOrNull(obj: Any?): TRObject? =
     obj?.let { TRObject(it) }
 
 fun TRObjectOrVoid(obj: Any?): TRObject? =
-    if (obj == INJECTIONS_VOID_OBJECT) TR_OBJECT_VOID
+    if (obj === INJECTIONS_VOID_OBJECT) TR_OBJECT_VOID
     else TRObjectOrNull(obj)
 
 
