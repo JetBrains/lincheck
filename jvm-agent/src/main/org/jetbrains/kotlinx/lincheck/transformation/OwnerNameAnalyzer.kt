@@ -164,7 +164,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
 
     override fun visitFieldInsn(opcode: Int, owner: String?, name: String?, descriptor: String) {
         super.visitFieldInsn(opcode, owner, name, descriptor)
-        execute(opcode, 0, className = owner, fieldName = name, descriptor = descriptor)
+        execute(opcode, 0, className = owner?.toCanonicalClassName(), fieldName = name, descriptor = descriptor)
     }
 
     override fun visitMethodInsn(
