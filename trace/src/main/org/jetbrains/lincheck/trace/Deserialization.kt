@@ -169,24 +169,38 @@ private class CodeLocationsContext {
  */
 class LazyTraceReader(
     private val dataFileName: String,
-    private val index: DataInputStream?
+    private val index: DataInputStream?,
+    private val postprocessor: TracePostprocessor
 ) : Closeable {
 
     private fun interface TracepointRegistrator {
         fun register(indexInParent: Int, tracePoint: TRTracePoint, physicalOffset: Long)
     }
 
-    constructor(baseFileName: String) :
+    constructor(baseFileName: String, postprocessor: TracePostprocessor) :
             this(
                 dataFileName = baseFileName,
-                index = wrapStream(openExistingFile(baseFileName + INDEX_FILENAME_SUFFIX))
+                index = wrapStream(openExistingFile(baseFileName + INDEX_FILENAME_SUFFIX)),
+                postprocessor = postprocessor
             )
+
+    private fun readTracePointWithPostprocessor(readCallback: () -> TRTracePoint): TRTracePoint =
+        readCallback().let { tracePoint ->
+            println("readTracePointWithPostprocessor: ${tracePoint.toText(verbose = true)}")
+            if (tracePoint is TRMethodCallTracePoint) {
+                postprocessor.postprocess(reader = this@LazyTraceReader, tracePoint)
+            }
+            else {
+                tracePoint
+            }
+        }
+
 
     // TODO: Create new
     val context: TraceContext = TRACE_CONTEXT
 
     private val dataStream: SeekableInputStream
-    private val data: SeekableDataInput
+    internal val data: SeekableDataInput
     private val dataBlocks = mutableMapOf<Int, MutableList<DataBlock>>()
     private val callTracepointChildren = RangeIndex.create()
 
@@ -229,7 +243,7 @@ class LazyTraceReader(
             loadTracePoints(
                 threadId = threadId,
                 maxRead = Integer.MAX_VALUE,
-                reader = this::readTracePointWithChildAddresses,
+                reader = { readTracePointWithPostprocessor(this::readTracePointWithChildAddresses) }, //this::readTracePointWithChildAddresses,
                 registrator = { _, tracePoint, _ ->
                     tracepoints.add(tracePoint)
                 }
@@ -257,8 +271,9 @@ class LazyTraceReader(
         loadTracePoints(
             threadId = parent.threadId,
             maxRead = Integer.MAX_VALUE,
-            reader = this::readTracePointWithChildAddresses,
+            reader = { readTracePointWithPostprocessor(this::readTracePointWithChildAddresses) }, //this::readTracePointWithChildAddresses,
             registrator = { idx, tracePoint, _ ->
+                println("Register child $idx of ${parent.toText(true)}: ${tracePoint.toText(true)}")
                 parent.loadChild(idx, tracePoint)
             }
         )
@@ -279,12 +294,12 @@ class LazyTraceReader(
         loadTracePoints(
             threadId = parent.threadId,
             maxRead = count,
-            reader = this::readTracePointWithChildAddresses,
+            reader = { readTracePointWithPostprocessor(this::readTracePointWithChildAddresses) },
             registrator = { idx, tracePoint, _ ->
+                println("Register child $idx of ${parent.toText(true)}: ${tracePoint.toText(true)}")
                 parent.loadChild(idx + from, tracePoint)
             }
         )
-
     }
 
     private fun loadTracePoints(threadId: Int, maxRead: Int, reader: () -> TRTracePoint, registrator: TracepointRegistrator) {
@@ -294,6 +309,7 @@ class LazyTraceReader(
             var kind = loadObjects(data, context, CodeLocationsContext(), false) { _, _, _ ->
                 val tracePointOffset = data.position() - 1 // account for Kind
                 val tracePoint = reader()
+                println("Loaded tracepoint ${tracePoint.toText(verbose = true)}")
                 registrator.register(idx++, tracePoint, tracePointOffset)
                 idx < maxRead
             }
@@ -509,8 +525,9 @@ class LazyTraceReader(
         loadTracePoints(
             threadId = tracePoint.threadId,
             maxRead = Integer.MAX_VALUE,
-            reader = this::readTracePointShallow,
-            registrator = { _, _, physicalOffset ->
+            reader = this::readTracePointShallow, //{ readTracePointWithPostprocessor(this::readTracePointShallow) },
+            registrator = { idx, child, physicalOffset ->
+                println("Register child $idx of ${tracePoint.toText(true)}: ${child.toText(true)}")
                 tracePoint.addChildAddress(calculateLogicalOffset(tracePoint.threadId, physicalOffset))
             }
         )
@@ -555,7 +572,7 @@ data class TraceWithContext(
     val roots: List<TRTracePoint>
 )
 
-fun loadRecordedTrace(inp: InputStream): TraceWithContext {
+fun loadRecordedTrace(inp: InputStream, postprocessor: TracePostprocessor = CompressingPostprocessor): TraceWithContext {
     DataInputStream(inp.buffered(INPUT_BUFFER_SIZE)).use { input ->
         checkDataHeader(input)
 
@@ -611,7 +628,7 @@ private fun loadAllObjectsDeep(
             break
         }
 
-        check (kind == ObjectKind.BLOCK_START) {
+        check(kind == ObjectKind.BLOCK_START) {
             "Unexpected object kind $kind, expected BLOCK_START, broken file"
         }
 

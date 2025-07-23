@@ -67,8 +67,8 @@ class TRMethodCallTracePoint(
     var result: TRObject? = null
     var exceptionClassName: String? = null
 
-    private val children: ChunkedList<TRTracePoint> = ChunkedList()
-    private val childrenAddresses: AddressIndex = AddressIndex.create()
+    private var children: ChunkedList<TRTracePoint> = ChunkedList()
+    private var childrenAddresses: AddressIndex = AddressIndex.create()
 
     // TODO Make parametrized
     val methodDescriptor: MethodDescriptor get() = TRACE_CONTEXT.getMethodDescriptor(methodId)
@@ -94,6 +94,12 @@ class TRMethodCallTracePoint(
     internal fun getChildAddress(index: Int): Long {
         require(index in 0 ..< children.size) { "Index $index out of range 0..<${children.size}" }
         return childrenAddresses[index]
+    }
+
+    internal fun replaceChildren(from: TRMethodCallTracePoint) {
+        // TODO: optimize?
+        children = from.children
+        childrenAddresses = from.childrenAddresses
     }
 
     internal fun loadChild(index: Int, child: TRTracePoint) {

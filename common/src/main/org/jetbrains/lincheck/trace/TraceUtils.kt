@@ -73,3 +73,27 @@ fun String.removeLeadingDollar(): String = removePrefix("$")
 fun String.removeVolatileDollar(): String = removeSuffix("\$volatile")
 
 fun String.removeVolatileDollarFU(): String = removeSuffix("\$volatile\$FU")
+
+/**
+ * Used for compressing default pairs and access pairs.
+ */
+fun haveSameOwner(currentClassName: String, nextClassName: String): Boolean =
+    currentClassName == nextClassName
+
+/**
+ * Used fpr compressing default pairs.
+ */
+fun isDefaultPair(currentMethodName: String, nextMethodName: String): Boolean =
+    currentMethodName == "${nextMethodName}\$default"
+
+/**
+ * Used fpr compressing access pairs.
+ */
+fun isAccessPair(currentMethodName: String, nextMethodName: String): Boolean =
+    currentMethodName == "access$${nextMethodName}"
+
+/**
+ * Used for compressing synthetic accesses.
+ */
+fun isSyntheticFieldAccess(methodName: String): Boolean =
+    methodName.contains("access\$get") || methodName.contains("access\$set")
