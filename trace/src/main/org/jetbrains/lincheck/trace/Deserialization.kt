@@ -186,7 +186,6 @@ class LazyTraceReader(
 
     private fun readTracePointWithPostprocessor(readCallback: () -> TRTracePoint): TRTracePoint =
         readCallback().let { tracePoint ->
-            println("readTracePointWithPostprocessor: ${tracePoint.toText(verbose = true)}")
             if (tracePoint is TRMethodCallTracePoint) {
                 postprocessor.postprocess(reader = this@LazyTraceReader, tracePoint)
             }
@@ -273,7 +272,6 @@ class LazyTraceReader(
             maxRead = Integer.MAX_VALUE,
             reader = { readTracePointWithPostprocessor(this::readTracePointWithChildAddresses) },
             registrator = { idx, tracePoint, _ ->
-                println("Register child $idx of ${parent.toText(true)}: ${tracePoint.toText(true)}")
                 parent.loadChild(idx, tracePoint)
             }
         )
@@ -296,7 +294,6 @@ class LazyTraceReader(
             maxRead = count,
             reader = { readTracePointWithPostprocessor(this::readTracePointWithChildAddresses) },
             registrator = { idx, tracePoint, _ ->
-                println("Register child $idx of ${parent.toText(true)}: ${tracePoint.toText(true)}")
                 parent.loadChild(idx + from, tracePoint)
             }
         )
@@ -316,7 +313,6 @@ class LazyTraceReader(
             var kind = loadObjects(data, context, CodeLocationsContext(), false) { _, _, _ ->
                 val tracePointOffset = data.position() - 1 // account for Kind
                 val tracePoint = reader()
-                println("Loaded tracepoint ${tracePoint.toText(verbose = true)}")
                 registrator.register(idx++, tracePoint, tracePointOffset)
                 idx < maxRead
             }
@@ -534,7 +530,6 @@ class LazyTraceReader(
             maxRead = Integer.MAX_VALUE,
             reader = this::readTracePointShallow,
             registrator = { idx, child, physicalOffset ->
-                println("Register child $idx of ${tracePoint.toText(true)}: ${child.toText(true)}")
                 tracePoint.addChildAddress(calculateLogicalOffset(tracePoint.threadId, physicalOffset))
             }
         )
