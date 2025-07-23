@@ -199,7 +199,7 @@ class LazyTraceReader(
     val context: TraceContext = TRACE_CONTEXT
 
     private val dataStream: SeekableInputStream
-    internal val data: SeekableDataInput
+    private val data: SeekableDataInput
     private val dataBlocks = mutableMapOf<Int, MutableList<DataBlock>>()
     private val callTracepointChildren = RangeIndex.create()
 
@@ -529,7 +529,7 @@ class LazyTraceReader(
             threadId = tracePoint.threadId,
             maxRead = Integer.MAX_VALUE,
             reader = this::readTracePointShallow,
-            registrator = { idx, child, physicalOffset ->
+            registrator = { _, _, physicalOffset ->
                 tracePoint.addChildAddress(calculateLogicalOffset(tracePoint.threadId, physicalOffset))
             }
         )
