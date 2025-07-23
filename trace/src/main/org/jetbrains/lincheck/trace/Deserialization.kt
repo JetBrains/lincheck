@@ -186,14 +186,10 @@ class LazyTraceReader(
 
     private fun readTracePointWithPostprocessor(readCallback: () -> TRTracePoint): TRTracePoint =
         readCallback().let { tracePoint ->
-            if (tracePoint is TRMethodCallTracePoint) {
+            if (tracePoint is TRMethodCallTracePoint)
                 postprocessor.postprocess(reader = this@LazyTraceReader, tracePoint)
-            }
-            else {
-                tracePoint
-            }
+            else tracePoint
         }
-
 
     // TODO: Create new
     val context: TraceContext = TRACE_CONTEXT

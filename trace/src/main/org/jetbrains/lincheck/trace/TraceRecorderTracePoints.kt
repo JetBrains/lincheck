@@ -97,7 +97,6 @@ class TRMethodCallTracePoint(
     }
 
     internal fun replaceChildren(from: TRMethodCallTracePoint) {
-        // TODO: optimize?
         children = from.children
         childrenAddresses = from.childrenAddresses
     }
