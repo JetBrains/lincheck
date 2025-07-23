@@ -32,10 +32,14 @@ private val EVENT_ID_GENERATOR = AtomicInteger(0)
 var INJECTIONS_VOID_OBJECT: Any? = null
 
 sealed class TRTracePoint(
-    val codeLocationId: Int,
+    codeLocationId: Int,
     val threadId: Int,
     val eventId: Int
 ) {
+    private var _codeLocationId: Int = codeLocationId
+    val codeLocationId: Int
+        get() = _codeLocationId
+
     internal open fun save(out: TraceWriter) {
         saveReferences(out)
 
@@ -48,6 +52,10 @@ sealed class TRTracePoint(
 
     internal open fun saveReferences(out: TraceWriter) {
         out.writeCodeLocation(codeLocationId)
+    }
+
+    internal fun replaceCodeLocationId(newCodeLocationId: Int) {
+        _codeLocationId = newCodeLocationId
     }
 
     val codeLocation: StackTraceElement get() = CodeLocations.stackTrace(codeLocationId)

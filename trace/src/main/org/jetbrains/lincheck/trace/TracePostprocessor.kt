@@ -116,6 +116,7 @@ object CompressingPostprocessor : TracePostprocessor {
         val actualNode = if (isSyntheticGetFieldAccess(methodName)) loadChild(reader, tracePoint = this, 1) ?: return this
                          else loadChild(reader, tracePoint = this, 2) ?: return this
 
+        actualNode.replaceCodeLocationId(codeLocationId)
         return actualNode
     }
 
