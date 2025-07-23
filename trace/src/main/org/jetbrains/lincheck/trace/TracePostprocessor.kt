@@ -24,12 +24,6 @@ object CompressingPostprocessor : TracePostprocessor {
             .compressSyntheticFieldAccess(reader)
     }
 
-    private fun loadChild(reader: LazyTraceReader, tracePoint: TRMethodCallTracePoint, childIdx: Int): TRTracePoint? {
-        if (childIdx !in 0..tracePoint.events.lastIndex) return null
-        return tracePoint.events[childIdx] ?: reader.getChildAndRestorePosition(tracePoint, childIdx)
-    }
-
-
     /**
      * Compresses `fun$default(...)` calls.
      *
@@ -91,7 +85,6 @@ object CompressingPostprocessor : TracePostprocessor {
         return combineCallNodes(this, singleChild)
     }
 
-
     /**
      * Compresses synthetic field access methods (`access$get` and `access$set`).
      *
@@ -124,6 +117,11 @@ object CompressingPostprocessor : TracePostprocessor {
                          else loadChild(reader, tracePoint = this, 2) ?: return this
 
         return actualNode
+    }
+
+    private fun loadChild(reader: LazyTraceReader, tracePoint: TRMethodCallTracePoint, childIdx: Int): TRTracePoint? {
+        if (childIdx !in 0..tracePoint.events.lastIndex) return null
+        return tracePoint.events[childIdx] ?: reader.getChildAndRestorePosition(tracePoint, childIdx)
     }
 
     private fun combineCallNodes(parent: TRMethodCallTracePoint, child: TRMethodCallTracePoint): TRMethodCallTracePoint {
