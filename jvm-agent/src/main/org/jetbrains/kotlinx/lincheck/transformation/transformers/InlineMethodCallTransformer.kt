@@ -21,6 +21,8 @@ import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
 import sun.nio.ch.lincheck.*
 
+private data class InlineStackElement(val methodId: Int, val catchLabel: Label, val lvar: LocalVariableInfo)
+
 /**
  * [InlineMethodCallTransformer] tracks method calls,
  * injecting invocations of corresponding [EventTracker] methods.
@@ -50,7 +52,12 @@ internal class InlineMethodCallTransformer(
             locals.hasVarByName("\$result")
         )
 
-    private val inlineStack = ArrayList<Pair<String?, LocalVariableInfo>>()
+    private val localVarInlineStartComparator = Comparator<LocalVariableInfo>
+        { a, b -> labelSorter.compare(a.labelIndexRange.second, b.labelIndexRange.second) }
+        .thenComparing { it.index }
+
+    private val inlineStack = mutableListOf<InlineStackElement>()
+    private val pendingCatchBlocks = mutableMapOf<Int, Label>()
 
     override fun visitLabel(label: Label) = adapter.run {
         if (!locals.hasInlines || looksLikeSuspendMethod) {
@@ -60,20 +67,28 @@ internal class InlineMethodCallTransformer(
 
         System.err.println(">>> $className.$methodName: LABEL $label STARTS")
 
-        // TODO Find a way to sort multiple marker variables with same start by end label
+        // Can one start label mark the beginning of several inlined methods?
+        // One end label can mark several returns for sure.
+        // Support multiple starts to be sure.
+
+        // Sort starts by end labels (it provides proper nesting) and then variable slots (it provides stable sort)
+
+        for (lvar in locals.inlinesStartAt(label)
+            .filter { it.inlineMethodName != methodName && isSupportedInline(it) }
+            .sortedWith(localVarInlineStartComparator)
+        ) {
+            val suffix = "\$iv".repeat(inlineStack.size + 1)
+            val inlineName = lvar.inlineMethodName!!
+
+            processStartLabel(label, lvar)
+        }
+
         val lvar = locals.inlinesStartAt(label).firstOrNull()
         // Sometimes Kotlin compiler generate "inline marker" inside inline function itself, which
         // covers the whole function. Skip this, there is no "inlined call"
         if (lvar != null && lvar.inlineMethodName != methodName && isSupportedInline(lvar)) {
             val suffix = "\$iv".repeat(inlineStack.size + 1)
             val inlineName = lvar.inlineMethodName!!
-
-            //TODO Find out what the exact problem is here
-            if (inlineName == "recoverStackTrace") {
-                super.visitLabel(label)
-                System.err.println("<<< $className.$methodName: LABEL $label ENDS")
-                return
-            }
 
             // If an extension function was inlined, `this_$iv` will point to class where extension
             // function was defined and `$this$<func-name>$iv` will show to virtual `this`, with
@@ -86,17 +101,31 @@ internal class InlineMethodCallTransformer(
             val className = if (clazz?.sort == OBJECT) clazz.className else null
             val thisLocal = if (clazz?.sort == OBJECT) this_.index else null
 
-            // Start a new inline call: We cannot start a true call as we don't have a lot of necessary
-            // information, such as method descriptor, variables' types, etc.
-            inlineStack.add(className to lvar)
+            // We should wrap this "call" into try {} finally {} to properly
+            // register exit from an inline function call via exception.
+            // Such construction cannot be conditional
 
+            val startLabel = Label()
+            val endLabel = Label()
+            visitTryCatchBlock(startLabel, endLabel, endLabel, null)
+            visitLabel(startLabel)
+
+            var methodId: Int = -1
             invokeIfInAnalyzedCode(
                 original = {},
                 instrumented = {
                     System.err.println("=== ADD ${lvar.name} (${lvar.labelIndexRange.first} .. ${lvar.labelIndexRange.second})")
-                    processInlineMethodCall(className, inlineName, clazz, thisLocal, label)
+                    methodId = processInlineMethodCall(className, inlineName, clazz, thisLocal, label)
                 }
             )
+
+            // Create virtual static stack element
+            inlineStack.add(InlineStackElement(
+                methodId = methodId,
+                catchLabel = endLabel,
+                lvar = lvar
+            ))
+
             super.visitLabel(label)
             System.err.println("<<< $className.$methodName: LABEL $label ENDS")
             return
@@ -104,7 +133,7 @@ internal class InlineMethodCallTransformer(
 
         // One label could end several inline calls
         val topOfStack = inlineStack.lastOrNull()
-        if (topOfStack?.second?.labelIndexRange?.second == label) {
+        if (topOfStack?.lvar?.labelIndexRange?.second == label) {
             // Visit the label before all "exit" code as there could be jumps to this label to exit from this method.
             // Jump instrumentation code doesn't insert exits for such jumps, as it will duplicate to a lot of code.
             visitLabel(label)
@@ -118,8 +147,8 @@ internal class InlineMethodCallTransformer(
             )
             // It is a true end of these inline methods, remove them from the static stack.
             repeat(removeFromStack) {
-                val (_, lvar) = inlineStack.removeLast()
-                System.err.println("=== REMOVE ${lvar.name} (${lvar.labelIndexRange.first} .. ${lvar.labelIndexRange.second})")
+                val topOfStack = inlineStack.removeLast()
+                System.err.println("=== REMOVE ${topOfStack.lvar.name} (${topOfStack.lvar.labelIndexRange.first} .. ${topOfStack.lvar.labelIndexRange.second})")
             }
             System.err.println("<<< $className.$methodName: LABEL $label ENDS")
             return
@@ -232,7 +261,7 @@ internal class InlineMethodCallTransformer(
     }
 
     @Suppress("UNUSED_PARAMETER")
-    private fun processInlineMethodCall(className: String?, inlineMethodName: String, ownerType: Type?, owner: Int?, startLabel: Label) = adapter.run {
+    private fun processInlineMethodCall(className: String?, inlineMethodName: String, ownerType: Type?, owner: Int?, startLabel: Label): Int = adapter.run {
         // Create a fake method descriptor
         val methodId = getPseudoMethodId(className, startLabel, inlineMethodName)
         System.err.println("@@@ $className / $startLabel / $inlineMethodName : $methodId")
@@ -256,6 +285,8 @@ internal class InlineMethodCallTransformer(
         }
         invokeStatic(Injections::onInlineMethodCall)
         invokeBeforeEventIfPluginEnabled("inline method call $inlineMethodName in $methodName")
+
+        return methodId
     }
 
     private fun processInlineMethodCallReturn(inlineMethodName: String, startLabel: Label) = adapter.run {
@@ -272,7 +303,9 @@ internal class InlineMethodCallTransformer(
     // Don't support atomicfu for now, it is messed with stack
     // Maybe we will need to expand it later
     // Check inlined method name by marker variable name
+    // TODO Find out what the exact problem is here with "recoverStackTrace"
     private fun isSupportedInline(lvar: LocalVariableInfo) = !lvar.name.endsWith("\$atomicfu")
+                                                            && lvar.inlineMethodName != "recoverStackTrace"
 
     private fun GeneratorAdapter.invokeIfTrueAndInAnalyzedCode(
         ifOpcode: Int,
