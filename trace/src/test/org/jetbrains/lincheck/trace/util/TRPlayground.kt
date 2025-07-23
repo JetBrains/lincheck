@@ -15,13 +15,14 @@ import org.jetbrains.lincheck.trace.TRMethodCallTracePoint
 import org.jetbrains.lincheck.trace.loadRecordedTrace
 import org.jetbrains.lincheck.trace.printRecorderTrace
 import java.io.FileInputStream
+import kotlin.random.Random
 
 fun main(args: Array<String>) {
     // Choose one!
 
-    // eagerLoadAndPrintTrace("<path to binary file>")
+    eagerLoadAndPrintTrace("C:\\home\\lev\\dada\\CachingCacheStorageTest_testFindAllLoadsDataFromDelegate487622695707007237.bin")
 
-    // lazyLoadAndPrintTrace("<path to binary file>")
+    // lazyLoadAndPrintTrace("C:\\home\\lev\\dada\\CachingCacheStorageTest_testFindAllLoadsDataFromDelegate487622695707007237.bin")
 }
 
 private fun eagerLoadAndPrintTrace(fileName: String) {
@@ -32,8 +33,9 @@ private fun eagerLoadAndPrintTrace(fileName: String) {
 private fun lazyLoadAndPrintTrace(fileName: String) {
     val reader = LazyTraceReader(fileName)
     val trace = reader.readRoots()
-    reader.loadChildrenRange(trace.first() as TRMethodCallTracePoint, 5, 5)
+    //reader.loadChildrenRange(trace.first() as TRMethodCallTracePoint, 5, 5)
     // Or you could run or other variant to load children
-    // reader.loadAllChildren(trace.first() as TRMethodCallTracePoint)
+    reader.loadAllChildren(trace.first() as TRMethodCallTracePoint)
     printRecorderTrace(System.out, reader.context, trace, true)
 }
+
