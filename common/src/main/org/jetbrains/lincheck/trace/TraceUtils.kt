@@ -96,4 +96,8 @@ fun isAccessPair(currentMethodName: String, nextMethodName: String): Boolean =
  * Used for compressing synthetic accesses.
  */
 fun isSyntheticFieldAccess(methodName: String): Boolean =
-    methodName.contains("access\$get") || methodName.contains("access\$set")
+    isSyntheticGetFieldAccess(methodName) || isSyntheticSetFieldAccess(methodName)
+
+fun isSyntheticGetFieldAccess(methodName: String): Boolean = methodName.contains("access\$get")
+
+fun isSyntheticSetFieldAccess(methodName: String): Boolean = methodName.contains("access\$set")

@@ -177,7 +177,7 @@ class LazyTraceReader(
         fun register(indexInParent: Int, tracePoint: TRTracePoint, physicalOffset: Long)
     }
 
-    constructor(baseFileName: String, postprocessor: TracePostprocessor) :
+    constructor(baseFileName: String, postprocessor: TracePostprocessor = CompressingPostprocessor) :
             this(
                 dataFileName = baseFileName,
                 index = wrapStream(openExistingFile(baseFileName + INDEX_FILENAME_SUFFIX)),
@@ -300,6 +300,13 @@ class LazyTraceReader(
                 parent.loadChild(idx + from, tracePoint)
             }
         )
+    }
+
+    fun getChildAndRestorePosition(parent: TRMethodCallTracePoint, childIdx: Int): TRTracePoint? {
+        val oldPosition = data.position()
+        loadChild(parent, childIdx)
+        data.seek(oldPosition)
+        return parent.events[childIdx]
     }
 
     private fun loadTracePoints(threadId: Int, maxRead: Int, reader: () -> TRTracePoint, registrator: TracepointRegistrator) {
@@ -525,7 +532,7 @@ class LazyTraceReader(
         loadTracePoints(
             threadId = tracePoint.threadId,
             maxRead = Integer.MAX_VALUE,
-            reader = this::readTracePointShallow, //{ readTracePointWithPostprocessor(this::readTracePointShallow) },
+            reader = this::readTracePointShallow,
             registrator = { idx, child, physicalOffset ->
                 println("Register child $idx of ${tracePoint.toText(true)}: ${child.toText(true)}")
                 tracePoint.addChildAddress(calculateLogicalOffset(tracePoint.threadId, physicalOffset))
@@ -572,7 +579,7 @@ data class TraceWithContext(
     val roots: List<TRTracePoint>
 )
 
-fun loadRecordedTrace(inp: InputStream, postprocessor: TracePostprocessor = CompressingPostprocessor): TraceWithContext {
+fun loadRecordedTrace(inp: InputStream): TraceWithContext {
     DataInputStream(inp.buffered(INPUT_BUFFER_SIZE)).use { input ->
         checkDataHeader(input)
 

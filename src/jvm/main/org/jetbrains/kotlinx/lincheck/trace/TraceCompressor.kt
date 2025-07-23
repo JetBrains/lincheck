@@ -463,9 +463,9 @@ private fun TraceNode.compress(compressionRule: (TraceNode) -> TraceNode): Trace
  * a user-defined thread trace.
  */
 private fun isUserThreadStart(currentTracePoint: MethodCallTracePoint, nextTracePoint: MethodCallTracePoint): Boolean =
-    currentTracePoint.isThreadStart
-            && nextTracePoint.className == "kotlin.jvm.functions.Function0"
-            && nextTracePoint.methodName == "invoke"
+    currentTracePoint.isThreadStart &&
+    nextTracePoint.className == "kotlin.jvm.functions.Function0" &&
+    nextTracePoint.methodName == "invoke"
 
 private fun AnalysisProfile.shouldBeHidden(callNode: CallNode): Boolean = 
     shouldBeHidden(callNode.tracePoint.className, callNode.tracePoint.methodName)
