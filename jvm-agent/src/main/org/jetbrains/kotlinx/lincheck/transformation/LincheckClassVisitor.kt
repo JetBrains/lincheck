@@ -197,7 +197,7 @@ internal class LincheckClassVisitor(
             isThreadContainerThreadStartMethod(className.toCanonicalClassName(), methodName)
         ) {
             // Must appear last in the code, to completely hide intrinsic candidate methods from all transformers
-            mv = IntrinsicCandidateMethodFilter(className, methodName, desc, intrinsicDelegateVisitor.newAdapter(), mv.newAdapter())
+            mv = IntrinsicCandidateMethodFilter(className, methodName, desc, intrinsicDelegateVisitor, mv)
             return mv
         }
 
@@ -238,7 +238,7 @@ internal class LincheckClassVisitor(
         // because lincheck will not see intrinsic method bodies at all.
         mv = CoverageBytecodeFilter(coverageDelegateVisitor.newAdapter(), mv.newNonRemappingAdapter())
         // Must appear last in the code, to completely hide intrinsic candidate methods from all transformers
-        mv = IntrinsicCandidateMethodFilter(className, methodName, desc, intrinsicDelegateVisitor.newAdapter(), mv.newNonRemappingAdapter())
+        mv = IntrinsicCandidateMethodFilter(className, methodName, desc, intrinsicDelegateVisitor, mv)
 
         return mv
     }
