@@ -75,14 +75,18 @@ internal class SynchronizedMethodTransformer(
     fileName: String,
     className: String,
     methodName: String,
-    adapter: GeneratorAdapter,
-    private val classVersion: Int
+    private val access: Int,
+    private val classVersion: Int,
+    adapter: GeneratorAdapter
 ) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter) {
-    private val isStatic: Boolean = this.adapter.access and ACC_STATIC != 0
+
+    private val isStatic: Boolean = (access and ACC_STATIC != 0)
+
     private val tryLabel = Label()
     private val catchLabel = Label()
 
     override fun visitCode() = adapter.run {
+        visitCode()
         invokeIfInAnalyzedCode(
             original = {},
             instrumented = {
@@ -101,7 +105,6 @@ internal class SynchronizedMethodTransformer(
                 invokeStatic(Injections::lock)
             }
         )
-        visitCode()
     }
 
     override fun visitMaxs(maxStack: Int, maxLocals: Int) = adapter.run {
