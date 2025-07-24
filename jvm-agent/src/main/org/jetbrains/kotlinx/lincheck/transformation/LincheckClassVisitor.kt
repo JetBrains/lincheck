@@ -225,7 +225,7 @@ internal class LincheckClassVisitor(
             mv = ConstantHashCodeTransformer(fileName, className, methodName, adapter, mv)
         }
 
-        mv = applySynchronizationTrackingTransformers(access, methodName, desc, mv)
+        mv = applySynchronizationTrackingTransformers(access, methodName, adapter, mv)
 
         // `SharedMemoryAccessTransformer` goes first because it relies on `AnalyzerAdapter`,
         // which should be put in front of the byte-code transformer chain,
@@ -306,15 +306,10 @@ internal class LincheckClassVisitor(
     private fun applySynchronizationTrackingTransformers(
         access: Int,
         methodName: String,
-        descriptor: String,
+        adapter: GeneratorAdapter,
         methodVisitor: MethodVisitor,
     ): MethodVisitor {
         var mv = methodVisitor
-        fun MethodVisitor.newAdapter() = GeneratorAdapter(this, access, methodName, descriptor)
-
-        val adapter = mv.newAdapter()
-        mv = adapter // TODO: fixme
-
         val isSynchronized = (access and ACC_SYNCHRONIZED != 0)
         if (isSynchronized) {
             mv = SynchronizedMethodTransformer(fileName, className, methodName, access, classVersion, adapter, mv)
