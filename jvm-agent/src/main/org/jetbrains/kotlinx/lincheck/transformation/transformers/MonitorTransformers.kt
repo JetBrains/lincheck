@@ -173,7 +173,8 @@ internal class WaitNotifyTransformer(
     className: String,
     methodName: String,
     adapter: GeneratorAdapter,
-) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter) {
+    methodVisitor: MethodVisitor,
+) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter, methodVisitor) {
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
         if (opcode == INVOKEVIRTUAL) {
@@ -181,7 +182,7 @@ internal class WaitNotifyTransformer(
                 isWait0(name, desc) -> {
                     invokeIfInAnalyzedCode(
                         original = {
-                            visitMethodInsn(opcode, owner, name, desc, itf)
+                            super.visitMethodInsn(opcode, owner, name, desc, itf)
                         },
                         instrumented = {
                             loadNewCodeLocationId()
@@ -195,7 +196,7 @@ internal class WaitNotifyTransformer(
                 isWait1(name, desc) -> {
                     invokeIfInAnalyzedCode(
                         original = {
-                            visitMethodInsn(opcode, owner, name, desc, itf)
+                            super.visitMethodInsn(opcode, owner, name, desc, itf)
                         },
                         instrumented = {
                             pop2() // timeMillis
@@ -226,7 +227,7 @@ internal class WaitNotifyTransformer(
                 isNotify(name, desc) -> {
                     invokeIfInAnalyzedCode(
                         original = {
-                            visitMethodInsn(opcode, owner, name, desc, itf)
+                            super.visitMethodInsn(opcode, owner, name, desc, itf)
                         },
                         instrumented = {
                             loadNewCodeLocationId()
@@ -239,7 +240,7 @@ internal class WaitNotifyTransformer(
                 isNotifyAll(name, desc) -> {
                     invokeIfInAnalyzedCode(
                         original = {
-                            visitMethodInsn(opcode, owner, name, desc, itf)
+                            super.visitMethodInsn(opcode, owner, name, desc, itf)
                         },
                         instrumented = {
                             loadNewCodeLocationId()
@@ -250,11 +251,11 @@ internal class WaitNotifyTransformer(
                 }
 
                 else -> {
-                    visitMethodInsn(opcode, owner, name, desc, itf)
+                    super.visitMethodInsn(opcode, owner, name, desc, itf)
                 }
             }
         } else {
-            visitMethodInsn(opcode, owner, name, desc, itf)
+            super.visitMethodInsn(opcode, owner, name, desc, itf)
         }
     }
 

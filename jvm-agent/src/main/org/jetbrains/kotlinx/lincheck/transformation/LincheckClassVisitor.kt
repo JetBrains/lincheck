@@ -320,7 +320,7 @@ internal class LincheckClassVisitor(
             mv = SynchronizedMethodTransformer(fileName, className, methodName, access, classVersion, adapter, mv)
         }
         mv = MonitorTransformer(fileName, className, methodName, adapter, mv)
-        mv = WaitNotifyTransformer(fileName, className, methodName, mv.newAdapter())
+        mv = WaitNotifyTransformer(fileName, className, methodName, adapter, mv)
         mv = ParkingTransformer(fileName, className, methodName, mv.newAdapter())
         return mv
     }
