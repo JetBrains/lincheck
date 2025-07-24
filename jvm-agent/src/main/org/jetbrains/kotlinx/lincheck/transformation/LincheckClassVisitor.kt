@@ -136,11 +136,10 @@ internal class LincheckClassVisitor(
             return mv
         }
 
-        val initialVisitor = mv
-
         mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
         mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
 
+        val initialVisitor = mv
         val adapter = mv.newAdapter()
         mv = adapter
 
