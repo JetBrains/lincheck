@@ -80,7 +80,6 @@ internal class LincheckClassVisitor(
         val locals = methods[methodName + desc] ?: MethodVariables()
 
         fun MethodVisitor.newAdapter() = GeneratorAdapter(this, access, methodName, desc)
-        fun MethodVisitor.newNonRemappingAdapter() = GeneratorAdapterWithoutLocals(this, access, methodName, desc)
 
         var mv = super.visitMethod(access, methodName, desc, signature, exceptions)
         if (isNative) {
