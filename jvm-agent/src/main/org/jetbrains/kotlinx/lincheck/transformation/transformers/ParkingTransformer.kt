@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.objectweb.asm.MethodVisitor
 import sun.nio.ch.lincheck.*
 import sun.misc.Unsafe
 
@@ -23,15 +24,16 @@ internal class ParkingTransformer(
     fileName: String,
     className: String,
     methodName: String,
-    adapter: GeneratorAdapter
-) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter) {
+    adapter: GeneratorAdapter,
+    methodVisitor: MethodVisitor,
+) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter, methodVisitor) {
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
         when {
             isUnsafe(owner) && name == "park" -> {
                 invokeIfInAnalyzedCode(
                     original = {
-                        visitMethodInsn(opcode, owner, name, desc, itf)
+                        super.visitMethodInsn(opcode, owner, name, desc, itf)
                     },
                     instrumented = {
                         pop2() // time
@@ -49,7 +51,7 @@ internal class ParkingTransformer(
             isUnsafe(owner) && name == "unpark" -> {
                 invokeIfInAnalyzedCode(
                     original = {
-                        visitMethodInsn(opcode, owner, name, desc, itf)
+                        super.visitMethodInsn(opcode, owner, name, desc, itf)
                     },
                     instrumented = {
                         loadNewCodeLocationId()
@@ -61,7 +63,7 @@ internal class ParkingTransformer(
             }
 
             else -> {
-                visitMethodInsn(opcode, owner, name, desc, itf)
+                super.visitMethodInsn(opcode, owner, name, desc, itf)
             }
         }
     }
