@@ -137,10 +137,7 @@ internal class LincheckClassVisitor(
             return mv
         }
 
-        val intrinsicDelegateVisitor = mv
-        // `coverageDelegateVisitor` must not capture `MethodCallTransformer`
-        // (to filter static method calls inserted by coverage library)
-        val coverageDelegateVisitor: MethodVisitor = mv
+        val initialVisitor = mv
 
         mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
         mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
@@ -154,7 +151,7 @@ internal class LincheckClassVisitor(
         }
         if (shouldNotInstrument(className, methodName, desc)) {
             // Must appear last in the code, to completely hide intrinsic candidate methods from all transformers
-            mv = IntrinsicCandidateMethodFilter(className, methodName, desc, intrinsicDelegateVisitor.newAdapter(), mv.newAdapter())
+            mv = IntrinsicCandidateMethodFilter(className, methodName, desc, initialVisitor, mv)
             return mv
         }
 
@@ -205,7 +202,7 @@ internal class LincheckClassVisitor(
             isThreadContainerThreadStartMethod(className.toCanonicalClassName(), methodName)
         ) {
             // Must appear last in the code, to completely hide intrinsic candidate methods from all transformers
-            mv = IntrinsicCandidateMethodFilter(className, methodName, desc, intrinsicDelegateVisitor, mv)
+            mv = IntrinsicCandidateMethodFilter(className, methodName, desc, initialVisitor, mv)
             return mv
         }
 
@@ -245,9 +242,9 @@ internal class LincheckClassVisitor(
         // It can appear earlier in code than `IntrinsicCandidateMethodFilter` because if kover instruments intrinsic methods
         // (which cannot disallow) then we don't need to hide coverage instrumentation from lincheck,
         // because lincheck will not see intrinsic method bodies at all.
-        mv = CoverageBytecodeFilter(coverageDelegateVisitor.newAdapter(), mv.newNonRemappingAdapter())
+        mv = CoverageBytecodeFilter(initialVisitor, mv)
         // Must appear last in the code, to completely hide intrinsic candidate methods from all transformers
-        mv = IntrinsicCandidateMethodFilter(className, methodName, desc, intrinsicDelegateVisitor, mv)
+        mv = IntrinsicCandidateMethodFilter(className, methodName, desc, initialVisitor, mv)
 
         return mv
     }
