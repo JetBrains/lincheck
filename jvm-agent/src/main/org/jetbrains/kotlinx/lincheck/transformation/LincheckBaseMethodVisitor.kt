@@ -20,29 +20,30 @@ internal open class LincheckBaseMethodVisitor(
     protected val fileName: String,
     protected val className: String,
     protected val methodName: String,
-    val adapter: GeneratorAdapter
-) : MethodVisitor(ASM_API, adapter) {
+    val adapter: GeneratorAdapter,
+    methodVisitor: MethodVisitor? = null // TODO: make non-optional after full transition
+) : MethodVisitor(ASM_API, methodVisitor ?: adapter) {
     private var lineNumber = 0
 
     /**
      * Injects `beforeEvent` method invocation if IDEA plugin is enabled.
      *
      * @param type type of the event, needed just for debugging.
-     * @param setMethodEventId a flag that identifies that method call event id set is required
      */
-    protected fun invokeBeforeEventIfPluginEnabled(type: String) {
+    protected fun invokeBeforeEventIfPluginEnabled(type: String) = adapter.run {
         if (ideaPluginEnabled) {
-            adapter.invokeBeforeEvent(type)
+            invokeBeforeEvent(type)
         }
     }
 
-    protected fun loadNewCodeLocationId() {
+    protected fun loadNewCodeLocationId() = adapter.run {
         val stackTraceElement = StackTraceElement(className, methodName, fileName, lineNumber)
         val codeLocationId = CodeLocations.newCodeLocation(stackTraceElement)
-        adapter.push(codeLocationId)
+        push(codeLocationId)
     }
 
-    protected fun isKnownLineNumber(): Boolean = lineNumber > 0
+    protected fun isKnownLineNumber(): Boolean =
+        lineNumber > 0
 
     override fun visitLineNumber(line: Int, start: Label) {
         lineNumber = line
