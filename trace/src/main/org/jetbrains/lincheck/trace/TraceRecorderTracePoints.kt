@@ -487,7 +487,9 @@ data class TRObject internal constructor (
         adornedClassNameRepresentation(className) + "@" + identityHashCode
 
     private fun adornedClassNameRepresentation(className: String): String =
-        className.substringAfterLast(".")
+        className
+            .let(::removeRefWrapperClassName)
+            .let(::getSimpleClassName)
             .let(::removeJavaLambdaRuntimeAddress)
             .let(::replaceNestedClassDollar)
 }

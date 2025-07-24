@@ -56,6 +56,24 @@ fun removeJavaLambdaRuntimeAddress(classNameRepresentation: String): String {
     return classNameRepresentation.substringBeforeLast('/')
 }
 
+/**
+ * Removes outer class name for primitive types when they are wrapped with `Ref` class.
+ * E.g. `kotlin.jvm.internal.Ref$IntRef@xxxxx` -> `IntRef@xxxxx`.
+ *
+ * *Note*: should be called on fully qualified class name.
+ */
+fun removeRefWrapperClassName(classNameRepresentation: String): String {
+    val prefix = "kotlin.jvm.internal.Ref$"
+    return if (classNameRepresentation.startsWith(prefix)) classNameRepresentation.removePrefix(prefix)
+           else classNameRepresentation
+}
+
+/**
+ * Returns simple class name - the last part of the fully qualified class name
+ * (e.g. `java.lang.String` -> `String`).
+ */
+fun getSimpleClassName(classNameRepresentation: String): String =
+    classNameRepresentation.substringAfterLast(".")
 
 // Trace polishing functions
 fun String.hasCoroutinesCoreSuffix(): Boolean = endsWith("\$kotlinx_coroutines_core")
