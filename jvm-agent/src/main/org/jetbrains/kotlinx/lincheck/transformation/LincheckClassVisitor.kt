@@ -92,6 +92,8 @@ internal class LincheckClassVisitor(
             if (methodName == "<clinit>" || methodName == "<init>") return mv
 
             val adapter = GeneratorAdapter(mv, access, methodName, desc)
+            mv = adapter
+
             // in Stress mode we apply only `CoroutineCancellabilitySupportTransformer`
             // to track coroutine suspension points
             mv = CoroutineCancellabilitySupportTransformer(fileName, className, methodName, adapter, mv)
@@ -106,6 +108,7 @@ internal class LincheckClassVisitor(
             mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
 
             val adapter = GeneratorAdapter(mv, access, methodName, desc)
+            mv = adapter
 
             // If it is Thread don't instrument all other things in it
             if (isThreadSubClass(className)) {
@@ -188,6 +191,7 @@ internal class LincheckClassVisitor(
         }
 
         val adapter = mv.newAdapter()
+        mv = adapter
 
         mv = CoroutineCancellabilitySupportTransformer(fileName, className, methodName, adapter, mv)
         mv = CoroutineDelaySupportTransformer(fileName, className, methodName, adapter, mv)
