@@ -105,10 +105,12 @@ internal class LincheckClassVisitor(
             mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
             mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
 
+            val adapter = GeneratorAdapter(mv, access, methodName, desc)
+
             // If it is Thread don't instrument all other things in it
             if (isThreadSubClass(className)) {
                 // We need this in TRACE_RECORDING mode to register new threads
-                mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
+                mv = ThreadTransformer(fileName, className, methodName, desc, adapter, mv)
                 return mv
             }
 
@@ -190,7 +192,7 @@ internal class LincheckClassVisitor(
         mv = CoroutineCancellabilitySupportTransformer(fileName, className, methodName, adapter, mv)
         mv = CoroutineDelaySupportTransformer(fileName, className, methodName, adapter, mv)
 
-        mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
+        mv = ThreadTransformer(fileName, className, methodName, desc, adapter, mv)
         // For `java.lang.Thread` class (and `ThreadContainer.start()` method),
         // we only apply `ThreadTransformer` and skip all other transformations
         if (isThreadClass(className.toCanonicalClassName()) ||

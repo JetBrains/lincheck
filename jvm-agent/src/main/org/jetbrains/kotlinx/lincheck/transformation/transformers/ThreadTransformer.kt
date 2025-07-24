@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.objectweb.asm.Label
+import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 import org.objectweb.asm.commons.GeneratorAdapter
@@ -31,14 +32,15 @@ internal class ThreadTransformer(
     methodName: String,
     private val desc: String,
     adapter: GeneratorAdapter,
-) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter)  {
+    methodVisitor: MethodVisitor,
+) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter, methodVisitor)  {
 
     private val runMethodTryBlockStart: Label = adapter.newLabel()
     private val runMethodTryBlockEnd: Label = adapter.newLabel()
     private val runMethodCatchBlock: Label = adapter.newLabel()
 
     override fun visitCode() = adapter.run {
-        visitCode()
+        super.visitCode()
         if (isThreadStartMethod(methodName, desc)) {
             // STACK: <empty>
             loadThis()
@@ -62,13 +64,13 @@ internal class ThreadTransformer(
             // STACK: <empty>
             invokeStatic(Injections::afterThreadFinish)
         }
-        visitInsn(opcode)
+        super.visitInsn(opcode)
     }
 
     override fun visitMaxs(maxStack: Int, maxLocals: Int) = adapter.run {
         // we only need to handle `Thread::run()` method, exit early otherwise
         if (!isThreadRunMethod(methodName, desc)) {
-            visitMaxs(maxStack, maxLocals)
+            super.visitMaxs(maxStack, maxLocals)
             return
         }
         visitLabel(runMethodTryBlockEnd)
@@ -84,7 +86,7 @@ internal class ThreadTransformer(
         // invokeStatic(Injections::afterThreadFinish)
 
         visitInsn(Opcodes.RETURN)
-        visitMaxs(maxStack, maxLocals)
+        super.visitMaxs(maxStack, maxLocals)
     }
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
@@ -144,7 +146,7 @@ internal class ThreadTransformer(
             loadLocal(threadContainerLocal)
             // STACK: thread, threadContainer
         }
-        adapter.visitMethodInsn(opcode, owner, name, desc, itf)
+        super.visitMethodInsn(opcode, owner, name, desc, itf)
     }
 
     private fun isThreadStartMethod(methodName: String, desc: String): Boolean =
