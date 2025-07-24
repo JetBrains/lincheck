@@ -146,7 +146,10 @@ internal class LincheckClassVisitor(
         //       otherwise we may incorrectly forget to add some ignored sections
         //       and start tracking events in unexpected places
         if (shouldWrapInIgnoredSection(className, methodName, desc)) {
-            mv = IgnoredSectionWrapperTransformer(fileName, className, methodName, mv.newAdapter())
+            val adapter = mv.newAdapter() // TODO: fixme
+            mv = adapter
+
+            mv = IgnoredSectionWrapperTransformer(fileName, className, methodName, mv, mv)
             return mv
         }
         if (shouldNotInstrument(className, methodName, desc)) {
