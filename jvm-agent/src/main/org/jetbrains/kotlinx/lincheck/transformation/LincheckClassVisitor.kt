@@ -88,14 +88,14 @@ internal class LincheckClassVisitor(
             return mv
         }
 
-        val adapter = GeneratorAdapter(mv, access, methodName, desc)
-
         if (instrumentationMode == STRESS) {
             if (methodName == "<clinit>" || methodName == "<init>") return mv
 
+            val adapter = GeneratorAdapter(mv, access, methodName, desc)
             // in Stress mode we apply only `CoroutineCancellabilitySupportTransformer`
             // to track coroutine suspension points
             mv = CoroutineCancellabilitySupportTransformer(fileName, className, methodName, adapter, mv)
+
             return mv
         }
 
@@ -184,6 +184,8 @@ internal class LincheckClassVisitor(
             mv = applySharedMemoryAccessTransformer(access, methodName, desc, mv)
             return mv
         }
+
+        val adapter = mv.newAdapter()
 
         mv = CoroutineCancellabilitySupportTransformer(fileName, className, methodName, adapter, mv)
         mv = CoroutineDelaySupportTransformer(fileName, className, methodName, adapter, mv)
