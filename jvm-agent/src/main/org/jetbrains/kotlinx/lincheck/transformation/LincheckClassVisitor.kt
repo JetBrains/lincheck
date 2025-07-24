@@ -79,8 +79,6 @@ internal class LincheckClassVisitor(
         val isNative = (access and ACC_NATIVE != 0)
         val locals = methods[methodName + desc] ?: MethodVariables()
 
-        fun MethodVisitor.newAdapter() = GeneratorAdapter(this, access, methodName, desc)
-
         var mv = super.visitMethod(access, methodName, desc, signature, exceptions)
         if (isNative) {
             Logger.debug { "Skipping transformation of the native method $className.$methodName" }
@@ -144,7 +142,7 @@ internal class LincheckClassVisitor(
         mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
 
         val initialVisitor = mv
-        val adapter = mv.newAdapter()
+        val adapter = GeneratorAdapter(mv, access, methodName, desc)
         mv = adapter
 
         // NOTE: `shouldWrapInIgnoredSection` should be before `shouldNotInstrument`,
