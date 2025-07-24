@@ -43,6 +43,7 @@ internal class DeterministicInvokeDynamicTransformer(
     private val classVersion: Int,
     adapter: GeneratorAdapter
 ) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter) {
+
     override fun visitInvokeDynamicInsn(
         name: String,
         descriptor: String,
@@ -50,18 +51,21 @@ internal class DeterministicInvokeDynamicTransformer(
         vararg bootstrapMethodArguments: Any?
     ) = adapter.run {
         invokeIfInAnalyzedCode(
-            original = { visitInvokeDynamicInsn(name, descriptor, bootstrapMethodHandle, *bootstrapMethodArguments) },
-        ) {
-            // Emulating invoke dynamic behaviour deterministically
-            
-            val arguments = storeArguments(descriptor)
+            original = {
+                visitInvokeDynamicInsn(name, descriptor, bootstrapMethodHandle, *bootstrapMethodArguments)
+            },
+            instrumented = {
+                // Emulating INVOKE_DYNAMIC behavior deterministically
 
-            getOrPutCallSiteForInvokeDynamic(name, descriptor, bootstrapMethodHandle, bootstrapMethodArguments)
-            getCallSiteTarget()
-            
-            loadLocals(arguments)
-            invokeMethodHandle(descriptor)
-        }
+                val arguments = storeArguments(descriptor)
+
+                getOrPutCallSiteForInvokeDynamic(name, descriptor, bootstrapMethodHandle, bootstrapMethodArguments)
+                getCallSiteTarget()
+
+                loadLocals(arguments)
+                invokeMethodHandle(descriptor)
+            }
+        )
     }
 
     private fun GeneratorAdapter.invokeMethodHandle(descriptor: String) {
