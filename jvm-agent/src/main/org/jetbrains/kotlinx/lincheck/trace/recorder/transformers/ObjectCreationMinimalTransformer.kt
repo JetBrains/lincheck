@@ -13,6 +13,7 @@ package org.jetbrains.kotlinx.lincheck.trace.recorder.transformers
 import sun.nio.ch.lincheck.*
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.shouldTransform
+import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.commons.GeneratorAdapter
 
@@ -31,8 +32,10 @@ internal class ObjectCreationMinimalTransformer(
     fileName: String,
     className: String,
     methodName: String,
-    adapter: GeneratorAdapter
-) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter) {
+    adapter: GeneratorAdapter,
+    methodVisitor: MethodVisitor,
+) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter, methodVisitor) {
+
     override fun visitTypeInsn(opcode: Int, type: String) = adapter.run {
         if (opcode == NEW && shouldTransform(type.toCanonicalClassName(), InstrumentationMode.TRACE_RECORDING)) {
             invokeIfInAnalyzedCode(
@@ -43,6 +46,7 @@ internal class ObjectCreationMinimalTransformer(
                 }
             )
         }
-        visitTypeInsn(opcode, type)
+        super.visitTypeInsn(opcode, type)
     }
+
 }

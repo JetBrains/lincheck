@@ -117,7 +117,7 @@ internal class LincheckClassVisitor(
                 return mv
             }
 
-            mv = ObjectCreationMinimalTransformer(fileName, className, methodName, mv.newAdapter())
+            mv = ObjectCreationMinimalTransformer(fileName, className, methodName, adapter, mv)
             mv = mv.newAdapter() // TODO: fixme
             mv = MethodCallMinimalTransformer(fileName, className, methodName, mv, mv)
 
