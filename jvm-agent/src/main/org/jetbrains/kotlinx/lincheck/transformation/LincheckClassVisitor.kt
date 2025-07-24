@@ -222,7 +222,7 @@ internal class LincheckClassVisitor(
             // In trace debugger mode we record hash codes of tracked objects and substitute them on re-run,
             // otherwise, we track all hash code calls in the instrumented code
             // and substitute them with constant.
-            mv = ConstantHashCodeTransformer(fileName, className, methodName, mv.newAdapter())
+            mv = ConstantHashCodeTransformer(fileName, className, methodName, adapter, mv)
         }
 
         mv = applySynchronizationTrackingTransformers(access, methodName, desc, mv)
