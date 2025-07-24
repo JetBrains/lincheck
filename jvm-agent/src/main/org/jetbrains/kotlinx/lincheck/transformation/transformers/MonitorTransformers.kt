@@ -27,13 +27,14 @@ internal class MonitorTransformer(
     className: String,
     methodName: String,
     adapter: GeneratorAdapter,
-) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter) {
+    methodVisitor: MethodVisitor,
+) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter, methodVisitor) {
 
     override fun visitInsn(opcode: Int) = adapter.run {
         when (opcode) {
             MONITORENTER -> {
                 invokeIfInAnalyzedCode(
-                    original = { monitorEnter() },
+                    original = { super.visitInsn(opcode) },
                     instrumented = {
                         loadNewCodeLocationId()
                         invokeStatic(Injections::beforeLock)
@@ -45,7 +46,7 @@ internal class MonitorTransformer(
 
             MONITOREXIT -> {
                 invokeIfInAnalyzedCode(
-                    original = { monitorExit() },
+                    original = { super.visitInsn(opcode) },
                     instrumented = {
                         loadNewCodeLocationId()
                         invokeStatic(Injections::unlock)
@@ -54,7 +55,7 @@ internal class MonitorTransformer(
                 )
             }
 
-            else -> visitInsn(opcode)
+            else -> super.visitInsn(opcode)
         }
     }
 
