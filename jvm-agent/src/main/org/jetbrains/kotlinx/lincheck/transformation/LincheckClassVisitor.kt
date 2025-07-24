@@ -122,7 +122,8 @@ internal class LincheckClassVisitor(
             // `SharedMemoryAccessTransformer` goes first because it relies on `AnalyzerAdapter`,
             // which should be put in front of the byte-code transformer chain,
             // so that it can correctly analyze the byte-code and compute required type-information
-            mv = applySharedMemoryAccessTransformer(access, methodName, desc, adapter, mv)
+            val sharedMemoryAccessTransformer = applySharedMemoryAccessTransformer(methodName, adapter, mv)
+            mv = sharedMemoryAccessTransformer
 
             mv = LocalVariablesAccessTransformer(fileName, className, methodName, desc, isStatic, locals, adapter, mv)
 
@@ -130,6 +131,8 @@ internal class LincheckClassVisitor(
             // so it should go before (in FIFO order) all transformers which can create local variables.
             // All visitors created AFTER InlineMethodCallTransformer must use a non-remapping Generator adapter.
             // mv = InlineMethodCallTransformer(fileName, className, methodName, desc, mv.newNonRemappingAdapter(), locals, mv)
+
+            mv = applyAnalyzerAdapter(access, methodName, desc, sharedMemoryAccessTransformer, mv)
 
             // This tacker must be before all transformers that use MethodVariables to track variable regions
             mv = LocalVariablesTracker(mv, locals)
@@ -181,7 +184,9 @@ internal class LincheckClassVisitor(
                 // so there is no need for the `DeterministicInvokeDynamicTransformer` there.
                 mv = DeterministicInvokeDynamicTransformer(fileName, className, methodName, classVersion, adapter, mv)
             }
-            mv = applySharedMemoryAccessTransformer(access, methodName, desc, adapter, mv)
+            val sharedMemoryAccessTransformer = applySharedMemoryAccessTransformer(methodName, adapter, mv)
+            mv = sharedMemoryAccessTransformer
+            mv = applyAnalyzerAdapter(access, methodName, desc, sharedMemoryAccessTransformer, mv)
             return mv
         }
 
@@ -219,7 +224,8 @@ internal class LincheckClassVisitor(
         // `SharedMemoryAccessTransformer` goes first because it relies on `AnalyzerAdapter`,
         // which should be put in front of the byte-code transformer chain,
         // so that it can correctly analyze the byte-code and compute required type-information
-        mv = applySharedMemoryAccessTransformer(access, methodName, desc, adapter, mv)
+        val sharedMemoryAccessTransformer = applySharedMemoryAccessTransformer(methodName, adapter, mv)
+        mv = sharedMemoryAccessTransformer
 
         mv = mv.newAdapter() // TODO: fixme
         mv = LocalVariablesAccessTransformer(fileName, className, methodName, desc, isStatic, locals, mv, mv)
@@ -228,6 +234,8 @@ internal class LincheckClassVisitor(
         // so it should go before (in FIFO order) all transformers which can create local variables.
         // All visitors created AFTER InlineMethodCallTransformer must use a non-remapping Generator adapter too.
         // mv = InlineMethodCallTransformer(fileName, className, methodName, desc, mv.newNonRemappingAdapter(), locals, mv)
+
+        mv = applyAnalyzerAdapter(access, methodName, desc, sharedMemoryAccessTransformer, mv)
 
         // This tacker must be before all transformers that use MethodVariables to track variable regions
         mv = LocalVariablesTracker(mv, locals)
@@ -312,21 +320,29 @@ internal class LincheckClassVisitor(
     }
 
     private fun applySharedMemoryAccessTransformer(
-        access: Int,
         methodName: String,
-        descriptor: String,
         adapter: GeneratorAdapter,
         methodVisitor: MethodVisitor,
-    ): MethodVisitor {
+    ): SharedMemoryAccessTransformer {
         var mv = methodVisitor
         // this transformer is required because currently the snapshot tracker
         // does not trace memory accesses inside constructors
         mv = ConstructorArgumentsSnapshotTrackerTransformer(fileName, className, methodName, adapter, mv,
             classVisitor::isInstanceOf
         )
-        val sv = SharedMemoryAccessTransformer(fileName, className, methodName, adapter, mv)
-        val aa = AnalyzerAdapter(className, access, methodName, descriptor, sv)
-        sv.analyzer = aa
-        return aa
+        mv = SharedMemoryAccessTransformer(fileName, className, methodName, adapter, mv)
+        return mv
+    }
+
+    private fun applyAnalyzerAdapter(
+        access: Int,
+        methodName: String,
+        descriptor: String,
+        sharedMemoryAccessTransformer: SharedMemoryAccessTransformer,
+        methodVisitor: MethodVisitor,
+    ): AnalyzerAdapter {
+        val analyzerAdapter = AnalyzerAdapter(className, access, methodName, descriptor, methodVisitor)
+        sharedMemoryAccessTransformer.analyzer = analyzerAdapter
+        return analyzerAdapter
     }
 }
