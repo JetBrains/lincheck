@@ -12,10 +12,17 @@ package org.jetbrains.lincheck.trace
 
 import org.jetbrains.lincheck.util.isJavaLambdaClass
 
+fun String.adornedClassNameRepresentation(): String = this
+    .removeRefWrapperClassName()
+    .getSimpleClassName()
+    .removeJavaLambdaRuntimeAddress()
+    .replaceNestedClassDollar()
+
 /**
  * Replaces nested class dollars (if present) from string with dots.
  */
-fun replaceNestedClassDollar(nestedClassRepresentation: String): String {
+fun String.replaceNestedClassDollar(): String {
+    val nestedClassRepresentation: String = this
     // If there's no dollar sign, return the original string
     if (!nestedClassRepresentation.contains('$')) return nestedClassRepresentation
 
@@ -51,11 +58,24 @@ fun replaceNestedClassDollar(nestedClassRepresentation: String): String {
 /**
  * Removes java lambdas runtime address from classname.
  */
-fun removeJavaLambdaRuntimeAddress(classNameRepresentation: String): String {
-    if (!isJavaLambdaClass(classNameRepresentation)) return classNameRepresentation
-    return classNameRepresentation.substringBeforeLast('/')
+fun String.removeJavaLambdaRuntimeAddress(): String {
+    if (isJavaLambdaClass(this)) return substringBeforeLast('/')
+    return this
 }
 
+/**
+ * Removes outer class name for primitive types when they are wrapped with `Ref` class.
+ * E.g. `kotlin.jvm.internal.Ref$IntRef@xxxxx` -> `IntRef@xxxxx`.
+ *
+ * *Note*: should be called on fully qualified class name.
+ */
+fun String.removeRefWrapperClassName(): String = removePrefix("kotlin.jvm.internal.Ref$")
+
+/**
+ * Returns simple class name - the last part of the fully qualified class name
+ * (e.g. `java.lang.String` -> `String`).
+ */
+fun String.getSimpleClassName(): String = substringAfterLast(".")
 
 // Trace polishing functions
 fun String.hasCoroutinesCoreSuffix(): Boolean = endsWith("\$kotlinx_coroutines_core")

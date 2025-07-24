@@ -42,11 +42,11 @@ ImmutableListTest.empty() at :0
           CollectionBehaviorsKt.equalityBehavior$default(CompareContext@1, null, false, 3, null) at CollectionBehaviors.kt:9
             CollectionBehaviorsKt.equalityBehavior(CompareContext@1, "", true) at CollectionBehaviors.kt:95
               objectName ➜ "" at CollectionBehaviors.kt:96
-              String@0.append(""): "" at CollectionBehaviors.kt:96
+              "".append(""): "" at CollectionBehaviors.kt:96
               objectName ➜ "" at CollectionBehaviors.kt:96
-              String@0.length(): 0 at CollectionBehaviors.kt:96
-              String@0.append(""): "" at CollectionBehaviors.kt:96
-              String@0.toString(): "" at CollectionBehaviors.kt:96
+              "".length(): 0 at CollectionBehaviors.kt:96
+              "".append(""): "" at CollectionBehaviors.kt:96
+              "".toString(): "" at CollectionBehaviors.kt:96
               equalityBehavior ➜ CompareContext@1 at CollectionBehaviors.kt:97
               objectName ➜ "" at CollectionBehaviors.kt:97
               CompareContext@1.equals("") at CollectionBehaviors.kt:97
@@ -56,9 +56,9 @@ ImmutableListTest.empty() at :0
                 AssertionsKt.assertEquals(EmptyList@1, SmallPersistentVector@1, "") at ComparisonDSL.kt:18
               equalityBehavior ➜ CompareContext@1 at CollectionBehaviors.kt:98
               prefix ➜ "" at CollectionBehaviors.kt:98
-              String@0.append(""): "" at CollectionBehaviors.kt:98
-              String@0.append("hashCode"): "hashCode" at CollectionBehaviors.kt:98
-              String@0.toString(): "hashCode" at CollectionBehaviors.kt:98
+              "".append(""): "" at CollectionBehaviors.kt:98
+              "".append("hashCode"): "hashCode" at CollectionBehaviors.kt:98
+              "hashCode".toString(): "hashCode" at CollectionBehaviors.kt:98
               CompareContext@1.propertyEquals("hashCode", CollectionBehaviorsKt$$Lambda$101@1) at CollectionBehaviors.kt:98
                 getter ➜ CollectionBehaviorsKt$$Lambda$101@1 at ComparisonDSL.kt:21
                 CompareContext@1.expected ➜ EmptyList@1 at ComparisonDSL.kt:21
@@ -75,9 +75,9 @@ ImmutableListTest.empty() at :0
               ordered ➜ 1 at CollectionBehaviors.kt:99
               equalityBehavior ➜ CompareContext@1 at CollectionBehaviors.kt:100
               prefix ➜ "" at CollectionBehaviors.kt:100
-              String@0.append(""): "" at CollectionBehaviors.kt:100
-              String@0.append("toString"): "toString" at CollectionBehaviors.kt:100
-              String@0.toString(): "toString" at CollectionBehaviors.kt:100
+              "".append(""): "" at CollectionBehaviors.kt:100
+              "".append("toString"): "toString" at CollectionBehaviors.kt:100
+              "toString".toString(): "toString" at CollectionBehaviors.kt:100
               CompareContext@1.propertyEquals("toString", CollectionBehaviorsKt$$Lambda$102@1) at CollectionBehaviors.kt:100
                 getter ➜ CollectionBehaviorsKt$$Lambda$102@1 at ComparisonDSL.kt:21
                 CompareContext@1.expected ➜ EmptyList@1 at ComparisonDSL.kt:21
@@ -93,16 +93,16 @@ ImmutableListTest.empty() at :0
           CollectionBehaviorsKt.collectionBehavior$default(CompareContext@1, null, false, 3, null) at CollectionBehaviors.kt:10
             CollectionBehaviorsKt.collectionBehavior(CompareContext@1, "", true) at CollectionBehaviors.kt:104
               objectName ➜ "" at CollectionBehaviors.kt:105
-              String@0.append(""): "" at CollectionBehaviors.kt:105
+              "".append(""): "" at CollectionBehaviors.kt:105
               objectName ➜ "" at CollectionBehaviors.kt:105
-              String@0.length(): 0 at CollectionBehaviors.kt:105
-              String@0.append(""): "" at CollectionBehaviors.kt:105
-              String@0.toString(): "" at CollectionBehaviors.kt:105
+              "".length(): 0 at CollectionBehaviors.kt:105
+              "".append(""): "" at CollectionBehaviors.kt:105
+              "".toString(): "" at CollectionBehaviors.kt:105
               collectionBehavior ➜ CompareContext@1 at CollectionBehaviors.kt:106
               prefix ➜ "" at CollectionBehaviors.kt:106
-              String@0.append(""): "" at CollectionBehaviors.kt:106
-              String@0.append("size"): "size" at CollectionBehaviors.kt:106
-              String@0.toString(): "size" at CollectionBehaviors.kt:106
+              "".append(""): "" at CollectionBehaviors.kt:106
+              "".append("size"): "size" at CollectionBehaviors.kt:106
+              "size".toString(): "size" at CollectionBehaviors.kt:106
               CompareContext@1.propertyEquals("size", CollectionBehaviorsKt$$Lambda$103@1) at CollectionBehaviors.kt:106
                 getter ➜ CollectionBehaviorsKt$$Lambda$103@1 at ComparisonDSL.kt:21
                 CompareContext@1.expected ➜ EmptyList@1 at ComparisonDSL.kt:21
@@ -118,9 +118,9 @@ ImmutableListTest.empty() at :0
                 AssertionsKt.assertEquals(0, 0, "size") at ComparisonDSL.kt:21
               collectionBehavior ➜ CompareContext@1 at CollectionBehaviors.kt:107
               prefix ➜ "" at CollectionBehaviors.kt:107
-              String@0.append(""): "" at CollectionBehaviors.kt:107
-              String@0.append("isEmpty"): "isEmpty" at CollectionBehaviors.kt:107
-              String@0.toString(): "isEmpty" at CollectionBehaviors.kt:107
+              "".append(""): "" at CollectionBehaviors.kt:107
+              "".append("isEmpty"): "isEmpty" at CollectionBehaviors.kt:107
+              "isEmpty".toString(): "isEmpty" at CollectionBehaviors.kt:107
               CompareContext@1.propertyEquals("isEmpty", CollectionBehaviorsKt$$Lambda$104@1) at CollectionBehaviors.kt:107
                 getter ➜ CollectionBehaviorsKt$$Lambda$104@1 at ComparisonDSL.kt:21
                 CompareContext@1.expected ➜ EmptyList@1 at ComparisonDSL.kt:21
