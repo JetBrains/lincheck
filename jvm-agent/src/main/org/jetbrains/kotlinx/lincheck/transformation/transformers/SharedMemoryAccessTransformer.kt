@@ -18,6 +18,7 @@ import org.objectweb.asm.commons.AnalyzerAdapter
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.objectweb.asm.MethodVisitor
 import sun.nio.ch.lincheck.*
 
 /**
@@ -29,7 +30,8 @@ internal class SharedMemoryAccessTransformer(
     className: String,
     methodName: String,
     adapter: GeneratorAdapter,
-) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter) {
+    methodVisitor: MethodVisitor,
+) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter, methodVisitor) {
 
     lateinit var analyzer: AnalyzerAdapter
 
@@ -41,14 +43,14 @@ internal class SharedMemoryAccessTransformer(
             // otherwise `VerifyError` will be thrown, see https://github.com/JetBrains/lincheck/issues/424
             (methodName == "<init>" && className == owner)
         ) {
-            visitFieldInsn(opcode, owner, fieldName, desc)
+            super.visitFieldInsn(opcode, owner, fieldName, desc)
             return
         }
         when (opcode) {
             GETSTATIC -> {
                 invokeIfInAnalyzedCode(
                     original = {
-                        visitFieldInsn(opcode, owner, fieldName, desc)
+                        super.visitFieldInsn(opcode, owner, fieldName, desc)
                     },
                     instrumented = {
                         processStaticFieldGet(owner, fieldName, opcode, desc)
@@ -59,7 +61,7 @@ internal class SharedMemoryAccessTransformer(
             GETFIELD -> {
                 invokeIfInAnalyzedCode(
                     original = {
-                        visitFieldInsn(opcode, owner, fieldName, desc)
+                        super.visitFieldInsn(opcode, owner, fieldName, desc)
                     },
                     instrumented = {
                         processInstanceFieldGet(owner, fieldName, opcode, desc)
@@ -70,7 +72,7 @@ internal class SharedMemoryAccessTransformer(
             PUTSTATIC -> {
                 invokeIfInAnalyzedCode(
                     original = {
-                        visitFieldInsn(opcode, owner, fieldName, desc)
+                        super.visitFieldInsn(opcode, owner, fieldName, desc)
                     },
                     instrumented = {
                         processStaticFieldPut(desc, owner, fieldName, opcode)
@@ -81,7 +83,7 @@ internal class SharedMemoryAccessTransformer(
             PUTFIELD -> {
                 invokeIfInAnalyzedCode(
                     original = {
-                        visitFieldInsn(opcode, owner, fieldName, desc)
+                        super.visitFieldInsn(opcode, owner, fieldName, desc)
                     },
                     instrumented = {
                         processInstanceFieldPut(desc, owner, fieldName, opcode)
@@ -91,7 +93,7 @@ internal class SharedMemoryAccessTransformer(
 
             else -> {
                 // All opcodes are covered above. However, in case a new one is added, Lincheck should not fail.
-                visitFieldInsn(opcode, owner, fieldName, desc)
+                super.visitFieldInsn(opcode, owner, fieldName, desc)
             }
         }
     }
@@ -110,7 +112,7 @@ internal class SharedMemoryAccessTransformer(
         // STACK: null, codeLocation, fieldId
         invokeStatic(Injections::beforeReadField)
         // STACK: <empty>
-        visitFieldInsn(opcode, owner, fieldName, desc)
+        super.visitFieldInsn(opcode, owner, fieldName, desc)
         // STACK: value
         invokeAfterReadField(null, fieldId, getType(desc))
         // STACK: value
@@ -134,7 +136,7 @@ internal class SharedMemoryAccessTransformer(
         // STACK: obj, obj, codeLocation, fieldId
         invokeStatic(Injections::beforeReadField)
         // STACK: obj
-        visitFieldInsn(opcode, owner, fieldName, desc)
+        super.visitFieldInsn(opcode, owner, fieldName, desc)
         // STACK: obj
         invokeAfterReadField(ownerLocal, fieldId, getType(desc))
         // STACK: value
@@ -163,7 +165,7 @@ internal class SharedMemoryAccessTransformer(
         // STACK: value
         invokeBeforeEventIfPluginEnabled("write static field")
         // STACK: value
-        visitFieldInsn(opcode, owner, fieldName, desc)
+        super.visitFieldInsn(opcode, owner, fieldName, desc)
         // STACK: <empty>
         invokeStatic(Injections::afterWrite)
     }
@@ -192,7 +194,7 @@ internal class SharedMemoryAccessTransformer(
         // STACK: obj
         loadLocal(valueLocal)
         // STACK: obj, value
-        visitFieldInsn(opcode, owner, fieldName, desc)
+        super.visitFieldInsn(opcode, owner, fieldName, desc)
         // STACK: <empty>
         invokeStatic(Injections::afterWrite)
     }
@@ -202,7 +204,7 @@ internal class SharedMemoryAccessTransformer(
             AALOAD, LALOAD, FALOAD, DALOAD, IALOAD, BALOAD, CALOAD, SALOAD -> {
                 invokeIfInAnalyzedCode(
                     original = {
-                        visitInsn(opcode)
+                        super.visitInsn(opcode)
                     },
                     instrumented = {
                         processArrayLoad(opcode)
@@ -213,7 +215,7 @@ internal class SharedMemoryAccessTransformer(
             AASTORE, IASTORE, FASTORE, BASTORE, CASTORE, SASTORE, LASTORE, DASTORE -> {
                 invokeIfInAnalyzedCode(
                     original = {
-                        visitInsn(opcode)
+                        super.visitInsn(opcode)
                     },
                     instrumented = {
                         processArrayStore(opcode)
@@ -222,7 +224,7 @@ internal class SharedMemoryAccessTransformer(
             }
 
             else -> {
-                visitInsn(opcode)
+                super.visitInsn(opcode)
             }
         }
     }
@@ -242,7 +244,7 @@ internal class SharedMemoryAccessTransformer(
         loadLocal(arrayLocal)
         loadLocal(indexLocal)
         // STACK: array, index
-        visitInsn(opcode)
+        super.visitInsn(opcode)
         // STACK: value
         invokeAfterReadArray(arrayLocal, indexLocal, arrayElementType)
         // STACK: value
@@ -267,7 +269,7 @@ internal class SharedMemoryAccessTransformer(
         // STACK: array, index
         loadLocal(valueLocal)
         // STACK: array, index, value
-        visitInsn(opcode)
+        super.visitInsn(opcode)
         // STACK: <empty>
         invokeStatic(Injections::afterWrite)
     }

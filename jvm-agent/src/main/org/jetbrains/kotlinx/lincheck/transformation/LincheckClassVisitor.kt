@@ -333,7 +333,7 @@ internal class LincheckClassVisitor(
 
         // this transformer is required because currently the snapshot tracker
         // does not trace memory accesses inside constructors
-        val st = ConstructorArgumentsSnapshotTrackerTransformer(
+        mv = ConstructorArgumentsSnapshotTrackerTransformer(
             fileName,
             className,
             methodName,
@@ -341,7 +341,7 @@ internal class LincheckClassVisitor(
             mv,
             classVisitor::isInstanceOf
         )
-        val sv = SharedMemoryAccessTransformer(fileName, className, methodName, st.newAdapter())
+        val sv = SharedMemoryAccessTransformer(fileName, className, methodName, adapter, mv)
         val aa = AnalyzerAdapter(className, access, methodName, descriptor, sv)
         sv.analyzer = aa
         return aa
