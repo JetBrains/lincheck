@@ -323,7 +323,7 @@ private fun SingleThreadedTable<TraceNode>.compressDollarThis() = compressNodes 
  */
 private fun SingleThreadedTable<TraceNode>.replaceNestedClassDollar() = compressNodes { node ->
     if (node is CallNode && node.tracePoint.ownerName != null) {
-        val newOwner = replaceNestedClassDollar(node.tracePoint.ownerName!!)
+        val newOwner = node.tracePoint.ownerName!!.replaceNestedClassDollar()
         node.tracePoint.updateOwnerName(newOwner)
     }
     node
@@ -421,7 +421,7 @@ private fun String.removeStackTraceNestedClassDollarSigns(): String {
     val after = this.substringAfter('.', "")
     if (after.isEmpty()) return before
 
-    return "${replaceNestedClassDollar(before)}.$after"
+    return "${before.replaceNestedClassDollar()}.$after"
 }
 
 internal fun SingleThreadedTable<TraceNode>.collapseLibraries(analysisProfile: AnalysisProfile) = compressNodes { node ->

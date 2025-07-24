@@ -488,10 +488,10 @@ data class TRObject internal constructor (
 
     private fun adornedClassNameRepresentation(className: String): String =
         className
-            .let(::removeRefWrapperClassName)
-            .let(::getSimpleClassName)
-            .let(::removeJavaLambdaRuntimeAddress)
-            .let(::replaceNestedClassDollar)
+            .removeRefWrapperClassName()
+            .getSimpleClassName()
+            .removeJavaLambdaRuntimeAddress()
+            .replaceNestedClassDollar()
 }
 
 private const val TR_OBJECT_NULL_CLASSNAME = -1
