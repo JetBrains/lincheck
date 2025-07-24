@@ -17,7 +17,7 @@ import org.jetbrains.lincheck.descriptors.VariableDescriptor
 
 
 interface TRAppendable {
-    fun appendClassName(prettyClassName: String): TRAppendable = append(prettyClassName)
+    fun appendOwnerName(prettyOwnerName: String): TRAppendable = append(prettyOwnerName)
     fun appendMethodName(prettyMethodName: String, md: MethodDescriptor): TRAppendable = append(prettyMethodName)
     fun appendFieldName(prettyFieldName: String, fd: FieldDescriptor): TRAppendable = append(prettyFieldName)
     fun appendVariableName(prettyVariableName: String, vd: VariableDescriptor): TRAppendable = append(prettyVariableName)
@@ -79,7 +79,7 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
             appendObject(tracePoint.obj)
         }
         else {
-            appendClassName(methodDescriptor.className.substringAfterLast("."))
+            appendOwnerName(methodDescriptor.className.adornedClassNameRepresentation())
         }
         return this
     }
@@ -153,7 +153,7 @@ abstract class AbstractTRFieldTracePointPrinter {
             appendObject(tracePoint.obj)
         }
         else {
-            appendClassName(tracePoint.fieldDescriptor.className.substringAfterLast("."))
+            appendOwnerName(tracePoint.fieldDescriptor.className.adornedClassNameRepresentation())
         }
         return this
     }

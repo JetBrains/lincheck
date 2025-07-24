@@ -12,6 +12,12 @@ package org.jetbrains.lincheck.trace
 
 import org.jetbrains.lincheck.util.isJavaLambdaClass
 
+fun String.adornedClassNameRepresentation(): String = this
+    .removeRefWrapperClassName()
+    .getSimpleClassName()
+    .removeJavaLambdaRuntimeAddress()
+    .replaceNestedClassDollar()
+
 /**
  * Replaces nested class dollars (if present) from string with dots.
  */

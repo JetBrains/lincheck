@@ -484,14 +484,7 @@ data class TRObject internal constructor (
     }
 
     fun adornedRepresentation(): String =
-        adornedClassNameRepresentation(className) + "@" + identityHashCode
-
-    private fun adornedClassNameRepresentation(className: String): String =
-        className
-            .removeRefWrapperClassName()
-            .getSimpleClassName()
-            .removeJavaLambdaRuntimeAddress()
-            .replaceNestedClassDollar()
+        className.adornedClassNameRepresentation() + "@" + identityHashCode
 }
 
 private const val TR_OBJECT_NULL_CLASSNAME = -1
