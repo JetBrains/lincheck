@@ -118,7 +118,7 @@ internal class LincheckClassVisitor(
             }
 
             mv = ObjectCreationMinimalTransformer(fileName, className, methodName, mv.newAdapter())
-            mv = MethodCallMinimalTransformer(fileName, className, methodName, mv.newAdapter())
+            mv = MethodCallMinimalTransformer(fileName, className, methodName, mv.newAdapter(), mv) // TODO: fixme
 
             // `SharedMemoryAccessTransformer` goes first because it relies on `AnalyzerAdapter`,
             // which should be put in front of the byte-code transformer chain,
@@ -207,7 +207,7 @@ internal class LincheckClassVisitor(
             return mv
         }
 
-        mv = MethodCallTransformer(fileName, className, methodName, mv.newAdapter())
+        mv = MethodCallTransformer(fileName, className, methodName, adapter, mv)
         mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
 
         // TODO: replace with proper instrumentation mode for debugger, don't use globals

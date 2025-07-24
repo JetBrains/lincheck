@@ -13,6 +13,7 @@ package org.jetbrains.kotlinx.lincheck.transformation.transformers
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import org.jetbrains.lincheck.trace.TRACE_CONTEXT
+import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
 import org.objectweb.asm.Type.*
@@ -30,7 +31,9 @@ internal class MethodCallTransformer(
     className: String,
     methodName: String,
     adapter: GeneratorAdapter,
-) : MethodCallTransformerBase(fileName, className, methodName, adapter) {
+    methodVisitor: MethodVisitor,
+) : MethodCallTransformerBase(fileName, className, methodName, adapter, methodVisitor) {
+
     override fun processMethodCall(desc: String, opcode: Int, owner: String, name: String, itf: Boolean) = adapter.run {
         val receiverType = getType("L$owner;")
         val returnType = getReturnType(desc)
@@ -68,7 +71,7 @@ internal class MethodCallTransformer(
                     receiverLocal?.let { loadLocal(it) }
                     loadLocals(argumentLocals)
                     // STACK: receiver?, arguments
-                    visitMethodInsn(opcode, owner, name, desc, itf)
+                    super.visitMethodInsn(opcode, owner, name, desc, itf)
                     // STACK: result?
                 }
                 // STACK: result?
