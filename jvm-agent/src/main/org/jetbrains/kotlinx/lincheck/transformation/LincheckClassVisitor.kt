@@ -118,8 +118,7 @@ internal class LincheckClassVisitor(
             }
 
             mv = ObjectCreationMinimalTransformer(fileName, className, methodName, adapter, mv)
-            mv = mv.newAdapter() // TODO: fixme
-            mv = MethodCallMinimalTransformer(fileName, className, methodName, mv, mv)
+            mv = MethodCallMinimalTransformer(fileName, className, methodName, adapter, mv)
 
             // `SharedMemoryAccessTransformer` goes first because it relies on `AnalyzerAdapter`,
             // which should be put in front of the byte-code transformer chain,
