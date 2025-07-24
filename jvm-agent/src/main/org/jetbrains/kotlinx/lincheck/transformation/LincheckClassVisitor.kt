@@ -142,13 +142,13 @@ internal class LincheckClassVisitor(
         mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
         mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
 
+        val adapter = mv.newAdapter()
+        mv = adapter
+
         // NOTE: `shouldWrapInIgnoredSection` should be before `shouldNotInstrument`,
         //       otherwise we may incorrectly forget to add some ignored sections
         //       and start tracking events in unexpected places
         if (shouldWrapInIgnoredSection(className, methodName, desc)) {
-            val adapter = mv.newAdapter() // TODO: fixme
-            mv = adapter
-
             mv = IgnoredSectionWrapperTransformer(fileName, className, methodName, mv, mv)
             return mv
         }
@@ -162,9 +162,6 @@ internal class LincheckClassVisitor(
         // We need to ensure there are no `beforeEvents` calls inside `toString()`
         // to ensure the event numeration will remain the same.
         if (ideaPluginEnabled && isToStringMethod(methodName, desc)) {
-            val adapter = mv.newAdapter()
-            mv = adapter // TODO: fixme
-
             mv = ObjectCreationTransformer(fileName, className, methodName, adapter, mv)
             // TODO: replace with proper instrumentation mode for debugger, don't use globals
             if (isInTraceDebuggerMode) {
@@ -178,9 +175,6 @@ internal class LincheckClassVisitor(
         // with `VerificationError` due to leaking this problem,
         // see: https://github.com/JetBrains/lincheck/issues/424
         if ((methodName == "<init>" && !isInTraceDebuggerMode)) {
-            val adapter = mv.newAdapter()
-            mv = adapter // TODO: fixme
-
             mv = ObjectCreationTransformer(fileName, className, methodName, adapter, mv)
             // TODO: replace with proper instrumentation mode for debugger, don't use globals
             if (isInTraceDebuggerMode) {
@@ -191,9 +185,6 @@ internal class LincheckClassVisitor(
             mv = applySharedMemoryAccessTransformer(access, methodName, desc, adapter, mv)
             return mv
         }
-
-        val adapter = mv.newAdapter()
-        mv = adapter
 
         mv = CoroutineCancellabilitySupportTransformer(fileName, className, methodName, adapter, mv)
         mv = CoroutineDelaySupportTransformer(fileName, className, methodName, adapter, mv)
