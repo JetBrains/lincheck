@@ -11,6 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.GeneratorAdapter
 import sun.nio.ch.lincheck.Injections
@@ -20,9 +21,10 @@ internal class ConstructorArgumentsSnapshotTrackerTransformer(
     className: String,
     methodName: String,
     adapter: GeneratorAdapter,
+    methodVisitor: MethodVisitor,
     // `SafeClassWriter::isInstanceOf` method which checks the subclassing without loading the classes to VM
     private val isInstanceOf: (actualType: String, expectedSuperType: String) -> Boolean
-) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter) {
+) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter, methodVisitor) {
 
     /**
      * Searches for invocations of constructors `className::<init>(args)` and inserts bytecode
@@ -55,12 +57,14 @@ internal class ConstructorArgumentsSnapshotTrackerTransformer(
                 }
 
             if (matchedArguments.isEmpty()) {
-                visitMethodInsn(opcode, owner, name, desc, itf)
+                super.visitMethodInsn(opcode, owner, name, desc, itf)
                 return
             }
 
             invokeIfInAnalyzedCode(
-                original = { visitMethodInsn(opcode, owner, name, desc, itf) },
+                original = {
+                    super.visitMethodInsn(opcode, owner, name, desc, itf)
+                },
                 instrumented = {
                     // STACK: args
                     val arguments = storeArguments(desc)
@@ -75,7 +79,9 @@ internal class ConstructorArgumentsSnapshotTrackerTransformer(
                     visitMethodInsn(opcode, owner, name, desc, itf)
                 }
             )
+            return
         }
-        else visitMethodInsn(opcode, owner, name, desc, itf)
+
+        super.visitMethodInsn(opcode, owner, name, desc, itf)
     }
 }

@@ -325,14 +325,20 @@ internal class LincheckClassVisitor(
         descriptor: String,
         methodVisitor: MethodVisitor,
     ): MethodVisitor {
+        var mv = methodVisitor
         fun MethodVisitor.newAdapter() = GeneratorAdapter(this, access, methodName, descriptor)
-        // this transformer is required because snapshot tracker currently
+
+        val adapter = mv.newAdapter() // TODO: fixme
+        mv = adapter
+
+        // this transformer is required because currently the snapshot tracker
         // does not trace memory accesses inside constructors
         val st = ConstructorArgumentsSnapshotTrackerTransformer(
             fileName,
             className,
             methodName,
-            methodVisitor.newAdapter(),
+            mv,
+            mv,
             classVisitor::isInstanceOf
         )
         val sv = SharedMemoryAccessTransformer(fileName, className, methodName, st.newAdapter())
