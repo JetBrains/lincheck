@@ -13,6 +13,7 @@ package org.jetbrains.kotlinx.lincheck.transformation.transformers
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.lincheck.trace.TRACE_CONTEXT
 import org.objectweb.asm.Label
+import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
 import sun.nio.ch.lincheck.*
@@ -27,9 +28,10 @@ internal class InlineMethodCallTransformer(
     methodName: String,
     desc: String,
     adapter: GeneratorAdapter,
+    methodVisitor: MethodVisitor,
     val locals: MethodVariables,
     val localsTracker: LocalVariablesAccessTransformer?
-) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter) {
+) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter, methodVisitor) {
     private companion object {
         val objectType = getObjectType("java/lang/Object").className
         val contType = getObjectType("kotlin/coroutines/Continuation").className
@@ -87,7 +89,7 @@ internal class InlineMethodCallTransformer(
                     processInlineMethodCall(className, inlineName, clazz, thisLocal, label)
                 }
             )
-            visitLabel(label)
+            super.visitLabel(label)
             return
         }
         // TODO Find a way to sort multiple marker variables with same start by end label
@@ -101,7 +103,7 @@ internal class InlineMethodCallTransformer(
                     processInlineMethodCallReturn(lvar.inlineMethodName!!, lvar.labelIndexRange.second)
                 }
             )
-            visitLabel(label)
+            super.visitLabel(label)
             return
         }
 
@@ -109,13 +111,13 @@ internal class InlineMethodCallTransformer(
     }
 
     override fun visitMaxs(maxStack: Int, maxLocals: Int) {
-        super.visitMaxs(maxStack, maxLocals)
         if (inlineStack.isNotEmpty()) {
             System.err.println("Inline methods calls are not balanced at $className.$methodName:")
             inlineStack.reversed().forEach {
                 System.err.println("  ${it.name} (slot ${it.index}) called at label ${it.labelIndexRange.first}")
             }
         }
+        super.visitMaxs(maxStack, maxLocals)
     }
 
     @Suppress("UNUSED_PARAMETER")
