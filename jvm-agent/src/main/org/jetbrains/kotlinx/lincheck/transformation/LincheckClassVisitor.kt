@@ -163,7 +163,8 @@ internal class LincheckClassVisitor(
         // We need to ensure there are no `beforeEvents` calls inside `toString()`
         // to ensure the event numeration will remain the same.
         if (ideaPluginEnabled && isToStringMethod(methodName, desc)) {
-            mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
+            mv = mv.newAdapter() // TODO: fixme
+            mv = ObjectCreationTransformer(fileName, className, methodName, mv, mv)
             // TODO: replace with proper instrumentation mode for debugger, don't use globals
             if (isInTraceDebuggerMode) {
                 // Lincheck does not support true identity hash codes (it always uses zeroes),
@@ -178,7 +179,8 @@ internal class LincheckClassVisitor(
         // with `VerificationError` due to leaking this problem,
         // see: https://github.com/JetBrains/lincheck/issues/424
         if ((methodName == "<init>" && !isInTraceDebuggerMode)) {
-            mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
+            mv = mv.newAdapter() // TODO: fixme
+            mv = ObjectCreationTransformer(fileName, className, methodName, mv, mv)
             // TODO: replace with proper instrumentation mode for debugger, don't use globals
             if (isInTraceDebuggerMode) {
                 // Lincheck does not support true identity hash codes (it always uses zeroes),
@@ -209,7 +211,7 @@ internal class LincheckClassVisitor(
         }
 
         mv = MethodCallTransformer(fileName, className, methodName, adapter, mv)
-        mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
+        mv = ObjectCreationTransformer(fileName, className, methodName, adapter, mv)
 
         // TODO: replace with proper instrumentation mode for debugger, don't use globals
         if (isInTraceDebuggerMode) {

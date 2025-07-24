@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import sun.nio.ch.lincheck.*
 import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
 import org.objectweb.asm.commons.GeneratorAdapter
@@ -25,8 +26,9 @@ internal class ObjectCreationTransformer(
     fileName: String,
     className: String,
     methodName: String,
-    adapter: GeneratorAdapter
-) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter) {
+    adapter: GeneratorAdapter,
+    methodVisitor: MethodVisitor,
+) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter, methodVisitor) {
 
     /* To track object creation, this transformer inserts `Injections::afterNewObjectCreation` calls
      * after an object is allocated and initialized.
@@ -67,12 +69,12 @@ internal class ObjectCreationTransformer(
         if (name == "<init>" && owner == "java/lang/Object" && uninitializedObjects > 0) {
             invokeIfInAnalyzedCode(
                 original = {
-                    visitMethodInsn(opcode, owner, name, desc, itf)
+                    super.visitMethodInsn(opcode, owner, name, desc, itf)
                 },
                 instrumented = {
                     val objectLocal = newLocal(OBJECT_TYPE)
                     copyLocal(objectLocal)
-                    visitMethodInsn(opcode, owner, name, desc, itf)
+                    super.visitMethodInsn(opcode, owner, name, desc, itf)
                     loadLocal(objectLocal)
                     invokeStatic(Injections::afterNewObjectCreation)
                 }
@@ -83,7 +85,7 @@ internal class ObjectCreationTransformer(
         if (name == "<init>" && uninitializedObjects > 0) {
             invokeIfInAnalyzedCode(
                 original = {
-                    visitMethodInsn(opcode, owner, name, desc, itf)
+                    super.visitMethodInsn(opcode, owner, name, desc, itf)
                 },
                 instrumented = {
                     val objectLocal = newLocal(OBJECT_TYPE)
@@ -95,7 +97,7 @@ internal class ObjectCreationTransformer(
                     // push constructor parameters back on the stack
                     params.forEach { loadLocal(it) }
                     // call the constructor
-                    visitMethodInsn(opcode, owner, name, desc, itf)
+                    super.visitMethodInsn(opcode, owner, name, desc, itf)
                     // call the injected method
                     loadLocal(objectLocal)
                     invokeStatic(Injections::afterNewObjectCreation)
@@ -104,11 +106,11 @@ internal class ObjectCreationTransformer(
             uninitializedObjects--
             return
         }
-        visitMethodInsn(opcode, owner, name, desc, itf)
+        super.visitMethodInsn(opcode, owner, name, desc, itf)
     }
 
     override fun visitIntInsn(opcode: Int, operand: Int) = adapter.run {
-        adapter.visitIntInsn(opcode, operand)
+        super.visitIntInsn(opcode, operand)
         if (opcode == NEWARRAY) {
             invokeIfInAnalyzedCode(
                 original = {},
@@ -131,7 +133,7 @@ internal class ObjectCreationTransformer(
             )
             uninitializedObjects++
         }
-        visitTypeInsn(opcode, type)
+        super.visitTypeInsn(opcode, type)
         if (opcode == ANEWARRAY) {
             invokeIfInAnalyzedCode(
                 original = {},
@@ -144,7 +146,7 @@ internal class ObjectCreationTransformer(
     }
 
     override fun visitMultiANewArrayInsn(descriptor: String?, numDimensions: Int) = adapter.run {
-        visitMultiANewArrayInsn(descriptor, numDimensions)
+        super.visitMultiANewArrayInsn(descriptor, numDimensions)
         invokeIfInAnalyzedCode(
             original = {},
             instrumented = {
