@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.objectweb.asm.Handle
+import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Opcodes.INVOKESTATIC
 import org.objectweb.asm.Type
@@ -41,8 +42,9 @@ internal class DeterministicInvokeDynamicTransformer(
     className: String,
     methodName: String,
     private val classVersion: Int,
-    adapter: GeneratorAdapter
-) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter) {
+    adapter: GeneratorAdapter,
+    methodVisitor: MethodVisitor
+) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter, methodVisitor) {
 
     override fun visitInvokeDynamicInsn(
         name: String,
@@ -52,7 +54,7 @@ internal class DeterministicInvokeDynamicTransformer(
     ) = adapter.run {
         invokeIfInAnalyzedCode(
             original = {
-                visitInvokeDynamicInsn(name, descriptor, bootstrapMethodHandle, *bootstrapMethodArguments)
+                super.visitInvokeDynamicInsn(name, descriptor, bootstrapMethodHandle, *bootstrapMethodArguments)
             },
             instrumented = {
                 // Emulating INVOKE_DYNAMIC behavior deterministically

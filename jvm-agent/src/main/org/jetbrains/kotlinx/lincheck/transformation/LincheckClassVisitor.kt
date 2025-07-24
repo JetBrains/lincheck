@@ -163,15 +163,15 @@ internal class LincheckClassVisitor(
         // We need to ensure there are no `beforeEvents` calls inside `toString()`
         // to ensure the event numeration will remain the same.
         if (ideaPluginEnabled && isToStringMethod(methodName, desc)) {
-            mv = mv.newAdapter() // TODO: fixme
-            mv = ObjectCreationTransformer(fileName, className, methodName, mv, mv)
+            val adapter = mv.newAdapter()
+            mv = adapter // TODO: fixme
+
+            mv = ObjectCreationTransformer(fileName, className, methodName, adapter, mv)
             // TODO: replace with proper instrumentation mode for debugger, don't use globals
             if (isInTraceDebuggerMode) {
                 // Lincheck does not support true identity hash codes (it always uses zeroes),
                 // so there is no need for the `DeterministicInvokeDynamicTransformer` there.
-                mv = DeterministicInvokeDynamicTransformer(
-                    fileName, className, methodName, classVersion, mv.newAdapter()
-                )
+                mv = DeterministicInvokeDynamicTransformer(fileName, className, methodName, classVersion, adapter, mv)
             }
             return mv
         }
@@ -179,15 +179,15 @@ internal class LincheckClassVisitor(
         // with `VerificationError` due to leaking this problem,
         // see: https://github.com/JetBrains/lincheck/issues/424
         if ((methodName == "<init>" && !isInTraceDebuggerMode)) {
-            mv = mv.newAdapter() // TODO: fixme
-            mv = ObjectCreationTransformer(fileName, className, methodName, mv, mv)
+            val adapter = mv.newAdapter()
+            mv = adapter // TODO: fixme
+
+            mv = ObjectCreationTransformer(fileName, className, methodName, adapter, mv)
             // TODO: replace with proper instrumentation mode for debugger, don't use globals
             if (isInTraceDebuggerMode) {
                 // Lincheck does not support true identity hash codes (it always uses zeroes),
                 // so there is no need for the `DeterministicInvokeDynamicTransformer` there.
-                mv = DeterministicInvokeDynamicTransformer(
-                    fileName, className, methodName, classVersion, mv.newAdapter()
-                )
+                mv = DeterministicInvokeDynamicTransformer(fileName, className, methodName, classVersion, adapter, mv)
             }
             mv = applySharedMemoryAccessTransformer(access, methodName, desc, mv)
             return mv
@@ -217,7 +217,7 @@ internal class LincheckClassVisitor(
         if (isInTraceDebuggerMode) {
             // Lincheck does not support true identity hash codes (it always uses zeroes),
             // so there is no need for the `DeterministicInvokeDynamicTransformer` there.
-            mv = DeterministicInvokeDynamicTransformer(fileName, className, methodName, classVersion, mv.newAdapter())
+            mv = DeterministicInvokeDynamicTransformer(fileName, className, methodName, classVersion, adapter, mv)
         } else {
             // In trace debugger mode we record hash codes of tracked objects and substitute them on re-run,
             // otherwise, we track all hash code calls in the instrumented code
