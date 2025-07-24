@@ -21,7 +21,7 @@ interface TRAppendable {
     fun appendMethodName(prettyMethodName: String, md: MethodDescriptor): TRAppendable = append(prettyMethodName)
     fun appendFieldName(prettyFieldName: String, fd: FieldDescriptor): TRAppendable = append(prettyFieldName)
     fun appendVariableName(prettyVariableName: String, vd: VariableDescriptor): TRAppendable = append(prettyVariableName)
-    fun appendArray(arr: TRObject): TRAppendable = append(arr.adornedRepresentation())
+    fun appendArray(arr: TRObject): TRAppendable = append(arr.toString())
     fun appendArrayIndex(index: Int): TRAppendable = append(index.toString())
     fun appendObject(obj: TRObject?): TRAppendable = append(obj.toString())
     fun appendKeyword(keyword: String): TRAppendable = append(keyword)

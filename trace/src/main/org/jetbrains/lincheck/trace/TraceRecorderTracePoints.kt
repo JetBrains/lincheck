@@ -479,12 +479,9 @@ data class TRObject internal constructor (
         } else if (classNameId == TR_OBJECT_VOID_CLASSNAME) {
             "void"
         } else {
-            adornedRepresentation()
+            className.adornedClassNameRepresentation() + "@" + identityHashCode
         }
     }
-
-    fun adornedRepresentation(): String =
-        className.adornedClassNameRepresentation() + "@" + identityHashCode
 }
 
 private const val TR_OBJECT_NULL_CLASSNAME = -1
