@@ -71,7 +71,7 @@ internal class MethodCallTransformer(
                     receiverLocal?.let { loadLocal(it) }
                     loadLocals(argumentLocals)
                     // STACK: receiver?, arguments
-                    super.visitMethodInsn(opcode, owner, name, desc, itf)
+                    mv.visitMethodInsn(opcode, owner, name, desc, itf)
                     // STACK: result?
                 }
                 // STACK: result?
