@@ -17,7 +17,7 @@ import org.jetbrains.lincheck.descriptors.VariableDescriptor
 
 
 interface TRAppendable {
-    fun appendOwnerName(prettyOwnerName: String): TRAppendable = append(prettyOwnerName)
+    fun appendClassName(prettyClassName: String): TRAppendable = append(prettyClassName)
     fun appendMethodName(prettyMethodName: String, md: MethodDescriptor): TRAppendable = append(prettyMethodName)
     fun appendFieldName(prettyFieldName: String, fd: FieldDescriptor): TRAppendable = append(prettyFieldName)
     fun appendVariableName(prettyVariableName: String, vd: VariableDescriptor): TRAppendable = append(prettyVariableName)
@@ -64,7 +64,7 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
     protected fun TRAppendable.append(tracePoint: TRMethodCallTracePoint): TRAppendable {
         val md = tracePoint.methodDescriptor
 
-        appendClassName(tracePoint, md)
+        appendOwner(tracePoint, md)
         appendSpecialSymbol(".")
         appendMethodName(md)
         appendSpecialSymbol("(")
@@ -74,12 +74,12 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
         return this
     }
 
-    protected fun TRAppendable.appendClassName(tracePoint: TRMethodCallTracePoint, methodDescriptor: MethodDescriptor): TRAppendable {
+    protected fun TRAppendable.appendOwner(tracePoint: TRMethodCallTracePoint, methodDescriptor: MethodDescriptor): TRAppendable {
         if (tracePoint.obj != null) {
             appendObject(tracePoint.obj)
         }
         else {
-            appendOwnerName(methodDescriptor.className.adornedClassNameRepresentation())
+            appendClassName(methodDescriptor.className.adornedClassNameRepresentation())
         }
         return this
     }
@@ -139,7 +139,7 @@ abstract class AbstractTRFieldTracePointPrinter {
     protected fun TRAppendable.append(tracePoint: TRFieldTracePoint): TRAppendable {
         val isLambdaCaptureSyntheticField = isLambdaCaptureSyntheticField(tracePoint)
 
-        appendClassName(tracePoint)
+        appendOwner(tracePoint)
         appendFieldName(tracePoint, isLambdaCaptureSyntheticField)
         append(" ")
         appendSpecialSymbol(tracePoint.accessSymbol())
@@ -148,12 +148,12 @@ abstract class AbstractTRFieldTracePointPrinter {
         return this
     }
 
-    protected fun TRAppendable.appendClassName(tracePoint: TRFieldTracePoint): TRAppendable {
+    protected fun TRAppendable.appendOwner(tracePoint: TRFieldTracePoint): TRAppendable {
         if (tracePoint.obj != null) {
             appendObject(tracePoint.obj)
         }
         else {
-            appendOwnerName(tracePoint.fieldDescriptor.className.adornedClassNameRepresentation())
+            appendClassName(tracePoint.fieldDescriptor.className.adornedClassNameRepresentation())
         }
         return this
     }
