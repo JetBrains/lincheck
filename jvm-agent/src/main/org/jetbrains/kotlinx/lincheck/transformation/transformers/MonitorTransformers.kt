@@ -15,6 +15,7 @@ import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type.getType
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.objectweb.asm.MethodVisitor
 import sun.nio.ch.lincheck.*
 
 /**
@@ -77,8 +78,9 @@ internal class SynchronizedMethodTransformer(
     methodName: String,
     private val access: Int,
     private val classVersion: Int,
-    adapter: GeneratorAdapter
-) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter) {
+    adapter: GeneratorAdapter,
+    methodVisitor: MethodVisitor
+) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter, methodVisitor) {
 
     private val isStatic: Boolean = (access and ACC_STATIC != 0)
 
@@ -86,7 +88,7 @@ internal class SynchronizedMethodTransformer(
     private val catchLabel = Label()
 
     override fun visitCode() = adapter.run {
-        visitCode()
+        super.visitCode()
         invokeIfInAnalyzedCode(
             original = {},
             instrumented = {
@@ -122,7 +124,7 @@ internal class SynchronizedMethodTransformer(
         )
         throwException()
         visitTryCatchBlock(tryLabel, catchLabel, catchLabel, null)
-        visitMaxs(maxStack, maxLocals)
+        super.visitMaxs(maxStack, maxLocals)
     }
 
     override fun visitInsn(opcode: Int) = adapter.run {
@@ -141,7 +143,7 @@ internal class SynchronizedMethodTransformer(
                 )
             }
         }
-        visitInsn(opcode)
+        super.visitInsn(opcode)
     }
 
     private fun loadSynchronizedMethodMonitorOwner() = adapter.run {

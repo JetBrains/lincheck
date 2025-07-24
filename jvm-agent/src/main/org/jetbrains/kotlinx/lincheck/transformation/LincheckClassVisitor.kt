@@ -311,9 +311,13 @@ internal class LincheckClassVisitor(
     ): MethodVisitor {
         var mv = methodVisitor
         fun MethodVisitor.newAdapter() = GeneratorAdapter(this, access, methodName, descriptor)
+
+        val adapter = mv.newAdapter()
+        mv = adapter // TODO: fixme
+
         val isSynchronized = (access and ACC_SYNCHRONIZED != 0)
         if (isSynchronized) {
-            mv = SynchronizedMethodTransformer(fileName, className, methodName, access, classVersion, mv.newAdapter())
+            mv = SynchronizedMethodTransformer(fileName, className, methodName, access, classVersion, adapter, mv)
         }
         mv = MonitorTransformer(fileName, className, methodName, mv.newAdapter())
         mv = WaitNotifyTransformer(fileName, className, methodName, mv.newAdapter())
