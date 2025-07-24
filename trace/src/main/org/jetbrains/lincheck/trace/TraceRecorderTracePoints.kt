@@ -36,7 +36,6 @@ sealed class TRTracePoint(
     val threadId: Int,
     val eventId: Int
 ) {
-
     internal open fun save(out: TraceWriter) {
         saveReferences(out)
 
