@@ -81,7 +81,10 @@ private fun SingleThreadedTable<TraceNode>.compressSuspendImpl() = compressNodes
 private fun SingleThreadedTable<TraceNode>.compressDefaultPairs() = compressNodes { node ->
     val singleChild = if (node.children.size == 1) node.children[0] else return@compressNodes node
     if (node !is CallNode || singleChild !is CallNode) return@compressNodes node
-    if (!haveSameOwner(node.tracePoint, singleChild.tracePoint) || !isDefaultPair(node.tracePoint.methodName, singleChild.tracePoint.methodName)) return@compressNodes node
+    if (
+        node.tracePoint.className != singleChild.tracePoint.className ||
+        !isDefaultPair(node.tracePoint.methodName, singleChild.tracePoint.methodName)
+    ) return@compressNodes node
     combineNodes(node, singleChild)
 }
 
@@ -108,7 +111,10 @@ private fun SingleThreadedTable<TraceNode>.compressDefaultPairs() = compressNode
 private fun SingleThreadedTable<TraceNode>.compressAccessPairs() = compressNodes { node ->
     val singleChild = if (node.children.size == 1) node.children[0] else return@compressNodes node
     if (node !is CallNode || singleChild !is CallNode) return@compressNodes node
-    if (!haveSameOwner(node.tracePoint, singleChild.tracePoint) || !isAccessPair(node.tracePoint.methodName, singleChild.tracePoint.methodName)) return@compressNodes node
+    if (
+        node.tracePoint.className != singleChild.tracePoint.className ||
+        !isAccessPair(node.tracePoint.methodName, singleChild.tracePoint.methodName)
+    ) return@compressNodes node
     combineNodes(node, singleChild)
 }
 
@@ -453,34 +459,13 @@ private fun TraceNode.compress(compressionRule: (TraceNode) -> TraceNode): Trace
 }
 
 /**
- * Used in [compressDefaultPairs] and [compressAccessPairs]
- */
-private fun haveSameOwner(currentPoint: MethodCallTracePoint, nextPoint: MethodCallTracePoint): Boolean =
-    currentPoint.className == nextPoint.className
-
-/**
- * Used in [compressDefaultPairs]
- */
-private fun isDefaultPair(currentName: String, nextName: String): Boolean =
-    currentName == "${nextName}\$default"
-
-/**
- * Used in [compressAccessPairs]
- */
-private fun isAccessPair(currentName: String, nextName: String): Boolean =
-    currentName == "access$${nextName}"
-
-private fun isSyntheticFieldAccess(methodName: String): Boolean =
-    methodName.contains("access\$get") || methodName.contains("access\$set")
-
-/**
  * Used to remove the lambda invocation line at the beginning of
  * a user-defined thread trace.
  */
 private fun isUserThreadStart(currentTracePoint: MethodCallTracePoint, nextTracePoint: MethodCallTracePoint): Boolean =
-    currentTracePoint.isThreadStart
-            && nextTracePoint.className == "kotlin.jvm.functions.Function0"
-            && nextTracePoint.methodName == "invoke"
+    currentTracePoint.isThreadStart &&
+    nextTracePoint.className == "kotlin.jvm.functions.Function0" &&
+    nextTracePoint.methodName == "invoke"
 
 private fun AnalysisProfile.shouldBeHidden(callNode: CallNode): Boolean = 
     shouldBeHidden(callNode.tracePoint.className, callNode.tracePoint.methodName)

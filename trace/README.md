@@ -2,7 +2,7 @@
 ## Trace recording on-disk format.
  Trace is stored on disk in binary format which allows some limited form of streaming.
 
- Stored trace consists of two files: the main data file and and auxiliary *index* file.
+ Stored trace consists of two files: the main data file and an auxiliary *index* file.
 
  The main data file can be used without an index, as the index will be re-created in memory 
 if a data file without an index or with a broken index is opened. For now, the re-created
@@ -102,7 +102,7 @@ of a program crash, as all trace objects accumulated in memory will be lost.
 
  The second subdivision is between *thread-neutral* and *thread-dependent* objects.
 
-- *Thread-independent* objects are shared between al threads. It is all reference objects, which
+- *Thread-independent* objects are shared between all threads. It is all reference objects, which
   are used by all threads. The whole set of these objects constitutes *context* of recorded trace.
   All these objects are *atomic*. They are written to the data file and index by the first thread 
   which encounters them. This could lead to rare duplication of these objects in the data file,
@@ -176,12 +176,12 @@ marks the end of trace point's children list (container content) and also stores
 can be loaded without children at all, with one level of children, or deeply (greedy).
 
  Also, API provides a way to load all or some of the children for method call tracepoint
-which was loaded without them. For this method called tracepoint remembers the locations 
+which was loaded without them. For this method call tracepoint remembers the locations 
 of all its children; these locations are filled when trace point is loaded. These offsets
 are *logical* (see below) and converted to physical ones with the help of thread id.
 
 ### Index format.
- Index consists from *header*, number of fixed-sized records (*cells*) and *footer*.
+ Index consists of *header*, number of fixed-sized records (*cells*) and *footer*.
 
 #### Header.
  Header is 16 bytes. The first 8 bytes is a *magic* constant which identifies a file
@@ -261,9 +261,9 @@ the two strategies, which hooks up into trace point creation and method call res
 `DataOutput` and allows all other code to write objects in consistent way, but with different
  backends.
 
- Each trace point implements methods to save al dependencies and itself to any `TraceWriter`
+ Each trace point implements methods to save all dependencies and itself to any `TraceWriter`
 and these methods are called by strategies and support code. Method call trace point also
-has a method to save footer after all children are saved. Saving of chidlren tracepoints
+has a method to save footer after all children are saved. Saving of children tracepoints
 is controlled by strategy's code too, method call tracepoint doesn't save its onw children.
 
 #### Collect-and-dump.
@@ -314,7 +314,7 @@ implementations are not.
 
 #### Eager.
  Eager loader (function `loadRecordedTrace`) doesn't need index as it loads a full
-data file in any case. It can read data from any `InoutStream` and returns
+data file in any case. It can read data from any `InputStream` and returns
 re-created context (which contains all reference objects) and list
 of method call trace points, one per thread.
 
@@ -334,10 +334,10 @@ seekable stream to support random access to data.
  Lazy loader first loads or re-creates index, populates context with all thread-independent
 reference objects, and then loads root method call trace points, one per thread.
 
- These method call trace points don't have their children loaded, thay only know
+ These method call trace points don't have their children loaded, they only know
 where to load children and their count.
 
- After that the same insance of lazy loader can be used to load any children of any
+ After that the same instance of lazy loader can be used to load any children of any
 already loaded method call tracepoint. It is possible to load all children at once
 or load only some range of children.
 
@@ -345,7 +345,7 @@ or load only some range of children.
 at corresponding positions in the children list (`events` property). This list
 will have a proper fixed number of elements from the beginning.
 
- Also, method call trace point which is loaded in such way can «forget» any children
+ Also, method call trace point which is loaded in such a way can «forget» any children
 or all of them, but such children can be loaded again later with the help of the same
 lazy loader.
 

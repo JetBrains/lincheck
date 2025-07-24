@@ -169,18 +169,26 @@ private class CodeLocationsContext {
  */
 class LazyTraceReader(
     private val dataFileName: String,
-    private val index: DataInputStream?
+    private val index: DataInputStream?,
+    private val postprocessor: TracePostprocessor
 ) : Closeable {
 
     private fun interface TracepointRegistrator {
         fun register(indexInParent: Int, tracePoint: TRTracePoint, physicalOffset: Long)
     }
 
-    constructor(baseFileName: String) :
+    constructor(baseFileName: String, postprocessor: TracePostprocessor = CompressingPostprocessor) :
             this(
                 dataFileName = baseFileName,
-                index = wrapStream(openExistingFile(baseFileName + INDEX_FILENAME_SUFFIX))
+                index = wrapStream(openExistingFile(baseFileName + INDEX_FILENAME_SUFFIX)),
+                postprocessor = postprocessor
             )
+
+    private fun readTracePointWithPostprocessor(): TRTracePoint =
+        postprocessor.postprocess(
+            reader = this@LazyTraceReader,
+            tracePoint = readTracePointWithChildAddresses()
+        )
 
     // TODO: Create new
     val context: TraceContext = TRACE_CONTEXT
@@ -229,7 +237,7 @@ class LazyTraceReader(
             loadTracePoints(
                 threadId = threadId,
                 maxRead = Integer.MAX_VALUE,
-                reader = this::readTracePointWithChildAddresses,
+                reader = this::readTracePointWithPostprocessor,
                 registrator = { _, tracePoint, _ ->
                     tracepoints.add(tracePoint)
                 }
@@ -257,7 +265,7 @@ class LazyTraceReader(
         loadTracePoints(
             threadId = parent.threadId,
             maxRead = Integer.MAX_VALUE,
-            reader = this::readTracePointWithChildAddresses,
+            reader = this::readTracePointWithPostprocessor,
             registrator = { idx, tracePoint, _ ->
                 parent.loadChild(idx, tracePoint)
             }
@@ -279,12 +287,18 @@ class LazyTraceReader(
         loadTracePoints(
             threadId = parent.threadId,
             maxRead = count,
-            reader = this::readTracePointWithChildAddresses,
+            reader = this::readTracePointWithPostprocessor,
             registrator = { idx, tracePoint, _ ->
                 parent.loadChild(idx + from, tracePoint)
             }
         )
+    }
 
+    fun getChildAndRestorePosition(parent: TRMethodCallTracePoint, childIdx: Int): TRTracePoint? {
+        val oldPosition = data.position()
+        loadChild(parent, childIdx)
+        data.seek(oldPosition)
+        return parent.events[childIdx]
     }
 
     private fun loadTracePoints(threadId: Int, maxRead: Int, reader: () -> TRTracePoint, registrator: TracepointRegistrator) {
@@ -611,7 +625,7 @@ private fun loadAllObjectsDeep(
             break
         }
 
-        check (kind == ObjectKind.BLOCK_START) {
+        check(kind == ObjectKind.BLOCK_START) {
             "Unexpected object kind $kind, expected BLOCK_START, broken file"
         }
 
