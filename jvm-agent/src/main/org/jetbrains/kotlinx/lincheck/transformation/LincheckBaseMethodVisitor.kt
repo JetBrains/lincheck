@@ -21,8 +21,8 @@ internal open class LincheckBaseMethodVisitor(
     protected val className: String,
     protected val methodName: String,
     val adapter: GeneratorAdapter,
-    methodVisitor: MethodVisitor? = null // TODO: make non-optional after full transition
-) : MethodVisitor(ASM_API, methodVisitor ?: adapter) {
+    methodVisitor: MethodVisitor
+) : MethodVisitor(ASM_API, methodVisitor) {
     private var lineNumber = 0
 
     /**
