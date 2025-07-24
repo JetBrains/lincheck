@@ -231,7 +231,8 @@ internal class LincheckClassVisitor(
         // so that it can correctly analyze the byte-code and compute required type-information
         mv = applySharedMemoryAccessTransformer(access, methodName, desc, adapter, mv)
 
-        mv = LocalVariablesAccessTransformer(fileName, className, methodName, desc, isStatic, locals, adapter, mv)
+        mv = mv.newAdapter() // TODO: fixme
+        mv = LocalVariablesAccessTransformer(fileName, className, methodName, desc, isStatic, locals, mv, mv)
         // Inline method call transformer relies on the original variables' indices,
         // so it should go before (in FIFO order) all transformers which can create local variables.
         // All visitors created AFTER InlineMethodCallTransformer must use a non-remapping Generator adapter too.
