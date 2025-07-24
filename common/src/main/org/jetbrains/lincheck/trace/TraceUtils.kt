@@ -63,11 +63,7 @@ fun String.removeJavaLambdaRuntimeAddress(): String {
  *
  * *Note*: should be called on fully qualified class name.
  */
-fun String.removeRefWrapperClassName(): String {
-    val prefix = "kotlin.jvm.internal.Ref$"
-    if (startsWith(prefix)) return removePrefix(prefix)
-    return this
-}
+fun String.removeRefWrapperClassName(): String = removePrefix("kotlin.jvm.internal.Ref$")
 
 /**
  * Returns simple class name - the last part of the fully qualified class name
