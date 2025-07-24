@@ -75,12 +75,6 @@ fun String.removeVolatileDollar(): String = removeSuffix("\$volatile")
 fun String.removeVolatileDollarFU(): String = removeSuffix("\$volatile\$FU")
 
 /**
- * Used for compressing default pairs and access pairs.
- */
-fun haveSameOwner(currentClassName: String, nextClassName: String): Boolean =
-    currentClassName == nextClassName
-
-/**
  * Used fpr compressing default pairs.
  */
 fun isDefaultPair(currentMethodName: String, nextMethodName: String): Boolean =

@@ -184,12 +184,11 @@ class LazyTraceReader(
                 postprocessor = postprocessor
             )
 
-    private fun readTracePointWithPostprocessor(readCallback: () -> TRTracePoint): TRTracePoint =
-        readCallback().let { tracePoint ->
-            if (tracePoint is TRMethodCallTracePoint)
-                postprocessor.postprocess(reader = this@LazyTraceReader, tracePoint)
-            else tracePoint
-        }
+    private fun readTracePointWithPostprocessor(): TRTracePoint =
+        postprocessor.postprocess(
+            reader = this@LazyTraceReader,
+            tracePoint = readTracePointWithChildAddresses()
+        )
 
     // TODO: Create new
     val context: TraceContext = TRACE_CONTEXT
@@ -238,7 +237,7 @@ class LazyTraceReader(
             loadTracePoints(
                 threadId = threadId,
                 maxRead = Integer.MAX_VALUE,
-                reader = { readTracePointWithPostprocessor(this::readTracePointWithChildAddresses) },
+                reader = this::readTracePointWithPostprocessor,
                 registrator = { _, tracePoint, _ ->
                     tracepoints.add(tracePoint)
                 }
@@ -266,7 +265,7 @@ class LazyTraceReader(
         loadTracePoints(
             threadId = parent.threadId,
             maxRead = Integer.MAX_VALUE,
-            reader = { readTracePointWithPostprocessor(this::readTracePointWithChildAddresses) },
+            reader = this::readTracePointWithPostprocessor,
             registrator = { idx, tracePoint, _ ->
                 parent.loadChild(idx, tracePoint)
             }
@@ -288,7 +287,7 @@ class LazyTraceReader(
         loadTracePoints(
             threadId = parent.threadId,
             maxRead = count,
-            reader = { readTracePointWithPostprocessor(this::readTracePointWithChildAddresses) },
+            reader = this::readTracePointWithPostprocessor,
             registrator = { idx, tracePoint, _ ->
                 parent.loadChild(idx + from, tracePoint)
             }

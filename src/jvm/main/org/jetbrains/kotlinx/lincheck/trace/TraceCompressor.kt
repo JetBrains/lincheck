@@ -82,7 +82,7 @@ private fun SingleThreadedTable<TraceNode>.compressDefaultPairs() = compressNode
     val singleChild = if (node.children.size == 1) node.children[0] else return@compressNodes node
     if (node !is CallNode || singleChild !is CallNode) return@compressNodes node
     if (
-        !haveSameOwner(node.tracePoint.className, singleChild.tracePoint.className) ||
+        node.tracePoint.className != singleChild.tracePoint.className ||
         !isDefaultPair(node.tracePoint.methodName, singleChild.tracePoint.methodName)
     ) return@compressNodes node
     combineNodes(node, singleChild)
@@ -112,7 +112,7 @@ private fun SingleThreadedTable<TraceNode>.compressAccessPairs() = compressNodes
     val singleChild = if (node.children.size == 1) node.children[0] else return@compressNodes node
     if (node !is CallNode || singleChild !is CallNode) return@compressNodes node
     if (
-        !haveSameOwner(node.tracePoint.className, singleChild.tracePoint.className) ||
+        node.tracePoint.className != singleChild.tracePoint.className ||
         !isAccessPair(node.tracePoint.methodName, singleChild.tracePoint.methodName)
     ) return@compressNodes node
     combineNodes(node, singleChild)
