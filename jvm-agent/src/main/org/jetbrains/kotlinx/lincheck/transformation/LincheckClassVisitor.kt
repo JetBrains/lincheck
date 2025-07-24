@@ -123,7 +123,7 @@ internal class LincheckClassVisitor(
             // `SharedMemoryAccessTransformer` goes first because it relies on `AnalyzerAdapter`,
             // which should be put in front of the byte-code transformer chain,
             // so that it can correctly analyze the byte-code and compute required type-information
-            mv = applySharedMemoryAccessTransformer(access, methodName, desc, mv)
+            mv = applySharedMemoryAccessTransformer(access, methodName, desc, adapter, mv)
 
             mv = LocalVariablesAccessTransformer(fileName, className, methodName, mv.newAdapter(), desc, isStatic, locals)
             // Inline method call transformer relies on the original variables' indices,
@@ -188,7 +188,7 @@ internal class LincheckClassVisitor(
                 // so there is no need for the `DeterministicInvokeDynamicTransformer` there.
                 mv = DeterministicInvokeDynamicTransformer(fileName, className, methodName, classVersion, adapter, mv)
             }
-            mv = applySharedMemoryAccessTransformer(access, methodName, desc, mv)
+            mv = applySharedMemoryAccessTransformer(access, methodName, desc, adapter, mv)
             return mv
         }
 
@@ -229,7 +229,7 @@ internal class LincheckClassVisitor(
         // `SharedMemoryAccessTransformer` goes first because it relies on `AnalyzerAdapter`,
         // which should be put in front of the byte-code transformer chain,
         // so that it can correctly analyze the byte-code and compute required type-information
-        mv = applySharedMemoryAccessTransformer(access, methodName, desc, mv)
+        mv = applySharedMemoryAccessTransformer(access, methodName, desc, adapter, mv)
 
         mv = LocalVariablesAccessTransformer(fileName, className, methodName, mv.newAdapter(), desc, isStatic, locals)
         // Inline method call transformer relies on the original variables' indices,
@@ -323,22 +323,13 @@ internal class LincheckClassVisitor(
         access: Int,
         methodName: String,
         descriptor: String,
+        adapter: GeneratorAdapter,
         methodVisitor: MethodVisitor,
     ): MethodVisitor {
         var mv = methodVisitor
-        fun MethodVisitor.newAdapter() = GeneratorAdapter(this, access, methodName, descriptor)
-
-        val adapter = mv.newAdapter() // TODO: fixme
-        mv = adapter
-
         // this transformer is required because currently the snapshot tracker
         // does not trace memory accesses inside constructors
-        mv = ConstructorArgumentsSnapshotTrackerTransformer(
-            fileName,
-            className,
-            methodName,
-            mv,
-            mv,
+        mv = ConstructorArgumentsSnapshotTrackerTransformer(fileName, className, methodName, adapter, mv,
             classVisitor::isInstanceOf
         )
         val sv = SharedMemoryAccessTransformer(fileName, className, methodName, adapter, mv)
