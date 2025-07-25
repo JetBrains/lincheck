@@ -21,7 +21,6 @@ import org.jetbrains.lincheck.descriptors.Types.LONG_TYPE
 import org.jetbrains.lincheck.descriptors.Types.ObjectType
 import org.jetbrains.lincheck.descriptors.Types.SHORT_TYPE
 import org.jetbrains.lincheck.descriptors.Types.Type
-import org.jetbrains.lincheck.descriptors.Types.VOID_TYPE
 
 /**
  * Interface for implementing trace points modification algorithms in order
@@ -282,14 +281,14 @@ private fun String.toType(): Type {
         "S", "java.lang.Short" -> SHORT_TYPE
         "C", "java.lang.Character" -> CHAR_TYPE
         else -> if (startsWith("[")) {
-            ArrayType(substring(1).toType())
-        } else {
-            if (startsWith("L") && endsWith(";")) {
-                ObjectType(substring(1, length - 1))
-            }
-            else {
-                ObjectType(this)
-            }
-        }
+                    ArrayType(substring(1).toType())
+                } else {
+                    if (startsWith("L") && endsWith(";")) {
+                        ObjectType(substring(1, length - 1))
+                    }
+                    else {
+                        ObjectType(this)
+                    }
+                }
     }
 }
