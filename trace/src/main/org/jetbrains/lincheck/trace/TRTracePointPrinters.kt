@@ -10,9 +10,16 @@
 
 package org.jetbrains.lincheck.trace
 
+import org.jetbrains.lincheck.descriptors.AccessPath
+import org.jetbrains.lincheck.descriptors.ArrayElementByIndexAccess
+import org.jetbrains.lincheck.descriptors.ArrayElementByNameAccess
+import org.jetbrains.lincheck.descriptors.ArrayLengthAccess
 import org.jetbrains.lincheck.descriptors.CodeLocations
 import org.jetbrains.lincheck.descriptors.FieldDescriptor
+import org.jetbrains.lincheck.descriptors.LocalVariableAccess
 import org.jetbrains.lincheck.descriptors.MethodDescriptor
+import org.jetbrains.lincheck.descriptors.ObjectFieldAccess
+import org.jetbrains.lincheck.descriptors.StaticFieldAccess
 import org.jetbrains.lincheck.descriptors.VariableDescriptor
 
 
@@ -27,6 +34,44 @@ interface TRAppendable {
     fun appendKeyword(keyword: String): TRAppendable = append(keyword)
     fun appendSpecialSymbol(symbol: String): TRAppendable = append(symbol)
     fun append(text: String?): TRAppendable
+}
+
+fun TRAppendable.appendAccessPath(accessPath: AccessPath) {
+    for (location in accessPath.locations) {
+        when (location) {
+            is LocalVariableAccess -> {
+                append(location.variableName) // TODO: should use `appendVariableName`
+            }
+
+            is StaticFieldAccess -> {
+                append(location.className.getSimpleClassName()) // TODO: should use `appendClassName`
+                appendSpecialSymbol(".")
+                append(location.fieldName) // TODO: should use `appendFieldName`
+            }
+
+            is ObjectFieldAccess -> {
+                appendSpecialSymbol(".")
+                append(location.fieldName) // TODO: should use `appendFieldName`
+            }
+
+            is ArrayElementByIndexAccess -> {
+                appendSpecialSymbol("[")
+                appendArrayIndex(location.index)
+                appendSpecialSymbol("]")
+            }
+
+            is ArrayElementByNameAccess -> {
+                appendSpecialSymbol("[")
+                appendAccessPath(location.indexAccessPath)
+                appendSpecialSymbol("]")
+            }
+
+            is ArrayLengthAccess -> {
+                appendSpecialSymbol(".")
+                append("length") // TODO: should use `appendFieldName`
+            }
+        }
+    }
 }
 
 internal object DefaultTRTextAppendable: TRAppendable {
@@ -75,10 +120,12 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
     }
 
     protected fun TRAppendable.appendOwner(tracePoint: TRMethodCallTracePoint, methodDescriptor: MethodDescriptor): TRAppendable {
-        if (tracePoint.obj != null) {
+        val ownerName = CodeLocations.accessPath(tracePoint.codeLocationId)
+        if (ownerName != null) {
+            appendAccessPath(ownerName)
+        } else if (tracePoint.obj != null) {
             appendObject(tracePoint.obj)
-        }
-        else {
+        } else {
             appendClassName(methodDescriptor.className.adornedClassNameRepresentation())
         }
         return this
@@ -149,10 +196,12 @@ abstract class AbstractTRFieldTracePointPrinter {
     }
 
     protected fun TRAppendable.appendOwner(tracePoint: TRFieldTracePoint): TRAppendable {
-        if (tracePoint.obj != null) {
+        val ownerName = CodeLocations.accessPath(tracePoint.codeLocationId)
+        if (ownerName != null) {
+            appendAccessPath(ownerName)
+        } else if (tracePoint.obj != null) {
             appendObject(tracePoint.obj)
-        }
-        else {
+        } else {
             appendClassName(tracePoint.fieldDescriptor.className.adornedClassNameRepresentation())
         }
         return this
