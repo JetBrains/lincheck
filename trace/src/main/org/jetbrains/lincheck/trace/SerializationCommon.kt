@@ -76,16 +76,16 @@ internal fun DataInput.readType(): Types.Type {
     val type = readByte()
     return when (type.toInt()) {
         0 -> Types.ArrayType(readType())
-        1 -> Types.BooleanType()
-        2 -> Types.ByteType()
-        3 -> Types.CharType()
-        4 -> Types.DoubleType()
-        5 -> Types.FloatType()
-        6 -> Types.IntType()
-        7 -> Types.LongType()
+        1 -> Types.BOOLEAN_TYPE
+        2 -> Types.BYTE_TYPE
+        3 -> Types.CHAR_TYPE
+        4 -> Types.DOUBLE_TYPE
+        5 -> Types.FLOAT_TYPE
+        6 -> Types.INT_TYPE
+        7 -> Types.LONG_TYPE
         8 -> Types.ObjectType(readUTF())
-        9 -> Types.ShortType()
-        10 -> Types.VoidType()
+        9 -> Types.SHORT_TYPE
+        10 -> Types.VOID_TYPE
         else -> error("Unknown Type id $type")
     }
 }
