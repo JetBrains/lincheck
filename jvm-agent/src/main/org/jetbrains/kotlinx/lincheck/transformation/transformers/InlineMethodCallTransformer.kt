@@ -30,7 +30,6 @@ internal class InlineMethodCallTransformer(
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
     val locals: MethodVariables,
-    val localsTracker: LocalVariablesAccessTransformer?
 ) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter, methodVisitor) {
     private companion object {
         val objectType = getObjectType("java/lang/Object").className
@@ -131,31 +130,19 @@ internal class InlineMethodCallTransformer(
         }
         else {
             val asmType = getLocalType(owner)
-            runWithoutLocalVariablesTracking {
-                if (asmType == null) {
-                    loadLocal(owner, ownerType)
-                } else if (asmType.sort == ownerType?.sort) {
-                    loadLocal(owner)
-                } else {
-                    // Sometimes ASM freaks out when a slot has completely different types in different frames.
-                    // Like, two variables of types Int and Object share a slot, and ASM thinks about it as about Int,
-                    // and we try to load it as an Object.
-                    pushNull()
-                }
+            if (asmType == null) {
+                loadLocal(owner, ownerType)
+            } else if (asmType.sort == ownerType?.sort) {
+                loadLocal(owner)
+            } else {
+                // Sometimes ASM freaks out when a slot has completely different types in different frames.
+                // Like, two variables of types Int and Object share a slot, and ASM thinks about it as about Int,
+                // and we try to load it as an Object.
+                pushNull()
             }
         }
         invokeStatic(Injections::onInlineMethodCall)
         invokeBeforeEventIfPluginEnabled("inline method call $inlineMethodName in $methodName")
-    }
-
-    private fun runWithoutLocalVariablesTracking(block: GeneratorAdapter.() -> Unit) {
-        if (localsTracker == null) {
-            adapter.block()
-            return
-        }
-        localsTracker.runWithoutLocalVariablesTracking {
-            adapter.block()
-        }
     }
 
     private fun processInlineMethodCallReturn(inlineMethodName: String, startLabel: Label) = adapter.run {

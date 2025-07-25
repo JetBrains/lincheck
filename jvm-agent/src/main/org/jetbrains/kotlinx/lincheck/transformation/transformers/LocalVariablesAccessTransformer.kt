@@ -29,12 +29,11 @@ internal class LocalVariablesAccessTransformer(
     methodVisitor: MethodVisitor,
 ) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter, methodVisitor) {
 
-    private var turnoffTransform = false
     private val numberOfLocals = convertAsmMethodType(desc).argumentTypes.size + if (isStatic) 0 else 1
 
     override fun visitVarInsn(opcode: Int, varIndex: Int) = adapter.run {
         val localVariableInfo = getVariableName(varIndex)?.takeIf { it.name != "this" }
-        if (localVariableInfo == null || turnoffTransform) {
+        if (localVariableInfo == null) {
             super.visitVarInsn(opcode, varIndex)
             return
         }
@@ -48,16 +47,6 @@ internal class LocalVariablesAccessTransformer(
             else -> {
                 super.visitVarInsn(opcode, varIndex)
             }
-        }
-    }
-
-    fun runWithoutLocalVariablesTracking(block: () -> Unit) {
-        val currentState = turnoffTransform
-        try {
-            turnoffTransform = true
-            block()
-        } finally {
-            turnoffTransform = currentState
         }
     }
 
