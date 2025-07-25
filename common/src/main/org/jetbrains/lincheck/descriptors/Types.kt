@@ -121,55 +121,55 @@ object Types {
         }
     }
 
-    class VoidType : Type() {
+    class VoidType internal constructor() : Type() {
         override fun toString(): String {
             return "void"
         }
     }
 
-    class IntType : Type() {
+    class IntType internal constructor() : Type() {
         override fun toString(): String {
             return "int"
         }
     }
 
-    class LongType : Type() {
+    class LongType internal constructor() : Type() {
         override fun toString(): String {
             return "long"
         }
     }
 
-    class DoubleType : Type() {
+    class DoubleType internal constructor() : Type() {
         override fun toString(): String {
             return "double"
         }
     }
 
-    class FloatType : Type() {
+    class FloatType internal constructor() : Type() {
         override fun toString(): String {
             return "float"
         }
     }
 
-    class BooleanType : Type() {
+    class BooleanType internal constructor() : Type() {
         override fun toString(): String {
             return "boolean"
         }
     }
 
-    class ByteType : Type() {
+    class ByteType internal constructor() : Type() {
         override fun toString(): String {
             return "byte"
         }
     }
 
-    class ShortType : Type() {
+    class ShortType internal constructor() : Type() {
         override fun toString(): String {
             return "short"
         }
     }
 
-    class CharType : Type() {
+    class CharType internal constructor() : Type() {
         override fun toString(): String {
             return "char"
         }
