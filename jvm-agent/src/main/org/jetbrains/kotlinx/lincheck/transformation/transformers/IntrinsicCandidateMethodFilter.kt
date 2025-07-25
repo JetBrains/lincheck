@@ -22,9 +22,9 @@ internal class IntrinsicCandidateMethodFilter(
     private val className: String,
     private val methodName: String,
     private val methodDesc: String,
-    private val initialAdapter: MethodVisitor,
-    nextAdapter: MethodVisitor
-) : MethodVisitor(ASM_API, nextAdapter) {
+    private val initialMethodVisitor: MethodVisitor,
+    methodVisitor: MethodVisitor
+) : MethodVisitor(ASM_API, methodVisitor) {
 
     override fun visitCode() {
         // Java 8 does not have `@HotSpotIntrinsicCandidate`/`@IntrinsicCandidate` annotations, thus,
@@ -57,7 +57,7 @@ internal class IntrinsicCandidateMethodFilter(
      * Essentially it allows to skip all transformers between `nextAdapter` and `initialAdapter`.
      */
     private fun delegate() {
-        this.mv = initialAdapter
+        this.mv = initialMethodVisitor
     }
 
     private fun isIntrinsicCandidateAnnotation(annotation: String): Boolean = (

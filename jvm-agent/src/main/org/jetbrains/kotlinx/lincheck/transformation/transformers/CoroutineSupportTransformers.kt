@@ -11,7 +11,6 @@
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.objectweb.asm.MethodVisitor
-import org.objectweb.asm.commons.AdviceAdapter
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.objectweb.asm.Type.getType
 import org.objectweb.asm.commons.GeneratorAdapter
@@ -22,14 +21,14 @@ import sun.nio.ch.lincheck.*
  * cancellable continuation by injecting [Injections.storeCancellableContinuation] method call.
  */
 internal class CoroutineCancellabilitySupportTransformer(
-    mv: MethodVisitor,
-    access: Int,
-    val className: String?,
-    methodName: String?,
-    desc: String?
-) : AdviceAdapter(ASM_API, mv, access, methodName, desc) {
+    fileName: String,
+    className: String,
+    methodName: String,
+    adapter: GeneratorAdapter,
+    methodVisitor: MethodVisitor,
+) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter, methodVisitor) {
 
-    override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
+    override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
         val isGetResult = (name == "getResult") && (
             owner == "kotlinx/coroutines/CancellableContinuation" ||
             owner == "kotlinx/coroutines/CancellableContinuationImpl"
@@ -37,7 +36,7 @@ internal class CoroutineCancellabilitySupportTransformer(
         if (isGetResult) {
             dup()
             invokeStatic(Injections::storeCancellableContinuation)
-            className?.toCanonicalClassName()?.let { coroutineCallingClasses += it }
+            coroutineCallingClasses += className.toCanonicalClassName()
         }
         super.visitMethodInsn(opcode, owner, name, desc, itf)
     }
@@ -60,17 +59,18 @@ internal class CoroutineDelaySupportTransformer(
     className: String,
     methodName: String,
     adapter: GeneratorAdapter,
-) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter) {
+    methodVisitor: MethodVisitor,
+) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter, methodVisitor) {
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
         if (!isCoroutineDelay(owner, name, desc)) {
-            visitMethodInsn(opcode, owner, name, desc, itf)
+            super.visitMethodInsn(opcode, owner, name, desc, itf)
             return
         }
 
         invokeIfInAnalyzedCode(
             original = {
-                visitMethodInsn(opcode, owner, name, desc, itf)
+                super.visitMethodInsn(opcode, owner, name, desc, itf)
             },
             instrumented = {
                 // STACK [INVOKESTATIC]: delay, <cont>
@@ -81,7 +81,7 @@ internal class CoroutineDelaySupportTransformer(
                 push(0L)
                 loadLocal(contLocal)
                 // STACK [INVOKESTATIC]: 0L, <cont>
-                visitMethodInsn(opcode, owner, name, desc, itf)
+                super.visitMethodInsn(opcode, owner, name, desc, itf)
             }
         )
     }

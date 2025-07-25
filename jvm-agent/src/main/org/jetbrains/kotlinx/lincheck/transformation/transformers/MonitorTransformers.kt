@@ -15,6 +15,7 @@ import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type.getType
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.objectweb.asm.MethodVisitor
 import sun.nio.ch.lincheck.*
 
 /**
@@ -26,13 +27,14 @@ internal class MonitorTransformer(
     className: String,
     methodName: String,
     adapter: GeneratorAdapter,
-) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter) {
+    methodVisitor: MethodVisitor,
+) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter, methodVisitor) {
 
     override fun visitInsn(opcode: Int) = adapter.run {
         when (opcode) {
             MONITORENTER -> {
                 invokeIfInAnalyzedCode(
-                    original = { monitorEnter() },
+                    original = { super.visitInsn(opcode) },
                     instrumented = {
                         loadNewCodeLocationId()
                         invokeStatic(Injections::beforeLock)
@@ -44,7 +46,7 @@ internal class MonitorTransformer(
 
             MONITOREXIT -> {
                 invokeIfInAnalyzedCode(
-                    original = { monitorExit() },
+                    original = { super.visitInsn(opcode) },
                     instrumented = {
                         loadNewCodeLocationId()
                         invokeStatic(Injections::unlock)
@@ -53,7 +55,7 @@ internal class MonitorTransformer(
                 )
             }
 
-            else -> visitInsn(opcode)
+            else -> super.visitInsn(opcode)
         }
     }
 
@@ -75,14 +77,19 @@ internal class SynchronizedMethodTransformer(
     fileName: String,
     className: String,
     methodName: String,
+    private val access: Int,
+    private val classVersion: Int,
     adapter: GeneratorAdapter,
-    private val classVersion: Int
-) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter) {
-    private val isStatic: Boolean = this.adapter.access and ACC_STATIC != 0
+    methodVisitor: MethodVisitor
+) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter, methodVisitor) {
+
+    private val isStatic: Boolean = (access and ACC_STATIC != 0)
+
     private val tryLabel = Label()
     private val catchLabel = Label()
 
     override fun visitCode() = adapter.run {
+        super.visitCode()
         invokeIfInAnalyzedCode(
             original = {},
             instrumented = {
@@ -101,7 +108,6 @@ internal class SynchronizedMethodTransformer(
                 invokeStatic(Injections::lock)
             }
         )
-        visitCode()
     }
 
     override fun visitMaxs(maxStack: Int, maxLocals: Int) = adapter.run {
@@ -119,7 +125,7 @@ internal class SynchronizedMethodTransformer(
         )
         throwException()
         visitTryCatchBlock(tryLabel, catchLabel, catchLabel, null)
-        visitMaxs(maxStack, maxLocals)
+        super.visitMaxs(maxStack, maxLocals)
     }
 
     override fun visitInsn(opcode: Int) = adapter.run {
@@ -138,7 +144,7 @@ internal class SynchronizedMethodTransformer(
                 )
             }
         }
-        visitInsn(opcode)
+        super.visitInsn(opcode)
     }
 
     private fun loadSynchronizedMethodMonitorOwner() = adapter.run {
@@ -167,7 +173,8 @@ internal class WaitNotifyTransformer(
     className: String,
     methodName: String,
     adapter: GeneratorAdapter,
-) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter) {
+    methodVisitor: MethodVisitor,
+) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter, methodVisitor) {
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
         if (opcode == INVOKEVIRTUAL) {
@@ -175,7 +182,7 @@ internal class WaitNotifyTransformer(
                 isWait0(name, desc) -> {
                     invokeIfInAnalyzedCode(
                         original = {
-                            visitMethodInsn(opcode, owner, name, desc, itf)
+                            super.visitMethodInsn(opcode, owner, name, desc, itf)
                         },
                         instrumented = {
                             loadNewCodeLocationId()
@@ -189,7 +196,7 @@ internal class WaitNotifyTransformer(
                 isWait1(name, desc) -> {
                     invokeIfInAnalyzedCode(
                         original = {
-                            visitMethodInsn(opcode, owner, name, desc, itf)
+                            super.visitMethodInsn(opcode, owner, name, desc, itf)
                         },
                         instrumented = {
                             pop2() // timeMillis
@@ -220,7 +227,7 @@ internal class WaitNotifyTransformer(
                 isNotify(name, desc) -> {
                     invokeIfInAnalyzedCode(
                         original = {
-                            visitMethodInsn(opcode, owner, name, desc, itf)
+                            super.visitMethodInsn(opcode, owner, name, desc, itf)
                         },
                         instrumented = {
                             loadNewCodeLocationId()
@@ -233,7 +240,7 @@ internal class WaitNotifyTransformer(
                 isNotifyAll(name, desc) -> {
                     invokeIfInAnalyzedCode(
                         original = {
-                            visitMethodInsn(opcode, owner, name, desc, itf)
+                            super.visitMethodInsn(opcode, owner, name, desc, itf)
                         },
                         instrumented = {
                             loadNewCodeLocationId()
@@ -244,11 +251,11 @@ internal class WaitNotifyTransformer(
                 }
 
                 else -> {
-                    visitMethodInsn(opcode, owner, name, desc, itf)
+                    super.visitMethodInsn(opcode, owner, name, desc, itf)
                 }
             }
         } else {
-            visitMethodInsn(opcode, owner, name, desc, itf)
+            super.visitMethodInsn(opcode, owner, name, desc, itf)
         }
     }
 

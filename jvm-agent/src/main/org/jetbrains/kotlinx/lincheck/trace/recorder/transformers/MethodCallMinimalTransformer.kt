@@ -11,8 +11,9 @@
 package org.jetbrains.kotlinx.lincheck.trace.recorder.transformers
 
 import org.jetbrains.kotlinx.lincheck.transformation.*
-import org.jetbrains.lincheck.trace.TRACE_CONTEXT
 import org.jetbrains.kotlinx.lincheck.transformation.transformers.MethodCallTransformerBase
+import org.jetbrains.lincheck.trace.TRACE_CONTEXT
+import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
@@ -34,7 +35,8 @@ internal class MethodCallMinimalTransformer(
     className: String,
     methodName: String,
     adapter: GeneratorAdapter,
-) : MethodCallTransformerBase(fileName, className, methodName, adapter) {
+    methodVisitor: MethodVisitor,
+) : MethodCallTransformerBase(fileName, className, methodName, adapter, methodVisitor) {
 
     override fun processMethodCall(desc: String, opcode: Int, owner: String, name: String, itf: Boolean) = adapter.run {
         val receiverType = getType("L$owner;")
@@ -61,7 +63,7 @@ internal class MethodCallMinimalTransformer(
                 receiverLocal?.let { loadLocal(it) }
                 loadLocals(argumentLocals)
                 // STACK: receiver?, arguments
-                visitMethodInsn(opcode, owner, name, desc, itf)
+                mv.visitMethodInsn(opcode, owner, name, desc, itf)
                 // STACK: result?
                 processMethodCallReturn(
                     returnType,

@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.lincheck.util.isInLincheckPackage
+import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Type
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
@@ -26,32 +27,33 @@ internal abstract class MethodCallTransformerBase(
     className: String,
     methodName: String,
     adapter: GeneratorAdapter,
-) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter) {
+    methodVisitor: MethodVisitor,
+) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter, methodVisitor) {
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
         // TODO: do not ignore <init>
         if (name == "<init>" || isIgnoredMethod(className = owner)) {
-            visitMethodInsn(opcode, owner, name, desc, itf)
+            super.visitMethodInsn(opcode, owner, name, desc, itf)
             return
         }
         if (isCoroutineInternalClass(owner.toCanonicalClassName())) {
             invokeInsideIgnoredSection {
-                visitMethodInsn(opcode, owner, name, desc, itf)
+                super.visitMethodInsn(opcode, owner, name, desc, itf)
             }
             return
         }
         if (isCoroutineResumptionSyntheticAccessor(owner, name)) {
-            visitMethodInsn(opcode, owner, name, desc, itf)
+            super.visitMethodInsn(opcode, owner, name, desc, itf)
             return
         }
         // It is useless for the user, and it depends on static initialization which is not instrumented.
         if (isThreadLocalRandomCurrent(owner, name)) {
-            visitMethodInsn(opcode, owner, name, desc, itf)
+            super.visitMethodInsn(opcode, owner, name, desc, itf)
             return
         }
         invokeIfInAnalyzedCode(
             original = {
-                visitMethodInsn(opcode, owner, name, desc, itf)
+                super.visitMethodInsn(opcode, owner, name, desc, itf)
             },
             instrumented = {
                 processMethodCall(desc, opcode, owner, name, itf)

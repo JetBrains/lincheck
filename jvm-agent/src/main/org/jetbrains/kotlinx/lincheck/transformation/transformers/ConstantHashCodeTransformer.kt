@@ -13,6 +13,7 @@ package org.jetbrains.kotlinx.lincheck.transformation.transformers
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckBaseMethodVisitor
 import org.jetbrains.kotlinx.lincheck.transformation.invokeIfInAnalyzedCode
 import org.jetbrains.kotlinx.lincheck.transformation.invokeStatic
+import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.commons.GeneratorAdapter
 import sun.nio.ch.lincheck.Injections
 
@@ -29,25 +30,27 @@ internal class ConstantHashCodeTransformer(
     className: String,
     methodName: String,
     adapter: GeneratorAdapter,
-) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter) {
+    methodVisitor: MethodVisitor
+) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter, methodVisitor) {
+
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
         when {
             name == "hashCode" && desc == "()I" -> {
                 invokeIfInAnalyzedCode(
-                    original = { visitMethodInsn(opcode, owner, name, desc, itf) },
+                    original = { super.visitMethodInsn(opcode, owner, name, desc, itf) },
                     instrumented = { invokeStatic(Injections::hashCodeDeterministic) }
                 )
             }
 
             owner == "java/lang/System" && name == "identityHashCode" && desc == "(Ljava/lang/Object;)I" -> {
                 invokeIfInAnalyzedCode(
-                    original = { visitMethodInsn(opcode, owner, name, desc, itf) },
+                    original = { super.visitMethodInsn(opcode, owner, name, desc, itf) },
                     instrumented = { invokeStatic(Injections::identityHashCodeDeterministic) }
                 )
             }
 
             else -> {
-                visitMethodInsn(opcode, owner, name, desc, itf)
+                super.visitMethodInsn(opcode, owner, name, desc, itf)
             }
         }
     }

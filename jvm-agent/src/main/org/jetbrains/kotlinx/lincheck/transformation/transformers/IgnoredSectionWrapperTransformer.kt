@@ -16,19 +16,21 @@ import org.jetbrains.kotlinx.lincheck.transformation.invokeStatic
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Label
+import org.objectweb.asm.MethodVisitor
 
 internal class IgnoredSectionWrapperTransformer(
     fileName: String,
     className: String,
     methodName: String,
     adapter: GeneratorAdapter,
-) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter) {
+    methodVisitor: MethodVisitor,
+) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter, methodVisitor) {
 
     private val tryBlock: Label = adapter.newLabel()
     private val catchBlock: Label = adapter.newLabel()
 
     override fun visitCode() = adapter.run {
-        visitCode()
+        super.visitCode()
         invokeStatic(Injections::enterIgnoredSection)
         visitTryCatchBlock(tryBlock, catchBlock, catchBlock, null)
         visitLabel(tryBlock)
@@ -40,14 +42,14 @@ internal class IgnoredSectionWrapperTransformer(
                 invokeStatic(Injections::leaveIgnoredSection)
             }
         }
-        visitInsn(opcode)
+        super.visitInsn(opcode)
     }
 
     override fun visitMaxs(maxStack: Int, maxLocals: Int) = adapter.run {
         visitLabel(catchBlock)
         invokeStatic(Injections::leaveIgnoredSection)
         visitInsn(ATHROW)
-        visitMaxs(maxStack, maxLocals)
+        super.visitMaxs(maxStack, maxLocals)
     }
 
 }

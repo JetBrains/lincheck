@@ -22,42 +22,31 @@ internal class LocalVariablesAccessTransformer(
     fileName: String,
     className: String,
     methodName: String,
-    adapter: GeneratorAdapter,
     desc: String,
     isStatic: Boolean,
-    private val locals: MethodVariables
-) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter) {
-    private var turnoffTransform = false
-    private val numberOfLocals = convertAsmMethodType(desc).argumentTypes.size  + if (isStatic) 0 else 1
+    private val locals: MethodVariables,
+    adapter: GeneratorAdapter,
+    methodVisitor: MethodVisitor,
+) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter, methodVisitor) {
+
+    private val numberOfLocals = convertAsmMethodType(desc).argumentTypes.size + if (isStatic) 0 else 1
 
     override fun visitVarInsn(opcode: Int, varIndex: Int) = adapter.run {
         val localVariableInfo = getVariableName(varIndex)?.takeIf { it.name != "this" }
-        if (localVariableInfo == null || turnoffTransform) {
-            visitVarInsn(opcode, varIndex)
+        if (localVariableInfo == null) {
+            super.visitVarInsn(opcode, varIndex)
             return
         }
         when (opcode) {
             Opcodes.ILOAD, Opcodes.LLOAD, Opcodes.FLOAD, Opcodes.DLOAD, Opcodes.ALOAD -> {
                 visitReadVarInsn(localVariableInfo, opcode, varIndex)
-                // visitVarInsn(opcode, varIndex)
             }
             Opcodes.ISTORE, Opcodes.LSTORE, Opcodes.FSTORE, Opcodes.DSTORE, Opcodes.ASTORE -> {
                 visitWriteVarInsn(localVariableInfo, opcode, varIndex)
-                // visitVarInsn(opcode, varIndex)
             }
             else -> {
-                visitVarInsn(opcode, varIndex)
+                super.visitVarInsn(opcode, varIndex)
             }
-        }
-    }
-
-    fun runWithoutLocalVariablesTracking(block: () -> Unit) {
-        val currentState = turnoffTransform
-        try {
-            turnoffTransform = true
-            block()
-        } finally {
-            turnoffTransform = currentState
         }
     }
 
@@ -65,7 +54,7 @@ internal class LocalVariablesAccessTransformer(
     private fun visitWriteVarInsn(localVariableInfo: LocalVariableInfo, opcode: Int, varIndex: Int) = adapter.run {
         invokeIfInAnalyzedCode(
             original = {
-                visitVarInsn(opcode, varIndex)
+                super.visitVarInsn(opcode, varIndex)
             },
             instrumented = {
                 // STACK: value
@@ -74,7 +63,7 @@ internal class LocalVariablesAccessTransformer(
                 dup(type)
                 storeLocal(local)
                 // STACK: value
-                visitVarInsn(opcode, varIndex)
+                super.visitVarInsn(opcode, varIndex)
                 // STACK: <empty>
                 loadNewCodeLocationId()
                 val variableId = TRACE_CONTEXT.getOrCreateVariableId(localVariableInfo.name)
@@ -93,16 +82,16 @@ internal class LocalVariablesAccessTransformer(
         // Skip variable read if it is in an unknown line of code and variable is argument
         // It can be code inserted by compiler to check Null invariant
         if (!isKnownLineNumber() && varIndex < numberOfLocals) {
-            visitVarInsn(opcode, varIndex)
+            super.visitVarInsn(opcode, varIndex)
             return
         }
         invokeIfInAnalyzedCode(
             original = {
-                visitVarInsn(opcode, varIndex)
+                super.visitVarInsn(opcode, varIndex)
             },
             instrumented = {
                 // STACK: <empty>
-                visitVarInsn(opcode, varIndex)
+                super.visitVarInsn(opcode, varIndex)
                 // STACK: value
                 val type = getVarInsOpcodeType(opcode)
                 val local = newLocal(type)
