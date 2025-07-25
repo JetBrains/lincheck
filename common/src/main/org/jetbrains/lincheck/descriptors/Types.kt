@@ -10,6 +10,17 @@
 
 package org.jetbrains.lincheck.descriptors
 
+import org.jetbrains.lincheck.descriptors.Types.ArrayType
+import org.jetbrains.lincheck.descriptors.Types.BOOLEAN_TYPE
+import org.jetbrains.lincheck.descriptors.Types.BYTE_TYPE
+import org.jetbrains.lincheck.descriptors.Types.CHAR_TYPE
+import org.jetbrains.lincheck.descriptors.Types.DOUBLE_TYPE
+import org.jetbrains.lincheck.descriptors.Types.FLOAT_TYPE
+import org.jetbrains.lincheck.descriptors.Types.INT_TYPE
+import org.jetbrains.lincheck.descriptors.Types.LONG_TYPE
+import org.jetbrains.lincheck.descriptors.Types.ObjectType
+import org.jetbrains.lincheck.descriptors.Types.SHORT_TYPE
+import org.jetbrains.lincheck.descriptors.Types.Type
 import java.util.*
 import kotlin.math.max
 
@@ -205,6 +216,29 @@ object Types {
             sb.append("): ")
             sb.append(returnType.toString())
             return sb.toString()
+        }
+    }
+}
+
+fun String.toType(): Type {
+    return when (this) {
+        "I", "java.lang.Integer" -> INT_TYPE
+        "J", "java.lang.Long" -> LONG_TYPE
+        "D", "java.lang.Double" -> DOUBLE_TYPE
+        "F", "java.lang.Float" -> FLOAT_TYPE
+        "Z", "java.lang.Boolean" -> BOOLEAN_TYPE
+        "B", "java.lang.Byte" -> BYTE_TYPE
+        "S", "java.lang.Short" -> SHORT_TYPE
+        "C", "java.lang.Character" -> CHAR_TYPE
+        else -> if (startsWith("[")) {
+            ArrayType(substring(1).toType())
+        } else {
+            if (startsWith("L") && endsWith(";")) {
+                ObjectType(substring(1, length - 1))
+            }
+            else {
+                ObjectType(this)
+            }
         }
     }
 }
