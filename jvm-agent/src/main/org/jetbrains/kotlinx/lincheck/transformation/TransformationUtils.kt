@@ -12,7 +12,7 @@ package org.jetbrains.kotlinx.lincheck.transformation
 
 import org.jetbrains.lincheck.util.isJavaLambdaClass
 import org.objectweb.asm.*
-import org.objectweb.asm.Opcodes.ANEWARRAY
+import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
@@ -408,11 +408,32 @@ internal fun isArray(type: Type): Boolean = type.sort == ARRAY
  */
 internal fun isPrimitive(type: Type): Boolean {
     return when (type.sort) {
-        BOOLEAN, CHAR, BYTE,
-        SHORT, INT, FLOAT,
-        LONG, DOUBLE, VOID -> true
+        BOOLEAN, CHAR, BYTE, SHORT, INT, Type.LONG, Type.FLOAT, Type.DOUBLE, VOID -> true
         else -> false
     }
+}
+
+internal fun getLocalVarAccessOpcodeType(opcode: Int): Type = when (opcode) {
+    ILOAD, ISTORE -> INT_TYPE
+    LLOAD, LSTORE -> LONG_TYPE
+    FLOAD, FSTORE -> FLOAT_TYPE
+    DLOAD, DSTORE -> DOUBLE_TYPE
+    ALOAD, ASTORE -> OBJECT_TYPE
+
+    else -> throw IllegalArgumentException("Invalid opcode: $opcode")
+}
+
+internal fun getArrayAccessOpcodeType(opcode: Int): Type = when (opcode) {
+    IALOAD, IASTORE -> INT_TYPE
+    FALOAD, FASTORE -> FLOAT_TYPE
+    CALOAD, CASTORE -> CHAR_TYPE
+    SALOAD, SASTORE -> SHORT_TYPE
+    LALOAD, LASTORE -> LONG_TYPE
+    DALOAD, DASTORE -> DOUBLE_TYPE
+    BALOAD, BASTORE -> BYTE_TYPE
+    AALOAD, AASTORE -> OBJECT_TYPE
+
+    else -> throw IllegalArgumentException("Invalid opcode: $opcode")
 }
 
 private fun getSuperclassName(internalClassName: String): String? {

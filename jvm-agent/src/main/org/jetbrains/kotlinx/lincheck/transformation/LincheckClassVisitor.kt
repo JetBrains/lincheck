@@ -115,7 +115,9 @@ internal class LincheckClassVisitor(
             }
 
             mv = ObjectCreationMinimalTransformer(fileName, className, methodName, adapter, mv)
-            mv = MethodCallMinimalTransformer(fileName, className, methodName, adapter, mv)
+
+            val methodCallTransformer = MethodCallMinimalTransformer(fileName, className, methodName, adapter, mv)
+            mv = methodCallTransformer
 
             // `SharedMemoryAccessTransformer` goes first because it relies on `AnalyzerAdapter`,
             // which should be put in front of the byte-code transformer chain,
@@ -130,7 +132,13 @@ internal class LincheckClassVisitor(
             // All visitors created AFTER InlineMethodCallTransformer must use a non-remapping Generator adapter.
             // mv = InlineMethodCallTransformer(fileName, className, methodName, desc, adapter, mv, locals)
 
-            mv = applyAnalyzerAdapter(access, methodName, desc, sharedMemoryAccessTransformer, mv)
+            mv = applyOwnerNameAnalyzerAdapter(access, methodName, desc, locals, mv,
+                methodCallTransformer,
+                sharedMemoryAccessTransformer,
+            )
+            mv = applyAnalyzerAdapter(access, methodName, desc, mv,
+                sharedMemoryAccessTransformer,
+            )
 
             // This tacker must be before all transformers that use MethodVariables to track variable regions
             mv = LocalVariablesTracker(mv, locals)
@@ -232,7 +240,9 @@ internal class LincheckClassVisitor(
         // All visitors created AFTER InlineMethodCallTransformer must use a non-remapping Generator adapter too.
         // mv = InlineMethodCallTransformer(fileName, className, methodName, desc, adapter, mv, locals)
 
-        mv = applyAnalyzerAdapter(access, methodName, desc, sharedMemoryAccessTransformer, mv)
+        mv = applyAnalyzerAdapter(access, methodName, desc, mv,
+            sharedMemoryAccessTransformer,
+        )
 
         // This tacker must be before all transformers that use MethodVariables to track variable regions
         mv = LocalVariablesTracker(mv, locals)
@@ -331,12 +341,29 @@ internal class LincheckClassVisitor(
         return mv
     }
 
+    private fun applyOwnerNameAnalyzerAdapter(
+        access: Int,
+        methodName: String,
+        descriptor: String,
+        methodVariables: MethodVariables,
+        methodVisitor: MethodVisitor,
+        methodTransformer: MethodCallMinimalTransformer,
+        sharedMemoryAccessTransformer: SharedMemoryAccessTransformer,
+    ): OwnerNameAnalyzerAdapter {
+        val ownerNameAnalyzer = OwnerNameAnalyzerAdapter(className, access, methodName, descriptor, methodVisitor,
+            methodVariables
+        )
+        methodTransformer.ownerNameAnalyzer = ownerNameAnalyzer
+        sharedMemoryAccessTransformer.ownerNameAnalyzer = ownerNameAnalyzer
+        return ownerNameAnalyzer
+    }
+
     private fun applyAnalyzerAdapter(
         access: Int,
         methodName: String,
         descriptor: String,
-        sharedMemoryAccessTransformer: SharedMemoryAccessTransformer,
         methodVisitor: MethodVisitor,
+        sharedMemoryAccessTransformer: SharedMemoryAccessTransformer,
     ): AnalyzerAdapter {
         val analyzerAdapter = AnalyzerAdapter(className, access, methodName, descriptor, methodVisitor)
         sharedMemoryAccessTransformer.analyzer = analyzerAdapter

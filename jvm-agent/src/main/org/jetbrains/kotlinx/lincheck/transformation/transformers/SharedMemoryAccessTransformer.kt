@@ -35,6 +35,8 @@ internal class SharedMemoryAccessTransformer(
 
     lateinit var analyzer: AnalyzerAdapter
 
+    var ownerNameAnalyzer: OwnerNameAnalyzerAdapter? = null
+
     override fun visitFieldInsn(opcode: Int, owner: String, fieldName: String, desc: String) = adapter.run {
         if (
             isCoroutineInternalClass(owner.toCanonicalClassName()) ||
@@ -128,10 +130,13 @@ internal class SharedMemoryAccessTransformer(
             isFinal = FinalFields.isFinalField(owner, fieldName)
         )
         // STACK: obj
+        val ownerName = ownerNameAnalyzer?.stack?.let { stack ->
+            stack[stack.size - 1]
+        }
         val ownerLocal = newLocal(getType("L$owner;")).also { copyLocal(it) }
         loadLocal(ownerLocal)
         // STACK: obj, obj
-        loadNewCodeLocationId()
+        loadNewCodeLocationId(accessPath = ownerName)
         push(fieldId)
         // STACK: obj, obj, codeLocation, fieldId
         invokeStatic(Injections::beforeReadField)
@@ -234,10 +239,11 @@ internal class SharedMemoryAccessTransformer(
         val arrayElementType = getArrayElementType(opcode)
         val indexLocal = newLocal(INT_TYPE).also { storeLocal(it) }
         val arrayLocal = newLocal(getType("[$arrayElementType")).also { storeLocal(it) }
+        val ownerName = ownerNameAnalyzer?.stack?.get(1)
         loadLocal(arrayLocal)
         loadLocal(indexLocal)
         // STACK: array, index
-        loadNewCodeLocationId()
+        loadNewCodeLocationId(accessPath = ownerName)
         // STACK: array, index, codeLocation
         invokeStatic(Injections::beforeReadArray)
         // STACK: <empty>
@@ -310,8 +316,8 @@ internal class SharedMemoryAccessTransformer(
      * For an array access instruction (either load or store),
      * tries to obtain the type of the read/written array element.
      *
-     * If the type can be determined from the opcode of the instruction itself
-     * (e.g., IALOAD/IASTORE) returns it immediately.
+     * If the type can be determined from the opcode of the instruction itself (e.g., `IALOAD`/`IASTORE`)
+     * then returns this type.
      *
      * Otherwise, queries the analyzer to determine the type of the array in the respective stack slot.
      * This is used in two cases:
@@ -319,25 +325,13 @@ internal class SharedMemoryAccessTransformer(
      * - for `AALOAD` and `AASTORE` instructions, to get the class name of the array elements.
      */
     private fun getArrayElementType(opcode: Int): Type = when (opcode) {
-        // Load
-        IALOAD -> INT_TYPE
-        FALOAD -> FLOAT_TYPE
-        CALOAD -> CHAR_TYPE
-        SALOAD -> SHORT_TYPE
-        LALOAD -> LONG_TYPE
-        DALOAD -> DOUBLE_TYPE
         BALOAD -> getArrayAccessTypeFromStack(2) ?: BYTE_TYPE
         AALOAD -> getArrayAccessTypeFromStack(2) ?: OBJECT_TYPE
-        // Store
-        IASTORE -> INT_TYPE
-        FASTORE -> FLOAT_TYPE
-        CASTORE -> CHAR_TYPE
-        SASTORE -> SHORT_TYPE
-        LASTORE -> LONG_TYPE
-        DASTORE -> DOUBLE_TYPE
+
         BASTORE -> getArrayAccessTypeFromStack(3) ?: BYTE_TYPE
         AASTORE -> getArrayAccessTypeFromStack(3) ?: OBJECT_TYPE
-        else -> throw IllegalStateException("Unexpected opcode: $opcode")
+
+        else -> getArrayAccessOpcodeType(opcode)
     }
 
     /*
