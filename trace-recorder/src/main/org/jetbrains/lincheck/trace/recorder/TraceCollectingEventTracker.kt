@@ -324,7 +324,7 @@ class TraceCollectingEventTracker(
             codeLocationId = codeLocation,
             array = TRObject(array),
             index = index,
-            value = null // todo
+            value = TRObjectOrNull(value)
         )
         strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
     }
