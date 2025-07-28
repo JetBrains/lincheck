@@ -445,6 +445,10 @@ class ThreadPoolRunConcurrentRepresentationTest : BaseRunConcurrentRepresentatio
 class CoroutinesRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
     "run_concurrent_test/coroutines/coroutines"
 ) {
+    // TODO: coroutine names are non-deterministic
+    override val isFlakyTest: Boolean
+        get() = true
+
     @Before
     fun setUp() {
         assumeFalse(isInTraceDebuggerMode) // unstable hash-code
