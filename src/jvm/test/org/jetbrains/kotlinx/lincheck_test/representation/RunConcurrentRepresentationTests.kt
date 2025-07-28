@@ -412,10 +412,7 @@ class ThreadPoolRunConcurrentRepresentationTest : BaseRunConcurrentRepresentatio
         //   and thus accesses to this object are not tracked,
         //   and the race on counter increment is not detected;
         // var counter = 0
-        val threadNumber = AtomicInteger(0)
-        val executorService = Executors.newFixedThreadPool(2) { runnable ->
-            Thread(runnable, "Thread-${threadNumber.incrementAndGet()}")
-        }
+        val executorService = createFixedThreadPool(2)
         try {
             // We use an object here instead of lambda to avoid hustle with Java's lambda.
             // These lambdas are represented in the trace as `$$Lambda$XX/0x00007766d02076a0`,
@@ -469,10 +466,7 @@ class CoroutinesRunConcurrentRepresentationTest : BaseRunConcurrentRepresentatio
     }
 
     override fun block() {
-        val threadNumber = AtomicInteger(0)
-        val executorService = Executors.newFixedThreadPool(2) { runnable ->
-            Thread(runnable, "Thread-${threadNumber.incrementAndGet()}")
-        }
+        val executorService = createFixedThreadPool(2)
         executorService.asCoroutineDispatcher().use { dispatcher ->
             runBlocking(dispatcher) {
                 val job1 = launch(dispatcher) {
@@ -488,5 +482,13 @@ class CoroutinesRunConcurrentRepresentationTest : BaseRunConcurrentRepresentatio
                 check(r1 == 1 || r2 == 1)
             }
         }
+    }
+}
+
+private fun createFixedThreadPool(nThreads: Int): ExecutorService {
+    val threadNumber = AtomicInteger(0)
+    return Executors.newFixedThreadPool(nThreads) { runnable ->
+        // set threads' names explicitly to make them deterministic within the Lincheck test
+        Thread(runnable, "Thread-${threadNumber.incrementAndGet()}")
     }
 }
