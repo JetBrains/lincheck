@@ -10,6 +10,7 @@
 
 package org.jetbrains.lincheck.trace
 
+import org.jetbrains.lincheck.descriptors.ClassDescriptor
 import org.jetbrains.lincheck.descriptors.CodeLocations
 import org.jetbrains.lincheck.descriptors.FieldDescriptor
 import org.jetbrains.lincheck.descriptors.MethodDescriptor
@@ -17,7 +18,7 @@ import org.jetbrains.lincheck.descriptors.VariableDescriptor
 
 
 interface TRAppendable {
-    fun appendClassName(className: String): TRAppendable
+    fun appendClassName(cd: ClassDescriptor): TRAppendable
     fun appendMethodName(md: MethodDescriptor): TRAppendable
     fun appendFieldName(fd: FieldDescriptor): TRAppendable
     fun appendVariableName(vd: VariableDescriptor): TRAppendable
@@ -30,17 +31,17 @@ interface TRAppendable {
 }
 
 abstract class AbstractTRAppendable: TRAppendable {
-    final override fun appendClassName(className: String) = appendClassNameImpl(className.adornedClassNameRepresentation())
-    protected open fun appendClassNameImpl(prettyClassName: String): TRAppendable = append(prettyClassName)
+    final override fun appendClassName(cd: ClassDescriptor) = appendClassName(cd.name.adornedClassNameRepresentation())
+    protected open fun appendClassName(prettyClassName: String): TRAppendable = append(prettyClassName)
 
-    final override fun appendMethodName(md: MethodDescriptor) = appendMethodNameImpl(md.methodName.prettifyMethodName(), md)
-    protected open fun appendMethodNameImpl(prettyMethodName: String, md: MethodDescriptor): TRAppendable = append(prettyMethodName)
+    final override fun appendMethodName(md: MethodDescriptor) = appendMethodName(md.methodName.prettifyMethodName(), md)
+    protected open fun appendMethodName(prettyMethodName: String, md: MethodDescriptor): TRAppendable = append(prettyMethodName)
 
-    final override fun appendFieldName(fd: FieldDescriptor) = appendFieldNameImpl(fd.fieldName.prettifyFieldName(), fd)
-    protected open fun appendFieldNameImpl(prettyFieldName: String, fd: FieldDescriptor): TRAppendable = append(prettyFieldName)
+    final override fun appendFieldName(fd: FieldDescriptor) = appendFieldName(fd.fieldName.prettifyFieldName(), fd)
+    protected open fun appendFieldName(prettyFieldName: String, fd: FieldDescriptor): TRAppendable = append(prettyFieldName)
 
-    final override fun appendVariableName(vd: VariableDescriptor) = appendVariableNameImpl(vd.name.prettifyVariableName(), vd)
-    protected open fun appendVariableNameImpl(prettyVariableName: String, vd: VariableDescriptor): TRAppendable = append(prettyVariableName)
+    final override fun appendVariableName(vd: VariableDescriptor) = appendVariableName(vd.name.prettifyVariableName(), vd)
+    protected open fun appendVariableName(prettyVariableName: String, vd: VariableDescriptor): TRAppendable = append(prettyVariableName)
 
     override fun appendArray(arr: TRObject): TRAppendable = append(arr.toString())
     override fun appendArrayIndex(index: Int): TRAppendable = append(index.toString())
@@ -95,7 +96,7 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
     protected fun TRAppendable.append(tracePoint: TRMethodCallTracePoint): TRAppendable {
         val md = tracePoint.methodDescriptor
 
-        appendOwner(tracePoint, md)
+        appendOwner(tracePoint)
         appendSpecialSymbol(".")
         appendMethodName(md)
         appendSpecialSymbol("(")
@@ -105,12 +106,12 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
         return this
     }
 
-    protected fun TRAppendable.appendOwner(tracePoint: TRMethodCallTracePoint, methodDescriptor: MethodDescriptor): TRAppendable {
+    protected fun TRAppendable.appendOwner(tracePoint: TRMethodCallTracePoint): TRAppendable {
         if (tracePoint.obj != null) {
             appendObject(tracePoint.obj)
         }
         else {
-            appendClassName(methodDescriptor.className)
+            appendClassName(tracePoint.classDescriptor)
         }
         return this
     }
@@ -173,7 +174,7 @@ abstract class AbstractTRFieldTracePointPrinter {
             appendObject(tracePoint.obj)
         }
         else {
-            appendClassName(tracePoint.fieldDescriptor.className)
+            appendClassName(tracePoint.classDescriptor)
         }
         return this
     }

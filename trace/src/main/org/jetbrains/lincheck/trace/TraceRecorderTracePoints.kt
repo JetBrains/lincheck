@@ -10,6 +10,7 @@
 
 package org.jetbrains.lincheck.trace
 
+import org.jetbrains.lincheck.descriptors.ClassDescriptor
 import org.jetbrains.lincheck.descriptors.CodeLocations
 import org.jetbrains.lincheck.descriptors.FieldDescriptor
 import org.jetbrains.lincheck.descriptors.MethodDescriptor
@@ -72,6 +73,7 @@ class TRMethodCallTracePoint(
 
     // TODO Make parametrized
     val methodDescriptor: MethodDescriptor get() = TRACE_CONTEXT.getMethodDescriptor(methodId)
+    val classDescriptor: ClassDescriptor get() = methodDescriptor.classDescriptor
 
     // Shortcuts
     val className: String get() = methodDescriptor.className
@@ -198,6 +200,7 @@ sealed class TRFieldTracePoint(
 
     // TODO Make parametrized
     val fieldDescriptor: FieldDescriptor get() = TRACE_CONTEXT.getFieldDescriptor(fieldId)
+    val classDescriptor: ClassDescriptor get() = fieldDescriptor.classDescriptor
 
     // Shortcuts
     val className: String get() = fieldDescriptor.className
