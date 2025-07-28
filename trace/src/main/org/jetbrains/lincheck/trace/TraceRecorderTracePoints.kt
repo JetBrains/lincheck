@@ -25,8 +25,6 @@ import java.io.DataOutput
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.math.max
-import kotlin.math.roundToInt
 
 private val EVENT_ID_GENERATOR = AtomicInteger(0)
 
@@ -53,7 +51,7 @@ sealed class TRTracePoint(
 
     val codeLocation: StackTraceElement get() = CodeLocations.stackTrace(codeLocationId)
 
-    abstract fun toText(verbose: Boolean): String
+    abstract fun toText(appendable: TRAppendable, verbose: Boolean)
 }
 
 // Only trace point which is "container"
@@ -159,8 +157,8 @@ class TRMethodCallTracePoint(
         }
     }
 
-    override fun toText(verbose: Boolean): String {
-        return StringBuilder().append(tracePoint = this, verbose).toString()
+    override fun toText(appendable: TRAppendable, verbose: Boolean) {
+        appendable.append(tracePoint = this, verbose)
     }
 
     internal companion object {
@@ -223,8 +221,8 @@ sealed class TRFieldTracePoint(
         out.preWriteTRObject(value)
     }
 
-    override fun toText(verbose: Boolean): String {
-        return StringBuilder().append(tracePoint = this, verbose).toString()
+    override fun toText(appendable: TRAppendable, verbose: Boolean) {
+        appendable.append(tracePoint = this, verbose)
     }
 }
 
@@ -305,8 +303,8 @@ sealed class TRLocalVariableTracePoint(
         out.preWriteTRObject(value)
     }
 
-    override fun toText(verbose: Boolean): String {
-        return StringBuilder().append(tracePoint = this, verbose).toString()
+    override fun toText(appendable: TRAppendable, verbose: Boolean) {
+        appendable.append(tracePoint = this, verbose)
     }
 }
 
@@ -381,8 +379,8 @@ sealed class TRArrayTracePoint(
         out.preWriteTRObject(value)
     }
 
-    override fun toText(verbose: Boolean): String {
-        return StringBuilder().append(tracePoint = this, verbose).toString()
+    override fun toText(appendable: TRAppendable, verbose: Boolean) {
+        appendable.append(tracePoint = this, verbose)
     }
 }
 

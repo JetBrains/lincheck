@@ -61,32 +61,10 @@ abstract class AbstractTRAppendable: TRAppendable {
         .removeLeadingDollar()
 }
 
-internal object DefaultTRTextAppendable: AbstractTRAppendable() {
-    private var destination: Appendable? = null
+class DefaultTRTextAppendable(private val destination: Appendable): AbstractTRAppendable() {
 
     override fun append(text: String?): TRAppendable {
-        check(destination != null) { "Before using DefaultTRTextAppendable adapter, setDestination() method must be called first with non-null destination." }
-        destination!!.append(text)
-        return this
-    }
-
-    /**
-     * Sets the new [destination] of this [TRAppendable] instance to [dest].
-     *
-     * To decrease memory consumption, there is only one instance of [TRAppendable] per each
-     * trace point printer. That instance uses [setDestination] method to change the
-     * actual underlying byte buffer before printing the new trace point.
-     */
-    fun setDestination(dest: Appendable): TRAppendable {
-        destination = dest
-        return this
-    }
-
-    /**
-     * Sets [destination] to `null`.
-     */
-    fun reset(): TRAppendable {
-        destination = null
+        destination.append(text)
         return this
     }
 }
@@ -141,15 +119,11 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
     }
 }
 
-internal object DefaultTRMethodCallTracePointPrinter: AbstractTRMethodCallTracePointPrinter() {
+object DefaultTRMethodCallTracePointPrinter: AbstractTRMethodCallTracePointPrinter() {
 
-    fun Appendable.append(tracePoint: TRMethodCallTracePoint, verbose: Boolean): Appendable {
-        with(DefaultTRTextAppendable) {
-            setDestination(this@append)
-            append(tracePoint)
-            append(tracePoint.codeLocationId, verbose)
-            reset()
-        }
+    fun TRAppendable.append(tracePoint: TRMethodCallTracePoint, verbose: Boolean): TRAppendable {
+        append(tracePoint)
+        append(tracePoint.codeLocationId, verbose)
         return this
     }
 }
@@ -192,15 +166,11 @@ abstract class AbstractTRFieldTracePointPrinter {
     }
 }
 
-internal object DefaultTRFieldTracePointPrinter: AbstractTRFieldTracePointPrinter() {
+object DefaultTRFieldTracePointPrinter: AbstractTRFieldTracePointPrinter() {
 
-    fun Appendable.append(tracePoint: TRFieldTracePoint, verbose: Boolean): Appendable {
-        with(DefaultTRTextAppendable) {
-            setDestination(this@append)
-            append(tracePoint)
-            append(tracePoint.codeLocationId, verbose)
-            reset()
-        }
+    fun TRAppendable.append(tracePoint: TRFieldTracePoint, verbose: Boolean): TRAppendable {
+        append(tracePoint)
+        append(tracePoint.codeLocationId, verbose)
         return this
     }
 }
@@ -218,15 +188,11 @@ abstract class AbstractTRLocalVariableTracePointPrinter {
     }
 }
 
-internal object DefaultTRLocalVariableTracePointPrinter: AbstractTRLocalVariableTracePointPrinter() {
+object DefaultTRLocalVariableTracePointPrinter: AbstractTRLocalVariableTracePointPrinter() {
 
-    fun Appendable.append(tracePoint: TRLocalVariableTracePoint, verbose: Boolean): Appendable {
-        with(DefaultTRTextAppendable) {
-            setDestination(this@append)
-            append(tracePoint)
-            append(tracePoint.codeLocationId, verbose)
-            reset()
-        }
+    fun TRAppendable.append(tracePoint: TRLocalVariableTracePoint, verbose: Boolean): TRAppendable {
+        append(tracePoint)
+        append(tracePoint.codeLocationId, verbose)
         return this
     }
 }
@@ -246,20 +212,16 @@ abstract class AbstractTRArrayTracePointPrinter {
     }
 }
 
-internal object DefaultTRArrayTracePointPrinter: AbstractTRArrayTracePointPrinter() {
+object DefaultTRArrayTracePointPrinter: AbstractTRArrayTracePointPrinter() {
 
-    fun Appendable.append(tracePoint: TRArrayTracePoint, verbose: Boolean): Appendable {
-        with(DefaultTRTextAppendable) {
-            setDestination(this@append)
-            append(tracePoint)
-            append(tracePoint.codeLocationId, verbose)
-            reset()
-        }
+    fun TRAppendable.append(tracePoint: TRArrayTracePoint, verbose: Boolean): TRAppendable {
+        append(tracePoint)
+        append(tracePoint.codeLocationId, verbose)
         return this
     }
 }
 
-private fun <V: TRAppendable> V.append(codeLocationId: Int, verbose: Boolean): V {
+internal fun <V: TRAppendable> V.append(codeLocationId: Int, verbose: Boolean): V {
     if (!verbose) return this
     val cl = CodeLocations.stackTrace(codeLocationId)
     append(" at ").append(cl.fileName).append(":").append(cl.lineNumber.toString())
