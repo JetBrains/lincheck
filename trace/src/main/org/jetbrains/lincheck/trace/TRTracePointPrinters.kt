@@ -208,9 +208,7 @@ internal object DefaultTRFieldTracePointPrinter: AbstractTRFieldTracePointPrinte
 abstract class AbstractTRLocalVariableTracePointPrinter {
 
     protected fun TRAppendable.append(tracePoint: TRLocalVariableTracePoint): TRAppendable {
-        val vd = tracePoint.variableDescriptor
-
-        appendVariableName(vd)
+        appendVariableName(tracePoint.variableDescriptor)
         append(" ")
         appendSpecialSymbol(tracePoint.accessSymbol())
         append(" ")
