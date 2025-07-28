@@ -490,10 +490,5 @@ class CoroutinesRunConcurrentRepresentationTest : BaseRunConcurrentRepresentatio
     }
 }
 
-private fun createFixedThreadPool(nThreads: Int): ExecutorService {
-    val threadNumber = AtomicInteger(0)
-    return Executors.newFixedThreadPool(nThreads) { runnable ->
-        // set threads' names explicitly to make them deterministic within the Lincheck test
-        Thread(runnable, "Thread-${threadNumber.incrementAndGet()}")
-    }
-}
+private fun createFixedThreadPool(nThreads: Int): ExecutorService =
+    Executors.newFixedThreadPool(nThreads, LincheckTestThreadFactory("Thread"))

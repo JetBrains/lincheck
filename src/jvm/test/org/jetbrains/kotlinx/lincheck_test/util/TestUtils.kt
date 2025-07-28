@@ -21,6 +21,8 @@ import org.jetbrains.lincheck.datastructures.Options
 import org.jetbrains.lincheck.datastructures.RandomProvider
 import org.junit.Assert.*
 import java.io.File
+import java.util.concurrent.ThreadFactory
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Checks output when Lincheck run fails with an exception and don't return [LincheckFailure]
@@ -233,6 +235,20 @@ class StringPoolGenerator(randomProvider: RandomProvider, configuration: String)
 
     override fun generate(): String =
         strings[random.nextInt(strings.size)]
+}
+
+/**
+ * A thread factory to be used in Lincheck tests.
+ *
+ * If used within the Lincheck model checking tests, guarantees deterministic thread names.
+ */
+class LincheckTestThreadFactory(private val threadNamePrefix: String) : ThreadFactory {
+    private val threadNumber = AtomicInteger(0)
+
+    override fun newThread(runnable: Runnable): Thread {
+        val threadName = "$threadNamePrefix-${threadNumber.getAndIncrement()}"
+        return Thread(runnable, threadName)
+    }
 }
 
 internal val OVERWRITE_REPRESENTATION_TESTS_OUTPUT: Boolean =
