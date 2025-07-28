@@ -17,19 +17,50 @@ import org.jetbrains.lincheck.descriptors.VariableDescriptor
 
 
 interface TRAppendable {
-    fun appendClassName(prettyClassName: String): TRAppendable = append(prettyClassName)
-    fun appendMethodName(prettyMethodName: String, md: MethodDescriptor): TRAppendable = append(prettyMethodName)
-    fun appendFieldName(prettyFieldName: String, fd: FieldDescriptor): TRAppendable = append(prettyFieldName)
-    fun appendVariableName(prettyVariableName: String, vd: VariableDescriptor): TRAppendable = append(prettyVariableName)
-    fun appendArray(arr: TRObject): TRAppendable = append(arr.toString())
-    fun appendArrayIndex(index: Int): TRAppendable = append(index.toString())
-    fun appendObject(obj: TRObject?): TRAppendable = append(obj.toString())
-    fun appendKeyword(keyword: String): TRAppendable = append(keyword)
-    fun appendSpecialSymbol(symbol: String): TRAppendable = append(symbol)
+    fun appendClassName(className: String): TRAppendable
+    fun appendMethodName(md: MethodDescriptor): TRAppendable
+    fun appendFieldName(fd: FieldDescriptor): TRAppendable
+    fun appendVariableName(vd: VariableDescriptor): TRAppendable
+    fun appendArray(arr: TRObject): TRAppendable
+    fun appendArrayIndex(index: Int): TRAppendable
+    fun appendObject(obj: TRObject?): TRAppendable
+    fun appendKeyword(keyword: String): TRAppendable
+    fun appendSpecialSymbol(symbol: String): TRAppendable
     fun append(text: String?): TRAppendable
 }
 
-internal object DefaultTRTextAppendable: TRAppendable {
+abstract class AbstractTRAppendable: TRAppendable {
+    final override fun appendClassName(className: String) = appendClassNameImpl(className.adornedClassNameRepresentation())
+    protected open fun appendClassNameImpl(prettyClassName: String): TRAppendable = append(prettyClassName)
+
+    final override fun appendMethodName(md: MethodDescriptor) = appendMethodNameImpl(md.methodName.prettifyMethodName(), md)
+    protected open fun appendMethodNameImpl(prettyMethodName: String, md: MethodDescriptor): TRAppendable = append(prettyMethodName)
+
+    final override fun appendFieldName(fd: FieldDescriptor) = appendFieldNameImpl(fd.fieldName.prettifyFieldName(), fd)
+    protected open fun appendFieldNameImpl(prettyFieldName: String, fd: FieldDescriptor): TRAppendable = append(prettyFieldName)
+
+    final override fun appendVariableName(vd: VariableDescriptor) = appendVariableNameImpl(vd.name.prettifyVariableName(), vd)
+    protected open fun appendVariableNameImpl(prettyVariableName: String, vd: VariableDescriptor): TRAppendable = append(prettyVariableName)
+
+    override fun appendArray(arr: TRObject): TRAppendable = append(arr.toString())
+    override fun appendArrayIndex(index: Int): TRAppendable = append(index.toString())
+    override fun appendObject(obj: TRObject?): TRAppendable = append(obj.toString())
+    override fun appendKeyword(keyword: String): TRAppendable = append(keyword)
+    override fun appendSpecialSymbol(symbol: String): TRAppendable = append(symbol)
+
+    private fun String.prettifyMethodName(): String = this
+        .removeCoroutinesCoreSuffix()
+
+    private fun String.prettifyFieldName(): String = this
+        .removeVolatileDollarFU()
+
+    private fun String.prettifyVariableName(): String = this
+        .removeInlineIV()
+        .removeDollarThis()
+        .removeLeadingDollar()
+}
+
+internal object DefaultTRTextAppendable: AbstractTRAppendable() {
     private var destination: Appendable? = null
 
     override fun append(text: String?): TRAppendable {
@@ -79,16 +110,8 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
             appendObject(tracePoint.obj)
         }
         else {
-            appendClassName(methodDescriptor.className.adornedClassNameRepresentation())
+            appendClassName(methodDescriptor.className)
         }
-        return this
-    }
-
-    protected fun TRAppendable.appendMethodName(methodDescriptor: MethodDescriptor): TRAppendable {
-        appendMethodName(
-            methodDescriptor.methodName.prettifyMethodName(),
-            methodDescriptor
-        )
         return this
     }
 
@@ -115,9 +138,6 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
         }
         return this
     }
-
-    private fun String.prettifyMethodName(): String = this
-        .removeCoroutinesCoreSuffix()
 }
 
 internal object DefaultTRMethodCallTracePointPrinter: AbstractTRMethodCallTracePointPrinter() {
@@ -153,7 +173,7 @@ abstract class AbstractTRFieldTracePointPrinter {
             appendObject(tracePoint.obj)
         }
         else {
-            appendClassName(tracePoint.fieldDescriptor.className.adornedClassNameRepresentation())
+            appendClassName(tracePoint.fieldDescriptor.className)
         }
         return this
     }
@@ -161,10 +181,7 @@ abstract class AbstractTRFieldTracePointPrinter {
     protected fun TRAppendable.appendFieldName(tracePoint: TRFieldTracePoint, isLambdaCaptureSyntheticField: Boolean): TRAppendable {
         if (!isLambdaCaptureSyntheticField) {
             appendSpecialSymbol(".")
-            appendFieldName(
-                tracePoint.name.prettifyFieldName(),
-                tracePoint.fieldDescriptor
-            )
+            appendFieldName(tracePoint.fieldDescriptor)
         }
         return this
     }
@@ -172,9 +189,6 @@ abstract class AbstractTRFieldTracePointPrinter {
     private fun isLambdaCaptureSyntheticField(tracePoint: TRFieldTracePoint): Boolean {
         return tracePoint.className.startsWith("kotlin.jvm.internal.Ref$") && tracePoint.name == "element"
     }
-
-    private fun String.prettifyFieldName(): String = this
-        .removeVolatileDollarFU()
 }
 
 internal object DefaultTRFieldTracePointPrinter: AbstractTRFieldTracePointPrinter() {
@@ -196,18 +210,13 @@ abstract class AbstractTRLocalVariableTracePointPrinter {
     protected fun TRAppendable.append(tracePoint: TRLocalVariableTracePoint): TRAppendable {
         val vd = tracePoint.variableDescriptor
 
-        appendVariableName(vd.name.prettifyVariableName(), vd)
+        appendVariableName(vd)
         append(" ")
         appendSpecialSymbol(tracePoint.accessSymbol())
         append(" ")
         appendObject(tracePoint.value)
         return this
     }
-
-    private fun String.prettifyVariableName(): String = this
-        .removeInlineIV()
-        .removeDollarThis()
-        .removeLeadingDollar()
 }
 
 internal object DefaultTRLocalVariableTracePointPrinter: AbstractTRLocalVariableTracePointPrinter() {
