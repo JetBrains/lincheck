@@ -468,12 +468,13 @@ class CoroutinesRunConcurrentRepresentationTest : BaseRunConcurrentRepresentatio
     override fun block() {
         val executorService = createFixedThreadPool(2)
         executorService.asCoroutineDispatcher().use { dispatcher ->
-            runBlocking(dispatcher) {
-                val job1 = launch(dispatcher) {
+            runBlocking(dispatcher + CoroutineName("Coroutine-0")) {
+                // set coroutines' names explicitly to make them deterministic within the Lincheck test
+                val job1 = launch(dispatcher + CoroutineName("Coroutine-1")) {
                     channel1.send(sharedCounter++)
                     r1 = channel2.receive()
                 }
-                val job2 = launch(dispatcher) {
+                val job2 = launch(dispatcher + CoroutineName("Coroutine-2")) {
                     channel2.send(sharedCounter++)
                     r2 = channel1.receive()
                 }
