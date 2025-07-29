@@ -227,7 +227,8 @@ internal fun AtomicMethodDescriptor.getAtomicReferenceAccessLocation(
     val remainingArguments = if (isArray) arguments.drop(1) else arguments.toList()
 
     // Find where the atomic reference is stored
-    val (owner, field) = findAtomicReferenceOwner(atomicReference, shadowStackFrame)
+    val (owner, field) = shadowStackFrame.findInstanceOrLocalVariableFieldReferringTo(atomicReference)
+        ?: (null to null)
 
     // Create the appropriate location based on the owner and field
     val location = when {
@@ -264,36 +265,22 @@ internal fun AtomicMethodDescriptor.getAtomicReferenceAccessLocation(
         else null
 }
 
-/**
- * Finds the owner object and field that contains the given atomic reference.
- * Checks local variables first, then instance fields.
- * 
- * @return Pair of (owner, field) where owner is the object containing the atomic reference,
- *         and field is the field in that object. Both can be null if no owner is found.
- */
-private fun findAtomicReferenceOwner(
-    atomicReference: Any,
-    shadowStackFrame: ShadowStackFrame
-): Pair<Any?, Field?> {
-    // Check local variables first
-    for ((_, value) in shadowStackFrame.getLocalVariables()) {
-        if (value != null) {
-            val field = value.findInstanceFieldReferringTo(atomicReference)
-            if (field != null) {
-                return value to field
-            }
+// TODO: move to `ShadowStack.kt`
+fun ShadowStackFrame.findInstanceOrLocalVariableFieldReferringTo(obj: Any): Pair<Any, Field>? {
+    // Check instance fields
+    val field = instance?.findInstanceFieldReferringTo(obj)
+    if (field != null) {
+        return (instance!! to field)
+    }
+    // Check local variables
+    for ((_, value) in getLocalVariables()) {
+        if (value == null) continue
+        val field = value.findInstanceFieldReferringTo(obj)
+        if (field != null) {
+            return value to field
         }
     }
-
-    // Check instance fields
-    val instance = shadowStackFrame.instance
-    val field = instance?.findInstanceFieldReferringTo(atomicReference)
-    if (field != null) {
-        return instance to field
-    }
-
-    // No owner found
-    return null to null
+    return null
 }
 
 internal fun AtomicMethodDescriptor.getAtomicFieldUpdaterAccessLocation(receiver: Any, arguments: Array<Any?>): ObjectAccessMethodInfo {
