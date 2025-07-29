@@ -10,59 +10,45 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
-import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
-import org.objectweb.asm.Opcodes.ACC_NATIVE
-import kotlin.collections.mutableMapOf
-import kotlin.jvm.Throws
 
 class MethodLabels internal constructor(
-    private val labels: Map<Label, Int>
+    labels: Map<Label, Int>
 ): Comparator<Label> {
+    private class LabelInfo(val index: Int, var seen: Boolean)
+
+    private val labels = labels.mapValues { (_, v) -> LabelInfo(v, false) }
+
     override fun compare(
         o1: Label,
         o2: Label
     ): Int {
-        val idx1 = labels[o1] ?: 0
-        val idx2 = labels[o2] ?: 0
+        val idx1 = labels[o1]?.index ?: 0
+        val idx2 = labels[o2]?.index ?: 0
         return idx1.compareTo(idx2)
     }
+
+    fun visitLabel(label: Label) {
+        labels[label]?.seen = true
+    }
+
+    fun reset() {
+        labels.values.forEach { it.seen = false }
+    }
+
+    fun isLabelSeen(label: Label): Boolean = labels[label]?.seen ?: false
 
     companion object {
         val EMPTY = MethodLabels(emptyMap())
     }
 }
 
-class MethodLabelsClassVisitor(visitor: ClassVisitor): ClassVisitor(ASM_API, visitor) {
-    private val labels = mutableMapOf<String, MutableMap<Label, Int>>()
-
-    override fun visitMethod(
-        access: Int,
-        name: String,
-        desc: String,
-        signature: String?,
-        exceptions: Array<out String>?
-    ): MethodVisitor {
-        val mv = super.visitMethod(access, name, desc, signature, exceptions)
-        if (access and ACC_NATIVE != 0) {
-            return mv
-        }
-        return LabelCollectorMethodVisitor(mv, labels.computeIfAbsent(name + desc) { mutableMapOf() })
-    }
-
-    fun getLabels(): Map<String, MethodLabels> {
-        return labels.mapValues { MethodLabels(it.value) }
-    }
-}
-
-private class LabelCollectorMethodVisitor(
-    visitor: MethodVisitor,
+internal class LabelCollectorMethodVisitor(
     private val labels: MutableMap<Label, Int>
-): MethodVisitor(ASM_API, visitor) {
-    private var index = 0
+): MethodVisitor(ASM_API, null) {
     override fun visitLabel(label: Label) {
-        super.visitLabel(label)
-        labels[label] = index++
+        // Don't call super.visitLabel(): we know that it is no-op
+        labels[label] = labels.size
     }
 }
