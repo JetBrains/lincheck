@@ -2372,14 +2372,36 @@ internal abstract class ManagedStrategy(
         val threadId = threadScheduler.getCurrentThreadId()
         val shadowStack = shadowStack[threadId]!!
         val shadowStackFrame = shadowStack.last()
-        val (arrayAccess, params) = if (apiKind == AtomicApiKind.ATOMIC_ARRAY) {
-            val info = getAtomicArrayAccessInfo(atomic, methodParams)
-            info.location to info.arguments
-        } else {
-            null to methodParams.asList()
-        }
 
         var ownerName: String? = null
+        var params: List<Any?>? = null
+
+        var arrayAccess = ""
+        if (apiKind == AtomicApiKind.ATOMIC_ARRAY) {
+            val info = getAtomicArrayAccessInfo(atomic, methodParams)
+            arrayAccess = "[${(info.location as ArrayElementByIndexAccess).index}]"
+            params = info.arguments
+        } else if (apiKind == AtomicApiKind.ATOMIC_OBJECT) {
+            params = methodParams.asList()
+        }
+
+        fun getOwnerName(owner: Any?, className: String?, location: AccessLocation): String {
+            val owner = findOwnerName(owner, className,
+                lookupInLocalVariables = false,
+                lookupInConstants = false,
+            )
+            return when (location) {
+                is ArrayElementByIndexAccess -> {
+                    (owner ?: "this") + "[${location.index}]"
+                }
+                is FieldAccessLocation -> {
+                    (if (owner != null) "$owner." else "") + location.fieldName
+                }
+                else -> {
+                    error("Unexpected location type: $location")
+                }
+            }
+        }
 
         if (apiKind == AtomicApiKind.ATOMIC_OBJECT ||
             apiKind == AtomicApiKind.ATOMIC_ARRAY
@@ -2388,58 +2410,44 @@ internal abstract class ManagedStrategy(
                 // first try to find the receiver field name
                 shadowStackFrame.findCurrentReceiverFieldReferringTo(atomic)
                 ?.let { fieldAccess ->
-                    val accessPath = AccessPath(listOfNotNull(fieldAccess, arrayAccess))
-                    findOwnerName(
-                        shadowStackFrame.instance, fieldAccess.className,
-                        lookupInLocalVariables = false,
-                        lookupInConstants = false,
-                    ) + accessPath.toString()
+                    getOwnerName(
+                        owner = shadowStackFrame.instance,
+                        className = fieldAccess.className,
+                        location = fieldAccess
+                    )
                 }
-
                 // then try to search in local variables
-                ?: shadowStackFrame.findLocalVariableReferringTo(atomic)
-                ?.let { accessPath ->
-                    (accessPath + arrayAccess).toString()
-                }
+                ?: shadowStackFrame.findLocalVariableReferringTo(atomic)?.toString()
         }
 
-        if (apiKind == AtomicApiKind.ATOMIC_FIELD_UPDATER) {
-            val info = getAtomicFieldUpdaterAccessInfo(atomic, methodParams)
-            val fieldAccess = info.location as ObjectFieldAccess
-            ownerName = findOwnerName(
-                info.obj,
-                fieldAccess.className,
-                lookupInLocalVariables = false,
-                lookupInConstants = false,
-            ) + fieldAccess.toAccessPath()
-        }
-
-        if (apiKind == AtomicApiKind.VAR_HANDLE) {
-            val info = getVarHandleAccessInfo(atomic, methodParams)
-            ownerName = findOwnerName(
-                info.obj,
-                (info.location as? FieldAccessLocation)?.className,
-                lookupInLocalVariables = false,
-                lookupInConstants = false,
-            ) + info.location.toAccessPath()
-        }
-
-        if (apiKind == AtomicApiKind.UNSAFE) {
-            val info = getUnsafeAccessInfo(atomic, methodParams)
-            ownerName = findOwnerName(
-                info.obj,
-                (info.location as? FieldAccessLocation)?.className,
-                lookupInLocalVariables = false,
-                lookupInConstants = false,
-            ) + info.location.toAccessPath()
+        if (apiKind == AtomicApiKind.ATOMIC_FIELD_UPDATER ||
+            apiKind == AtomicApiKind.VAR_HANDLE ||
+            apiKind == AtomicApiKind.UNSAFE
+        ) {
+            val info = when (apiKind) {
+                AtomicApiKind.ATOMIC_FIELD_UPDATER ->
+                    getAtomicFieldUpdaterAccessInfo(atomic, methodParams)
+                AtomicApiKind.VAR_HANDLE ->
+                    getVarHandleAccessInfo(atomic, methodParams)
+                AtomicApiKind.UNSAFE ->
+                    getUnsafeAccessInfo(atomic, methodParams)
+                else ->
+                    error("")
+            }
+            ownerName = getOwnerName(
+                owner = info.obj,
+                className = (info.location as? FieldAccessLocation)?.className,
+                location = info.location
+            )
+            params = info.arguments
         }
 
         return if (ownerName != null) {
-            // return owner name if it was found
-            ownerName to params
+            // return the owner name if it was found
+            ownerName + arrayAccess to params!!
         } else {
-            // otherwise just return atomic object representation
-            objectTracker.getObjectRepresentation(atomic) to params
+            // otherwise return atomic object representation
+            objectTracker.getObjectRepresentation(atomic) + arrayAccess to params!!
         }
     }
 
