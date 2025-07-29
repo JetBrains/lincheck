@@ -44,6 +44,11 @@ import org.jetbrains.lincheck.util.isArraysCopyOfRangeIntrinsic
 import org.jetbrains.lincheck.datastructures.ManagedStrategyGuarantee
 import org.jetbrains.lincheck.analysis.ShadowStackFrame
 import org.jetbrains.lincheck.analysis.isCurrentStackFrameInstance
+import org.jetbrains.lincheck.descriptors.LocalVariableAccess
+import org.jetbrains.lincheck.descriptors.OwnerName
+import org.jetbrains.lincheck.descriptors.plus
+import org.jetbrains.lincheck.descriptors.toAccessLocation
+import org.jetbrains.lincheck.descriptors.toOwnerName
 import org.jetbrains.lincheck.util.AnalysisProfile
 import org.jetbrains.lincheck.util.AnalysisSectionType
 import org.jetbrains.lincheck.util.Logger
@@ -2626,6 +2631,28 @@ internal class ManagedStrategyRunner(
 
 private fun TracePoint.isActorMethodCallTracePoint() =
     (this is MethodCallTracePoint && this.isRootCall)
+
+// TODO: move to `ShadowStack.kt`
+fun ShadowStackFrame.findInstanceFieldOrLocalVariableReferringTo(obj: Any): Pair<Any?, OwnerName>? {
+    // Check instance fields
+    val field = instance?.findInstanceFieldReferringTo(obj)
+    if (field != null) {
+        return (instance!! to field.toAccessLocation().toOwnerName())
+    }
+    // Check local variables
+    for ((varName, value) in getLocalVariables()) {
+        if (value == null) continue
+        val ownerName = LocalVariableAccess(varName).toOwnerName()
+        if (value === obj) {
+            return (null to ownerName)
+        }
+        val field = value.findInstanceFieldReferringTo(obj)
+        if (field != null) {
+            return (null to ownerName + field.toAccessLocation())
+        }
+    }
+    return null
+}
 
 // represents an unknown code location
 internal const val UNKNOWN_CODE_LOCATION = -1
