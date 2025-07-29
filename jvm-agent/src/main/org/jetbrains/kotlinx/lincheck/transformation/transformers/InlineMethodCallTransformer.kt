@@ -40,6 +40,7 @@ internal class InlineMethodCallTransformer(
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
     val locals: MethodVariables,
+    val labelSorter: MethodLabels
 ) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter, methodVisitor) {
     private companion object {
         val objectType: String = getObjectType("java/lang/Object").className
@@ -320,17 +321,15 @@ internal class InlineMethodCallTransformer(
         return methodId
     }
 
-    private fun processInlineMethodCallReturn(inlineMethodName: String, startLabel: Label) = adapter.run {
-        // Create a fake method descriptor
-        val methodId = getPseudoMethodId(className, startLabel, inlineMethodName)
-        System.err.println("%%% $className / $startLabel / $inlineMethodName : $methodId")
+    private fun processInlineMethodCallReturn(methodId: Int) = adapter.run {
+        System.err.println("%%% $className.$methodName: $methodId")
         push(methodId)
         invokeStatic(Injections::onInlineMethodCallReturn)
     }
 
     private fun getPseudoMethodId(possibleClassName: String?, startLabel: Label, inlineMethodName: String): Int =
         TRACE_CONTEXT.getOrCreateMethodId(
-            possibleClassName ?: "$className\$$methodName\$$startLabel\$inlineCall",
+            possibleClassName ?: "$className$$methodName$$startLabel\$inlineCall",
             inlineMethodName,
             "()V"
         )
