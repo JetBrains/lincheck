@@ -76,6 +76,7 @@ public interface EventTracker {
 
     void onInlineMethodCall(int codeLocation, int methodId, Object owner);
     void onInlineMethodCallReturn(int methodId);
+    void onInlineMethodCallException(int methodId, Throwable t);
 
     BootstrapResult<?> invokeDeterministicallyOrNull(long descriptorId, Object descriptor, Object receiver, Object[] params);
 

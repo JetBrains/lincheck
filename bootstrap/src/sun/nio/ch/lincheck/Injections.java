@@ -587,6 +587,13 @@ public class Injections {
         getEventTracker().onInlineMethodCallReturn(methodId);
     }
 
+    /**
+     * Called from the instrumented code after any kotlin inline method throws exception
+     */
+    public static void onInlineMethodCallException(int methodId, Throwable t) {
+        getEventTracker().onInlineMethodCallException(methodId, t);
+    }
+
     // == Methods required for the IDEA Plugin integration ==
 
     /**

@@ -27,6 +27,8 @@ internal fun List<LocalVariableInfo>.isUniqueVariable(): Boolean {
 data class LocalVariableInfo(val name: String, val index: Int, val labelIndexRange: Pair<Label, Label>, val type: Type) {
     val isInlineCallMarker = name.startsWith(INLINE_FUNC_PREFIX)
     val inlineMethodName = if (isInlineCallMarker) name.removePrefix(INLINE_FUNC_PREFIX) else null
+    val startLabel = labelIndexRange.first
+    val endLabel = labelIndexRange.second
 }
 
 data class MethodVariables(val variables: LocalVariablesMap = emptyMap()) {

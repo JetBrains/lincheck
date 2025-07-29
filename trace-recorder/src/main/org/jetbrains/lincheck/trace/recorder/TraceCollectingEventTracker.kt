@@ -532,6 +532,19 @@ class TraceCollectingEventTracker(
         strategy.callEnded(tracePoint)
     }
 
+    override fun onInlineMethodCallException(methodId: Int, t: Throwable): Unit = runInsideIgnoredSection {
+        val threadData = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTrackerData as? ThreadData? ?: return
+        val tracePoint = threadData.popStackFrame()
+        if (tracePoint.methodId != methodId) {
+            val md = TRACE_CONTEXT.getMethodDescriptor(methodId)
+            System.err.println("??? Exception Inline Method with Id $methodId (${md.className}.${md.methodName}) but on stack ${tracePoint.methodId} (${tracePoint.className}.${tracePoint.methodName})")
+        } else {
+            System.err.println("--- Exception Inline Method with Id $methodId (${tracePoint.className}.${tracePoint.methodName})")
+        }
+        tracePoint.exceptionClassName = t.javaClass.name
+        strategy.callEnded(tracePoint)
+    }
+
     override fun invokeDeterministicallyOrNull(
         descriptorId: Long,
         descriptor: Any?,
