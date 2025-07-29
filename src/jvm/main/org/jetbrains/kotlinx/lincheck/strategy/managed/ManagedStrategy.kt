@@ -2385,10 +2385,13 @@ internal abstract class ManagedStrategy(
             params = methodParams.asList()
         }
 
-        fun getOwnerName(owner: Any?, className: String?, location: AccessLocation): String {
+        fun getOwnerName(owner: Any?, className: String?, location: AccessLocation,
+            lookupInLocalVariables: Boolean = true,
+            lookupInConstants: Boolean = true,
+        ): String {
             val owner = findOwnerName(owner, className,
-                lookupInLocalVariables = false,
-                lookupInConstants = false,
+                lookupInLocalVariables = lookupInLocalVariables,
+                lookupInConstants = lookupInConstants,
             )
             return when (location) {
                 is ArrayElementByIndexAccess -> {
@@ -2413,7 +2416,9 @@ internal abstract class ManagedStrategy(
                     getOwnerName(
                         owner = shadowStackFrame.instance,
                         className = fieldAccess.className,
-                        location = fieldAccess
+                        location = fieldAccess,
+                        lookupInLocalVariables = false,
+                        lookupInConstants = false,
                     )
                 }
                 // then try to search in local variables
