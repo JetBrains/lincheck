@@ -656,8 +656,8 @@ class TraceCollectingEventTracker(
             }
             when (mode) {
                 TraceCollectorMode.BINARY_DUMP -> saveRecorderTrace(traceDumpPath!!, TRACE_CONTEXT, roots)
-                TraceCollectorMode.TEXT -> printRecorderTrace(traceDumpPath, TRACE_CONTEXT, roots, false)
-                TraceCollectorMode.TEXT_VERBOSE -> printRecorderTrace(traceDumpPath, TRACE_CONTEXT, roots, true)
+                TraceCollectorMode.TEXT -> printPostProcessedTrace(traceDumpPath, TRACE_CONTEXT, roots, false)
+                TraceCollectorMode.TEXT_VERBOSE -> printPostProcessedTrace(traceDumpPath, TRACE_CONTEXT, roots, true)
                 TraceCollectorMode.BINARY_STREAM -> Unit // Do nothing, everything is written
             }
         } catch (t: Throwable) {
