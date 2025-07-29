@@ -2341,28 +2341,32 @@ internal abstract class ManagedStrategy(
     }
 
     /**
-     * Returns beautiful string representation of the [owner].
-     * If the [owner] is `this` of the current method, then returns `null`.
+     * Finds the owner name of a given object. The owner name can originate from various sources
+     * such as local variable names, instance field names, constants referencing the object,
+     * or as a last resort, the object's string representation.
+     *
+     * @param obj The object whose owner name needs to be determined.
+     * @return A string representing the owner name of the object, or null if no owner is applicable.
      */
-    private fun findOwnerName(owner: Any): String? {
+    private fun findOwnerName(obj: Any): String? {
         val threadId = threadScheduler.getCurrentThreadId()
         // if the current owner is `this` - no owner needed
-        if (isCurrentStackFrameReceiver(owner)) return null
+        if (isCurrentStackFrameReceiver(obj)) return null
         // do not prettify thread names
-        if (owner is Thread) {
-            return objectTracker.getObjectRepresentation(owner)
+        if (obj is Thread) {
+            return objectTracker.getObjectRepresentation(obj)
         }
         // lookup for the object in local variables and use the local variable name if found
         val shadowStackFrame = shadowStack[threadId]!!.last()
-        shadowStackFrame.getLastAccessVariable(owner)?.let { return it }
+        shadowStackFrame.getLastAccessVariable(obj)?.let { return it }
         // lookup for a field name in the current stack frame `this`
         shadowStackFrame.instance
-            ?.findInstanceFieldReferringTo(owner)
+            ?.findInstanceFieldReferringTo(obj)
             ?.let { return it.name }
         // lookup for the constant referencing the object
-        constants[owner]?.let { return it }
+        constants[obj]?.let { return it }
         // otherwise return object's string representation
-        return objectTracker.getObjectRepresentation(owner)
+        return objectTracker.getObjectRepresentation(obj)
     }
 
     /**
