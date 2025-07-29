@@ -204,16 +204,19 @@ internal fun AtomicMethodDescriptor.getUnsafeAccessLocation(receiver: Any, argum
     }
 }
 
-internal fun getAtomicReferenceAccessLocation(
+internal fun AtomicMethodDescriptor.getAtomicReferenceAccessLocation(
     atomicReference: Any,
+    arguments: Array<Any?>,
     shadowStackFrame: ShadowStackFrame,
-    arguments: Array<Any?>
 ): ObjectAccessMethodInfo {
+    require(apiKind == ATOMIC_OBJECT || apiKind == ATOMIC_ARRAY) {
+        "Method is not an Atomic reference or array method: $this"
+    }
     require(isAtomic(atomicReference) || isAtomicArray(atomicReference)) {
         "Receiver is not a recognized Atomic type: ${atomicReference.javaClass.name}"
     }
 
-    val isArray = isAtomicArray(atomicReference)
+    val isArray = (apiKind == ATOMIC_ARRAY)
     val index = if (isArray && arguments.isNotEmpty() && arguments[0] is Int) arguments[0] as Int else null
     val remainingArguments = if (isArray && index != null) arguments.drop(1) else arguments.toList()
 
