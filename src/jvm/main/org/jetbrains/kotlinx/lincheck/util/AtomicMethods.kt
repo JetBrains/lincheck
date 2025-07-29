@@ -220,26 +220,66 @@ internal fun AtomicMethodDescriptor.getAtomicReferenceAccessLocation(
     val index = if (isArray && arguments.isNotEmpty() && arguments[0] is Int) arguments[0] as Int else null
     val remainingArguments = if (isArray && index != null) arguments.drop(1) else arguments.toList()
 
+    // Find where the atomic reference is stored
+    val (owner, field) = findAtomicReferenceOwner(atomicReference, shadowStackFrame)
+
+    // Create the appropriate location based on the owner and field
+    val location = when {
+        // Array access case (applies to all owner types)
+        isArray && index != null -> ArrayElementByIndexAccess(index)
+        
+        // Field access cases (only when field is found)
+        field != null -> {
+            val className = field.declaringClass.name
+            val fieldName = field.name
+            
+            if (Modifier.isStatic(field.modifiers)) {
+                StaticFieldAccess(className, fieldName)
+            } else {
+                ObjectFieldAccess(className, fieldName)
+            }
+        }
+        
+        // Default case for non-array atomic references without identified field
+        else -> object : ObjectAccessLocation() {}
+    }
+
+    // Determine the object to use based on the owner type
+    val obj = when {
+        // For static fields, obj is null
+        field != null && Modifier.isStatic(field.modifiers) -> null
+        
+        // For local variables or instance fields, use the owner
+        owner != null -> owner
+        
+        // Default case, use the atomic reference itself
+        else -> atomicReference
+    }
+
+    return ObjectAccessMethodInfo(
+        obj = obj,
+        location = location,
+        arguments = remainingArguments
+    )
+}
+
+/**
+ * Finds the owner object and field that contains the given atomic reference.
+ * Checks local variables first, then instance fields.
+ * 
+ * @return Pair of (owner, field) where owner is the object containing the atomic reference,
+ *         and field is the field in that object. Both can be null if no owner is found.
+ */
+private fun findAtomicReferenceOwner(
+    atomicReference: Any,
+    shadowStackFrame: ShadowStackFrame
+): Pair<Any?, Field?> {
     // Check local variables first
-    for ((localVariableName, value) in shadowStackFrame.getLocalVariables()) {
+    for ((_, value) in shadowStackFrame.getLocalVariables()) {
         if (value != null) {
             val field = value.findInstanceFieldReferringTo(atomicReference)
             if (field != null) {
-                val location = if (isArray && index != null) {
-                    // For atomic arrays in local variables
-                    ArrayElementByIndexAccess(index)
-                } else {
-                    // For atomic references in local variables
-                    ObjectFieldAccess(
-                        className = field.declaringClass.name,
-                        fieldName = field.name
-                    )
-                }
-                return ObjectAccessMethodInfo(
-                    obj = value,
-                    location = location,
-                    arguments = remainingArguments
-                )
+                return value to field
             }
         }
     }
@@ -248,62 +288,11 @@ internal fun AtomicMethodDescriptor.getAtomicReferenceAccessLocation(
     val instance = shadowStackFrame.instance
     val field = instance?.findInstanceFieldReferringTo(atomicReference)
     if (field != null) {
-        val isStatic = Modifier.isStatic(field.modifiers)
-
-        return if (isStatic) {
-            // Static field case
-            val location = if (isArray && index != null) {
-                // For static atomic arrays
-                ArrayElementByIndexAccess(index)
-            } else {
-                // For static atomic references
-                StaticFieldAccess(
-                    className = field.declaringClass.name,
-                    fieldName = field.name
-                )
-            }
-            ObjectAccessMethodInfo(
-                obj = null,
-                location = location,
-                arguments = remainingArguments
-            )
-        } else {
-            // Instance field case
-            val location = if (isArray && index != null) {
-                // For instance atomic arrays
-                ArrayElementByIndexAccess(index)
-            } else {
-                // For instance atomic references
-                ObjectFieldAccess(
-                    className = field.declaringClass.name,
-                    fieldName = field.name
-                )
-            }
-            ObjectAccessMethodInfo(
-                obj = instance,
-                location = location,
-                arguments = remainingArguments
-            )
-        }
+        return instance to field
     }
 
-    // Default case - couldn't find the owner
-    return if (isArray && index != null) {
-        // For atomic arrays without identified owner
-        ObjectAccessMethodInfo(
-            obj = atomicReference,
-            location = ArrayElementByIndexAccess(index),
-            arguments = remainingArguments
-        )
-    } else {
-        // For atomic references without identified owner
-        // Use a generic object access location
-        ObjectAccessMethodInfo(
-            obj = atomicReference,
-            location = object : ObjectAccessLocation() {},
-            arguments = remainingArguments
-        )
-    }
+    // No owner found
+    return null to null
 }
 
 internal fun AtomicMethodDescriptor.getAtomicFieldUpdaterAccessLocation(receiver: Any, arguments: Array<Any?>): ObjectAccessMethodInfo {
