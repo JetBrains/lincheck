@@ -710,6 +710,7 @@ private fun Appendable.appendValidationFailure(
     appendExecutionScenarioWithResults(failure, exceptionStackTraces)
     appendLine()
     appendLine()
+    append("#1: ")
     appendException(failure.exception)
     return this
 }
