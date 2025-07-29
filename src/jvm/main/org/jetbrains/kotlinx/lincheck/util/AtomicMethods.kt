@@ -147,7 +147,7 @@ internal fun AtomicMethodDescriptor.getSetValue(obj: Any?, params: Array<Any?>):
 internal fun AtomicMethodDescriptor.getAtomicArrayAccessLocation(
     atomicArray: Any,
     arguments: Array<Any?>
-): ObjectAccessMethodInfo? {
+): ArrayElementByIndexAccess {
     require(apiKind == ATOMIC_ARRAY) {
         "Method is not an atomic array method: $this"
     }
@@ -158,36 +158,24 @@ internal fun AtomicMethodDescriptor.getAtomicArrayAccessLocation(
         "Expected first argument to be array index, but got " +
             if (arguments.isEmpty()) "no arguments" else arguments[0]?.javaClass?.name ?: "null"
     }
+    return ArrayElementByIndexAccess(arguments[0] as Int)
+}
 
-    val index = arguments[0] as Int
-    val remainingArguments = arguments.drop(1)
-
+internal fun AtomicMethodDescriptor.getAtomicArrayAccessInfo(
+    atomicArray: Any,
+    arguments: Array<Any?>
+): ObjectAccessMethodInfo? {
+    require(apiKind == ATOMIC_ARRAY) {
+        "Method is not an atomic array method: $this"
+    }
     return ObjectAccessMethodInfo(
         obj = atomicArray,
-        location = ArrayElementByIndexAccess(index),
-        arguments = remainingArguments
+        location = getAtomicArrayAccessLocation(atomicArray, arguments),
+        arguments = arguments.drop(1),
     )
 }
 
-// TODO: move to `ShadowStack.kt`
-fun ShadowStackFrame.findInstanceOrLocalVariableFieldReferringTo(obj: Any): Pair<Any, Field>? {
-    // Check instance fields
-    val field = instance?.findInstanceFieldReferringTo(obj)
-    if (field != null) {
-        return (instance!! to field)
-    }
-    // Check local variables
-    for ((_, value) in getLocalVariables()) {
-        if (value == null) continue
-        val field = value.findInstanceFieldReferringTo(obj)
-        if (field != null) {
-            return value to field
-        }
-    }
-    return null
-}
-
-internal fun AtomicMethodDescriptor.getAtomicFieldUpdaterAccessLocation(
+internal fun AtomicMethodDescriptor.getAtomicFieldUpdaterAccessInfo(
     receiver: Any,
     arguments: Array<Any?>
 ): ObjectAccessMethodInfo {
@@ -231,7 +219,7 @@ internal fun AtomicMethodDescriptor.getAtomicFieldUpdaterAccessLocation(
     }
 }
 
-internal fun AtomicMethodDescriptor.getUnsafeAccessLocation(
+internal fun AtomicMethodDescriptor.getUnsafeAccessInfo(
     receiver: Any,
     arguments: Array<Any?>
 ): ObjectAccessMethodInfo {
@@ -294,7 +282,7 @@ internal fun AtomicMethodDescriptor.getUnsafeAccessLocation(
     }
 }
 
-internal fun AtomicMethodDescriptor.getVarHandleAccessLocation(
+internal fun AtomicMethodDescriptor.getVarHandleAccessInfo(
     varHandle: Any,
     arguments: Array<Any?>
 ): ObjectAccessMethodInfo {
