@@ -2351,11 +2351,17 @@ internal abstract class ManagedStrategy(
         // lookup for the object in local variables and use the local variable name if found
         if (lookupInLocalVariables) {
             val shadowStackFrame = shadowStack.last()
-            shadowStackFrame.getLastAccessVariable(obj)?.let { return it }
+            shadowStackFrame.getLastAccessVariable(obj)?.let { name ->
+                // return if (name.contains("this")) null else name
+                return name
+            }
             // lookup for a field name in the current stack frame `this`
             shadowStackFrame.instance
                 ?.findInstanceFieldReferringTo(obj)
-                ?.let { return it.name }
+                ?.let { field ->
+                    val name = field.name
+                    return if (name.contains("this")) null else name
+                }
         }
         // lookup for the constant referencing the object
         if (lookupInConstants) {
@@ -2409,7 +2415,7 @@ internal abstract class ManagedStrategy(
         if (apiKind == AtomicApiKind.ATOMIC_OBJECT ||
             apiKind == AtomicApiKind.ATOMIC_ARRAY
         ) {
-            ownerName =
+            ownerName = // if (shadowStack.isCurrentStackFrameReceiver(atomic)) null else
                 // first try to find the receiver field name
                 shadowStackFrame.findCurrentReceiverFieldReferringTo(atomic)
                 ?.let { fieldAccess ->
@@ -2417,8 +2423,8 @@ internal abstract class ManagedStrategy(
                         owner = shadowStackFrame.instance,
                         className = fieldAccess.className,
                         location = fieldAccess,
-                        lookupInLocalVariables = false,
-                        lookupInConstants = false,
+                        // lookupInLocalVariables = false,
+                        // lookupInConstants = false,
                     )
                 }
                 // then try to search in local variables
@@ -2442,7 +2448,9 @@ internal abstract class ManagedStrategy(
             ownerName = getOwnerName(
                 owner = info.obj,
                 className = (info.location as? FieldAccessLocation)?.className,
-                location = info.location
+                location = info.location,
+                // lookupInLocalVariables = false,
+                // lookupInConstants = false,
             )
             params = info.arguments
         }
@@ -2724,7 +2732,7 @@ fun ShadowStackFrame.findCurrentReceiverFieldReferringTo(obj: Any): FieldAccessL
 // TODO: move to `ShadowStack.kt`
 fun ShadowStackFrame.findLocalVariableReferringTo(obj: Any): OwnerName? {
     for ((varName, value) in getLocalVariables()) {
-        if (value == null) continue
+        if (value === null || value === instance /* do not return `this` */) continue
         val ownerName = LocalVariableAccess(varName).toOwnerName()
         if (value === obj) {
             return ownerName
