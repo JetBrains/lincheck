@@ -13,19 +13,19 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| ------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                               Thread 1                                                                |
-| ------------------------------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                                           |
-|   number ➜ 1.0 at VarHandleDoubleRepresentationTest.operation(VarHandleRepresentationTests.kt:327)                                    |
-|   number.compareAndSet(1.0, 1.0): true at VarHandleDoubleRepresentationTest.operation(VarHandleRepresentationTests.kt:327)            |
-|   number.set(2.0) at VarHandleDoubleRepresentationTest.operation(VarHandleRepresentationTests.kt:328)                                 |
-|   staticNumber ➜ 2.0 at VarHandleDoubleRepresentationTest.operation(VarHandleRepresentationTests.kt:330)                              |
-|   staticNumber.compareAndSet(2.0, 1.0): true at VarHandleDoubleRepresentationTest.operation(VarHandleRepresentationTests.kt:330)      |
-|   staticNumber.set(3.0) at VarHandleDoubleRepresentationTest.operation(VarHandleRepresentationTests.kt:331)                           |
-|   array ➜ DoubleArray#1 at VarHandleDoubleRepresentationTest.operation(VarHandleRepresentationTests.kt:333)                           |
-|   DoubleArray#1[1].compareAndSet(3.0, 1.0): false at VarHandleDoubleRepresentationTest.operation(VarHandleRepresentationTests.kt:333) |
-|   array ➜ DoubleArray#1 at VarHandleDoubleRepresentationTest.operation(VarHandleRepresentationTests.kt:334)                           |
-|   DoubleArray#1[1].set(2.0) at VarHandleDoubleRepresentationTest.operation(VarHandleRepresentationTests.kt:334)                       |
-|   result: void                                                                                                                        |
-| ------------------------------------------------------------------------------------------------------------------------------------- |
+| -------------------------------------------------------------------------------------------------------------------------------- |
+|                                                             Thread 1                                                             |
+| -------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                      |
+|   number ➜ 1.0 at VarHandleDoubleRepresentationTest.operation(VarHandleRepresentationTests.kt:327)                               |
+|   number.compareAndSet(1.0, 1.0): true at VarHandleDoubleRepresentationTest.operation(VarHandleRepresentationTests.kt:327)       |
+|   number.set(2.0) at VarHandleDoubleRepresentationTest.operation(VarHandleRepresentationTests.kt:328)                            |
+|   staticNumber ➜ 2.0 at VarHandleDoubleRepresentationTest.operation(VarHandleRepresentationTests.kt:330)                         |
+|   staticNumber.compareAndSet(2.0, 1.0): true at VarHandleDoubleRepresentationTest.operation(VarHandleRepresentationTests.kt:330) |
+|   staticNumber.set(3.0) at VarHandleDoubleRepresentationTest.operation(VarHandleRepresentationTests.kt:331)                      |
+|   array ➜ DoubleArray#1 at VarHandleDoubleRepresentationTest.operation(VarHandleRepresentationTests.kt:333)                      |
+|   array[1].compareAndSet(3.0, 1.0): false at VarHandleDoubleRepresentationTest.operation(VarHandleRepresentationTests.kt:333)    |
+|   array ➜ DoubleArray#1 at VarHandleDoubleRepresentationTest.operation(VarHandleRepresentationTests.kt:334)                      |
+|   array[1].set(2.0) at VarHandleDoubleRepresentationTest.operation(VarHandleRepresentationTests.kt:334)                          |
+|   result: void                                                                                                                   |
+| -------------------------------------------------------------------------------------------------------------------------------- |

@@ -13,19 +13,19 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| ------------------------------------------------------------------------------------------------------------------------------------------ |
-|                                                                  Thread 1                                                                  |
-| ------------------------------------------------------------------------------------------------------------------------------------------ |
-| operation()                                                                                                                                |
-|   number ➜ false at VarHandleBooleanRepresentationTest.operation(VarHandleRepresentationTests.kt:216)                                      |
-|   number.compareAndSet(false, false): true at VarHandleBooleanRepresentationTest.operation(VarHandleRepresentationTests.kt:216)            |
-|   number.set(true) at VarHandleBooleanRepresentationTest.operation(VarHandleRepresentationTests.kt:217)                                    |
-|   staticNumber ➜ true at VarHandleBooleanRepresentationTest.operation(VarHandleRepresentationTests.kt:219)                                 |
-|   staticNumber.compareAndSet(true, false): true at VarHandleBooleanRepresentationTest.operation(VarHandleRepresentationTests.kt:219)       |
-|   staticNumber.set(false) at VarHandleBooleanRepresentationTest.operation(VarHandleRepresentationTests.kt:220)                             |
-|   array ➜ BooleanArray#1 at VarHandleBooleanRepresentationTest.operation(VarHandleRepresentationTests.kt:222)                              |
-|   BooleanArray#1[1].compareAndSet(false, false): true at VarHandleBooleanRepresentationTest.operation(VarHandleRepresentationTests.kt:222) |
-|   array ➜ BooleanArray#1 at VarHandleBooleanRepresentationTest.operation(VarHandleRepresentationTests.kt:223)                              |
-|   BooleanArray#1[1].set(true) at VarHandleBooleanRepresentationTest.operation(VarHandleRepresentationTests.kt:223)                         |
-|   result: void                                                                                                                             |
-| ------------------------------------------------------------------------------------------------------------------------------------------ |
+| ------------------------------------------------------------------------------------------------------------------------------------ |
+|                                                               Thread 1                                                               |
+| ------------------------------------------------------------------------------------------------------------------------------------ |
+| operation()                                                                                                                          |
+|   number ➜ false at VarHandleBooleanRepresentationTest.operation(VarHandleRepresentationTests.kt:216)                                |
+|   number.compareAndSet(false, false): true at VarHandleBooleanRepresentationTest.operation(VarHandleRepresentationTests.kt:216)      |
+|   number.set(true) at VarHandleBooleanRepresentationTest.operation(VarHandleRepresentationTests.kt:217)                              |
+|   staticNumber ➜ true at VarHandleBooleanRepresentationTest.operation(VarHandleRepresentationTests.kt:219)                           |
+|   staticNumber.compareAndSet(true, false): true at VarHandleBooleanRepresentationTest.operation(VarHandleRepresentationTests.kt:219) |
+|   staticNumber.set(false) at VarHandleBooleanRepresentationTest.operation(VarHandleRepresentationTests.kt:220)                       |
+|   array ➜ BooleanArray#1 at VarHandleBooleanRepresentationTest.operation(VarHandleRepresentationTests.kt:222)                        |
+|   array[1].compareAndSet(false, false): true at VarHandleBooleanRepresentationTest.operation(VarHandleRepresentationTests.kt:222)    |
+|   array ➜ BooleanArray#1 at VarHandleBooleanRepresentationTest.operation(VarHandleRepresentationTests.kt:223)                        |
+|   array[1].set(true) at VarHandleBooleanRepresentationTest.operation(VarHandleRepresentationTests.kt:223)                            |
+|   result: void                                                                                                                       |
+| ------------------------------------------------------------------------------------------------------------------------------------ |
