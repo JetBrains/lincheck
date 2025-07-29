@@ -9,13 +9,13 @@ The following interleaving leads to the error:
 | -------------------------------------------------------------------------------------------------------- |
 |                      Thread 1                       |                      Thread 2                      |
 | -------------------------------------------------------------------------------------------------------- |
-|                                                     | enqueue(-1)                                        |
+|                                                     | enqueue(-1): <hung>                                |
 |                                                     |   q.enqueue(-1)                                    |
 |                                                     |     tail.get(): Node#2                             |
 |                                                     |     curTail.getNext(): AtomicReference#3           |
 |                                                     |     curTail.next.compareAndSet(null, Node#1): true |
 |                                                     |     switch                                         |
-| enqueue(1)                                          |                                                    |
+| enqueue(1): <hung>                                  |                                                    |
 |   q.enqueue(1)                                      |                                                    |
 |     /* The following events repeat infinitely: */   |                                                    |
 | ┌╶> tail.get(): Node#2                              |                                                    |
@@ -28,13 +28,13 @@ Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 |                                               Thread 1                                                |                                               Thread 2                                               |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-|                                                                                                       | enqueue(-1)                                                                                          |
+|                                                                                                       | enqueue(-1): <hung>                                                                                  |
 |                                                                                                       |   q.enqueue(-1) at ObstructionFreedomViolationEventsCutTest.enqueue(SpinlockEventsCutTests.kt:44)    |
 |                                                                                                       |     tail.get(): Node#2 at MSQueueBlocking.enqueue(MSQueueBlocking.kt:23)                             |
 |                                                                                                       |     curTail.getNext(): AtomicReference#3 at MSQueueBlocking.enqueue(MSQueueBlocking.kt:24)           |
 |                                                                                                       |     curTail.next.compareAndSet(null, Node#1): true at MSQueueBlocking.enqueue(MSQueueBlocking.kt:24) |
 |                                                                                                       |     switch                                                                                           |
-| enqueue(1)                                                                                            |                                                                                                      |
+| enqueue(1): <hung>                                                                                    |                                                                                                      |
 |   q.enqueue(1) at ObstructionFreedomViolationEventsCutTest.enqueue(SpinlockEventsCutTests.kt:44)      |                                                                                                      |
 |     /* The following events repeat infinitely: */                                                     |                                                                                                      |
 | ┌╶> tail.get(): Node#2 at MSQueueBlocking.enqueue(MSQueueBlocking.kt:23)                              |                                                                                                      |

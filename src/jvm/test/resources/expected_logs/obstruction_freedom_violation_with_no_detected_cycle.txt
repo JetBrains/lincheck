@@ -9,7 +9,7 @@ The following interleaving leads to the error:
 | ------------------------------------- |
 |               Thread 1                |
 | ------------------------------------- |
-| operation()                           |
+| operation(): <hung>                   |
 |   incrementManyTimes()                |
 |   incrementManyTimes()                |
 |     counter.get(): 101                |
@@ -20,7 +20,7 @@ Detailed trace:
 | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                      Thread 1                                                                       |
 | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                                                         |
+| operation(): <hung>                                                                                                                                 |
 |   incrementManyTimes() at ObstructionFreedomActiveLockRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:39)                      |
 |     counter.get(): 0 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:46)               |
 |     counter.incrementAndGet(): 1 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:49)   |
