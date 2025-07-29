@@ -21,15 +21,20 @@ data class LocalVariableAccess(
     val variableName: String
 ) : AccessLocation()
 
+abstract class FieldAccessLocation : ObjectAccessLocation() {
+    abstract val className: String
+    abstract val fieldName: String
+}
+
 data class StaticFieldAccess(
-    val className: String,
-    val fieldName: String,
-) : ObjectAccessLocation()
+    override val className: String,
+    override val fieldName: String,
+) : FieldAccessLocation()
 
 data class ObjectFieldAccess(
-    val className: String,
-    val fieldName: String,
-) : ObjectAccessLocation()
+    override val className: String,
+    override val fieldName: String,
+) : FieldAccessLocation()
 
 data class ArrayElementByIndexAccess(
     val index: Int
@@ -59,7 +64,6 @@ class AccessPath(val locations: List<AccessLocation>) {
                 }
                 is StaticFieldAccess -> {
                     with(builder) {
-                        append(location.className.substringAfterLast("."))
                         append(".")
                         append(location.fieldName)
                     }
@@ -103,7 +107,7 @@ class AccessPath(val locations: List<AccessLocation>) {
 
 typealias OwnerName = AccessPath
 
-fun Field.toAccessLocation(): ObjectAccessLocation {
+fun Field.toAccessLocation(): FieldAccessLocation {
     val className = declaringClass.name
     val fieldName = name
     return if (Modifier.isStatic(modifiers)) {
