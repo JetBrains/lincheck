@@ -10,32 +10,11 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import org.jetbrains.lincheck.descriptors.*
+import org.jetbrains.lincheck.util.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import java.util.concurrent.ConcurrentHashMap
 import sun.misc.Unsafe
-
-
-abstract class ObjectLocation
-
-data class StaticFieldLocation(
-    val className: String,
-    val fieldName: String,
-) : ObjectLocation()
-
-data class ObjectFieldLocation(
-    val className: String,
-    val fieldName: String,
-) : ObjectLocation()
-
-data class ArrayIndexLocation(
-    val index: Int
-) : ObjectLocation()
-
-data class ObjectAccessMethodInfo(
-    val obj: Any?,
-    val location: ObjectLocation,
-    val arguments: List<Any?>,
-)
 
 internal fun AtomicMethodDescriptor.getUnsafeAccessLocation(receiver: Any, arguments: Array<Any?>): ObjectAccessMethodInfo {
     require(apiKind == AtomicApiKind.UNSAFE) {
@@ -61,7 +40,7 @@ internal fun AtomicMethodDescriptor.getUnsafeAccessLocation(receiver: Any, argum
             val index = ((memoryOffset - arrayBaseOffset) / arrayIndexScale).toInt()
             ObjectAccessMethodInfo(
                 obj = targetObject,
-                location = ArrayIndexLocation(index),
+                location = ArrayElementByIndexAccess(index),
                 arguments = remainingArguments
             )
         }
@@ -72,7 +51,7 @@ internal fun AtomicMethodDescriptor.getUnsafeAccessLocation(receiver: Any, argum
                 ?: error("Failed to find field name by offset $memoryOffset")
             ObjectAccessMethodInfo(
                 obj = null,
-                location = StaticFieldLocation(
+                location = StaticFieldAccess(
                     className = targetObject.name,
                     fieldName = fieldName,
                 ),
@@ -87,7 +66,7 @@ internal fun AtomicMethodDescriptor.getUnsafeAccessLocation(receiver: Any, argum
                 ?: error("Failed to find field name by offset $memoryOffset")
             ObjectAccessMethodInfo(
                 obj = targetObject,
-                location = ObjectFieldLocation(className, fieldName),
+                location = ObjectFieldAccess(className, fieldName),
                 arguments = remainingArguments
             )
         }
@@ -127,7 +106,7 @@ internal fun AtomicMethodDescriptor.getAtomicFieldUpdaterAccessLocation(receiver
 
         return ObjectAccessMethodInfo(
             obj = targetObject,
-            location = ObjectFieldLocation(
+            location = ObjectFieldAccess(
                 className = targetType.name,
                 fieldName = fieldName
             ),
@@ -160,7 +139,7 @@ internal fun AtomicMethodDescriptor.getVarHandleAccessLocation(varHandle: Any, a
             val index = arguments[1] as Int
             ObjectAccessMethodInfo(
                 obj = array,
-                location = ArrayIndexLocation(index),
+                location = ArrayElementByIndexAccess(index),
                 arguments = arguments.drop(2)
             )
         }
@@ -178,7 +157,7 @@ internal fun AtomicMethodDescriptor.getVarHandleAccessLocation(varHandle: Any, a
 
                 ObjectAccessMethodInfo(
                     obj = null,
-                    location = StaticFieldLocation(
+                    location = StaticFieldAccess(
                         className = receiverType.name,
                         fieldName = fieldName
                     ),
@@ -209,7 +188,7 @@ internal fun AtomicMethodDescriptor.getVarHandleAccessLocation(varHandle: Any, a
 
                 ObjectAccessMethodInfo(
                     obj = targetObject,
-                    location = ObjectFieldLocation(
+                    location = ObjectFieldAccess(
                         className = receiverType.name,
                         fieldName = fieldName
                     ),
