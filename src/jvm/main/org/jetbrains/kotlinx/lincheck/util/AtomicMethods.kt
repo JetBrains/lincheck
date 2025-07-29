@@ -18,7 +18,10 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleNames
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType
 import org.jetbrains.lincheck.descriptors.*
 import org.jetbrains.lincheck.util.*
+import org.jetbrains.lincheck.analysis.ShadowStackFrame
 import sun.misc.Unsafe
+import java.lang.reflect.Field
+import java.lang.reflect.Modifier
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
@@ -198,6 +201,105 @@ internal fun AtomicMethodDescriptor.getUnsafeAccessLocation(receiver: Any, argum
 
         // Unexpected case
         else -> error("Failed to determine unsafe object access location")
+    }
+}
+
+internal fun getAtomicReferenceAccessLocation(
+    atomicReference: Any,
+    shadowStackFrame: ShadowStackFrame,
+    arguments: Array<Any?>
+): ObjectAccessMethodInfo {
+    require(isAtomic(atomicReference) || isAtomicArray(atomicReference)) {
+        "Receiver is not a recognized Atomic type: ${atomicReference.javaClass.name}"
+    }
+
+    val isArray = isAtomicArray(atomicReference)
+    val index = if (isArray && arguments.isNotEmpty() && arguments[0] is Int) arguments[0] as Int else null
+    val remainingArguments = if (isArray && index != null) arguments.drop(1) else arguments.toList()
+
+    // Check local variables first
+    for ((localVariableName, value) in shadowStackFrame.getLocalVariables()) {
+        if (value != null) {
+            val field = value.findInstanceFieldReferringTo(atomicReference)
+            if (field != null) {
+                val location = if (isArray && index != null) {
+                    // For atomic arrays in local variables
+                    ArrayElementByIndexAccess(index)
+                } else {
+                    // For atomic references in local variables
+                    ObjectFieldAccess(
+                        className = field.declaringClass.name,
+                        fieldName = field.name
+                    )
+                }
+                return ObjectAccessMethodInfo(
+                    obj = value,
+                    location = location,
+                    arguments = remainingArguments
+                )
+            }
+        }
+    }
+
+    // Check instance fields
+    val instance = shadowStackFrame.instance
+    val field = instance?.findInstanceFieldReferringTo(atomicReference)
+    if (field != null) {
+        val isStatic = Modifier.isStatic(field.modifiers)
+
+        return if (isStatic) {
+            // Static field case
+            val location = if (isArray && index != null) {
+                // For static atomic arrays
+                ArrayElementByIndexAccess(index)
+            } else {
+                // For static atomic references
+                StaticFieldAccess(
+                    className = field.declaringClass.name,
+                    fieldName = field.name
+                )
+            }
+            ObjectAccessMethodInfo(
+                obj = null,
+                location = location,
+                arguments = remainingArguments
+            )
+        } else {
+            // Instance field case
+            val location = if (isArray && index != null) {
+                // For instance atomic arrays
+                ArrayElementByIndexAccess(index)
+            } else {
+                // For instance atomic references
+                ObjectFieldAccess(
+                    className = field.declaringClass.name,
+                    fieldName = field.name
+                )
+            }
+            ObjectAccessMethodInfo(
+                obj = instance,
+                location = location,
+                arguments = remainingArguments
+            )
+        }
+    }
+
+    // Default case - couldn't find the owner
+    return if (isArray && index != null) {
+        // For atomic arrays without identified owner
+        ObjectAccessMethodInfo(
+            obj = atomicReference,
+            location = ArrayElementByIndexAccess(index),
+            arguments = remainingArguments
+        )
+    } else {
+        // For atomic references without identified owner
+        // Use a generic object access location
+        ObjectAccessMethodInfo(
+            obj = atomicReference,
+            location = object : ObjectAccessLocation() {},
+            arguments = remainingArguments
+        )
     }
 }
 
