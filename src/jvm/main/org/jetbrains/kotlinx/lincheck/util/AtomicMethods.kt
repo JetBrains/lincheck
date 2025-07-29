@@ -144,65 +144,29 @@ internal fun AtomicMethodDescriptor.getSetValue(obj: Any?, params: Array<Any?>):
     return params[argOffset]
 }
 
-internal fun AtomicMethodDescriptor.getAtomicReferenceAccessLocation(
-    atomicReference: Any,
-    arguments: Array<Any?>,
-    shadowStackFrame: ShadowStackFrame,
+internal fun AtomicMethodDescriptor.getAtomicArrayAccessLocation(
+    atomicArray: Any,
+    arguments: Array<Any?>
 ): ObjectAccessMethodInfo? {
-    require(apiKind == ATOMIC_OBJECT || apiKind == ATOMIC_ARRAY) {
-        "Method is not an Atomic reference or array method: $this"
+    require(apiKind == ATOMIC_ARRAY) {
+        "Method is not an atomic array method: $this"
     }
-    require(isAtomic(atomicReference) || isAtomicArray(atomicReference)) {
-        "Receiver is not a recognized Atomic type: ${atomicReference.javaClass.name}"
+    require(isAtomicArray(atomicArray)) {
+        "Receiver is not a recognized atomic array type: ${atomicArray.javaClass.name}"
     }
-    if (apiKind == ATOMIC_ARRAY) {
-        require(arguments.isNotEmpty() && arguments[0] is Int) {
-            "Expected first argument to be array index, but got " +
-                if (arguments.isEmpty()) "no arguments" else arguments[0]?.javaClass?.name ?: "null"
-        }
+    require(arguments.isNotEmpty() && arguments[0] is Int) {
+        "Expected first argument to be array index, but got " +
+            if (arguments.isEmpty()) "no arguments" else arguments[0]?.javaClass?.name ?: "null"
     }
 
-    val isArray = (apiKind == ATOMIC_ARRAY)
-    val index = if (isArray) arguments[0] as Int else null
-    val remainingArguments = if (isArray) arguments.drop(1) else arguments.toList()
+    val index = arguments[0] as Int
+    val remainingArguments = arguments.drop(1)
 
-    // Find where the atomic reference is stored
-    val (owner, field) = shadowStackFrame.findInstanceOrLocalVariableFieldReferringTo(atomicReference)
-        ?: (null to null)
-
-    // Create the appropriate location based on the owner and field
-    val location = when {
-        // Array access case
-        isArray -> ArrayElementByIndexAccess(index!!)
-        // Field access cases (only when the field is found)
-        field != null -> {
-            val className = field.declaringClass.name
-            val fieldName = field.name
-            if (Modifier.isStatic(field.modifiers)) {
-                StaticFieldAccess(className, fieldName)
-            } else {
-                ObjectFieldAccess(className, fieldName)
-            }
-        }
-        // Default case for non-array atomic references without identified field
-        else -> null
-    }
-    // Determine the object to use based on the owner type
-    val obj = when {
-        // For static fields, obj is null
-        field != null && Modifier.isStatic(field.modifiers) -> null
-        // For local variables or instance fields, use the owner
-        owner != null -> owner
-        // Default case, use the atomic reference itself
-        else -> atomicReference
-    }
-    return if (location != null)
-        ObjectAccessMethodInfo(
-            obj = obj,
-            location = location,
-            arguments = remainingArguments
-        )
-        else null
+    return ObjectAccessMethodInfo(
+        obj = atomicArray,
+        location = ArrayElementByIndexAccess(index),
+        arguments = remainingArguments
+    )
 }
 
 // TODO: move to `ShadowStack.kt`
