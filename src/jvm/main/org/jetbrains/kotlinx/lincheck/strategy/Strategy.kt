@@ -150,15 +150,17 @@ fun Strategy.verify(result: InvocationResult, verifier: Verifier): LincheckFailu
         is SpinCycleFoundAndReplayRequired -> null
         is CompletedInvocationResult ->
             if (!verifier.verifyResults(scenario, result.results)) {
-                tryCollectTrace(result).let { (trace, traceResult) -> IncorrectResultsFailure(
-                        scenario = scenario,
-                        results = (traceResult as CompletedInvocationResult).results,
-                        trace = trace,
-                        analysisProfile = analysisProfile
-                    )
-                }
+                val (trace, traceResult) = tryCollectTrace(result)
+                IncorrectResultsFailure(
+                    scenario = scenario,
+                    results = (traceResult as CompletedInvocationResult).results,
+                    trace = trace,
+                    analysisProfile = analysisProfile,
+                )
             } else null
-        else -> 
-            tryCollectTrace(result).let { (trace, traceResult) -> traceResult.toLincheckFailure(scenario, trace, analysisProfile) }
+        else -> {
+            val (trace, traceResult) = tryCollectTrace(result)
+            traceResult.toLincheckFailure(scenario, trace, analysisProfile)
+        }
     }
 }

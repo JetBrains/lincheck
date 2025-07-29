@@ -424,10 +424,10 @@ internal sealed interface ReturnedValueResult {
     }
     
     data class ActorExceptionResult(val exceptionResultRepresentation: String): ActorResult {
-        override val resultRepresentation: String get() = "$exceptionResultRepresentation #$excNumber" 
+        override val resultRepresentation: String get() = "$exceptionResultRepresentation #$exceptionNumber" 
         override val showAtBeginningOfActor = true
         override val showAtEndOfActor = true
-        var excNumber = -1
+        var exceptionNumber = -1
     }
 }
 

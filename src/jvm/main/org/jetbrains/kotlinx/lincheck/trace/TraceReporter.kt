@@ -10,9 +10,7 @@
 package org.jetbrains.kotlinx.lincheck.trace
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.execution.threadsResults
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
@@ -315,7 +313,7 @@ private fun Trace.numberExceptionResults(): Trace = this.deepCopy().also { copy 
         .sortedWith (compareBy({ it.actorId }, { it.iThread }))
         .map { it.returnedValue }
         .filterIsInstance<ReturnedValueResult.ActorExceptionResult>() 
-        .forEachIndexed { index, exceptionResult -> exceptionResult.excNumber = index + 1 }
+        .forEachIndexed { index, exceptionResult -> exceptionResult.exceptionNumber = index + 1 }
 }
 
 internal fun Appendable.appendTraceTableSimple(title: String, threadNames: List<String>, graph: SingleThreadedTable<TraceNode>) {

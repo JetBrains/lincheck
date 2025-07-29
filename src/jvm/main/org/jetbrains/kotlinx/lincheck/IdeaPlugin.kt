@@ -15,7 +15,6 @@ import sun.nio.ch.lincheck.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ExecutionMode.GENERAL_PURPOSE_MODEL_CHECKER
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
@@ -286,7 +285,7 @@ internal fun flattenedTraceGraphToCSV(nodeList: SingleThreadedTable<TraceNode>):
                     val beforeEventId = -1
                     val type = TracePointType.RESULT
                     val representation = node.actorResult.resultRepresentation
-                    val exceptionNumber = (node.actorResult as? ReturnedValueResult.ActorExceptionResult)?.excNumber ?: -1
+                    val exceptionNumber = (node.actorResult as? ReturnedValueResult.ActorExceptionResult)?.exceptionNumber ?: -1
                     "${type.ordinal};${node.iThread};${node.callDepth};${preExpandedNodeSet.contains(node)};${beforeEventId};${representation};${exceptionNumber};null;-1;[];false"
                 }
                 else -> null
