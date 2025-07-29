@@ -366,8 +366,10 @@ internal fun AtomicMethodDescriptor.getVarHandleAccessInfo(
 }
 
 private class VarHandleStaticFieldExtractor(private val varHandleClass: Class<*>) {
-    private val baseField = varHandleClass.getDeclaredField("base")
-    private val fieldOffsetField = varHandleClass.getDeclaredField("fieldOffset")
+    private val baseField =
+        varHandleClass.allDeclaredFieldWithSuperclasses.find { it.name == "base" }!!
+    private val fieldOffsetField =
+        varHandleClass.allDeclaredFieldWithSuperclasses.find { it.name == "fieldOffset" }!!
 
     fun extractBase(varHandle: Any): Class<*> {
         return readFieldViaUnsafe(varHandle, baseField, Unsafe::getObject) as Class<*>
@@ -379,8 +381,10 @@ private class VarHandleStaticFieldExtractor(private val varHandleClass: Class<*>
 }
 
 private class VarHandleInstanceFieldExtractor(private val varHandleClass: Class<*>) {
-    private val receiverTypeField = varHandleClass.getDeclaredField("receiverType")
-    private val fieldOffsetField = varHandleClass.getDeclaredField("fieldOffset")
+    private val receiverTypeField =
+        varHandleClass.allDeclaredFieldWithSuperclasses.find { it.name == "receiverType" }!!
+    private val fieldOffsetField =
+        varHandleClass.allDeclaredFieldWithSuperclasses.find { it.name == "fieldOffset" }!!
 
     fun extractReceiverType(varHandle: Any): Class<*> {
         return readFieldViaUnsafe(varHandle, receiverTypeField, Unsafe::getObject) as Class<*>
