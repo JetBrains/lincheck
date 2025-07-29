@@ -120,8 +120,8 @@ fun Field.toAccessLocation(): FieldAccessLocation {
 fun AccessLocation.toAccessPath() = AccessPath(this)
 fun AccessLocation.toOwnerName() = toAccessPath()
 
-operator fun AccessPath.plus(location: AccessLocation): AccessPath =
-    AccessPath(this.locations + location)
+operator fun AccessPath.plus(location: AccessLocation?): AccessPath =
+    if (location != null) AccessPath(this.locations + location) else this
 
 operator fun AccessPath.plus(other: AccessPath): AccessPath =
     AccessPath(this.locations + other.locations)

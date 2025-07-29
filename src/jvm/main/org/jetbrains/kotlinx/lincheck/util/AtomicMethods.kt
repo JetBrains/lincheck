@@ -144,10 +144,13 @@ internal fun AtomicMethodDescriptor.getSetValue(obj: Any?, params: Array<Any?>):
     return params[argOffset]
 }
 
-internal fun AtomicMethodDescriptor.getAtomicArrayAccessLocation(
+internal fun AtomicMethodDescriptor.getAtomicArrayAccessInfo(
     atomicArray: Any,
     arguments: Array<Any?>
-): ArrayElementByIndexAccess {
+): ObjectAccessMethodInfo {
+    require(apiKind == ATOMIC_ARRAY) {
+        "Method is not an atomic array method: $this"
+    }
     require(apiKind == ATOMIC_ARRAY) {
         "Method is not an atomic array method: $this"
     }
@@ -158,19 +161,9 @@ internal fun AtomicMethodDescriptor.getAtomicArrayAccessLocation(
         "Expected first argument to be array index, but got " +
             if (arguments.isEmpty()) "no arguments" else arguments[0]?.javaClass?.name ?: "null"
     }
-    return ArrayElementByIndexAccess(arguments[0] as Int)
-}
-
-internal fun AtomicMethodDescriptor.getAtomicArrayAccessInfo(
-    atomicArray: Any,
-    arguments: Array<Any?>
-): ObjectAccessMethodInfo? {
-    require(apiKind == ATOMIC_ARRAY) {
-        "Method is not an atomic array method: $this"
-    }
     return ObjectAccessMethodInfo(
         obj = atomicArray,
-        location = getAtomicArrayAccessLocation(atomicArray, arguments),
+        location = ArrayElementByIndexAccess(arguments[0] as Int),
         arguments = arguments.drop(1),
     )
 }

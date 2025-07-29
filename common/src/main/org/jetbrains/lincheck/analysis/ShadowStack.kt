@@ -53,5 +53,5 @@ class ShadowStackFrame(val instance: Any?) {
     }
 }
 
-fun List<ShadowStackFrame>.isCurrentStackFrameInstance(obj: Any): Boolean =
+fun List<ShadowStackFrame>.isCurrentStackFrameReceiver(obj: Any): Boolean =
     (obj === lastOrNull()?.instance)
