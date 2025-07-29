@@ -973,9 +973,9 @@ internal abstract class ManagedStrategy(
                 ?.filterIsInstance<MethodCallTracePoint>()
                 ?.firstOrNull { it.isActor && it.actorId == currentActorId[iThread] && it.iThread == iThread }
         if (actorStartTracePoint != null) {
-            runner.getActorResult(iThread, currentActorId[iThread]!!)?.let { result ->
-                actorStartTracePoint.initializeActorResult(result)
-            }
+            val result = runner.getActorResult(iThread, currentActorId[iThread]!!)
+            actorStartTracePoint.initializeActorResult(result)
+            
             val actorFinishTracePoint = MethodReturnTracePoint(getNextEventId(), actorStartTracePoint)
             traceCollector?.addTracePointInternal(actorFinishTracePoint)
         }

@@ -350,7 +350,7 @@ internal class MethodCallTracePoint(
     fun initializeActorResult(result: Result?) {
         check(isActor)
         this.returnedValue = when (result) {
-            null -> ReturnedValueResult.VoidResult
+            null -> ReturnedValueResult.ActorHungResult
             is ExceptionResult -> when (result.throwable) {
                 is LincheckAnalysisAbortedError -> ReturnedValueResult.ActorHungResult
                 else -> ReturnedValueResult.ActorExceptionResult(result.toString())
