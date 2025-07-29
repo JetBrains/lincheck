@@ -23,14 +23,14 @@ import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import org.jetbrains.lincheck.util.isThreadContainerClass
 import org.jetbrains.lincheck.util.isIntellijRuntimeAgentClass
 import org.jetbrains.lincheck.util.isThreadContainerThreadStartMethod
-import sun.nio.ch.lincheck.*
+import org.objectweb.asm.util.CheckClassAdapter
 
 internal class LincheckClassVisitor(
     private val classVisitor: SafeClassWriter,
     private val instrumentationMode: InstrumentationMode,
     private val methodVariables: Map<String, MethodVariables>,
     private val methodLabels: Map<String, MethodLabels>
-) : ClassVisitor(ASM_API, classVisitor) {
+) : ClassVisitor(ASM_API, CheckClassAdapter(classVisitor)) {
     private var classVersion = 0
 
     private var fileName: String = ""
@@ -78,7 +78,12 @@ internal class LincheckClassVisitor(
     ): MethodVisitor {
         val isStatic = (access and ACC_STATIC != 0)
         val isNative = (access and ACC_NATIVE != 0)
-        val locals = methods[methodName + desc] ?: MethodVariables()
+        val locals = methodVariables[methodName + desc] ?: MethodVariables.EMPTY
+        val labels = methodLabels[methodName + desc] ?: MethodLabels.EMPTY
+
+        fun MethodVisitor.newAdapter() = GeneratorAdapter(this, access, methodName, desc)
+        fun MethodVisitor.newNonRemappingAdapter() = GeneratorAdapterWithoutLocals(this, access, methodName, desc)
+
         var mv = super.visitMethod(access, methodName, desc, signature, exceptions)
 
         if (isNative) {
@@ -139,7 +144,7 @@ internal class LincheckClassVisitor(
             mv = applyAnalyzerAdapter(access, methodName, desc, sharedMemoryAccessTransformer, mv)
 
             // This tacker must be before all transformers that use MethodVariables to track variable regions
-            mv = LocalVariablesTracker(mv, locals)
+            mv = LabelsTracker(mv, locals, labels)
 
             return mv
         }
@@ -236,12 +241,12 @@ internal class LincheckClassVisitor(
         // Inline method call transformer relies on the original variables' indices,
         // so it should go before (in FIFO order) all transformers which can create local variables.
         // All visitors created AFTER InlineMethodCallTransformer must use a non-remapping Generator adapter too.
-        // mv = InlineMethodCallTransformer(fileName, className, methodName, desc, adapter, mv, locals)
+        mv = InlineMethodCallTransformer(fileName, className, methodName, desc, adapter, mv, locals)
 
         mv = applyAnalyzerAdapter(access, methodName, desc, sharedMemoryAccessTransformer, mv)
 
         // This tacker must be before all transformers that use MethodVariables to track variable regions
-        mv = LocalVariablesTracker(mv, locals)
+        mv = LabelsTracker(mv, locals, labels)
 
         // Must appear in code after `SharedMemoryAccessTransformer` (to be able to skip this transformer).
         // It can appear earlier in code than `IntrinsicCandidateMethodFilter` because if kover instruments intrinsic methods

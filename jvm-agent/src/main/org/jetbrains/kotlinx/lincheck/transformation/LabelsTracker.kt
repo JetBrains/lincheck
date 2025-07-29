@@ -14,14 +14,16 @@ import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 
 /**
- * [LocalVariablesTracker] tracks active regions of variables in the method.
+ * [LabelsTracker] tracks active regions of variables in the method.
  */
-internal class LocalVariablesTracker(
+internal class LabelsTracker(
     visitor: MethodVisitor,
-    val locals: MethodVariables
+    val locals: MethodVariables,
+    val labels: MethodLabels
 ) : MethodVisitor(ASM_API, visitor) {
     override fun visitLabel(label: Label)  {
         super.visitLabel(label)
         locals.visitLabel(label)
+        labels.visitLabel(label)
     }
 }
