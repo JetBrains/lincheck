@@ -1,7 +1,7 @@
 /*
  * Lincheck
  *
- * Copyright (C) 2019 - 2024 JetBrains s.r.o.
+ * Copyright (C) 2019 - 2025 JetBrains s.r.o.
  *
  * This Source Code Form is subject to the terms of the
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
@@ -12,7 +12,6 @@ package org.jetbrains.kotlinx.lincheck.util
 
 import org.jetbrains.lincheck.util.*
 import java.util.concurrent.atomic.*
-import kotlin.reflect.jvm.jvmName
 import java.lang.reflect.*
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -249,7 +248,7 @@ internal val Any?.isPrimitive get() = when (this) {
  * Extension property to determine if the given object is a [kotlinx.coroutines] symbol.
  */
 private val Any?.isCoroutinesSymbol get() =
-    this != null && this::class.jvmName == "kotlinx.coroutines.internal.Symbol"
+    this != null && this::javaClass.name == "kotlinx.coroutines.internal.Symbol"
 
 internal fun getArrayLength(arr: Any): Int {
     return when {
