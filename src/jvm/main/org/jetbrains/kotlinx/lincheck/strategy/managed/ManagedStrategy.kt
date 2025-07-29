@@ -43,6 +43,7 @@ import org.jetbrains.lincheck.util.isArraysCopyOfIntrinsic
 import org.jetbrains.lincheck.util.isArraysCopyOfRangeIntrinsic
 import org.jetbrains.lincheck.datastructures.ManagedStrategyGuarantee
 import org.jetbrains.lincheck.analysis.ShadowStackFrame
+import org.jetbrains.lincheck.analysis.isCurrentStackFrameInstance
 import org.jetbrains.lincheck.util.AnalysisProfile
 import org.jetbrains.lincheck.util.AnalysisSectionType
 import org.jetbrains.lincheck.util.Logger
@@ -2349,15 +2350,16 @@ internal abstract class ManagedStrategy(
      * @return A string representing the owner name of the object, or null if no owner is applicable.
      */
     private fun findOwnerName(obj: Any): String? {
-        val threadId = threadScheduler.getCurrentThreadId()
-        // if the current owner is `this` - no owner needed
-        if (isCurrentStackFrameReceiver(obj)) return null
         // do not prettify thread names
         if (obj is Thread) {
             return objectTracker.getObjectRepresentation(obj)
         }
+        val threadId = threadScheduler.getCurrentThreadId()
+        val shadowStack = shadowStack[threadId]!!
+        // if the current owner is `this` - no owner needed
+        if (shadowStack.isCurrentStackFrameInstance(obj)) return null
         // lookup for the object in local variables and use the local variable name if found
-        val shadowStackFrame = shadowStack[threadId]!!.last()
+        val shadowStackFrame = shadowStack.last()
         shadowStackFrame.getLastAccessVariable(obj)?.let { return it }
         // lookup for a field name in the current stack frame `this`
         shadowStackFrame.instance
@@ -2367,15 +2369,6 @@ internal abstract class ManagedStrategy(
         constants[obj]?.let { return it }
         // otherwise return object's string representation
         return objectTracker.getObjectRepresentation(obj)
-    }
-
-    /**
-     * Checks if [owner] is the `this` object (i.e., receiver) of the currently executed method call.
-     */
-    private fun isCurrentStackFrameReceiver(owner: Any): Boolean {
-        val currentThreadId = threadScheduler.getCurrentThreadId()
-        val stackTraceElement = shadowStack[currentThreadId]!!.last()
-        return (owner === stackTraceElement.instance)
     }
 
     /* Methods to control the current call context. */
