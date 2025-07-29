@@ -1299,7 +1299,7 @@ internal abstract class ManagedStrategy(
                     eventId = eventId,
                     iThread = threadId,
                     actorId = currentActorId[threadId]!!,
-                    ownerRepresentation = getFieldOwnerName(obj, fieldDescriptor),
+                    ownerRepresentation = findOwnerName(obj, fieldDescriptor.className),
                     fieldName = fieldDescriptor.fieldName,
                     codeLocation = codeLocation,
                     isLocal = false,
@@ -1357,7 +1357,7 @@ internal abstract class ManagedStrategy(
                 eventId = eventId,
                 iThread = threadId,
                 actorId = currentActorId[threadId]!!,
-                ownerRepresentation = getFieldOwnerName(obj, fieldDescriptor),
+                ownerRepresentation = findOwnerName(obj, fieldDescriptor.className),
                 fieldName = fieldDescriptor.fieldName,
                 codeLocation = codeLocation,
                 isLocal = false,
@@ -2326,36 +2326,33 @@ internal abstract class ManagedStrategy(
 
 
     /**
-     * Returns string representation of the field owner based on the provided parameters.
-     */
-    @Suppress("UNUSED_PARAMETER")
-    private fun getFieldOwnerName(obj: Any?, fieldDescriptor: FieldDescriptor): String? {
-        if (fieldDescriptor.isStatic) {
-            val threadId = threadScheduler.getCurrentThreadId()
-            val stackTraceElement = shadowStack[threadId]!!.last()
-            if (stackTraceElement.instance?.javaClass?.name == fieldDescriptor.className) {
-                return null
-            }
-            return fieldDescriptor.className.toSimpleClassName()
-        }
-        return findOwnerName(obj!!)
-    }
-
-    /**
      * Finds the owner name of a given object. The owner name can originate from various sources
      * such as local variable names, instance field names, constants referencing the object,
      * or as a last resort, the object's string representation.
      *
      * @param obj The object whose owner name needs to be determined.
+     * @param className The name of the class in case of static field/method accesses. Required when obj is null.
      * @return A string representing the owner name of the object, or null if no owner is applicable.
      */
-    private fun findOwnerName(obj: Any): String? {
+    private fun findOwnerName(obj: Any?, className: String? = null): String? {
+        val threadId = threadScheduler.getCurrentThreadId()
+        val shadowStack = shadowStack[threadId]!!
+        if (obj == null) {
+            require(className != null) { 
+                "Class name must be provided for null object" 
+            }
+            // If the class name matches the current instance's class in the shadow stack,
+            // return null since the field belongs to the current class context and doesn't 
+            // need an explicit owner prefix
+            if (className == shadowStack.lastOrNull()?.instance?.javaClass?.name) {
+                return null
+            }
+            return className.toSimpleClassName()
+        }
         // do not prettify thread names
         if (obj is Thread) {
             return objectTracker.getObjectRepresentation(obj)
         }
-        val threadId = threadScheduler.getCurrentThreadId()
-        val shadowStack = shadowStack[threadId]!!
         // if the current owner is `this` - no owner needed
         if (shadowStack.isCurrentStackFrameInstance(obj)) return null
         // lookup for the object in local variables and use the local variable name if found
