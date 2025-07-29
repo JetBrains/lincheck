@@ -400,10 +400,6 @@ class IncorrectHashmapRunConcurrentRepresentationTest : BaseRunConcurrentReprese
 class ThreadPoolRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
     "run_concurrent_test/thread_pool/thread_pool"
 ) {
-    // TODO: flaky object numeration --- investigate and fix
-    override val isFlakyTest: Boolean
-        get() = true
-
     @Before
     fun setUp() {
         assumeFalse(isInTraceDebuggerMode) // unstable hash-code
@@ -416,7 +412,7 @@ class ThreadPoolRunConcurrentRepresentationTest : BaseRunConcurrentRepresentatio
         //   and thus accesses to this object are not tracked,
         //   and the race on counter increment is not detected;
         // var counter = 0
-        val executorService = Executors.newFixedThreadPool(2)
+        val executorService = createFixedThreadPool(2)
         try {
             // We use an object here instead of lambda to avoid hustle with Java's lambda.
             // These lambdas are represented in the trace as `$$Lambda$XX/0x00007766d02076a0`,
@@ -446,7 +442,11 @@ class ThreadPoolRunConcurrentRepresentationTest : BaseRunConcurrentRepresentatio
 class CoroutinesRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
     "run_concurrent_test/coroutines/coroutines"
 ) {
-    // TODO: check why flakiness appears in this test
+    // TODO: coroutine names are still non-deterministic.
+    //   Apparently, for some reason the `kotlinx.coroutines` is run in `DEBUG` mode,
+    //   and in this mode `COROUTINE_ID` is appended to each coroutine's name.
+    //   The `COROUTINE_ID` is global `AtomicLong` which is incremented on each new coroutine creation,
+    //   and thus is non-deterministic.
     override val isFlakyTest: Boolean
         get() = true
 
@@ -469,19 +469,26 @@ class CoroutinesRunConcurrentRepresentationTest : BaseRunConcurrentRepresentatio
         private val channel2 = Channel<Int>(capacity = 1)
     }
 
-    override fun block() = Executors.newFixedThreadPool(2).asCoroutineDispatcher().use { dispatcher ->
-        runBlocking(dispatcher) {
-            val job1 = launch(dispatcher) {
-                channel1.send(sharedCounter++)
-                r1 = channel2.receive()
+    override fun block() {
+        val executorService = createFixedThreadPool(2)
+        executorService.asCoroutineDispatcher().use { dispatcher ->
+            runBlocking(dispatcher + CoroutineName("Coroutine-0")) {
+                // set coroutines' names explicitly to make them deterministic within the Lincheck test
+                val job1 = launch(dispatcher + CoroutineName("Coroutine-1")) {
+                    channel1.send(sharedCounter++)
+                    r1 = channel2.receive()
+                }
+                val job2 = launch(dispatcher + CoroutineName("Coroutine-2")) {
+                    channel2.send(sharedCounter++)
+                    r2 = channel1.receive()
+                }
+                job1.join()
+                job2.join()
+                check(r1 == 1 || r2 == 1)
             }
-            val job2 = launch(dispatcher) {
-                channel2.send(sharedCounter++)
-                r2 = channel1.receive()
-            }
-            job1.join()
-            job2.join()
-            check(r1 == 1 || r2 == 1)
         }
     }
 }
+
+private fun createFixedThreadPool(nThreads: Int): ExecutorService =
+    Executors.newFixedThreadPool(nThreads, LincheckTestThreadFactory("Thread"))
