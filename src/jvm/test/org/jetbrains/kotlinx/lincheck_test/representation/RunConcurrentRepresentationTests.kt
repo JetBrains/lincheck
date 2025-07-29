@@ -443,7 +443,7 @@ class CoroutinesRunConcurrentRepresentationTest : BaseRunConcurrentRepresentatio
     "run_concurrent_test/coroutines/coroutines"
 ) {
     // TODO: coroutine names are still non-deterministic.
-    //   Apparently, for some reason the `kotlinx.coroutines` is run in DEBUG mode,
+    //   Apparently, for some reason the `kotlinx.coroutines` is run in `DEBUG` mode,
     //   and in this mode `COROUTINE_ID` is appended to each coroutine's name.
     //   The `COROUTINE_ID` is global `AtomicLong` which is incremented on each new coroutine creation,
     //   and thus is non-deterministic.
