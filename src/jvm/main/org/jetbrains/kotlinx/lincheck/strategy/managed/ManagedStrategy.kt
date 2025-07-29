@@ -2160,7 +2160,7 @@ internal abstract class ManagedStrategy(
         )
         // handle non-atomic methods
         if (atomicMethodDescriptor == null) {
-            val ownerName = if (owner != null) findOwnerName(owner) else className.toSimpleClassName()
+            val ownerName = findOwnerName(owner, className)
             if (!ownerName.isNullOrEmpty()) {
                 tracePoint.initializeOwnerName(ownerName)
             }
