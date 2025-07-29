@@ -144,66 +144,6 @@ internal fun AtomicMethodDescriptor.getSetValue(obj: Any?, params: Array<Any?>):
     return params[argOffset]
 }
 
-internal fun AtomicMethodDescriptor.getUnsafeAccessLocation(receiver: Any, arguments: Array<Any?>): ObjectAccessMethodInfo {
-    require(apiKind == AtomicApiKind.UNSAFE) {
-        "Method is not an Unsafe method: $this"
-    }
-    require(arguments.size >= 2) {
-        "Expected at least 2 arguments, but got ${arguments.size}"
-    }
-    require(arguments[1] is Long) {
-        "Expected memory offset to be Long, but got ${arguments[1]?.javaClass?.name ?: "null"}"
-    }
-
-    val targetObject = arguments[0]
-    val memoryOffset = arguments[1] as Long
-    val remainingArguments = arguments.drop(2)
-
-    return when {
-        // Array access case
-        targetObject != null && targetObject::class.java.isArray -> {
-            val unsafe = UnsafeHolder.UNSAFE
-            val arrayBaseOffset = unsafe.arrayBaseOffset(targetObject::class.java)
-            val arrayIndexScale = unsafe.arrayIndexScale(targetObject::class.java)
-            val index = ((memoryOffset - arrayBaseOffset) / arrayIndexScale).toInt()
-            ObjectAccessMethodInfo(
-                obj = targetObject,
-                location = ArrayElementByIndexAccess(index),
-                arguments = remainingArguments
-            )
-        }
-
-        // Static field access case
-        targetObject is Class<*> -> {
-            val fieldName = findFieldNameByOffsetViaUnsafe(targetObject, memoryOffset)
-                ?: error("Failed to find field name by offset $memoryOffset")
-            ObjectAccessMethodInfo(
-                obj = null,
-                location = StaticFieldAccess(
-                    className = targetObject.name,
-                    fieldName = fieldName,
-                ),
-                arguments = remainingArguments
-            )
-        }
-
-        // Instance field access case
-        targetObject != null -> {
-            val className = targetObject::class.java.name
-            val fieldName = findFieldNameByOffsetViaUnsafe(targetObject::class.java, memoryOffset)
-                ?: error("Failed to find field name by offset $memoryOffset")
-            ObjectAccessMethodInfo(
-                obj = targetObject,
-                location = ObjectFieldAccess(className, fieldName),
-                arguments = remainingArguments
-            )
-        }
-
-        // Unexpected case
-        else -> error("Failed to determine unsafe object access location")
-    }
-}
-
 internal fun AtomicMethodDescriptor.getAtomicReferenceAccessLocation(
     atomicReference: Any,
     arguments: Array<Any?>,
@@ -283,8 +223,11 @@ fun ShadowStackFrame.findInstanceOrLocalVariableFieldReferringTo(obj: Any): Pair
     return null
 }
 
-internal fun AtomicMethodDescriptor.getAtomicFieldUpdaterAccessLocation(receiver: Any, arguments: Array<Any?>): ObjectAccessMethodInfo {
-    require(apiKind == AtomicApiKind.ATOMIC_FIELD_UPDATER) {
+internal fun AtomicMethodDescriptor.getAtomicFieldUpdaterAccessLocation(
+    receiver: Any,
+    arguments: Array<Any?>
+): ObjectAccessMethodInfo {
+    require(apiKind == ATOMIC_FIELD_UPDATER) {
         "Method is not an AtomicFieldUpdater method: $this"
     }
     require(isAtomicFieldUpdater(receiver)) {
@@ -324,8 +267,74 @@ internal fun AtomicMethodDescriptor.getAtomicFieldUpdaterAccessLocation(receiver
     }
 }
 
-internal fun AtomicMethodDescriptor.getVarHandleAccessLocation(varHandle: Any, arguments: Array<Any?>): ObjectAccessMethodInfo {
-    require(apiKind == AtomicApiKind.VAR_HANDLE) {
+internal fun AtomicMethodDescriptor.getUnsafeAccessLocation(
+    receiver: Any,
+    arguments: Array<Any?>
+): ObjectAccessMethodInfo {
+    require(apiKind == UNSAFE) {
+        "Method is not an Unsafe method: $this"
+    }
+    require(arguments.size >= 2) {
+        "Expected at least 2 arguments, but got ${arguments.size}"
+    }
+    require(arguments[1] is Long) {
+        "Expected memory offset to be Long, but got ${arguments[1]?.javaClass?.name ?: "null"}"
+    }
+
+    val targetObject = arguments[0]
+    val memoryOffset = arguments[1] as Long
+    val remainingArguments = arguments.drop(2)
+
+    return when {
+        // Array access case
+        targetObject != null && targetObject::class.java.isArray -> {
+            val unsafe = UnsafeHolder.UNSAFE
+            val arrayBaseOffset = unsafe.arrayBaseOffset(targetObject::class.java)
+            val arrayIndexScale = unsafe.arrayIndexScale(targetObject::class.java)
+            val index = ((memoryOffset - arrayBaseOffset) / arrayIndexScale).toInt()
+            ObjectAccessMethodInfo(
+                obj = targetObject,
+                location = ArrayElementByIndexAccess(index),
+                arguments = remainingArguments
+            )
+        }
+
+        // Static field access case
+        targetObject is Class<*> -> {
+            val fieldName = findFieldNameByOffsetViaUnsafe(targetObject, memoryOffset)
+                ?: error("Failed to find field name by offset $memoryOffset")
+            ObjectAccessMethodInfo(
+                obj = null,
+                location = StaticFieldAccess(
+                    className = targetObject.name,
+                    fieldName = fieldName,
+                ),
+                arguments = remainingArguments
+            )
+        }
+
+        // Instance field access case
+        targetObject != null -> {
+            val className = targetObject::class.java.name
+            val fieldName = findFieldNameByOffsetViaUnsafe(targetObject::class.java, memoryOffset)
+                ?: error("Failed to find field name by offset $memoryOffset")
+            ObjectAccessMethodInfo(
+                obj = targetObject,
+                location = ObjectFieldAccess(className, fieldName),
+                arguments = remainingArguments
+            )
+        }
+
+        // Unexpected case
+        else -> error("Failed to determine unsafe object access location")
+    }
+}
+
+internal fun AtomicMethodDescriptor.getVarHandleAccessLocation(
+    varHandle: Any,
+    arguments: Array<Any?>
+): ObjectAccessMethodInfo {
+    require(apiKind == VAR_HANDLE) {
         "Method is not a VarHandle method: $this"
     }
     require(isVarHandle(varHandle)) {
