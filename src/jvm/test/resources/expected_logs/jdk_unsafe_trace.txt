@@ -13,29 +13,29 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| ------------------------------------------------------------------------------------------------------------------------------- |
-|                                                            Thread 1                                                             |
-| ------------------------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                                     |
-|   hashMap.put(1, 2): null at JdkUnsafeTraceRepresentationTest.operation(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:53)   |
-|     putVal(1, 2, false): null at ConcurrentHashMap.put(ConcurrentHashMap.java:1006)                                             |
-|       ConcurrentHashMap.spread(1): 1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1012)                                   |
-|       table ➜ null at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1014)                                                     |
-|       initTable(): Array<Node>#1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1017)                                       |
-|         table ➜ null at ConcurrentHashMap.initTable(ConcurrentHashMap.java:2293)                                                |
-|         sizeCtl ➜ 0 at ConcurrentHashMap.initTable(ConcurrentHashMap.java:2294)                                                 |
-|         sizeCtl.compareAndSetInt(0, -1): true at ConcurrentHashMap.initTable(ConcurrentHashMap.java:2296)                       |
-|         table ➜ null at ConcurrentHashMap.initTable(ConcurrentHashMap.java:2298)                                                |
-|         table = Array<Node>#1 at ConcurrentHashMap.initTable(ConcurrentHashMap.java:2302)                                       |
-|         sizeCtl = 12 at ConcurrentHashMap.initTable(ConcurrentHashMap.java:2306)                                                |
-|       ConcurrentHashMap.tabAt(Array<Node>#1, 1): null at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1018)                  |
-|         Array<Node>#1[1].getReferenceAcquire(): null at ConcurrentHashMap.tabAt(ConcurrentHashMap.java:760)                     |
-|       ConcurrentHashMap.casTabAt(Array<Node>#1, 1, null, Node#1): true at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1019) |
-|         Array<Node>#1[1].compareAndSetReference(null, Node#1): true at ConcurrentHashMap.casTabAt(ConcurrentHashMap.java:765)   |
-|       addCount(1, 0) at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1075)                                                   |
-|         counterCells ➜ null at ConcurrentHashMap.addCount(ConcurrentHashMap.java:2326)                                          |
-|         baseCount ➜ 0 at ConcurrentHashMap.addCount(ConcurrentHashMap.java:2326)                                                |
-|         baseCount.compareAndSetLong(0, 1): true at ConcurrentHashMap.addCount(ConcurrentHashMap.java:2327)                      |
-|         sizeCtl ➜ 12 at ConcurrentHashMap.addCount(ConcurrentHashMap.java:2343)                                                 |
-|   result: void                                                                                                                  |
-| ------------------------------------------------------------------------------------------------------------------------------- |
+| ----------------------------------------------------------------------------------------------------------------------------- |
+|                                                           Thread 1                                                            |
+| ----------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                   |
+|   hashMap.put(1, 2): null at JdkUnsafeTraceRepresentationTest.operation(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:54) |
+|     putVal(1, 2, false): null at ConcurrentHashMap.put(ConcurrentHashMap.java:1006)                                           |
+|       spread(1): 1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1012)                                                   |
+|       table ➜ null at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1014)                                                   |
+|       initTable(): Array<Node>#1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1017)                                     |
+|         table ➜ null at ConcurrentHashMap.initTable(ConcurrentHashMap.java:2293)                                              |
+|         sizeCtl ➜ 0 at ConcurrentHashMap.initTable(ConcurrentHashMap.java:2294)                                               |
+|         sizeCtl.compareAndSetInt(0, -1): true at ConcurrentHashMap.initTable(ConcurrentHashMap.java:2296)                     |
+|         table ➜ null at ConcurrentHashMap.initTable(ConcurrentHashMap.java:2298)                                              |
+|         table = Array<Node>#1 at ConcurrentHashMap.initTable(ConcurrentHashMap.java:2302)                                     |
+|         sizeCtl = 12 at ConcurrentHashMap.initTable(ConcurrentHashMap.java:2306)                                              |
+|       tabAt(Array<Node>#1, 1): null at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1018)                                  |
+|         Array<Node>#1[1].getReferenceAcquire(): null at ConcurrentHashMap.tabAt(ConcurrentHashMap.java:760)                   |
+|       casTabAt(Array<Node>#1, 1, null, Node#1): true at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1019)                 |
+|         Array<Node>#1[1].compareAndSetReference(null, Node#1): true at ConcurrentHashMap.casTabAt(ConcurrentHashMap.java:765) |
+|       addCount(1, 0) at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1075)                                                 |
+|         counterCells ➜ null at ConcurrentHashMap.addCount(ConcurrentHashMap.java:2326)                                        |
+|         baseCount ➜ 0 at ConcurrentHashMap.addCount(ConcurrentHashMap.java:2326)                                              |
+|         baseCount.compareAndSetLong(0, 1): true at ConcurrentHashMap.addCount(ConcurrentHashMap.java:2327)                    |
+|         sizeCtl ➜ 12 at ConcurrentHashMap.addCount(ConcurrentHashMap.java:2343)                                               |
+|   result: void                                                                                                                |
+| ----------------------------------------------------------------------------------------------------------------------------- |

@@ -13,29 +13,29 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| ---------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                    Thread 1                                                                    |
-| ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                                                    |
-|   FunctionWithDefaultFieldsReprTest.callMe(3, "Hey") at FunctionWithDefaultFieldsReprTest.operation(FunctionWithDefaultFieldsReprTest.kt:20)   |
-|     a ➜ 0 at FunctionWithDefaultFieldsReprTest.callMe(FunctionWithDefaultFieldsReprTest.kt:25)                                                 |
-|     a = 3 at FunctionWithDefaultFieldsReprTest.callMe(FunctionWithDefaultFieldsReprTest.kt:25)                                                 |
-|     a ➜ 3 at FunctionWithDefaultFieldsReprTest.callMe(FunctionWithDefaultFieldsReprTest.kt:26)                                                 |
-|     a = 6 at FunctionWithDefaultFieldsReprTest.callMe(FunctionWithDefaultFieldsReprTest.kt:26)                                                 |
-|     FunctionWithDefaultFieldsReprTest.callOther(5, "Hey") at FunctionWithDefaultFieldsReprTest.callMe(FunctionWithDefaultFieldsReprTest.kt:27) |
-|       a ➜ 6 at FunctionWithDefaultFieldsReprTest.callOther(FunctionWithDefaultFieldsReprTest.kt:31)                                            |
-|       a = 9 at FunctionWithDefaultFieldsReprTest.callOther(FunctionWithDefaultFieldsReprTest.kt:31)                                            |
-|       a ➜ 9 at FunctionWithDefaultFieldsReprTest.callOther(FunctionWithDefaultFieldsReprTest.kt:32)                                            |
-|       a = 14 at FunctionWithDefaultFieldsReprTest.callOther(FunctionWithDefaultFieldsReprTest.kt:32)                                           |
-|   FunctionWithDefaultFieldsReprTest.callMe(1, "Hey") at FunctionWithDefaultFieldsReprTest.operation(FunctionWithDefaultFieldsReprTest.kt:21)   |
-|     a ➜ 14 at FunctionWithDefaultFieldsReprTest.callMe(FunctionWithDefaultFieldsReprTest.kt:25)                                                |
-|     a = 17 at FunctionWithDefaultFieldsReprTest.callMe(FunctionWithDefaultFieldsReprTest.kt:25)                                                |
-|     a ➜ 17 at FunctionWithDefaultFieldsReprTest.callMe(FunctionWithDefaultFieldsReprTest.kt:26)                                                |
-|     a = 18 at FunctionWithDefaultFieldsReprTest.callMe(FunctionWithDefaultFieldsReprTest.kt:26)                                                |
-|     FunctionWithDefaultFieldsReprTest.callOther(5, "Hey") at FunctionWithDefaultFieldsReprTest.callMe(FunctionWithDefaultFieldsReprTest.kt:27) |
-|       a ➜ 18 at FunctionWithDefaultFieldsReprTest.callOther(FunctionWithDefaultFieldsReprTest.kt:31)                                           |
-|       a = 21 at FunctionWithDefaultFieldsReprTest.callOther(FunctionWithDefaultFieldsReprTest.kt:31)                                           |
-|       a ➜ 21 at FunctionWithDefaultFieldsReprTest.callOther(FunctionWithDefaultFieldsReprTest.kt:32)                                           |
-|       a = 26 at FunctionWithDefaultFieldsReprTest.callOther(FunctionWithDefaultFieldsReprTest.kt:32)                                           |
-|   result: void                                                                                                                                 |
-| ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------------------------------------------------------------------------------------ |
+|                                                   Thread 1                                                   |
+| ------------------------------------------------------------------------------------------------------------ |
+| operation()                                                                                                  |
+|   callMe(3, "Hey") at FunctionWithDefaultFieldsReprTest.operation(FunctionWithDefaultFieldsReprTest.kt:20)   |
+|     a ➜ 0 at FunctionWithDefaultFieldsReprTest.callMe(FunctionWithDefaultFieldsReprTest.kt:25)               |
+|     a = 3 at FunctionWithDefaultFieldsReprTest.callMe(FunctionWithDefaultFieldsReprTest.kt:25)               |
+|     a ➜ 3 at FunctionWithDefaultFieldsReprTest.callMe(FunctionWithDefaultFieldsReprTest.kt:26)               |
+|     a = 6 at FunctionWithDefaultFieldsReprTest.callMe(FunctionWithDefaultFieldsReprTest.kt:26)               |
+|     callOther(5, "Hey") at FunctionWithDefaultFieldsReprTest.callMe(FunctionWithDefaultFieldsReprTest.kt:27) |
+|       a ➜ 6 at FunctionWithDefaultFieldsReprTest.callOther(FunctionWithDefaultFieldsReprTest.kt:31)          |
+|       a = 9 at FunctionWithDefaultFieldsReprTest.callOther(FunctionWithDefaultFieldsReprTest.kt:31)          |
+|       a ➜ 9 at FunctionWithDefaultFieldsReprTest.callOther(FunctionWithDefaultFieldsReprTest.kt:32)          |
+|       a = 14 at FunctionWithDefaultFieldsReprTest.callOther(FunctionWithDefaultFieldsReprTest.kt:32)         |
+|   callMe(1, "Hey") at FunctionWithDefaultFieldsReprTest.operation(FunctionWithDefaultFieldsReprTest.kt:21)   |
+|     a ➜ 14 at FunctionWithDefaultFieldsReprTest.callMe(FunctionWithDefaultFieldsReprTest.kt:25)              |
+|     a = 17 at FunctionWithDefaultFieldsReprTest.callMe(FunctionWithDefaultFieldsReprTest.kt:25)              |
+|     a ➜ 17 at FunctionWithDefaultFieldsReprTest.callMe(FunctionWithDefaultFieldsReprTest.kt:26)              |
+|     a = 18 at FunctionWithDefaultFieldsReprTest.callMe(FunctionWithDefaultFieldsReprTest.kt:26)              |
+|     callOther(5, "Hey") at FunctionWithDefaultFieldsReprTest.callMe(FunctionWithDefaultFieldsReprTest.kt:27) |
+|       a ➜ 18 at FunctionWithDefaultFieldsReprTest.callOther(FunctionWithDefaultFieldsReprTest.kt:31)         |
+|       a = 21 at FunctionWithDefaultFieldsReprTest.callOther(FunctionWithDefaultFieldsReprTest.kt:31)         |
+|       a ➜ 21 at FunctionWithDefaultFieldsReprTest.callOther(FunctionWithDefaultFieldsReprTest.kt:32)         |
+|       a = 26 at FunctionWithDefaultFieldsReprTest.callOther(FunctionWithDefaultFieldsReprTest.kt:32)         |
+|   result: void                                                                                               |
+| ------------------------------------------------------------------------------------------------------------ |

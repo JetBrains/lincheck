@@ -4,7 +4,7 @@ java.lang.IllegalStateException: Check failed.
 	at org.jetbrains.kotlinx.lincheck_test.representation.ThreadSafeCollectionUnmutedRepresentationTest.block(StdLibRepresentationTests.kt:41)
 	at org.jetbrains.kotlinx.lincheck_test.representation.ThreadSafeCollectionUnmutedRepresentationTest.block(StdLibRepresentationTests.kt:34)
 	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:51)
-	at java.base/java.lang.Thread.run(Thread.java:833)
+	at java.base/java.lang.Thread.run(Thread.java:840)
 
 The following interleaving leads to the error:
 | ------------------------------------------------------ |
@@ -21,7 +21,7 @@ Detailed trace:
 |   block(): threw IllegalStateException at ThreadSafeCollectionUnmutedRepresentationTest.block(StdLibRepresentationTests.kt:34)                                                  |
 |     concurrentMap.put(1, 1): null at ThreadSafeCollectionUnmutedRepresentationTest.block(StdLibRepresentationTests.kt:39)                                                       |
 |       putVal(1, 1, false): null at ConcurrentHashMap.put(ConcurrentHashMap.java:1006)                                                                                           |
-|         ConcurrentHashMap.spread(1): 1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1012)                                                                                 |
+|         spread(1): 1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1012)                                                                                                   |
 |         table ➜ null at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1014)                                                                                                   |
 |         initTable(): Array<Node>#1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1017)                                                                                     |
 |           table ➜ null at ConcurrentHashMap.initTable(ConcurrentHashMap.java:2293)                                                                                              |
@@ -30,9 +30,9 @@ Detailed trace:
 |           table ➜ null at ConcurrentHashMap.initTable(ConcurrentHashMap.java:2298)                                                                                              |
 |           table = Array<Node>#1 at ConcurrentHashMap.initTable(ConcurrentHashMap.java:2302)                                                                                     |
 |           sizeCtl = 12 at ConcurrentHashMap.initTable(ConcurrentHashMap.java:2306)                                                                                              |
-|         ConcurrentHashMap.tabAt(Array<Node>#1, 1): null at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1018)                                                                |
+|         tabAt(Array<Node>#1, 1): null at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1018)                                                                                  |
 |           Array<Node>#1[1].getReferenceAcquire(): null at ConcurrentHashMap.tabAt(ConcurrentHashMap.java:760)                                                                   |
-|         ConcurrentHashMap.casTabAt(Array<Node>#1, 1, null, Node#1): true at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1019)                                               |
+|         casTabAt(Array<Node>#1, 1, null, Node#1): true at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1019)                                                                 |
 |           Array<Node>#1[1].compareAndSetReference(null, Node#1): true at ConcurrentHashMap.casTabAt(ConcurrentHashMap.java:765)                                                 |
 |         addCount(1, 0) at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1075)                                                                                                 |
 |           counterCells ➜ null at ConcurrentHashMap.addCount(ConcurrentHashMap.java:2326)                                                                                        |
