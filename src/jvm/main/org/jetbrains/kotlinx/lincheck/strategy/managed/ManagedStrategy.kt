@@ -1552,52 +1552,25 @@ internal abstract class ManagedStrategy(
      */
     private fun processMethodEffectOnStaticSnapshot(
         owner: Any?,
-        params: Array<Any?>
+        params: Array<Any?>,
+        atomicMethodDescriptor: AtomicMethodDescriptor?,
     ) {
-        when {
-            // Unsafe API
-            isUnsafe(owner) -> {
-                val methodType: UnsafeName = UnsafeNames.getMethodCallType(params)
-                when (methodType) {
-                    is UnsafeInstanceMethod -> {
-                        memorySnapshot.trackField(methodType.owner, methodType.owner.javaClass, methodType.fieldName)
-                    }
-                    is UnsafeStaticMethod -> {
-                        memorySnapshot.trackField(null, methodType.clazz, methodType.fieldName)
-                    }
-                    is UnsafeArrayMethod -> {
-                        memorySnapshot.trackArrayCell(methodType.array, methodType.index)
-                    }
-                    else -> {}
-                }
+        if (owner == null || atomicMethodDescriptor == null) return
+        val info = atomicMethodDescriptor.getAtomicAccessInfo(owner, params)
+        when (info.location) {
+            is StaticFieldAccess -> {
+                memorySnapshot.trackField(null, info.clazz!!, info.location.fieldName)
             }
-            // VarHandle API
-            isVarHandle(owner) -> {
-                val methodType: VarHandleMethodType = VarHandleNames.varHandleMethodType(owner, params)
-                when (methodType) {
-                    is InstanceVarHandleMethod -> {
-                        memorySnapshot.trackField(methodType.owner, methodType.owner.javaClass, methodType.fieldName)
-                    }
-                    is StaticVarHandleMethod -> {
-                        memorySnapshot.trackField(null, methodType.ownerClass, methodType.fieldName)
-                    }
-                    is ArrayVarHandleMethod -> {
-                        memorySnapshot.trackArrayCell(methodType.array, methodType.index)
-                    }
-                    else -> {}
-                }
+            is ObjectFieldAccess -> {
+                memorySnapshot.trackField(info.obj, info.obj!!.javaClass, info.location.fieldName)
             }
-            // Java AFU (this also automatically handles the `kotlinx.atomicfu`, since they are compiled to Java AFU + Java atomic arrays)
-            isAtomicFieldUpdater(owner) -> {
-                val obj = params[0]
-                val afuDesc: AtomicFieldUpdaterDescriptor? = AtomicFieldUpdaterNames.getAtomicFieldUpdaterDescriptor(owner!!)
-                check(afuDesc != null) { "Cannot extract field name referenced by Java AFU object $owner" }
-
-                memorySnapshot.trackField(obj, afuDesc.targetType, afuDesc.fieldName)
+            is ArrayElementByIndexAccess -> {
+                memorySnapshot.trackArrayCell(info.obj!!, info.location.index)
             }
-            // TODO: System.arraycopy
-            // TODO: reflection
+            else -> {}
         }
+        // TODO: System.arraycopy
+        // TODO: reflection
     }
 
     /**
@@ -1628,16 +1601,16 @@ internal abstract class ManagedStrategy(
         params: Array<Any?>
     ): Any? = runInsideIgnoredSection {
         val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
+        // check if the called method is an atomics API method
+        // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
+        val atomicMethodDescriptor = getAtomicMethodDescriptor(receiver, methodDescriptor.methodName)
         // process method effect on the static memory snapshot
-        processMethodEffectOnStaticSnapshot(receiver, params)
+        processMethodEffectOnStaticSnapshot(receiver, params, atomicMethodDescriptor)
         val threadId = threadScheduler.getCurrentThreadId()
         // re-throw abort error if the thread was aborted
         if (threadScheduler.isAborted(threadId)) {
             threadScheduler.abortCurrentThread()
         }
-        // check if the called method is an atomics API method
-        // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
-        val atomicMethodDescriptor = getAtomicMethodDescriptor(receiver, methodDescriptor.methodName)
         // obtain deterministic method descriptor if required
         val methodCallInfo = MethodCallInfo(
             ownerType = Types.ObjectType(methodDescriptor.className),

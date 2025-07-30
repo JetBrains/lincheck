@@ -88,6 +88,7 @@ internal enum class MemoryOrdering {
 
 data class AtomicMethodAccessInfo(
     val obj: Any?,
+    val clazz: Class<*>?,
     val location: ObjectAccessLocation?,
     val arguments: List<Any?>,
 )
@@ -170,6 +171,7 @@ internal fun AtomicMethodDescriptor.getAtomicObjectAccessInfo(
     }
     return AtomicMethodAccessInfo(
         obj = atomic,
+        clazz = null,
         location = null,
         arguments = arguments.asList()
     )
@@ -194,6 +196,7 @@ internal fun AtomicMethodDescriptor.getAtomicArrayAccessInfo(
     }
     return AtomicMethodAccessInfo(
         obj = atomicArray,
+        clazz = null,
         location = ArrayElementByIndexAccess(arguments[0] as Int),
         arguments = arguments.drop(1),
     )
@@ -232,6 +235,7 @@ internal fun AtomicMethodDescriptor.getAtomicFieldUpdaterAccessInfo(
 
         return AtomicMethodAccessInfo(
             obj = targetObject,
+            clazz = targetType,
             location = ObjectFieldAccess(
                 className = targetType.name,
                 fieldName = fieldName
@@ -270,6 +274,7 @@ internal fun AtomicMethodDescriptor.getUnsafeAccessInfo(
             val index = ((memoryOffset - arrayBaseOffset) / arrayIndexScale).toInt()
             AtomicMethodAccessInfo(
                 obj = targetObject,
+                clazz = null,
                 location = ArrayElementByIndexAccess(index),
                 arguments = remainingArguments
             )
@@ -281,6 +286,7 @@ internal fun AtomicMethodDescriptor.getUnsafeAccessInfo(
                 ?: error("Failed to find field name by offset $memoryOffset")
             AtomicMethodAccessInfo(
                 obj = null,
+                clazz = targetObject,
                 location = StaticFieldAccess(
                     className = targetObject.name,
                     fieldName = fieldName,
@@ -291,11 +297,13 @@ internal fun AtomicMethodDescriptor.getUnsafeAccessInfo(
 
         // Instance field access case
         targetObject != null -> {
-            val className = targetObject::class.java.name
-            val fieldName = findFieldNameByOffsetViaUnsafe(targetObject::class.java, memoryOffset)
+            val targetType = targetObject::class.java
+            val className = targetType.name
+            val fieldName = findFieldNameByOffsetViaUnsafe(targetType, memoryOffset)
                 ?: error("Failed to find field name by offset $memoryOffset")
             AtomicMethodAccessInfo(
                 obj = targetObject,
+                clazz = targetType,
                 location = ObjectFieldAccess(className, fieldName),
                 arguments = remainingArguments
             )
@@ -331,6 +339,7 @@ internal fun AtomicMethodDescriptor.getVarHandleAccessInfo(
             val index = arguments[1] as Int
             AtomicMethodAccessInfo(
                 obj = array,
+                clazz = null,
                 location = ArrayElementByIndexAccess(index),
                 arguments = arguments.drop(2)
             )
@@ -349,6 +358,7 @@ internal fun AtomicMethodDescriptor.getVarHandleAccessInfo(
 
                 AtomicMethodAccessInfo(
                     obj = null,
+                    clazz = receiverType,
                     location = StaticFieldAccess(
                         className = receiverType.name,
                         fieldName = fieldName
@@ -380,6 +390,7 @@ internal fun AtomicMethodDescriptor.getVarHandleAccessInfo(
 
                 AtomicMethodAccessInfo(
                     obj = targetObject,
+                    clazz = receiverType,
                     location = ObjectFieldAccess(
                         className = receiverType.name,
                         fieldName = fieldName
