@@ -2306,7 +2306,7 @@ internal abstract class ManagedStrategy(
             ownerName = getOwnerName(
                 owner = info.obj,
                 className = (info.location as? FieldAccessLocation)?.className,
-                location = info.location,
+                location = info.location!!,
                 // lookupInLocalVariables = false,
                 // lookupInConstants = false,
             )

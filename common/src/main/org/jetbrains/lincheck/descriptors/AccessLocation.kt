@@ -40,12 +40,6 @@ data class ArrayElementByIndexAccess(
     val index: Int
 ) : ArrayAccessLocation()
 
-data class ObjectAccessMethodInfo(
-    val obj: Any?,
-    val location: ObjectAccessLocation,
-    val arguments: List<Any?>,
-)
-
 
 class AccessPath(val locations: List<AccessLocation>) {
 

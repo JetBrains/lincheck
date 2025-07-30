@@ -18,10 +18,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleNames
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType
 import org.jetbrains.lincheck.descriptors.*
 import org.jetbrains.lincheck.util.*
-import org.jetbrains.lincheck.analysis.ShadowStackFrame
 import sun.misc.Unsafe
-import java.lang.reflect.Field
-import java.lang.reflect.Modifier
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
@@ -89,6 +86,12 @@ internal enum class MemoryOrdering {
     }
 }
 
+data class AtomicMethodAccessInfo(
+    val obj: Any?,
+    val location: ObjectAccessLocation?,
+    val arguments: List<Any?>,
+)
+
 internal fun getAtomicMethodDescriptor(obj: Any?, methodName: String): AtomicMethodDescriptor? {
     return when {
         isAtomic(obj)               -> atomicMethods[methodName]
@@ -144,10 +147,38 @@ internal fun AtomicMethodDescriptor.getSetValue(obj: Any?, params: Array<Any?>):
     return params[argOffset]
 }
 
+internal fun AtomicMethodDescriptor.getAtomicAccessInfo(
+    receiver: Any,
+    arguments: Array<Any?>,
+): AtomicMethodAccessInfo = when (apiKind) {
+    ATOMIC_OBJECT           -> getAtomicObjectAccessInfo(receiver, arguments)
+    ATOMIC_ARRAY            -> getAtomicArrayAccessInfo(receiver, arguments)
+    ATOMIC_FIELD_UPDATER    -> getAtomicFieldUpdaterAccessInfo(receiver, arguments)
+    VAR_HANDLE              -> getVarHandleAccessInfo(receiver, arguments)
+    UNSAFE                  -> getUnsafeAccessInfo(receiver, arguments)
+}
+
+internal fun AtomicMethodDescriptor.getAtomicObjectAccessInfo(
+    atomic: Any,
+    arguments: Array<Any?>
+): AtomicMethodAccessInfo {
+    require(apiKind == ATOMIC_OBJECT) {
+        "Method is not an atomic object method: $this"
+    }
+    require(isAtomic(atomic)) {
+        "Receiver is not a recognized atomic type: ${atomic.javaClass.name}"
+    }
+    return AtomicMethodAccessInfo(
+        obj = atomic,
+        location = null,
+        arguments = arguments.asList()
+    )
+}
+
 internal fun AtomicMethodDescriptor.getAtomicArrayAccessInfo(
     atomicArray: Any,
     arguments: Array<Any?>
-): ObjectAccessMethodInfo {
+): AtomicMethodAccessInfo {
     require(apiKind == ATOMIC_ARRAY) {
         "Method is not an atomic array method: $this"
     }
@@ -161,7 +192,7 @@ internal fun AtomicMethodDescriptor.getAtomicArrayAccessInfo(
         "Expected first argument to be array index, but got " +
             if (arguments.isEmpty()) "no arguments" else arguments[0]?.javaClass?.name ?: "null"
     }
-    return ObjectAccessMethodInfo(
+    return AtomicMethodAccessInfo(
         obj = atomicArray,
         location = ArrayElementByIndexAccess(arguments[0] as Int),
         arguments = arguments.drop(1),
@@ -171,7 +202,7 @@ internal fun AtomicMethodDescriptor.getAtomicArrayAccessInfo(
 internal fun AtomicMethodDescriptor.getAtomicFieldUpdaterAccessInfo(
     receiver: Any,
     arguments: Array<Any?>
-): ObjectAccessMethodInfo {
+): AtomicMethodAccessInfo {
     require(apiKind == ATOMIC_FIELD_UPDATER) {
         "Method is not an AtomicFieldUpdater method: $this"
     }
@@ -199,7 +230,7 @@ internal fun AtomicMethodDescriptor.getAtomicFieldUpdaterAccessInfo(
         val fieldName = findFieldNameByOffsetViaUnsafe(targetType, offset)
             ?: error("Failed to find field name by offset $offset in ${targetType.name}")
 
-        return ObjectAccessMethodInfo(
+        return AtomicMethodAccessInfo(
             obj = targetObject,
             location = ObjectFieldAccess(
                 className = targetType.name,
@@ -215,7 +246,7 @@ internal fun AtomicMethodDescriptor.getAtomicFieldUpdaterAccessInfo(
 internal fun AtomicMethodDescriptor.getUnsafeAccessInfo(
     receiver: Any,
     arguments: Array<Any?>
-): ObjectAccessMethodInfo {
+): AtomicMethodAccessInfo {
     require(apiKind == UNSAFE) {
         "Method is not an Unsafe method: $this"
     }
@@ -237,7 +268,7 @@ internal fun AtomicMethodDescriptor.getUnsafeAccessInfo(
             val arrayBaseOffset = unsafe.arrayBaseOffset(targetObject::class.java)
             val arrayIndexScale = unsafe.arrayIndexScale(targetObject::class.java)
             val index = ((memoryOffset - arrayBaseOffset) / arrayIndexScale).toInt()
-            ObjectAccessMethodInfo(
+            AtomicMethodAccessInfo(
                 obj = targetObject,
                 location = ArrayElementByIndexAccess(index),
                 arguments = remainingArguments
@@ -248,7 +279,7 @@ internal fun AtomicMethodDescriptor.getUnsafeAccessInfo(
         targetObject is Class<*> -> {
             val fieldName = findFieldNameByOffsetViaUnsafe(targetObject, memoryOffset)
                 ?: error("Failed to find field name by offset $memoryOffset")
-            ObjectAccessMethodInfo(
+            AtomicMethodAccessInfo(
                 obj = null,
                 location = StaticFieldAccess(
                     className = targetObject.name,
@@ -263,7 +294,7 @@ internal fun AtomicMethodDescriptor.getUnsafeAccessInfo(
             val className = targetObject::class.java.name
             val fieldName = findFieldNameByOffsetViaUnsafe(targetObject::class.java, memoryOffset)
                 ?: error("Failed to find field name by offset $memoryOffset")
-            ObjectAccessMethodInfo(
+            AtomicMethodAccessInfo(
                 obj = targetObject,
                 location = ObjectFieldAccess(className, fieldName),
                 arguments = remainingArguments
@@ -278,7 +309,7 @@ internal fun AtomicMethodDescriptor.getUnsafeAccessInfo(
 internal fun AtomicMethodDescriptor.getVarHandleAccessInfo(
     varHandle: Any,
     arguments: Array<Any?>
-): ObjectAccessMethodInfo {
+): AtomicMethodAccessInfo {
     require(apiKind == VAR_HANDLE) {
         "Method is not a VarHandle method: $this"
     }
@@ -298,7 +329,7 @@ internal fun AtomicMethodDescriptor.getVarHandleAccessInfo(
             }
             val array = arguments[0]
             val index = arguments[1] as Int
-            ObjectAccessMethodInfo(
+            AtomicMethodAccessInfo(
                 obj = array,
                 location = ArrayElementByIndexAccess(index),
                 arguments = arguments.drop(2)
@@ -316,7 +347,7 @@ internal fun AtomicMethodDescriptor.getVarHandleAccessInfo(
                 val fieldName = findFieldNameByOffsetViaUnsafe(receiverType, fieldOffset)
                     ?: error("Failed to find field name by offset $fieldOffset in ${receiverType.name}")
 
-                ObjectAccessMethodInfo(
+                AtomicMethodAccessInfo(
                     obj = null,
                     location = StaticFieldAccess(
                         className = receiverType.name,
@@ -347,7 +378,7 @@ internal fun AtomicMethodDescriptor.getVarHandleAccessInfo(
                 val fieldName = findFieldNameByOffsetViaUnsafe(receiverType, fieldOffset)
                     ?: error("Failed to find field name by offset $fieldOffset in ${receiverType.name}")
 
-                ObjectAccessMethodInfo(
+                AtomicMethodAccessInfo(
                     obj = targetObject,
                     location = ObjectFieldAccess(
                         className = receiverType.name,
