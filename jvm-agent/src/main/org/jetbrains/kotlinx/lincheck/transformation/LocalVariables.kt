@@ -39,7 +39,7 @@ data class LocalVariableInfo(val name: String, val index: Int, val labelIndexRan
                 val match = INLINE_LAMBDA_PATTERN.matchEntire(name)
                 if (match != null) {
                     val callerInlineName = match.groups["inlineName"]?.value ?: "<unknown inline>"
-                    return "Lambda called by $callerInlineName"
+                    return "Lambda argument to $callerInlineName"
                 } else {
                     return name.removePrefix(INLINE_LAMBDA_PREFIX)
                 }
