@@ -574,8 +574,10 @@ class TraceCollectingEventTracker(
         }
 
         try {
-            allThreads.sortBy { it.threadId }
+            val appendable = DefaultTRTextAppendable(System.err)
             val roots = mutableListOf<TRTracePoint>()
+
+            allThreads.sortBy { it.threadId }
             allThreads.forEach { thread ->
                 val st = thread.callStack
                 if (st.isEmpty()) {
@@ -585,7 +587,9 @@ class TraceCollectingEventTracker(
                         System.err.println("Trace Recorder: Thread ${thread.threadId + 1}: Stack is not empty, contains ${st.size} elements, report bug")
                         System.err.println("Stack leftover:")
                         st.reversed().forEach {
-                            System.err.println("  ${it.toText(true)}")
+                            appendable.append("  ")
+                            it.toText(appendable)
+                            appendable.append("\n")
                         }
                     }
                     roots.add(st.first())

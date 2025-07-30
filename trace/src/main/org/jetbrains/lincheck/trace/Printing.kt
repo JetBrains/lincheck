@@ -26,37 +26,39 @@ fun printRecorderTrace(fileName: String?, context: TraceContext, rootCallsPerThr
 fun printRecorderTrace(output: OutputStream, context: TraceContext, rootCallsPerThread: List<TRTracePoint>, verbose: Boolean) {
     check(context == TRACE_CONTEXT) { "Now only global TRACE_CONTEXT is supported" }
     PrintStream(output.buffered(OUTPUT_BUFFER_SIZE)).use { output ->
+        val appendable = DefaultTRTextAppendable(output, verbose)
         rootCallsPerThread.forEachIndexed { i, root ->
             output.println("# Thread ${i+1}")
-            printTRPoint(output, root, 0, verbose)
+            printTRPoint(appendable, root, 0)
         }
     }
 }
 
-private fun printTRPoint(output: PrintStream, node: TRTracePoint, depth: Int, verbose: Boolean) {
-    output.print(" ".repeat(depth * 2))
-    output.println(node.toText(verbose))
+private fun printTRPoint(appendable: TRAppendable, node: TRTracePoint, depth: Int) {
+    appendable.append(" ".repeat(depth * 2))
+    node.toText(appendable)
+    appendable.append("\n")
     if (node is TRMethodCallTracePoint) {
         var unloaded = 0
         node.events.forEach { event ->
             if (event == null) {
                 unloaded++
             } else {
-                reportUnloaded(output, unloaded, depth + 1)
+                reportUnloaded(appendable, unloaded, depth + 1)
                 unloaded = 0
-                printTRPoint(output, event, depth + 1, verbose)
+                printTRPoint(appendable, event, depth + 1)
             }
         }
-        reportUnloaded(output, unloaded, depth + 1)
+        reportUnloaded(appendable, unloaded, depth + 1)
     }
 }
 
-private fun reportUnloaded(output: PrintStream, unloaded: Int, depth: Int) {
+private fun reportUnloaded(appendable: TRAppendable, unloaded: Int, depth: Int) {
     if (unloaded == 1) {
-        output.print(" ".repeat(depth * 2))
-        output.println("... <unloaded child>")
+        appendable.append(" ".repeat(depth * 2))
+        appendable.append("... <unloaded child>\n")
     } else if (unloaded > 1) {
-        output.print(" ".repeat(depth * 2))
-        output.println("... <${unloaded} unloaded children>")
+        appendable.append(" ".repeat(depth * 2))
+        appendable.append("... <${unloaded} unloaded children>\n")
     }
 }
