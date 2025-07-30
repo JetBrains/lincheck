@@ -8,14 +8,15 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck_test.representation
+package org.jetbrains.kotlinx.lincheck_test.representation.inlines
 
+import org.jetbrains.kotlinx.lincheck_test.representation.BaseTraceRepresentationTest
 import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import org.jetbrains.lincheck.util.isJdk8
 import org.junit.Assume.assumeFalse
 import org.junit.Before
 
-class InlineExtFuncRepresentationTest: BaseTraceRepresentationTest("inline_ext_fun") {
+class InlineExtFuncRepresentationTest: BaseTraceRepresentationTest("inlines/ext_fun") {
     var escape: Any? = null
     val i = 1
 
