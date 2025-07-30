@@ -4,7 +4,7 @@ java.lang.IllegalStateException: Check failed.
 	at org.jetbrains.kotlinx.lincheck_test.representation.AccessFieldRepresentationTest.block(AccessFunctionRepresentationTest.kt:50)
 	at org.jetbrains.kotlinx.lincheck_test.representation.AccessFieldRepresentationTest.block(AccessFunctionRepresentationTest.kt:43)
 	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:51)
-	at java.base/java.lang.Thread.run(Thread.java:833)
+	at java.base/java.lang.Thread.run(Thread.java:840)
 
 The following interleaving leads to the error:
 | ------------------------------------------------------ |
@@ -21,7 +21,7 @@ Detailed trace:
 |   block(): threw IllegalStateException at AccessFieldRepresentationTest.block(AccessFunctionRepresentationTest.kt:43)                                                           |
 |     AccessFunctionRepresentationTestKt.runLambda(Lambda#2) at AccessFieldRepresentationTest.block(AccessFunctionRepresentationTest.kt:49)                                       |
 |       r.invoke() at AccessFunctionRepresentationTestKt.runLambda(AccessFunctionRepresentationTest.kt:40)                                                                        |
-|         this$0.a ➜ 0 at AccessFieldRepresentationTest.block$lambda$0(AccessFunctionRepresentationTest.kt:49)                                                                    |
-|         this$0.a = 1 at AccessFieldRepresentationTest.block$lambda$0(AccessFunctionRepresentationTest.kt:49)                                                                    |
+|         a ➜ 0 at AccessFieldRepresentationTest.block$lambda$0(AccessFunctionRepresentationTest.kt:49)                                                                           |
+|         a = 1 at AccessFieldRepresentationTest.block$lambda$0(AccessFunctionRepresentationTest.kt:49)                                                                           |
 |   result: IllegalStateException #1                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
