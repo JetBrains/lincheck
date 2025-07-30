@@ -22,31 +22,43 @@ import java.util.concurrent.ConcurrentHashMap
 private class ThreadData(
     val threadId: Int
 ) {
-    val callStack: MutableList<TRMethodCallTracePoint> = arrayListOf()
-    val shadowStack: MutableList<ShadowStackFrame> = arrayListOf()
+    data class StackFrame(
+        val call: TRMethodCallTracePoint,
+        val shadow: ShadowStackFrame,
+        val isInline: Boolean
+    )
+
+    private val stack: MutableList<StackFrame> = arrayListOf()
     private val analysisSectionStack: MutableList<AnalysisSectionType> = arrayListOf()
 
-    fun currentMethodCallTracePoint(): TRMethodCallTracePoint = callStack.last()
+    fun currentMethodCallTracePoint(): TRMethodCallTracePoint = stack.last().call
 
-    fun pushStackFrame(tracePoint: TRMethodCallTracePoint, instance: Any?) {
+    fun isCurrentMethodCallInline(): Boolean = stack.last().isInline
+
+    fun firstMethodCallTracePoint(): TRMethodCallTracePoint = stack.first().call
+
+    fun pushStackFrame(tracePoint: TRMethodCallTracePoint, instance: Any?, isInline: Boolean) {
         val stackFrame = ShadowStackFrame(instance)
-        callStack.add(tracePoint)
-        shadowStack.add(stackFrame)
+        stack.add(StackFrame(
+            call = tracePoint,
+            shadow = stackFrame,
+            isInline = isInline
+        ))
     }
 
     fun popStackFrame(): TRMethodCallTracePoint {
-        shadowStack.removeLast()
-        return callStack.removeLast()
+        val frame = stack.removeLast()
+        return frame.call
     }
 
+    fun getStack(): List<StackFrame> = stack
+
     fun afterLocalRead(variableName: String, value: Any?) {
-        val shadowStackFrame = shadowStack.last()
-        shadowStackFrame.setLocalVariable(variableName, value)
+        stack.last().shadow.setLocalVariable(variableName, value)
     }
 
     fun afterLocalWrite(variableName: String, value: Any?) {
-        val shadowStackFrame = shadowStack.last()
-        shadowStackFrame.setLocalVariable(variableName, value)
+        stack.last().shadow.setLocalVariable(variableName, value)
     }
 
     fun enterAnalysisSection(section: AnalysisSectionType) {
@@ -184,7 +196,7 @@ class TraceCollectingEventTracker(
             parameters = emptyList()
         )
         strategy.tracePointCreated(null, tracePoint)
-        threadData.pushStackFrame(tracePoint, Thread.currentThread())
+        threadData.pushStackFrame(tracePoint, Thread.currentThread(), false)
         threadDescriptor.enableAnalysis()
     }
 
@@ -192,7 +204,7 @@ class TraceCollectingEventTracker(
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
         // Don't pop, we need it
-        val tracePoint = threadData.callStack.first()
+        val tracePoint = threadData.firstMethodCallTracePoint()
         tracePoint.result = TR_OBJECT_VOID
         strategy.callEnded(tracePoint)
         strategy.finishCurrentThread()
@@ -205,7 +217,7 @@ class TraceCollectingEventTracker(
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: throw exception
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: throw exception
         // Don't pop, we need it
-        val tracePoint = threadData.callStack.first()
+        val tracePoint = threadData.firstMethodCallTracePoint()
         tracePoint.exceptionClassName = exception::class.java.name
         strategy.callEnded(tracePoint)
         threadDescriptor.disableAnalysis()
@@ -423,9 +435,7 @@ class TraceCollectingEventTracker(
             parameters = params.map { TRObjectOrNull(it) }
         )
         strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
-        threadData.pushStackFrame(tracePoint, receiver)
-
-        System.err.println("+++ Call Normal Method with Id $methodId (${tracePoint.className}.${tracePoint.methodName})")
+        threadData.pushStackFrame(tracePoint, receiver, false)
 
         // if the method has certain guarantees, enter the corresponding section
         threadData.enterAnalysisSection(methodSection)
@@ -440,23 +450,24 @@ class TraceCollectingEventTracker(
         params: Array<Any?>,
         result: Any?
     ): Any? = runInsideIgnoredSection {
-        val threadData =
-            ThreadDescriptor.getCurrentThreadDescriptor()?.eventTrackerData as? ThreadData? ?: return result
+        val threadData = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTrackerData as? ThreadData? ?: return result
         val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
 
-        val tracePoint = threadData.popStackFrame()
+        while (threadData.isCurrentMethodCallInline()) {
+            val inlineTracePoint = threadData.currentMethodCallTracePoint()
+            Logger.error { "Forced exit from inline method ${inlineTracePoint.methodId} (${inlineTracePoint.className}.${inlineTracePoint.methodName}) due to return from method $methodId (${methodDescriptor.className}.${methodDescriptor.methodName})" }
+            onInlineMethodCallReturn(inlineTracePoint.methodId)
+        }
 
+        val tracePoint = threadData.popStackFrame()
         if (tracePoint.methodId != methodId) {
-            val md = TRACE_CONTEXT.getMethodDescriptor(methodId)
-            System.err.println("??? Returns Normal Method with Id $methodId (${md.className}.${md.methodName}) but on stack ${tracePoint.methodId} (${tracePoint.className}.${tracePoint.methodName})")
-        } else {
-            System.err.println("--- Returns Normal Method with Id $methodId (${tracePoint.className}.${tracePoint.methodName})")
+            Logger.error { "Return from method $methodId (${methodDescriptor.className}.${methodDescriptor.methodName}) but on stack ${tracePoint.methodId} (${tracePoint.className}.${tracePoint.methodName})" }
         }
 
         tracePoint.result = TRObjectOrVoid(result)
         strategy.callEnded(tracePoint)
 
-        val methodSection = methodAnalysisSectionType(receiver, methodDescriptor.className, methodDescriptor.methodName)
+        val methodSection = methodAnalysisSectionType(receiver, tracePoint.className, tracePoint.methodName)
         threadData.leaveAnalysisSection(methodSection)
         return result
     }
@@ -472,20 +483,21 @@ class TraceCollectingEventTracker(
         val threadData = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTrackerData as? ThreadData? ?: return t
         val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
 
-        val tracePoint = threadData.popStackFrame()
-
-        if (tracePoint.methodId != methodId) {
-            val md = TRACE_CONTEXT.getMethodDescriptor(methodId)
-            System.err.println("??? Exception Normal Method with Id $methodId (${md.className}.${md.methodName}) but on stack ${tracePoint.methodId} (${tracePoint.className}.${tracePoint.methodName})")
-        } else {
-            System.err.println("--- Exception Normal Method with Id $methodId (${tracePoint.className}.${tracePoint.methodName})")
+        while (threadData.isCurrentMethodCallInline()) {
+            val inlineTracePoint = threadData.currentMethodCallTracePoint()
+            Logger.error { "Forced exit from inline method ${inlineTracePoint.methodId} (${inlineTracePoint.className}.${inlineTracePoint.methodName}) due to exception in method $methodId (${methodDescriptor.className}.${methodDescriptor.methodName})" }
+            onInlineMethodCallException(inlineTracePoint.methodId, t)
         }
 
+        val tracePoint = threadData.popStackFrame()
+        if (tracePoint.methodId != methodId) {
+            Logger.error { "Exception in method $methodId (${methodDescriptor.className}.${methodDescriptor.methodName}) but on stack ${tracePoint.methodId} (${tracePoint.className}.${tracePoint.methodName})" }
+        }
 
         tracePoint.exceptionClassName = t.javaClass.name
         strategy.callEnded(tracePoint)
 
-        val methodSection = methodAnalysisSectionType(receiver, methodDescriptor.className, methodDescriptor.methodName)
+        val methodSection = methodAnalysisSectionType(receiver, tracePoint.className, tracePoint.methodName)
         threadData.leaveAnalysisSection(methodSection)
         return t
     }
@@ -504,32 +516,31 @@ class TraceCollectingEventTracker(
             parameters = emptyList()
         )
         strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
-        threadData.pushStackFrame(tracePoint, owner)
-        System.err.println("+++ Call Inline Method with Id $methodId (${tracePoint.className}.${tracePoint.methodName})")
+        threadData.pushStackFrame(tracePoint, owner, true)
     }
 
     override fun onInlineMethodCallReturn(methodId: Int): Unit = runInsideIgnoredSection {
         val threadData = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTrackerData as? ThreadData? ?: return
+
         val tracePoint = threadData.popStackFrame()
         if (tracePoint.methodId != methodId) {
-            val md = TRACE_CONTEXT.getMethodDescriptor(methodId)
-            System.err.println("??? Returns Inline Method with Id $methodId (${md.className}.${md.methodName}) but on stack ${tracePoint.methodId} (${tracePoint.className}.${tracePoint.methodName})")
-        } else {
-            System.err.println("--- Returns Inline Method with Id $methodId (${tracePoint.className}.${tracePoint.methodName})")
+            val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
+            Logger.error { "Return from inline method $methodId (${methodDescriptor.className}.${methodDescriptor.methodName}) but on stack ${tracePoint.methodId} (${tracePoint.className}.${tracePoint.methodName})" }
         }
+
         tracePoint.result = TR_OBJECT_VOID
         strategy.callEnded(tracePoint)
     }
 
     override fun onInlineMethodCallException(methodId: Int, t: Throwable): Unit = runInsideIgnoredSection {
         val threadData = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTrackerData as? ThreadData? ?: return
+
         val tracePoint = threadData.popStackFrame()
         if (tracePoint.methodId != methodId) {
-            val md = TRACE_CONTEXT.getMethodDescriptor(methodId)
-            System.err.println("??? Exception Inline Method with Id $methodId (${md.className}.${md.methodName}) but on stack ${tracePoint.methodId} (${tracePoint.className}.${tracePoint.methodName})")
-        } else {
-            System.err.println("--- Exception Inline Method with Id $methodId (${tracePoint.className}.${tracePoint.methodName})")
+            val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
+            Logger.error { "Exception in inline method $methodId (${methodDescriptor.className}.${methodDescriptor.methodName}) but on stack ${tracePoint.methodId} (${tracePoint.className}.${tracePoint.methodName})" }
         }
+
         tracePoint.exceptionClassName = t.javaClass.name
         strategy.callEnded(tracePoint)
     }
@@ -572,8 +583,6 @@ class TraceCollectingEventTracker(
     fun enableTrace() {
         // Start tracing in this thread
         val threadData = ThreadData(threads.size)
-        // Shadow stack cannot be empty
-        threadData.shadowStack.add(ShadowStackFrame(Thread.currentThread()))
         ThreadDescriptor.getCurrentThreadDescriptor().eventTrackerData = threadData
         threads[Thread.currentThread()] = threadData
 
@@ -586,7 +595,7 @@ class TraceCollectingEventTracker(
         )
         strategy.registerCurrentThread(threadData.threadId)
         strategy.tracePointCreated(null,tracePoint)
-        threadData.pushStackFrame(tracePoint, null)
+        threadData.pushStackFrame(tracePoint, null, false)
 
         startTime = System.currentTimeMillis()
     }
@@ -618,7 +627,7 @@ class TraceCollectingEventTracker(
 
             allThreads.sortBy { it.threadId }
             allThreads.forEach { thread ->
-                val st = thread.callStack
+                val st = thread.getStack()
                 if (st.isEmpty()) {
                     System.err.println("Trace Recorder: Thread ${thread.threadId + 1}: Stack underflow, report bug")
                 } else {
@@ -631,7 +640,7 @@ class TraceCollectingEventTracker(
                             appendable.append("\n")
                         }
                     }
-                    roots.add(st.first())
+                    roots.add(st.first().call)
                 }
             }
             when (mode) {

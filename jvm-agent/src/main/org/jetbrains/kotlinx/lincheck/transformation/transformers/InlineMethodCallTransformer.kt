@@ -11,6 +11,8 @@
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.jetbrains.kotlinx.lincheck.transformation.invokeIfInAnalyzedCode
+import org.jetbrains.kotlinx.lincheck.transformation.invokeStatic
 import org.jetbrains.lincheck.trace.TRACE_CONTEXT
 import org.jetbrains.lincheck.util.Logger
 import org.objectweb.asm.Label
@@ -21,12 +23,6 @@ import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.GeneratorAdapter
 import sun.nio.ch.lincheck.EventTracker
 import sun.nio.ch.lincheck.Injections
-
-private data class InlineStackElement(
-    val lvar: LocalVariableInfo,
-    val methodId: Int,
-    val tryEndsCatchBeginsLabel: Label
-)
 
 /**
  * [InlineMethodCallTransformer] tracks method calls,
@@ -42,13 +38,18 @@ internal class InlineMethodCallTransformer(
     val locals: MethodVariables,
     val labelSorter: MethodLabels
 ) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter, methodVisitor) {
+    private data class InlineStackElement(
+        val lvar: LocalVariableInfo,
+        val methodId: Int,
+        val tryEndsCatchBeginsLabel: Label
+    )
+
     private companion object {
         val objectType: String = getObjectType("java/lang/Object").className
         val contType: String = getObjectType("kotlin/coroutines/Continuation").className
     }
 
     private val methodType = getMethodType(desc)
-
     private val looksLikeSuspendMethod =
         methodType.returnType.className == objectType &&
                 methodType.argumentTypes.lastOrNull()?.className == contType &&
@@ -66,51 +67,23 @@ internal class InlineMethodCallTransformer(
 
     private val inlineStack = mutableListOf<InlineStackElement>()
 
-    override fun visitLabel(label: Label) = adapter.run {
+    override fun visitLabel(label: Label) {
         if (!locals.hasInlines || looksLikeSuspendMethod) {
             super.visitLabel(label)
             return
         }
 
-        System.err.println(">>> $className.$methodName: LABEL $label STARTS")
         // It is not clear, could one label be used to mark the end of one inline call and
         // the start of another one. Nothing wrong instrument exists first.
-        if (topOfStackEndsBeforeOrAtLabel(label)) {
-            var removeFromStack = 0
-            invokeIfInAnalyzedCode(original = {}, instrumented = {
-                removeFromStack = exitFromInlineMethods("Exit with LABEL") {
-                    val cmp = labelSorter.compare(it.endLabel, label)
-                    if (cmp < 0) {
-                        Logger.warn { "$className.$methodName: Local call to ${it.inlineMethodName} should be finished at label ${it.endLabel} but still alive at ${label}." }
-                    }
-                    // Stop processing stack if a label is before the end label
-                    cmp > 0
-                }
-            })
-
-            // Add `catch(t: Throwable) { reportException(); throw t }` for all exited methods
-            repeat(removeFromStack) {
-                // pop static stack
-                val (lvar, methodId, tryEndsCatchBeginsLabel) = inlineStack.removeLast()
-
-                System.err.println("=== REMOVE ${lvar.name} (${lvar.startLabel} .. ${lvar.endLabel}) at $label")
-
-                // Jump over "catch" to the end-of-inline-call label (given one)
-                // It will jump over all generated `catch` blocks in once, but it is Ok.
-                push("Jump Over Catch for $methodId")
-                invokeStatic(Injections::debugPrint)
-                visitJumpInsn(GOTO, label)
-
-                // This is the border between `try {}` and `catch(Throwable)`
-                visitLabel(tryEndsCatchBeginsLabel)
-                dup()
-                push(methodId)
-                swap()
-                invokeStatic(Injections::onInlineMethodCallException)
-                push("Rethrow exception from catch-all of inline method $methodId")
-                invokeStatic(Injections::debugPrint)
-                visitInsn(ATHROW)
+        while (inlineStack.isNotEmpty()) {
+            val (lvar, methodId, tryEndsCatchBeginsLabel) = inlineStack.last()
+            val cmp = labelSorter.compare(lvar.endLabel, label)
+            if (cmp > 0) break
+            if (cmp < 0) {
+                Logger.warn { "${className}.${methodName}: Local call to ${lvar.inlineMethodName} should be finished at label ${lvar.endLabel} but still alive at ${label}." }
             }
+            emitInlinedMethodEpilogue(methodId, tryEndsCatchBeginsLabel)
+            inlineStack.removeLast()
         }
 
         // Visit the label itself
@@ -124,62 +97,27 @@ internal class InlineMethodCallTransformer(
             .filter { it.inlineMethodName != methodName && isSupportedInline(it) }
             .sortedWith(localVarInlineStartComparator)
         ) {
-            // Start the `try {}` block around call, create distinct label for its beginning because
-            // formally `visitTryCatchBlock()` call doesn't allow usage of visited labels.
-            val tryStartLabel = Label()
-            val tryEndsCatchBeginsLabel = Label()
-            visitTryCatchBlock(tryStartLabel, tryEndsCatchBeginsLabel, tryEndsCatchBeginsLabel, null)
-            visitLabel(tryStartLabel)
-
-            val suffix = "\$iv".repeat(inlineStack.size + 1)
-            val inlineName = lvar.inlineMethodName!!
-
-            // If an extension function was inlined, `this_$iv` will point to class where extension
-            // function was defined and `$this$<func-name>$iv` will show to virtual `this`, with
-            // which function should really work.
-            // Prefer the second variant if possible.
-            val this_ =
-                locals.activeVariables.firstOrNull { it.name == "\$this$$inlineName$suffix" }
-                    ?: locals.activeVariables.firstOrNull { it.name == "this_$suffix" }
-            val clazz = this_?.type
-            val className = if (clazz?.sort == OBJECT) clazz.className else null
-            val thisLocal = if (clazz?.sort == OBJECT) this_.index else null
-
-            var methodId: Int = -1
-            invokeIfInAnalyzedCode(
-                original = {},
-                instrumented = {
-                    methodId = processInlineMethodCall(className, inlineName, clazz, thisLocal, label)
-                }
-            )
-            System.err.println("=== ADD ${lvar.name} (${lvar.startLabel} .. ${lvar.endLabel}) at $label")
             inlineStack.add(
-                InlineStackElement(
-                    lvar = lvar,
-                    methodId = methodId,
-                    tryEndsCatchBeginsLabel = tryEndsCatchBeginsLabel
-                )
+                emitInlineMethodPrologue(lvar)
             )
         }
-        System.err.println("<<< $className.$methodName: LABEL $label ENDS")
     }
 
-    override fun visitJumpInsn(opcode: Int, label: Label) = adapter.run {
+    override fun visitJumpInsn(opcode: Int, label: Label) {
         // This is a jump inside the current inline call
         if (!topOfStackEndsBeforeLabel(label)) {
-            visitJumpInsn(opcode, label)
+            super.visitJumpInsn(opcode, label)
             return
         }
         // we must not pop the static analysis stack here, as an inline method is not ended here!
         // So, only generate injection and don't alter the stack
-        System.err.println(">>> $className.$methodName: JUMP $opcode TO $label STARTS")
         when (opcode) {
-            GOTO -> invokeIfInAnalyzedCode(
+            GOTO -> adapter.invokeIfInAnalyzedCode(
                 original = {},
                 instrumented = {
                     // Stop when we jump inside the inline method, comparison is strict as
                     // endLabel will be processed by `visitLabel()` method
-                    exitFromInlineMethods("Exit with GOTO") { labelSorter.compare(it.endLabel, label) > 0 }
+                    exitFromInlineMethods { labelSorter.compare(it.endLabel, label) > 0 }
                 }
             )
 
@@ -192,11 +130,11 @@ internal class InlineMethodCallTransformer(
             IFNULL,
             IFNONNULL -> {
                 // Duplicate one top category-1 value
-                dup()
-                invokeIfTrueAndInAnalyzedCode(opcode) {
+                adapter.dup()
+                adapter.invokeIfTrueAndInAnalyzedCode(opcode) {
                     // Stop when we jump inside the inline method, comparison is strict as
                     // endLabel will be processed by `visitLabel()` method
-                    exitFromInlineMethods("Exit with IF ($opcode)") { labelSorter.compare(it.endLabel, label) > 0 }
+                    exitFromInlineMethods { labelSorter.compare(it.endLabel, label) > 0 }
                 }
             }
 
@@ -209,120 +147,159 @@ internal class InlineMethodCallTransformer(
             IF_ACMPEQ,
             IF_ACMPNE -> {
                 // Duplicate two top category-1 values
-                dup2()
-                invokeIfTrueAndInAnalyzedCode(opcode) {
-                    exitFromInlineMethods("Exit with IF_xCMP ($opcode)") {
-                        labelSorter.compare(
-                            it.endLabel,
-                            label
-                        ) <= 0
-                    }
+                adapter.dup2()
+                adapter.invokeIfTrueAndInAnalyzedCode(opcode) {
+                    exitFromInlineMethods { labelSorter.compare(it.endLabel, label) > 0 }
                 }
             }
 
             JSR -> Unit
             else -> error("Unknown conditional opcode $opcode")
         }
-        System.err.println("<<< $className.$methodName: JUMP $opcode TO $label ENDS")
-        visitJumpInsn(opcode, label)
+        super.visitJumpInsn(opcode, label)
     }
 
-    override fun visitInsn(opcode: Int) = adapter.run {
+    override fun visitInsn(opcode: Int) {
         if (inlineStack.isEmpty()) {
-            visitInsn(opcode)
+            super.visitInsn(opcode)
             return
         }
-        System.err.println(">>> $className.$methodName: RETURN ($opcode) STARTS")
         // we must not pop the static analysis stack here, as an inline method is not ended here!
         // So, only generate injection and don't alter the stack
         when (opcode) {
             // Don't process ATHROW, it will be processed in catch blocks
             ARETURN, DRETURN, FRETURN, IRETURN, LRETURN, RETURN -> {
-                if (inlineStack.isNotEmpty()) {
-                    System.err.println("<<< $className.$methodName: RETURN $opcode STARTS")
-                    invokeIfInAnalyzedCode(
-                        original = {},
-                        instrumented = {
-                            // Process the whole stack, so never break out of loop
-                            exitFromInlineMethods("Exit with RETURN ($opcode)") { false }
-                        }
-                    )
-                    System.err.println("<<< $className.$methodName: RETURN $opcode END")
-                }
+                adapter.invokeIfInAnalyzedCode(
+                    original = {},
+                    instrumented = {
+                        exitFromInlineMethods { false }
+                    }
+                )
             }
         }
-        System.err.println("<<< $className.$methodName: RETURN ($opcode) ENDS")
-        visitInsn(opcode)
-    }
-
-    private fun exitFromInlineMethods(msg: String, stopHere: (LocalVariableInfo) -> Boolean): Int {
-        var exited = 0
-        for (topOfStack in inlineStack.reversed()) {
-            val (lvar, methodId) = topOfStack
-            // This inline call covers this jump, stop "exiting"
-            if (stopHere(lvar)) {
-                System.err.println("=== STOP PROCESSING AT ${lvar.name} (${lvar.startLabel} .. ${lvar.endLabel})")
-                break
-            }
-            System.err.println("*** EXIT ${lvar.name} (${lvar.startLabel} .. ${lvar.endLabel}): $msg")
-            adapter.push("~~~ " + msg + " - " + lvar.inlineMethodName)
-            adapter.invokeStatic(Injections::debugPrint)
-            processInlineMethodCallReturn(methodId)
-            exited++
-        }
-        return exited
+        super.visitInsn(opcode)
     }
 
     override fun visitMaxs(maxStack: Int, maxLocals: Int) {
-        if (inlineStack.isNotEmpty()) {
+        while (inlineStack.isNotEmpty()) {
+            val (lvar, methodId, tryEndsCatchBeginsLabel) = inlineStack.removeLast()
             Logger.error {
-                "Inline methods calls are not balanced at $className.$methodName:\n" +
-                        inlineStack.reversed().joinToString(separator = "\n") {
-                            val (lvar, methodId) = it
-                            "  ${lvar.inlineMethodName} (slot ${lvar.index}, methodId $methodId) called at label ${lvar.startLabel}"
-                        }
+                "Inline method call is not balanced at $className.$methodName: " +
+                "${lvar.inlineMethodName} (slot ${lvar.index}, methodId $methodId) " +
+                "called at label ${lvar.startLabel}"
             }
-            exitFromInlineMethods("Exit with END OF PARENT") { false }
+            emitInlinedMethodEpilogue(methodId, tryEndsCatchBeginsLabel)
         }
         super.visitMaxs(maxStack, maxLocals)
     }
 
-    @Suppress("UNUSED_PARAMETER")
+    /**
+     * Generate exits from inline methods till stopped by callback without any conditions.
+     * It assumes that this call is protected by if statements outside.
+     * Now inline methods cannot affect analysis sections, so it is optimal to call
+     * callbacks for all of them in one batch (under one `if`) if possible.
+     */
+    private fun exitFromInlineMethods(stopHere: (LocalVariableInfo) -> Boolean) {
+        for (topOfStack in inlineStack.asReversed()) {
+            val (lvar, methodId, _) = topOfStack
+            // Check, should we stop at this stack level
+            if (stopHere(lvar)) break
+            processInlineMethodReturn(methodId)
+        }
+    }
+
+    private fun emitInlineMethodPrologue(lvar: LocalVariableInfo): InlineStackElement = adapter.run {
+        val suffix = "\$iv".repeat(inlineStack.size + 1)
+        val inlineMethodName = lvar.inlineMethodName!!
+
+        // If an extension function was inlined, `this_$iv` will point to class where extension
+        // function was defined and `$this$<func-name>$iv` will show to virtual `this`, with
+        // which function should really work.
+        // Prefer the second variant if possible.
+        val this_ = locals.activeVariables.firstOrNull { it.name == "\$this$$inlineMethodName$suffix" }
+            ?: locals.activeVariables.firstOrNull { it.name == "this_$suffix" }
+        val ownerType = this_?.type
+        val className = if (ownerType?.sort == OBJECT) ownerType.className else null
+        val owner = if (ownerType?.sort == OBJECT) this_.index else null
+
+        val methodId = getPseudoMethodId(className, lvar.startLabel, inlineMethodName)
+
+        // Start the `try {}` block around call, create distinct label for its beginning because
+        // formally `visitTryCatchBlock()` call doesn't allow usage of visited labels.
+        val tryStartLabel = Label()
+        val tryEndsCatchBeginsLabel = Label()
+        visitTryCatchBlock(tryStartLabel, tryEndsCatchBeginsLabel, tryEndsCatchBeginsLabel, null)
+        visitLabel(tryStartLabel)
+        invokeIfInAnalyzedCode(
+            original = {},
+            instrumented = {
+                processInlineMethodCall(inlineMethodName, methodId,ownerType, owner)
+            }
+        )
+
+        return InlineStackElement(
+            lvar = lvar,
+            methodId = methodId,
+            tryEndsCatchBeginsLabel = tryEndsCatchBeginsLabel
+        )
+    }
+
+    private fun emitInlinedMethodEpilogue(methodId: Int, tryEndsCatchBeginsLabel: Label) = adapter.run {
+        val endOfMethodLabel = Label()
+        invokeIfInAnalyzedCode(
+            original = {},
+            instrumented = {
+                processInlineMethodReturn(methodId)
+            }
+        )
+
+        // Jump over the catch block if there is no exception
+        visitJumpInsn(GOTO, endOfMethodLabel)
+
+        // This is the border between `try {}` and `catch(Throwable)`
+        visitLabel(tryEndsCatchBeginsLabel)
+        // Stack: <exception>
+        invokeIfInAnalyzedCode(
+            original = {},
+            instrumented = {
+                // Stack: <exception>
+                dup()
+                // Stack: <exception>, <exception>
+                push(methodId)
+                // Stack: <exception>, <exception>, <methodId>
+                swap()
+                // Stack: <exception>, <methodId>, <exception>
+                invokeStatic(Injections::onInlineMethodCallException)
+                // Stack: <exception>
+            }
+        )
+        // Stack: <exception>
+        // Rethrow
+        visitInsn(ATHROW)
+
+        // End of catch block: goto above goes here
+        visitLabel(endOfMethodLabel)
+    }
+
     private fun processInlineMethodCall(
-        className: String?,
         inlineMethodName: String,
+        methodId: Int,
         ownerType: Type?,
         owner: Int?,
-        startLabel: Label
-    ): Int = adapter.run {
-        // Create a fake method descriptor
-        val methodId = getPseudoMethodId(className, startLabel, inlineMethodName)
-        System.err.println("@@@ $className / $startLabel / $inlineMethodName : $methodId")
+    ) = adapter.run {
         push(methodId)
         loadNewCodeLocationId()
         if (owner == null) {
             pushNull()
         } else {
-            val asmType = getLocalType(owner)
-            if (asmType == null) {
-                loadLocal(owner, ownerType)
-            } else if (asmType.sort == ownerType?.sort) {
-                loadLocal(owner)
-            } else {
-                // Sometimes ASM freaks out when a slot has completely different types in different frames.
-                // Like, two variables of types Int and Object share a slot, and ASM thinks about it as about Int,
-                // and we try to load it as an Object.
-                pushNull()
-            }
+            // As `owner` is an "old" variable index, we need to remap it, and `GeneratorAdapter.loadLocal()` bypass remapping
+            visitVarInsn(ALOAD, owner)
         }
         invokeStatic(Injections::onInlineMethodCall)
         invokeBeforeEventIfPluginEnabled("inline method call $inlineMethodName in $methodName")
-
-        return methodId
     }
 
-    private fun processInlineMethodCallReturn(methodId: Int) = adapter.run {
-        System.err.println("%%% $className.$methodName: $methodId")
+    private fun processInlineMethodReturn(methodId: Int)  = adapter.run {
         push(methodId)
         invokeStatic(Injections::onInlineMethodCallReturn)
     }
