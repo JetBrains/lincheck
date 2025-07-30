@@ -26,17 +26,17 @@ fun printRecorderTrace(fileName: String?, context: TraceContext, rootCallsPerThr
 fun printRecorderTrace(output: OutputStream, context: TraceContext, rootCallsPerThread: List<TRTracePoint>, verbose: Boolean) {
     check(context == TRACE_CONTEXT) { "Now only global TRACE_CONTEXT is supported" }
     PrintStream(output.buffered(OUTPUT_BUFFER_SIZE)).use { output ->
-        val appendable = DefaultTRTextAppendable(output)
+        val appendable = DefaultTRTextAppendable(output, verbose)
         rootCallsPerThread.forEachIndexed { i, root ->
             output.println("# Thread ${i+1}")
-            printTRPoint(appendable, root, 0, verbose)
+            printTRPoint(appendable, root, 0)
         }
     }
 }
 
-private fun printTRPoint(appendable: TRAppendable, node: TRTracePoint, depth: Int, verbose: Boolean) {
+private fun printTRPoint(appendable: TRAppendable, node: TRTracePoint, depth: Int) {
     appendable.append(" ".repeat(depth * 2))
-    node.toText(appendable, verbose)
+    node.toText(appendable)
     appendable.append("\n")
     if (node is TRMethodCallTracePoint) {
         var unloaded = 0
@@ -46,7 +46,7 @@ private fun printTRPoint(appendable: TRAppendable, node: TRTracePoint, depth: In
             } else {
                 reportUnloaded(appendable, unloaded, depth + 1)
                 unloaded = 0
-                printTRPoint(appendable, event, depth + 1, verbose)
+                printTRPoint(appendable, event, depth + 1)
             }
         }
         reportUnloaded(appendable, unloaded, depth + 1)

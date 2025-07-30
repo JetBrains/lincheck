@@ -18,6 +18,8 @@ import org.jetbrains.lincheck.descriptors.VariableDescriptor
 
 
 interface TRAppendable {
+    val verbose: Boolean
+
     fun appendClassName(cd: ClassDescriptor): TRAppendable
     fun appendMethodName(md: MethodDescriptor): TRAppendable
     fun appendFieldName(fd: FieldDescriptor): TRAppendable
@@ -61,7 +63,10 @@ abstract class AbstractTRAppendable: TRAppendable {
         .removeLeadingDollar()
 }
 
-class DefaultTRTextAppendable(private val destination: Appendable): AbstractTRAppendable() {
+class DefaultTRTextAppendable(
+    private val destination: Appendable,
+    override val verbose: Boolean = false
+): AbstractTRAppendable() {
 
     override fun append(text: String?): TRAppendable {
         destination.append(text)
@@ -71,7 +76,7 @@ class DefaultTRTextAppendable(private val destination: Appendable): AbstractTRAp
 
 abstract class AbstractTRMethodCallTracePointPrinter() {
 
-    protected fun TRAppendable.append(tracePoint: TRMethodCallTracePoint): TRAppendable {
+    protected fun TRAppendable.appendTracePoint(tracePoint: TRMethodCallTracePoint): TRAppendable {
         val md = tracePoint.methodDescriptor
 
         appendOwner(tracePoint)
@@ -121,8 +126,8 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
 
 object DefaultTRMethodCallTracePointPrinter: AbstractTRMethodCallTracePointPrinter() {
 
-    fun TRAppendable.append(tracePoint: TRMethodCallTracePoint, verbose: Boolean): TRAppendable {
-        append(tracePoint)
+    fun TRAppendable.append(tracePoint: TRMethodCallTracePoint): TRAppendable {
+        appendTracePoint(tracePoint)
         append(tracePoint.codeLocationId, verbose)
         return this
     }
@@ -131,7 +136,7 @@ object DefaultTRMethodCallTracePointPrinter: AbstractTRMethodCallTracePointPrint
 
 abstract class AbstractTRFieldTracePointPrinter {
 
-    protected fun TRAppendable.append(tracePoint: TRFieldTracePoint): TRAppendable {
+    protected fun TRAppendable.appendTracePoint(tracePoint: TRFieldTracePoint): TRAppendable {
         val isLambdaCaptureSyntheticField = isLambdaCaptureSyntheticField(tracePoint)
 
         appendOwner(tracePoint)
@@ -168,8 +173,8 @@ abstract class AbstractTRFieldTracePointPrinter {
 
 object DefaultTRFieldTracePointPrinter: AbstractTRFieldTracePointPrinter() {
 
-    fun TRAppendable.append(tracePoint: TRFieldTracePoint, verbose: Boolean): TRAppendable {
-        append(tracePoint)
+    fun TRAppendable.append(tracePoint: TRFieldTracePoint): TRAppendable {
+        appendTracePoint(tracePoint)
         append(tracePoint.codeLocationId, verbose)
         return this
     }
@@ -178,7 +183,7 @@ object DefaultTRFieldTracePointPrinter: AbstractTRFieldTracePointPrinter() {
 
 abstract class AbstractTRLocalVariableTracePointPrinter {
 
-    protected fun TRAppendable.append(tracePoint: TRLocalVariableTracePoint): TRAppendable {
+    protected fun TRAppendable.appendTracePoint(tracePoint: TRLocalVariableTracePoint): TRAppendable {
         appendVariableName(tracePoint.variableDescriptor)
         append(" ")
         appendSpecialSymbol(tracePoint.accessSymbol())
@@ -190,8 +195,8 @@ abstract class AbstractTRLocalVariableTracePointPrinter {
 
 object DefaultTRLocalVariableTracePointPrinter: AbstractTRLocalVariableTracePointPrinter() {
 
-    fun TRAppendable.append(tracePoint: TRLocalVariableTracePoint, verbose: Boolean): TRAppendable {
-        append(tracePoint)
+    fun TRAppendable.append(tracePoint: TRLocalVariableTracePoint): TRAppendable {
+        appendTracePoint(tracePoint)
         append(tracePoint.codeLocationId, verbose)
         return this
     }
@@ -199,7 +204,7 @@ object DefaultTRLocalVariableTracePointPrinter: AbstractTRLocalVariableTracePoin
 
 abstract class AbstractTRArrayTracePointPrinter {
 
-    protected fun TRAppendable.append(tracePoint: TRArrayTracePoint): TRAppendable {
+    protected fun TRAppendable.appendTracePoint(tracePoint: TRArrayTracePoint): TRAppendable {
         appendArray(tracePoint.array)
         appendSpecialSymbol("[")
         appendArrayIndex(tracePoint.index)
@@ -214,8 +219,8 @@ abstract class AbstractTRArrayTracePointPrinter {
 
 object DefaultTRArrayTracePointPrinter: AbstractTRArrayTracePointPrinter() {
 
-    fun TRAppendable.append(tracePoint: TRArrayTracePoint, verbose: Boolean): TRAppendable {
-        append(tracePoint)
+    fun TRAppendable.append(tracePoint: TRArrayTracePoint): TRAppendable {
+        appendTracePoint(tracePoint)
         append(tracePoint.codeLocationId, verbose)
         return this
     }

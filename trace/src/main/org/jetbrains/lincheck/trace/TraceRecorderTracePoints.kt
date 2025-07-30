@@ -20,6 +20,7 @@ import org.jetbrains.lincheck.trace.DefaultTRArrayTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRFieldTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRLocalVariableTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRMethodCallTracePointPrinter.append
+import org.jetbrains.lincheck.trace.append
 import java.io.DataInput
 import java.io.DataOutput
 import java.math.BigDecimal
@@ -51,7 +52,13 @@ sealed class TRTracePoint(
 
     val codeLocation: StackTraceElement get() = CodeLocations.stackTrace(codeLocationId)
 
-    abstract fun toText(appendable: TRAppendable, verbose: Boolean)
+    fun toText(verbose: Boolean): String {
+        val sb = StringBuilder()
+        toText(DefaultTRTextAppendable(sb, verbose))
+        return sb.toString()
+    }
+
+    abstract fun toText(appendable: TRAppendable)
 }
 
 // Only trace point which is "container"
@@ -157,8 +164,8 @@ class TRMethodCallTracePoint(
         }
     }
 
-    override fun toText(appendable: TRAppendable, verbose: Boolean) {
-        appendable.append(tracePoint = this, verbose)
+    override fun toText(appendable: TRAppendable) {
+        appendable.append(tracePoint = this)
     }
 
     internal companion object {
@@ -221,8 +228,8 @@ sealed class TRFieldTracePoint(
         out.preWriteTRObject(value)
     }
 
-    override fun toText(appendable: TRAppendable, verbose: Boolean) {
-        appendable.append(tracePoint = this, verbose)
+    override fun toText(appendable: TRAppendable) {
+        appendable.append(tracePoint = this)
     }
 }
 
@@ -303,8 +310,8 @@ sealed class TRLocalVariableTracePoint(
         out.preWriteTRObject(value)
     }
 
-    override fun toText(appendable: TRAppendable, verbose: Boolean) {
-        appendable.append(tracePoint = this, verbose)
+    override fun toText(appendable: TRAppendable) {
+        appendable.append(tracePoint = this)
     }
 }
 
@@ -379,8 +386,8 @@ sealed class TRArrayTracePoint(
         out.preWriteTRObject(value)
     }
 
-    override fun toText(appendable: TRAppendable, verbose: Boolean) {
-        appendable.append(tracePoint = this, verbose)
+    override fun toText(appendable: TRAppendable) {
+        appendable.append(tracePoint = this)
     }
 }
 

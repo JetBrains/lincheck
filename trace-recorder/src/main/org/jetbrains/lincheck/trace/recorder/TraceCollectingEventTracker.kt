@@ -588,7 +588,7 @@ class TraceCollectingEventTracker(
                         System.err.println("Stack leftover:")
                         st.reversed().forEach {
                             appendable.append("  ")
-                            it.toText(appendable, verbose = true)
+                            it.toText(appendable)
                             appendable.append("\n")
                         }
                     }
