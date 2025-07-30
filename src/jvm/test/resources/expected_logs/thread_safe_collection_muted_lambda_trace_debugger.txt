@@ -22,27 +22,27 @@ Detailed trace:
 |     concurrentMap.computeIfAbsent(1, Lambda#2): 7 at ThreadSafeCollectionMutedLambdaRepresentationTest.block(StdLibRepresentationTests.kt:53)                                   |
 |       key.hashCode(): 1 at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1694)                                                                                       |
 |       sizeCtl.compareAndSetInt(0, -1): true at ConcurrentHashMap.initTable(ConcurrentHashMap.java:2296)                                                                         |
-|       Array<Node>#1[1].getReferenceAcquire(): null at ConcurrentHashMap.tabAt(ConcurrentHashMap.java:760)                                                                       |
-|       Array<Node>#1[1].compareAndSetReference(null, ReservationNode#1): true at ConcurrentHashMap.casTabAt(ConcurrentHashMap.java:765)                                          |
+|       tab[1].getReferenceAcquire(): null at ConcurrentHashMap.tabAt(ConcurrentHashMap.java:760)                                                                                 |
+|       tab[1].compareAndSetReference(null, ReservationNode#1): true at ConcurrentHashMap.casTabAt(ConcurrentHashMap.java:765)                                                    |
 |       mappingFunction.apply(1): 7 at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1708)                                                                             |
 |         $tmp0.invoke(1): 7 at ThreadSafeCollectionMutedLambdaRepresentationTest.block$lambda$3(StdLibRepresentationTests.kt:53)                                                 |
-|           this$0.a = 5 at ThreadSafeCollectionMutedLambdaRepresentationTest.block$lambda$2(StdLibRepresentationTests.kt:54)                                                     |
+|           a = 5 at ThreadSafeCollectionMutedLambdaRepresentationTest.block$lambda$2(StdLibRepresentationTests.kt:54)                                                            |
 |           innerConcurrentMap.computeIfAbsent(1, Lambda#3): 6 at ThreadSafeCollectionMutedLambdaRepresentationTest.block$lambda$2(StdLibRepresentationTests.kt:55)               |
 |             key.hashCode(): 1 at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1694)                                                                                 |
 |             sizeCtl.compareAndSetInt(0, -1): true at ConcurrentHashMap.initTable(ConcurrentHashMap.java:2296)                                                                   |
-|             Array<Node>#2[1].getReferenceAcquire(): null at ConcurrentHashMap.tabAt(ConcurrentHashMap.java:760)                                                                 |
-|             Array<Node>#2[1].compareAndSetReference(null, ReservationNode#2): true at ConcurrentHashMap.casTabAt(ConcurrentHashMap.java:765)                                    |
+|             tab[1].getReferenceAcquire(): null at ConcurrentHashMap.tabAt(ConcurrentHashMap.java:760)                                                                           |
+|             tab[1].compareAndSetReference(null, ReservationNode#2): true at ConcurrentHashMap.casTabAt(ConcurrentHashMap.java:765)                                              |
 |             mappingFunction.apply(1): 6 at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1708)                                                                       |
 |               $tmp0.invoke(1): 6 at ThreadSafeCollectionMutedLambdaRepresentationTest.block$lambda$2$lambda$1(StdLibRepresentationTests.kt:55)                                  |
-|                 this$0.a ➜ 5 at ThreadSafeCollectionMutedLambdaRepresentationTest.block$lambda$2$lambda$0(StdLibRepresentationTests.kt:55)                                      |
-|                 this$0.a = 6 at ThreadSafeCollectionMutedLambdaRepresentationTest.block$lambda$2$lambda$0(StdLibRepresentationTests.kt:55)                                      |
-|                 this$0.a ➜ 6 at ThreadSafeCollectionMutedLambdaRepresentationTest.block$lambda$2$lambda$0(StdLibRepresentationTests.kt:55)                                      |
-|             Array<Node>#2[1].putReferenceRelease(Node#1) at ConcurrentHashMap.setTabAt(ConcurrentHashMap.java:769)                                                              |
+|                 a ➜ 5 at ThreadSafeCollectionMutedLambdaRepresentationTest.block$lambda$2$lambda$0(StdLibRepresentationTests.kt:55)                                             |
+|                 a = 6 at ThreadSafeCollectionMutedLambdaRepresentationTest.block$lambda$2$lambda$0(StdLibRepresentationTests.kt:55)                                             |
+|                 a ➜ 6 at ThreadSafeCollectionMutedLambdaRepresentationTest.block$lambda$2$lambda$0(StdLibRepresentationTests.kt:55)                                             |
+|             tab[1].putReferenceRelease(Node#1) at ConcurrentHashMap.setTabAt(ConcurrentHashMap.java:769)                                                                        |
 |             baseCount.compareAndSetLong(0, 1): true at ConcurrentHashMap.addCount(ConcurrentHashMap.java:2327)                                                                  |
-|           this$0.a ➜ 6 at ThreadSafeCollectionMutedLambdaRepresentationTest.block$lambda$2(StdLibRepresentationTests.kt:56)                                                     |
-|           this$0.a = 7 at ThreadSafeCollectionMutedLambdaRepresentationTest.block$lambda$2(StdLibRepresentationTests.kt:56)                                                     |
-|           this$0.a ➜ 7 at ThreadSafeCollectionMutedLambdaRepresentationTest.block$lambda$2(StdLibRepresentationTests.kt:56)                                                     |
-|       Array<Node>#1[1].putReferenceRelease(Node#2) at ConcurrentHashMap.setTabAt(ConcurrentHashMap.java:769)                                                                    |
+|           a ➜ 6 at ThreadSafeCollectionMutedLambdaRepresentationTest.block$lambda$2(StdLibRepresentationTests.kt:56)                                                            |
+|           a = 7 at ThreadSafeCollectionMutedLambdaRepresentationTest.block$lambda$2(StdLibRepresentationTests.kt:56)                                                            |
+|           a ➜ 7 at ThreadSafeCollectionMutedLambdaRepresentationTest.block$lambda$2(StdLibRepresentationTests.kt:56)                                                            |
+|       tab[1].putReferenceRelease(Node#2) at ConcurrentHashMap.setTabAt(ConcurrentHashMap.java:769)                                                                              |
 |       baseCount.compareAndSetLong(0, 1): true at ConcurrentHashMap.addCount(ConcurrentHashMap.java:2327)                                                                        |
 |     a ➜ 7 at ThreadSafeCollectionMutedLambdaRepresentationTest.block(StdLibRepresentationTests.kt:58)                                                                           |
 |     a = 8 at ThreadSafeCollectionMutedLambdaRepresentationTest.block(StdLibRepresentationTests.kt:58)                                                                           |
