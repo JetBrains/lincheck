@@ -41,7 +41,8 @@ internal class InlineMethodCallTransformer(
     private data class InlineStackElement(
         val lvar: LocalVariableInfo,
         val methodId: Int,
-        val tryEndsCatchBeginsLabel: Label
+        val tryEndsCatchBeginsLabel: Label,
+        val inlineDepth: Int
     )
 
     private companion object {
@@ -66,6 +67,7 @@ internal class InlineMethodCallTransformer(
         .thenComparing { it.index }
 
     private val inlineStack = mutableListOf<InlineStackElement>()
+    private var currentInlineDepth = 0
 
     override fun visitLabel(label: Label) {
         if (!locals.hasInlines || looksLikeSuspendMethod) {
@@ -76,7 +78,7 @@ internal class InlineMethodCallTransformer(
         // It is not clear, could one label be used to mark the end of one inline call and
         // the start of another one. Nothing wrong instrument exists first.
         while (inlineStack.isNotEmpty()) {
-            val (lvar, methodId, tryEndsCatchBeginsLabel) = inlineStack.last()
+            val (lvar, methodId, tryEndsCatchBeginsLabel, savedInlineDepth) = inlineStack.last()
             val cmp = labelSorter.compare(lvar.endLabel, label)
             if (cmp > 0) break
             if (cmp < 0) {
@@ -84,6 +86,7 @@ internal class InlineMethodCallTransformer(
             }
             emitInlinedMethodEpilogue(methodId, tryEndsCatchBeginsLabel)
             inlineStack.removeLast()
+            currentInlineDepth = savedInlineDepth
         }
 
         // Visit the label itself
@@ -209,7 +212,14 @@ internal class InlineMethodCallTransformer(
     }
 
     private fun emitInlineMethodPrologue(lvar: LocalVariableInfo): InlineStackElement = adapter.run {
-        val suffix = "\$iv".repeat(inlineStack.size + 1)
+        val savedInlineDepth = currentInlineDepth
+        if (lvar.isInlineCallMarker) {
+            currentInlineDepth++
+        } else {
+            currentInlineDepth = 0
+        }
+
+        val suffix = "\$iv".repeat(currentInlineDepth)
         val inlineMethodName = lvar.inlineMethodName!!
 
         // If an extension function was inlined, `this_$iv` will point to class where extension
@@ -219,7 +229,9 @@ internal class InlineMethodCallTransformer(
         val this_ = locals.activeVariables.firstOrNull { it.name == "\$this$$inlineMethodName$suffix" }
             ?: locals.activeVariables.firstOrNull { it.name == "this_$suffix" }
         val ownerType = this_?.type
-        val className = if (ownerType?.sort == OBJECT) ownerType.className else null
+        val className = if (lvar.isInlineLambdaMarker) this@InlineMethodCallTransformer.className.substringAfterLast("/")
+                        else if (ownerType?.sort == OBJECT) ownerType.className
+                        else null
         val owner = if (ownerType?.sort == OBJECT) this_.index else null
 
         val methodId = getPseudoMethodId(className, lvar.startLabel, inlineMethodName)
@@ -240,7 +252,8 @@ internal class InlineMethodCallTransformer(
         return InlineStackElement(
             lvar = lvar,
             methodId = methodId,
-            tryEndsCatchBeginsLabel = tryEndsCatchBeginsLabel
+            tryEndsCatchBeginsLabel = tryEndsCatchBeginsLabel,
+            inlineDepth = savedInlineDepth
         )
     }
 
