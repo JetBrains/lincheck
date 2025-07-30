@@ -2339,15 +2339,13 @@ internal abstract class ManagedStrategy(
         if (lookupInLocalVariables) {
             val shadowStackFrame = shadowStack.last()
             shadowStackFrame.getLastAccessVariable(obj)?.let { name ->
-                // return if (name.contains("this")) null else name
-                return name
+                return if (isThisName(name)) null else name
             }
             // lookup for a field name in the current stack frame `this`
             shadowStackFrame.instance
                 ?.findInstanceFieldReferringTo(obj)
                 ?.let { field ->
-                    val name = field.name
-                    return if (name.contains("this")) null else name
+                    return if (isThisName(field.name)) null else field.name
                 }
         }
         // lookup for the constant referencing the object
@@ -2450,6 +2448,11 @@ internal abstract class ManagedStrategy(
             objectTracker.getObjectRepresentation(atomic) + arrayAccess to params!!
         }
     }
+    
+    private fun isThisName(name: String): Boolean =
+        (name == "this")    ||
+        (name == "\$this")  ||
+        name.matches(Regex("this\\$\\d+"))
 
     /* Methods to control the current call context. */
 
