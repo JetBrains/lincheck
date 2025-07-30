@@ -124,7 +124,7 @@ internal fun AtomicMethodDescriptor.getSetValue(obj: Any?, params: Array<Any?>):
         val varHandle = obj!!
         val varHandleClassName = varHandle.javaClass.name
         // non-static field access case - the first argument is an accessed object
-        if (isVarHandleStaticFieldClass(varHandleClassName)) {
+        if (!isVarHandleStaticFieldClass(varHandleClassName)) {
             argOffset += 1
         }
         // array access case - there is an additional element index argument
