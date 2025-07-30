@@ -232,7 +232,7 @@ internal class InlineMethodCallTransformer(
             ?: locals.activeVariables.firstOrNull { it.name == "this_$suffix" }
         val className = this_?.type?.className ?: ""
 
-        val methodId = getPseudoMethodId(className, inlineMethodName)
+        val methodId = getPseudoMethodId(className.toCanonicalClassName(), inlineMethodName)
 
         // Start the `try {}` block around call, create distinct label for its beginning because
         // formally `visitTryCatchBlock()` call doesn't allow usage of visited labels.
