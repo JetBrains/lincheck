@@ -60,10 +60,10 @@ internal class InlineMethodCallTransformer(
                                 locals.hasVarByName("\$result")
                         )
 
-    // Sort local variables by their end labels (earlier label goes first)
+    // Sort local variables by their end labels (latest label goes first)
     // and then by index if labels are the same (to have a stable result).
     private val localVarInlineStartComparator = Comparator<LocalVariableInfo>
-    { a, b -> labelSorter.compare(a.endLabel, b.endLabel) }
+    { a, b -> labelSorter.compare(b.endLabel, a.endLabel) }
         .thenComparing { it.index }
 
     private val inlineStack = mutableListOf<InlineStackElement>()
@@ -82,7 +82,7 @@ internal class InlineMethodCallTransformer(
             val cmp = labelSorter.compare(lvar.endLabel, label)
             if (cmp > 0) break
             if (cmp < 0) {
-                Logger.warn { "${className}.${methodName}: Local call to ${lvar.inlineMethodName} should be finished at label ${lvar.endLabel} but still alive at ${label}." }
+                Logger.warn { "${className}.${methodName}: Inline call to ${lvar.inlineMethodName} should be finished at label ${lvar.endLabel} but still alive at ${label}." }
             }
             emitInlinedMethodEpilogue(methodId, tryEndsCatchBeginsLabel)
             inlineStack.removeLast()
@@ -332,8 +332,11 @@ internal class InlineMethodCallTransformer(
     // Maybe we will need to expand it later
     // Check inlined method name by marker variable name
     // TODO Find out what the exact problem is here with "recoverStackTrace"
+    //  and "synchronized" from kotlinx.coroutines.internal
     private fun isSupportedInline(lvar: LocalVariableInfo) = !lvar.name.endsWith("\$atomicfu")
             && lvar.inlineMethodName != "recoverStackTrace"
+            && lvar.inlineMethodName != "synchronized"
+            && lvar.inlineMethodName != "synchronizedImpl"
 
     private fun GeneratorAdapter.invokeIfTrueAndInAnalyzedCode(
         ifOpcode: Int,
