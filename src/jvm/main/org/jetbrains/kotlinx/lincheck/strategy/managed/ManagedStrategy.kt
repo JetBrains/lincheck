@@ -2172,17 +2172,15 @@ internal abstract class ManagedStrategy(
         }
         // if the current owner is `this` - no owner needed
         if (shadowStack.isCurrentStackFrameReceiver(obj)) return null
-        // lookup for the object in local variables and use the local variable name if found
         val shadowStackFrame = shadowStack.last()
+        // lookup for the object in local variables and use the local variable name if found
         shadowStackFrame.findLocalVariableReferringTo(obj)?.let { access ->
             return if (isThisName(access.variableName)) null else access.variableName
         }
         // lookup for a field name in the current stack frame `this`
-        shadowStackFrame.instance
-            ?.findInstanceFieldReferringTo(obj)
-            ?.let { field ->
-                return if (isThisName(field.name)) null else field.name
-            }
+        shadowStackFrame.findCurrentReceiverFieldReferringTo(obj)?.let { access ->
+            return if (isThisName(access.fieldName)) null else access.fieldName
+        }
         // lookup for the constant referencing the object
         constants[obj]?.let { return it }
         // otherwise return object's string representation
