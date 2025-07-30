@@ -29,60 +29,60 @@ The following interleaving leads to the error:
 All unfinished threads are in deadlock
 
 Detailed trace:
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-|                                                                         Main Thread                                                                          |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| $this_runCatching.block() at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:51)           |
-|   block() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:108)                                                 |
-|     sync.newCondition(): ConditionObject#1 at ReentrantLock.newCondition(ReentrantLock.java:537)                                                             |
-|     sync.newCondition(): ConditionObject#2 at ReentrantLock.newCondition(ReentrantLock.java:537)                                                             |
-|     q.take() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:113)                                              |
-|       lock.lockInterruptibly() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:417)                                                                       |
-|         sync.lockInterruptibly() at ReentrantLock.lockInterruptibly(ReentrantLock.java:372)                                                                  |
-|           Thread.interrupted(): false at ReentrantLock.Sync.lockInterruptibly(ReentrantLock.java:158)                                                        |
-|           initialTryLock(): true at ReentrantLock.Sync.lockInterruptibly(ReentrantLock.java:160)                                                             |
-|             Thread.currentThread(): Thread#0 at ReentrantLock.NonfairSync.initialTryLock(ReentrantLock.java:224)                                             |
-|             compareAndSetState(0, 1): true at ReentrantLock.NonfairSync.initialTryLock(ReentrantLock.java:225)                                               |
-|               Unsafe#1.compareAndSetInt(NonfairSync#1, 16, 0, 1): true at AbstractQueuedSynchronizer.compareAndSetState(AbstractQueuedSynchronizer.java:556) |
-|             setExclusiveOwnerThread(Thread#0) at ReentrantLock.NonfairSync.initialTryLock(ReentrantLock.java:226)                                            |
-|       notEmpty.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:420)                                                                               |
-|         Thread.interrupted(): false at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:1608)                                |
-|         enableWait(ConditionNode#1): 1 at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:1611)                             |
-|           this$0.isHeldExclusively(): true at AbstractQueuedSynchronizer.ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1502)                    |
-|             getExclusiveOwnerThread(): Thread#0 at ReentrantLock.Sync.isHeldExclusively(ReentrantLock.java:186)                                              |
-|             Thread.currentThread(): Thread#0 at ReentrantLock.Sync.isHeldExclusively(ReentrantLock.java:186)                                                 |
-|           Thread.currentThread(): Thread#0 at AbstractQueuedSynchronizer.ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1503)                    |
-|           node.setStatusRelaxed(3) at AbstractQueuedSynchronizer.ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1504)                            |
-|             Unsafe#1.putInt(ConditionNode#1, 12, 3) at AbstractQueuedSynchronizer.Node.setStatusRelaxed(AbstractQueuedSynchronizer.java:474)                 |
-|           this$0.getState(): 1 at AbstractQueuedSynchronizer.ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1511)                                |
-|           this$0.release(1): true at AbstractQueuedSynchronizer.ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1512)                             |
-|             tryRelease(1): true at AbstractQueuedSynchronizer.release(AbstractQueuedSynchronizer.java:1007)                                                  |
-|               getState(): 1 at ReentrantLock.Sync.tryRelease(ReentrantLock.java:173)                                                                         |
-|               getExclusiveOwnerThread(): Thread#0 at ReentrantLock.Sync.tryRelease(ReentrantLock.java:174)                                                   |
-|               Thread.currentThread(): Thread#0 at ReentrantLock.Sync.tryRelease(ReentrantLock.java:174)                                                      |
-|               setExclusiveOwnerThread(null) at ReentrantLock.Sync.tryRelease(ReentrantLock.java:178)                                                         |
-|               setState(0) at ReentrantLock.Sync.tryRelease(ReentrantLock.java:179)                                                                           |
-|             AbstractQueuedSynchronizer.signalNext(null) at AbstractQueuedSynchronizer.release(AbstractQueuedSynchronizer.java:1008)                          |
-|         LockSupport.setCurrentBlocker(ConditionObject#1) at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:1612)           |
-|           Thread.currentThread(): Thread#0 at LockSupport.setCurrentBlocker(LockSupport.java:161)                                                            |
-|           Unsafe#1.putReferenceOpaque(Thread#0, 76, ConditionObject#1) at LockSupport.setCurrentBlocker(LockSupport.java:161)                                |
-|         canReacquire(ConditionNode#1): false at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:1614)                       |
-|           node.prev ➜ null at AbstractQueuedSynchronizer.ConditionObject.canReacquire(AbstractQueuedSynchronizer.java:1527)                                  |
-|         Thread.interrupted(): false at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:1615)                                |
-|         node.status ➜ 3 at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:1618)                                            |
-|         ForkJoinPool.managedBlock(ConditionNode#1) at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:1623)                 |
-|           Thread.currentThread(): Thread#0 at ForkJoinPool.managedBlock(ForkJoinPool.java:3430)                                                              |
-|           ForkJoinPool.unmanagedBlock(ConditionNode#1) at ForkJoinPool.managedBlock(ForkJoinPool.java:3434)                                                  |
-|             blocker.isReleasable(): false at ForkJoinPool.unmanagedBlock(ForkJoinPool.java:3463)                                                             |
-|               status ➜ 3 at AbstractQueuedSynchronizer.ConditionNode.isReleasable(AbstractQueuedSynchronizer.java:502)                                       |
-|               Thread.currentThread(): Thread#0 at AbstractQueuedSynchronizer.ConditionNode.isReleasable(AbstractQueuedSynchronizer.java:502)                 |
-|               Thread#0.isInterrupted(): false at AbstractQueuedSynchronizer.ConditionNode.isReleasable(AbstractQueuedSynchronizer.java:502)                  |
-|             blocker.block() at ForkJoinPool.unmanagedBlock(ForkJoinPool.java:3463)                                                                           |
-|               isReleasable(): false at AbstractQueuedSynchronizer.ConditionNode.block(AbstractQueuedSynchronizer.java:506)                                   |
-|                 status ➜ 3 at AbstractQueuedSynchronizer.ConditionNode.isReleasable(AbstractQueuedSynchronizer.java:502)                                     |
-|                 Thread.currentThread(): Thread#0 at AbstractQueuedSynchronizer.ConditionNode.isReleasable(AbstractQueuedSynchronizer.java:502)               |
-|                 Thread#0.isInterrupted(): false at AbstractQueuedSynchronizer.ConditionNode.isReleasable(AbstractQueuedSynchronizer.java:502)                |
-|               LockSupport.park() at AbstractQueuedSynchronizer.ConditionNode.block(AbstractQueuedSynchronizer.java:506)                                      |
-|                 PARK at LockSupport.park(LockSupport.java:341)                                                                                               |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| -------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                    Main Thread                                                                     |
+| -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| $this_runCatching.block() at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:51) |
+|   block() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:108)                                       |
+|     sync.newCondition(): ConditionObject#1 at ReentrantLock.newCondition(ReentrantLock.java:537)                                                   |
+|     sync.newCondition(): ConditionObject#2 at ReentrantLock.newCondition(ReentrantLock.java:537)                                                   |
+|     q.take() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:113)                                    |
+|       lock.lockInterruptibly() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:417)                                                             |
+|         sync.lockInterruptibly() at ReentrantLock.lockInterruptibly(ReentrantLock.java:372)                                                        |
+|           Thread.interrupted(): false at ReentrantLock.Sync.lockInterruptibly(ReentrantLock.java:158)                                              |
+|           initialTryLock(): true at ReentrantLock.Sync.lockInterruptibly(ReentrantLock.java:160)                                                   |
+|             Thread.currentThread(): Thread#0 at ReentrantLock.NonfairSync.initialTryLock(ReentrantLock.java:224)                                   |
+|             compareAndSetState(0, 1): true at ReentrantLock.NonfairSync.initialTryLock(ReentrantLock.java:225)                                     |
+|               state.compareAndSetInt(0, 1): true at AbstractQueuedSynchronizer.compareAndSetState(AbstractQueuedSynchronizer.java:556)             |
+|             setExclusiveOwnerThread(Thread#0) at ReentrantLock.NonfairSync.initialTryLock(ReentrantLock.java:226)                                  |
+|       notEmpty.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:420)                                                                     |
+|         Thread.interrupted(): false at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:1608)                      |
+|         enableWait(ConditionNode#1): 1 at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:1611)                   |
+|           isHeldExclusively(): true at AbstractQueuedSynchronizer.ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1502)                 |
+|             getExclusiveOwnerThread(): Thread#0 at ReentrantLock.Sync.isHeldExclusively(ReentrantLock.java:186)                                    |
+|             Thread.currentThread(): Thread#0 at ReentrantLock.Sync.isHeldExclusively(ReentrantLock.java:186)                                       |
+|           Thread.currentThread(): Thread#0 at AbstractQueuedSynchronizer.ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1503)          |
+|           node.setStatusRelaxed(3) at AbstractQueuedSynchronizer.ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1504)                  |
+|             status.putInt(3) at AbstractQueuedSynchronizer.Node.setStatusRelaxed(AbstractQueuedSynchronizer.java:474)                              |
+|           getState(): 1 at AbstractQueuedSynchronizer.ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1511)                             |
+|           release(1): true at AbstractQueuedSynchronizer.ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1512)                          |
+|             tryRelease(1): true at AbstractQueuedSynchronizer.release(AbstractQueuedSynchronizer.java:1007)                                        |
+|               getState(): 1 at ReentrantLock.Sync.tryRelease(ReentrantLock.java:173)                                                               |
+|               getExclusiveOwnerThread(): Thread#0 at ReentrantLock.Sync.tryRelease(ReentrantLock.java:174)                                         |
+|               Thread.currentThread(): Thread#0 at ReentrantLock.Sync.tryRelease(ReentrantLock.java:174)                                            |
+|               setExclusiveOwnerThread(null) at ReentrantLock.Sync.tryRelease(ReentrantLock.java:178)                                               |
+|               setState(0) at ReentrantLock.Sync.tryRelease(ReentrantLock.java:179)                                                                 |
+|             AbstractQueuedSynchronizer.signalNext(null) at AbstractQueuedSynchronizer.release(AbstractQueuedSynchronizer.java:1008)                |
+|         LockSupport.setCurrentBlocker(ConditionObject#1) at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:1612) |
+|           Thread.currentThread(): Thread#0 at LockSupport.setCurrentBlocker(LockSupport.java:161)                                                  |
+|           Thread#0.parkBlocker.putReferenceOpaque(ConditionObject#1) at LockSupport.setCurrentBlocker(LockSupport.java:161)                        |
+|         canReacquire(ConditionNode#1): false at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:1614)             |
+|           node.prev ➜ null at AbstractQueuedSynchronizer.ConditionObject.canReacquire(AbstractQueuedSynchronizer.java:1527)                        |
+|         Thread.interrupted(): false at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:1615)                      |
+|         node.status ➜ 3 at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:1618)                                  |
+|         ForkJoinPool.managedBlock(ConditionNode#1) at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:1623)       |
+|           Thread.currentThread(): Thread#0 at ForkJoinPool.managedBlock(ForkJoinPool.java:3432)                                                    |
+|           ForkJoinPool.unmanagedBlock(ConditionNode#1) at ForkJoinPool.managedBlock(ForkJoinPool.java:3436)                                        |
+|             blocker.isReleasable(): false at ForkJoinPool.unmanagedBlock(ForkJoinPool.java:3465)                                                   |
+|               status ➜ 3 at AbstractQueuedSynchronizer.ConditionNode.isReleasable(AbstractQueuedSynchronizer.java:502)                             |
+|               Thread.currentThread(): Thread#0 at AbstractQueuedSynchronizer.ConditionNode.isReleasable(AbstractQueuedSynchronizer.java:502)       |
+|               Thread#0.isInterrupted(): false at AbstractQueuedSynchronizer.ConditionNode.isReleasable(AbstractQueuedSynchronizer.java:502)        |
+|             blocker.block() at ForkJoinPool.unmanagedBlock(ForkJoinPool.java:3465)                                                                 |
+|               isReleasable(): false at AbstractQueuedSynchronizer.ConditionNode.block(AbstractQueuedSynchronizer.java:506)                         |
+|                 status ➜ 3 at AbstractQueuedSynchronizer.ConditionNode.isReleasable(AbstractQueuedSynchronizer.java:502)                           |
+|                 Thread.currentThread(): Thread#0 at AbstractQueuedSynchronizer.ConditionNode.isReleasable(AbstractQueuedSynchronizer.java:502)     |
+|                 Thread#0.isInterrupted(): false at AbstractQueuedSynchronizer.ConditionNode.isReleasable(AbstractQueuedSynchronizer.java:502)      |
+|               LockSupport.park() at AbstractQueuedSynchronizer.ConditionNode.block(AbstractQueuedSynchronizer.java:506)                            |
+|                 PARK at LockSupport.park(LockSupport.java:341)                                                                                     |
+| -------------------------------------------------------------------------------------------------------------------------------------------------- |
 All unfinished threads are in deadlock
