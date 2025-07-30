@@ -186,7 +186,7 @@ fun findFieldNameByOffsetViaUnsafe(targetType: Class<*>, offset: Long): String? 
     }.let { if (it == NULL_FIELD_NAME) null else it }
 
 private fun findFieldNameByOffsetViaUnsafeImpl(targetType: Class<*>, offset: Long): String? {
-    for (field in targetType.declaredFields) {
+    for (field in targetType.allDeclaredFieldWithSuperclasses) {
         try {
             if (Modifier.isNative(field.modifiers)) continue
             val fieldOffset = if (Modifier.isStatic(field.modifiers)) {
