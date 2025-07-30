@@ -2174,8 +2174,8 @@ internal abstract class ManagedStrategy(
         if (shadowStack.isCurrentStackFrameReceiver(obj)) return null
         // lookup for the object in local variables and use the local variable name if found
         val shadowStackFrame = shadowStack.last()
-        shadowStackFrame.getLastAccessVariable(obj)?.let { name ->
-            return if (isThisName(name)) null else name
+        shadowStackFrame.findLocalVariableReferringTo(obj)?.let { access ->
+            return if (isThisName(access.variableName)) null else access.variableName
         }
         // lookup for a field name in the current stack frame `this`
         shadowStackFrame.instance
@@ -2239,6 +2239,8 @@ internal abstract class ManagedStrategy(
                 }
                 // then try to search in local variables
                 ?: shadowStackFrame.findLocalVariableReferringTo(atomic)?.toString()
+                // then try to search in local variables' fields
+                ?: shadowStackFrame.findLocalVariableFieldReferringTo(atomic)?.toString()
         }
 
         if (apiKind == AtomicApiKind.ATOMIC_FIELD_UPDATER ||
