@@ -18,10 +18,6 @@ import java.lang.reflect.Constructor;
  * Methods of this object are called from the instrumented code.
  */
 public class Injections {
-    public static void debugPrint(String m) {
-        System.err.println(m);
-    }
-
 
     // Special object to represent void method call result.
     public static final Object VOID_RESULT = new Object();
