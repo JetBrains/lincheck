@@ -14,8 +14,6 @@ import java.util.concurrent.atomic.*
 import org.jetbrains.kotlinx.lincheck.util.AtomicMethodKind.*
 import org.jetbrains.kotlinx.lincheck.util.AtomicApiKind.*
 import org.jetbrains.kotlinx.lincheck.util.MemoryOrdering.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleNames
-import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType
 import org.jetbrains.lincheck.descriptors.*
 import org.jetbrains.lincheck.util.*
 import sun.misc.Unsafe

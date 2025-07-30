@@ -16,10 +16,6 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicFieldUpdaterNames.getAtomicFieldUpdaterDescriptor
-import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceMethodType.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
 import org.jetbrains.kotlinx.lincheck.strategy.nativecalls.*
 import org.jetbrains.kotlinx.lincheck.beforeEvent as ideaPluginBeforeEvent
 import org.jetbrains.kotlinx.lincheck.transformation.*
