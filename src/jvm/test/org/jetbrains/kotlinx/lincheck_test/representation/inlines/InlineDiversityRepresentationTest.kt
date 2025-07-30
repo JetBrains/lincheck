@@ -8,9 +8,11 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck_test.representation
+package org.jetbrains.kotlinx.lincheck_test.representation.inlines
 
-class InlineMethodRepresentationTest: BaseTraceRepresentationTest("inline_method") {
+import org.jetbrains.kotlinx.lincheck_test.representation.BaseTraceRepresentationTest
+
+class InlineDiversityRepresentationTest: BaseTraceRepresentationTest("inlines/diversity") {
     private val isc = InlineSetterClass()
 
     var escape: Any? = null

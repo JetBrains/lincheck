@@ -1,0 +1,29 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|                                                                              Thread 1                                                                              |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| operation()                                                                                                                                                        |
+|   escape = "START" at InlineLambdaConditionalTakenThrowTest.operation(InlineLambdaConditionalTakenThrowTest.kt:32)                                                 |
+|   run(): threw RuntimeException at InlineLambdaConditionalTakenThrowTest.operation(InlineLambdaConditionalTakenThrowTest.kt:34)                                    |
+|     setEscape("BEFORE BLOCK") at InlineLambdaConditionalTakenThrowTest.operation(InlineLambdaConditionalTakenThrowTest.kt:55)                                      |
+|       escape = "BEFORE BLOCK" at InlineLambdaConditionalTakenThrowTest.setEscape(InlineLambdaConditionalTakenThrowTest.kt:20)                                      |
+|     Lambda argument to run(): threw RuntimeException at InlineLambdaConditionalTakenThrowTest.operation(InlineLambdaConditionalTakenThrowTest.kt:56)               |
+|       InlineLambdaConditionalTakenThrowTest#1.escape = "IN LAMBDA" at InlineLambdaConditionalTakenThrowTest.operation(InlineLambdaConditionalTakenThrowTest.kt:35) |
+|   escape = "CATCH" at InlineLambdaConditionalTakenThrowTest.operation(InlineLambdaConditionalTakenThrowTest.kt:40)                                                 |
+|   escape = "END" at InlineLambdaConditionalTakenThrowTest.operation(InlineLambdaConditionalTakenThrowTest.kt:42)                                                   |
+|   result: void                                                                                                                                                     |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

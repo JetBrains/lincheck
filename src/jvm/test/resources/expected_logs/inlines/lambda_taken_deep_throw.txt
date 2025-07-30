@@ -1,0 +1,34 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                        Thread 1                                                                                         |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                                                             |
+|   escape = "START" at InlineLambdaConditionalTakenDeepThrowTest.operation(InlineLambdaConditionalTakenDeepThrowTest.kt:32)                                                              |
+|   run(): threw RuntimeException at InlineLambdaConditionalTakenDeepThrowTest.operation(InlineLambdaConditionalTakenDeepThrowTest.kt:34)                                                 |
+|     setEscape("BEFORE BLOCK") at InlineLambdaConditionalTakenDeepThrowTest.operation(InlineLambdaConditionalTakenDeepThrowTest.kt:59)                                                   |
+|       escape = "BEFORE BLOCK" at InlineLambdaConditionalTakenDeepThrowTest.setEscape(InlineLambdaConditionalTakenDeepThrowTest.kt:20)                                                   |
+|     Lambda argument to run(): threw RuntimeException at InlineLambdaConditionalTakenDeepThrowTest.operation(InlineLambdaConditionalTakenDeepThrowTest.kt:60)                            |
+|       InlineLambdaConditionalTakenDeepThrowTest#1.escape = "IN LAMBDA 1" at InlineLambdaConditionalTakenDeepThrowTest.operation(InlineLambdaConditionalTakenDeepThrowTest.kt:35)        |
+|       InlineLambdaConditionalTakenDeepThrowTest#1.run(): threw RuntimeException at InlineLambdaConditionalTakenDeepThrowTest.operation(InlineLambdaConditionalTakenDeepThrowTest.kt:36) |
+|         setEscape("BEFORE BLOCK") at InlineLambdaConditionalTakenDeepThrowTest.operation(InlineLambdaConditionalTakenDeepThrowTest.kt:61)                                               |
+|           escape = "BEFORE BLOCK" at InlineLambdaConditionalTakenDeepThrowTest.setEscape(InlineLambdaConditionalTakenDeepThrowTest.kt:20)                                               |
+|         Lambda argument to run(): threw RuntimeException at InlineLambdaConditionalTakenDeepThrowTest.operation(InlineLambdaConditionalTakenDeepThrowTest.kt:62)                        |
+|           InlineLambdaConditionalTakenDeepThrowTest#1.escape = "IN LAMBDA 2" at InlineLambdaConditionalTakenDeepThrowTest.operation(InlineLambdaConditionalTakenDeepThrowTest.kt:37)    |
+|   escape = "CATCH" at InlineLambdaConditionalTakenDeepThrowTest.operation(InlineLambdaConditionalTakenDeepThrowTest.kt:44)                                                              |
+|   escape = "END" at InlineLambdaConditionalTakenDeepThrowTest.operation(InlineLambdaConditionalTakenDeepThrowTest.kt:46)                                                                |
+|   result: void                                                                                                                                                                          |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -108,7 +108,7 @@ internal class InlineMethodCallTransformer(
 
     override fun visitJumpInsn(opcode: Int, label: Label) {
         // This is a jump inside the current inline call
-        if (!topOfStackEndsBeforeLabel(label)) {
+        if (!topOfStackEndsBeforeOrAtLabel(label)) {
             super.visitJumpInsn(opcode, label)
             return
         }
@@ -118,8 +118,8 @@ internal class InlineMethodCallTransformer(
             GOTO -> adapter.invokeIfInAnalyzedCode(
                 original = {},
                 instrumented = {
-                    // Stop when we jump inside the inline method, comparison is strict as
-                    // endLabel will be processed by `visitLabel()` method
+                    // Stop when we jump inside the inline method, comparison is strict because
+                    // "normal" exit code will be generated BEFORE this label (as method epilogue)
                     exitFromInlineMethods { labelSorter.compare(it.endLabel, label) > 0 }
                 }
             )
@@ -135,8 +135,8 @@ internal class InlineMethodCallTransformer(
                 // Duplicate one top category-1 value
                 adapter.dup()
                 adapter.invokeIfTrueAndInAnalyzedCode(opcode) {
-                    // Stop when we jump inside the inline method, comparison is strict as
-                    // endLabel will be processed by `visitLabel()` method
+                    // Stop when we jump inside the inline method, comparison is strict because
+                    // "normal" exit code will be generated BEFORE this label (as method epilogue)
                     exitFromInlineMethods { labelSorter.compare(it.endLabel, label) > 0 }
                 }
             }
@@ -152,6 +152,8 @@ internal class InlineMethodCallTransformer(
                 // Duplicate two top category-1 values
                 adapter.dup2()
                 adapter.invokeIfTrueAndInAnalyzedCode(opcode) {
+                    // Stop when we jump inside the inline method, comparison is strict because
+                    // "normal" exit code will be generated BEFORE this label (as method epilogue)
                     exitFromInlineMethods { labelSorter.compare(it.endLabel, label) > 0 }
                 }
             }
