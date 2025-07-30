@@ -312,7 +312,7 @@ private fun Trace.numberExceptionResults(): Trace = this.deepCopy().also { copy 
         .filter { it.isActor }
         .sortedWith (compareBy({ it.actorId }, { it.iThread }))
         .map { it.returnedValue }
-        .filterIsInstance<ReturnedValueResult.ActorExceptionResult>() 
+        .filterIsInstance<ReturnedValueResult.ExceptionResult>() 
         .forEachIndexed { index, exceptionResult -> exceptionResult.exceptionNumber = index + 1 }
 }
 

@@ -242,19 +242,10 @@ internal class MethodCallTracePoint(
     var methodName: String,
     codeLocation: Int,
     val isStatic: Boolean,
-    val callType: CallType = CallType.NORMAL,
+    var callType: CallType = CallType.NORMAL,
     val isSuspend: Boolean
 ) : CodeLocationTracePoint(eventId, iThread, actorId, codeLocation) {
-    
-    private var myReturnedValue: ReturnedValueResult? = null
-    var returnedValue: ReturnedValueResult 
-        get() {
-            return if (myReturnedValue != null) myReturnedValue!!
-            else if (isActor) ReturnedValueResult.ActorHungResult
-            else ReturnedValueResult.NoValue
-        }
-        set(value) { myReturnedValue = value }
-    
+    var returnedValue: ReturnedValueResult = ReturnedValueResult.NoValue
     var thrownException: Throwable? = null
     var parameters: List<String>? = null
     var parameterTypes: List<String>? = null
@@ -275,7 +266,7 @@ internal class MethodCallTracePoint(
             isRootCall -> appendActor()
             else -> appendDefaultMethodCall()
         }
-        appendReturnedValue()
+        if (!isRootCall) appendReturnedValue()
     }.toString()
 
     override fun toStringImpl(withLocation: Boolean): String {
@@ -293,8 +284,13 @@ internal class MethodCallTracePoint(
     
     private fun StringBuilder.appendActor() {
         append("$methodName(${ parameters?.joinToString(", ") ?: "" })")
-        if (returnedValue is ReturnedValueResult.ActorResult && (returnedValue as ReturnedValueResult.ActorResult).showAtBeginningOfActor) {
-            append(": ${(returnedValue as ReturnedValueResult.ActorResult).resultRepresentation}")
+        if (returnedValue != ReturnedValueResult.NoValue && returnedValue.actorRepresentationConfig.showAtBeginningOfActor) {
+            append(": ${returnedValue.actorRepresentationConfig.resultRepresentation}")
+        }
+        
+        // We only show hung for actors (not for thread starts)
+        if (returnedValue == ReturnedValueResult.NoValue && isActor) {
+            append(": ${returnedValue.actorRepresentationConfig.resultRepresentation}")
         }
     }
         
@@ -359,13 +355,13 @@ internal class MethodCallTracePoint(
     fun initializeActorResult(result: Result?) {
         check(isActor)
         this.returnedValue = when (result) {
-            null -> ReturnedValueResult.ActorHungResult
+            null -> ReturnedValueResult.NoValue
             is ExceptionResult -> when (result.throwable) {
-                is LincheckAnalysisAbortedError -> ReturnedValueResult.ActorHungResult
-                else -> ReturnedValueResult.ActorExceptionResult(result.toString())
+                is LincheckAnalysisAbortedError -> ReturnedValueResult.NoValue
+                else -> ReturnedValueResult.ExceptionResult(result.toString())
             }
-            is VoidResult -> ReturnedValueResult.ActorVoidResult
-            else -> ReturnedValueResult.ActorValueResult(result.toString())
+            is VoidResult -> ReturnedValueResult.VoidResult
+            else -> ReturnedValueResult.ValueResult(result.toString(), "")
         }
     }
 
@@ -397,47 +393,54 @@ internal class MethodCallTracePoint(
 }
 
 
-internal sealed interface ReturnedValueResult {
-    data object NoValue: ReturnedValueResult
-    data object VoidResult: ReturnedValueResult
-    data object CoroutineSuspended: ReturnedValueResult
-    data class ValueResult(val valueRepresentation: String, val valueType: String): ReturnedValueResult
+internal sealed class ReturnedValueResult(
+    val actorRepresentationConfig: ActorResultRepresentationConfig
+) {
+    data object NoValue: ReturnedValueResult(HungActorResultConfig)
+    data object VoidResult: ReturnedValueResult(VoidActorResultConfig)
     
-    // Holds any needed data to construct result lines
-    interface ActorResult: ReturnedValueResult {
-        // representation
-        val resultRepresentation: String
-        
-        // Needs to be shown next to the actor line as `actor(): ...`
-        val showAtBeginningOfActor: Boolean
-        
-        // Needs to be shown after last event in actor as `result: ...`
-        val showAtEndOfActor: Boolean
-    }
+    // Should not be possible for actor
+    data object CoroutineSuspended: ReturnedValueResult(VoidActorResultConfig)
+    data class ValueResult(val valueRepresentation: String, val valueType: String): ReturnedValueResult(ValueActorResultConfig(valueRepresentation))
     
-    data object ActorHungResult: ActorResult {
-        override val resultRepresentation = "<hung>"
-        override val showAtBeginningOfActor = true
-        override val showAtEndOfActor = false
+    // Only for actors
+    data class ExceptionResult(val exceptionRepresentation: String): ReturnedValueResult(ExceptionActorResultConfig(exceptionRepresentation)) {
+        var exceptionNumber: Int
+            get() = (actorRepresentationConfig as ExceptionActorResultConfig).exceptionNumber
+            set(value) { (actorRepresentationConfig as ExceptionActorResultConfig).exceptionNumber = value }
     }
+}
 
-    data class ActorValueResult(override val resultRepresentation: String): ActorResult {
-        override val showAtBeginningOfActor = true
-        override val showAtEndOfActor = true
-    }
-    
-    data object ActorVoidResult: ActorResult {
-        override val resultRepresentation = "void"
-        override val showAtBeginningOfActor = false
-        override val showAtEndOfActor = true
-    }
-    
-    data class ActorExceptionResult(val exceptionResultRepresentation: String): ActorResult {
-        override val resultRepresentation: String get() = "$exceptionResultRepresentation #$exceptionNumber" 
-        override val showAtBeginningOfActor = true
-        override val showAtEndOfActor = true
-        var exceptionNumber = -1
-    }
+internal sealed interface ActorResultRepresentationConfig {
+    val resultRepresentation: String
+    val showAtBeginningOfActor: Boolean
+    val showAtEndOfActor: Boolean
+}
+
+internal object HungActorResultConfig:  ActorResultRepresentationConfig {
+    override val resultRepresentation: String = "<hung>"
+    override val showAtBeginningOfActor: Boolean = true
+    override val showAtEndOfActor: Boolean = false
+}
+
+
+internal class ValueActorResultConfig(result: String): ActorResultRepresentationConfig {
+    override val resultRepresentation: String = result
+    override val showAtBeginningOfActor: Boolean = true
+    override val showAtEndOfActor: Boolean = true
+}
+
+internal object VoidActorResultConfig:  ActorResultRepresentationConfig{
+    override val resultRepresentation = "void"
+    override val showAtBeginningOfActor = false
+    override val showAtEndOfActor = true
+}
+
+internal class ExceptionActorResultConfig(private val result: String): ActorResultRepresentationConfig {
+    override val resultRepresentation get() = "$result #$exceptionNumber"
+    override val showAtBeginningOfActor = true
+    override val showAtEndOfActor = true
+    var exceptionNumber = -1
 }
 
 internal class MonitorEnterTracePoint(
