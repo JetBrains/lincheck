@@ -245,7 +245,16 @@ internal class MethodCallTracePoint(
     val callType: CallType = CallType.NORMAL,
     val isSuspend: Boolean
 ) : CodeLocationTracePoint(eventId, iThread, actorId, codeLocation) {
-    var returnedValue: ReturnedValueResult = ReturnedValueResult.NoValue
+    
+    private var myReturnedValue: ReturnedValueResult? = null
+    var returnedValue: ReturnedValueResult 
+        get() {
+            return if (myReturnedValue != null) myReturnedValue!!
+            else if (isActor) ReturnedValueResult.ActorHungResult
+            else ReturnedValueResult.NoValue
+        }
+        set(value) { myReturnedValue = value }
+    
     var thrownException: Throwable? = null
     var parameters: List<String>? = null
     var parameterTypes: List<String>? = null
