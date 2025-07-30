@@ -2151,12 +2151,7 @@ internal abstract class ManagedStrategy(
      * @param className The name of the class in case of static field/method accesses. Required when obj is null.
      * @return A string representing the owner name of the object, or null if no owner is applicable.
      */
-    private fun findOwnerName(
-        obj: Any?,
-        className: String? = null,
-        lookupInLocalVariables: Boolean = true,
-        lookupInConstants: Boolean = true,
-    ): String? {
+    private fun findOwnerName(obj: Any?, className: String? = null): String? {
         val threadId = threadScheduler.getCurrentThreadId()
         val shadowStack = shadowStack[threadId]!!
         if (obj == null) {
@@ -2178,22 +2173,18 @@ internal abstract class ManagedStrategy(
         // if the current owner is `this` - no owner needed
         if (shadowStack.isCurrentStackFrameReceiver(obj)) return null
         // lookup for the object in local variables and use the local variable name if found
-        if (lookupInLocalVariables) {
-            val shadowStackFrame = shadowStack.last()
-            shadowStackFrame.getLastAccessVariable(obj)?.let { name ->
-                return if (isThisName(name)) null else name
+        val shadowStackFrame = shadowStack.last()
+        shadowStackFrame.getLastAccessVariable(obj)?.let { name ->
+            return if (isThisName(name)) null else name
+        }
+        // lookup for a field name in the current stack frame `this`
+        shadowStackFrame.instance
+            ?.findInstanceFieldReferringTo(obj)
+            ?.let { field ->
+                return if (isThisName(field.name)) null else field.name
             }
-            // lookup for a field name in the current stack frame `this`
-            shadowStackFrame.instance
-                ?.findInstanceFieldReferringTo(obj)
-                ?.let { field ->
-                    return if (isThisName(field.name)) null else field.name
-                }
-        }
         // lookup for the constant referencing the object
-        if (lookupInConstants) {
-            constants[obj]?.let { return it }
-        }
+        constants[obj]?.let { return it }
         // otherwise return object's string representation
         return objectTracker.getObjectRepresentation(obj)
     }
@@ -2218,14 +2209,8 @@ internal abstract class ManagedStrategy(
             params = methodParams.asList()
         }
 
-        fun getOwnerName(owner: Any?, className: String?, location: AccessLocation,
-            lookupInLocalVariables: Boolean = true,
-            lookupInConstants: Boolean = true,
-        ): String {
-            val owner = findOwnerName(owner, className,
-                lookupInLocalVariables = lookupInLocalVariables,
-                lookupInConstants = lookupInConstants,
-            )
+        fun getOwnerName(owner: Any?, className: String?, location: AccessLocation): String {
+            val owner = findOwnerName(owner, className)
             return when (location) {
                 is ArrayElementByIndexAccess -> {
                     (owner ?: "this") + "[${location.index}]"
@@ -2250,8 +2235,6 @@ internal abstract class ManagedStrategy(
                         owner = shadowStackFrame.instance,
                         className = fieldAccess.className,
                         location = fieldAccess,
-                        // lookupInLocalVariables = false,
-                        // lookupInConstants = false,
                     )
                 }
                 // then try to search in local variables
@@ -2276,8 +2259,6 @@ internal abstract class ManagedStrategy(
                 owner = info.obj,
                 className = (info.location as? FieldAccessLocation)?.className,
                 location = info.location!!,
-                // lookupInLocalVariables = false,
-                // lookupInConstants = false,
             )
             params = info.arguments
         }
