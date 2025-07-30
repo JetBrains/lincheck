@@ -228,13 +228,9 @@ internal class InlineMethodCallTransformer(
         // Prefer the second variant if possible.
         val this_ = locals.activeVariables.firstOrNull { it.name == "\$this$$inlineMethodName$suffix" }
             ?: locals.activeVariables.firstOrNull { it.name == "this_$suffix" }
-        val ownerType = this_?.type
-        val className = if (lvar.isInlineLambdaMarker) this@InlineMethodCallTransformer.className.substringAfterLast("/")
-                        else if (ownerType?.sort == OBJECT) ownerType.className
-                        else null
-        val owner = if (ownerType?.sort == OBJECT) this_.index else null
+        val className = this_?.type?.className ?: ""
 
-        val methodId = getPseudoMethodId(className, lvar.startLabel, inlineMethodName)
+        val methodId = getPseudoMethodId(className, inlineMethodName)
 
         // Start the `try {}` block around call, create distinct label for its beginning because
         // formally `visitTryCatchBlock()` call doesn't allow usage of visited labels.
@@ -245,7 +241,7 @@ internal class InlineMethodCallTransformer(
         invokeIfInAnalyzedCode(
             original = {},
             instrumented = {
-                processInlineMethodCall(inlineMethodName, methodId,ownerType, owner)
+                processInlineMethodCall(inlineMethodName, methodId, this_)
             }
         )
 
@@ -297,8 +293,7 @@ internal class InlineMethodCallTransformer(
     private fun processInlineMethodCall(
         inlineMethodName: String,
         methodId: Int,
-        ownerType: Type?,
-        owner: Int?,
+        owner: LocalVariableInfo?,
     ) = adapter.run {
         push(methodId)
         loadNewCodeLocationId()
@@ -306,7 +301,8 @@ internal class InlineMethodCallTransformer(
             pushNull()
         } else {
             // As `owner` is an "old" variable index, we need to remap it, and `GeneratorAdapter.loadLocal()` bypass remapping
-            visitVarInsn(ALOAD, owner)
+            visitVarInsn(owner.type.getOpcode(ILOAD), owner.index)
+            box(owner.type)
         }
         invokeStatic(Injections::onInlineMethodCall)
         invokeBeforeEventIfPluginEnabled("inline method call $inlineMethodName in $methodName")
@@ -317,9 +313,9 @@ internal class InlineMethodCallTransformer(
         invokeStatic(Injections::onInlineMethodCallReturn)
     }
 
-    private fun getPseudoMethodId(possibleClassName: String?, startLabel: Label, inlineMethodName: String): Int =
+    private fun getPseudoMethodId(possibleClassName: String, inlineMethodName: String): Int =
         TRACE_CONTEXT.getOrCreateMethodId(
-            possibleClassName ?: "$className$$methodName$$startLabel\$inlineCall",
+            possibleClassName,
             inlineMethodName,
             "()V"
         )
