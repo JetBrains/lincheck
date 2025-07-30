@@ -30,7 +30,7 @@ internal class LincheckClassVisitor(
     private val instrumentationMode: InstrumentationMode,
     private val methodVariables: Map<String, MethodVariables>,
     private val methodLabels: Map<String, MethodLabels>
-) : ClassVisitor(ASM_API, CheckClassAdapter(classVisitor)) {
+) : ClassVisitor(ASM_API, classVisitor) {
     private var classVersion = 0
 
     private var fileName: String = ""
