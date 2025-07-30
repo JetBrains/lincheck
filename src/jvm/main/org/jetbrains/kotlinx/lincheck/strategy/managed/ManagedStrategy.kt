@@ -42,22 +42,9 @@ import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.util.isArraysCopyOfIntrinsic
 import org.jetbrains.lincheck.util.isArraysCopyOfRangeIntrinsic
 import org.jetbrains.lincheck.datastructures.ManagedStrategyGuarantee
-import org.jetbrains.lincheck.analysis.ShadowStackFrame
-import org.jetbrains.lincheck.analysis.isCurrentStackFrameReceiver
+import org.jetbrains.lincheck.analysis.*
 import org.jetbrains.lincheck.descriptors.*
-import org.jetbrains.lincheck.util.AnalysisProfile
-import org.jetbrains.lincheck.util.AnalysisSectionType
-import org.jetbrains.lincheck.util.Logger
-import org.jetbrains.lincheck.util.disableAnalysis
-import org.jetbrains.lincheck.util.enableAnalysis
-import org.jetbrains.lincheck.util.ensure
-import org.jetbrains.lincheck.util.enterIgnoredSection
-import org.jetbrains.lincheck.util.isCallStackPropagating
-import org.jetbrains.lincheck.util.isInTraceDebuggerMode
-import org.jetbrains.lincheck.util.isSilent
-import org.jetbrains.lincheck.util.leaveIgnoredSection
-import org.jetbrains.lincheck.util.readFieldSafely
-import org.jetbrains.lincheck.util.runInsideIgnoredSection
+import org.jetbrains.lincheck.util.*
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 import kotlin.Result as KResult
 import org.objectweb.asm.commons.Method.getMethod as getAsmMethod
@@ -2722,28 +2709,6 @@ internal class ManagedStrategyRunner(
 
 private fun TracePoint.isActorMethodCallTracePoint() =
     (this is MethodCallTracePoint && this.isRootCall)
-
-// TODO: move to `ShadowStack.kt`
-fun ShadowStackFrame.findCurrentReceiverFieldReferringTo(obj: Any): FieldAccessLocation? {
-    val field = instance?.findInstanceFieldReferringTo(obj)
-    return field?.toAccessLocation()
-}
-
-// TODO: move to `ShadowStack.kt`
-fun ShadowStackFrame.findLocalVariableReferringTo(obj: Any): OwnerName? {
-    for ((varName, value) in getLocalVariables()) {
-        if (value === null || value === instance /* do not return `this` */) continue
-        val ownerName = LocalVariableAccess(varName).toOwnerName()
-        if (value === obj) {
-            return ownerName
-        }
-        val field = value.findInstanceFieldReferringTo(obj)
-        if (field != null) {
-            return ownerName + field.toAccessLocation()
-        }
-    }
-    return null
-}
 
 // represents an unknown code location
 internal const val UNKNOWN_CODE_LOCATION = -1

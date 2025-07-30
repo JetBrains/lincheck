@@ -42,6 +42,9 @@ internal fun isSuspendFunction(className: String, methodName: String, params: Li
     }
 }
 
+// TODO: move Java reflection utils (not depending on kotlin-reflection)
+//   to `common/org/jetbrains/lincheck/util/Utils.kt`
+
 /**
  * Retrieves a `Method` object representing a method of the specified name and parameter types.
  *

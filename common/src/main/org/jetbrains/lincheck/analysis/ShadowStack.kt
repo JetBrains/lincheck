@@ -10,6 +10,14 @@
 
 package org.jetbrains.lincheck.analysis
 
+import org.jetbrains.lincheck.descriptors.FieldAccessLocation
+import org.jetbrains.lincheck.descriptors.LocalVariableAccess
+import org.jetbrains.lincheck.descriptors.OwnerName
+import org.jetbrains.lincheck.descriptors.plus
+import org.jetbrains.lincheck.descriptors.toAccessLocation
+import org.jetbrains.lincheck.descriptors.toOwnerName
+import org.jetbrains.lincheck.util.*
+
 /**
  * Represents a shadow stack frame used to reflect the program's stack in [org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy].
  *
@@ -55,3 +63,23 @@ class ShadowStackFrame(val instance: Any?) {
 
 fun List<ShadowStackFrame>.isCurrentStackFrameReceiver(obj: Any): Boolean =
     (obj === lastOrNull()?.instance)
+
+fun ShadowStackFrame.findCurrentReceiverFieldReferringTo(obj: Any): FieldAccessLocation? {
+    val field = instance?.findInstanceFieldReferringTo(obj)
+    return field?.toAccessLocation()
+}
+
+fun ShadowStackFrame.findLocalVariableReferringTo(obj: Any): OwnerName? {
+    for ((varName, value) in getLocalVariables()) {
+        if (value === null || value === instance /* do not return `this` */) continue
+        val ownerName = LocalVariableAccess(varName).toOwnerName()
+        if (value === obj) {
+            return ownerName
+        }
+        val field = value.findInstanceFieldReferringTo(obj)
+        if (field != null) {
+            return ownerName + field.toAccessLocation()
+        }
+    }
+    return null
+}
