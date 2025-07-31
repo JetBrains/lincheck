@@ -304,7 +304,7 @@ class TraceCollectingEventTracker(
         codeLocation: Int
     ) {}
 
-    override fun afterReadField(obj: Any?, codeLocation: Int, fieldId: Int, value: Any?) {
+    override fun afterReadField(obj: Any?, codeLocation: Int, fieldId: Int, value: Any?) = runInsideIgnoredSection {
         val threadData = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTrackerData as? ThreadData? ?: return
         val tracePoint = TRReadTracePoint(
             threadId = threadData.threadId,
@@ -316,7 +316,7 @@ class TraceCollectingEventTracker(
         strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
     }
 
-    override fun afterReadArrayElement(array: Any, index: Int, codeLocation: Int, value: Any?) {
+    override fun afterReadArrayElement(array: Any, index: Int, codeLocation: Int, value: Any?) = runInsideIgnoredSection {
         val threadData = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTrackerData as? ThreadData? ?: return
 
         val tracePoint = TRReadArrayTracePoint(
