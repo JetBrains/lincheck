@@ -333,6 +333,7 @@ internal class InlineMethodCallTransformer(
     // Check inlined method name by marker variable name
     // TODO Find out what the exact problem is here with "recoverStackTrace"
     //  and "synchronized" from kotlinx.coroutines.internal
+    //  It is related to DR-278 and DR-279
     private fun isSupportedInline(lvar: LocalVariableInfo) = !lvar.name.endsWith("\$atomicfu")
             && lvar.inlineMethodName != "recoverStackTrace"
             && lvar.inlineMethodName != "synchronized"
