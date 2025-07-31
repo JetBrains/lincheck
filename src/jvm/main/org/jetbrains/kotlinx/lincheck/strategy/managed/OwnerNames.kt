@@ -23,9 +23,8 @@ import org.jetbrains.lincheck.analysis.findLocalVariableFieldReferringTo
 import org.jetbrains.lincheck.analysis.findLocalVariableReferringTo
 import org.jetbrains.lincheck.analysis.isThisName
 import org.jetbrains.lincheck.descriptors.AccessLocation
-import org.jetbrains.lincheck.descriptors.ArrayElementByIndexAccess
+import org.jetbrains.lincheck.descriptors.ArrayElementByIndexAccessLocation
 import org.jetbrains.lincheck.descriptors.FieldAccessLocation
-import kotlin.collections.last
 
 /**
  * Finds the owner name of a given object. The owner name can originate from various sources
@@ -103,7 +102,7 @@ internal fun findAtomicOwnerName(
     var arrayAccess = ""
     if (apiKind == AtomicApiKind.ATOMIC_ARRAY) {
         val info = atomicMethodDescriptor.getAtomicArrayAccessInfo(atomic, arguments)
-        arrayAccess = "[${(info.location as ArrayElementByIndexAccess).index}]"
+        arrayAccess = "[${(info.location as ArrayElementByIndexAccessLocation).index}]"
         params = info.arguments
     } else if (apiKind == AtomicApiKind.ATOMIC_OBJECT) {
         params = arguments.asList()
@@ -112,7 +111,7 @@ internal fun findAtomicOwnerName(
     fun getOwnerName(owner: Any?, className: String?, location: AccessLocation): String {
         val owner = findOwnerName(owner, className, shadowStackFrame, objectTracker, constants)
         return when (location) {
-            is ArrayElementByIndexAccess -> {
+            is ArrayElementByIndexAccessLocation -> {
                 (owner ?: "this") + "[${location.index}]"
             }
             is FieldAccessLocation -> {

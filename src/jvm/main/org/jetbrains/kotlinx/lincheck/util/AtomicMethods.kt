@@ -196,7 +196,7 @@ internal fun AtomicMethodDescriptor.getAtomicArrayAccessInfo(
     return AtomicMethodAccessInfo(
         obj = atomicArray,
         clazz = null,
-        location = ArrayElementByIndexAccess(arguments[0] as Int),
+        location = ArrayElementByIndexAccessLocation(arguments[0] as Int),
         arguments = arguments.drop(1),
     )
 }
@@ -235,7 +235,7 @@ internal fun AtomicMethodDescriptor.getAtomicFieldUpdaterAccessInfo(
         return AtomicMethodAccessInfo(
             obj = targetObject,
             clazz = targetType,
-            location = ObjectFieldAccess(
+            location = ObjectFieldAccessLocation(
                 className = targetType.name,
                 fieldName = fieldName
             ),
@@ -274,7 +274,7 @@ internal fun AtomicMethodDescriptor.getUnsafeAccessInfo(
             AtomicMethodAccessInfo(
                 obj = targetObject,
                 clazz = null,
-                location = ArrayElementByIndexAccess(index),
+                location = ArrayElementByIndexAccessLocation(index),
                 arguments = remainingArguments
             )
         }
@@ -286,7 +286,7 @@ internal fun AtomicMethodDescriptor.getUnsafeAccessInfo(
             AtomicMethodAccessInfo(
                 obj = null,
                 clazz = targetObject,
-                location = StaticFieldAccess(
+                location = StaticFieldAccessLocation(
                     className = targetObject.name,
                     fieldName = fieldName,
                 ),
@@ -303,7 +303,7 @@ internal fun AtomicMethodDescriptor.getUnsafeAccessInfo(
             AtomicMethodAccessInfo(
                 obj = targetObject,
                 clazz = targetType,
-                location = ObjectFieldAccess(className, fieldName),
+                location = ObjectFieldAccessLocation(className, fieldName),
                 arguments = remainingArguments
             )
         }
@@ -339,7 +339,7 @@ internal fun AtomicMethodDescriptor.getVarHandleAccessInfo(
             AtomicMethodAccessInfo(
                 obj = array,
                 clazz = null,
-                location = ArrayElementByIndexAccess(index),
+                location = ArrayElementByIndexAccessLocation(index),
                 arguments = arguments.drop(2)
             )
         }
@@ -358,7 +358,7 @@ internal fun AtomicMethodDescriptor.getVarHandleAccessInfo(
                 AtomicMethodAccessInfo(
                     obj = null,
                     clazz = receiverType,
-                    location = StaticFieldAccess(
+                    location = StaticFieldAccessLocation(
                         className = receiverType.name,
                         fieldName = fieldName
                     ),
@@ -390,7 +390,7 @@ internal fun AtomicMethodDescriptor.getVarHandleAccessInfo(
                 AtomicMethodAccessInfo(
                     obj = targetObject,
                     clazz = receiverType,
-                    location = ObjectFieldAccess(
+                    location = ObjectFieldAccessLocation(
                         className = receiverType.name,
                         fieldName = fieldName
                     ),

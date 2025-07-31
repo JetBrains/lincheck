@@ -49,18 +49,18 @@ fun ShadowStackFrame.findCurrentReceiverFieldReferringTo(obj: Any): FieldAccessL
     return field?.toAccessLocation()
 }
 
-fun ShadowStackFrame.findLocalVariableReferringTo(obj: Any): LocalVariableAccess? {
+fun ShadowStackFrame.findLocalVariableReferringTo(obj: Any): LocalVariableAccessLocation? {
     return localVariables
         .filter { (name, state) -> (state.value === obj) && !isInlineThisIVName(name) }
         .maxByOrNull { (_, state) -> state.accessCounter }
         ?.key
-        ?.let { LocalVariableAccess(it) }
+        ?.let { LocalVariableAccessLocation(it) }
 }
 
 fun ShadowStackFrame.findLocalVariableFieldReferringTo(obj: Any): OwnerName? {
     for ((varName, value) in getLocalVariables()) {
         if (value === null || value === instance /* do not return `this` */) continue
-        val ownerName = LocalVariableAccess(varName).toOwnerName()
+        val ownerName = LocalVariableAccessLocation(varName).toOwnerName()
         val field = value.findInstanceFieldReferringTo(obj)
         if (field != null) {
             return ownerName + field.toAccessLocation()

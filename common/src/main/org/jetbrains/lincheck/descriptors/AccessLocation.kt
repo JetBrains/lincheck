@@ -17,7 +17,7 @@ abstract class AccessLocation
 abstract class ObjectAccessLocation : AccessLocation()
 abstract class ArrayAccessLocation : ObjectAccessLocation()
 
-data class LocalVariableAccess(
+data class LocalVariableAccessLocation(
     val variableName: String
 ) : AccessLocation()
 
@@ -26,17 +26,17 @@ abstract class FieldAccessLocation : ObjectAccessLocation() {
     abstract val fieldName: String
 }
 
-data class StaticFieldAccess(
+data class StaticFieldAccessLocation(
     override val className: String,
     override val fieldName: String,
 ) : FieldAccessLocation()
 
-data class ObjectFieldAccess(
+data class ObjectFieldAccessLocation(
     override val className: String,
     override val fieldName: String,
 ) : FieldAccessLocation()
 
-data class ArrayElementByIndexAccess(
+data class ArrayElementByIndexAccessLocation(
     val index: Int
 ) : ArrayAccessLocation()
 
@@ -53,22 +53,22 @@ class AccessPath(val locations: List<AccessLocation>) {
         val builder = StringBuilder()
         for (location in locations) {
             when (location) {
-                is LocalVariableAccess -> {
+                is LocalVariableAccessLocation -> {
                     builder.append(location.variableName)
                 }
-                is StaticFieldAccess -> {
+                is StaticFieldAccessLocation -> {
                     with(builder) {
                         append(".")
                         append(location.fieldName)
                     }
                 }
-                is ObjectFieldAccess -> {
+                is ObjectFieldAccessLocation -> {
                     with(builder) {
                         append(".")
                         append(location.fieldName)
                     }
                 }
-                is ArrayElementByIndexAccess -> {
+                is ArrayElementByIndexAccessLocation -> {
                     with(builder) {
                         append('[')
                         append(location.index)
@@ -86,12 +86,12 @@ class AccessPath(val locations: List<AccessLocation>) {
                 "Access path must not be empty"
             }
             check(path.locations.first()
-                .let { it is LocalVariableAccess || it is StaticFieldAccess }
+                .let { it is LocalVariableAccessLocation || it is StaticFieldAccessLocation }
             ) {
                 "Access path must start with local variable or static field access"
             }
             check(path.locations.drop(1)
-                .all { it !is LocalVariableAccess && it !is StaticFieldAccess }
+                .all { it !is LocalVariableAccessLocation && it !is StaticFieldAccessLocation }
             ) {
                 "Access path must not contain local variable or static field access in the middle"
             }
@@ -105,9 +105,9 @@ fun Field.toAccessLocation(): FieldAccessLocation {
     val className = declaringClass.name
     val fieldName = name
     return if (Modifier.isStatic(modifiers)) {
-        StaticFieldAccess(className, fieldName)
+        StaticFieldAccessLocation(className, fieldName)
     } else {
-        ObjectFieldAccess(className, fieldName)
+        ObjectFieldAccessLocation(className, fieldName)
     }
 }
 
