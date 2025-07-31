@@ -130,9 +130,7 @@ internal class SharedMemoryAccessTransformer(
             isFinal = FinalFields.isFinalField(owner, fieldName)
         )
         // STACK: obj
-        val ownerName = ownerNameAnalyzer?.stack?.let { stack ->
-            stack[stack.size - 1]
-        }
+        val ownerName = ownerNameAnalyzer?.stack?.getStackElementAt(0)
         val ownerLocal = newLocal(getType("L$owner;")).also { copyLocal(it) }
         loadLocal(ownerLocal)
         // STACK: obj, obj
@@ -239,7 +237,7 @@ internal class SharedMemoryAccessTransformer(
         val arrayElementType = getArrayElementType(opcode)
         val indexLocal = newLocal(INT_TYPE).also { storeLocal(it) }
         val arrayLocal = newLocal(getType("[$arrayElementType")).also { storeLocal(it) }
-        val ownerName = ownerNameAnalyzer?.stack?.get(1)
+        val ownerName = ownerNameAnalyzer?.stack?.getStackElementAt(1)
         loadLocal(arrayLocal)
         loadLocal(indexLocal)
         // STACK: array, index
@@ -325,11 +323,11 @@ internal class SharedMemoryAccessTransformer(
      * - for `AALOAD` and `AASTORE` instructions, to get the class name of the array elements.
      */
     private fun getArrayElementType(opcode: Int): Type = when (opcode) {
-        BALOAD -> getArrayAccessTypeFromStack(2) ?: BYTE_TYPE
-        AALOAD -> getArrayAccessTypeFromStack(2) ?: OBJECT_TYPE
+        BALOAD -> getArrayAccessTypeFromStack(1) ?: BYTE_TYPE
+        AALOAD -> getArrayAccessTypeFromStack(1) ?: OBJECT_TYPE
 
-        BASTORE -> getArrayAccessTypeFromStack(3) ?: BYTE_TYPE
-        AASTORE -> getArrayAccessTypeFromStack(3) ?: OBJECT_TYPE
+        BASTORE -> getArrayAccessTypeFromStack(2) ?: BYTE_TYPE
+        AASTORE -> getArrayAccessTypeFromStack(2) ?: OBJECT_TYPE
 
         else -> getArrayAccessOpcodeType(opcode)
     }
@@ -343,7 +341,7 @@ internal class SharedMemoryAccessTransformer(
      */
     private fun getArrayAccessTypeFromStack(position: Int): Type? {
         if (analyzer.stack == null) return null
-        val arrayDesc = analyzer.stack[analyzer.stack.size - position]
+        val arrayDesc = analyzer.stack.getStackElementAt(position)
         check(arrayDesc is String)
         val arrayType = getType(arrayDesc)
         check(arrayType.sort == ARRAY)

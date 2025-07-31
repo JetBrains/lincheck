@@ -397,6 +397,17 @@ internal fun GeneratorAdapter.invokeInsideIgnoredSection(
 }
 
 /**
+ * Retrieves an element from the list representing JVM's stack.
+ * The position is determined from the end of the list, where `position = 0` represents the top element.
+ *
+ * @param position The zero-based position from the end of the list to retrieve the element.
+ *                 The value must be a valid index relative to the size of the list.
+ * @return The element at the specified position from the end of the list, or null if the position is out of bounds.
+ */
+internal fun <T> List<T>.getStackElementAt(position: Int): T =
+    get(size - position - 1)
+
+/**
  * @param type asm type descriptor.
  * @return whether [type] is a java array type (primitive or reference).
  */
