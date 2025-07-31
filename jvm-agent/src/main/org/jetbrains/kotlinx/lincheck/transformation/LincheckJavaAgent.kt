@@ -156,7 +156,13 @@ object LincheckJavaAgent {
                 }
                 // for some reason, without `isNotEmpty()` check this code can throw NPE on JVM 8
                 if (classes.isNotEmpty()) {
-                    instrumentation.retransformClasses(*classes.toTypedArray())
+                    classes.forEach {
+                        try {
+                            instrumentation.retransformClasses(it)
+                        } catch (t: Throwable) {
+                            Logger.error { "Failed to retransforming class ${it.name}: ${t.message}" }
+                        }
+                    }
                     instrumentedClasses.addAll(classes.map { it.name })
                 }
             }
