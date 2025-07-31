@@ -107,15 +107,6 @@ internal fun findAtomicOwnerName(
     var ownerName: String? = null
     var params: List<Any?>? = null
 
-    var arrayAccess = ""
-    if (apiKind == AtomicApiKind.ATOMIC_ARRAY) {
-        val info = atomicMethodDescriptor.getAtomicArrayAccessInfo(atomic, arguments)
-        arrayAccess = "[${(info.location as ArrayElementByIndexAccessLocation).index}]"
-        params = info.arguments
-    } else if (apiKind == AtomicApiKind.ATOMIC_OBJECT) {
-        params = arguments.asList()
-    }
-
     fun getOwnerName(owner: Any?, className: String?, location: AccessLocation): String {
         val owner = findOwnerName(owner, className, shadowStackFrame, objectTracker, constants)
         return when (location) {
@@ -148,6 +139,16 @@ internal fun findAtomicOwnerName(
             ?: shadowStackFrame.findLocalVariableReferringTo(atomic)?.toString()
             // then try to search in local variables' fields
             ?: shadowStackFrame.findLocalVariableFieldReferringTo(atomic)?.toString()
+    }
+
+    var arrayAccess = "" // will contain `[i]` string denoting the accessed element index
+                         // in case we are dealing with atomic arrays API
+    if (apiKind == AtomicApiKind.ATOMIC_ARRAY) {
+        val info = atomicMethodDescriptor.getAtomicArrayAccessInfo(atomic, arguments)
+        arrayAccess = "[${(info.location as ArrayElementByIndexAccessLocation).index}]"
+        params = info.arguments
+    } else if (apiKind == AtomicApiKind.ATOMIC_OBJECT) {
+        params = arguments.asList()
     }
 
     if (apiKind == AtomicApiKind.ATOMIC_FIELD_UPDATER ||
