@@ -16,6 +16,9 @@ import org.objectweb.asm.Type
 
 typealias StackSlotIndex = Int
 typealias LocalVariablesMap = Map<StackSlotIndex, List<LocalVariableInfo>>
+typealias LocalVariablesMutableMap = MutableMap<StackSlotIndex, MutableList<LocalVariableInfo>>
+
+fun LocalVariablesMutableMap(): LocalVariablesMutableMap = mutableMapOf()
 
 private const val INLINE_FUNC_PREFIX = "\$i\$f\$"
 private const val INLINE_LAMBDA_PREFIX = "\$i\$a\$"
