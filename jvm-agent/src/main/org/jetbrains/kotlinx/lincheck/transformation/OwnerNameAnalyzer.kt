@@ -428,6 +428,9 @@ class OwnerNameAnalyzerAdapter protected constructor(
             Opcodes.GETSTATIC -> {
                 val fieldAccess = StaticFieldAccessLocation(className!!, fieldName!!)
                 push(OwnerName(fieldAccess))
+                if (Type.getType(descriptor).size == 2) {
+                    push(null)
+                }
             }
 
             Opcodes.PUTSTATIC -> {
@@ -440,6 +443,9 @@ class OwnerNameAnalyzerAdapter protected constructor(
                 if (ownerName != null) {
                     push(ownerName + fieldAccess)
                 } else {
+                    push(null)
+                }
+                if (Type.getType(descriptor).size == 2) {
                     push(null)
                 }
             }
