@@ -2,7 +2,7 @@
 
 java.lang.IllegalStateException: Check failed.
 	at org.jetbrains.kotlinx.lincheck_test.representation.MultipleRootsInRunConcurrent.multipleRootsTest$lambda$3$lambda$2(MultipleRootsInRunConcurrent.kt:36)
-	at java.base/java.lang.Thread.run(Unknown Source)
+	at java.base/java.lang.Thread.run(Thread.java:840)
 
 The following interleaving leads to the error:
 | ------------------------------------------------------------------------------- |

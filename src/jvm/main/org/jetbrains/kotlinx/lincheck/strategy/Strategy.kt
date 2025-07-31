@@ -68,7 +68,7 @@ abstract class Strategy protected constructor(
      * @param result The invocation result.
      * @return The collected trace, or null if it was not possible to collect the trace.
      */
-    open fun tryCollectTrace(result: InvocationResult): Trace? = null
+    open fun tryCollectTrace(result: InvocationResult): Pair<Trace?, InvocationResult> = Pair(null, result)
 
     /**
      * Waits for all user threads created in the current invocation to finish within the given timeout.
@@ -98,7 +98,7 @@ abstract class Strategy protected constructor(
     /**
      * Is invoked after each actor execution, even if a legal exception was thrown
      */
-    open fun onActorFinish() {}
+    open fun onActorFinish(iThread: Int) {}
 
     /**
      * Closes the strategy and releases any resources associated with it.
@@ -150,9 +150,17 @@ fun Strategy.verify(result: InvocationResult, verifier: Verifier): LincheckFailu
         is SpinCycleFoundAndReplayRequired -> null
         is CompletedInvocationResult ->
             if (!verifier.verifyResults(scenario, result.results)) {
-                IncorrectResultsFailure(scenario, result.results, tryCollectTrace(result), analysisProfile)
+                val (trace, traceResult) = tryCollectTrace(result)
+                IncorrectResultsFailure(
+                    scenario = scenario,
+                    results = (traceResult as CompletedInvocationResult).results,
+                    trace = trace,
+                    analysisProfile = analysisProfile,
+                )
             } else null
-        else ->
-            result.toLincheckFailure(scenario, tryCollectTrace(result), analysisProfile)
+        else -> {
+            val (trace, traceResult) = tryCollectTrace(result)
+            traceResult.toLincheckFailure(scenario, trace, analysisProfile)
+        }
     }
 }

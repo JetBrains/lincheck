@@ -57,15 +57,23 @@ internal class VerboseTraceFlattenPolicy : TraceFlattenPolicy {
                 if (!currentNode.isRootCall) return descendants
                 val returnedValue = currentNode.tracePoint.returnedValue
 
-                // Dont show hung actor
+                // Dont show empty hung actor
                 if (descendants.size == 1 &&
                     descendants.contains(currentNode) &&
-                    returnedValue is ReturnedValueResult.ActorResult &&
-                    returnedValue.isHung) return emptyList()
-
+                    returnedValue is ReturnedValueResult.NoValue &&
+                    currentNode.tracePoint.isActor) return emptyList()
+                
                 // Check if result node should be added
-                if (descendants.size > 1 && returnedValue is ReturnedValueResult.ActorResult && returnedValue.showAtEndOfActor) {
-                    return descendants + ResultNode(currentNode.callDepth + 1, returnedValue, currentNode.returnEventNumber, currentNode.tracePoint)
+                if (descendants.size > 1 && returnedValue.showAtMethodCallEnd) {
+                    val nSiblings = currentNode.parent?.children?.size ?: 0
+                    if (nSiblings <= 1) {
+                        return descendants + ResultNode(
+                            currentNode.callDepth + 1,
+                            returnedValue,
+                            currentNode.returnEventNumber,
+                            currentNode.tracePoint
+                        )
+                    }
                 }
 
                 return descendants
@@ -107,15 +115,15 @@ internal class ShortTraceFlattenPolicy : TraceFlattenPolicy {
                 if (!currentNode.isRootCall) return descendants
                 val returnedValue = currentNode.tracePoint.returnedValue
 
-                // Dont show hung actor
+                // Dont show empty hung actor
                 if (descendants.size == 1 &&
                     descendants.contains(currentNode) &&
-                    returnedValue is ReturnedValueResult.ActorResult &&
-                    returnedValue.isHung) return emptyList()
+                    returnedValue is ReturnedValueResult.NoValue &&
+                    currentNode.tracePoint.isActor) return emptyList()
 
 
                 // Check if result node should be added
-                val nodesToReturn = if (descendants.size > 1 && returnedValue is ReturnedValueResult.ActorResult && returnedValue.showAtEndOfActor) {
+                val nodesToReturn = if (descendants.size > 1 && returnedValue.showAtMethodCallEnd) {
                     descendants + ResultNode(currentNode.callDepth + 1, returnedValue, currentNode.returnEventNumber, currentNode.tracePoint)
                     // Or thread start root nodes
                 } else if (descendants.size == 1 && descendants.contains(currentNode) && currentNode.tracePoint.isThreadStart) {

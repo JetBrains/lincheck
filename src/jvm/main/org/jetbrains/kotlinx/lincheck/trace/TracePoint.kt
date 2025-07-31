@@ -242,7 +242,7 @@ internal class MethodCallTracePoint(
     var methodName: String,
     codeLocation: Int,
     val isStatic: Boolean,
-    val callType: CallType = CallType.NORMAL,
+    var callType: CallType = CallType.NORMAL,
     val isSuspend: Boolean
 ) : CodeLocationTracePoint(eventId, iThread, actorId, codeLocation) {
     var returnedValue: ReturnedValueResult = ReturnedValueResult.NoValue
@@ -266,7 +266,7 @@ internal class MethodCallTracePoint(
             isRootCall -> appendActor()
             else -> appendDefaultMethodCall()
         }
-        appendReturnedValue()
+        if (!isRootCall) appendReturnedValue()
     }.toString()
 
     override fun toStringImpl(withLocation: Boolean): String {
@@ -284,8 +284,13 @@ internal class MethodCallTracePoint(
     
     private fun StringBuilder.appendActor() {
         append("$methodName(${ parameters?.joinToString(", ") ?: "" })")
-        if (returnedValue is ReturnedValueResult.ActorResult && (returnedValue as ReturnedValueResult.ActorResult).showAtBeginningOfActor) {
-            append(": ${(returnedValue as ReturnedValueResult.ActorResult).resultRepresentation}")
+        if (returnedValue != ReturnedValueResult.NoValue && returnedValue.showAtMethodCallBeginning) {
+            append(": ${returnedValue.resultRepresentation}")
+        }
+        
+        // We only show hung for actors (not for thread starts)
+        if (returnedValue == ReturnedValueResult.NoValue && isActor) {
+            append(": ${returnedValue.resultRepresentation}")
         }
     }
         
@@ -346,6 +351,19 @@ internal class MethodCallTracePoint(
     fun initializeOwnerName(ownerName: String) {
         this.ownerName = ownerName
     }
+    
+    fun initializeActorResult(result: Result?) {
+        check(isActor)
+        this.returnedValue = when (result) {
+            null -> ReturnedValueResult.NoValue
+            is ExceptionResult -> when (result.throwable) {
+                is LincheckAnalysisAbortedError -> ReturnedValueResult.NoValue
+                else -> ReturnedValueResult.ExceptionResult(result.toString())
+            }
+            is VoidResult -> ReturnedValueResult.VoidResult
+            else -> ReturnedValueResult.ValueResult(result.toString(), "")
+        }
+    }
 
     fun isThreadCreation() = 
         methodName == threadFunctionInfo.functionName && className.replace('/', '.') == threadFunctionInfo.className
@@ -375,29 +393,40 @@ internal class MethodCallTracePoint(
 }
 
 
-internal sealed interface ReturnedValueResult {
-    data object NoValue: ReturnedValueResult
-    data object VoidResult: ReturnedValueResult
-    data object CoroutineSuspended: ReturnedValueResult
-    data class ValueResult(val valueRepresentation: String, val valueType: String): ReturnedValueResult
+internal sealed class ReturnedValueResult() {
+    abstract val resultRepresentation: String
+
+    open val showAtMethodCallBeginning: Boolean = true
+    open val showAtMethodCallEnd: Boolean = true
+
+    data object NoValue : ReturnedValueResult() {
+        override val resultRepresentation = "<hung>" // TODO: this is a hack, add special `HungResult` in the future
+        override val showAtMethodCallBeginning = false
+        override val showAtMethodCallEnd = false
+    }
+
+    data object VoidResult : ReturnedValueResult() {
+        override val resultRepresentation = "void"
+        override val showAtMethodCallBeginning = false
+        override val showAtMethodCallEnd = true
+    }
     
-    // Holds any needed data to construct result lines
-    data class ActorResult(
-        // representation
-        val resultRepresentation: String,
-        
-        // Needs to be shown next to the actor line as `actor(): ...`
-        val showAtBeginningOfActor: Boolean = true,
-        
-        // Needs to be shown after last event in actor as `result: ...`
-        val showAtEndOfActor: Boolean = true,
-        
-        // Is true if actor is hung, prevents empty actors from appearing
-        val isHung: Boolean = false,
-        
-        // For idea plugin
-        val exceptionNumber: Int = -1,
-    ): ReturnedValueResult
+    // Should not be possible for actor
+    data object CoroutineSuspended : ReturnedValueResult() {
+        override val resultRepresentation = "<suspended>"
+        override val showAtMethodCallBeginning = false
+        override val showAtMethodCallEnd = true
+    }
+
+
+    data class ValueResult(val valueRepresentation: String, val valueType: String) : ReturnedValueResult() {
+        override val resultRepresentation = valueRepresentation
+    }
+    
+    // Only for actors
+    data class ExceptionResult(val exceptionRepresentation: String, var exceptionNumber: Int = -1) : ReturnedValueResult() {
+        override val resultRepresentation get() = "$exceptionRepresentation #$exceptionNumber"
+    }
 }
 
 internal class MonitorEnterTracePoint(

@@ -120,11 +120,11 @@ internal class CallNode(
         .also { it.returnEventNumber = returnEventNumber}
     
     internal fun createResultNodeForEmptyActor() =
-        ResultNode(callDepth + 1, tracePoint.returnedValue as ReturnedValueResult.ActorResult, eventNumber, tracePoint)
+        ResultNode(callDepth + 1, tracePoint.returnedValue, eventNumber, tracePoint)
 }
 
 // Is not part of initial graph, is only added during flattening or for empty GPMC result
-internal class ResultNode(callDepth: Int, val actorResult: ReturnedValueResult.ActorResult, eventNumber: Int, tracePoint: TracePoint)
+internal class ResultNode(callDepth: Int, val actorResult: ReturnedValueResult, eventNumber: Int, tracePoint: TracePoint)
     : TraceNode(callDepth, eventNumber, tracePoint) {
 
     override fun toStringImpl(withLocation: Boolean): String =
