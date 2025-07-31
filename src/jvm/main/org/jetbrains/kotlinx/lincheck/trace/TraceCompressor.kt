@@ -275,7 +275,7 @@ private fun SingleThreadedTable<TraceNode>.compressThreadStart() = compressNodes
  */
 private fun SingleThreadedTable<TraceNode>.compressInlineIV() = compressNodes { node ->
     if (node !is CallNode || node.tracePoint.ownerName == null) return@compressNodes node
-    node.tracePoint.updateOwnerName(node.tracePoint.ownerName!!.removeInlineIV())
+    node.tracePoint.updateOwnerName(node.tracePoint.ownerName!!.split(".").joinToString(".") { it.removeInlineIV() })
     node
 }
 
