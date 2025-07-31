@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.analysis
 
 import org.jetbrains.lincheck.descriptors.*
+import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.util.*
 
 /**
@@ -53,13 +54,17 @@ fun ShadowStackFrame.findLocalVariableReferringTo(obj: Any): LocalVariableAccess
     return localVariables
         .filter { (name, state) -> (state.value === obj) && !isInlineThisIVName(name) }
         .maxByOrNull { (_, state) -> state.accessCounter }
-        ?.let { LocalVariableAccessLocation(it.key) }
+        ?.let {
+            val descriptor = TRACE_CONTEXT.getVariableDescriptor(it.key)
+            LocalVariableAccessLocation(descriptor)
+        }
 }
 
 fun ShadowStackFrame.findLocalVariableFieldReferringTo(obj: Any): OwnerName? {
     for ((varName, value) in getLocalVariables()) {
         if (value === null || value === instance /* do not return `this` */) continue
-        val ownerName = LocalVariableAccessLocation(varName).toOwnerName()
+        val descriptor = TRACE_CONTEXT.getVariableDescriptor(varName)
+        val ownerName = LocalVariableAccessLocation(descriptor).toOwnerName()
         val field = value.findInstanceFieldReferringTo(obj)
         if (field != null) {
             return ownerName + field.toAccessLocation()

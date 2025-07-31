@@ -32,18 +32,18 @@ fun TRAppendable.appendAccessPath(accessPath: AccessPath) {
     for (location in accessPath.locations) {
         when (location) {
             is LocalVariableAccessLocation -> {
-                append(location.variableName) // TODO: should use `appendVariableName`
+                appendVariableName(location.variableDescriptor)
             }
 
             is StaticFieldAccessLocation -> {
-                append(location.className.getSimpleClassName()) // TODO: should use `appendClassName`
+                appendClassName(location.fieldDescriptor.classDescriptor)
                 appendSpecialSymbol(".")
-                append(location.fieldName) // TODO: should use `appendFieldName`
+                appendFieldName(location.fieldDescriptor)
             }
 
             is ObjectFieldAccessLocation -> {
                 appendSpecialSymbol(".")
-                append(location.fieldName) // TODO: should use `appendFieldName`
+                appendFieldName(location.fieldDescriptor)
             }
 
             is ArrayElementByIndexAccessLocation -> {
@@ -60,7 +60,7 @@ fun TRAppendable.appendAccessPath(accessPath: AccessPath) {
 
             is ArrayLengthAccessLocation -> {
                 appendSpecialSymbol(".")
-                append("length") // TODO: should use `appendFieldName`
+                appendKeyword("length")
             }
         }
     }

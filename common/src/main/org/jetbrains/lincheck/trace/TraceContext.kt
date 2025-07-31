@@ -59,7 +59,11 @@ class TraceContext {
         )
     }
 
-    fun getMethodDescriptor(methodId: Int): MethodDescriptor = methods[methodId]
+    fun getMethodDescriptor(className: String, methodName: String, desc: String): MethodDescriptor =
+        getMethodDescriptor(getOrCreateMethodId(className, methodName, desc))
+
+    fun getMethodDescriptor(methodId: Int): MethodDescriptor =
+        methods[methodId]
 
     fun restoreMethodDescriptor(id: Int, value: MethodDescriptor) {
         methods.restore(id, value)
@@ -79,7 +83,11 @@ class TraceContext {
         )
     }
 
-    fun getFieldDescriptor(fieldId: Int): FieldDescriptor = fields[fieldId]
+    fun getFieldDescriptor(className: String, fieldName: String, isStatic: Boolean, isFinal: Boolean): FieldDescriptor =
+        getFieldDescriptor(getOrCreateFieldId(className, fieldName, isStatic, isFinal))
+
+    fun getFieldDescriptor(fieldId: Int): FieldDescriptor =
+        fields[fieldId]
 
     fun restoreFieldDescriptor(id: Int, value: FieldDescriptor) {
         fields.restore(id, value)
@@ -91,7 +99,11 @@ class TraceContext {
         return variables.getOrCreateId(VariableDescriptor(variableName))
     }
 
-    fun getVariableDescriptor(variableId: Int): VariableDescriptor = variables[variableId]
+    fun getVariableDescriptor(variableName: String): VariableDescriptor =
+        getVariableDescriptor(getOrCreateVariableId(variableName))
+
+    fun getVariableDescriptor(variableId: Int): VariableDescriptor =
+        variables[variableId]
 
     fun restoreVariableDescriptor(id: Int, value: VariableDescriptor) {
         variables.restore(id, value)
