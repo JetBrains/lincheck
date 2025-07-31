@@ -121,11 +121,11 @@ object LincheckClassFileTransformer : ClassFileTransformer {
 
     private fun mapMethodsToLabels(
         classNode: ClassNode
-    ): Map<String, Map<Int, List<LocalVariableInfo>>> {
+    ): Map<String, LocalVariablesMap> {
         return classNode.methods.associateBy(
             keySelector = { m -> m.name + m.desc },
             valueTransform = { m ->
-                mutableMapOf<Int, MutableList<LocalVariableInfo>>().also { map ->
+                LocalVariablesMutableMap().also { map ->
                     m.localVariables?.forEach { local ->
                         if (
                             m.name == "<init>" &&

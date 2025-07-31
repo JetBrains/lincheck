@@ -110,7 +110,7 @@ class TraceContext {
         if (codeLocationId == UNKNOWN_CODE_LOCATION_ID) return EMPTY_STACK_TRACE
         val loc = locations[codeLocationId]
         if (loc == null) {
-            error("Unknown code location $codeLocationId")
+            error("Invalid code location id $codeLocationId")
         }
         return loc.stackTraceElement
     }
@@ -119,7 +119,7 @@ class TraceContext {
         if (codeLocationId == UNKNOWN_CODE_LOCATION_ID) return null
         val loc = locations[codeLocationId]
         if (loc == null) {
-            error("Unknown code location $codeLocationId")
+            error("Invalid code location id $codeLocationId")
         }
         return loc.accessPath
     }
