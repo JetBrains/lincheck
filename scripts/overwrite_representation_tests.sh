@@ -35,7 +35,7 @@ testFilter="org.jetbrains.kotlinx.lincheck_test.representation.*"
 for jdk in "${jdks[@]}" 
 do
   echo "[Representation Tests Overwrite] Running tests for jdk: $jdk in non-trace mode  ----------------------"
-  ./gradlew clean test --tests "$testFilter" -PjdkToolchainVersion="$jdk" -PoverwriteRepresentationTestsOutput=true -PtestInTraceDebuggerMode=false
+  ./gradlew clean :test --tests "$testFilter" -PjdkToolchainVersion="$jdk" -PoverwriteRepresentationTestsOutput=true -PtestInTraceDebuggerMode=false
 
   #https://github.com/JetBrains/lincheck/issues/500
   if [ "$jdk" = "8" ]; then
@@ -43,5 +43,5 @@ do
   fi 
   
   echo "[Representation Tests Overwrite] Running tests for jdk: $jdk in trace mode  --------------------------"
-  ./gradlew clean test --tests "$testFilter" -PjdkToolchainVersion="$jdk" -PoverwriteRepresentationTestsOutput=true -PtestInTraceDebuggerMode=true
+  ./gradlew clean :test --tests "$testFilter" -PjdkToolchainVersion="$jdk" -PoverwriteRepresentationTestsOutput=true -PtestInTraceDebuggerMode=true
 done 
