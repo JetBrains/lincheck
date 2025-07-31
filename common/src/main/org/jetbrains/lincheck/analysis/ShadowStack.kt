@@ -53,8 +53,7 @@ fun ShadowStackFrame.findLocalVariableReferringTo(obj: Any): LocalVariableAccess
     return localVariables
         .filter { (name, state) -> (state.value === obj) && !isInlineThisIVName(name) }
         .maxByOrNull { (_, state) -> state.accessCounter }
-        ?.key
-        ?.let { LocalVariableAccessLocation(it) }
+        ?.let { LocalVariableAccessLocation(it.key) }
 }
 
 fun ShadowStackFrame.findLocalVariableFieldReferringTo(obj: Any): OwnerName? {
