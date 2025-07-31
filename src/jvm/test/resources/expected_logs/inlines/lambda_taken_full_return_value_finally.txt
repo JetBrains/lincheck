@@ -1,0 +1,30 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                                        Thread 1                                                                                                         |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                                                                                             |
+|   returnInt(): -1 at InlineLambdaConditionalTakenFullReturnValueFinallyTest.operation(InlineLambdaConditionalTakenFullReturnValueFinallyTest.kt:32)                                                                     |
+|     escape = "START" at InlineLambdaConditionalTakenFullReturnValueFinallyTest.returnInt(InlineLambdaConditionalTakenFullReturnValueFinallyTest.kt:36)                                                                  |
+|     run() at InlineLambdaConditionalTakenFullReturnValueFinallyTest.returnInt(InlineLambdaConditionalTakenFullReturnValueFinallyTest.kt:37)                                                                             |
+|       setEscape("BEFORE BLOCK") at InlineLambdaConditionalTakenFullReturnValueFinallyTest.returnInt(InlineLambdaConditionalTakenFullReturnValueFinallyTest.kt:60)                                                       |
+|         escape = "BEFORE BLOCK" at InlineLambdaConditionalTakenFullReturnValueFinallyTest.setEscape(InlineLambdaConditionalTakenFullReturnValueFinallyTest.kt:20)                                                       |
+|       Lambda argument to run() at InlineLambdaConditionalTakenFullReturnValueFinallyTest.returnInt(InlineLambdaConditionalTakenFullReturnValueFinallyTest.kt:62)                                                        |
+|         InlineLambdaConditionalTakenFullReturnValueFinallyTest#1.escape = "IN LAMBDA" at InlineLambdaConditionalTakenFullReturnValueFinallyTest.returnInt(InlineLambdaConditionalTakenFullReturnValueFinallyTest.kt:38) |
+|     setEscape("AFTER BLOCK") at InlineLambdaConditionalTakenFullReturnValueFinallyTest.returnInt(InlineLambdaConditionalTakenFullReturnValueFinallyTest.kt:64)                                                          |
+|       escape = "AFTER BLOCK" at InlineLambdaConditionalTakenFullReturnValueFinallyTest.setEscape(InlineLambdaConditionalTakenFullReturnValueFinallyTest.kt:20)                                                          |
+|   result: void                                                                                                                                                                                                          |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -1,0 +1,33 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|                                                                                                      Thread 1                                                                                                      |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| operation()                                                                                                                                                                                                        |
+|   escape = "START" at InlineLambdaConditionalNotTakenFullReturnFinallyTest.operation(InlineLambdaConditionalNotTakenFullReturnFinallyTest.kt:32)                                                                   |
+|   run() at InlineLambdaConditionalNotTakenFullReturnFinallyTest.operation(InlineLambdaConditionalNotTakenFullReturnFinallyTest.kt:33)                                                                              |
+|     setEscape("BEFORE BLOCK") at InlineLambdaConditionalNotTakenFullReturnFinallyTest.operation(InlineLambdaConditionalNotTakenFullReturnFinallyTest.kt:54)                                                        |
+|       escape = "BEFORE BLOCK" at InlineLambdaConditionalNotTakenFullReturnFinallyTest.setEscape(InlineLambdaConditionalNotTakenFullReturnFinallyTest.kt:20)                                                        |
+|     Lambda argument to run() at InlineLambdaConditionalNotTakenFullReturnFinallyTest.operation(InlineLambdaConditionalNotTakenFullReturnFinallyTest.kt:56)                                                         |
+|       InlineLambdaConditionalNotTakenFullReturnFinallyTest#1.escape = "IN LAMBDA" at InlineLambdaConditionalNotTakenFullReturnFinallyTest.operation(InlineLambdaConditionalNotTakenFullReturnFinallyTest.kt:34)    |
+|   run() at InlineLambdaConditionalNotTakenFullReturnFinallyTest.operation(InlineLambdaConditionalNotTakenFullReturnFinallyTest.kt:58)                                                                              |
+|     Lambda argument to run() at InlineLambdaConditionalNotTakenFullReturnFinallyTest.operation(InlineLambdaConditionalNotTakenFullReturnFinallyTest.kt:58)                                                         |
+|       InlineLambdaConditionalNotTakenFullReturnFinallyTest#1.escape = "AFTER LAMBDA" at InlineLambdaConditionalNotTakenFullReturnFinallyTest.operation(InlineLambdaConditionalNotTakenFullReturnFinallyTest.kt:36) |
+|     InlineLambdaConditionalNotTakenFullReturnFinallyTest#1.setEscape("AFTER BLOCK") at InlineLambdaConditionalNotTakenFullReturnFinallyTest.operation(InlineLambdaConditionalNotTakenFullReturnFinallyTest.kt:58)  |
+|       escape = "AFTER BLOCK" at InlineLambdaConditionalNotTakenFullReturnFinallyTest.setEscape(InlineLambdaConditionalNotTakenFullReturnFinallyTest.kt:20)                                                         |
+|   escape = "END" at InlineLambdaConditionalNotTakenFullReturnFinallyTest.operation(InlineLambdaConditionalNotTakenFullReturnFinallyTest.kt:38)                                                                     |
+|   result: void                                                                                                                                                                                                     |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

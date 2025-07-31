@@ -1,0 +1,27 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                     Thread 1                                                                                      |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                                                       |
+|   escape = "START" at InlineLambdaConditionalTakenFullReturnTest.operation(InlineLambdaConditionalTakenFullReturnTest.kt:32)                                                      |
+|   run() at InlineLambdaConditionalTakenFullReturnTest.operation(InlineLambdaConditionalTakenFullReturnTest.kt:33)                                                                 |
+|     setEscape("BEFORE BLOCK") at InlineLambdaConditionalTakenFullReturnTest.operation(InlineLambdaConditionalTakenFullReturnTest.kt:51)                                           |
+|       escape = "BEFORE BLOCK" at InlineLambdaConditionalTakenFullReturnTest.setEscape(InlineLambdaConditionalTakenFullReturnTest.kt:20)                                           |
+|     Lambda argument to run() at InlineLambdaConditionalTakenFullReturnTest.operation(InlineLambdaConditionalTakenFullReturnTest.kt:52)                                            |
+|       InlineLambdaConditionalTakenFullReturnTest#1.escape = "IN LAMBDA" at InlineLambdaConditionalTakenFullReturnTest.operation(InlineLambdaConditionalTakenFullReturnTest.kt:34) |
+|   result: void                                                                                                                                                                    |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
