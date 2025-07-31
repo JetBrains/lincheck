@@ -31,16 +31,6 @@ import org.jetbrains.lincheck.descriptors.FieldAccessLocation
  * such as local variable names, instance field names, constants referencing the object,
  * or as a last resort, the object's string representation.
  *
- * @param obj The object whose owner name needs to be determined.
-
- * @return A string representing the owner name of the object, or null if no owner is applicable.
- */
-
-/**
- * Finds the owner name of a given object. The owner name can originate from various sources
- * such as local variable names, instance field names, constants referencing the object,
- * or as a last resort, the object's string representation.
- *
  * @param obj The object whose owner name needs to be determined, can be null.
  * @param className The name of the class, required when obj is null. Used in case of static field/method accesses.
  * @param shadowStackFrame the current shadow stack frame, representing the program's stack state during execution.
@@ -87,6 +77,24 @@ internal fun findOwnerName(
     return objectTracker.getObjectRepresentation(obj)
 }
 
+/**
+ * Finds the owner name of a given atomic API method call.
+ * Handles the following APIs:
+ * - `Atomic[Reference|Integer|Long|Boolean]`;
+ * - `Atomic[Reference|Integer|Long]Array`;
+ * - `Atomic[Reference|Integer|Long]FieldUpdater`;
+ * - `VarHandle`;
+ * - `Unsafe`.
+ *
+ * @param atomic the atomic API method receiver for which the owner name is to be found.
+ * @param arguments an array of arguments provided for the atomic operation.
+ * @param atomicMethodDescriptor a descriptor providing metadata about the atomic method being analyzed.
+ * @param shadowStackFrame the current shadow stack frame, representing the program's stack state during execution.
+ * @param objectTracker the object tracker, used to provide representations of tracked objects.
+ * @param constants a mapping from objects to their associated constant names.
+ * @return a pair consisting of the determined owner name as a string,
+ *   and a list of parameters associated with the atomic operation.
+ */
 internal fun findAtomicOwnerName(
     atomic: Any,
     arguments: Array<Any?>,
@@ -126,7 +134,7 @@ internal fun findAtomicOwnerName(
     if (apiKind == AtomicApiKind.ATOMIC_OBJECT ||
         apiKind == AtomicApiKind.ATOMIC_ARRAY
     ) {
-        ownerName = // if (shadowStack.isCurrentStackFrameReceiver(atomic)) null else
+        ownerName =
             // first try to find the receiver field name
             shadowStackFrame.findCurrentReceiverFieldReferringTo(atomic)
             ?.let { fieldAccess ->
