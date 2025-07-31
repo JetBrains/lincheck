@@ -10,10 +10,12 @@
 
 package org.jetbrains.lincheck.util
 
-import sun.misc.Unsafe
-import java.lang.reflect.Field
-import java.lang.reflect.Modifier
+import org.jetbrains.lincheck.descriptors.FieldDescriptor
+import org.jetbrains.lincheck.descriptors.toDescriptor
 import java.util.concurrent.ConcurrentHashMap
+import java.lang.reflect.Modifier
+import java.lang.reflect.Field
+import sun.misc.Unsafe
 
 object UnsafeHolder {
     val UNSAFE: Unsafe = try {
@@ -176,16 +178,20 @@ fun getFieldOffsetViaUnsafe(field: Field): Long {
     }
 }
 
-private val fieldNameByOffsetCache = ConcurrentHashMap<Pair<Class<*>, Long>, String?>()
-private val NULL_FIELD_NAME = ".+-  NULL  -+." // cannot store `null` in the cache.
+private val fieldDescriptorByOffsetCache = ConcurrentHashMap<Pair<Class<*>, Long>, Any /* FieldDescriptor */>()
+private val DESCRIPTOR_NOT_FOUND = Any() // cannot store `null` in the cache.
 
 @Suppress("DEPRECATION")
 fun findFieldNameByOffsetViaUnsafe(targetType: Class<*>, offset: Long): String? =
-    fieldNameByOffsetCache.getOrPut(targetType to offset) {
-        findFieldNameByOffsetViaUnsafeImpl(targetType, offset) ?: NULL_FIELD_NAME
-    }.let { if (it == NULL_FIELD_NAME) null else it }
+    findFieldDescriptorByOffsetViaUnsafe(targetType, offset)?.fieldName
 
-private fun findFieldNameByOffsetViaUnsafeImpl(targetType: Class<*>, offset: Long): String? {
+@Suppress("DEPRECATION")
+fun findFieldDescriptorByOffsetViaUnsafe(targetType: Class<*>, offset: Long): FieldDescriptor? =
+    fieldDescriptorByOffsetCache.getOrPut(targetType to offset) {
+        findFieldNameByOffsetViaUnsafeImpl(targetType, offset) ?: DESCRIPTOR_NOT_FOUND
+    }.let { if (it === DESCRIPTOR_NOT_FOUND) null else (it as FieldDescriptor) }
+
+private fun findFieldNameByOffsetViaUnsafeImpl(targetType: Class<*>, offset: Long): FieldDescriptor? {
     for (field in targetType.allDeclaredFieldWithSuperclasses) {
         try {
             if (Modifier.isNative(field.modifiers)) continue
@@ -194,7 +200,7 @@ private fun findFieldNameByOffsetViaUnsafeImpl(targetType: Class<*>, offset: Lon
             } else {
                 UnsafeHolder.UNSAFE.objectFieldOffset(field)
             }
-            if (fieldOffset == offset) return field.name
+            if (fieldOffset == offset) return field.toDescriptor()
         } catch (t: Throwable) {
             t.printStackTrace()
         }

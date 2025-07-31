@@ -11,6 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.transformation
 
 import org.jetbrains.lincheck.descriptors.*
+import org.jetbrains.lincheck.trace.TRACE_CONTEXT
 import org.objectweb.asm.*
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import kotlin.math.max
@@ -396,7 +397,8 @@ class OwnerNameAnalyzerAdapter protected constructor(
             Opcodes.ALOAD, Opcodes.ILOAD, Opcodes.FLOAD -> {
                 val localVarName = methodVariables.getActiveVar(intArg)
                 if (localVarName != null) {
-                    val localVarAccess = LocalVariableAccessLocation(localVarName)
+                    val localVarDescriptor = TRACE_CONTEXT.getVariableDescriptor(localVarName)
+                    val localVarAccess = LocalVariableAccessLocation(localVarDescriptor)
                     push(OwnerName(localVarAccess))
                 } else {
                     push(null)
@@ -406,7 +408,8 @@ class OwnerNameAnalyzerAdapter protected constructor(
             Opcodes.LLOAD, Opcodes.DLOAD -> {
                 val localVarName = methodVariables.getActiveVar(intArg)
                 if (localVarName != null) {
-                    val localVarAccess = LocalVariableAccessLocation(localVarName)
+                    val localVarDescriptor = TRACE_CONTEXT.getVariableDescriptor(localVarName)
+                    val localVarAccess = LocalVariableAccessLocation(localVarDescriptor)
                     push(OwnerName(localVarAccess))
                     push(null)
                 } else {
@@ -426,8 +429,20 @@ class OwnerNameAnalyzerAdapter protected constructor(
             /* Field access instructions */
 
             Opcodes.GETSTATIC -> {
-                val fieldAccess = StaticFieldAccessLocation(className!!, fieldName!!)
-                push(OwnerName(fieldAccess))
+                val fieldDescriptor = runCatching {
+                    TRACE_CONTEXT.getFieldDescriptor(
+                        className = className!!,
+                        fieldName = fieldName!!,
+                        isStatic = true,
+                        isFinal = FinalFields.isFinalField(className, fieldName)
+                    )
+                }.getOrNull()
+                if (fieldDescriptor != null) {
+                    val fieldAccess = StaticFieldAccessLocation(fieldDescriptor)
+                    push(OwnerName(fieldAccess))
+                } else {
+                    push(null)
+                }
                 if (Type.getType(descriptor).size == 2) {
                     push(null)
                 }
@@ -439,8 +454,16 @@ class OwnerNameAnalyzerAdapter protected constructor(
 
             Opcodes.GETFIELD -> {
                 val ownerName = pop()
-                val fieldAccess = ObjectFieldAccessLocation(className!!, fieldName!!)
-                if (ownerName != null) {
+                val fieldDescriptor = runCatching {
+                    TRACE_CONTEXT.getFieldDescriptor(
+                        className = className!!,
+                        fieldName = fieldName!!,
+                        isStatic = false,
+                        isFinal = FinalFields.isFinalField(className, fieldName)
+                    )
+                }.getOrNull()
+                if (ownerName != null && fieldDescriptor != null) {
+                    val fieldAccess = ObjectFieldAccessLocation(fieldDescriptor)
                     push(ownerName + fieldAccess)
                 } else {
                     push(null)
@@ -764,7 +787,8 @@ class OwnerNameAnalyzerAdapter protected constructor(
         if (this.locals == null) return
         for (i in this.locals!!.indices) {
             val localVarName = localVariables.find { it.index == i }?.name ?: continue
-            val localVarAccess = LocalVariableAccessLocation(localVarName)
+            val localVarDescriptor = TRACE_CONTEXT.getVariableDescriptor(localVarName)
+            val localVarAccess = LocalVariableAccessLocation(localVarDescriptor)
             locals!![i] = OwnerName(localVarAccess)
         }
     }

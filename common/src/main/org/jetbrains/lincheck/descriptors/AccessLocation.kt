@@ -10,6 +10,7 @@
 
 package org.jetbrains.lincheck.descriptors
 
+import org.jetbrains.lincheck.trace.*
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
 
@@ -18,23 +19,36 @@ abstract class ObjectAccessLocation : AccessLocation()
 abstract class ArrayAccessLocation : ObjectAccessLocation()
 
 data class LocalVariableAccessLocation(
-    val variableName: String
-) : AccessLocation()
+    val variableDescriptor: VariableDescriptor
+) : AccessLocation() {
+    val variableName: String get() = variableDescriptor.name
+}
 
 abstract class FieldAccessLocation : ObjectAccessLocation() {
-    abstract val className: String
-    abstract val fieldName: String
+    abstract val fieldDescriptor: FieldDescriptor
+    val className get() = fieldDescriptor.className
+    val fieldName get() = fieldDescriptor.fieldName
 }
 
 data class StaticFieldAccessLocation(
-    override val className: String,
-    override val fieldName: String,
-) : FieldAccessLocation()
+    override val fieldDescriptor: FieldDescriptor
+) : FieldAccessLocation() {
+    init {
+        require(fieldDescriptor.isStatic) {
+            "Static field access location must be constructed with static field descriptor"
+        }
+    }
+}
 
 data class ObjectFieldAccessLocation(
-    override val className: String,
-    override val fieldName: String,
-) : FieldAccessLocation()
+    override val fieldDescriptor: FieldDescriptor
+) : FieldAccessLocation() {
+    init {
+        require(!fieldDescriptor.isStatic) {
+            "Object field access location must be constructed with non-static field descriptor"
+        }
+    }
+}
 
 data class ArrayElementByIndexAccessLocation(
     val index: Int
@@ -63,7 +77,7 @@ class AccessPath(val locations: List<AccessLocation>) {
                 }
                 is StaticFieldAccessLocation -> {
                     with(builder) {
-                        append(location.className.substringAfterLast("."))
+                        append(location.className.getSimpleClassName())
                         append(".")
                         append(location.fieldName)
                     }
@@ -120,10 +134,17 @@ typealias OwnerName = AccessPath
 fun Field.toAccessLocation(): FieldAccessLocation {
     val className = declaringClass.name
     val fieldName = name
+    val isStatic = Modifier.isStatic(modifiers)
+    val isFinal = Modifier.isFinal(modifiers)
+    val descriptorId = TRACE_CONTEXT.getOrCreateFieldId(className, fieldName,
+        isStatic = isStatic,
+        isFinal = isFinal,
+    )
+    val descriptor = TRACE_CONTEXT.getFieldDescriptor(descriptorId)
     return if (Modifier.isStatic(modifiers)) {
-        StaticFieldAccessLocation(className, fieldName)
+        StaticFieldAccessLocation(descriptor)
     } else {
-        ObjectFieldAccessLocation(className, fieldName)
+        ObjectFieldAccessLocation(descriptor)
     }
 }
 
