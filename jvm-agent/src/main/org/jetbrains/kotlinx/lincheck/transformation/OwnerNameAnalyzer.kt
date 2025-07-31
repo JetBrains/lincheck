@@ -16,7 +16,28 @@ import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import kotlin.math.max
 
 /**
- * TODO: update the documentation
+ * ASM method visitor adapter that tracks owner names (access paths)
+ * for values on the operand stack and in local variables during bytecode analysis.
+ *
+ * This adapter simulates JVM execution to maintain detailed ownership chains for:
+ * - local variable accesses;
+ * - field accesses (static and instance);
+ * - array operations (element access and length);
+ * - stack manipulations.
+ *
+ * The owner names are used by Lincheck to assign meaningful names to
+ * receiver objects on field and method accesses.
+ *
+ * The implementation is based on [org.objectweb.asm.commons.AnalyzerAdapter].
+ *
+ * @param owner the owner class name being analyzed.
+ * @param access method access flags (see [Opcodes]).
+ * @param name method name.
+ * @param descriptor method signature descriptor (see [Type]).
+ * @param methodVisitor optional delegate method visitor.
+ * @param methodVariables provides active variable information.
+ *
+ * @see org.objectweb.asm.commons.AnalyzerAdapter
  */
 class OwnerNameAnalyzerAdapter protected constructor(
     api: Int,
@@ -29,28 +50,12 @@ class OwnerNameAnalyzerAdapter protected constructor(
     val methodVariables: MethodVariables,
 ) : MethodVisitor(api, methodVisitor) {
     /**
-     * TODO: update the documentation
-     *
-     * The local variable slots for the current execution frame. Primitive types are represented by
-     * [Opcodes.TOP], [Opcodes.INTEGER], [Opcodes.FLOAT], [Opcodes.LONG],
-     * [Opcodes.DOUBLE],[Opcodes.NULL] or [Opcodes.UNINITIALIZED_THIS] (long and
-     * double are represented by two elements, the second one being TOP). Reference types are
-     * represented by String objects (representing internal names, see [ ][Type.getInternalName]), and uninitialized types by Label objects (this label designates the
-     * NEW instruction that created this uninitialized value). This field is null for
-     * unreachable instructions.
+     * Tracks [OwnerName]-s for objects stored in local variables.
      */
     var locals: MutableList<OwnerName?>?
 
     /**
-     * TODO: update the documentation
-     *
-     * The operand stack slots for the current execution frame. Primitive types are represented by
-     * [Opcodes.TOP], [Opcodes.INTEGER], [Opcodes.FLOAT], [Opcodes.LONG],
-     * [Opcodes.DOUBLE],[Opcodes.NULL] or [Opcodes.UNINITIALIZED_THIS] (long and
-     * double are represented by two elements, the second one being TOP). Reference types are
-     * represented by String objects (representing internal names, see [ ][Type.getInternalName]), and uninitialized types by Label objects (this label designates the
-     * NEW instruction that created this uninitialized value). This field is null for
-     * unreachable instructions.
+     * Tracks [OwnerName]-s for objects stored on the stack.
      */
     var stack: MutableList<OwnerName?>?
 
