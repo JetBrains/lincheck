@@ -19,6 +19,7 @@ import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransforme
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.isEagerlyInstrumentedClass
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.shouldTransform
 import org.jetbrains.kotlinx.lincheck.transformation.transformers.coroutineCallingClasses
+import org.jetbrains.lincheck.util.Logger
 import org.jetbrains.lincheck.util.isJavaLambdaClass
 import org.jetbrains.lincheck.util.isJdk8
 import org.jetbrains.lincheck.util.readFieldSafely
@@ -348,7 +349,11 @@ object LincheckJavaAgent {
         if (!shouldTransform(clazz.name, instrumentationMode)) return
         if (canRetransformClass(clazz)) {
             instrumentedClasses += clazz.name
-            instrumentation.retransformClasses(clazz)
+            try {
+                instrumentation.retransformClasses(clazz)
+            } catch (e: VerifyError) {
+                Logger.warn { "Failed to retransform class ${clazz.name}" }
+            }
         }
         // Traverse static fields.
         clazz.declaredFields
