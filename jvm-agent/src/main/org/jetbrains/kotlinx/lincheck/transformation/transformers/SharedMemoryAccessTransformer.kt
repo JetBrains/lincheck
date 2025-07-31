@@ -174,6 +174,7 @@ internal class SharedMemoryAccessTransformer(
     }
 
     private fun GeneratorAdapter.processInstanceFieldPut(desc: String, owner: String, fieldName: String, opcode: Int) {
+        // STACK: obj, value
         val valueType = getType(desc)
         val fieldId = TRACE_CONTEXT.getOrCreateFieldId(
             className = owner.toCanonicalClassName(),
@@ -182,13 +183,14 @@ internal class SharedMemoryAccessTransformer(
             isFinal = FinalFields.isFinalField(owner, fieldName)
         )
         val valueLocal = newLocal(valueType) // we cannot use DUP as long/double require DUP2
+        val ownerName = ownerNameAnalyzer?.stack?.getStackElementAt(1)
         storeLocal(valueLocal)
         // STACK: obj
         dup()
         // STACK: obj, obj
         loadLocal(valueLocal)
         box(valueType)
-        loadNewCodeLocationId()
+        loadNewCodeLocationId(accessPath = ownerName)
         push(fieldId)
         // STACK: obj, obj, value, codeLocation, fieldId
         invokeStatic(Injections::beforeWriteField)
@@ -260,13 +262,14 @@ internal class SharedMemoryAccessTransformer(
         // STACK: array, index, value
         val arrayElementType = getArrayElementType(opcode)
         val valueLocal = newLocal(arrayElementType) // we cannot use DUP as long/double require DUP2
+        val ownerName = ownerNameAnalyzer?.stack?.getStackElementAt(2)
         storeLocal(valueLocal)
         // STACK: array, index
         dup2()
         // STACK: array, index, array, index
         loadLocal(valueLocal)
         box(arrayElementType)
-        loadNewCodeLocationId()
+        loadNewCodeLocationId(accessPath = ownerName)
         // STACK: array, index, array, index, value, codeLocation
         invokeStatic(Injections::beforeWriteArray)
         invokeBeforeEventIfPluginEnabled("write array")
