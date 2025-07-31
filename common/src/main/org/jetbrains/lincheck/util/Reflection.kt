@@ -37,7 +37,7 @@ val Class<*>.allDeclaredFieldWithSuperclasses get(): List<Field> {
  * @return the name of the field that references the given object, or null if no such field is found.
  */
 fun Any.findInstanceFieldReferringTo(obj: Any): Field? {
-    this.javaClass.allDeclaredFieldWithSuperclasses.forEach { field ->
+    for (field in this.javaClass.allDeclaredFieldWithSuperclasses) {
         if (readFieldSafely(this, field).getOrNull() === obj) {
             return field
         }

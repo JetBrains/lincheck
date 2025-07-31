@@ -2271,11 +2271,6 @@ internal abstract class ManagedStrategy(
             objectTracker.getObjectRepresentation(atomic) + arrayAccess to params!!
         }
     }
-    
-    private fun isThisName(name: String): Boolean =
-        (name == "this")    ||
-        (name == "\$this")  ||
-        name.matches(Regex("this\\$\\d+"))
 
     /* Methods to control the current call context. */
 
