@@ -2141,135 +2141,19 @@ internal abstract class ManagedStrategy(
     private fun MethodCallTracePoint.initializeParameters(parameters: List<Any?>) =
         initializeParameters(parameters.map { objectTracker.getObjectRepresentation(it) }, parameters.map { objectFqTypeName(it) })
 
-
-    /**
-     * Finds the owner name of a given object. The owner name can originate from various sources
-     * such as local variable names, instance field names, constants referencing the object,
-     * or as a last resort, the object's string representation.
-     *
-     * @param obj The object whose owner name needs to be determined.
-     * @param className The name of the class in case of static field/method accesses. Required when obj is null.
-     * @return A string representing the owner name of the object, or null if no owner is applicable.
-     */
     private fun findOwnerName(obj: Any?, className: String? = null): String? {
         val threadId = threadScheduler.getCurrentThreadId()
-        val shadowStack = shadowStack[threadId]!!
-        if (obj == null) {
-            require(className != null) { 
-                "Class name must be provided for null object" 
-            }
-            // If the class name matches the current instance's class in the shadow stack,
-            // return null since the field belongs to the current class context and doesn't 
-            // need an explicit owner prefix
-            if (className == shadowStack.lastOrNull()?.instance?.javaClass?.name) {
-                return null
-            }
-            return className.toSimpleClassName()
-        }
-        // do not prettify thread names
-        if (obj is Thread) {
-            return objectTracker.getObjectRepresentation(obj)
-        }
-        // if the current owner is `this` - no owner needed
-        if (shadowStack.isCurrentStackFrameReceiver(obj)) return null
-        val shadowStackFrame = shadowStack.last()
-        // lookup for the object in local variables and use the local variable name if found
-        shadowStackFrame.findLocalVariableReferringTo(obj)?.let { access ->
-            return if (isThisName(access.variableName)) null else access.variableName
-        }
-        // lookup for a field name in the current stack frame `this`
-        shadowStackFrame.findCurrentReceiverFieldReferringTo(obj)?.let { access ->
-            return if (isThisName(access.fieldName)) null else access.fieldName
-        }
-        // lookup for the constant referencing the object
-        constants[obj]?.let { return it }
-        // otherwise return object's string representation
-        return objectTracker.getObjectRepresentation(obj)
+        val shadowStackFrame = shadowStack[threadId]!!.last()
+        return findOwnerName(obj, className, shadowStackFrame, objectTracker, constants)
     }
 
     private fun AtomicMethodDescriptor.findAtomicOwnerName(
         atomic: Any,
-        methodParams: Array<Any?>,
+        arguments: Array<Any?>,
     ): Pair<String, List<Any?>> {
         val threadId = threadScheduler.getCurrentThreadId()
-        val shadowStack = shadowStack[threadId]!!
-        val shadowStackFrame = shadowStack.last()
-
-        var ownerName: String? = null
-        var params: List<Any?>? = null
-
-        var arrayAccess = ""
-        if (apiKind == AtomicApiKind.ATOMIC_ARRAY) {
-            val info = getAtomicArrayAccessInfo(atomic, methodParams)
-            arrayAccess = "[${(info.location as ArrayElementByIndexAccess).index}]"
-            params = info.arguments
-        } else if (apiKind == AtomicApiKind.ATOMIC_OBJECT) {
-            params = methodParams.asList()
-        }
-
-        fun getOwnerName(owner: Any?, className: String?, location: AccessLocation): String {
-            val owner = findOwnerName(owner, className)
-            return when (location) {
-                is ArrayElementByIndexAccess -> {
-                    (owner ?: "this") + "[${location.index}]"
-                }
-                is FieldAccessLocation -> {
-                    (if (owner != null) "$owner." else "") + location.fieldName
-                }
-                else -> {
-                    error("Unexpected location type: $location")
-                }
-            }
-        }
-
-        if (apiKind == AtomicApiKind.ATOMIC_OBJECT ||
-            apiKind == AtomicApiKind.ATOMIC_ARRAY
-        ) {
-            ownerName = // if (shadowStack.isCurrentStackFrameReceiver(atomic)) null else
-                // first try to find the receiver field name
-                shadowStackFrame.findCurrentReceiverFieldReferringTo(atomic)
-                ?.let { fieldAccess ->
-                    getOwnerName(
-                        owner = shadowStackFrame.instance,
-                        className = fieldAccess.className,
-                        location = fieldAccess,
-                    )
-                }
-                // then try to search in local variables
-                ?: shadowStackFrame.findLocalVariableReferringTo(atomic)?.toString()
-                // then try to search in local variables' fields
-                ?: shadowStackFrame.findLocalVariableFieldReferringTo(atomic)?.toString()
-        }
-
-        if (apiKind == AtomicApiKind.ATOMIC_FIELD_UPDATER ||
-            apiKind == AtomicApiKind.VAR_HANDLE ||
-            apiKind == AtomicApiKind.UNSAFE
-        ) {
-            val info = when (apiKind) {
-                AtomicApiKind.ATOMIC_FIELD_UPDATER ->
-                    getAtomicFieldUpdaterAccessInfo(atomic, methodParams)
-                AtomicApiKind.VAR_HANDLE ->
-                    getVarHandleAccessInfo(atomic, methodParams)
-                AtomicApiKind.UNSAFE ->
-                    getUnsafeAccessInfo(atomic, methodParams)
-                else ->
-                    error("")
-            }
-            ownerName = getOwnerName(
-                owner = info.obj,
-                className = (info.location as? FieldAccessLocation)?.className,
-                location = info.location!!,
-            )
-            params = info.arguments
-        }
-
-        return if (ownerName != null) {
-            // return the owner name if it was found
-            ownerName + arrayAccess to params!!
-        } else {
-            // otherwise return atomic object representation
-            objectTracker.getObjectRepresentation(atomic) + arrayAccess to params!!
-        }
+        val shadowStackFrame = shadowStack[threadId]!!.last()
+        return findAtomicOwnerName(atomic, arguments, this, shadowStackFrame, objectTracker, constants)
     }
 
     /* Methods to control the current call context. */
