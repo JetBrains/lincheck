@@ -44,17 +44,24 @@ internal fun StackTraceElement.compress(): String = this.toString()
  * This function removes the `$suspendImpl` call and moves all its children to the parent.
  */
 private fun SingleThreadedTable<TraceNode>.compressSuspendImpl() = compressNodes { node ->
-    val singleChild = if (node.children.size == 1) node.children[0] else return@compressNodes node
-    if (node !is CallNode || singleChild !is CallNode) return@compressNodes node
-    if ("${node.tracePoint.methodName}\$suspendImpl" != singleChild.tracePoint.methodName) return@compressNodes node
+    val isSuspendImplAndSwitch = node.children.size == 2 && node.children[1].tracePoint is SwitchEventTracePoint
+    val firstChild = if (
+        node.children.size == 1 || // either single call to $suspendImpl
+        isSuspendImplAndSwitch     // or call to $suspendImpl and then switch via `ManagedStrategy::afterCoroutineSuspended`
+    ) node.children[0] else return@compressNodes node
+    if (node !is CallNode || firstChild !is CallNode) return@compressNodes node
+    if ("${node.tracePoint.methodName}\$suspendImpl" != firstChild.tracePoint.methodName) return@compressNodes node
 
     val newNode = node.copy()
     // trace grandchildren to children, inherit correct stackTraceElement, decrement depth
-    singleChild.children.forEach {
+    firstChild.children.forEach {
         if (it.tracePoint is CodeLocationTracePoint) {
-            (it.tracePoint as CodeLocationTracePoint).codeLocation = singleChild.tracePoint.codeLocation
+            (it.tracePoint as CodeLocationTracePoint).codeLocation = firstChild.tracePoint.codeLocation
         }
         newNode.addChild(it)
+    }
+    if (isSuspendImplAndSwitch) {
+        newNode.addChild(node.children[1])
     }
     newNode
 }
