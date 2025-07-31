@@ -65,7 +65,15 @@ internal class VerboseTraceFlattenPolicy : TraceFlattenPolicy {
                 
                 // Check if result node should be added
                 if (descendants.size > 1 && returnedValue.actorRepresentationConfig.showAtEndOfActor) {
-                    return descendants + ResultNode(currentNode.callDepth + 1, returnedValue, currentNode.returnEventNumber, currentNode.tracePoint)
+                    val nSiblings = currentNode.parent?.children?.size ?: 0
+                    if (nSiblings <= 1) {
+                        return descendants + ResultNode(
+                            currentNode.callDepth + 1,
+                            returnedValue,
+                            currentNode.returnEventNumber,
+                            currentNode.tracePoint
+                        )
+                    }
                 }
 
                 return descendants
