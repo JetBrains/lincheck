@@ -139,7 +139,13 @@ object LincheckJavaAgent {
             INSTRUMENT_ALL_CLASSES -> {
                 // Re-transform the already loaded classes.
                 // New classes will be transformed automatically.
-                instrumentation.retransformClasses(*getLoadedClassesToInstrument().toTypedArray())
+                getLoadedClassesToInstrument().forEach {
+                    try {
+                        instrumentation.retransformClasses(it)
+                    } catch (t: Throwable) {
+                        Logger.error { "Failed to retransforming class ${it.name}: ${t.message}" }
+                    }
+                }
             }
 
             // In the stress testing mode, Lincheck needs to track coroutine suspensions.
@@ -176,8 +182,11 @@ object LincheckJavaAgent {
                     .filter { isEagerlyInstrumentedClass(it.name) }
                     .toTypedArray()
 
-                if (eagerlyTransformedClasses.isNotEmpty())
-                    instrumentation.retransformClasses(*eagerlyTransformedClasses)
+                if (eagerlyTransformedClasses.isNotEmpty()) {
+                    eagerlyTransformedClasses.forEach {
+                        instrumentation.retransformClasses(it)
+                    }
+                }
                 instrumentedClasses.addAll(eagerlyTransformedClasses.map { it.name })
             }
         }
@@ -238,8 +247,8 @@ object LincheckJavaAgent {
         // `retransformClasses` uses initial (loaded in VM from disk) class bytecode and reapplies
         // transformations of all agents that did not remove their transformers to this moment;
         // for some reason, without `isNotEmpty()` check this code can throw NPE on JVM 8
-        if (classes.isNotEmpty()) {
-            instrumentation.retransformClasses(*classes.toTypedArray())
+        classes.forEach() {
+            instrumentation.retransformClasses(it)
         }
         // Clear the set of instrumented classes.
         instrumentedClasses.clear()
