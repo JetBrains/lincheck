@@ -284,13 +284,13 @@ internal class MethodCallTracePoint(
     
     private fun StringBuilder.appendActor() {
         append("$methodName(${ parameters?.joinToString(", ") ?: "" })")
-        if (returnedValue != ReturnedValueResult.NoValue && returnedValue.actorRepresentationConfig.showAtBeginningOfActor) {
-            append(": ${returnedValue.actorRepresentationConfig.resultRepresentation}")
+        if (returnedValue != ReturnedValueResult.NoValue && returnedValue.showAtMethodCallBeginning) {
+            append(": ${returnedValue.resultRepresentation}")
         }
         
         // We only show hung for actors (not for thread starts)
         if (returnedValue == ReturnedValueResult.NoValue && isActor) {
-            append(": ${returnedValue.actorRepresentationConfig.resultRepresentation}")
+            append(": ${returnedValue.resultRepresentation}")
         }
     }
         
@@ -393,54 +393,40 @@ internal class MethodCallTracePoint(
 }
 
 
-internal sealed class ReturnedValueResult(
-    val actorRepresentationConfig: ActorResultRepresentationConfig
-) {
-    data object NoValue: ReturnedValueResult(HungActorResultConfig)
-    data object VoidResult: ReturnedValueResult(VoidActorResultConfig)
+internal sealed class ReturnedValueResult() {
+    abstract val resultRepresentation: String
+
+    open val showAtMethodCallBeginning: Boolean = true
+    open val showAtMethodCallEnd: Boolean = true
+
+    data object NoValue : ReturnedValueResult() {
+        override val resultRepresentation = "<hung>" // TODO: this is a hack, add special `HungResult` in the future
+        override val showAtMethodCallBeginning = false
+        override val showAtMethodCallEnd = false
+    }
+
+    data object VoidResult : ReturnedValueResult() {
+        override val resultRepresentation = "void"
+        override val showAtMethodCallBeginning = false
+        override val showAtMethodCallEnd = true
+    }
     
     // Should not be possible for actor
-    data object CoroutineSuspended: ReturnedValueResult(VoidActorResultConfig)
-    data class ValueResult(val valueRepresentation: String, val valueType: String): ReturnedValueResult(ValueActorResultConfig(valueRepresentation))
+    data object CoroutineSuspended : ReturnedValueResult() {
+        override val resultRepresentation = "<suspended>"
+        override val showAtMethodCallBeginning = false
+        override val showAtMethodCallEnd = true
+    }
+
+
+    data class ValueResult(val valueRepresentation: String, val valueType: String) : ReturnedValueResult() {
+        override val resultRepresentation = valueRepresentation
+    }
     
     // Only for actors
-    data class ExceptionResult(val exceptionRepresentation: String): ReturnedValueResult(ExceptionActorResultConfig(exceptionRepresentation)) {
-        var exceptionNumber: Int
-            get() = (actorRepresentationConfig as ExceptionActorResultConfig).exceptionNumber
-            set(value) { (actorRepresentationConfig as ExceptionActorResultConfig).exceptionNumber = value }
+    data class ExceptionResult(val exceptionRepresentation: String, var exceptionNumber: Int = -1) : ReturnedValueResult() {
+        override val resultRepresentation get() = "$exceptionRepresentation #$exceptionNumber"
     }
-}
-
-internal sealed interface ActorResultRepresentationConfig {
-    val resultRepresentation: String
-    val showAtBeginningOfActor: Boolean
-    val showAtEndOfActor: Boolean
-}
-
-internal object HungActorResultConfig:  ActorResultRepresentationConfig {
-    override val resultRepresentation: String = "<hung>"
-    override val showAtBeginningOfActor: Boolean = true
-    override val showAtEndOfActor: Boolean = false
-}
-
-
-internal class ValueActorResultConfig(result: String): ActorResultRepresentationConfig {
-    override val resultRepresentation: String = result
-    override val showAtBeginningOfActor: Boolean = true
-    override val showAtEndOfActor: Boolean = true
-}
-
-internal object VoidActorResultConfig:  ActorResultRepresentationConfig{
-    override val resultRepresentation = "void"
-    override val showAtBeginningOfActor = false
-    override val showAtEndOfActor = true
-}
-
-internal class ExceptionActorResultConfig(private val result: String): ActorResultRepresentationConfig {
-    override val resultRepresentation get() = "$result #$exceptionNumber"
-    override val showAtBeginningOfActor = true
-    override val showAtEndOfActor = true
-    var exceptionNumber = -1
 }
 
 internal class MonitorEnterTracePoint(

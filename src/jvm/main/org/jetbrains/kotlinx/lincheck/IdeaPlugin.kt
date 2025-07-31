@@ -284,7 +284,7 @@ internal fun flattenedTraceGraphToCSV(nodeList: SingleThreadedTable<TraceNode>):
                 is ResultNode -> {
                     val beforeEventId = -1
                     val type = TracePointType.RESULT
-                    val representation = node.actorResult.actorRepresentationConfig.resultRepresentation
+                    val representation = node.actorResult.resultRepresentation
                     val exceptionNumber = (node.actorResult as? ReturnedValueResult.ExceptionResult)?.exceptionNumber ?: -1
                     "${type.ordinal};${node.iThread};${node.callDepth};${preExpandedNodeSet.contains(node)};${beforeEventId};${representation};${exceptionNumber};null;-1;[];false"
                 }

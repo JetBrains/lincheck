@@ -128,7 +128,7 @@ internal class ResultNode(callDepth: Int, val actorResult: ReturnedValueResult, 
     : TraceNode(callDepth, eventNumber, tracePoint) {
 
     override fun toStringImpl(withLocation: Boolean): String =
-        "result: ${actorResult.actorRepresentationConfig.resultRepresentation}"
+        "result: ${actorResult.resultRepresentation}"
 
     override fun copy(): TraceNode = ResultNode(callDepth, actorResult, eventNumber, tracePoint)
 }
