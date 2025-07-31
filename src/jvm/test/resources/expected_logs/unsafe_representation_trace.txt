@@ -13,16 +13,16 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                     Thread 1                                                                                      |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                                                                                       |
-|   Array<IntWrapper>#1[2].getObject(): IntWrapper#1 at UnsafeTraceRepresentationTest.operation(UnsafeTraceRepresentationTest.kt:23)                                                |
-|   node.compareAndSwapObject(IntWrapper#2, IntWrapper#3): true at UnsafeTraceRepresentationTest.operation(UnsafeTraceRepresentationTest.kt:24)                                     |
-|   value ➜ 2 at UnsafeTraceRepresentationTest.operation(UnsafeTraceRepresentationTest.kt:25)                                                                                       |
-|   value.compareAndSwapInt(2, 3): true at UnsafeTraceRepresentationTest.operation(UnsafeTraceRepresentationTest.kt:25)                                                             |
-|   UnsafeTraceRepresentationTest.staticNode.compareAndSwapObject(IntWrapper#4, IntWrapper#5): true at UnsafeTraceRepresentationTest.operation(UnsafeTraceRepresentationTest.kt:27) |
-|   node.getValue(): 4 at UnsafeTraceRepresentationTest.operation(UnsafeTraceRepresentationTest.kt:28)                                                                              |
-|   node.value.compareAndSwapInt(4, 6): true at UnsafeTraceRepresentationTest.operation(UnsafeTraceRepresentationTest.kt:28)                                                        |
-|   result: void                                                                                                                                                                    |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| --------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                      Thread 1                                                                       |
+| --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                         |
+|   array[2].getObject(): IntWrapper#1 at UnsafeTraceRepresentationTest.operation(UnsafeTraceRepresentationTest.kt:23)                                |
+|   node.compareAndSwapObject(IntWrapper#2, IntWrapper#3): true at UnsafeTraceRepresentationTest.operation(UnsafeTraceRepresentationTest.kt:24)       |
+|   value ➜ 2 at UnsafeTraceRepresentationTest.operation(UnsafeTraceRepresentationTest.kt:25)                                                         |
+|   value.compareAndSwapInt(2, 3): true at UnsafeTraceRepresentationTest.operation(UnsafeTraceRepresentationTest.kt:25)                               |
+|   staticNode.compareAndSwapObject(IntWrapper#4, IntWrapper#5): true at UnsafeTraceRepresentationTest.operation(UnsafeTraceRepresentationTest.kt:27) |
+|   node.getValue(): 4 at UnsafeTraceRepresentationTest.operation(UnsafeTraceRepresentationTest.kt:28)                                                |
+|   node.value.compareAndSwapInt(4, 6): true at UnsafeTraceRepresentationTest.operation(UnsafeTraceRepresentationTest.kt:28)                          |
+|   result: void                                                                                                                                      |
+| --------------------------------------------------------------------------------------------------------------------------------------------------- |

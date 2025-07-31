@@ -21,7 +21,7 @@ Detailed trace:
 |   block(): threw IllegalStateException at AccessFunctionRepresentationTest.block(AccessFunctionRepresentationTest.kt:13)                                                        |
 |     AccessFunctionRepresentationTestKt.runLambda(Lambda#2) at AccessFunctionRepresentationTest.block(AccessFunctionRepresentationTest.kt:19)                                    |
 |       r.invoke() at AccessFunctionRepresentationTestKt.runLambda(AccessFunctionRepresentationTest.kt:40)                                                                        |
-|         this$0.inc1() at AccessFunctionRepresentationTest.block$lambda$0(AccessFunctionRepresentationTest.kt:19)                                                                |
+|         inc1() at AccessFunctionRepresentationTest.block$lambda$0(AccessFunctionRepresentationTest.kt:19)                                                                       |
 |           Nested#1.inc2() at AccessFunctionRepresentationTest.inc1(AccessFunctionRepresentationTest.kt:24)                                                                      |
 |             AccessFunctionRepresentationTest.inc3() at AccessFunctionRepresentationTest.Nested.inc2(AccessFunctionRepresentationTest.kt:33)                                     |
 |               a ➜ 0 at AccessFunctionRepresentationTest.inc3(AccessFunctionRepresentationTest.kt:28)                                                                            |

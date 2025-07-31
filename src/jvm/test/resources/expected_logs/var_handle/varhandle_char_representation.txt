@@ -13,19 +13,19 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| --------------------------------------------------------------------------------------------------------------------------------- |
-|                                                             Thread 1                                                              |
-| --------------------------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                                       |
-|   number ➜ '1' at VarHandleCharRepresentationTest.operation(VarHandleRepresentationTests.kt:179)                                  |
-|   number.compareAndSet('1', '1'): true at VarHandleCharRepresentationTest.operation(VarHandleRepresentationTests.kt:179)          |
-|   number.set('2') at VarHandleCharRepresentationTest.operation(VarHandleRepresentationTests.kt:180)                               |
-|   staticNumber ➜ '2' at VarHandleCharRepresentationTest.operation(VarHandleRepresentationTests.kt:182)                            |
-|   staticNumber.compareAndSet('2', '1'): true at VarHandleCharRepresentationTest.operation(VarHandleRepresentationTests.kt:182)    |
-|   staticNumber.set('3') at VarHandleCharRepresentationTest.operation(VarHandleRepresentationTests.kt:183)                         |
-|   array ➜ CharArray#1 at VarHandleCharRepresentationTest.operation(VarHandleRepresentationTests.kt:185)                           |
-|   CharArray#1[1].compareAndSet('3', '1'): false at VarHandleCharRepresentationTest.operation(VarHandleRepresentationTests.kt:185) |
-|   array ➜ CharArray#1 at VarHandleCharRepresentationTest.operation(VarHandleRepresentationTests.kt:186)                           |
-|   CharArray#1[1].set('2') at VarHandleCharRepresentationTest.operation(VarHandleRepresentationTests.kt:186)                       |
-|   result: void                                                                                                                    |
-| --------------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------------------------------------------------------------------------------------------------------ |
+|                                                            Thread 1                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------ |
+| operation()                                                                                                                    |
+|   number ➜ '1' at VarHandleCharRepresentationTest.operation(VarHandleRepresentationTests.kt:179)                               |
+|   number.compareAndSet('1', '1'): true at VarHandleCharRepresentationTest.operation(VarHandleRepresentationTests.kt:179)       |
+|   number.set('2') at VarHandleCharRepresentationTest.operation(VarHandleRepresentationTests.kt:180)                            |
+|   staticNumber ➜ '2' at VarHandleCharRepresentationTest.operation(VarHandleRepresentationTests.kt:182)                         |
+|   staticNumber.compareAndSet('2', '1'): true at VarHandleCharRepresentationTest.operation(VarHandleRepresentationTests.kt:182) |
+|   staticNumber.set('3') at VarHandleCharRepresentationTest.operation(VarHandleRepresentationTests.kt:183)                      |
+|   array ➜ CharArray#1 at VarHandleCharRepresentationTest.operation(VarHandleRepresentationTests.kt:185)                        |
+|   array[1].compareAndSet('3', '1'): false at VarHandleCharRepresentationTest.operation(VarHandleRepresentationTests.kt:185)    |
+|   array ➜ CharArray#1 at VarHandleCharRepresentationTest.operation(VarHandleRepresentationTests.kt:186)                        |
+|   array[1].set('2') at VarHandleCharRepresentationTest.operation(VarHandleRepresentationTests.kt:186)                          |
+|   result: void                                                                                                                 |
+| ------------------------------------------------------------------------------------------------------------------------------ |

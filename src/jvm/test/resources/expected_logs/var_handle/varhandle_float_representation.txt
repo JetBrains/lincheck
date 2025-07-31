@@ -13,19 +13,19 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| ----------------------------------------------------------------------------------------------------------------------------------- |
-|                                                              Thread 1                                                               |
-| ----------------------------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                                         |
-|   number ➜ 1.0 at VarHandleFloatRepresentationTest.operation(VarHandleRepresentationTests.kt:290)                                   |
-|   number.compareAndSet(1.0, 1.0): true at VarHandleFloatRepresentationTest.operation(VarHandleRepresentationTests.kt:290)           |
-|   number.set(2.0) at VarHandleFloatRepresentationTest.operation(VarHandleRepresentationTests.kt:291)                                |
-|   staticNumber ➜ 2.0 at VarHandleFloatRepresentationTest.operation(VarHandleRepresentationTests.kt:293)                             |
-|   staticNumber.compareAndSet(2.0, 1.0): true at VarHandleFloatRepresentationTest.operation(VarHandleRepresentationTests.kt:293)     |
-|   staticNumber.set(3.0) at VarHandleFloatRepresentationTest.operation(VarHandleRepresentationTests.kt:294)                          |
-|   array ➜ FloatArray#1 at VarHandleFloatRepresentationTest.operation(VarHandleRepresentationTests.kt:296)                           |
-|   FloatArray#1[1].compareAndSet(3.0, 1.0): false at VarHandleFloatRepresentationTest.operation(VarHandleRepresentationTests.kt:296) |
-|   array ➜ FloatArray#1 at VarHandleFloatRepresentationTest.operation(VarHandleRepresentationTests.kt:297)                           |
-|   FloatArray#1[1].set(2.0) at VarHandleFloatRepresentationTest.operation(VarHandleRepresentationTests.kt:297)                       |
-|   result: void                                                                                                                      |
-| ----------------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------------------------------------------------------------------------------------------------------- |
+|                                                            Thread 1                                                             |
+| ------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                     |
+|   number ➜ 1.0 at VarHandleFloatRepresentationTest.operation(VarHandleRepresentationTests.kt:290)                               |
+|   number.compareAndSet(1.0, 1.0): true at VarHandleFloatRepresentationTest.operation(VarHandleRepresentationTests.kt:290)       |
+|   number.set(2.0) at VarHandleFloatRepresentationTest.operation(VarHandleRepresentationTests.kt:291)                            |
+|   staticNumber ➜ 2.0 at VarHandleFloatRepresentationTest.operation(VarHandleRepresentationTests.kt:293)                         |
+|   staticNumber.compareAndSet(2.0, 1.0): true at VarHandleFloatRepresentationTest.operation(VarHandleRepresentationTests.kt:293) |
+|   staticNumber.set(3.0) at VarHandleFloatRepresentationTest.operation(VarHandleRepresentationTests.kt:294)                      |
+|   array ➜ FloatArray#1 at VarHandleFloatRepresentationTest.operation(VarHandleRepresentationTests.kt:296)                       |
+|   array[1].compareAndSet(3.0, 1.0): false at VarHandleFloatRepresentationTest.operation(VarHandleRepresentationTests.kt:296)    |
+|   array ➜ FloatArray#1 at VarHandleFloatRepresentationTest.operation(VarHandleRepresentationTests.kt:297)                       |
+|   array[1].set(2.0) at VarHandleFloatRepresentationTest.operation(VarHandleRepresentationTests.kt:297)                          |
+|   result: void                                                                                                                  |
+| ------------------------------------------------------------------------------------------------------------------------------- |

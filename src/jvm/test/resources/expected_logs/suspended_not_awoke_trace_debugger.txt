@@ -6,21 +6,21 @@
 | ---------------------------------------- |
 
 The following interleaving leads to the error:
-| ------------------------------------------------------------------------------------------------------------------- |
-|     Thread 1      |                                            Thread 2                                             |
-| ------------------------------------------------------------------------------------------------------------------- |
-| trigger()         |                                                                                                 |
-|   allowed = true  |                                                                                                 |
-|   switch          |                                                                                                 |
-|                   | operation(): Suspended                                                                          |
-|                   |   allowed ➜ true                                                                                |
-|                   |   neverWakeUpChannel.receive() [suspendable: Continuation#1]: COROUTINE_SUSPENDED               |
-|                   |     BufferedChannel.receive$suspendImpl(BufferedChannel#1, Continuation#1): COROUTINE_SUSPENDED |
-|                   |     switch (reason: coroutine is suspended)                                                     |
-|   allowed = false |                                                                                                 |
-|   result: void    |                                                                                                 |
-|                   |   result: Suspended                                                                             |
-| ------------------------------------------------------------------------------------------------------------------- |
+| ----------------------------------------------------------------------------------------------------- |
+|     Thread 1      |                                     Thread 2                                      |
+| ----------------------------------------------------------------------------------------------------- |
+| trigger()         |                                                                                   |
+|   allowed = true  |                                                                                   |
+|   switch          |                                                                                   |
+|                   | operation(): Suspended                                                            |
+|                   |   allowed ➜ true                                                                  |
+|                   |   neverWakeUpChannel.receive() [suspendable: Continuation#1]: COROUTINE_SUSPENDED |
+|                   |     receive$suspendImpl(BufferedChannel#1, Continuation#1): COROUTINE_SUSPENDED   |
+|                   |     switch (reason: coroutine is suspended)                                       |
+|   allowed = false |                                                                                   |
+|   result: void    |                                                                                   |
+|                   |   result: Suspended                                                               |
+| ----------------------------------------------------------------------------------------------------- |
 
 Detailed trace:
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -32,7 +32,7 @@ Detailed trace:
 |                                                                                 | operation(): Suspended                                                                                                                                                                                                    |
 |                                                                                 |   allowed ➜ true at SuspendedNotAwokeTest.operation(SuspendedNotAwokeTest.kt:38)                                                                                                                                          |
 |                                                                                 |   neverWakeUpChannel.receive() [suspendable: Continuation#1]: COROUTINE_SUSPENDED at SuspendedNotAwokeTest.operation(SuspendedNotAwokeTest.kt:39)                                                                         |
-|                                                                                 |     BufferedChannel.receive$suspendImpl(BufferedChannel#1, Continuation#1): COROUTINE_SUSPENDED at BufferedChannel.receive(BufferedChannel.kt:0)                                                                          |
+|                                                                                 |     receive$suspendImpl(BufferedChannel#1, Continuation#1): COROUTINE_SUSPENDED at BufferedChannel.receive(BufferedChannel.kt:0)                                                                                          |
 |                                                                                 |       BufferedChannel.access$getReceiveSegment$FU$p(): AtomicReferenceFieldUpdaterImpl#1 at BufferedChannel.receive$suspendImpl(BufferedChannel.kt:667)                                                                   |
 |                                                                                 |       receiveSegment.get(): ChannelSegment#1 at BufferedChannel.receive$suspendImpl(BufferedChannel.kt:3519)                                                                                                              |
 |                                                                                 |       isClosedForReceive(): false at BufferedChannel.receive$suspendImpl(BufferedChannel.kt:3523)                                                                                                                         |
@@ -53,7 +53,7 @@ Detailed trace:
 |                                                                                 |         CancellableContinuationKt.getOrCreateCancellableContinuation(Continuation#1): Continuation#2 at BufferedChannel.receiveOnNoWaiterSuspend(BufferedChannel.kt:3572)                                                 |
 |                                                                                 |           DebugKt.getASSERTIONS_ENABLED(): true at CancellableContinuationImpl.<init>(CancellableContinuationImpl.kt:38)                                                                                                  |
 |                                                                                 |           delegate.getContext(): CombinedContext#1 at CancellableContinuationImpl.<init>(CancellableContinuationImpl.kt:41)                                                                                               |
-|                                                                                 |         BufferedChannel.updateCellReceive(ChannelSegment#1, 0, 0, Continuation#2): <SUSPEND> at BufferedChannel.receiveOnNoWaiterSuspend(BufferedChannel.kt:3575)                                                         |
+|                                                                                 |         updateCellReceive(ChannelSegment#1, 0, 0, Continuation#2): <SUSPEND> at BufferedChannel.receiveOnNoWaiterSuspend(BufferedChannel.kt:3575)                                                                         |
 |                                                                                 |           segment.getState(0): null at BufferedChannel.updateCellReceive(BufferedChannel.kt:999)                                                                                                                          |
 |                                                                                 |             data[1].get(): null at ChannelSegment.getState(BufferedChannel.kt:2773)                                                                                                                                       |
 |                                                                                 |           sendersAndCloseStatus.get(): 0 at BufferedChannel.updateCellReceive(BufferedChannel.kt:1007)                                                                                                                    |
@@ -65,7 +65,7 @@ Detailed trace:
 |                                                                                 |                 bufferEnd.get(): 0 at BufferedChannel.getBufferEndCounter(BufferedChannel.kt:72)                                                                                                                          |
 |                                                                                 |           BufferedChannelKt.access$getSUSPEND$p(): <SUSPEND> at BufferedChannel.updateCellReceive(BufferedChannel.kt:1020)                                                                                                |
 |                                                                                 |         BufferedChannelKt.access$getSUSPEND$p(): <SUSPEND> at BufferedChannel.receiveOnNoWaiterSuspend(BufferedChannel.kt:3577)                                                                                           |
-|                                                                                 |         BufferedChannel.prepareReceiverForSuspension(Continuation#2, ChannelSegment#1, 0) at BufferedChannel.receiveOnNoWaiterSuspend(BufferedChannel.kt:3578)                                                            |
+|                                                                                 |         prepareReceiverForSuspension(Continuation#2, ChannelSegment#1, 0) at BufferedChannel.receiveOnNoWaiterSuspend(BufferedChannel.kt:3578)                                                                            |
 |                                                                                 |           onReceiveEnqueued() at BufferedChannel.prepareReceiverForSuspension(BufferedChannel.kt:716)                                                                                                                     |
 |                                                                                 |           $this$prepareReceiverForSuspension.invokeOnCancellation(ChannelSegment#1, 0) at BufferedChannel.prepareReceiverForSuspension(BufferedChannel.kt:717)                                                            |
 |                                                                                 |             _decisionAndIndex.get(): 536870911 at CancellableContinuationImpl.invokeOnCancellation(CancellableContinuationImpl.kt:0)                                                                                      |

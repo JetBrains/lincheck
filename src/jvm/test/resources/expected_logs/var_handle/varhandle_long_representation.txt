@@ -13,19 +13,19 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| ----------------------------------------------------------------------------------------------------------------------------- |
-|                                                           Thread 1                                                            |
-| ----------------------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                                   |
-|   number ➜ 1 at VarHandleLongRepresentationTest.operation(VarHandleRepresentationTests.kt:253)                                |
-|   number.compareAndSet(1, 1): true at VarHandleLongRepresentationTest.operation(VarHandleRepresentationTests.kt:253)          |
-|   number.set(2) at VarHandleLongRepresentationTest.operation(VarHandleRepresentationTests.kt:254)                             |
-|   staticNumber ➜ 2 at VarHandleLongRepresentationTest.operation(VarHandleRepresentationTests.kt:256)                          |
-|   staticNumber.compareAndSet(2, 1): true at VarHandleLongRepresentationTest.operation(VarHandleRepresentationTests.kt:256)    |
-|   staticNumber.set(3) at VarHandleLongRepresentationTest.operation(VarHandleRepresentationTests.kt:257)                       |
-|   array ➜ LongArray#1 at VarHandleLongRepresentationTest.operation(VarHandleRepresentationTests.kt:259)                       |
-|   LongArray#1[1].compareAndSet(3, 1): false at VarHandleLongRepresentationTest.operation(VarHandleRepresentationTests.kt:259) |
-|   array ➜ LongArray#1 at VarHandleLongRepresentationTest.operation(VarHandleRepresentationTests.kt:260)                       |
-|   LongArray#1[1].set(2) at VarHandleLongRepresentationTest.operation(VarHandleRepresentationTests.kt:260)                     |
-|   result: void                                                                                                                |
-| ----------------------------------------------------------------------------------------------------------------------------- |
+| -------------------------------------------------------------------------------------------------------------------------- |
+|                                                          Thread 1                                                          |
+| -------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                |
+|   number ➜ 1 at VarHandleLongRepresentationTest.operation(VarHandleRepresentationTests.kt:253)                             |
+|   number.compareAndSet(1, 1): true at VarHandleLongRepresentationTest.operation(VarHandleRepresentationTests.kt:253)       |
+|   number.set(2) at VarHandleLongRepresentationTest.operation(VarHandleRepresentationTests.kt:254)                          |
+|   staticNumber ➜ 2 at VarHandleLongRepresentationTest.operation(VarHandleRepresentationTests.kt:256)                       |
+|   staticNumber.compareAndSet(2, 1): true at VarHandleLongRepresentationTest.operation(VarHandleRepresentationTests.kt:256) |
+|   staticNumber.set(3) at VarHandleLongRepresentationTest.operation(VarHandleRepresentationTests.kt:257)                    |
+|   array ➜ LongArray#1 at VarHandleLongRepresentationTest.operation(VarHandleRepresentationTests.kt:259)                    |
+|   array[1].compareAndSet(3, 1): false at VarHandleLongRepresentationTest.operation(VarHandleRepresentationTests.kt:259)    |
+|   array ➜ LongArray#1 at VarHandleLongRepresentationTest.operation(VarHandleRepresentationTests.kt:260)                    |
+|   array[1].set(2) at VarHandleLongRepresentationTest.operation(VarHandleRepresentationTests.kt:260)                        |
+|   result: void                                                                                                             |
+| -------------------------------------------------------------------------------------------------------------------------- |
