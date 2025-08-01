@@ -196,7 +196,7 @@ class TraceCollectingEventTracker(
             parameters = emptyList()
         )
         strategy.tracePointCreated(null, tracePoint)
-        threadData.pushStackFrame(tracePoint, Thread.currentThread(), false)
+        threadData.pushStackFrame(tracePoint, Thread.currentThread(), isInline = false)
         threadDescriptor.enableAnalysis()
     }
 
@@ -446,7 +446,7 @@ class TraceCollectingEventTracker(
             parameters = params.map { TRObjectOrNull(it) }
         )
         strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
-        threadData.pushStackFrame(tracePoint, receiver, false)
+        threadData.pushStackFrame(tracePoint, receiver, isInline = false)
 
         // if the method has certain guarantees, enter the corresponding section
         threadData.enterAnalysisSection(methodSection)
@@ -527,7 +527,7 @@ class TraceCollectingEventTracker(
             parameters = emptyList()
         )
         strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
-        threadData.pushStackFrame(tracePoint, owner, true)
+        threadData.pushStackFrame(tracePoint, owner, isInline = true)
     }
 
     override fun onInlineMethodCallReturn(methodId: Int): Unit = runInsideIgnoredSection {
@@ -606,7 +606,7 @@ class TraceCollectingEventTracker(
         )
         strategy.registerCurrentThread(threadData.threadId)
         strategy.tracePointCreated(null,tracePoint)
-        threadData.pushStackFrame(tracePoint, null, false)
+        threadData.pushStackFrame(tracePoint, null, isInline = false)
 
         startTime = System.currentTimeMillis()
     }
