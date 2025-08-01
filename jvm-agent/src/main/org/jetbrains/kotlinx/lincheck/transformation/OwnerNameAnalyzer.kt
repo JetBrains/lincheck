@@ -12,7 +12,6 @@ package org.jetbrains.kotlinx.lincheck.transformation
 
 import org.jetbrains.lincheck.descriptors.*
 import org.jetbrains.lincheck.trace.TRACE_CONTEXT
-import org.jetbrains.lincheck.util.Logger
 import org.objectweb.asm.*
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import kotlin.math.max
@@ -396,35 +395,26 @@ class OwnerNameAnalyzerAdapter protected constructor(
             /* Local variable access instructions */
 
             Opcodes.ALOAD, Opcodes.ILOAD, Opcodes.FLOAD -> {
-                val localVarName = methodVariables.getActiveVar(intArg)
-                if (localVarName != null) {
-                    val localVarDescriptor = TRACE_CONTEXT.getVariableDescriptor(localVarName)
-                    val localVarAccess = LocalVariableAccessLocation(localVarDescriptor)
-                    push(OwnerName(localVarAccess))
-                } else {
-                    push(null)
-                }
+                val ownerName = get(intArg)
+                push(ownerName)
             }
 
             Opcodes.LLOAD, Opcodes.DLOAD -> {
-                val localVarName = methodVariables.getActiveVar(intArg)
-                if (localVarName != null) {
-                    val localVarDescriptor = TRACE_CONTEXT.getVariableDescriptor(localVarName)
-                    val localVarAccess = LocalVariableAccessLocation(localVarDescriptor)
-                    push(OwnerName(localVarAccess))
-                    push(null)
-                } else {
-                    push(null)
-                    push(null)
-                }
+                val ownerName = get(intArg)
+                push(ownerName)
+                push(null)
             }
 
             Opcodes.ASTORE, Opcodes.ISTORE, Opcodes.FSTORE -> {
-                pop()
+                val ownerName = pop()
+                set(intArg, ownerName)
             }
 
             Opcodes.LSTORE, Opcodes.DSTORE -> {
-                pop(2)
+                pop()
+                val ownerName = pop()
+                set(intArg, ownerName)
+                set(intArg + 1, null)
             }
 
             /* Field access instructions */
