@@ -52,10 +52,10 @@ internal class TraceRecorderMethodTransformer(
         visitLabel(startLabel)
      }
 
-     override fun onMethodExit(opcode: Int) {
+    override fun onMethodExit(opcode: Int) {
          invokeStatic(TraceRecorderInjections::stopTraceRecorderAndDumpTrace)
          super.onMethodExit(opcode)
-     }
+    }
 
     override fun visitMaxs(maxStack: Int, maxLocals: Int) {
         val endLabel = Label()

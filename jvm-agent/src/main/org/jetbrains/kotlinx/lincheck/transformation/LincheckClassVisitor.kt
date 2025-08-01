@@ -99,13 +99,18 @@ internal class LincheckClassVisitor(
         }
 
         if (instrumentationMode == TRACE_RECORDING) {
-            if (methodName == "<clinit>" || methodName == "<init>") return mv
+            if (methodName == "<clinit>") return mv
 
             mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
             mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
 
             val adapter = GeneratorAdapter(mv, access, methodName, desc)
             mv = adapter
+
+            if (methodName == "<init>") {
+                mv = ObjectCreationTransformer(fileName, className, methodName, adapter, mv)
+                return mv
+            }
 
             // If it is Thread don't instrument all other things in it
             if (isThreadSubClass(className)) {
