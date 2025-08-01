@@ -4,7 +4,7 @@ java.lang.IllegalStateException: Check failed.
 	at org.jetbrains.kotlinx.lincheck_test.representation.BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:56)
 	at org.jetbrains.kotlinx.lincheck_test.representation.BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:44)
 	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:51)
-	at java.base/java.lang.Thread.run(Thread.java:833)
+	at java.base/java.lang.Thread.run(Thread.java:840)
 
 The following interleaving leads to the error:
 | ------------------------------------------------------ |
@@ -31,13 +31,13 @@ Detailed trace:
 |       methodHandle.invoke(CounterDerived#1) at MethodHandlesFindSpecialRepresentationTest.doTest(MethodHandlesLookupTests.kt:29)                                                |
 |         DirectMethodHandle.internalMemberName(Special#1): MemberName#1 at DirectMethodHandle.Holder.invokeSpecial(DirectMethodHandle$Holder:0)                                  |
 |         MethodHandle.linkToSpecial(CounterDerived#1, MemberName#1) at DirectMethodHandle.Holder.invokeSpecial(DirectMethodHandle$Holder:0)                                      |
-|           CounterDerived#1.value ➜ 2 at Counter.increment(MethodHandlesLookupTests.kt:156)                                                                                      |
-|           CounterDerived#1.value = 3 at Counter.increment(MethodHandlesLookupTests.kt:156)                                                                                      |
+|           value ➜ 2 at Counter.increment(MethodHandlesLookupTests.kt:156)                                                                                                       |
+|           value = 3 at Counter.increment(MethodHandlesLookupTests.kt:156)                                                                                                       |
 |       methodHandle.invokeExact(CounterDerived#1) at MethodHandlesFindSpecialRepresentationTest.doTest(MethodHandlesLookupTests.kt:30)                                           |
 |         DirectMethodHandle.internalMemberName(Special#1): MemberName#1 at DirectMethodHandle.Holder.invokeSpecial(DirectMethodHandle$Holder:0)                                  |
 |         MethodHandle.linkToSpecial(CounterDerived#1, MemberName#1) at DirectMethodHandle.Holder.invokeSpecial(DirectMethodHandle$Holder:0)                                      |
-|           CounterDerived#1.value ➜ 3 at Counter.increment(MethodHandlesLookupTests.kt:156)                                                                                      |
-|           CounterDerived#1.value = 4 at Counter.increment(MethodHandlesLookupTests.kt:156)                                                                                      |
+|           value ➜ 3 at Counter.increment(MethodHandlesLookupTests.kt:156)                                                                                                       |
+|           value = 4 at Counter.increment(MethodHandlesLookupTests.kt:156)                                                                                                       |
 |       counter.value ➜ 4 at MethodHandlesFindSpecialRepresentationTest.doTest(MethodHandlesLookupTests.kt:31)                                                                    |
 |   result: IllegalStateException #1                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
