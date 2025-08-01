@@ -108,7 +108,7 @@ internal class LincheckClassVisitor(
             mv = adapter
 
             if (methodName == "<init>") {
-                mv = ObjectCreationTransformer(fileName, className, methodName, adapter, mv)
+                mv = ObjectCreationMinimalTransformer(fileName, className, methodName, adapter, mv)
                 return mv
             }
 
