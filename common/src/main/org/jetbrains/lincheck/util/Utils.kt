@@ -38,6 +38,14 @@ fun isJavaLambdaClass(className: String): Boolean =
     className.contains("\$\$Lambda")
 
 /**
+ * Extracts and returns the enclosing class name of a Java lambda class.
+ */
+internal fun getJavaLambdaEnclosingClass(className: String): String {
+    require(isJavaLambdaClass(className)) { "Not a Java lambda class: $className" }
+    return className.substringBefore("\$\$Lambda")
+}
+
+/**
  * Tests if the provided [className] represents one of jdk internal [ThreadContainer] classes
  * that use [JavaLangAccess.start] API to start threads.
  */

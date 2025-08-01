@@ -42,6 +42,7 @@ import org.jetbrains.lincheck.analysis.*
 import org.jetbrains.lincheck.descriptors.*
 import org.jetbrains.lincheck.util.*
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
+import kotlin.text.isNotEmpty
 import kotlin.Result as KResult
 import org.objectweb.asm.commons.Method.getMethod as getAsmMethod
 
@@ -2129,7 +2130,8 @@ internal abstract class ManagedStrategy(
     private fun findOwnerName(obj: Any?, className: String, codeLocationId: Int): String? {
         val threadId = threadScheduler.getCurrentThreadId()
         val shadowStackFrame = shadowStack[threadId]!!.last()
-        return findOwnerName(obj, className, codeLocationId, shadowStackFrame, objectTracker)
+        val ownerName = findOwnerName(obj, className, codeLocationId, shadowStackFrame, objectTracker)
+        return ownerName?.takeIf { it.isNotEmpty() }
     }
 
     private fun AtomicMethodDescriptor.findAtomicOwnerName(

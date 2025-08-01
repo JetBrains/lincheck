@@ -21,6 +21,7 @@ import org.jetbrains.lincheck.analysis.ShadowStackFrame
 import org.jetbrains.lincheck.analysis.findCurrentReceiverFieldReferringTo
 import org.jetbrains.lincheck.analysis.findLocalVariableFieldReferringTo
 import org.jetbrains.lincheck.analysis.findLocalVariableReferringTo
+import org.jetbrains.lincheck.analysis.isCurrentStackFrameReceiver
 import org.jetbrains.lincheck.analysis.isThisName
 import org.jetbrains.lincheck.descriptors.AccessLocation
 import org.jetbrains.lincheck.descriptors.ArrayElementByIndexAccessLocation
@@ -55,11 +56,11 @@ fun findOwnerName(
         return objectTracker.getObjectRepresentation(obj)
     }
     // if the current owner is `this` - no owner needed
-    if (obj === shadowStackFrame.instance) return null
+    if (shadowStackFrame.isCurrentStackFrameReceiver(obj)) return null
     // lookup for a statically inferred owner name
-    val ownerName = CodeLocations.accessPath(codeLocationId)
+    val ownerName = CodeLocations.accessPath(codeLocationId)?.toString()
     if (ownerName != null) {
-        return ownerName.toString()
+        return if (isThisName(ownerName)) null else ownerName
     }
     // otherwise return object's string representation
     return objectTracker.getObjectRepresentation(obj)

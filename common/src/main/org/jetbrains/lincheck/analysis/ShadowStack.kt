@@ -42,8 +42,18 @@ class ShadowStackFrame(val instance: Any?) {
     }
 }
 
-fun List<ShadowStackFrame>.isCurrentStackFrameReceiver(obj: Any): Boolean =
-    (obj === lastOrNull()?.instance)
+fun ShadowStackFrame.isCurrentStackFrameReceiver(obj: Any): Boolean {
+    // check if obj is equal to current `this`
+    if (obj === instance) return true
+    // check lambda's enclosing class
+    val instanceClassName = instance?.javaClass?.name
+    if (instanceClassName != null && isJavaLambdaClass(instanceClassName)) {
+        if (obj.javaClass.name == getJavaLambdaEnclosingClass(instanceClassName)) return true
+    }
+    // return false otherwise
+    return false
+}
+
 
 fun ShadowStackFrame.findCurrentReceiverFieldReferringTo(obj: Any): FieldAccessLocation? {
     val field = instance?.findInstanceFieldReferringTo(obj)
