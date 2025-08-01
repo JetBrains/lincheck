@@ -23,7 +23,6 @@ import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import org.jetbrains.lincheck.util.isThreadContainerClass
 import org.jetbrains.lincheck.util.isIntellijRuntimeAgentClass
 import org.jetbrains.lincheck.util.isThreadContainerThreadStartMethod
-import org.objectweb.asm.util.CheckClassAdapter
 
 internal class LincheckClassVisitor(
     private val classVisitor: SafeClassWriter,
@@ -197,6 +196,10 @@ internal class LincheckClassVisitor(
             val sharedMemoryAccessTransformer = applySharedMemoryAccessTransformer(methodName, adapter, mv)
             mv = sharedMemoryAccessTransformer
             mv = applyAnalyzerAdapter(access, methodName, desc, sharedMemoryAccessTransformer, mv)
+            mv = applyOwnerNameAnalyzerAdapter(access, methodName, desc, locals, mv,
+                methodCallTransformer = null,
+                sharedMemoryAccessTransformer,
+            )
             return mv
         }
 
@@ -214,7 +217,9 @@ internal class LincheckClassVisitor(
             return mv
         }
 
-        mv = MethodCallTransformer(fileName, className, methodName, adapter, mv)
+        val methodCallTransformer = MethodCallTransformer(fileName, className, methodName, adapter, mv)
+        mv = methodCallTransformer
+
         mv = ObjectCreationTransformer(fileName, className, methodName, adapter, mv)
 
         // TODO: replace with proper instrumentation mode for debugger, don't use globals
@@ -241,6 +246,10 @@ internal class LincheckClassVisitor(
         mv = InlineMethodCallTransformer(fileName, className, methodName, desc, adapter, mv, locals, labels)
 
         mv = applyAnalyzerAdapter(access, methodName, desc, mv,
+            sharedMemoryAccessTransformer,
+        )
+        mv = applyOwnerNameAnalyzerAdapter(access, methodName, desc, locals, mv,
+            methodCallTransformer,
             sharedMemoryAccessTransformer,
         )
 
@@ -347,14 +356,14 @@ internal class LincheckClassVisitor(
         descriptor: String,
         methodVariables: MethodVariables,
         methodVisitor: MethodVisitor,
-        methodTransformer: MethodCallMinimalTransformer,
-        sharedMemoryAccessTransformer: SharedMemoryAccessTransformer,
+        methodCallTransformer: MethodCallTransformerBase?,
+        sharedMemoryAccessTransformer: SharedMemoryAccessTransformer?,
     ): OwnerNameAnalyzerAdapter {
         val ownerNameAnalyzer = OwnerNameAnalyzerAdapter(className, access, methodName, descriptor, methodVisitor,
             methodVariables
         )
-        methodTransformer.ownerNameAnalyzer = ownerNameAnalyzer
-        sharedMemoryAccessTransformer.ownerNameAnalyzer = ownerNameAnalyzer
+        methodCallTransformer?.ownerNameAnalyzer = ownerNameAnalyzer
+        sharedMemoryAccessTransformer?.ownerNameAnalyzer = ownerNameAnalyzer
         return ownerNameAnalyzer
     }
 
