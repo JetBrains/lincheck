@@ -17,6 +17,11 @@ import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.MethodVisitor
+import org.objectweb.asm.Opcodes
+import org.objectweb.asm.Opcodes.ACC_ABSTRACT
+import org.objectweb.asm.Opcodes.ACC_BRIDGE
+import org.objectweb.asm.Opcodes.ACC_NATIVE
+import org.objectweb.asm.Opcodes.ACC_SYNTHETIC
 import org.objectweb.asm.commons.GeneratorAdapter
 import java.lang.instrument.ClassFileTransformer
 import java.security.ProtectionDomain
@@ -94,9 +99,13 @@ private class TraceAgentClassVisitor(
     ): MethodVisitor {
         fun MethodVisitor.newAdapter() = GeneratorAdapter(this, access, methodName, desc)
 
+        val isNotSynthetic = access and (ACC_SYNTHETIC or ACC_BRIDGE or ACC_ABSTRACT or ACC_NATIVE) == 0
+
         var mv = super.visitMethod(access, methodName, desc, signature, exceptions)
+        // Don't transform synthetic methods, as they cannot be asked for by the user
         if (className == TraceAgentParameters.classUnderTraceDebugging &&
-            methodName == TraceAgentParameters.methodUnderTraceDebugging) {
+            methodName == TraceAgentParameters.methodUnderTraceDebugging &&
+            isNotSynthetic) {
             mv = methodTransformer(mv.newAdapter(), access, methodName, desc)
         }
 
