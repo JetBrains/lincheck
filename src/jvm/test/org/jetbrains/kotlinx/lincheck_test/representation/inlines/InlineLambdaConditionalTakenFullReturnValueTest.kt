@@ -37,7 +37,7 @@ class InlineLambdaConditionalTakenFullReturnValueTest: BaseTraceRepresentationTe
         run {
             escape = "IN LAMBDA"
             if (!isFalse) return -1
-            escape = "AFTER LAMBDA"
+            escape = "UNREACHABLE"
             return -5
         }
         escape = "END"

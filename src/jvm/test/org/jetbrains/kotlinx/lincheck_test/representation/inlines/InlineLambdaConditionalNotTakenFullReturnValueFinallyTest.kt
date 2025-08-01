@@ -36,7 +36,7 @@ class InlineLambdaConditionalNotTakenFullReturnValueFinallyTest: BaseTraceRepres
         escape = "START"
         run {
             escape = "IN LAMBDA"
-            if (!isFalse) return -1
+            if (isFalse) return -1
             escape = "AFTER LAMBDA"
             return -5
         }
