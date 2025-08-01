@@ -29,7 +29,7 @@ The following interleaving leads to the error:
 |         counter ➜ 2                                           |                                 |
 |         counter = 3                                           |                                 |
 |         continuation = Continuation#5                         |                                 |
-|         Continuation#5.getOrThrow(): COROUTINE_SUSPENDED      |                                 |
+|         continuation.getOrThrow(): COROUTINE_SUSPENDED        |                                 |
 |         DebugProbesKt.probeCoroutineSuspended(Continuation#4) |                                 |
 |         switch (reason: coroutine is suspended)               |                                 |
 |                                                               |   continuation ➜ Continuation#5 |
@@ -76,7 +76,7 @@ Detailed trace:
 |         counter ➜ 2 at SuspendTraceResumptionReportingTest.function3(SuspendTraceReportingTest.kt:98)                                           |                                                                                                                        |
 |         counter = 3 at SuspendTraceResumptionReportingTest.function3(SuspendTraceReportingTest.kt:98)                                           |                                                                                                                        |
 |         continuation = Continuation#5 at SuspendTraceResumptionReportingTest.function3(SuspendTraceReportingTest.kt:100)                        |                                                                                                                        |
-|         Continuation#5.getOrThrow(): COROUTINE_SUSPENDED at SuspendTraceResumptionReportingTest.function3(SuspendTraceReportingTest.kt:99)      |                                                                                                                        |
+|         continuation.getOrThrow(): COROUTINE_SUSPENDED at SuspendTraceResumptionReportingTest.function3(SuspendTraceReportingTest.kt:99)        |                                                                                                                        |
 |           result ➜ UNDECIDED at SafeContinuation.getOrThrow(SafeContinuationJvm.kt:51)                                                          |                                                                                                                        |
 |           result.compareAndSet(UNDECIDED, COROUTINE_SUSPENDED): true at SafeContinuation.getOrThrow(SafeContinuationJvm.kt:53)                  |                                                                                                                        |
 |         DebugProbesKt.probeCoroutineSuspended(Continuation#4) at SuspendTraceResumptionReportingTest.function3(SuspendTraceReportingTest.kt:99) |                                                                                                                        |
