@@ -42,13 +42,8 @@ class ShadowStackFrame(val instance: Any?) {
     }
 }
 
-fun ShadowStackFrame.isCurrentStackFrameReceiver(obj: Any): Boolean {
-    // check if obj is equal to current `this`
-    if (obj === instance) return true
-    // return false otherwise
-    return false
-}
-
+fun ShadowStackFrame.isCurrentStackFrameReceiver(obj: Any): Boolean =
+    (obj === instance)
 
 fun ShadowStackFrame.findCurrentReceiverFieldReferringTo(obj: Any): FieldAccessLocation? {
     val field = instance?.findInstanceFieldReferringTo(obj)
