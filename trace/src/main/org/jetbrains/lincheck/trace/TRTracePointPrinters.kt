@@ -57,11 +57,6 @@ fun TRAppendable.appendAccessPath(accessPath: AccessPath) {
                 appendAccessPath(location.indexAccessPath)
                 appendSpecialSymbol("]")
             }
-
-            is ArrayLengthAccessLocation -> {
-                appendSpecialSymbol(".")
-                appendKeyword("length")
-            }
         }
     }
 }

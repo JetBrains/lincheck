@@ -59,7 +59,21 @@ data class ArrayElementByNameAccessLocation(
     val indexAccessPath: AccessPath
 ) : ArrayAccessLocation()
 
-data object ArrayLengthAccessLocation : ObjectAccessLocation()
+val ArrayLengthAccessLocation = ObjectFieldAccessLocation(
+    TRACE_CONTEXT.getFieldDescriptor(
+        /* NOTE: `java.lang.Array` does not actually exist in Java.
+         *   We added it here to handle `.length` accesses uniformly with regular instance field accesses,
+         *   and to avoid introducing special sub-class only for `.length` accesses.
+         *
+         * TODO: be careful on descriptors and Java reflection bridge APIs.
+         *   This design decision can backfire, so we might want to re-visit it in the future.
+         */
+        className = "java.lang.Array",
+        fieldName = "length",
+        isStatic = false,
+        isFinal = true,
+    )
+)
 
 class AccessPath(val locations: List<AccessLocation>) {
 
@@ -104,9 +118,6 @@ class AccessPath(val locations: List<AccessLocation>) {
                         append(location.indexAccessPath)
                         append(']')
                     }
-                }
-                is ArrayLengthAccessLocation -> {
-                    builder.append(".length")
                 }
             }
         }
