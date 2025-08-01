@@ -14,7 +14,7 @@ import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 
 /**
- * [LabelsTracker] tracks active regions of variables in the method.
+ * [LabelsTracker] tracks active regions of variables and status of the labels in the method.
  */
 internal class LabelsTracker(
     visitor: MethodVisitor,
