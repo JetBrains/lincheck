@@ -10,8 +10,9 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
-import org.jetbrains.lincheck.descriptors.*
 import org.jetbrains.lincheck.trace.TRACE_CONTEXT
+import org.jetbrains.lincheck.descriptors.*
+import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.*
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import kotlin.math.max
@@ -327,9 +328,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
 
     private fun set(local: Int, ownerName: OwnerName?) {
         maxLocals = max(maxLocals, local + 1)
-        while (local >= locals!!.size) {
-            locals!!.add(null)
-        }
+        locals!!.expandTo(maxLocals, null)
         locals!![local] = ownerName
     }
 
@@ -790,9 +789,8 @@ class OwnerNameAnalyzerAdapter protected constructor(
         if (this.locals == null) {
             this.locals = mutableListOf()
         }
-        for (i in 0 ..< computeTypesSize(numLocals, localsTypes)) {
-            if (locals!!.size <= i) locals!!.add(null)
-        }
+        val newSize = computeTypesSize(numLocals, localsTypes)
+        locals!!.resize(newSize, null)
     }
 
     private fun initializeStack(numStack: Int, stackTypes: Array<Any?>) {
@@ -801,9 +799,8 @@ class OwnerNameAnalyzerAdapter protected constructor(
         } else {
             this.stack!!.clear()
         }
-        for (i in 0 ..< computeTypesSize(numStack, stackTypes)) {
-            if (stack!!.size <= i) stack!!.add(null)
-        }
+        val newSize = computeTypesSize(numStack, stackTypes)
+        stack!!.resize(newSize, null)
     }
 
     private fun computeTypesSize(numTypes: Int, frameTypes: Array<Any?>): Int {
