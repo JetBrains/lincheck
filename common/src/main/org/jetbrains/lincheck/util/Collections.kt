@@ -1,14 +1,14 @@
 /*
  * Lincheck
  *
- * Copyright (C) 2019 - 2024 JetBrains s.r.o.
+ * Copyright (C) 2019 - 2025 JetBrains s.r.o.
  *
  * This Source Code Form is subject to the terms of the
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.util
+package org.jetbrains.lincheck.util
 
 /**
  * Finds the index of the first element that matches the given [predicate]
@@ -19,7 +19,7 @@ package org.jetbrains.kotlinx.lincheck.util
  * @return the index of the first matching element, or -1 if no elements match the condition.
  * @throws IllegalArgumentException if [from] is out of bounds.
  */
-internal fun <T> List<T>.indexOf(from: Int, predicate: (T) -> Boolean): Int {
+fun <T> List<T>.indexOf(from: Int, predicate: (T) -> Boolean): Int {
     require(from in indices) {
         "Index out of bounds: $from"
     }
@@ -38,7 +38,7 @@ internal fun <T> List<T>.indexOf(from: Int, predicate: (T) -> Boolean): Int {
  * @return the index of the last element matching the condition, or -1 if no such element exists.
  * @throws IllegalArgumentException if [from] is out of bounds of the list.
  */
-internal fun <T> List<T>.indexOfLast(from: Int, predicate: (T) -> Boolean): Int {
+fun <T> List<T>.indexOfLast(from: Int, predicate: (T) -> Boolean): Int {
     require(from in indices) {
         "Index out of bounds: $from"
     }
@@ -55,7 +55,7 @@ internal fun <T> List<T>.indexOfLast(from: Int, predicate: (T) -> Boolean): Int 
  *        start index and end index are inclusive.
  * @return a mutable sublist view of the list within the specified range.
  */
-internal fun <T> MutableList<T>.subList(range: IntRange): MutableList<T> =
+fun <T> MutableList<T>.subList(range: IntRange): MutableList<T> =
     subList(range.first, range.last + 1)
 
 /**
@@ -65,7 +65,7 @@ internal fun <T> MutableList<T>.subList(range: IntRange): MutableList<T> =
  * @param from The index of the element to move. Must be a valid index within the list.
  * @param to The target index where the element should be moved. Must be a valid index within the list.
  */
-internal fun <T> MutableList<T>.move(from: Int, to: Int) {
+fun <T> MutableList<T>.move(from: Int, to: Int) {
     if (from == to) return
     val element = this[from]
     removeAt(from)
@@ -82,7 +82,7 @@ internal fun <T> MutableList<T>.move(from: Int, to: Int) {
  * @param to the target index where the sublist will be inserted.
  *        The index must not overlap with the source range.
  */
-internal fun <T> MutableList<T>.move(from: IntRange, to: Int) {
+fun <T> MutableList<T>.move(from: IntRange, to: Int) {
     // don't need to do anything if the range is empty
     if (from.isEmpty()) return
     // check that the target position is not within the source range
@@ -99,9 +99,9 @@ internal fun <T> MutableList<T>.move(from: IntRange, to: Int) {
     addAll(adjustedTo, elements)
 }
 
-internal fun <K, V> MutableMap<K, V>.update(key: K, default: V, transform: (V) -> V): V =
+fun <K, V> MutableMap<K, V>.update(key: K, default: V, transform: (V) -> V): V =
     compute(key) { _, current -> transform(current ?: default) }!!
 
-internal fun <K, V> MutableMap<K, V>.updateInplace(key: K, default: V, apply: V.() -> Unit) {
+fun <K, V> MutableMap<K, V>.updateInplace(key: K, default: V, apply: V.() -> Unit) {
     computeIfAbsent(key) { default }.also(apply)
 }
