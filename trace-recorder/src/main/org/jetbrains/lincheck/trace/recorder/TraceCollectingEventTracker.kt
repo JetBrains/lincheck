@@ -551,7 +551,7 @@ class TraceCollectingEventTracker(
 
         val tracePoint = TRMethodCallTracePoint(
             threadId = threadData.threadId,
-            codeLocationId = -1,
+            codeLocationId = UNKNOWN_CODE_LOCATION_ID,
             methodId = TRACE_CONTEXT.getOrCreateMethodId(className, methodName, "()V"),
             obj = null,
             parameters = emptyList()
