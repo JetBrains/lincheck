@@ -127,10 +127,6 @@ internal class LincheckClassVisitor(
             mv = sharedMemoryAccessTransformer
 
             mv = LocalVariablesAccessTransformer(fileName, className, methodName, desc, isStatic, locals, adapter, mv)
-
-            // Inline method call transformer relies on the original variables' indices,
-            // so it should go before (in FIFO order) all transformers which can create local variables.
-            // All visitors created AFTER InlineMethodCallTransformer must use a non-remapping Generator adapter.
             mv = InlineMethodCallTransformer(fileName, className, methodName, desc, adapter, mv, locals, labels)
 
             mv = applyAnalyzerAdapter(access, methodName, desc, sharedMemoryAccessTransformer, mv)
@@ -229,10 +225,6 @@ internal class LincheckClassVisitor(
         mv = sharedMemoryAccessTransformer
 
         mv = LocalVariablesAccessTransformer(fileName, className, methodName, desc, isStatic, locals, adapter, mv)
-
-        // Inline method call transformer relies on the original variables' indices,
-        // so it should go before (in FIFO order) all transformers which can create local variables.
-        // All visitors created AFTER InlineMethodCallTransformer must use a non-remapping Generator adapter too.
         mv = InlineMethodCallTransformer(fileName, className, methodName, desc, adapter, mv, locals, labels)
 
         mv = applyAnalyzerAdapter(access, methodName, desc, sharedMemoryAccessTransformer, mv)
