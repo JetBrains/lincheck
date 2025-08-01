@@ -11,6 +11,52 @@
 package org.jetbrains.lincheck.util
 
 /**
+ * Expands the list to the specified size by adding the given value
+ * to the end of the list until it reaches the target size.
+ * If the current size is already greater than or equal to the specified size,
+ * the list remains unchanged.
+ *
+ * @param size the target size to expand the list to. Must be non-negative.
+ * @param value the element to fill the list with.
+ */
+fun <T> MutableList<T>.expandTo(size: Int, value: T) {
+    for (i in this.size until size) add(value)
+}
+
+/**
+ * Truncates the mutable list to the specified size by removing all elements beyond the target size.
+ * If the current size is already less than or equal to the specified size, the list remains unchanged.
+ *
+ * @param size the target size to truncate the list to.
+ *   Must be non-negative and not greater than the current list size.
+ */
+fun <T> MutableList<T>.truncateTo(size: Int) {
+    require(size >= 0 && size <= this.size) {
+        "New size must be non-negative and not greater than the current list size"
+    }
+    this.subList(size, this.size).clear()
+}
+
+/**
+ * Resizes the mutable list to the specified size.
+ * If the new size is greater than the current size, the list is expanded and the new elements are
+ * initialized to the specified default value.
+ * If the new size is less than the current size, the list is truncated.
+ *
+ * @param size The target size for the list.
+ * @param defaultValue The value to use for initializing new elements if the list needs to be expanded.
+ */
+fun <T> MutableList<T>.resize(size: Int, defaultValue: T) {
+    if (this.size == size) {
+        return
+    } else if (this.size < size) {
+        expandTo(size, defaultValue)
+    } else {
+        truncateTo(size)
+    }
+}
+
+/**
  * Finds the index of the first element that matches the given [predicate]
  * starting from the specified [from] index.
  *
