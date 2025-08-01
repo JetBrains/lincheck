@@ -127,10 +127,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
 
         super.visitFrame(type, numLocal, local, numStack, stack)
 
-        if (this.locals != null) {
-            this.locals!!.clear()
-            this.stack!!.clear()
-        } else {
+        if (this.locals == null) {
             this.locals = mutableListOf()
             this.stack = mutableListOf()
         }
@@ -768,31 +765,31 @@ class OwnerNameAnalyzerAdapter protected constructor(
 
     private fun setActiveLocalVariableNames(localVariables: List<LocalVariableInfo>) {
         if (this.locals == null) return
-        for (i in this.locals!!.indices) {
-            val localVarName = localVariables.find { it.index == i }?.name ?: continue
-            val localVarDescriptor = TRACE_CONTEXT.getVariableDescriptor(localVarName)
+        for (localVar in localVariables) {
+            val localVarDescriptor = TRACE_CONTEXT.getVariableDescriptor(localVar.name)
             val localVarAccess = LocalVariableAccessLocation(localVarDescriptor)
-            locals!![i] = OwnerName(localVarAccess)
+            set(localVar.index, OwnerName(localVarAccess))
         }
     }
 
-    private fun initializeLocals(numLocals: Int, localsTypes: Array<Any?> /* , localVariables: List<LocalVariableInfo> */) {
-        for (i in 0 ..< numLocals) {
-            val localType = localsTypes[i]
-            locals!!.add(null)
-            if (localType == Opcodes.LONG || localType == Opcodes.DOUBLE) {
-                locals!!.add(null)
-            }
+    private fun initializeLocals(numLocals: Int, localsTypes: Array<Any?>) {
+        for (i in 0 ..< computeTypesSize(numLocals, localsTypes)) {
+            if (locals!!.size <= i) locals!!.add(null)
         }
     }
 
-    private fun initializeStack(numTypes: Int, types: Array<Any?>) {
+    private fun initializeStack(numStack: Int, stackTypes: Array<Any?>) {
+        for (i in 0 ..< computeTypesSize(numStack, stackTypes)) {
+            if (stack!!.size <= i) stack!!.add(null)
+        }
+    }
+
+    private fun computeTypesSize(numTypes: Int, frameTypes: Array<Any?>): Int {
+        var size = 0
         for (i in 0 ..< numTypes) {
-            val type = types[i]
-            stack!!.add(null)
-            if (type == Opcodes.LONG || type == Opcodes.DOUBLE) {
-                stack!!.add(null)
-            }
+            val type = frameTypes[i]
+            size += if (type == Opcodes.LONG || type == Opcodes.DOUBLE) 2 else 1
         }
+        return size
     }
 }
