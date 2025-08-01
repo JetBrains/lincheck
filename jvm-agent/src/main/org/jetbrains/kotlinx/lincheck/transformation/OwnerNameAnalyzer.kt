@@ -102,12 +102,12 @@ class OwnerNameAnalyzerAdapter protected constructor(
      * @param methodVisitor the method visitor to which this adapter delegates calls. May be null.
      */
     init {
-        locals = mutableListOf<OwnerName?>()
-        stack = mutableListOf<OwnerName?>()
-
         val isStatic = (access and Opcodes.ACC_STATIC != 0)
         val argumentTypes = Type.getArgumentTypes(descriptor)!!
         val localsTypes = if (isStatic) argumentTypes else arrayOf(OBJECT_TYPE) + argumentTypes
+
+        locals = mutableListOf<OwnerName?>()
+        stack = mutableListOf<OwnerName?>()
 
         @Suppress("UNCHECKED_CAST")
         initializeLocals(localsTypes.size, localsTypes as Array<Any?>)
@@ -132,15 +132,6 @@ class OwnerNameAnalyzerAdapter protected constructor(
         }
 
         super.visitFrame(type, numLocal, local, numStack, stack)
-
-        if (this.locals == null) {
-            this.locals = mutableListOf()
-        }
-        if (this.stack == null) {
-            this.stack = mutableListOf()
-        } else {
-            this.stack!!.clear()
-        }
 
         initializeLocals(numLocal, local)
         initializeStack(numStack, stack)
@@ -785,9 +776,8 @@ class OwnerNameAnalyzerAdapter protected constructor(
     }
 
     private fun setActiveLocalVariableNames(localVariables: List<LocalVariableInfo>) {
-        if (this.locals == null && localVariables.isNotEmpty()) {
-            val maxIndex = localVariables.maxOf { it.index }
-            this.locals = MutableList(maxIndex + 1) { null }
+        if (this.locals == null) {
+            this.locals = mutableListOf()
         }
         for (localVar in localVariables) {
             val localVarDescriptor = TRACE_CONTEXT.getVariableDescriptor(localVar.name)
@@ -797,12 +787,20 @@ class OwnerNameAnalyzerAdapter protected constructor(
     }
 
     private fun initializeLocals(numLocals: Int, localsTypes: Array<Any?>) {
+        if (this.locals == null) {
+            this.locals = mutableListOf()
+        }
         for (i in 0 ..< computeTypesSize(numLocals, localsTypes)) {
             if (locals!!.size <= i) locals!!.add(null)
         }
     }
 
     private fun initializeStack(numStack: Int, stackTypes: Array<Any?>) {
+        if (this.stack == null) {
+            this.stack = mutableListOf()
+        } else {
+            this.stack!!.clear()
+        }
         for (i in 0 ..< computeTypesSize(numStack, stackTypes)) {
             if (stack!!.size <= i) stack!!.add(null)
         }
