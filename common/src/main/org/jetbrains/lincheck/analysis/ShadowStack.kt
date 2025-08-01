@@ -45,11 +45,6 @@ class ShadowStackFrame(val instance: Any?) {
 fun ShadowStackFrame.isCurrentStackFrameReceiver(obj: Any): Boolean {
     // check if obj is equal to current `this`
     if (obj === instance) return true
-    // check lambda's enclosing class
-    val instanceClassName = instance?.javaClass?.name
-    if (instanceClassName != null && isJavaLambdaClass(instanceClassName)) {
-        if (obj.javaClass.name == getJavaLambdaEnclosingClass(instanceClassName)) return true
-    }
     // return false otherwise
     return false
 }
