@@ -304,6 +304,14 @@ class TraceCollectingEventTracker(
         codeLocation: Int
     ) {}
 
+    // Needs to run inside ignored section
+    // as uninstrumented std lib code can be overshadowed by instrumented project code.
+    // Specifically, this function can reach `kotlin.text.StringsKt___StringsKt.take` which calls `length`.
+    // In IJ platform there is a custom `length` function at `com.intellij.util.text.ImmutableText.length`
+    // which overshadows kt std lib length, AND is instrumented when trace collector is used for IJ repo.
+    //
+    // This means that technically any function marked as silent or ignored can be overshadowed 
+    // and therefore all injected functions should run inside ignored section.
     override fun afterReadField(obj: Any?, codeLocation: Int, fieldId: Int, value: Any?) = runInsideIgnoredSection {
         val threadData = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTrackerData as? ThreadData? ?: return
         val tracePoint = TRReadTracePoint(
