@@ -171,7 +171,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
 
     override fun visitFieldInsn(opcode: Int, owner: String?, name: String?, descriptor: String) {
         super.visitFieldInsn(opcode, owner, name, descriptor)
-        execute(opcode, 0, className = owner?.toCanonicalClassName(), fieldName = name, descriptor = descriptor)
+        execute(opcode, 0, className = owner, fieldName = name, descriptor = descriptor)
     }
 
     override fun visitMethodInsn(
@@ -430,24 +430,14 @@ class OwnerNameAnalyzerAdapter protected constructor(
             /* Field access instructions */
 
             Opcodes.GETSTATIC -> {
-                val fieldDescriptor = runCatching {
-                    TRACE_CONTEXT.getFieldDescriptor(
-                        className = className!!,
-                        fieldName = fieldName!!,
-                        isStatic = true,
-                        isFinal = FinalFields.isFinalField(className.toInternalClassName(), fieldName)
-                    )
-                }
-                .onFailure { exception ->
-                    Logger.error { "Failed to get field descriptor for $className.$fieldName, reason: $exception" }
-                }
-                .getOrNull()
-                if (fieldDescriptor != null) {
-                    val fieldAccess = StaticFieldAccessLocation(fieldDescriptor)
-                    push(OwnerName(fieldAccess))
-                } else {
-                    push(null)
-                }
+                val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(
+                    className = className!!.toCanonicalClassName(),
+                    fieldName = fieldName!!,
+                    isStatic = true,
+                    isFinal = FinalFields.isFinalField(className, fieldName)
+                )
+                val fieldAccess = StaticFieldAccessLocation(fieldDescriptor)
+                push(OwnerName(fieldAccess))
                 if (Type.getType(descriptor).size == 2) {
                     push(null)
                 }
@@ -459,20 +449,14 @@ class OwnerNameAnalyzerAdapter protected constructor(
 
             Opcodes.GETFIELD -> {
                 val ownerName = pop()
-                val fieldDescriptor = runCatching {
-                    TRACE_CONTEXT.getFieldDescriptor(
-                        className = className!!,
-                        fieldName = fieldName!!,
-                        isStatic = false,
-                        isFinal = FinalFields.isFinalField(className.toInternalClassName(), fieldName)
-                    )
-                }
-                .onFailure { exception ->
-                    Logger.error { "Failed to get field descriptor for $className.$fieldName, reason: $exception" }
-                }
-                .getOrNull()
-                if (ownerName != null && fieldDescriptor != null) {
-                    val fieldAccess = ObjectFieldAccessLocation(fieldDescriptor)
+                val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(
+                    className = className!!.toCanonicalClassName(),
+                    fieldName = fieldName!!,
+                    isStatic = false,
+                    isFinal = FinalFields.isFinalField(className, fieldName)
+                )
+                val fieldAccess = ObjectFieldAccessLocation(fieldDescriptor)
+                if (ownerName != null) {
                     push(ownerName + fieldAccess)
                 } else {
                     push(null)
