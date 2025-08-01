@@ -188,7 +188,7 @@ class TraceCollectingEventTracker(
         threadDescriptor.enableAnalysis()
     }
 
-    override fun afterThreadFinish() {
+    override fun afterThreadFinish() = runInsideIgnoredSection {
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
         // Don't pop, we need it
@@ -304,7 +304,15 @@ class TraceCollectingEventTracker(
         codeLocation: Int
     ) {}
 
-    override fun afterReadField(obj: Any?, codeLocation: Int, fieldId: Int, value: Any?) {
+    // Needs to run inside ignored section
+    // as uninstrumented std lib code can be overshadowed by instrumented project code.
+    // Specifically, this function can reach `kotlin.text.StringsKt___StringsKt.take` which calls `length`.
+    // In IJ platform there is a custom `length` function at `com.intellij.util.text.ImmutableText.length`
+    // which overshadows kt std lib length, AND is instrumented when trace collector is used for IJ repo.
+    //
+    // This means that technically any function marked as silent or ignored can be overshadowed 
+    // and therefore all injected functions should run inside ignored section.
+    override fun afterReadField(obj: Any?, codeLocation: Int, fieldId: Int, value: Any?) = runInsideIgnoredSection {
         val threadData = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTrackerData as? ThreadData? ?: return
         val tracePoint = TRReadTracePoint(
             threadId = threadData.threadId,
@@ -316,7 +324,7 @@ class TraceCollectingEventTracker(
         strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
     }
 
-    override fun afterReadArrayElement(array: Any, index: Int, codeLocation: Int, value: Any?) {
+    override fun afterReadArrayElement(array: Any, index: Int, codeLocation: Int, value: Any?) = runInsideIgnoredSection {
         val threadData = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTrackerData as? ThreadData? ?: return
 
         val tracePoint = TRReadArrayTracePoint(
