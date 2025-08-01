@@ -62,6 +62,10 @@ fun findOwnerName(
     if (ownerName != null) {
         return if (isThisName(ownerName)) null else ownerName
     }
+    // lookup for a field name in the current stack frame `this`
+    shadowStackFrame.findCurrentReceiverFieldReferringTo(obj)?.let { access ->
+        return if (isThisName(access.fieldName)) null else access.fieldName
+    }
     // otherwise return object's string representation
     return objectTracker.getObjectRepresentation(obj)
 }
