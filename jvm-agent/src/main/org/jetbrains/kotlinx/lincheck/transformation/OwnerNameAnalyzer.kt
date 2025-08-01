@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.transformation
 
 import org.jetbrains.lincheck.descriptors.*
 import org.jetbrains.lincheck.trace.TRACE_CONTEXT
+import org.jetbrains.lincheck.util.Logger
 import org.objectweb.asm.*
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import kotlin.math.max
@@ -434,9 +435,13 @@ class OwnerNameAnalyzerAdapter protected constructor(
                         className = className!!,
                         fieldName = fieldName!!,
                         isStatic = true,
-                        isFinal = FinalFields.isFinalField(className, fieldName)
+                        isFinal = FinalFields.isFinalField(className.toInternalClassName(), fieldName)
                     )
-                }.getOrNull()
+                }
+                .onFailure { exception ->
+                    Logger.error { "Failed to get field descriptor for $className.$fieldName, reason: $exception" }
+                }
+                .getOrNull()
                 if (fieldDescriptor != null) {
                     val fieldAccess = StaticFieldAccessLocation(fieldDescriptor)
                     push(OwnerName(fieldAccess))
@@ -459,9 +464,13 @@ class OwnerNameAnalyzerAdapter protected constructor(
                         className = className!!,
                         fieldName = fieldName!!,
                         isStatic = false,
-                        isFinal = FinalFields.isFinalField(className, fieldName)
+                        isFinal = FinalFields.isFinalField(className.toInternalClassName(), fieldName)
                     )
-                }.getOrNull()
+                }
+                .onFailure { exception ->
+                    Logger.error { "Failed to get field descriptor for $className.$fieldName, reason: $exception" }
+                }
+                .getOrNull()
                 if (ownerName != null && fieldDescriptor != null) {
                     val fieldAccess = ObjectFieldAccessLocation(fieldDescriptor)
                     push(ownerName + fieldAccess)
