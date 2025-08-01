@@ -20,7 +20,7 @@ The following interleaving leads to the error:
 |                                    |     counter ➜ AtomicInteger#1                               |
 |                                    |     counter.get(): 1                                        |
 |                                    |     continuation1 = Continuation#3                          |
-|                                    |     Continuation#3.getOrThrow(): COROUTINE_SUSPENDED        |
+|                                    |     continuation1.getOrThrow(): COROUTINE_SUSPENDED         |
 |                                    |     DebugProbesKt.probeCoroutineSuspended(Continuation#2)   |
 |                                    |     switch (reason: coroutine is suspended)                 |
 |     continuation1 ➜ Continuation#3 |                                                             |
@@ -50,7 +50,7 @@ Detailed trace:
 |                                                                                                                                             |     counter ➜ AtomicInteger#1 at SingleSuspensionPointTraceRepresentationTest.suspendAndCauseFailure(MultipleSuspensionsTests.kt:53)                             |
 |                                                                                                                                             |     counter.get(): 1 at SingleSuspensionPointTraceRepresentationTest.suspendAndCauseFailure(MultipleSuspensionsTests.kt:53)                                      |
 |                                                                                                                                             |     continuation1 = Continuation#3 at SingleSuspensionPointTraceRepresentationTest.suspendAndCauseFailure(MultipleSuspensionsTests.kt:56)                        |
-|                                                                                                                                             |     Continuation#3.getOrThrow(): COROUTINE_SUSPENDED at SingleSuspensionPointTraceRepresentationTest.suspendAndCauseFailure(MultipleSuspensionsTests.kt:56)      |
+|                                                                                                                                             |     continuation1.getOrThrow(): COROUTINE_SUSPENDED at SingleSuspensionPointTraceRepresentationTest.suspendAndCauseFailure(MultipleSuspensionsTests.kt:56)       |
 |                                                                                                                                             |       result ➜ UNDECIDED at SafeContinuation.getOrThrow(SafeContinuationJvm.kt:51)                                                                               |
 |                                                                                                                                             |       result.compareAndSet(UNDECIDED, COROUTINE_SUSPENDED): true at SafeContinuation.getOrThrow(SafeContinuationJvm.kt:53)                                       |
 |                                                                                                                                             |     DebugProbesKt.probeCoroutineSuspended(Continuation#2) at SingleSuspensionPointTraceRepresentationTest.suspendAndCauseFailure(MultipleSuspensionsTests.kt:56) |
