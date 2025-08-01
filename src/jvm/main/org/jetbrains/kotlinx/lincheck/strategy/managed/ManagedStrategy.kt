@@ -1268,7 +1268,7 @@ internal abstract class ManagedStrategy(
                     eventId = eventId,
                     iThread = threadId,
                     actorId = currentActorId[threadId]!!,
-                    ownerRepresentation = findOwnerName(obj, fieldDescriptor.className),
+                    ownerRepresentation = findOwnerName(obj, fieldDescriptor.className, codeLocation),
                     fieldName = fieldDescriptor.fieldName,
                     codeLocation = codeLocation,
                     isLocal = false,
@@ -1326,7 +1326,7 @@ internal abstract class ManagedStrategy(
                 eventId = eventId,
                 iThread = threadId,
                 actorId = currentActorId[threadId]!!,
-                ownerRepresentation = findOwnerName(obj, fieldDescriptor.className),
+                ownerRepresentation = findOwnerName(obj, fieldDescriptor.className, codeLocation),
                 fieldName = fieldDescriptor.fieldName,
                 codeLocation = codeLocation,
                 isLocal = false,
@@ -2090,7 +2090,7 @@ internal abstract class ManagedStrategy(
         callType: MethodCallTracePoint.CallType,
     ): MethodCallTracePoint {
         val (ownerName, params) = if (atomicMethodDescriptor == null) {
-            findOwnerName(owner, className) to methodParams.asList()
+            findOwnerName(owner, className, codeLocation) to methodParams.asList()
         } else {
             atomicMethodDescriptor.findAtomicOwnerName(owner!!, methodParams)
         }
@@ -2126,10 +2126,10 @@ internal abstract class ManagedStrategy(
     private fun MethodCallTracePoint.initializeParameters(parameters: List<Any?>) =
         initializeParameters(parameters.map { objectTracker.getObjectRepresentation(it) }, parameters.map { objectFqTypeName(it) })
 
-    private fun findOwnerName(obj: Any?, className: String? = null): String? {
+    private fun findOwnerName(obj: Any?, className: String, codeLocationId: Int): String? {
         val threadId = threadScheduler.getCurrentThreadId()
         val shadowStackFrame = shadowStack[threadId]!!.last()
-        return findOwnerName(obj, className, shadowStackFrame, objectTracker, constants)
+        return findOwnerName(obj, className, codeLocationId, shadowStackFrame, objectTracker)
     }
 
     private fun AtomicMethodDescriptor.findAtomicOwnerName(

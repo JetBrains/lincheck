@@ -38,8 +38,6 @@ internal class MethodCallMinimalTransformer(
     methodVisitor: MethodVisitor,
 ) : MethodCallTransformerBase(fileName, className, methodName, adapter, methodVisitor) {
 
-    var ownerNameAnalyzer: OwnerNameAnalyzerAdapter? = null
-
     override fun processMethodCall(desc: String, opcode: Int, owner: String, name: String, itf: Boolean) = adapter.run {
         val receiverType = getType("L$owner;")
         val returnType = getReturnType(desc)
