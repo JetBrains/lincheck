@@ -89,7 +89,10 @@ internal class SeekableChannelBufferedInputStream(
             buffer.clear()
             // Mark as empty for reading
             buffer.position(buffer.capacity())
+
             channel.position(pos)
+            // To support call of [position()] right after this seek() without buffer reading
+            bufferStartPosition = pos - buffer.position()
         } else {
             buffer.position((pos - bufferStartPosition).toInt())
         }
