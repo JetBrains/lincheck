@@ -102,8 +102,6 @@ internal class LincheckClassVisitor(
         }
 
         if (instrumentationMode == TRACE_RECORDING) {
-            if (methodName == "<clinit>") return mv
-
             mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
             mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
 
@@ -112,6 +110,12 @@ internal class LincheckClassVisitor(
 
             if (methodName == "<init>") {
                 mv = ObjectCreationMinimalTransformer(fileName, className, methodName, adapter, mv)
+                return mv
+            }
+
+            if (shouldWrapInIgnoredSection(className, methodName, desc)) {
+                // Note: <clinit> case is handle here as well
+                mv = IgnoredSectionWrapperTransformer(fileName, className, methodName, mv, mv)
                 return mv
             }
 
