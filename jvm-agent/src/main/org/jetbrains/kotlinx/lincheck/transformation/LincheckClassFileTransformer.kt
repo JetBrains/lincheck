@@ -105,7 +105,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         try {
             classNode.accept(visitor)
             writer.toByteArray().also {
-                if (true) {
+                if (dumpTransformedSources) {
                     val cr = ClassReader(it)
                     val sw = StringWriter()
                     val pw = PrintWriter(sw)
