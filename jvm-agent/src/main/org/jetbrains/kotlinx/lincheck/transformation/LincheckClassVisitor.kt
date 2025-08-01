@@ -23,7 +23,6 @@ import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import org.jetbrains.lincheck.util.isThreadContainerClass
 import org.jetbrains.lincheck.util.isIntellijRuntimeAgentClass
 import org.jetbrains.lincheck.util.isThreadContainerThreadStartMethod
-import sun.nio.ch.lincheck.*
 
 internal class LincheckClassVisitor(
     private val classVisitor: SafeClassWriter,
@@ -83,6 +82,8 @@ internal class LincheckClassVisitor(
         if (isNative) {
             Logger.debug { "Skipping transformation of the native method $className.$methodName" }
             return mv
+        } else {
+            Logger.debug { "Transforming method $className.$methodName" }
         }
 
         if (instrumentationMode == STRESS) {
@@ -115,7 +116,9 @@ internal class LincheckClassVisitor(
             }
 
             mv = ObjectCreationMinimalTransformer(fileName, className, methodName, adapter, mv)
-            mv = MethodCallMinimalTransformer(fileName, className, methodName, adapter, mv)
+
+            val methodCallTransformer = MethodCallMinimalTransformer(fileName, className, methodName, adapter, mv)
+            mv = methodCallTransformer
 
             // `SharedMemoryAccessTransformer` goes first because it relies on `AnalyzerAdapter`,
             // which should be put in front of the byte-code transformer chain,
@@ -130,7 +133,13 @@ internal class LincheckClassVisitor(
             // All visitors created AFTER InlineMethodCallTransformer must use a non-remapping Generator adapter.
             // mv = InlineMethodCallTransformer(fileName, className, methodName, desc, adapter, mv, locals)
 
-            mv = applyAnalyzerAdapter(access, methodName, desc, sharedMemoryAccessTransformer, mv)
+            mv = applyOwnerNameAnalyzerAdapter(access, methodName, desc, locals, mv,
+                methodCallTransformer,
+                sharedMemoryAccessTransformer,
+            )
+            mv = applyAnalyzerAdapter(access, methodName, desc, mv,
+                sharedMemoryAccessTransformer,
+            )
 
             // This tacker must be before all transformers that use MethodVariables to track variable regions
             mv = LocalVariablesTracker(mv, locals)
@@ -185,6 +194,10 @@ internal class LincheckClassVisitor(
             val sharedMemoryAccessTransformer = applySharedMemoryAccessTransformer(methodName, adapter, mv)
             mv = sharedMemoryAccessTransformer
             mv = applyAnalyzerAdapter(access, methodName, desc, sharedMemoryAccessTransformer, mv)
+            mv = applyOwnerNameAnalyzerAdapter(access, methodName, desc, locals, mv,
+                methodCallTransformer = null,
+                sharedMemoryAccessTransformer,
+            )
             return mv
         }
 
@@ -202,7 +215,9 @@ internal class LincheckClassVisitor(
             return mv
         }
 
-        mv = MethodCallTransformer(fileName, className, methodName, adapter, mv)
+        val methodCallTransformer = MethodCallTransformer(fileName, className, methodName, adapter, mv)
+        mv = methodCallTransformer
+
         mv = ObjectCreationTransformer(fileName, className, methodName, adapter, mv)
 
         // TODO: replace with proper instrumentation mode for debugger, don't use globals
@@ -232,7 +247,13 @@ internal class LincheckClassVisitor(
         // All visitors created AFTER InlineMethodCallTransformer must use a non-remapping Generator adapter too.
         // mv = InlineMethodCallTransformer(fileName, className, methodName, desc, adapter, mv, locals)
 
-        mv = applyAnalyzerAdapter(access, methodName, desc, sharedMemoryAccessTransformer, mv)
+        mv = applyAnalyzerAdapter(access, methodName, desc, mv,
+            sharedMemoryAccessTransformer,
+        )
+        mv = applyOwnerNameAnalyzerAdapter(access, methodName, desc, locals, mv,
+            methodCallTransformer,
+            sharedMemoryAccessTransformer,
+        )
 
         // This tacker must be before all transformers that use MethodVariables to track variable regions
         mv = LocalVariablesTracker(mv, locals)
@@ -331,12 +352,29 @@ internal class LincheckClassVisitor(
         return mv
     }
 
+    private fun applyOwnerNameAnalyzerAdapter(
+        access: Int,
+        methodName: String,
+        descriptor: String,
+        methodVariables: MethodVariables,
+        methodVisitor: MethodVisitor,
+        methodCallTransformer: MethodCallTransformerBase?,
+        sharedMemoryAccessTransformer: SharedMemoryAccessTransformer?,
+    ): OwnerNameAnalyzerAdapter {
+        val ownerNameAnalyzer = OwnerNameAnalyzerAdapter(className, access, methodName, descriptor, methodVisitor,
+            methodVariables
+        )
+        methodCallTransformer?.ownerNameAnalyzer = ownerNameAnalyzer
+        sharedMemoryAccessTransformer?.ownerNameAnalyzer = ownerNameAnalyzer
+        return ownerNameAnalyzer
+    }
+
     private fun applyAnalyzerAdapter(
         access: Int,
         methodName: String,
         descriptor: String,
-        sharedMemoryAccessTransformer: SharedMemoryAccessTransformer,
         methodVisitor: MethodVisitor,
+        sharedMemoryAccessTransformer: SharedMemoryAccessTransformer,
     ): AnalyzerAdapter {
         val analyzerAdapter = AnalyzerAdapter(className, access, methodName, descriptor, methodVisitor)
         sharedMemoryAccessTransformer.analyzer = analyzerAdapter

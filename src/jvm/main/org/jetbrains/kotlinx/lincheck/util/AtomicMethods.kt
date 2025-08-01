@@ -15,6 +15,7 @@ import org.jetbrains.kotlinx.lincheck.util.AtomicMethodKind.*
 import org.jetbrains.kotlinx.lincheck.util.AtomicApiKind.*
 import org.jetbrains.kotlinx.lincheck.util.MemoryOrdering.*
 import org.jetbrains.lincheck.descriptors.*
+import org.jetbrains.lincheck.trace.TRACE_CONTEXT
 import org.jetbrains.lincheck.util.*
 import sun.misc.Unsafe
 import java.util.concurrent.ConcurrentHashMap
@@ -228,17 +229,14 @@ internal fun AtomicMethodDescriptor.getAtomicFieldUpdaterAccessInfo(
         // extract offset
         val offsetField = receiver.javaClass.getDeclaredField("offset")
         val offset = UnsafeHolder.UNSAFE.getLong(receiver, UnsafeHolder.UNSAFE.objectFieldOffset(offsetField))
-        // lookup field name
-        val fieldName = findFieldNameByOffsetViaUnsafe(targetType, offset)
-            ?: error("Failed to find field name by offset $offset in ${targetType.name}")
+        // lookup field descriptor
+        val fieldDescriptor = findFieldDescriptorByOffsetViaUnsafe(targetType, offset)
+            ?: error("Failed to find field descriptor by offset $offset in ${targetType.name}")
 
         return AtomicMethodAccessInfo(
             obj = targetObject,
             clazz = targetType,
-            location = ObjectFieldAccessLocation(
-                className = targetType.name,
-                fieldName = fieldName
-            ),
+            location = ObjectFieldAccessLocation(fieldDescriptor),
             arguments = remainingArguments
         )
     } catch (t: Throwable) {
@@ -281,15 +279,12 @@ internal fun AtomicMethodDescriptor.getUnsafeAccessInfo(
 
         // Static field access case
         targetObject is Class<*> -> {
-            val fieldName = findFieldNameByOffsetViaUnsafe(targetObject, memoryOffset)
-                ?: error("Failed to find field name by offset $memoryOffset")
+            val fieldDescriptor = findFieldDescriptorByOffsetViaUnsafe(targetObject, memoryOffset)
+                ?: error("Failed to find field descriptor by offset $memoryOffset in ${targetObject.name}")
             AtomicMethodAccessInfo(
                 obj = null,
                 clazz = targetObject,
-                location = StaticFieldAccessLocation(
-                    className = targetObject.name,
-                    fieldName = fieldName,
-                ),
+                location = StaticFieldAccessLocation(fieldDescriptor),
                 arguments = remainingArguments
             )
         }
@@ -297,13 +292,13 @@ internal fun AtomicMethodDescriptor.getUnsafeAccessInfo(
         // Instance field access case
         targetObject != null -> {
             val targetType = targetObject::class.java
-            val className = targetType.name
-            val fieldName = findFieldNameByOffsetViaUnsafe(targetType, memoryOffset)
-                ?: error("Failed to find field name by offset $memoryOffset")
+            val fieldDescriptor = findFieldDescriptorByOffsetViaUnsafe(targetType, memoryOffset)
+                ?: error("Failed to find field descriptor by offset $memoryOffset in ${targetType.name}")
+
             AtomicMethodAccessInfo(
                 obj = targetObject,
                 clazz = targetType,
-                location = ObjectFieldAccessLocation(className, fieldName),
+                location = ObjectFieldAccessLocation(fieldDescriptor),
                 arguments = remainingArguments
             )
         }
@@ -352,16 +347,13 @@ internal fun AtomicMethodDescriptor.getVarHandleAccessInfo(
                 }
                 val receiverType = extractor.extractBase(varHandle)
                 val fieldOffset = extractor.extractFieldOffset(varHandle)
-                val fieldName = findFieldNameByOffsetViaUnsafe(receiverType, fieldOffset)
-                    ?: error("Failed to find field name by offset $fieldOffset in ${receiverType.name}")
+                val fieldDescriptor = findFieldDescriptorByOffsetViaUnsafe(receiverType, fieldOffset)
+                    ?: error("Failed to find field descriptor by offset $fieldOffset in ${receiverType.name}")
 
                 AtomicMethodAccessInfo(
                     obj = null,
                     clazz = receiverType,
-                    location = StaticFieldAccessLocation(
-                        className = receiverType.name,
-                        fieldName = fieldName
-                    ),
+                    location = StaticFieldAccessLocation(fieldDescriptor),
                     arguments = arguments.toList()
                 )
             } catch (t: Throwable) {
@@ -384,16 +376,13 @@ internal fun AtomicMethodDescriptor.getVarHandleAccessInfo(
                 }
                 val receiverType = extractor.extractReceiverType(varHandle)
                 val fieldOffset = extractor.extractFieldOffset(varHandle)
-                val fieldName = findFieldNameByOffsetViaUnsafe(receiverType, fieldOffset)
-                    ?: error("Failed to find field name by offset $fieldOffset in ${receiverType.name}")
+                val fieldDescriptor = findFieldDescriptorByOffsetViaUnsafe(receiverType, fieldOffset)
+                    ?: error("Failed to find field descriptor by offset $fieldOffset in ${receiverType.name}")
 
                 AtomicMethodAccessInfo(
                     obj = targetObject,
                     clazz = receiverType,
-                    location = ObjectFieldAccessLocation(
-                        className = receiverType.name,
-                        fieldName = fieldName
-                    ),
+                    location = ObjectFieldAccessLocation(fieldDescriptor),
                     arguments = arguments.drop(1)
                 )
             } catch (t: Throwable) {

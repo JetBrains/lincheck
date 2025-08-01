@@ -1,14 +1,60 @@
 /*
  * Lincheck
  *
- * Copyright (C) 2019 - 2024 JetBrains s.r.o.
+ * Copyright (C) 2019 - 2025 JetBrains s.r.o.
  *
  * This Source Code Form is subject to the terms of the
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.util
+package org.jetbrains.lincheck.util
+
+/**
+ * Expands the list to the specified size by adding the given value
+ * to the end of the list until it reaches the target size.
+ * If the current size is already greater than or equal to the specified size,
+ * the list remains unchanged.
+ *
+ * @param size the target size to expand the list to. Must be non-negative.
+ * @param value the element to fill the list with.
+ */
+fun <T> MutableList<T>.expandTo(size: Int, value: T) {
+    for (i in this.size until size) add(value)
+}
+
+/**
+ * Truncates the mutable list to the specified size by removing all elements beyond the target size.
+ * If the current size is already less than or equal to the specified size, the list remains unchanged.
+ *
+ * @param size the target size to truncate the list to.
+ *   Must be non-negative and not greater than the current list size.
+ */
+fun <T> MutableList<T>.truncateTo(size: Int) {
+    require(size >= 0 && size <= this.size) {
+        "New size must be non-negative and not greater than the current list size"
+    }
+    this.subList(size, this.size).clear()
+}
+
+/**
+ * Resizes the mutable list to the specified size.
+ * If the new size is greater than the current size, the list is expanded and the new elements are
+ * initialized to the specified default value.
+ * If the new size is less than the current size, the list is truncated.
+ *
+ * @param size The target size for the list.
+ * @param defaultValue The value to use for initializing new elements if the list needs to be expanded.
+ */
+fun <T> MutableList<T>.resize(size: Int, defaultValue: T) {
+    if (this.size == size) {
+        return
+    } else if (this.size < size) {
+        expandTo(size, defaultValue)
+    } else {
+        truncateTo(size)
+    }
+}
 
 /**
  * Finds the index of the first element that matches the given [predicate]
@@ -19,7 +65,7 @@ package org.jetbrains.kotlinx.lincheck.util
  * @return the index of the first matching element, or -1 if no elements match the condition.
  * @throws IllegalArgumentException if [from] is out of bounds.
  */
-internal fun <T> List<T>.indexOf(from: Int, predicate: (T) -> Boolean): Int {
+fun <T> List<T>.indexOf(from: Int, predicate: (T) -> Boolean): Int {
     require(from in indices) {
         "Index out of bounds: $from"
     }
@@ -38,7 +84,7 @@ internal fun <T> List<T>.indexOf(from: Int, predicate: (T) -> Boolean): Int {
  * @return the index of the last element matching the condition, or -1 if no such element exists.
  * @throws IllegalArgumentException if [from] is out of bounds of the list.
  */
-internal fun <T> List<T>.indexOfLast(from: Int, predicate: (T) -> Boolean): Int {
+fun <T> List<T>.indexOfLast(from: Int, predicate: (T) -> Boolean): Int {
     require(from in indices) {
         "Index out of bounds: $from"
     }
@@ -55,7 +101,7 @@ internal fun <T> List<T>.indexOfLast(from: Int, predicate: (T) -> Boolean): Int 
  *        start index and end index are inclusive.
  * @return a mutable sublist view of the list within the specified range.
  */
-internal fun <T> MutableList<T>.subList(range: IntRange): MutableList<T> =
+fun <T> MutableList<T>.subList(range: IntRange): MutableList<T> =
     subList(range.first, range.last + 1)
 
 /**
@@ -65,7 +111,7 @@ internal fun <T> MutableList<T>.subList(range: IntRange): MutableList<T> =
  * @param from The index of the element to move. Must be a valid index within the list.
  * @param to The target index where the element should be moved. Must be a valid index within the list.
  */
-internal fun <T> MutableList<T>.move(from: Int, to: Int) {
+fun <T> MutableList<T>.move(from: Int, to: Int) {
     if (from == to) return
     val element = this[from]
     removeAt(from)
@@ -82,7 +128,7 @@ internal fun <T> MutableList<T>.move(from: Int, to: Int) {
  * @param to the target index where the sublist will be inserted.
  *        The index must not overlap with the source range.
  */
-internal fun <T> MutableList<T>.move(from: IntRange, to: Int) {
+fun <T> MutableList<T>.move(from: IntRange, to: Int) {
     // don't need to do anything if the range is empty
     if (from.isEmpty()) return
     // check that the target position is not within the source range
@@ -99,9 +145,9 @@ internal fun <T> MutableList<T>.move(from: IntRange, to: Int) {
     addAll(adjustedTo, elements)
 }
 
-internal fun <K, V> MutableMap<K, V>.update(key: K, default: V, transform: (V) -> V): V =
+fun <K, V> MutableMap<K, V>.update(key: K, default: V, transform: (V) -> V): V =
     compute(key) { _, current -> transform(current ?: default) }!!
 
-internal fun <K, V> MutableMap<K, V>.updateInplace(key: K, default: V, apply: V.() -> Unit) {
+fun <K, V> MutableMap<K, V>.updateInplace(key: K, default: V, apply: V.() -> Unit) {
     computeIfAbsent(key) { default }.also(apply)
 }

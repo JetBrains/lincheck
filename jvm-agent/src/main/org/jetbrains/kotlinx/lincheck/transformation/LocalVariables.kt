@@ -10,11 +10,15 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
+import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.Label
 import org.objectweb.asm.Type
 
 typealias StackSlotIndex = Int
 typealias LocalVariablesMap = Map<StackSlotIndex, List<LocalVariableInfo>>
+typealias LocalVariablesMutableMap = MutableMap<StackSlotIndex, MutableList<LocalVariableInfo>>
+
+fun LocalVariablesMutableMap(): LocalVariablesMutableMap = mutableMapOf()
 
 private const val INLINE_FUNC_PREFIX = "\$i\$f\$"
 
@@ -24,7 +28,12 @@ internal fun List<LocalVariableInfo>.isUniqueVariable(): Boolean {
     return all { it.name == name && it.type == type }
 }
 
-data class LocalVariableInfo(val name: String, val index: Int, val labelIndexRange: Pair<Label, Label>, val type: Type) {
+data class LocalVariableInfo(
+    val name: String,
+    val index: Int,
+    val type: Type,
+    val labelIndexRange: Pair<Label, Label>
+) {
     val isInlineCallMarker = name.startsWith(INLINE_FUNC_PREFIX)
     val inlineMethodName = if (isInlineCallMarker) name.removePrefix(INLINE_FUNC_PREFIX) else null
 }
@@ -57,4 +66,10 @@ data class MethodVariables(val variables: LocalVariablesMap = emptyMap()) {
 
     fun getVarByName(name: String): Set<LocalVariableInfo> = varsByName.getOrElse(name, ::emptyList).toSet()
     fun hasVarByName(name: String): Boolean = varsByName.containsKey(name)
+
+    fun getActiveVar(index: StackSlotIndex): String? =
+        activeVars.firstOrNull { it.index == index }?.name
+
+    fun getActiveVars(): List<LocalVariableInfo> =
+        activeVariables.toList()
 }

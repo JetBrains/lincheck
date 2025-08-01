@@ -21,10 +21,54 @@ import org.jetbrains.lincheck.analysis.ShadowStackFrame
 import org.jetbrains.lincheck.analysis.findCurrentReceiverFieldReferringTo
 import org.jetbrains.lincheck.analysis.findLocalVariableFieldReferringTo
 import org.jetbrains.lincheck.analysis.findLocalVariableReferringTo
+import org.jetbrains.lincheck.analysis.isCurrentStackFrameReceiver
 import org.jetbrains.lincheck.analysis.isThisName
 import org.jetbrains.lincheck.descriptors.AccessLocation
 import org.jetbrains.lincheck.descriptors.ArrayElementByIndexAccessLocation
+import org.jetbrains.lincheck.descriptors.CodeLocations
 import org.jetbrains.lincheck.descriptors.FieldAccessLocation
+
+internal fun findOwnerName(
+    className: String,
+    shadowStackFrame: ShadowStackFrame,
+): String? {
+    // If the class name matches the current instance's class in the shadow stack,
+    // return null since the field belongs to the current class context and doesn't
+    // need an explicit owner prefix
+    if (className == shadowStackFrame.instance?.javaClass?.name) {
+        return null
+    }
+    return className.toSimpleClassName()
+}
+
+fun findOwnerName(
+    obj: Any?,
+    className: String,
+    codeLocationId: Int,
+    shadowStackFrame: ShadowStackFrame,
+    objectTracker: ObjectTracker,
+): String? {
+    if (obj == null) {
+        return findOwnerName(className, shadowStackFrame)
+    }
+    // do not prettify thread names
+    if (obj is Thread) {
+        return objectTracker.getObjectRepresentation(obj)
+    }
+    // if the current owner is `this` - no owner needed
+    if (shadowStackFrame.isCurrentStackFrameReceiver(obj)) return null
+    // lookup for a statically inferred owner name
+    val ownerName = CodeLocations.accessPath(codeLocationId)?.toString()
+    if (ownerName != null) {
+        return if (isThisName(ownerName)) null else ownerName
+    }
+    // lookup for a field name in the current stack frame `this`
+    shadowStackFrame.findCurrentReceiverFieldReferringTo(obj)?.let { access ->
+        return if (isThisName(access.fieldName)) null else access.fieldName
+    }
+    // otherwise return object's string representation
+    return objectTracker.getObjectRepresentation(obj)
+}
 
 /**
  * Finds the owner name of a given object. The owner name can originate from various sources
@@ -49,13 +93,7 @@ internal fun findOwnerName(
         require(className != null) {
             "Class name must be provided for null object"
         }
-        // If the class name matches the current instance's class in the shadow stack,
-        // return null since the field belongs to the current class context and doesn't
-        // need an explicit owner prefix
-        if (className == shadowStackFrame.instance?.javaClass?.name) {
-            return null
-        }
-        return className.toSimpleClassName()
+        return findOwnerName(className, shadowStackFrame)
     }
     // do not prettify thread names
     if (obj is Thread) {

@@ -6,8 +6,8 @@ The following interleaving leads to the error:
 | -------------------------------------------------------- |
 | $this_runCatching.block()                                |
 |   block()                                                |
-|     ReentrantLock#1.newCondition(): ConditionObject#1    |
-|     ReentrantLock#1.newCondition(): ConditionObject#2    |
+|     lock.newCondition(): ConditionObject#1               |
+|     lock.newCondition(): ConditionObject#2               |
 |     q.take()                                             |
 |       lock.lockInterruptibly()                           |
 |       count ➜ 0                                          |
@@ -35,9 +35,9 @@ Detailed trace:
 | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | $this_runCatching.block() at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:51) |
 |   block() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:108)                                       |
-|     ReentrantLock#1.newCondition(): ConditionObject#1 at ArrayBlockingQueue.<init>(ArrayBlockingQueue.java:275)                                    |
+|     lock.newCondition(): ConditionObject#1 at ArrayBlockingQueue.<init>(ArrayBlockingQueue.java:275)                                               |
 |       sync.newCondition(): ConditionObject#1 at ReentrantLock.newCondition(ReentrantLock.java:537)                                                 |
-|     ReentrantLock#1.newCondition(): ConditionObject#2 at ArrayBlockingQueue.<init>(ArrayBlockingQueue.java:276)                                    |
+|     lock.newCondition(): ConditionObject#2 at ArrayBlockingQueue.<init>(ArrayBlockingQueue.java:276)                                               |
 |       sync.newCondition(): ConditionObject#2 at ReentrantLock.newCondition(ReentrantLock.java:537)                                                 |
 |     q.take() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:113)                                    |
 |       lock.lockInterruptibly() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:417)                                                             |
