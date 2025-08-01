@@ -85,6 +85,8 @@ internal class LincheckClassVisitor(
         if (isNative) {
             Logger.debug { "Skipping transformation of the native method $className.$methodName" }
             return mv
+        } else {
+            Logger.debug { "Transforming method $className.$methodName" }
         }
 
         if (instrumentationMode == STRESS) {
