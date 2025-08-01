@@ -33,7 +33,7 @@ class InlineLambdaConditionalNotTakenReturnTest: BaseTraceRepresentationTest("in
         run {
             escape = "IN LAMBDA"
             if (isFalse) return@run
-            escape = "UNREACHABLE"
+            escape = "AFTER LAMBDA"
         }
         escape = "END"
     }
