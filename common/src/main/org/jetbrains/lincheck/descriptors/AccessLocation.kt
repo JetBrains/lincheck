@@ -10,6 +10,7 @@
 
 package org.jetbrains.lincheck.descriptors
 
+import org.jetbrains.lincheck.analysis.isThisName
 import org.jetbrains.lincheck.trace.*
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
@@ -73,12 +74,14 @@ class AccessPath(val locations: List<AccessLocation>) {
         for (location in locations) {
             when (location) {
                 is LocalVariableAccessLocation -> {
-                    builder.append(location.variableName)
+                    if (!isThisName(location.variableName)) {
+                        builder.append(location.variableName)
+                    }
                 }
                 is StaticFieldAccessLocation -> {
                     with(builder) {
-                        append(location.className.getSimpleClassName())
-                        append(".")
+                        // append(location.className.getSimpleClassName())
+                        // append(".")
                         append(location.fieldName)
                     }
                 }
@@ -107,7 +110,11 @@ class AccessPath(val locations: List<AccessLocation>) {
                 }
             }
         }
-        return builder.toString()
+        val result = builder.toString()
+        if (result.startsWith(".")) {
+            return result.substring(1)
+        }
+        return result
     }
 
     companion object {

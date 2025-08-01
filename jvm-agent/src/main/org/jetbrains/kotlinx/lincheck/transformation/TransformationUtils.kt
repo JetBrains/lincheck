@@ -533,14 +533,6 @@ internal fun isCoroutineStateMachineClass(className: String): Boolean {
 private val isCoroutineStateMachineClassMap = ConcurrentHashMap<String, Boolean>()
 
 /**
- * Extracts and returns the enclosing class name of a Java lambda class.
- */
-internal fun getJavaLambdaEnclosingClass(className: String): String {
-    require(isJavaLambdaClass(className)) { "Not a Java lambda class: $className" }
-    return className.substringBefore("\$\$Lambda")
-}
-
-/**
  * Tests if the provided [className] contains `"ClassLoader"` as a substring.
  */
 internal fun isClassLoaderClassName(className: String): Boolean =
