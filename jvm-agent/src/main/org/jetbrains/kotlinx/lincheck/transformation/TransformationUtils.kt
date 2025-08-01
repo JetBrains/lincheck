@@ -320,7 +320,7 @@ internal fun GeneratorAdapter.invokeBeforeEvent(debugMessage: String) = invokeIn
 }
 
 // Map for storing the declaring class and method of each function.
-internal val functionToDeclaringClassMap = HashMap<KFunction<*>, Pair<Type, Method>>()
+internal val functionToDeclaringClassMap = ConcurrentHashMap<KFunction<*>, Pair<Type, Method>>()
 
 /**
  * Invokes a static method represented by a KFunction.
