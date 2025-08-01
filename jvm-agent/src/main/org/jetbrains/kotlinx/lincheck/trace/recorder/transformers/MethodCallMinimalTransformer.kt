@@ -43,7 +43,7 @@ internal class MethodCallMinimalTransformer(
         val returnType = getReturnType(desc)
         val ownerName = ownerNameAnalyzer?.stack?.let { stack ->
             if (opcode == INVOKESTATIC) return@let null
-            val position = getArgumentTypes(desc).size
+            val position = getArgumentTypes(desc).sumOf { it.size }
             stack.getStackElementAt(position)
         }
         // STACK: receiver?, arguments
