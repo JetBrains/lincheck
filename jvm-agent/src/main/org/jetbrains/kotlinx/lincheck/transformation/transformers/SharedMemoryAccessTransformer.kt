@@ -109,14 +109,14 @@ internal class SharedMemoryAccessTransformer(
         )
         // STACK: <empty>
         pushNull()
-        loadNewCodeLocationId()
+        val codeLocationId = loadNewCodeLocationId()
         push(fieldId)
         // STACK: null, codeLocation, fieldId
         invokeStatic(Injections::beforeReadField)
         // STACK: <empty>
         super.visitFieldInsn(opcode, owner, fieldName, desc)
         // STACK: value
-        invokeAfterReadField(null, fieldId, getType(desc))
+        invokeAfterReadField(null, fieldId, getType(desc), codeLocationId)
         // STACK: value
         invokeBeforeEventIfPluginEnabled("read static field")
         // STACK: value
@@ -134,14 +134,14 @@ internal class SharedMemoryAccessTransformer(
         val ownerLocal = newLocal(getType("L$owner;")).also { copyLocal(it) }
         loadLocal(ownerLocal)
         // STACK: obj, obj
-        loadNewCodeLocationId(accessPath = ownerName)
+        val codeLocationId = loadNewCodeLocationId(accessPath = ownerName)
         push(fieldId)
         // STACK: obj, obj, codeLocation, fieldId
         invokeStatic(Injections::beforeReadField)
         // STACK: obj
         super.visitFieldInsn(opcode, owner, fieldName, desc)
         // STACK: obj
-        invokeAfterReadField(ownerLocal, fieldId, getType(desc))
+        invokeAfterReadField(ownerLocal, fieldId, getType(desc), codeLocationId)
         // STACK: value
         invokeBeforeEventIfPluginEnabled("read field")
         // STACK: value
@@ -243,7 +243,7 @@ internal class SharedMemoryAccessTransformer(
         loadLocal(arrayLocal)
         loadLocal(indexLocal)
         // STACK: array, index
-        loadNewCodeLocationId(accessPath = ownerName)
+        val codeLocationId = loadNewCodeLocationId(accessPath = ownerName)
         // STACK: array, index, codeLocation
         invokeStatic(Injections::beforeReadArray)
         // STACK: <empty>
@@ -252,7 +252,7 @@ internal class SharedMemoryAccessTransformer(
         // STACK: array, index
         super.visitInsn(opcode)
         // STACK: value
-        invokeAfterReadArray(arrayLocal, indexLocal, arrayElementType)
+        invokeAfterReadArray(arrayLocal, indexLocal, arrayElementType, codeLocationId)
         // STACK: value
         invokeBeforeEventIfPluginEnabled("read array")
         // STACK: value
@@ -281,7 +281,7 @@ internal class SharedMemoryAccessTransformer(
         invokeStatic(Injections::afterWrite)
     }
 
-    private fun GeneratorAdapter.invokeAfterReadField(ownerLocal: Int?, fieldId: Int, valueType: Type) {
+    private fun GeneratorAdapter.invokeAfterReadField(ownerLocal: Int?, fieldId: Int, valueType: Type, codeLocationId: Int) {
         // STACK: value
         val resultLocal = newLocal(valueType)
         copyLocal(resultLocal)
@@ -290,7 +290,7 @@ internal class SharedMemoryAccessTransformer(
         } else {
             pushNull()
         }
-        loadNewCodeLocationId()
+        push(codeLocationId)
         push(fieldId)
         loadLocal(resultLocal)
         box(valueType)
@@ -299,13 +299,13 @@ internal class SharedMemoryAccessTransformer(
         // STACK: value
     }
 
-    private fun GeneratorAdapter.invokeAfterReadArray(arrayLocal: Int, indexLocal: Int, valueType: Type) {
+    private fun GeneratorAdapter.invokeAfterReadArray(arrayLocal: Int, indexLocal: Int, valueType: Type, codeLocationId: Int) {
         // STACK: value
         val resultLocal = newLocal(valueType)
         copyLocal(resultLocal)
         loadLocal(arrayLocal)
         loadLocal(indexLocal)
-        loadNewCodeLocationId()
+        push(codeLocationId)
         loadLocal(resultLocal)
         box(valueType)
         // STACK: value, array, index, codeLocation, boxed value
