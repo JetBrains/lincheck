@@ -17,7 +17,6 @@ import org.jetbrains.lincheck.trace.TRACE_CONTEXT
 import org.jetbrains.lincheck.util.Logger
 import org.objectweb.asm.Label
 import org.objectweb.asm.Opcodes.*
-import org.objectweb.asm.Type
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.GeneratorAdapter
@@ -53,12 +52,12 @@ internal class InlineMethodCallTransformer(
     private val methodType = getMethodType(desc)
     private val looksLikeSuspendMethod =
         methodType.returnType.className == objectType &&
-                methodType.argumentTypes.lastOrNull()?.className == contType &&
-                (
-                        locals.hasVarByName("\$completion") ||
-                                locals.hasVarByName("\$continuation") ||
-                                locals.hasVarByName("\$result")
-                        )
+        methodType.argumentTypes.lastOrNull()?.className == contType &&
+        (
+            locals.hasVarByName("\$completion") ||
+            locals.hasVarByName("\$continuation") ||
+            locals.hasVarByName("\$result")
+        )
 
     // Sort local variables by their end labels (latest label goes first)
     // and then by index if labels are the same (to have a stable result).
@@ -158,7 +157,7 @@ internal class InlineMethodCallTransformer(
                 }
             }
 
-            JSR -> Unit
+            JSR -> {}
             else -> error("Unknown conditional opcode $opcode")
         }
         super.visitJumpInsn(opcode, label)
@@ -232,7 +231,7 @@ internal class InlineMethodCallTransformer(
             ?: locals.activeVariables.firstOrNull { it.name == "this_$suffix" }
         val className = this_?.type?.className ?: ""
 
-        val methodId = getPseudoMethodId(className.toCanonicalClassName(), inlineMethodName)
+        val methodId = getInlineMethodId(className.toCanonicalClassName(), inlineMethodName)
 
         // Start the `try {}` block around call, create distinct label for its beginning because
         // formally `visitTryCatchBlock()` call doesn't allow usage of visited labels.
@@ -315,7 +314,7 @@ internal class InlineMethodCallTransformer(
         invokeStatic(Injections::onInlineMethodCallReturn)
     }
 
-    private fun getPseudoMethodId(possibleClassName: String, inlineMethodName: String): Int =
+    private fun getInlineMethodId(possibleClassName: String, inlineMethodName: String): Int =
         TRACE_CONTEXT.getOrCreateMethodId(
             possibleClassName,
             inlineMethodName,
