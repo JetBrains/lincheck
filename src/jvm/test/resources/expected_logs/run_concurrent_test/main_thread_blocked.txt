@@ -16,7 +16,7 @@ The following interleaving leads to the error:
 |         LockSupport.setCurrentBlocker(ConditionObject#1) |
 |         canReacquire(ConditionNode#1): false             |
 |         Thread.interrupted(): false                      |
-|         node.status ➜ 3                                  |
+|         firstWaiter.status ➜ 3                           |
 |         ForkJoinPool.managedBlock(ConditionNode#1)       |
 |           Thread.currentThread(): Thread#0               |
 |           ForkJoinPool.unmanagedBlock(ConditionNode#1)   |
@@ -69,7 +69,7 @@ Detailed trace:
 |         canReacquire(ConditionNode#1): false at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:1614)             |
 |           node.prev ➜ null at AbstractQueuedSynchronizer.ConditionObject.canReacquire(AbstractQueuedSynchronizer.java:1527)                        |
 |         Thread.interrupted(): false at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:1615)                      |
-|         node.status ➜ 3 at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:1618)                                  |
+|         firstWaiter.status ➜ 3 at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:1618)                           |
 |         ForkJoinPool.managedBlock(ConditionNode#1) at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:1623)       |
 |           Thread.currentThread(): Thread#0 at ForkJoinPool.managedBlock(ForkJoinPool.java:3432)                                                    |
 |           ForkJoinPool.unmanagedBlock(ConditionNode#1) at ForkJoinPool.managedBlock(ForkJoinPool.java:3436)                                        |
