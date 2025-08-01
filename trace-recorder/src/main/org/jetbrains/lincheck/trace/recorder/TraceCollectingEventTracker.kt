@@ -382,6 +382,8 @@ class TraceCollectingEventTracker(
     override fun afterLocalRead(codeLocation: Int, variableId: Int, value: Any?) = runInsideIgnoredSection {
         val threadData = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTrackerData as? ThreadData? ?: return
 
+        // TODO: make in optional
+/*
         val tracePoint = TRReadLocalVariableTracePoint(
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
@@ -389,6 +391,7 @@ class TraceCollectingEventTracker(
             value = TRObjectOrNull(value)
         )
         strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
+*/
 
         val variableDescriptor = TRACE_CONTEXT.getVariableDescriptor(variableId)
         threadData.afterLocalRead(variableDescriptor.name, value)
