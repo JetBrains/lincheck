@@ -13,9 +13,15 @@ package org.jetbrains.kotlinx.lincheck.transformation
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 
+/**
+ * This comparator compares labels in order of their appearance in method instructions.
+ *
+ * Unknown labels are arbitrarily considered less than any known ones and equals to other unknown ones.
+ */
 class MethodLabels internal constructor(
     labels: Map<Label, Int>
 ): Comparator<Label> {
+    // Index is a serial number of the labels (starting from 0) in order method instructions visited.
     private class LabelInfo(val index: Int, var seen: Boolean)
 
     private val labels = labels.mapValues { (_, v) -> LabelInfo(v, false) }
@@ -24,8 +30,8 @@ class MethodLabels internal constructor(
         o1: Label,
         o2: Label
     ): Int {
-        val idx1 = labels[o1]?.index ?: 0
-        val idx2 = labels[o2]?.index ?: 0
+        val idx1 = labels[o1]?.index ?: -1
+        val idx2 = labels[o2]?.index ?: -1
         return idx1.compareTo(idx2)
     }
 
