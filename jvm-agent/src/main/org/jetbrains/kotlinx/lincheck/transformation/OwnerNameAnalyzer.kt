@@ -67,6 +67,12 @@ class OwnerNameAnalyzerAdapter protected constructor(
     private var maxLocals: Int
 
     /**
+     * Indicates whether the analyzer is in an initialized state.
+     */
+    private val isInitialized: Boolean get() =
+        this.locals != null && this.stack != null
+
+    /**
      * Constructs a new [OwnerNameAnalyzerAdapter]. *Subclasses must not use this constructor*.
      * Instead, they must use the [.AnalyzerAdapter] version.
      *
@@ -129,6 +135,8 @@ class OwnerNameAnalyzerAdapter protected constructor(
 
         if (this.locals == null) {
             this.locals = mutableListOf()
+        }
+        if (this.stack == null) {
             this.stack = mutableListOf()
         }
 
@@ -143,8 +151,8 @@ class OwnerNameAnalyzerAdapter protected constructor(
         super.visitInsn(opcode)
         execute(opcode, 0, null)
         if ((opcode >= Opcodes.IRETURN && opcode <= Opcodes.RETURN) || opcode == Opcodes.ATHROW) {
-            // this.locals = null
-            // this.stack = null
+            this.locals = null
+            this.stack = null
         }
     }
 
@@ -185,7 +193,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
         super.visitMethodInsn(opcodeAndSource, owner, name, descriptor, isInterface)
         val opcode = opcodeAndSource and Opcodes.SOURCE_MASK.inv()
 
-        if (this.locals == null) {
+        if (!isInitialized) {
             return
         }
 
@@ -204,7 +212,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
         vararg bootstrapMethodArguments: Any?
     ) {
         super.visitInvokeDynamicInsn(name, descriptor, bootstrapMethodHandle, *bootstrapMethodArguments)
-        if (this.locals == null) {
+        if (!isInitialized) {
             return
         }
 
@@ -217,14 +225,14 @@ class OwnerNameAnalyzerAdapter protected constructor(
         super.visitJumpInsn(opcode, label)
         execute(opcode, 0, null)
         if (opcode == Opcodes.GOTO) {
-            // this.locals = null
-            // this.stack = null
+            this.locals = null
+            this.stack = null
         }
     }
 
     override fun visitLdcInsn(value: Any?) {
         super.visitLdcInsn(value)
-        if (this.locals == null) {
+        if (!isInitialized) {
             return
         }
         // TODO: need to investigate how to lookup constant name (if available)
@@ -279,15 +287,15 @@ class OwnerNameAnalyzerAdapter protected constructor(
     override fun visitTableSwitchInsn(min: Int, max: Int, dflt: Label?, vararg labels: Label?) {
         super.visitTableSwitchInsn(min, max, dflt, *labels)
         execute(Opcodes.TABLESWITCH, 0, null)
-        // this.locals = null
-        // this.stack = null
+        this.locals = null
+        this.stack = null
     }
 
     override fun visitLookupSwitchInsn(dflt: Label?, keys: IntArray?, labels: Array<Label?>?) {
         super.visitLookupSwitchInsn(dflt, keys, labels)
         execute(Opcodes.LOOKUPSWITCH, 0, null)
-        // this.locals = null
-        // this.stack = null
+        this.locals = null
+        this.stack = null
     }
 
     override fun visitMultiANewArrayInsn(descriptor: String, numDimensions: Int) {
@@ -380,7 +388,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
         descriptor: String? = null
     ) {
         require(!(opcode == Opcodes.JSR || opcode == Opcodes.RET)) { "JSR/RET are not supported" }
-        if (this.locals == null) {
+        if (!isInitialized) {
             return
         }
 
