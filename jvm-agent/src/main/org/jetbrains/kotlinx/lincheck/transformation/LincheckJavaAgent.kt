@@ -143,7 +143,7 @@ object LincheckJavaAgent {
                     try {
                         instrumentation.retransformClasses(it)
                     } catch (t: Throwable) {
-                        Logger.error { "Failed to retransforming class ${it.name}: ${t.message}" }
+                        Logger.error { "Failed to retransform class ${it.name}: ${t.message}" }
                     }
                 }
             }
@@ -166,7 +166,7 @@ object LincheckJavaAgent {
                         try {
                             instrumentation.retransformClasses(it)
                         } catch (t: Throwable) {
-                            Logger.error { "Failed to retransforming class ${it.name}: ${t.message}" }
+                            Logger.error { "Failed to retransform class ${it.name}: ${t.message}" }
                         }
                     }
                     instrumentedClasses.addAll(classes.map { it.name })
@@ -184,7 +184,11 @@ object LincheckJavaAgent {
 
                 if (eagerlyTransformedClasses.isNotEmpty()) {
                     eagerlyTransformedClasses.forEach {
-                        instrumentation.retransformClasses(it)
+                        try {
+                            instrumentation.retransformClasses(it)
+                        } catch (t: Throwable) {
+                            Logger.error { "Failed to retransform class ${it.name}: ${t.message}" }
+                        }
                     }
                 }
                 instrumentedClasses.addAll(eagerlyTransformedClasses.map { it.name })
@@ -248,7 +252,11 @@ object LincheckJavaAgent {
         // transformations of all agents that did not remove their transformers to this moment;
         // for some reason, without `isNotEmpty()` check this code can throw NPE on JVM 8
         classes.forEach() {
-            instrumentation.retransformClasses(it)
+            try {
+                instrumentation.retransformClasses(it)
+            } catch (t: Throwable) {
+                Logger.error { "Failed to restore class ${it.name}: ${t.message}" }
+            }
         }
         // Clear the set of instrumented classes.
         instrumentedClasses.clear()
@@ -367,7 +375,7 @@ object LincheckJavaAgent {
             try {
                 instrumentation.retransformClasses(clazz)
             } catch (e: VerifyError) {
-                Logger.warn { "Failed to retransform class ${clazz.name}" }
+                Logger.error { "Failed to retransform class ${clazz.name}" }
             }
         }
         // Traverse static fields.
