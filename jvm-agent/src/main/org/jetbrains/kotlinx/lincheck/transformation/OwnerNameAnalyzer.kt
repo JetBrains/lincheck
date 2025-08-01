@@ -383,6 +383,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
         if (this.locals == null) {
             return
         }
+
         val value1: Any?
         val value2: Any?
         val value3: Any?
@@ -764,7 +765,10 @@ class OwnerNameAnalyzerAdapter protected constructor(
     }
 
     private fun setActiveLocalVariableNames(localVariables: List<LocalVariableInfo>) {
-        if (this.locals == null) return
+        if (this.locals == null && localVariables.isNotEmpty()) {
+            val maxIndex = localVariables.maxOf { it.index }
+            this.locals = MutableList(maxIndex + 1) { null }
+        }
         for (localVar in localVariables) {
             val localVarDescriptor = TRACE_CONTEXT.getVariableDescriptor(localVar.name)
             val localVarAccess = LocalVariableAccessLocation(localVarDescriptor)
