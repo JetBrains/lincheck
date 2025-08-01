@@ -143,8 +143,8 @@ class OwnerNameAnalyzerAdapter protected constructor(
         super.visitInsn(opcode)
         execute(opcode, 0, null)
         if ((opcode >= Opcodes.IRETURN && opcode <= Opcodes.RETURN) || opcode == Opcodes.ATHROW) {
-            this.locals = null
-            this.stack = null
+            // this.locals = null
+            // this.stack = null
         }
     }
 
@@ -217,8 +217,8 @@ class OwnerNameAnalyzerAdapter protected constructor(
         super.visitJumpInsn(opcode, label)
         execute(opcode, 0, null)
         if (opcode == Opcodes.GOTO) {
-            this.locals = null
-            this.stack = null
+            // this.locals = null
+            // this.stack = null
         }
     }
 
@@ -279,15 +279,15 @@ class OwnerNameAnalyzerAdapter protected constructor(
     override fun visitTableSwitchInsn(min: Int, max: Int, dflt: Label?, vararg labels: Label?) {
         super.visitTableSwitchInsn(min, max, dflt, *labels)
         execute(Opcodes.TABLESWITCH, 0, null)
-        this.locals = null
-        this.stack = null
+        // this.locals = null
+        // this.stack = null
     }
 
     override fun visitLookupSwitchInsn(dflt: Label?, keys: IntArray?, labels: Array<Label?>?) {
         super.visitLookupSwitchInsn(dflt, keys, labels)
         execute(Opcodes.LOOKUPSWITCH, 0, null)
-        this.locals = null
-        this.stack = null
+        // this.locals = null
+        // this.stack = null
     }
 
     override fun visitMultiANewArrayInsn(descriptor: String, numDimensions: Int) {
