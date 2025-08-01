@@ -138,6 +138,8 @@ class OwnerNameAnalyzerAdapter protected constructor(
         }
         if (this.stack == null) {
             this.stack = mutableListOf()
+        } else {
+            this.stack!!.clear()
         }
 
         initializeLocals(numLocal, local)
@@ -341,11 +343,17 @@ class OwnerNameAnalyzerAdapter protected constructor(
     }
 
     private fun push(ownerName: OwnerName?) {
+        if (stack == null) {
+            stack = mutableListOf()
+        }
         stack!!.add(ownerName)
         maxStack = max(maxStack, stack!!.size)
     }
 
     private fun push(numSlots: Int) {
+        if (stack == null) {
+            stack = mutableListOf()
+        }
         for (i in 0 until numSlots) {
             stack!!.add(null)
         }
@@ -353,18 +361,21 @@ class OwnerNameAnalyzerAdapter protected constructor(
     }
 
     private fun pop(): OwnerName? {
+        if (stack == null || stack!!.isEmpty()) return null
         return stack!!.removeAt(stack!!.size - 1)
     }
 
     private fun pop(numSlots: Int) {
+        if (stack == null) return
         val size = stack!!.size
-        val end = size - numSlots
+        val end = (size - numSlots).coerceAtLeast(0)
         for (i in size - 1 downTo end) {
             stack!!.removeAt(i)
         }
     }
 
     private fun pop(descriptor: String) {
+        if (stack == null) return
         val firstDescriptorChar = descriptor[0]
         if (firstDescriptorChar == '(') {
             var numSlots = 0
@@ -388,7 +399,8 @@ class OwnerNameAnalyzerAdapter protected constructor(
         descriptor: String? = null
     ) {
         require(!(opcode == Opcodes.JSR || opcode == Opcodes.RET)) { "JSR/RET are not supported" }
-        if (!isInitialized) {
+
+        if (this.locals == null) {
             return
         }
 

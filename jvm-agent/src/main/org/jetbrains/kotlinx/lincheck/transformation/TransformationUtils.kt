@@ -404,8 +404,14 @@ internal fun GeneratorAdapter.invokeInsideIgnoredSection(
  *                 The value must be a valid index relative to the size of the list.
  * @return The element at the specified position from the end of the list, or null if the position is out of bounds.
  */
-internal fun <T> List<T>.getStackElementAt(position: Int): T =
-    get(size - position - 1)
+internal fun <T> List<T>.getStackElementAt(position: Int): T? {
+    require(position >= 0) {
+        "Position must be non-negative, but was $position"
+    }
+    val index = (size - position - 1)
+    return if (index >= 0) get(index) else null
+}
+
 
 /**
  * @param type asm type descriptor.
