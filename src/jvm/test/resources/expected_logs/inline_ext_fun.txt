@@ -22,7 +22,7 @@ Detailed trace:
 |   MethodHandle.linkToStatic("SOME", MemberName#1): "SOME" at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                   |
 |   DirectMethodHandle.internalMemberName(DirectMethodHandle#2): MemberName#2 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
 |   MethodHandle.linkToStatic(0, "SOME", MemberName#2): 4 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                     |
-|   argL0.invokeBasic(4, 1): 5 at DelegatingMethodHandle.Holder.reinvoke_L(DelegatingMethodHandle$Holder:0)                                          |
+|   DirectMethodHandle#3.invokeBasic(4, 1): 5 at DelegatingMethodHandle.Holder.reinvoke_L(DelegatingMethodHandle$Holder:0)                           |
 |     internalMemberName(DirectMethodHandle#3): MemberName#3 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                  |
 |     MethodHandle.linkToStatic(4, 1, MemberName#3): 5 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                        |
 |   DirectMethodHandle.internalMemberName(DirectMethodHandle#4): MemberName#4 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
