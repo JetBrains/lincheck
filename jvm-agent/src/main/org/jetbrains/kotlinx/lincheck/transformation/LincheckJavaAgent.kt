@@ -19,9 +19,7 @@ import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransforme
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.isEagerlyInstrumentedClass
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.shouldTransform
 import org.jetbrains.kotlinx.lincheck.transformation.transformers.coroutineCallingClasses
-import org.jetbrains.lincheck.util.isJavaLambdaClass
-import org.jetbrains.lincheck.util.isJdk8
-import org.jetbrains.lincheck.util.readFieldSafely
+import org.jetbrains.lincheck.util.*
 import java.lang.instrument.Instrumentation
 import java.lang.reflect.Modifier
 import java.io.File
