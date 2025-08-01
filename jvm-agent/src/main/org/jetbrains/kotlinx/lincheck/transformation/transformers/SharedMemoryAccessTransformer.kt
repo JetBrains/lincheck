@@ -183,7 +183,7 @@ internal class SharedMemoryAccessTransformer(
             isFinal = FinalFields.isFinalField(owner, fieldName)
         )
         val valueLocal = newLocal(valueType) // we cannot use DUP as long/double require DUP2
-        val ownerName = ownerNameAnalyzer?.stack?.getStackElementAt(1)
+        val ownerName = ownerNameAnalyzer?.stack?.getStackElementAt(valueType.size)
         storeLocal(valueLocal)
         // STACK: obj
         dup()
@@ -262,7 +262,7 @@ internal class SharedMemoryAccessTransformer(
         // STACK: array, index, value
         val arrayElementType = getArrayElementType(opcode)
         val valueLocal = newLocal(arrayElementType) // we cannot use DUP as long/double require DUP2
-        val ownerName = ownerNameAnalyzer?.stack?.getStackElementAt(2)
+        val ownerName = ownerNameAnalyzer?.stack?.getStackElementAt(1 + arrayElementType.size)
         storeLocal(valueLocal)
         // STACK: array, index
         dup2()
