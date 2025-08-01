@@ -188,7 +188,7 @@ class TraceCollectingEventTracker(
         threadDescriptor.enableAnalysis()
     }
 
-    override fun afterThreadFinish() {
+    override fun afterThreadFinish() = runInsideIgnoredSection {
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
         // Don't pop, we need it
