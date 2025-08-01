@@ -59,7 +59,7 @@ fun String.replaceNestedClassDollar(): String {
  * Removes java lambdas runtime address from classname.
  */
 fun String.removeJavaLambdaRuntimeAddress(): String {
-    if (isJavaLambdaClass(this)) return substringBeforeLast('/')
+    if (isJavaLambdaClass(this)) return substringBeforeLast('/').substringBeforeLast('$')
     return this
 }
 
