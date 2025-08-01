@@ -93,11 +93,11 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         val classNode = ClassNode()
         reader.accept(classNode, ClassReader.EXPAND_FRAMES)
 
-        val methodVariables = getMethodsLocalVariables(classNode)
-
         // Don't use class/method visitors on classNode to collect labels, as
         // MethodNode reset all labels on a re-visit (WHY?!).
         // Only one visit is possible to have labels stable.
+        // Visiting components like `MethodNode.instructions` is safe.
+        val methodVariables = getMethodsLocalVariables(classNode)
         val methodLabels = getMethodsLabels(classNode)
 
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
