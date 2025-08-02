@@ -19,6 +19,7 @@ import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransforme
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.isEagerlyInstrumentedClass
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.shouldTransform
 import org.jetbrains.kotlinx.lincheck.transformation.transformers.coroutineCallingClasses
+import org.jetbrains.lincheck.util.Logger
 import org.jetbrains.lincheck.util.isJavaLambdaClass
 import org.jetbrains.lincheck.util.isJdk8
 import org.jetbrains.lincheck.util.readFieldSafely
@@ -138,7 +139,13 @@ object LincheckJavaAgent {
             INSTRUMENT_ALL_CLASSES -> {
                 // Re-transform the already loaded classes.
                 // New classes will be transformed automatically.
-                instrumentation.retransformClasses(*getLoadedClassesToInstrument().toTypedArray())
+                getLoadedClassesToInstrument().forEach {
+                    try {
+                        instrumentation.retransformClasses(it)
+                    } catch (t: Throwable) {
+                        Logger.error { "Failed to retransform class ${it.name}: ${t.message}" }
+                    }
+                }
             }
 
             // In the stress testing mode, Lincheck needs to track coroutine suspensions.
@@ -155,7 +162,13 @@ object LincheckJavaAgent {
                 }
                 // for some reason, without `isNotEmpty()` check this code can throw NPE on JVM 8
                 if (classes.isNotEmpty()) {
-                    instrumentation.retransformClasses(*classes.toTypedArray())
+                    classes.forEach {
+                        try {
+                            instrumentation.retransformClasses(it)
+                        } catch (t: Throwable) {
+                            Logger.error { "Failed to retransform class ${it.name}: ${t.message}" }
+                        }
+                    }
                     instrumentedClasses.addAll(classes.map { it.name })
                 }
             }
@@ -169,8 +182,15 @@ object LincheckJavaAgent {
                     .filter { isEagerlyInstrumentedClass(it.name) }
                     .toTypedArray()
 
-                if (eagerlyTransformedClasses.isNotEmpty())
-                    instrumentation.retransformClasses(*eagerlyTransformedClasses)
+                if (eagerlyTransformedClasses.isNotEmpty()) {
+                    eagerlyTransformedClasses.forEach {
+                        try {
+                            instrumentation.retransformClasses(it)
+                        } catch (t: Throwable) {
+                            Logger.error { "Failed to retransform class ${it.name}: ${t.message}" }
+                        }
+                    }
+                }
                 instrumentedClasses.addAll(eagerlyTransformedClasses.map { it.name })
             }
         }
@@ -231,8 +251,12 @@ object LincheckJavaAgent {
         // `retransformClasses` uses initial (loaded in VM from disk) class bytecode and reapplies
         // transformations of all agents that did not remove their transformers to this moment;
         // for some reason, without `isNotEmpty()` check this code can throw NPE on JVM 8
-        if (classes.isNotEmpty()) {
-            instrumentation.retransformClasses(*classes.toTypedArray())
+        classes.forEach() {
+            try {
+                instrumentation.retransformClasses(it)
+            } catch (t: Throwable) {
+                Logger.error { "Failed to restore class ${it.name}: ${t.message}" }
+            }
         }
         // Clear the set of instrumented classes.
         instrumentedClasses.clear()
@@ -348,7 +372,11 @@ object LincheckJavaAgent {
         if (!shouldTransform(clazz.name, instrumentationMode)) return
         if (canRetransformClass(clazz)) {
             instrumentedClasses += clazz.name
-            instrumentation.retransformClasses(clazz)
+            try {
+                instrumentation.retransformClasses(clazz)
+            } catch (e: VerifyError) {
+                Logger.error { "Failed to retransform class ${clazz.name}" }
+            }
         }
         // Traverse static fields.
         clazz.declaredFields
