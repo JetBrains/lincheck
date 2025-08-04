@@ -21,7 +21,7 @@ Detailed trace:
 |   run() at InlineLambdaConditionalTakenFullReturnFinallyTest.operation(InlineLambdaConditionalTakenFullReturnFinallyTest.kt:33)                                                                        |
 |     setEscape("BEFORE BLOCK") at InlineLambdaConditionalTakenFullReturnFinallyTest.operation(InlineLambdaConditionalTakenFullReturnFinallyTest.kt:54)                                                  |
 |       escape = "BEFORE BLOCK" at InlineLambdaConditionalTakenFullReturnFinallyTest.setEscape(InlineLambdaConditionalTakenFullReturnFinallyTest.kt:20)                                                  |
-|     Lambda argument to run() at InlineLambdaConditionalTakenFullReturnFinallyTest.operation(InlineLambdaConditionalTakenFullReturnFinallyTest.kt:56)                                                   |
+|     run$Lambda() at InlineLambdaConditionalTakenFullReturnFinallyTest.operation(InlineLambdaConditionalTakenFullReturnFinallyTest.kt:56)                                                               |
 |       InlineLambdaConditionalTakenFullReturnFinallyTest#1.escape = "IN LAMBDA" at InlineLambdaConditionalTakenFullReturnFinallyTest.operation(InlineLambdaConditionalTakenFullReturnFinallyTest.kt:34) |
 |   setEscape("AFTER BLOCK") at InlineLambdaConditionalTakenFullReturnFinallyTest.operation(InlineLambdaConditionalTakenFullReturnFinallyTest.kt:58)                                                     |
 |     escape = "AFTER BLOCK" at InlineLambdaConditionalTakenFullReturnFinallyTest.setEscape(InlineLambdaConditionalTakenFullReturnFinallyTest.kt:20)                                                     |

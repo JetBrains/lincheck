@@ -21,7 +21,7 @@ Detailed trace:
 |   thisClassInlineFunc() at InlineDiversityRepresentationTest.operation(InlineDiversityRepresentationTest.kt:26)                                         |
 |     isc.otherClassInlineFunc() at InlineDiversityRepresentationTest.operation(InlineDiversityRepresentationTest.kt:46)                                  |
 |       outsideInlineFunc() at InlineDiversityRepresentationTest.operation(InlineDiversityRepresentationTest.kt:47)                                       |
-|         Lambda argument to thisClassInlineFunc() at InlineDiversityRepresentationTest.operation(InlineDiversityRepresentationTest.kt:48)                |
+|         thisClassInlineFunc$Lambda() at InlineDiversityRepresentationTest.operation(InlineDiversityRepresentationTest.kt:48)                            |
 |           InlineDiversityRepresentationTest#1.escape = "INLINE" at InlineDiversityRepresentationTest.operation(InlineDiversityRepresentationTest.kt:27) |
 |   escape = "END" at InlineDiversityRepresentationTest.operation(InlineDiversityRepresentationTest.kt:29)                                                |
 |   result: void                                                                                                                                          |

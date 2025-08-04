@@ -21,7 +21,7 @@ Detailed trace:
 |   run() at InlineLambdaConditionalNotTakenThrowTest.operation(InlineLambdaConditionalNotTakenThrowTest.kt:34)                                                                  |
 |     setEscape("BEFORE BLOCK") at InlineLambdaConditionalNotTakenThrowTest.operation(InlineLambdaConditionalNotTakenThrowTest.kt:55)                                            |
 |       escape = "BEFORE BLOCK" at InlineLambdaConditionalNotTakenThrowTest.setEscape(InlineLambdaConditionalNotTakenThrowTest.kt:20)                                            |
-|     Lambda argument to run() at InlineLambdaConditionalNotTakenThrowTest.operation(InlineLambdaConditionalNotTakenThrowTest.kt:56)                                             |
+|     run$Lambda() at InlineLambdaConditionalNotTakenThrowTest.operation(InlineLambdaConditionalNotTakenThrowTest.kt:56)                                                         |
 |       InlineLambdaConditionalNotTakenThrowTest#1.escape = "IN LAMBDA" at InlineLambdaConditionalNotTakenThrowTest.operation(InlineLambdaConditionalNotTakenThrowTest.kt:35)    |
 |       InlineLambdaConditionalNotTakenThrowTest#1.escape = "AFTER LAMBDA" at InlineLambdaConditionalNotTakenThrowTest.operation(InlineLambdaConditionalNotTakenThrowTest.kt:37) |
 |     setEscape("AFTER BLOCK") at InlineLambdaConditionalNotTakenThrowTest.operation(InlineLambdaConditionalNotTakenThrowTest.kt:57)                                             |

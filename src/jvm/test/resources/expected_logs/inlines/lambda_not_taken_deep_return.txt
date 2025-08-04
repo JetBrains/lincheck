@@ -21,12 +21,12 @@ Detailed trace:
 |   run() at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:33)                                                                             |
 |     setEscape("BEFORE BLOCK") at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:55)                                                       |
 |       escape = "BEFORE BLOCK" at InlineLambdaConditionalNotTakenDeepReturnTest.setEscape(InlineLambdaConditionalNotTakenDeepReturnTest.kt:20)                                                       |
-|     Lambda argument to run() at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:56)                                                        |
+|     run$Lambda() at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:56)                                                                    |
 |       InlineLambdaConditionalNotTakenDeepReturnTest#1.escape = "IN LAMBDA 1" at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:34)        |
 |       InlineLambdaConditionalNotTakenDeepReturnTest#1.run() at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:35)                         |
 |         setEscape("BEFORE BLOCK") at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:57)                                                   |
 |           escape = "BEFORE BLOCK" at InlineLambdaConditionalNotTakenDeepReturnTest.setEscape(InlineLambdaConditionalNotTakenDeepReturnTest.kt:20)                                                   |
-|         Lambda argument to run() at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:58)                                                    |
+|         run$Lambda() at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:58)                                                                |
 |           InlineLambdaConditionalNotTakenDeepReturnTest#1.escape = "IN LAMBDA 2" at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:36)    |
 |           InlineLambdaConditionalNotTakenDeepReturnTest#1.escape = "AFTER LAMBDA 2" at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:38) |
 |         setEscape("AFTER BLOCK") at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:59)                                                    |
