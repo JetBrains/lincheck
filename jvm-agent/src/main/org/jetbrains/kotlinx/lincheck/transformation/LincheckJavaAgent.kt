@@ -46,12 +46,12 @@ inline fun withLincheckJavaAgent(instrumentationMode: InstrumentationMode, block
              * but at the moment of implementing this logic (March 2024), it was the smoothest way
              * to inject code in the user codebase when the `java.base` module also needs to be instrumented.
              */
-            LincheckJavaAgent.instrumentation = ByteBuddyAgent.install()
+            instrumentation = ByteBuddyAgent.install()
             isInstrumentationInitialized = true
         }
 
         // run the testing code with instrumentation
-        LincheckJavaAgent.install(instrumentationMode)
+        install(instrumentationMode)
         return try {
             block()
         } finally {
@@ -162,7 +162,12 @@ object LincheckJavaAgent {
 
             // In the model checking mode, Lincheck processes classes lazily, only when they are used.
             instrumentationMode == MODEL_CHECKING || instrumentationMode == TRACE_RECORDING -> {
-                check(instrumentedClasses.isEmpty())
+                // Clear the set of instrumented classes in case something get wrong during `uninstall`.
+                // For instance, it is possible that Lincheck detects a deadlock, `uninstall` is called,
+                // but one of the "deadlocked" thread calls `ensureClassHierarchyIsTransformed` after that,
+                // adding a new class to `instrumentedClasses`.
+                // TODO: distinguish different runs by associating `instrumentedClasses` with `EventTracker`.
+                instrumentedClasses.clear()
                 // Transform some predefined classes eagerly on start,
                 // because often it's the only place when we can do it
                 val eagerlyTransformedClasses = getLoadedClassesToInstrument()
@@ -314,12 +319,15 @@ object LincheckJavaAgent {
                 return
             }
             else -> {
-                if (!instrumentation.isModifiableClass(obj.javaClass) ||
-                    !shouldTransform(obj.javaClass.name, instrumentationMode)
+                if (instrumentation.isModifiableClass(clazz) &&
+                    shouldTransform(className, instrumentationMode)
                 ) {
-                    return
+                    ensureClassHierarchyIsTransformed(clazz)
+                } else {
+                    if (className.startsWith("jdk.") || className.startsWith("java.lang.") || className.startsWith("sun.misc.")) {
+                        return
+                    }
                 }
-                ensureClassHierarchyIsTransformed(clazz)
             }
         }
 

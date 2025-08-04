@@ -276,6 +276,7 @@ fun ObjectTracker.getObjectRepresentation(obj: Any?): String = when {
 
     // immutable types (including primitive types) have trivial `toString` implementation
     obj.isImmutable -> obj.toString()
+    obj.isCoroutinesSymbol -> obj.toString()
 
     // for enum types, we display their name
     obj is Enum<*> -> obj.name

@@ -24,6 +24,8 @@ import org.jetbrains.kotlinx.lincheck.strategy.runIteration
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.ensureObjectIsTransformed
 import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 object Lincheck {
 
@@ -58,7 +60,7 @@ object Lincheck {
         invocations: Int = DEFAULT_INVOCATIONS,
         settings: LincheckSettings,
         block: Runnable
-    ) {
+    ) = LINCHECK_TEST_LOCK.withLock {
         val scenario = ExecutionScenario(
             initExecution = emptyList(),
             parallelExecution = listOf(
@@ -121,3 +123,4 @@ internal class NoExceptionVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpeci
         results.parallelResults[0][0] !is ExceptionResult
 }
 
+internal val LINCHECK_TEST_LOCK = ReentrantLock()

@@ -16,6 +16,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelChecki
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.jetbrains.kotlinx.lincheck_test.util.withLincheckJavaAgentAndLincheckTestLock
 import org.jetbrains.lincheck.datastructures.scenario
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import kotlin.reflect.*
@@ -34,7 +35,7 @@ internal fun modelCheckerTest(
         parallel { thread { actor(testOperation) } }
     }
     val verifier = CollectResultsVerifier()
-    withLincheckJavaAgent(InstrumentationMode.MODEL_CHECKING) {
+    withLincheckJavaAgentAndLincheckTestLock(InstrumentationMode.MODEL_CHECKING) {
         val strategy = createStrategy(testClass.java, scenario, stdLibAnalysis)
         val failure = strategy.runIteration(invocations, verifier)
         if (expectedFailure != null) {
