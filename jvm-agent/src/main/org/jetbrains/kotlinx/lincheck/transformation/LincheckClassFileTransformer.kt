@@ -93,11 +93,15 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         val classNode = ClassNode()
         reader.accept(classNode, ClassReader.EXPAND_FRAMES)
 
-        val methods = mapMethodsToLabels(classNode)
-        val methodVariables = methods.mapValues { MethodVariables(it.value) }
+        // Don't use class/method visitors on classNode to collect labels, as
+        // MethodNode reset all labels on a re-visit (WHY?!).
+        // Only one visit is possible to have labels stable.
+        // Visiting components like `MethodNode.instructions` is safe.
+        val methodVariables = getMethodsLocalVariables(classNode)
+        val methodLabels = getMethodsLabels(classNode)
 
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
-        val visitor = LincheckClassVisitor(writer, instrumentationMode, methodVariables)
+        val visitor = LincheckClassVisitor(writer, instrumentationMode, methodVariables, methodLabels)
         try {
             classNode.accept(visitor)
             writer.toByteArray().also {
@@ -119,9 +123,9 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         }
     }
 
-    private fun mapMethodsToLabels(
+    private fun getMethodsLocalVariables(
         classNode: ClassNode
-    ): Map<String, Map<Int, List<LocalVariableInfo>>> {
+    ): Map<String, MethodVariables> {
         return classNode.methods.associateBy(
             keySelector = { m -> m.name + m.desc },
             valueTransform = { m ->
@@ -141,6 +145,22 @@ object LincheckClassFileTransformer : ClassFileTransformer {
                 }
             }
         )
+        .mapValues { MethodVariables(it.value) }
+    }
+
+    private fun getMethodsLabels(
+        classNode: ClassNode
+    ): Map<String, MethodLabels> {
+        return classNode.methods.associateBy(
+            keySelector = { m -> m.name + m.desc },
+            valueTransform = { m ->
+                mutableMapOf<Label, Int>().also { map ->
+                    val extractor = LabelCollectorMethodVisitor(map)
+                    m.instructions.accept(extractor)
+                }
+            }
+        )
+        .mapValues { MethodLabels(it.value) }
     }
 
     private fun String.isOuterReceiverName() = this == "this$0"

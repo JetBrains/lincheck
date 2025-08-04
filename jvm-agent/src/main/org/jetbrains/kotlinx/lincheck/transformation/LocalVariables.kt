@@ -17,6 +17,8 @@ typealias StackSlotIndex = Int
 typealias LocalVariablesMap = Map<StackSlotIndex, List<LocalVariableInfo>>
 
 private const val INLINE_FUNC_PREFIX = "\$i\$f\$"
+private const val INLINE_LAMBDA_PREFIX = "\$i\$a\$"
+private val INLINE_LAMBDA_PATTERN = Regex("^[$]i[$]a[$]-(?<inlineName>[^-]+)-(?<lambdaReferenceName>[^-]+)$")
 
 internal fun List<LocalVariableInfo>.isUniqueVariable(): Boolean {
     val name = first().name
@@ -26,7 +28,27 @@ internal fun List<LocalVariableInfo>.isUniqueVariable(): Boolean {
 
 data class LocalVariableInfo(val name: String, val index: Int, val labelIndexRange: Pair<Label, Label>, val type: Type) {
     val isInlineCallMarker = name.startsWith(INLINE_FUNC_PREFIX)
-    val inlineMethodName = if (isInlineCallMarker) name.removePrefix(INLINE_FUNC_PREFIX) else null
+    val isInlineLambdaMarker = name.startsWith(INLINE_LAMBDA_PREFIX)
+
+    val inlineMethodName: String?
+        get() {
+            if (isInlineCallMarker) {
+                return name.removePrefix(INLINE_FUNC_PREFIX)
+            }
+            if (isInlineLambdaMarker) {
+                val match = INLINE_LAMBDA_PATTERN.matchEntire(name)
+                if (match != null) {
+                    val callerInlineName = match.groups["inlineName"]?.value ?: "<unknown inline>"
+                    return "Lambda argument to $callerInlineName"
+                } else {
+                    return name.removePrefix(INLINE_LAMBDA_PREFIX)
+                }
+            }
+            return null
+        }
+
+    val startLabel = labelIndexRange.first
+    val endLabel = labelIndexRange.second
 }
 
 data class MethodVariables(val variables: LocalVariablesMap = emptyMap()) {
@@ -50,11 +72,15 @@ data class MethodVariables(val variables: LocalVariablesMap = emptyMap()) {
     fun variablesEndAt(label: Label): List<LocalVariableInfo> = varsByEndLabel[label].orEmpty()
 
     fun inlinesStartAt(label: Label): List<LocalVariableInfo> =
-        varsByStartLabel[label].orEmpty().filter { it.isInlineCallMarker }
+        varsByStartLabel[label].orEmpty().filter { it.isInlineCallMarker || it.isInlineLambdaMarker }
 
     fun inlinesEndAt(label: Label): List<LocalVariableInfo> =
-        varsByEndLabel[label].orEmpty().filter { it.isInlineCallMarker }
+        varsByEndLabel[label].orEmpty().filter { it.isInlineCallMarker || it.isInlineLambdaMarker }
 
     fun getVarByName(name: String): Set<LocalVariableInfo> = varsByName.getOrElse(name, ::emptyList).toSet()
     fun hasVarByName(name: String): Boolean = varsByName.containsKey(name)
+
+    companion object {
+        val EMPTY = MethodVariables()
+    }
 }
