@@ -10,7 +10,6 @@
 
 package org.jetbrains.lincheck.descriptors
 
-import org.jetbrains.lincheck.analysis.isThisName
 import org.jetbrains.lincheck.trace.*
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
@@ -77,30 +76,41 @@ val ArrayLengthAccessLocation = ObjectFieldAccessLocation(
 
 class AccessPath(val locations: List<AccessLocation>) {
 
-    init { validate(this) }
-
     constructor(location: AccessLocation) : this(listOf(location))
 
     constructor(vararg locations: AccessLocation) : this(locations.toList())
 
     override fun toString(): String {
         val builder = StringBuilder()
-        for (location in locations) {
+
+        val locations = this.filterThisAccesses().locations
+        for (i in locations.indices) {
+            val location = locations[i]
+            val nextLocation = locations.getOrNull(i + 1)
+
             when (location) {
                 is LocalVariableAccessLocation -> {
-                    if (!isThisName(location.variableName)) {
+                    with(builder) {
                         builder.append(location.variableName)
+                        if (nextLocation is FieldAccessLocation) {
+                            append(".")
+                        }
                     }
                 }
                 is StaticFieldAccessLocation -> {
                     with(builder) {
                         append(location.fieldName)
+                        if (nextLocation is FieldAccessLocation) {
+                            append(".")
+                        }
                     }
                 }
                 is ObjectFieldAccessLocation -> {
                     with(builder) {
-                        append(".")
                         append(location.fieldName)
+                        if (nextLocation is FieldAccessLocation) {
+                            append(".")
+                        }
                     }
                 }
                 is ArrayElementByIndexAccessLocation -> {
@@ -119,31 +129,12 @@ class AccessPath(val locations: List<AccessLocation>) {
                 }
             }
         }
-        val result = builder.toString()
-        if (result.startsWith(".")) {
-            return result.substring(1)
-        }
-        return result
-    }
 
-    companion object {
-        fun validate(path: AccessPath) {
-            check(path.locations.isNotEmpty()) {
-                "Access path must not be empty"
-            }
-            check(path.locations.first()
-                .let { it is LocalVariableAccessLocation || it is StaticFieldAccessLocation }
-            ) {
-                "Access path must start with local variable or static field access"
-            }
-            check(path.locations.drop(1)
-                .all { it !is LocalVariableAccessLocation && it !is StaticFieldAccessLocation }
-            ) {
-                "Access path must not contain local variable or static field access in the middle"
-            }
-        }
+        return builder.toString()
     }
 }
+
+fun AccessPath.isEmpty(): Boolean = locations.isEmpty()
 
 typealias OwnerName = AccessPath
 

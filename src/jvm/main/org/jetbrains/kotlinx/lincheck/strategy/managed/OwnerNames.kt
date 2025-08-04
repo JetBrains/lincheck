@@ -10,23 +10,11 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import org.jetbrains.lincheck.descriptors.*
+import org.jetbrains.lincheck.analysis.*
+import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.lincheck.trace.isThisName
 import org.jetbrains.kotlinx.lincheck.transformation.toSimpleClassName
-import org.jetbrains.kotlinx.lincheck.util.AtomicApiKind
-import org.jetbrains.kotlinx.lincheck.util.AtomicMethodDescriptor
-import org.jetbrains.kotlinx.lincheck.util.getAtomicArrayAccessInfo
-import org.jetbrains.kotlinx.lincheck.util.getAtomicFieldUpdaterAccessInfo
-import org.jetbrains.kotlinx.lincheck.util.getUnsafeAccessInfo
-import org.jetbrains.kotlinx.lincheck.util.getVarHandleAccessInfo
-import org.jetbrains.lincheck.analysis.ShadowStackFrame
-import org.jetbrains.lincheck.analysis.findCurrentReceiverFieldReferringTo
-import org.jetbrains.lincheck.analysis.findLocalVariableFieldReferringTo
-import org.jetbrains.lincheck.analysis.findLocalVariableReferringTo
-import org.jetbrains.lincheck.analysis.isCurrentStackFrameReceiver
-import org.jetbrains.lincheck.analysis.isThisName
-import org.jetbrains.lincheck.descriptors.AccessLocation
-import org.jetbrains.lincheck.descriptors.ArrayElementByIndexAccessLocation
-import org.jetbrains.lincheck.descriptors.CodeLocations
-import org.jetbrains.lincheck.descriptors.FieldAccessLocation
 
 internal fun findOwnerName(
     className: String,

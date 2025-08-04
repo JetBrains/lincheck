@@ -29,21 +29,32 @@ interface TRAppendable {
 }
 
 fun TRAppendable.appendAccessPath(accessPath: AccessPath) {
-    for (location in accessPath.locations) {
+    for (i in accessPath.locations.indices) {
+        val location = accessPath.locations[i]
+        val nextLocation = accessPath.locations.getOrNull(i + 1)
+
         when (location) {
             is LocalVariableAccessLocation -> {
                 appendVariableName(location.variableDescriptor)
+                if (nextLocation is FieldAccessLocation) {
+                    appendSpecialSymbol(".")
+                }
             }
 
             is StaticFieldAccessLocation -> {
                 appendClassName(location.fieldDescriptor.classDescriptor)
                 appendSpecialSymbol(".")
                 appendFieldName(location.fieldDescriptor)
+                if (nextLocation is FieldAccessLocation) {
+                    appendSpecialSymbol(".")
+                }
             }
 
             is ObjectFieldAccessLocation -> {
-                appendSpecialSymbol(".")
                 appendFieldName(location.fieldDescriptor)
+                if (nextLocation is FieldAccessLocation) {
+                    appendSpecialSymbol(".")
+                }
             }
 
             is ArrayElementByIndexAccessLocation -> {
@@ -109,7 +120,6 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
         val md = tracePoint.methodDescriptor
 
         appendOwner(tracePoint)
-        appendSpecialSymbol(".")
         appendMethodName(md)
         appendSpecialSymbol("(")
         appendParameters(tracePoint)
@@ -121,11 +131,16 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
     protected fun TRAppendable.appendOwner(tracePoint: TRMethodCallTracePoint): TRAppendable {
         val ownerName = CodeLocations.accessPath(tracePoint.codeLocationId)
         if (ownerName != null) {
-            appendAccessPath(ownerName)
+            ownerName.filterThisAccesses().takeIf { !it.isEmpty() }?.let {
+                appendAccessPath(it)
+                appendSpecialSymbol(".")
+            }
         } else if (tracePoint.obj != null) {
             appendObject(tracePoint.obj)
+            appendSpecialSymbol(".")
         } else {
             appendClassName(tracePoint.classDescriptor)
+            appendSpecialSymbol(".")
         }
         return this
     }
@@ -182,18 +197,22 @@ abstract class AbstractTRFieldTracePointPrinter {
     protected fun TRAppendable.appendOwner(tracePoint: TRFieldTracePoint): TRAppendable {
         val ownerName = CodeLocations.accessPath(tracePoint.codeLocationId)
         if (ownerName != null) {
-            appendAccessPath(ownerName)
+            ownerName.filterThisAccesses().takeIf { !it.isEmpty() }?.let {
+                appendAccessPath(it)
+                appendSpecialSymbol(".")
+            }
         } else if (tracePoint.obj != null) {
             appendObject(tracePoint.obj)
+            appendSpecialSymbol(".")
         } else {
             appendClassName(tracePoint.classDescriptor)
+            appendSpecialSymbol(".")
         }
         return this
     }
 
     protected fun TRAppendable.appendFieldName(tracePoint: TRFieldTracePoint, isLambdaCaptureSyntheticField: Boolean): TRAppendable {
         if (!isLambdaCaptureSyntheticField) {
-            appendSpecialSymbol(".")
             appendFieldName(tracePoint.fieldDescriptor)
         }
         return this
