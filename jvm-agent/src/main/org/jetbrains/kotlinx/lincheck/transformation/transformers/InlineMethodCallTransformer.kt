@@ -59,6 +59,12 @@ internal class InlineMethodCallTransformer(
             locals.hasVarByName("\$result")
         )
 
+    // List of blocklisted methods due to https://youtrack.jetbrains.com/issue/DR-278
+    // Cleanup when a problem will be solved properly.
+    private val looksLikeBlocklistedMethod =
+        (className == "kotlinx/coroutines/channels/BroadcastChannelImpl") ||
+        (className == "kotlinx/coroutines/JobSupport\$Finishing")
+
     // Sort local variables by their end labels (latest label goes first)
     // and then by index if labels are the same (to have a stable result).
     private val localVarInlineStartComparator = Comparator<LocalVariableInfo>
@@ -69,7 +75,7 @@ internal class InlineMethodCallTransformer(
     private var currentInlineDepth = 0
 
     override fun visitLabel(label: Label) {
-        if (!locals.hasInlines || looksLikeSuspendMethod) {
+        if (!locals.hasInlines || looksLikeSuspendMethod || looksLikeBlocklistedMethod) {
             super.visitLabel(label)
             return
         }
