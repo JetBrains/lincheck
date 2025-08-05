@@ -13,17 +13,17 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                                    Thread 1                                                                                                    |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                                                                                                                    |
-|   returnInt(): -5 at InlineLambdaConditionalNotTakenFullReturnValueTest.operation(InlineLambdaConditionalNotTakenFullReturnValueTest.kt:32)                                                                    |
-|     escape = "START" at InlineLambdaConditionalNotTakenFullReturnValueTest.returnInt(InlineLambdaConditionalNotTakenFullReturnValueTest.kt:36)                                                                 |
-|     run() at InlineLambdaConditionalNotTakenFullReturnValueTest.returnInt(InlineLambdaConditionalNotTakenFullReturnValueTest.kt:37)                                                                            |
-|       setEscape("BEFORE BLOCK") at InlineLambdaConditionalNotTakenFullReturnValueTest.returnInt(InlineLambdaConditionalNotTakenFullReturnValueTest.kt:57)                                                      |
-|         escape = "BEFORE BLOCK" at InlineLambdaConditionalNotTakenFullReturnValueTest.setEscape(InlineLambdaConditionalNotTakenFullReturnValueTest.kt:20)                                                      |
-|       run$Lambda() at InlineLambdaConditionalNotTakenFullReturnValueTest.returnInt(InlineLambdaConditionalNotTakenFullReturnValueTest.kt:58)                                                                   |
-|         InlineLambdaConditionalNotTakenFullReturnValueTest#1.escape = "IN LAMBDA" at InlineLambdaConditionalNotTakenFullReturnValueTest.returnInt(InlineLambdaConditionalNotTakenFullReturnValueTest.kt:38)    |
-|         InlineLambdaConditionalNotTakenFullReturnValueTest#1.escape = "AFTER LAMBDA" at InlineLambdaConditionalNotTakenFullReturnValueTest.returnInt(InlineLambdaConditionalNotTakenFullReturnValueTest.kt:40) |
-|   result: void                                                                                                                                                                                                 |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                         Thread 1                                                                          |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                               |
+|   returnInt(): -5 at InlineLambdaConditionalNotTakenFullReturnValueTest.operation(InlineLambdaConditionalNotTakenFullReturnValueTest.kt:32)               |
+|     escape = "START" at InlineLambdaConditionalNotTakenFullReturnValueTest.returnInt(InlineLambdaConditionalNotTakenFullReturnValueTest.kt:36)            |
+|     run() at InlineLambdaConditionalNotTakenFullReturnValueTest.returnInt(InlineLambdaConditionalNotTakenFullReturnValueTest.kt:37)                       |
+|       setEscape("BEFORE BLOCK") at InlineLambdaConditionalNotTakenFullReturnValueTest.returnInt(InlineLambdaConditionalNotTakenFullReturnValueTest.kt:57) |
+|         escape = "BEFORE BLOCK" at InlineLambdaConditionalNotTakenFullReturnValueTest.setEscape(InlineLambdaConditionalNotTakenFullReturnValueTest.kt:20) |
+|       run$Lambda() at InlineLambdaConditionalNotTakenFullReturnValueTest.returnInt(InlineLambdaConditionalNotTakenFullReturnValueTest.kt:58)              |
+|         escape = "IN LAMBDA" at InlineLambdaConditionalNotTakenFullReturnValueTest.returnInt(InlineLambdaConditionalNotTakenFullReturnValueTest.kt:38)    |
+|         escape = "AFTER LAMBDA" at InlineLambdaConditionalNotTakenFullReturnValueTest.returnInt(InlineLambdaConditionalNotTakenFullReturnValueTest.kt:40) |
+|   result: void                                                                                                                                            |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------- |
