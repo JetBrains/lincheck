@@ -94,13 +94,6 @@ data class MethodVariables(val variables: LocalVariablesMap = emptyMap()) {
 
     fun getActiveVars(): List<LocalVariableInfo> =
         activeVariables.toList()
-            .sortedBy { it.index }
-            .ensure {
-                it.forEachIndexed { i, info ->
-                    if (i != info.index) return@ensure false
-                }
-                return@ensure true
-            }
 
     companion object {
         val EMPTY = MethodVariables()
