@@ -154,11 +154,8 @@ object LincheckJavaAgent {
                     // old classes that were already loaded before and have coroutine method calls inside
                     canonicalClassName in coroutineCallingClasses
                 }
-                // for some reason, without `isNotEmpty()` check this code can throw NPE on JVM 8
-                if (classes.isNotEmpty()) {
-                    retransformClasses(classes)
-                    instrumentedClasses.addAll(classes.map { it.name })
-                }
+                retransformClasses(classes)
+                instrumentedClasses.addAll(classes.map { it.name })
             }
 
             // In the model checking mode, Lincheck processes classes lazily, only when they are used.
@@ -170,20 +167,30 @@ object LincheckJavaAgent {
                     .filter { isEagerlyInstrumentedClass(it.name) }
                     .toTypedArray()
 
-                if (eagerlyTransformedClasses.isNotEmpty()) {
-                    retransformClasses(eagerlyTransformedClasses.asList())
-                }
+                retransformClasses(eagerlyTransformedClasses.asList())
                 instrumentedClasses.addAll(eagerlyTransformedClasses.map { it.name })
             }
         }
     }
 
     private fun retransformClasses(classes: List<Class<*>>) {
-        classes.forEach {
-            try {
-                instrumentation.retransformClasses(it)
-            } catch (t: Throwable) {
-                Logger.error { "Failed to retransform class ${it.name}: ${t.message}" }
+        // for some reason, trying to call `retransformClasses` on an empty list can throw NPE on JVM 8
+        if (classes.isEmpty()) return
+
+        // failsafe guardrails:
+        // 1. first try to retransform all classes in one bulk
+        // 2. if transformation fails for some class => retransform classes one by one,
+        //    thus skipping and logging failing classes
+        try {
+            instrumentation.retransformClasses(*classes.toTypedArray())
+        } catch (_: Throwable) {
+            classes.forEach {
+                try {
+                    instrumentation.retransformClasses(it)
+                } catch (t: Throwable) {
+                    Logger.error { "Failed to retransform class ${it.name}" }
+                    Logger.error(t)
+                }
             }
         }
     }
@@ -242,7 +249,6 @@ object LincheckJavaAgent {
             }
         // `retransformClasses` uses initial (loaded in VM from disk) class bytecode and reapplies
         // transformations of all agents that did not remove their transformers to this moment;
-        // for some reason, without `isNotEmpty()` check this code can throw NPE on JVM 8
         retransformClasses(classes)
         // Clear the set of instrumented classes.
         instrumentedClasses.clear()
