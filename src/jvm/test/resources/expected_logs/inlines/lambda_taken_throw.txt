@@ -21,7 +21,7 @@ Detailed trace:
 |   run(): threw RuntimeException at InlineLambdaConditionalTakenThrowTest.operation(InlineLambdaConditionalTakenThrowTest.kt:34)                                    |
 |     setEscape("BEFORE BLOCK") at InlineLambdaConditionalTakenThrowTest.operation(InlineLambdaConditionalTakenThrowTest.kt:55)                                      |
 |       escape = "BEFORE BLOCK" at InlineLambdaConditionalTakenThrowTest.setEscape(InlineLambdaConditionalTakenThrowTest.kt:20)                                      |
-|     Lambda argument to run(): threw RuntimeException at InlineLambdaConditionalTakenThrowTest.operation(InlineLambdaConditionalTakenThrowTest.kt:56)               |
+|     run$Lambda(): threw RuntimeException at InlineLambdaConditionalTakenThrowTest.operation(InlineLambdaConditionalTakenThrowTest.kt:56)                           |
 |       InlineLambdaConditionalTakenThrowTest#1.escape = "IN LAMBDA" at InlineLambdaConditionalTakenThrowTest.operation(InlineLambdaConditionalTakenThrowTest.kt:35) |
 |   escape = "CATCH" at InlineLambdaConditionalTakenThrowTest.operation(InlineLambdaConditionalTakenThrowTest.kt:40)                                                 |
 |   escape = "END" at InlineLambdaConditionalTakenThrowTest.operation(InlineLambdaConditionalTakenThrowTest.kt:42)                                                   |

@@ -21,12 +21,12 @@ Detailed trace:
 |   run(): threw RuntimeException at InlineLambdaConditionalTaken2ndLevelThrowTest.operation(InlineLambdaConditionalTaken2ndLevelThrowTest.kt:35)                                                     |
 |     setEscape("BEFORE BLOCK") at InlineLambdaConditionalTaken2ndLevelThrowTest.operation(InlineLambdaConditionalTaken2ndLevelThrowTest.kt:60)                                                       |
 |       escape = "BEFORE BLOCK" at InlineLambdaConditionalTaken2ndLevelThrowTest.setEscape(InlineLambdaConditionalTaken2ndLevelThrowTest.kt:21)                                                       |
-|     Lambda argument to run(): threw RuntimeException at InlineLambdaConditionalTaken2ndLevelThrowTest.operation(InlineLambdaConditionalTaken2ndLevelThrowTest.kt:61)                                |
+|     run$Lambda(): threw RuntimeException at InlineLambdaConditionalTaken2ndLevelThrowTest.operation(InlineLambdaConditionalTaken2ndLevelThrowTest.kt:61)                                            |
 |       InlineLambdaConditionalTaken2ndLevelThrowTest#1.escape = "IN LAMBDA 1" at InlineLambdaConditionalTaken2ndLevelThrowTest.operation(InlineLambdaConditionalTaken2ndLevelThrowTest.kt:36)        |
 |       InlineLambdaConditionalTaken2ndLevelThrowTest#1.run(): threw RuntimeException at InlineLambdaConditionalTaken2ndLevelThrowTest.operation(InlineLambdaConditionalTaken2ndLevelThrowTest.kt:37) |
 |         setEscape("BEFORE BLOCK") at InlineLambdaConditionalTaken2ndLevelThrowTest.operation(InlineLambdaConditionalTaken2ndLevelThrowTest.kt:62)                                                   |
 |           escape = "BEFORE BLOCK" at InlineLambdaConditionalTaken2ndLevelThrowTest.setEscape(InlineLambdaConditionalTaken2ndLevelThrowTest.kt:21)                                                   |
-|         Lambda argument to run(): threw RuntimeException at InlineLambdaConditionalTaken2ndLevelThrowTest.operation(InlineLambdaConditionalTaken2ndLevelThrowTest.kt:63)                            |
+|         run$Lambda(): threw RuntimeException at InlineLambdaConditionalTaken2ndLevelThrowTest.operation(InlineLambdaConditionalTaken2ndLevelThrowTest.kt:63)                                        |
 |           InlineLambdaConditionalTaken2ndLevelThrowTest#1.escape = "IN LAMBDA 2" at InlineLambdaConditionalTaken2ndLevelThrowTest.operation(InlineLambdaConditionalTaken2ndLevelThrowTest.kt:38)    |
 |   escape = "CATCH" at InlineLambdaConditionalTaken2ndLevelThrowTest.operation(InlineLambdaConditionalTaken2ndLevelThrowTest.kt:45)                                                                  |
 |   escape = "END" at InlineLambdaConditionalTaken2ndLevelThrowTest.operation(InlineLambdaConditionalTaken2ndLevelThrowTest.kt:47)                                                                    |
