@@ -167,9 +167,7 @@ object LincheckJavaAgent {
                     .filter { isEagerlyInstrumentedClass(it.name) }
                     .toTypedArray()
 
-                if (eagerlyTransformedClasses.isNotEmpty()) {
-                    retransformClasses(eagerlyTransformedClasses.asList())
-                }
+                retransformClasses(eagerlyTransformedClasses.asList())
                 instrumentedClasses.addAll(eagerlyTransformedClasses.map { it.name })
             }
         }
@@ -251,7 +249,6 @@ object LincheckJavaAgent {
             }
         // `retransformClasses` uses initial (loaded in VM from disk) class bytecode and reapplies
         // transformations of all agents that did not remove their transformers to this moment;
-        // for some reason, without `isNotEmpty()` check this code can throw NPE on JVM 8
         retransformClasses(classes)
         // Clear the set of instrumented classes.
         instrumentedClasses.clear()
