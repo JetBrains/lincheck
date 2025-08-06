@@ -123,4 +123,7 @@ internal class NoExceptionVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpeci
         results.parallelResults[0][0] !is ExceptionResult
 }
 
+// This lock is used to ensure Lincheck tests
+// are never run in parallel, thus, avoiding
+// parallel javaagent install/uninstall calls.
 internal val LINCHECK_TEST_LOCK = ReentrantLock()
