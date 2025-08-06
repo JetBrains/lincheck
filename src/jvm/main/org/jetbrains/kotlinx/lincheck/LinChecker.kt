@@ -9,7 +9,6 @@
  */
 package org.jetbrains.kotlinx.lincheck
 
-import kotlinx.atomicfu.locks.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.transformation.*
@@ -17,6 +16,7 @@ import org.jetbrains.lincheck.*
 import org.jetbrains.lincheck.datastructures.*
 import org.jetbrains.lincheck.datastructures.verifier.*
 import org.jetbrains.lincheck.util.*
+import kotlin.concurrent.*
 import kotlin.reflect.*
 
 /**
