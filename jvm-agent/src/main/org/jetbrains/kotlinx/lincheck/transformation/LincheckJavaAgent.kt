@@ -324,6 +324,8 @@ object LincheckJavaAgent {
                 ) {
                     ensureClassHierarchyIsTransformed(clazz)
                 } else {
+                    // Optimization and safety net: do not analyze low-level
+                    // class instances from the standard Java library.
                     if (className.startsWith("jdk.") || className.startsWith("java.lang.") || className.startsWith("sun.misc.")) {
                         return
                     }

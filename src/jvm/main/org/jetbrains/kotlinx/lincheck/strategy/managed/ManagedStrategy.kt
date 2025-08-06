@@ -1439,7 +1439,6 @@ internal abstract class ManagedStrategy(
         // Please note that this check must not produce Lincheck events.
         if (obj.isImmutable) return
         runInsideIgnoredSection {
-            if (obj.isCoroutinesSymbol) return
             identityHashCodeTracker.afterNewTrackedObjectCreation(obj)
             objectTracker.registerNewObject(obj)
         }
