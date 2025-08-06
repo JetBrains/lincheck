@@ -40,12 +40,13 @@ private fun lazyPrintTRPoint(output: PrintStream, reader: LazyTraceReader, node:
     output.print(" ".repeat(depth * 2))
     output.println(node.toText(verbose))
     if (node is TRMethodCallTracePoint && node.events.isNotEmpty()) {
-        reader.loadChildrenRange(node, 0, node.events.size)
+        reader.loadAllChildren(node)
         node.events.forEach { event ->
             if (event != null) {
                 lazyPrintTRPoint(output, reader, event, depth + 1, verbose)
             }
         }
+        node.unloadAllChildren()
     }
 }
 
