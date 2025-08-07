@@ -10,13 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck_test.util
 
-import kotlinx.atomicfu.locks.withLock
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
-import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
-import org.jetbrains.lincheck.LINCHECK_TEST_LOCK
-import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.ParameterGenerator
 import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import org.jetbrains.lincheck.util.DEFAULT_TEST_JDK_VERSION
@@ -24,17 +19,11 @@ import org.jetbrains.lincheck.util.JdkVersion
 import org.jetbrains.lincheck.util.jdkVersion
 import org.jetbrains.lincheck.datastructures.Options
 import org.jetbrains.lincheck.datastructures.RandomProvider
-import org.junit.Assert.*
-import java.io.File
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.atomic.AtomicInteger
+import org.junit.Assert.*
+import java.io.File
 
-internal inline fun withLincheckJavaAgentAndLincheckTestLock(
-    instrumentationMode: InstrumentationMode,
-    block: () -> Unit
-): Unit = LINCHECK_TEST_LOCK.withLock {
-    withLincheckJavaAgent(instrumentationMode, block)
-}
 
 /**
  * Checks output when Lincheck run fails with an exception and don't return [LincheckFailure]

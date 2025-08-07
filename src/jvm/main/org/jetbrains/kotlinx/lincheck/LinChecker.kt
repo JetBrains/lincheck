@@ -63,22 +63,21 @@ constructor(private val testClass: Class<*>, options: Options<*, *>?) {
      *   The continuation is run in the context when Lincheck java-agent is still attached.
      * @return [LincheckFailure] if a failure is discovered, null otherwise.
      */
-    internal fun checkImpl(cont: LincheckFailureContinuation? = null): LincheckFailure? =
-        LINCHECK_TEST_LOCK.withLock {
-            check(testConfigurations.isNotEmpty()) { "No Lincheck test configuration to run" }
-            lincheckVerificationStarted()
-            for (testCfg in testConfigurations) {
-                withLincheckJavaAgent(testCfg.instrumentationMode) {
-                    val failure = testCfg.checkImpl()
-                    if (failure != null) {
-                        if (cont != null) cont(failure)
-                        return failure
-                    }
+    internal fun checkImpl(cont: LincheckFailureContinuation? = null): LincheckFailure? {
+        check(testConfigurations.isNotEmpty()) { "No Lincheck test configuration to run" }
+        lincheckVerificationStarted()
+        for (testCfg in testConfigurations) {
+            withLincheckTestContext(testCfg.instrumentationMode) {
+                val failure = testCfg.checkImpl()
+                if (failure != null) {
+                    if (cont != null) cont(failure)
+                    return failure
                 }
             }
-            if (cont != null) cont(null)
-            return null
         }
+        if (cont != null) cont(null)
+        return null
+    }
 
     private fun CTestConfiguration.checkImpl(): LincheckFailure? {
         var verifier = createVerifier()

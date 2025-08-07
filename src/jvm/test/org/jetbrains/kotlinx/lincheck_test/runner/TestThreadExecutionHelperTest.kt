@@ -15,7 +15,7 @@ import org.jetbrains.kotlinx.lincheck.ExceptionResult.Companion.create
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
-import org.jetbrains.kotlinx.lincheck_test.util.withLincheckJavaAgentAndLincheckTestLock
+import org.jetbrains.lincheck.withLincheckTestContext
 import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
@@ -69,7 +69,7 @@ class TestThreadExecutionHelperTest {
 
     @Test
     @Throws(Exception::class)
-    fun testBase() = withLincheckJavaAgentAndLincheckTestLock(InstrumentationMode.STRESS) {
+    fun testBase() = withLincheckTestContext(InstrumentationMode.STRESS) {
         val ex = TestThreadExecutionGenerator.create(
             runner, 0,
             Arrays.asList(
@@ -100,7 +100,7 @@ class TestThreadExecutionHelperTest {
 
     @Test
     @Throws(Exception::class)
-    fun testActorExceptionHandling() = withLincheckJavaAgentAndLincheckTestLock(InstrumentationMode.STRESS) {
+    fun testActorExceptionHandling() = withLincheckTestContext(InstrumentationMode.STRESS) {
         val ex = TestThreadExecutionGenerator.create(
             runner, 0,
             Arrays.asList(
