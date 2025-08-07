@@ -19,10 +19,11 @@ import org.jetbrains.lincheck.util.JdkVersion
 import org.jetbrains.lincheck.util.jdkVersion
 import org.jetbrains.lincheck.datastructures.Options
 import org.jetbrains.lincheck.datastructures.RandomProvider
-import org.junit.Assert.*
-import java.io.File
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.atomic.AtomicInteger
+import org.junit.Assert.*
+import java.io.File
+
 
 /**
  * Checks output when Lincheck run fails with an exception and don't return [LincheckFailure]

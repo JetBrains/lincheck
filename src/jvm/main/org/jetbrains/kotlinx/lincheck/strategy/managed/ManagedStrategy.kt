@@ -1435,6 +1435,8 @@ internal abstract class ManagedStrategy(
     }
 
     override fun afterNewObjectCreation(obj: Any) {
+        // Fast-check for immutable objects without entering an ignored section.
+        // Please note that this check must not produce Lincheck events.
         if (obj.isImmutable) return
         runInsideIgnoredSection {
             identityHashCodeTracker.afterNewTrackedObjectCreation(obj)

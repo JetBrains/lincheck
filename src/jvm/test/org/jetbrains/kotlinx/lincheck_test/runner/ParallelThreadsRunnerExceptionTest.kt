@@ -17,7 +17,7 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
-import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
+import org.jetbrains.lincheck.withLincheckTestContext
 import org.jetbrains.kotlinx.lincheck_test.verifier.*
 import org.jetbrains.lincheck.datastructures.actor
 import org.jetbrains.lincheck.datastructures.scenario
@@ -87,7 +87,7 @@ class ParallelThreadsRunnerExceptionTest {
     private val resSucc = SuspendResumeScenarios::resumeSuccessfully
 
     @Test
-    fun testResumeWithException() = withLincheckJavaAgent(InstrumentationMode.STRESS) {
+    fun testResumeWithException() = withLincheckTestContext(InstrumentationMode.STRESS) {
         val (scenario, expectedResults) = scenarioWithResults {
             parallel {
                 thread {
@@ -111,7 +111,7 @@ class ParallelThreadsRunnerExceptionTest {
     }
 
     @Test
-    fun testThrowExceptionInFollowUp() = withLincheckJavaAgent(InstrumentationMode.STRESS) {
+    fun testThrowExceptionInFollowUp() = withLincheckTestContext(InstrumentationMode.STRESS) {
         val (scenario, expectedResults) = scenarioWithResults {
             parallel {
                 thread {
@@ -134,7 +134,7 @@ class ParallelThreadsRunnerExceptionTest {
     }
 
     @Test
-    fun testThrow() = withLincheckJavaAgent(InstrumentationMode.STRESS) {
+    fun testThrow() = withLincheckTestContext(InstrumentationMode.STRESS) {
         val (scenario, expectedResults) = scenarioWithResults {
             parallel {
                 thread {
@@ -154,7 +154,7 @@ class ParallelThreadsRunnerExceptionTest {
 
 class ParallelThreadExecutionExceptionsTest {
     @Test
-    fun shouldCompleteWithUnexpectedException() = withLincheckJavaAgent(InstrumentationMode.STRESS) {
+    fun shouldCompleteWithUnexpectedException() = withLincheckTestContext(InstrumentationMode.STRESS) {
         val scenario = scenario {
             parallel {
                 thread { actor(::operation) }

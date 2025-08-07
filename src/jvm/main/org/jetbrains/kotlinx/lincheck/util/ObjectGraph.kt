@@ -233,7 +233,6 @@ internal val Any?.isImmutable get() = when {
     this is String          -> true
     this is BigInteger      -> true
     this is BigDecimal      -> true
-    this.isCoroutinesSymbol -> true
     else                    -> false
 }
 
@@ -248,7 +247,7 @@ internal val Any?.isPrimitive get() = when (this) {
 /**
  * Extension property to determine if the given object is a [kotlinx.coroutines] symbol.
  */
-private val Any?.isCoroutinesSymbol get() =
+internal val Any?.isCoroutinesSymbol get() =
     this != null && this::class.jvmName == "kotlinx.coroutines.internal.Symbol"
 
 internal fun getArrayLength(arr: Any): Int {

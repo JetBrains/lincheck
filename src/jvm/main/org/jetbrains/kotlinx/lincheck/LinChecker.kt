@@ -9,20 +9,14 @@
  */
 package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.lincheck.datastructures.ManagedCTestConfiguration
-import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
-import org.jetbrains.lincheck.util.DEFAULT_LOG_LEVEL
-import org.jetbrains.lincheck.util.LoggingLevel
-import org.jetbrains.lincheck.util.ideaPluginEnabled
-import org.jetbrains.lincheck.datastructures.CTestConfiguration
-import org.jetbrains.lincheck.datastructures.Options
-import org.jetbrains.lincheck.datastructures.RandomProvider
-import org.jetbrains.lincheck.datastructures.createFromTestClassAnnotations
-import org.jetbrains.lincheck.datastructures.createVerifier
-import org.jetbrains.lincheck.datastructures.verifier.Verifier
+import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.jetbrains.lincheck.*
+import org.jetbrains.lincheck.datastructures.*
+import org.jetbrains.lincheck.datastructures.verifier.*
+import org.jetbrains.lincheck.util.*
+import kotlin.concurrent.*
 import kotlin.reflect.*
 
 /**
@@ -69,12 +63,11 @@ constructor(private val testClass: Class<*>, options: Options<*, *>?) {
      *   The continuation is run in the context when Lincheck java-agent is still attached.
      * @return [LincheckFailure] if a failure is discovered, null otherwise.
      */
-    @Synchronized // never run Lincheck tests in parallel
     internal fun checkImpl(cont: LincheckFailureContinuation? = null): LincheckFailure? {
         check(testConfigurations.isNotEmpty()) { "No Lincheck test configuration to run" }
         lincheckVerificationStarted()
         for (testCfg in testConfigurations) {
-            withLincheckJavaAgent(testCfg.instrumentationMode) {
+            withLincheckTestContext(testCfg.instrumentationMode) {
                 val failure = testCfg.checkImpl()
                 if (failure != null) {
                     if (cont != null) cont(failure)
@@ -180,7 +173,7 @@ constructor(private val testClass: Class<*>, options: Options<*, *>?) {
     }
 
     private fun checkAtLeastOneMethodIsMarkedAsOperation() {
-        check (testStructure.hasOperations()) { NO_OPERATION_ERROR_MESSAGE }
+        check(testStructure.hasOperations()) { NO_OPERATION_ERROR_MESSAGE }
     }
 
     // This companion object is used for backwards compatibility.
@@ -191,7 +184,10 @@ constructor(private val testClass: Class<*>, options: Options<*, *>?) {
          *
          * @throws AssertionError if any of the tests fails.
          */
-        @Deprecated("Use StressOptions.check() or ModelCheckingOptions.check() instead.", level = DeprecationLevel.WARNING)
+        @Deprecated(
+            "Use StressOptions.check() or ModelCheckingOptions.check() instead.",
+            level = DeprecationLevel.WARNING
+        )
         @JvmOverloads
         @JvmStatic
         fun check(testClass: Class<*>, options: Options<*, *>? = null) {
@@ -245,7 +241,7 @@ private fun ExecutionScenario.tryMinimize(checkScenario: (ExecutionScenario) -> 
         }
     }
     // Try to move one of the first operations to the initial (pre-parallel) part.
-    parallelExecution.forEachIndexed {  threadId: Int, actors: List<Actor> ->
+    parallelExecution.forEachIndexed { threadId: Int, actors: List<Actor> ->
         if (actors.isNotEmpty()) {
             val newInitExecution = initExecution + actors.first()
             val newParallelExecution = parallelExecution.mapIndexed { t: Int, it: List<Actor> ->
@@ -268,7 +264,7 @@ private fun ExecutionScenario.tryMinimize(checkScenario: (ExecutionScenario) -> 
         }
     }
     // Try to move one of the last operations to the post (post-parallel) part.
-    parallelExecution.forEachIndexed {  threadId: Int, actors: List<Actor> ->
+    parallelExecution.forEachIndexed { threadId: Int, actors: List<Actor> ->
         if (actors.isNotEmpty()) {
             val newInitExecution = ArrayList(initExecution)
             val newParallelExecution = parallelExecution.mapIndexed { t: Int, it: List<Actor> ->
@@ -347,7 +343,8 @@ internal fun <O : Options<O, *>> O.checkImpl(testClass: Class<*>, cont: Lincheck
 
 internal typealias LincheckFailureContinuation = (LincheckFailure?) -> Unit
 
-internal const val NO_OPERATION_ERROR_MESSAGE = "You must specify at least one operation to test. Please refer to the user guide: https://kotlinlang.org/docs/introduction.html"
+internal const val NO_OPERATION_ERROR_MESSAGE =
+    "You must specify at least one operation to test. Please refer to the user guide: https://kotlinlang.org/docs/introduction.html"
 
 /**
  * We provide lincheck version to [testFailed] method to the plugin be able to

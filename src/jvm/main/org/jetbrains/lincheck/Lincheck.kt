@@ -21,9 +21,12 @@ import org.jetbrains.kotlinx.lincheck.execution.parallelResults
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.runIteration
+import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.ensureObjectIsTransformed
 import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 object Lincheck {
 
@@ -78,7 +81,7 @@ object Lincheck {
             .verifier(NoExceptionVerifier::class.java)
 
         val testCfg = options.createTestConfigurations(GeneralPurposeModelCheckingWrapper::class.java)
-        withLincheckJavaAgent(testCfg.instrumentationMode) {
+        withLincheckTestContext(testCfg.instrumentationMode) {
             ensureObjectIsTransformed(block)
             val verifier = testCfg.createVerifier()
             val wrapperClass = GeneralPurposeModelCheckingWrapper::class.java
@@ -121,3 +124,26 @@ internal class NoExceptionVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpeci
         results.parallelResults[0][0] !is ExceptionResult
 }
 
+/**
+ * Executes the provided [block] of code within the context of Lincheck test. This includes:
+ * - locking the testing process using a shared lock to ensure thread-safety of
+ *   bytecode instrumentation and Lincheck analysis
+ *   (therefore, as for now, Lincheck tests cannot be run in parallel);
+ * - attaching java-agent for bytecode instrumentation.
+ *
+ * @param instrumentationMode the mode of Lincheck instrumentation to be applied.
+ * @param block the code block to execute within the Lincheck test context
+ */
+internal inline fun withLincheckTestContext(
+    instrumentationMode: InstrumentationMode,
+    block: () -> Unit
+) {
+    LINCHECK_TEST_LOCK.withLock {
+        withLincheckJavaAgent(instrumentationMode, block)
+    }
+}
+
+// This lock is used to ensure Lincheck tests
+// are never run in parallel, thus, avoiding
+// parallel javaagent install/uninstall calls.
+private val LINCHECK_TEST_LOCK = ReentrantLock()
