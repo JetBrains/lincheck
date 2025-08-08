@@ -35,18 +35,21 @@ fun String.adornedClassNameRepresentation(): String = this
 fun isThisName(name: String): Boolean =
     (name == "this")                                    ||
     (name == "\$this")                                  ||
-    name.matches(Regex("this\\$\\d+"))                  ||
+    name.matches(enclosingThisRegex)                    ||
     isInlineThisIVName(name)
 
 fun isInlineThisIVName(name: String): Boolean =
     name.startsWith("this_\$iv")                        ||
-    name.contains(Regex("^\\\$this\\$.+?(\\\$iv)+$"))
+    name.contains(inlineThisRegex)
 
 fun AccessLocation.isThisAccess(): Boolean = when (this) {
     is LocalVariableAccessLocation  -> isThisName(variableName)
     is FieldAccessLocation          -> isThisName(fieldName)
     else                            -> false
 }
+
+private val enclosingThisRegex = Regex("this\\$\\d+")
+private val inlineThisRegex = Regex("^\\\$this\\$.+?(\\\$iv)+$")
 
 fun AccessPath.filterThisAccesses(): AccessPath =
     AccessPath(locations.filter { !it.isThisAccess() })
