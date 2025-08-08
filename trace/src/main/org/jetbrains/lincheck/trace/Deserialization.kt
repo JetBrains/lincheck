@@ -19,6 +19,7 @@ import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption
 import kotlin.io.path.Path
+import org.jetbrains.lincheck.descriptors.CodeLocation
 
 private const val INPUT_BUFFER_SIZE: Int = 16 * 1024 * 1024
 
@@ -145,12 +146,14 @@ private class CodeLocationsContext {
     fun restoreAllCodeLocations(context: TraceContext) {
         shallowSTEs.forEachIndexed { id, value ->
             if (value != null) {
-                context.restoreCodeLocation(id, StackTraceElement(
+                val stackTraceElement = StackTraceElement(
                     /* declaringClass = */ stringCache[value.className] ?: "<unknown class>",
                     /* methodName = */ stringCache[value.methodName] ?: "<unknown method>",
                     /* fileName = */ stringCache[value.fileName] ?: "<unknown file>",
                     /* lineNumber = */ value.lineNumber
-                ))
+                )
+                val location = CodeLocation(stackTraceElement)
+                context.restoreCodeLocation(id, location)
             }
         }
     }

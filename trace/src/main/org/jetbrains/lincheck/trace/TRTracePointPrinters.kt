@@ -10,11 +10,7 @@
 
 package org.jetbrains.lincheck.trace
 
-import org.jetbrains.lincheck.descriptors.ClassDescriptor
-import org.jetbrains.lincheck.descriptors.CodeLocations
-import org.jetbrains.lincheck.descriptors.FieldDescriptor
-import org.jetbrains.lincheck.descriptors.MethodDescriptor
-import org.jetbrains.lincheck.descriptors.VariableDescriptor
+import org.jetbrains.lincheck.descriptors.*
 
 
 interface TRAppendable {
@@ -30,6 +26,50 @@ interface TRAppendable {
     fun appendKeyword(keyword: String): TRAppendable
     fun appendSpecialSymbol(symbol: String): TRAppendable
     fun append(text: String?): TRAppendable
+}
+
+fun TRAppendable.appendAccessPath(accessPath: AccessPath) {
+    for (i in accessPath.locations.indices) {
+        val location = accessPath.locations[i]
+        val nextLocation = accessPath.locations.getOrNull(i + 1)
+
+        when (location) {
+            is LocalVariableAccessLocation -> {
+                appendVariableName(location.variableDescriptor)
+                if (nextLocation is FieldAccessLocation) {
+                    appendSpecialSymbol(".")
+                }
+            }
+
+            is StaticFieldAccessLocation -> {
+                appendClassName(location.fieldDescriptor.classDescriptor)
+                appendSpecialSymbol(".")
+                appendFieldName(location.fieldDescriptor)
+                if (nextLocation is FieldAccessLocation) {
+                    appendSpecialSymbol(".")
+                }
+            }
+
+            is ObjectFieldAccessLocation -> {
+                appendFieldName(location.fieldDescriptor)
+                if (nextLocation is FieldAccessLocation) {
+                    appendSpecialSymbol(".")
+                }
+            }
+
+            is ArrayElementByIndexAccessLocation -> {
+                appendSpecialSymbol("[")
+                appendArrayIndex(location.index)
+                appendSpecialSymbol("]")
+            }
+
+            is ArrayElementByNameAccessLocation -> {
+                appendSpecialSymbol("[")
+                appendAccessPath(location.indexAccessPath)
+                appendSpecialSymbol("]")
+            }
+        }
+    }
 }
 
 abstract class AbstractTRAppendable: TRAppendable {
@@ -80,7 +120,6 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
         val md = tracePoint.methodDescriptor
 
         appendOwner(tracePoint)
-        appendSpecialSymbol(".")
         appendMethodName(md)
         appendSpecialSymbol("(")
         appendParameters(tracePoint)
@@ -90,11 +129,18 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
     }
 
     protected fun TRAppendable.appendOwner(tracePoint: TRMethodCallTracePoint): TRAppendable {
-        if (tracePoint.obj != null) {
+        val ownerName = CodeLocations.accessPath(tracePoint.codeLocationId)
+        if (ownerName != null) {
+            ownerName.filterThisAccesses().takeIf { !it.isEmpty() }?.let {
+                appendAccessPath(it)
+                appendSpecialSymbol(".")
+            }
+        } else if (tracePoint.obj != null) {
             appendObject(tracePoint.obj)
-        }
-        else {
+            appendSpecialSymbol(".")
+        } else {
             appendClassName(tracePoint.classDescriptor)
+            appendSpecialSymbol(".")
         }
         return this
     }
@@ -149,18 +195,24 @@ abstract class AbstractTRFieldTracePointPrinter {
     }
 
     protected fun TRAppendable.appendOwner(tracePoint: TRFieldTracePoint): TRAppendable {
-        if (tracePoint.obj != null) {
+        val ownerName = CodeLocations.accessPath(tracePoint.codeLocationId)
+        if (ownerName != null) {
+            ownerName.filterThisAccesses().takeIf { !it.isEmpty() }?.let {
+                appendAccessPath(it)
+                appendSpecialSymbol(".")
+            }
+        } else if (tracePoint.obj != null) {
             appendObject(tracePoint.obj)
-        }
-        else {
+            appendSpecialSymbol(".")
+        } else {
             appendClassName(tracePoint.classDescriptor)
+            appendSpecialSymbol(".")
         }
         return this
     }
 
     protected fun TRAppendable.appendFieldName(tracePoint: TRFieldTracePoint, isLambdaCaptureSyntheticField: Boolean): TRAppendable {
         if (!isLambdaCaptureSyntheticField) {
-            appendSpecialSymbol(".")
             appendFieldName(tracePoint.fieldDescriptor)
         }
         return this

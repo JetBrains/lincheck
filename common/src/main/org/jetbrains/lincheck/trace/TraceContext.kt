@@ -10,7 +10,9 @@
 
 package org.jetbrains.lincheck.trace
 
+import org.jetbrains.lincheck.descriptors.AccessPath
 import org.jetbrains.lincheck.descriptors.ClassDescriptor
+import org.jetbrains.lincheck.descriptors.CodeLocation
 import org.jetbrains.lincheck.descriptors.FieldDescriptor
 import org.jetbrains.lincheck.descriptors.MethodDescriptor
 import org.jetbrains.lincheck.descriptors.MethodSignature
@@ -24,7 +26,7 @@ const val UNKNOWN_CODE_LOCATION_ID = -1
 private val EMPTY_STACK_TRACE = StackTraceElement("", "", "", 0)
 
 class TraceContext {
-    private val locations = ArrayList<StackTraceElement?>()
+    private val locations = ArrayList<CodeLocation?>()
     private val classes = IndexedPool<ClassDescriptor>()
     private val methods = IndexedPool<MethodDescriptor>()
     private val fields = IndexedPool<FieldDescriptor>()
@@ -57,7 +59,11 @@ class TraceContext {
         )
     }
 
-    fun getMethodDescriptor(methodId: Int): MethodDescriptor = methods[methodId]
+    fun getMethodDescriptor(className: String, methodName: String, desc: String): MethodDescriptor =
+        getMethodDescriptor(getOrCreateMethodId(className, methodName, desc))
+
+    fun getMethodDescriptor(methodId: Int): MethodDescriptor =
+        methods[methodId]
 
     fun restoreMethodDescriptor(id: Int, value: MethodDescriptor) {
         methods.restore(id, value)
@@ -77,7 +83,11 @@ class TraceContext {
         )
     }
 
-    fun getFieldDescriptor(fieldId: Int): FieldDescriptor = fields[fieldId]
+    fun getFieldDescriptor(className: String, fieldName: String, isStatic: Boolean, isFinal: Boolean): FieldDescriptor =
+        getFieldDescriptor(getOrCreateFieldId(className, fieldName, isStatic, isFinal))
+
+    fun getFieldDescriptor(fieldId: Int): FieldDescriptor =
+        fields[fieldId]
 
     fun restoreFieldDescriptor(id: Int, value: FieldDescriptor) {
         fields.restore(id, value)
@@ -89,39 +99,51 @@ class TraceContext {
         return variables.getOrCreateId(VariableDescriptor(variableName))
     }
 
-    fun getVariableDescriptor(variableId: Int): VariableDescriptor = variables[variableId]
+    fun getVariableDescriptor(variableName: String): VariableDescriptor =
+        getVariableDescriptor(getOrCreateVariableId(variableName))
+
+    fun getVariableDescriptor(variableId: Int): VariableDescriptor =
+        variables[variableId]
 
     fun restoreVariableDescriptor(id: Int, value: VariableDescriptor) {
         variables.restore(id, value)
     }
 
+    val codeLocations: List<CodeLocation?> get() = locations
 
-    val codeLocations: List<StackTraceElement?> get() = locations
-
-    fun newCodeLocation(stackTraceElement: StackTraceElement): Int {
+    fun newCodeLocation(stackTraceElement: StackTraceElement, accessPath: AccessPath? = null): Int {
         val id = locations.size
-        locations.add(stackTraceElement)
+        val location = CodeLocation(stackTraceElement, accessPath)
+        locations.add(location)
         return id
     }
 
     fun stackTrace(codeLocationId: Int): StackTraceElement {
-        // actors do not have a code location (for now)
         if (codeLocationId == UNKNOWN_CODE_LOCATION_ID) return EMPTY_STACK_TRACE
-        var loc = locations[codeLocationId]
+        val loc = locations[codeLocationId]
         if (loc == null) {
-            error("Unknown code location $codeLocationId")
+            error("Invalid code location id $codeLocationId")
         }
-        return loc
+        return loc.stackTraceElement
     }
 
-    fun restoreCodeLocation(id: Int, value: StackTraceElement) {
-        check (id >= locations.size || locations[id] == null || locations[id] == value) {
-            "CodeLocation with id $id is already present in context and differs from $value"
+    fun accessPath(codeLocationId: Int): AccessPath? {
+        if (codeLocationId == UNKNOWN_CODE_LOCATION_ID) return null
+        val loc = locations[codeLocationId]
+        if (loc == null) {
+            error("Invalid code location id $codeLocationId")
+        }
+        return loc.accessPath
+    }
+
+    fun restoreCodeLocation(id: Int, location: CodeLocation) {
+        check (id >= locations.size || locations[id] == null || locations[id] == location) {
+            "CodeLocation with id $id is already present in context and differs from $location"
         }
         while (locations.size <= id) {
             locations.add(null)
         }
-        locations[id] = value
+        locations[id] = location
     }
 
     fun clear() {

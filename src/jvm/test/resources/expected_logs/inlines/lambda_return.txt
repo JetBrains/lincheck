@@ -13,18 +13,18 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| --------------------------------------------------------------------------------------------------------------------- |
-|                                                       Thread 1                                                        |
-| --------------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                           |
-|   escape = "START" at InlineLambdaReturnTest.operation(InlineLambdaReturnTest.kt:32)                                  |
-|   run() at InlineLambdaReturnTest.operation(InlineLambdaReturnTest.kt:33)                                             |
-|     setEscape("BEFORE BLOCK") at InlineLambdaReturnTest.operation(InlineLambdaReturnTest.kt:48)                       |
-|       escape = "BEFORE BLOCK" at InlineLambdaReturnTest.setEscape(InlineLambdaReturnTest.kt:20)                       |
-|     run$Lambda() at InlineLambdaReturnTest.operation(InlineLambdaReturnTest.kt:49)                                    |
-|       InlineLambdaReturnTest#1.escape = "IN LAMBDA" at InlineLambdaReturnTest.operation(InlineLambdaReturnTest.kt:34) |
-|     setEscape("AFTER BLOCK") at InlineLambdaReturnTest.operation(InlineLambdaReturnTest.kt:50)                        |
-|       escape = "AFTER BLOCK" at InlineLambdaReturnTest.setEscape(InlineLambdaReturnTest.kt:20)                        |
-|   escape = "END" at InlineLambdaReturnTest.operation(InlineLambdaReturnTest.kt:37)                                    |
-|   result: void                                                                                                        |
-| --------------------------------------------------------------------------------------------------------------------- |
+| ----------------------------------------------------------------------------------------------- |
+|                                            Thread 1                                             |
+| ----------------------------------------------------------------------------------------------- |
+| operation()                                                                                     |
+|   escape = "START" at InlineLambdaReturnTest.operation(InlineLambdaReturnTest.kt:32)            |
+|   run() at InlineLambdaReturnTest.operation(InlineLambdaReturnTest.kt:33)                       |
+|     setEscape("BEFORE BLOCK") at InlineLambdaReturnTest.operation(InlineLambdaReturnTest.kt:48) |
+|       escape = "BEFORE BLOCK" at InlineLambdaReturnTest.setEscape(InlineLambdaReturnTest.kt:20) |
+|     run$Lambda() at InlineLambdaReturnTest.operation(InlineLambdaReturnTest.kt:49)              |
+|       escape = "IN LAMBDA" at InlineLambdaReturnTest.operation(InlineLambdaReturnTest.kt:34)    |
+|     setEscape("AFTER BLOCK") at InlineLambdaReturnTest.operation(InlineLambdaReturnTest.kt:50)  |
+|       escape = "AFTER BLOCK" at InlineLambdaReturnTest.setEscape(InlineLambdaReturnTest.kt:20)  |
+|   escape = "END" at InlineLambdaReturnTest.operation(InlineLambdaReturnTest.kt:37)              |
+|   result: void                                                                                  |
+| ----------------------------------------------------------------------------------------------- |

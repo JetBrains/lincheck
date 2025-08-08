@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
+import org.jetbrains.lincheck.descriptors.AccessPath
 import org.jetbrains.lincheck.descriptors.CodeLocations
 import org.jetbrains.lincheck.util.ideaPluginEnabled
 import org.objectweb.asm.Label
@@ -36,10 +37,11 @@ internal open class LincheckBaseMethodVisitor(
         }
     }
 
-    protected fun loadNewCodeLocationId() = adapter.run {
+    protected fun loadNewCodeLocationId(accessPath: AccessPath? = null): Int = adapter.run {
         val stackTraceElement = StackTraceElement(className, methodName, fileName, lineNumber)
-        val codeLocationId = CodeLocations.newCodeLocation(stackTraceElement)
+        val codeLocationId = CodeLocations.newCodeLocation(stackTraceElement, accessPath)
         push(codeLocationId)
+        return codeLocationId
     }
 
     protected fun isKnownLineNumber(): Boolean =

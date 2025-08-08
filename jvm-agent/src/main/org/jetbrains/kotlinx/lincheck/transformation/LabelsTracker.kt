@@ -22,8 +22,8 @@ internal class LabelsTracker(
     val labels: MethodLabels
 ) : MethodVisitor(ASM_API, visitor) {
     override fun visitLabel(label: Label)  {
-        super.visitLabel(label)
         locals.visitLabel(label)
         labels.visitLabel(label)
+        super.visitLabel(label)
     }
 }

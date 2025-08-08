@@ -13,27 +13,27 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                              Thread 1                                                                                               |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                                                                                                         |
-|   escape = "START" at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:32)                                                                  |
-|   run() at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:33)                                                                             |
-|     setEscape("BEFORE BLOCK") at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:55)                                                       |
-|       escape = "BEFORE BLOCK" at InlineLambdaConditionalNotTakenDeepReturnTest.setEscape(InlineLambdaConditionalNotTakenDeepReturnTest.kt:20)                                                       |
-|     run$Lambda() at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:56)                                                                    |
-|       InlineLambdaConditionalNotTakenDeepReturnTest#1.escape = "IN LAMBDA 1" at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:34)        |
-|       InlineLambdaConditionalNotTakenDeepReturnTest#1.run() at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:35)                         |
-|         setEscape("BEFORE BLOCK") at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:57)                                                   |
-|           escape = "BEFORE BLOCK" at InlineLambdaConditionalNotTakenDeepReturnTest.setEscape(InlineLambdaConditionalNotTakenDeepReturnTest.kt:20)                                                   |
-|         run$Lambda() at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:58)                                                                |
-|           InlineLambdaConditionalNotTakenDeepReturnTest#1.escape = "IN LAMBDA 2" at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:36)    |
-|           InlineLambdaConditionalNotTakenDeepReturnTest#1.escape = "AFTER LAMBDA 2" at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:38) |
-|         setEscape("AFTER BLOCK") at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:59)                                                    |
-|           escape = "AFTER BLOCK" at InlineLambdaConditionalNotTakenDeepReturnTest.setEscape(InlineLambdaConditionalNotTakenDeepReturnTest.kt:20)                                                    |
-|       InlineLambdaConditionalNotTakenDeepReturnTest#1.escape = "AFTER LAMBDA 1" at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:40)     |
-|     setEscape("AFTER BLOCK") at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:61)                                                        |
-|       escape = "AFTER BLOCK" at InlineLambdaConditionalNotTakenDeepReturnTest.setEscape(InlineLambdaConditionalNotTakenDeepReturnTest.kt:20)                                                        |
-|   escape = "END" at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:42)                                                                    |
-|   result: void                                                                                                                                                                                      |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                  Thread 1                                                                                   |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                                                 |
+|   escape = "START" at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:32)                                          |
+|   run() at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:33)                                                     |
+|     setEscape("BEFORE BLOCK") at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:55)                               |
+|       escape = "BEFORE BLOCK" at InlineLambdaConditionalNotTakenDeepReturnTest.setEscape(InlineLambdaConditionalNotTakenDeepReturnTest.kt:20)                               |
+|     run$Lambda() at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:56)                                            |
+|       escape = "IN LAMBDA 1" at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:34)                                |
+|       InlineLambdaConditionalNotTakenDeepReturnTest#1.run() at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:35) |
+|         setEscape("BEFORE BLOCK") at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:57)                           |
+|           escape = "BEFORE BLOCK" at InlineLambdaConditionalNotTakenDeepReturnTest.setEscape(InlineLambdaConditionalNotTakenDeepReturnTest.kt:20)                           |
+|         run$Lambda() at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:58)                                        |
+|           escape = "IN LAMBDA 2" at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:36)                            |
+|           escape = "AFTER LAMBDA 2" at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:38)                         |
+|         setEscape("AFTER BLOCK") at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:59)                            |
+|           escape = "AFTER BLOCK" at InlineLambdaConditionalNotTakenDeepReturnTest.setEscape(InlineLambdaConditionalNotTakenDeepReturnTest.kt:20)                            |
+|       escape = "AFTER LAMBDA 1" at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:40)                             |
+|     setEscape("AFTER BLOCK") at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:61)                                |
+|       escape = "AFTER BLOCK" at InlineLambdaConditionalNotTakenDeepReturnTest.setEscape(InlineLambdaConditionalNotTakenDeepReturnTest.kt:20)                                |
+|   escape = "END" at InlineLambdaConditionalNotTakenDeepReturnTest.operation(InlineLambdaConditionalNotTakenDeepReturnTest.kt:42)                                            |
+|   result: void                                                                                                                                                              |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

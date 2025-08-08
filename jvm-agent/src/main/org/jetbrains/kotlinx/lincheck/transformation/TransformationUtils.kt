@@ -12,7 +12,7 @@ package org.jetbrains.kotlinx.lincheck.transformation
 
 import org.jetbrains.lincheck.util.isJavaLambdaClass
 import org.objectweb.asm.*
-import org.objectweb.asm.Opcodes.ANEWARRAY
+import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
@@ -397,6 +397,23 @@ internal fun GeneratorAdapter.invokeInsideIgnoredSection(
 }
 
 /**
+ * Retrieves an element from the list representing JVM's stack.
+ * The position is determined from the end of the list, where `position = 0` represents the top element.
+ *
+ * @param position The zero-based position from the end of the list to retrieve the element.
+ *                 The value must be a valid index relative to the size of the list.
+ * @return The element at the specified position from the end of the list, or null if the position is out of bounds.
+ */
+internal fun <T> List<T>.getStackElementAt(position: Int): T? {
+    require(position >= 0) {
+        "Position must be non-negative, but was $position"
+    }
+    val index = (size - position - 1)
+    return if (index >= 0) get(index) else null
+}
+
+
+/**
  * @param type asm type descriptor.
  * @return whether [type] is a java array type (primitive or reference).
  */
@@ -408,11 +425,32 @@ internal fun isArray(type: Type): Boolean = type.sort == ARRAY
  */
 internal fun isPrimitive(type: Type): Boolean {
     return when (type.sort) {
-        BOOLEAN, CHAR, BYTE,
-        SHORT, INT, FLOAT,
-        LONG, DOUBLE, VOID -> true
+        BOOLEAN, CHAR, BYTE, SHORT, INT, Type.LONG, Type.FLOAT, Type.DOUBLE, VOID -> true
         else -> false
     }
+}
+
+internal fun getLocalVarAccessOpcodeType(opcode: Int): Type = when (opcode) {
+    ILOAD, ISTORE -> INT_TYPE
+    LLOAD, LSTORE -> LONG_TYPE
+    FLOAD, FSTORE -> FLOAT_TYPE
+    DLOAD, DSTORE -> DOUBLE_TYPE
+    ALOAD, ASTORE -> OBJECT_TYPE
+
+    else -> throw IllegalArgumentException("Invalid opcode: $opcode")
+}
+
+internal fun getArrayAccessOpcodeType(opcode: Int): Type = when (opcode) {
+    IALOAD, IASTORE -> INT_TYPE
+    FALOAD, FASTORE -> FLOAT_TYPE
+    CALOAD, CASTORE -> CHAR_TYPE
+    SALOAD, SASTORE -> SHORT_TYPE
+    LALOAD, LASTORE -> LONG_TYPE
+    DALOAD, DASTORE -> DOUBLE_TYPE
+    BALOAD, BASTORE -> BYTE_TYPE
+    AALOAD, AASTORE -> OBJECT_TYPE
+
+    else -> throw IllegalArgumentException("Invalid opcode: $opcode")
 }
 
 private fun getSuperclassName(internalClassName: String): String? {
@@ -499,14 +537,6 @@ internal fun isCoroutineStateMachineClass(className: String): Boolean {
 }
 
 private val isCoroutineStateMachineClassMap = ConcurrentHashMap<String, Boolean>()
-
-/**
- * Extracts and returns the enclosing class name of a Java lambda class.
- */
-internal fun getJavaLambdaEnclosingClass(className: String): String {
-    require(isJavaLambdaClass(className)) { "Not a Java lambda class: $className" }
-    return className.substringBefore("\$\$Lambda")
-}
 
 /**
  * Tests if the provided [className] contains `"ClassLoader"` as a substring.
