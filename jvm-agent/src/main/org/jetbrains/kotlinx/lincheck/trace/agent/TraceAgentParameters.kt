@@ -30,8 +30,7 @@ object TraceAgentParameters {
         if (args == null) {
             error("Please provide class and method names as arguments")
         }
-
-        val actualArguments = args.split(",")
+        val actualArguments = splitArgs(args)
         classUnderTraceDebugging = actualArguments.getOrNull(0) ?: error("Class name was not provided")
         methodUnderTraceDebugging = actualArguments.getOrNull(1) ?: error("Method name was not provided")
         traceDumpFilePath = actualArguments.getOrNull(2)
@@ -50,4 +49,37 @@ object TraceAgentParameters {
             ?: error("Method \"${methodUnderTraceDebugging}\" was not found in class \"${classUnderTraceDebugging}\". Check that method exists and it is public.")
         return testClass to testMethod
     }
+}
+
+/**
+ * Splits a given string of arguments into a list, using a comma as a delimiter.
+ * Supports escaping of commas and other characters using a backslash.
+ *
+ * Example:
+ * Input: "org.example.Test,testMethod\,with\,commas,path"
+ * Output: ["org.example.Test", "testMethod,with,commas", "path"]
+ *
+ * @param args the string containing arguments to be split, with commas as delimiters
+ * @return a list of strings after splitting the input, with escaped characters processed correctly
+ */
+private fun splitArgs(args: String): List<String> {
+    val splitArgs = mutableListOf<String>()
+    var currentArg = ""
+    var escaping = false
+    args.forEach { char ->
+        when {
+            escaping -> {
+                escaping = false
+                currentArg += char
+            }
+            char == ',' -> {
+                splitArgs.add(currentArg)
+                currentArg = ""
+            }
+            char == '\\' && !escaping -> escaping = true
+            else -> currentArg += char
+        }
+    }
+    splitArgs.add(currentArg)
+    return splitArgs
 }
