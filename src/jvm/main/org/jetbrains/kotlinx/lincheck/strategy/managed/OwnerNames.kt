@@ -23,7 +23,7 @@ internal fun findOwnerName(
     // If the class name matches the current instance's class in the shadow stack,
     // return null since the field belongs to the current class context and doesn't
     // need an explicit owner prefix
-    if (className == shadowStackFrame.instance?.javaClass?.name) {
+    if (className == shadowStackFrame.instanceClassName) {
         return null
     }
     return className.toSimpleClassName()

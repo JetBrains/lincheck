@@ -25,6 +25,8 @@ class ShadowStackFrame(val instance: Any?) {
 
     private var accessCounter: Int = 0
 
+    val instanceClassName = instance?.javaClass?.name
+
     data class LocalVariableState(
         val value: Any?,
         val accessCounter: Int,
