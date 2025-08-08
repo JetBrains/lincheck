@@ -117,8 +117,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
 
     override fun visitLabel(label: Label?) {
         super.visitLabel(label)
-        val activeVars = methodVariables.getActiveVars()
-        setActiveLocalVariableNames(activeVars)
+        setActiveLocalVariableNames(methodVariables.activeVariables)
     }
 
     override fun visitFrame(
@@ -774,7 +773,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
         }
     }
 
-    private fun setActiveLocalVariableNames(localVariables: List<LocalVariableInfo>) {
+    private fun setActiveLocalVariableNames(localVariables: Collection<LocalVariableInfo>) {
         if (this.locals == null) {
             this.locals = mutableListOf()
         }

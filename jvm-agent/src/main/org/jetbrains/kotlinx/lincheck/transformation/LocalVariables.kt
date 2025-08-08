@@ -89,9 +89,6 @@ data class MethodVariables(val variables: LocalVariablesMap = emptyMap()) {
     fun getVarByName(name: String): Set<LocalVariableInfo> = varsByName.getOrElse(name, ::emptyList).toSet()
     fun hasVarByName(name: String): Boolean = varsByName.containsKey(name)
 
-    fun getActiveVars(): List<LocalVariableInfo> =
-        activeVariables.toList()
-
     companion object {
         val EMPTY = MethodVariables()
     }
