@@ -51,6 +51,17 @@ object TraceAgentParameters {
     }
 }
 
+/**
+ * Splits a given string of arguments into a list, using a comma as a delimiter.
+ * Supports escaping of commas and other characters using a backslash.
+ *
+ * Example:
+ * Input: "org.example.Test,testMethod\,with\,commas,path"
+ * Output: ["org.example.Test", "testMethod,with,commas", "path"]
+ *
+ * @param args the string containing arguments to be split, with commas as delimiters
+ * @return a list of strings after splitting the input, with escaped characters processed correctly
+ */
 private fun splitArgs(args: String): List<String> {
     val splitArgs = mutableListOf<String>()
     var currentArg = ""
