@@ -390,6 +390,10 @@ object LincheckJavaAgent {
             if (it.name in instrumentedClasses) return // already instrumented
             ensureClassHierarchyIsTransformed(it, processedObjects)
         }
+        clazz.interfaces.forEach {
+            if (it.name in instrumentedClasses) return // already instrumented
+            ensureClassHierarchyIsTransformed(it, processedObjects)
+        }
         clazz.enclosingClass?.let {
             if (it.name in instrumentedClasses) return // already instrumented
             ensureClassHierarchyIsTransformed(it, processedObjects)
