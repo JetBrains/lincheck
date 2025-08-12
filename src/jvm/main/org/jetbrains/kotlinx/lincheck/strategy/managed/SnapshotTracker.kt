@@ -191,7 +191,7 @@ class SnapshotTracker {
             },
             onField = { owner, field, fieldValue ->
                 // optimization to track only `value` field of java atomic classes
-                if (isAtomicJava(owner) && field.name != "value") null
+                if (isJavaAtomic(owner) && field.name != "value") null
                 // do not traverse fields of var-handles
                 else if (owner.javaClass.typeName == "java.lang.invoke.VarHandle") null
                 else {

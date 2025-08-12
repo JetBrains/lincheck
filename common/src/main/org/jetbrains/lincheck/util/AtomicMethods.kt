@@ -428,10 +428,10 @@ private val varHandleInstanceFieldExtractors = ConcurrentHashMap<Class<*>, VarHa
 
 
 internal fun isAtomic(receiver: Any?) =
-    isAtomicJava(receiver) ||
+    isJavaAtomic(receiver) ||
     isAtomicFU(receiver)
 
-internal fun isAtomicJava(receiver: Any?) =
+internal fun isJavaAtomic(receiver: Any?) =
     // java.util.concurrent
     receiver is AtomicReference<*> ||
     receiver is AtomicBoolean ||

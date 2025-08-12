@@ -75,8 +75,8 @@ internal fun traverseObjectGraph(
                 when {
                     // Special treatment for java atomic classes, because they can be extended but user classes,
                     // in case if a user extends java atomic class, we do not want to jump through it.
-                    (promotedObject?.javaClass?.name != null && isJavaAtomicClass(promotedObject.javaClass.name)) -> {
-                        val getMethod = promotedObject.javaClass.getMethod("get")
+                    (isJavaAtomic(promotedObject)) -> {
+                        val getMethod = promotedObject!!.javaClass.getMethod("get")
                         promotedObject = getMethod.invoke(promotedObject)
                     }
                     // atomicfu.AtomicBool is handled separately because its value field is named differently
