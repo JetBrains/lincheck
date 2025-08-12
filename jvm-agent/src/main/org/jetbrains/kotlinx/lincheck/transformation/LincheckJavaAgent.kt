@@ -334,13 +334,13 @@ object LincheckJavaAgent {
         traverseObjectGraph(obj, processedObjects, expandObject = ::expandObject) { obj ->
             val className = obj.javaClass.name
             val shouldTraverseObject = (
-                    obj is Array<*> ||
-                    isJavaLambdaClass(className) ||
-                    shouldTransform(obj.javaClass, instrumentationMode)
-                ) &&
                 // Optimization and safety net: do not analyze low-level
                 // class instances from the standard Java library.
-                !isLowLevelJavaClass(className)
+                (!isLowLevelJavaClass(className) ||
+                    // unless the low-level class needs to be transformed
+                    shouldTransform(obj.javaClass, instrumentationMode)
+                )
+            )
 
             return@traverseObjectGraph shouldTraverseObject
         }
