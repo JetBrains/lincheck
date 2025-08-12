@@ -331,15 +331,7 @@ object LincheckJavaAgent {
             return objectsToTransform
         }
 
-        traverseObjectGraph(obj, processedObjects,
-            expandObject = ::expandObject,
-            config = ObjectGraphTraversalConfig(
-                traverseStaticFields = false,
-                traverseImmutableObjects = false,
-                traverseEnumObjects = true,
-                promoteAtomicObjects = false,
-            ),
-        ) { obj ->
+        traverseObjectGraph(obj, processedObjects, expandObject = ::expandObject) { obj ->
             val className = obj.javaClass.name
             val shouldTraverseObject = (
                     obj is Array<*> ||
