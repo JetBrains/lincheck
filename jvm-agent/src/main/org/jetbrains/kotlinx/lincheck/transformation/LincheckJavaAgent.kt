@@ -327,11 +327,7 @@ object LincheckJavaAgent {
                 } else {
                     // Optimization and safety net: do not analyze low-level
                     // class instances from the standard Java library.
-                    if (className.startsWith("jdk.") ||
-                        className.startsWith("java.lang.") ||
-                        className.startsWith("sun.misc.")) {
-                        return
-                    }
+                    if (isLowLevelJavaClass(className)) return
                 }
             }
         }
@@ -383,6 +379,11 @@ object LincheckJavaAgent {
             ensureClassHierarchyIsTransformed(it, processedObjects)
         }
     }
+
+    private fun isLowLevelJavaClass(className: String) =
+        className.startsWith("jdk.") ||
+        className.startsWith("sun.misc.") ||
+        className.startsWith("java.lang.")
 
     /**
      * FOR TEST PURPOSE ONLY!
