@@ -311,7 +311,8 @@ object LincheckJavaAgent {
     private fun ensureObjectIsTransformed(obj: Any, processedObjects: MutableSet<Any>) {
 
         fun expandObject(obj: Any): List<Any> {
-            val className = obj.javaClass.name
+            val clazz = obj.javaClass
+            val className = clazz.name
             val objectsToTransform = mutableListOf<Any>()
             when {
                 isJavaLambdaClass(className) -> {
@@ -323,7 +324,7 @@ object LincheckJavaAgent {
                     }
                 }
                 else -> {
-                    ensureClassHierarchyIsTransformed(obj.javaClass) {
+                    ensureClassHierarchyIsTransformed(clazz) {
                         objectsToTransform.add(it)
                     }
                 }
@@ -332,16 +333,14 @@ object LincheckJavaAgent {
         }
 
         traverseObjectGraph(obj, processedObjects, expandObject = ::expandObject) { obj ->
-            val className = obj.javaClass.name
             val shouldTraverseObject = (
                 // Optimization and safety net: do not analyze low-level
                 // class instances from the standard Java library.
-                (!isLowLevelJavaClass(className) ||
+                (!isLowLevelJavaClass(obj.javaClass.name) ||
                     // unless the low-level class needs to be transformed
                     shouldTransform(obj.javaClass, instrumentationMode)
                 )
             )
-
             return@traverseObjectGraph shouldTraverseObject
         }
     }
