@@ -286,17 +286,6 @@ object LincheckJavaAgent {
     }
 
     /**
-     * Ensures that the given class and all its superclasses are transformed if necessary.
-     *
-     * @param clazz the class to transform
-     */
-    private fun ensureClassHierarchyIsTransformed(clazz: Class<*>) {
-        if (INSTRUMENT_ALL_CLASSES) return
-        if (clazz.name in instrumentedClasses) return // already instrumented
-        ensureClassHierarchyIsTransformed(clazz, Collections.newSetFromMap(IdentityHashMap()))
-    }
-
-    /**
      * Ensures that the given object and all its referenced objects are transformed for Lincheck analysis.
      * If the INSTRUMENT_ALL_CLASSES_IN_MODEL_CHECKING_MODE flag is set to true, no transformation is performed.
      *
@@ -334,7 +323,7 @@ object LincheckJavaAgent {
             }
             else -> {
                 if (shouldTransform(clazz, instrumentationMode)) {
-                    ensureClassHierarchyIsTransformed(clazz)
+                    ensureClassHierarchyIsTransformed(clazz, processedObjects)
                 } else {
                     // Optimization and safety net: do not analyze low-level
                     // class instances from the standard Java library.
@@ -367,6 +356,8 @@ object LincheckJavaAgent {
      * @param processedObjects Set of objects that have already been processed to prevent duplicate transformation.
      */
     private fun ensureClassHierarchyIsTransformed(clazz: Class<*>, processedObjects: MutableSet<Any>) {
+        if (clazz.name in instrumentedClasses) return
+
         if (shouldTransform(clazz, instrumentationMode)) {
             instrumentedClasses += clazz.name
             retransformClass(clazz)
