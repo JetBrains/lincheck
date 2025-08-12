@@ -41,32 +41,32 @@ private typealias ObjectExpansionCallback = (obj: Any) -> List<Any>
  *
  * @param root object to start the traversal from.
  * @param config configuration of the traversal, see [ObjectGraphTraversalConfig].
+ * @param visitedObjects Optional set to track already visited objects during traversal.
+ *   Can be used to maintain object visit state across multiple traversal calls.
+ *   If not provided, a new identity-based hash set will be created.
+ *   Must use referential equality (identity-based comparison) for correct cycle detection in the traversal algorithm.
  * @param onField callback for fields traversal, accepts `(fieldOwner, field, fieldValue)`.
  *   Returns an object to be traversed next, or null if the field value should not be traversed.
  *   If not passed, by default, all fields of objects are traversed.
  * @param onArrayElement callback for array elements traversal, accepts `(array, index, elementValue)`.
  *   Returns an object to be traversed next, or null if the array element should not be traversed.
  *   If not passed, by default, all array elements are traversed.
+ * @param expandObject Optional callback for custom object expansion during traversal,
+ *   beyond default fields and array elements traversal.
+ *   When provided, should return for an object a list of additional objects to be traversed.
  * @param onObject Optional callback invoked for each distinct object encountered during traversal
  *   before it is traversed recursively.
  *   Should return boolean indicating whether the object should be traversed recursively.
  *   If not provided, defaults to true, indicating that any reached objects should be traversed recursively.
- * @param expandObject Optional callback for custom object expansion during traversal,
- *   beyond default fields and array elements traversal.
- *   When provided, should return for an object a list of additional objects to be traversed.
- * @param visitedObjects Optional set to track already visited objects during traversal.
- *   Can be used to maintain object visit state across multiple traversal calls.
- *   If not provided, a new identity-based hash set will be created.
- *   Must use referential equality (identity-based comparison) for correct cycle detection in the traversal algorithm.
  */
 internal fun traverseObjectGraph(
     root: Any,
+    visitedObjects: MutableSet<Any>? = null,
     config: ObjectGraphTraversalConfig = ObjectGraphTraversalConfig(),
     onField: FieldCallback = { _ /* obj */, _ /* field */, fieldValue -> fieldValue },
     onArrayElement: ArrayElementCallback = { _ /* array */, _ /* index */, elementValue -> elementValue },
-    onObject: ObjectCallback = { _ /* obj */ -> true },
     expandObject: ObjectExpansionCallback? = null,
-    visitedObjects: MutableSet<Any>? = null
+    onObject: ObjectCallback = { _ /* obj */ -> true },
 ) {
     if (!shouldTraverseObject(root, config)) return
     if (!onObject(root)) return
