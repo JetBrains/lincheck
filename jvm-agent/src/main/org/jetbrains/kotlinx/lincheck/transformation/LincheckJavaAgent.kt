@@ -280,7 +280,11 @@ object LincheckJavaAgent {
             return
         }
         if (className in instrumentedClasses) return // already instrumented
-        ensureClassHierarchyIsTransformed(Class.forName(className), Collections.newSetFromMap(IdentityHashMap()))
+
+        val processedObjects: MutableSet<Any> = Collections.newSetFromMap(IdentityHashMap())
+        ensureClassHierarchyIsTransformed(Class.forName(className)) { obj ->
+            ensureObjectIsTransformed(obj, processedObjects)
+        }
     }
 
     /**
@@ -305,45 +309,45 @@ object LincheckJavaAgent {
      * @param processedObjects A set of processed objects to avoid infinite recursion.
      */
     private fun ensureObjectIsTransformed(obj: Any, processedObjects: MutableSet<Any>) {
-        var clazz: Class<*> = obj.javaClass
-        val className = clazz.name
 
-        if (processedObjects.contains(obj)) return
-        processedObjects += obj
-
-        when {
-            isJavaLambdaClass(className) -> {
-                val enclosingClassName = getJavaLambdaEnclosingClass(className)
-                if (enclosingClassName !in instrumentedClasses) {
-                    ensureClassHierarchyIsTransformed(Class.forName(enclosingClassName), processedObjects)
-                }
-            }
-            obj is Array<*> -> {
-                obj.forEach {
-                    if (it !== null) {
-                        ensureObjectIsTransformed(it, processedObjects)
+        fun expandObject(obj: Any): List<Any> {
+            val className = obj.javaClass.name
+            val objectsToTransform = mutableListOf<Any>()
+            when {
+                isJavaLambdaClass(className) -> {
+                    val enclosingClassName = getJavaLambdaEnclosingClass(className)
+                    if (enclosingClassName !in instrumentedClasses) {
+                        ensureClassHierarchyIsTransformed(Class.forName(enclosingClassName)) {
+                            objectsToTransform.add(it)
+                        }
                     }
                 }
-                return
-            }
-            else -> {
-                if (shouldTransform(clazz, instrumentationMode)) {
-                    ensureClassHierarchyIsTransformed(clazz, processedObjects)
-                } else {
-                    // Optimization and safety net: do not analyze low-level
-                    // class instances from the standard Java library.
-                    if (isLowLevelJavaClass(className)) return
+                else -> {
+                    ensureClassHierarchyIsTransformed(obj.javaClass) {
+                        objectsToTransform.add(it)
+                    }
                 }
             }
+            return objectsToTransform
         }
 
-        while (true) {
-            clazz.declaredFields
-                .filter { !it.type.isPrimitive && !Modifier.isStatic(it.modifiers) }
-                .mapNotNull { readFieldSafely(obj, it).getOrNull() }
-                .forEach { ensureObjectIsTransformed(it, processedObjects) }
+        traverseObjectGraph(obj, processedObjects,
+            expandObject = ::expandObject,
+            config = ObjectGraphTraversalConfig(
+                traverseStaticFields = false,
+                traverseImmutableObjects = false,
+                traverseEnumObjects = true,
+                promoteAtomicObjects = false,
+            ),
+        ) { obj ->
+            val className = obj.javaClass.name
+            val shouldAnalyzeObject =
+                (shouldTransform(obj.javaClass, instrumentationMode) || isJavaLambdaClass(className))&&
+                // Optimization and safety net: do not analyze low-level
+                // class instances from the standard Java library.
+                !isLowLevelJavaClass(className)
 
-            clazz = clazz.superclass ?: break
+            return@traverseObjectGraph shouldAnalyzeObject
         }
     }
 
@@ -353,7 +357,7 @@ object LincheckJavaAgent {
      * @param clazz The class to be transformed.
      * @param processedObjects Set of objects that have already been processed to prevent duplicate transformation.
      */
-    private fun ensureClassHierarchyIsTransformed(clazz: Class<*>, processedObjects: MutableSet<Any>) {
+    private fun ensureClassHierarchyIsTransformed(clazz: Class<*>, transformObjectCallback: (Any) -> Unit) {
         if (clazz.name in instrumentedClasses) return // already instrumented
 
         if (shouldTransform(clazz, instrumentationMode)) {
@@ -368,7 +372,7 @@ object LincheckJavaAgent {
         clazz.declaredFields
             .filter { !it.type.isPrimitive && Modifier.isStatic(it.modifiers) }
             .mapNotNull { readFieldSafely(null, it).getOrNull() }
-            .forEach { ensureObjectIsTransformed(it, processedObjects) }
+            .forEach { transformObjectCallback(it) }
 
         // Traverse super classes, interfaces, and enclosing class
         val classesToTransform =
@@ -377,7 +381,7 @@ object LincheckJavaAgent {
             clazz.interfaces.asList()
 
         classesToTransform.forEach {
-            ensureClassHierarchyIsTransformed(it, processedObjects)
+            ensureClassHierarchyIsTransformed(it, transformObjectCallback)
         }
     }
 
