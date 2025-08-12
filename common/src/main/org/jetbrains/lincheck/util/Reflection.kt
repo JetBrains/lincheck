@@ -22,8 +22,7 @@ val Class<*>.allDeclaredFieldWithSuperclasses get(): List<Field> {
     val fields: MutableList<Field> = ArrayList<Field>()
     var currentClass: Class<*>? = this
     while (currentClass != null) {
-        val declaredFields: Array<Field> = currentClass.declaredFields
-        fields.addAll(declaredFields)
+        fields.addAll(currentClass.declaredFields)
         currentClass = currentClass.superclass
     }
     return fields
