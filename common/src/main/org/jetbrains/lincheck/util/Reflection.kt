@@ -22,6 +22,7 @@ val Class<*>.allDeclaredFieldWithSuperclasses get(): List<Field> {
     if (superclass == null && interfaces.isEmpty()) {
         return this.declaredFields.asList()
     }
+
     val fields: MutableList<Field> = mutableListOf()
     val queue: MutableList<Class<*>> = mutableListOf(this)
     while (queue.isNotEmpty()) {
