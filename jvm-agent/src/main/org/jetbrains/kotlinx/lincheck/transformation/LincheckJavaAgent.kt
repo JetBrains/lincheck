@@ -279,8 +279,9 @@ object LincheckJavaAgent {
             Class.forName(canonicalClassName)
             return
         }
-        if (!shouldTransform(canonicalClassName, instrumentationMode)) return
         if (canonicalClassName in instrumentedClasses) return // already instrumented
+        // TODO: remove this check, it already done in `ensureClassHierarchyIsTransformed`
+        if (!shouldTransform(canonicalClassName, instrumentationMode)) return
         ensureClassHierarchyIsTransformed(Class.forName(canonicalClassName), Collections.newSetFromMap(IdentityHashMap()))
     }
 
@@ -290,9 +291,7 @@ object LincheckJavaAgent {
      * @param clazz the class to transform
      */
     private fun ensureClassHierarchyIsTransformed(clazz: Class<*>) {
-        if (INSTRUMENT_ALL_CLASSES) {
-            return
-        }
+        if (INSTRUMENT_ALL_CLASSES) return
         if (clazz.name in instrumentedClasses) return // already instrumented
         ensureClassHierarchyIsTransformed(clazz, Collections.newSetFromMap(IdentityHashMap()))
     }
@@ -306,9 +305,7 @@ object LincheckJavaAgent {
      * @param obj the object to be transformed
      */
     fun ensureObjectIsTransformed(obj: Any) {
-        if (INSTRUMENT_ALL_CLASSES) {
-            return
-        }
+        if (INSTRUMENT_ALL_CLASSES) return
         ensureObjectIsTransformed(obj, Collections.newSetFromMap(IdentityHashMap()))
     }
 
