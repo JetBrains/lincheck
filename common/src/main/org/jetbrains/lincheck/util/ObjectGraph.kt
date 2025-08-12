@@ -41,7 +41,7 @@ private typealias ObjectExpansionCallback = (obj: Any) -> List<Any>
  *
  * @param root object to start the traversal from.
  * @param config configuration of the traversal, see [ObjectGraphTraversalConfig].
- * @param visitedObjects Optional set to track already visited objects during traversal.
+ * @param processedObjects Optional set to track already processed objects during traversal.
  *   Can be used to maintain object visit state across multiple traversal calls.
  *   If not provided, a new identity-based hash set will be created.
  *   Must use referential equality (identity-based comparison) for correct cycle detection in the traversal algorithm.
@@ -61,7 +61,7 @@ private typealias ObjectExpansionCallback = (obj: Any) -> List<Any>
  */
 internal fun traverseObjectGraph(
     root: Any,
-    visitedObjects: MutableSet<Any>? = null,
+    processedObjects: MutableSet<Any>? = null,
     config: ObjectGraphTraversalConfig = ObjectGraphTraversalConfig(),
     onField: FieldCallback = { _ /* obj */, _ /* field */, fieldValue -> fieldValue },
     onArrayElement: ArrayElementCallback = { _ /* array */, _ /* index */, elementValue -> elementValue },
@@ -72,7 +72,7 @@ internal fun traverseObjectGraph(
     if (!onObject(root)) return
 
     val queue = ArrayDeque<Any>()
-    val visitedObjects = visitedObjects ?: Collections.newSetFromMap(IdentityHashMap())
+    val visitedObjects = processedObjects ?: Collections.newSetFromMap(IdentityHashMap())
 
     queue.add(root)
     visitedObjects.add(root)
