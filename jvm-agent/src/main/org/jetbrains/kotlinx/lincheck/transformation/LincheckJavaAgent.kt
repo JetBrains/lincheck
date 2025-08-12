@@ -341,13 +341,16 @@ object LincheckJavaAgent {
             ),
         ) { obj ->
             val className = obj.javaClass.name
-            val shouldAnalyzeObject =
-                (shouldTransform(obj.javaClass, instrumentationMode) || isJavaLambdaClass(className))&&
+            val shouldTraverseObject = (
+                    obj is Array<*> ||
+                    isJavaLambdaClass(className) ||
+                    shouldTransform(obj.javaClass, instrumentationMode)
+                ) &&
                 // Optimization and safety net: do not analyze low-level
                 // class instances from the standard Java library.
                 !isLowLevelJavaClass(className)
 
-            return@traverseObjectGraph shouldAnalyzeObject
+            return@traverseObjectGraph shouldTraverseObject
         }
     }
 
