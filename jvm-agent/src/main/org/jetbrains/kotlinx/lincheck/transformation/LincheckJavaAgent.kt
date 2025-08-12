@@ -373,6 +373,9 @@ object LincheckJavaAgent {
         }
 
         // Traverse static fields.
+        //
+        // NOTE: traverses only current class' fields, as the loop below will process
+        //   all superclasses' and interfaces' fields as a part of `ensureClassHierarchyIsTransformed`
         clazz.declaredFields
             .filter { !it.type.isPrimitive && Modifier.isStatic(it.modifiers) }
             .mapNotNull { readFieldSafely(null, it).getOrNull() }
