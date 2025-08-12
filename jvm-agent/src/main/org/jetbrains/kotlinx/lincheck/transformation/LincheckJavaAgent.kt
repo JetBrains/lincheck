@@ -352,8 +352,7 @@ object LincheckJavaAgent {
 
         while (true) {
             clazz.declaredFields
-                .filter { !it.type.isPrimitive }
-                .filter { !Modifier.isStatic(it.modifiers) }
+                .filter { !it.type.isPrimitive && !Modifier.isStatic(it.modifiers) }
                 .mapNotNull { readFieldSafely(obj, it).getOrNull() }
                 .forEach { ensureObjectIsTransformed(it, processedObjects) }
 
@@ -375,8 +374,7 @@ object LincheckJavaAgent {
 
         // Traverse static fields.
         clazz.declaredFields
-            .filter { !it.type.isPrimitive }
-            .filter { Modifier.isStatic(it.modifiers) }
+            .filter { !it.type.isPrimitive && Modifier.isStatic(it.modifiers) }
             .mapNotNull { readFieldSafely(null, it).getOrNull() }
             .forEach { ensureObjectIsTransformed(it, processedObjects) }
 
