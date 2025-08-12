@@ -379,15 +379,12 @@ object LincheckJavaAgent {
             .forEach { ensureObjectIsTransformed(it, processedObjects) }
 
         // Traverse super classes, interfaces and enclosing class
-        clazz.superclass?.let {
-            if (it.name in instrumentedClasses) return // already instrumented
-            ensureClassHierarchyIsTransformed(it, processedObjects)
-        }
-        clazz.interfaces.forEach {
-            if (it.name in instrumentedClasses) return // already instrumented
-            ensureClassHierarchyIsTransformed(it, processedObjects)
-        }
-        clazz.enclosingClass?.let {
+        val classesToTransform =
+            listOfNotNull(clazz.superclass) +
+            listOfNotNull(clazz.enclosingClass) +
+            clazz.interfaces.asList()
+
+        classesToTransform.forEach {
             if (it.name in instrumentedClasses) return // already instrumented
             ensureClassHierarchyIsTransformed(it, processedObjects)
         }
