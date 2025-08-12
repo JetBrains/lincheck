@@ -1,18 +1,17 @@
 /*
  * Lincheck
  *
- * Copyright (C) 2019 - 2024 JetBrains s.r.o.
+ * Copyright (C) 2019 - 2025 JetBrains s.r.o.
  *
  * This Source Code Form is subject to the terms of the
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.util
+package org.jetbrains.lincheck.util
 
 import org.jetbrains.lincheck.util.*
 import java.util.concurrent.atomic.*
-import kotlin.reflect.jvm.jvmName
 import java.lang.reflect.*
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -76,13 +75,13 @@ internal fun traverseObjectGraph(
                 when {
                     // Special treatment for java atomic classes, because they can be extended but user classes,
                     // in case if a user extends java atomic class, we do not want to jump through it.
-                    (promotedObject?.javaClass?.name != null && isAtomicJavaClass(promotedObject.javaClass.name)) -> {
+                    (promotedObject?.javaClass?.name != null && isJavaAtomicClass(promotedObject.javaClass.name)) -> {
                         val getMethod = promotedObject.javaClass.getMethod("get")
                         promotedObject = getMethod.invoke(promotedObject)
                     }
                     // atomicfu.AtomicBool is handled separately because its value field is named differently
-                    promotedObject is kotlinx.atomicfu.AtomicBoolean -> {
-                        val valueField = promotedObject.javaClass.getDeclaredField("_value")
+                    isAtomicFUBoolean(promotedObject) -> {
+                        val valueField = promotedObject!!.javaClass.getDeclaredField("_value")
                         promotedObject = readFieldViaUnsafe(promotedObject, valueField)
                     }
                     // other atomicfu types are handled uniformly
@@ -243,12 +242,6 @@ internal val Any?.isPrimitive get() = when (this) {
     is Boolean, is Int, is Short, is Long, is Double, is Float, is Char, is Byte -> true
     else -> false
 }
-
-/**
- * Extension property to determine if the given object is a [kotlinx.coroutines] symbol.
- */
-internal val Any?.isCoroutinesSymbol get() =
-    this != null && this::class.jvmName == "kotlinx.coroutines.internal.Symbol"
 
 internal fun getArrayLength(arr: Any): Int {
     return when {

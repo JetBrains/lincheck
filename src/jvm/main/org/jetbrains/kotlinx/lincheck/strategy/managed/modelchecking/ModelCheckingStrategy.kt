@@ -14,8 +14,7 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.util.*
-import org.jetbrains.lincheck.util.isInTraceDebuggerMode
-import org.jetbrains.lincheck.util.isJavaLambdaClass
+import org.jetbrains.lincheck.util.*
 import java.lang.ref.WeakReference
 import java.lang.reflect.*
 import java.util.*

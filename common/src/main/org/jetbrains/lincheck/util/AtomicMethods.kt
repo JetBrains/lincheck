@@ -1,26 +1,24 @@
 /*
  * Lincheck
  *
- * Copyright (C) 2019 - 2024 JetBrains s.r.o.
+ * Copyright (C) 2019 - 2025 JetBrains s.r.o.
  *
  * This Source Code Form is subject to the terms of the
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.util
+package org.jetbrains.lincheck.util
 
-import java.util.concurrent.atomic.*
-import org.jetbrains.kotlinx.lincheck.util.AtomicMethodKind.*
-import org.jetbrains.kotlinx.lincheck.util.AtomicApiKind.*
-import org.jetbrains.kotlinx.lincheck.util.MemoryOrdering.*
+import org.jetbrains.lincheck.util.AtomicMethodKind.*
+import org.jetbrains.lincheck.util.AtomicApiKind.*
+import org.jetbrains.lincheck.util.MemoryOrdering.*
 import org.jetbrains.lincheck.descriptors.*
-import org.jetbrains.lincheck.trace.TRACE_CONTEXT
-import org.jetbrains.lincheck.util.*
-import sun.misc.Unsafe
+import java.util.concurrent.atomic.*
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.contracts.ExperimentalContracts
+import sun.misc.Unsafe
 import kotlin.contracts.contract
+import kotlin.contracts.ExperimentalContracts
 
 internal data class AtomicMethodDescriptor(
     val kind: AtomicMethodKind,
@@ -442,17 +440,22 @@ internal fun isAtomicJava(receiver: Any?) =
 
 internal fun isAtomicFU(receiver: Any?) =
     // kotlinx.atomicfu
-    receiver is kotlinx.atomicfu.AtomicRef<*> ||
-    receiver is kotlinx.atomicfu.AtomicBoolean ||
-    receiver is kotlinx.atomicfu.AtomicInt ||
-    receiver is kotlinx.atomicfu.AtomicLong
+    receiver?.javaClass?.name?.let { isAtomicFUClass(it) } ?: false
+    // we use reflection instead to avoid adding dependency on atomicfu
+    //
+    // receiver is kotlinx.atomicfu.AtomicRef<*> ||
+    // receiver is kotlinx.atomicfu.AtomicBoolean ||
+    // receiver is kotlinx.atomicfu.AtomicInt ||
+    // receiver is kotlinx.atomicfu.AtomicLong
 
+internal fun isAtomicFUBoolean(receiver: Any?) =
+    receiver?.javaClass?.name == "kotlinx.atomicfu.AtomicBoolean"
 
 internal fun isAtomicClass(className: String) =
-    isAtomicJavaClass(className) ||
+    isJavaAtomicClass(className) ||
     isAtomicFUClass(className)
 
-internal fun isAtomicJavaClass(className: String) =
+internal fun isJavaAtomicClass(className: String) =
     // java.util.concurrent
     className == "java.util.concurrent.atomic.AtomicInteger" ||
     className == "java.util.concurrent.atomic.AtomicLong" ||
@@ -481,16 +484,25 @@ internal fun isAtomicArrayJava(receiver: Any?) =
 
 internal fun isAtomicFUArray(receiver: Any?) =
     // kotlinx.atomicfu
-    receiver is kotlinx.atomicfu.AtomicArray<*> ||
-    receiver is kotlinx.atomicfu.AtomicBooleanArray ||
-    receiver is kotlinx.atomicfu.AtomicIntArray ||
-    receiver is kotlinx.atomicfu.AtomicLongArray
+    receiver?.javaClass?.name?.let { isAtomicFUArrayClass(it) } ?: false
+    // we use reflection to avoid adding dependency on atomicfu
+    //
+    // receiver is kotlinx.atomicfu.AtomicArray<*> ||
+    // receiver is kotlinx.atomicfu.AtomicBooleanArray ||
+    // receiver is kotlinx.atomicfu.AtomicIntArray ||
+    // receiver is kotlinx.atomicfu.AtomicLongArray
 
 internal fun isAtomicArrayClass(className: String) =
+    isJavaAtomicArrayClass(className) ||
+    isAtomicFUArrayClass(className)
+
+internal fun isJavaAtomicArrayClass(className: String) =
     // java.util.concurrent
     className == "java.util.concurrent.atomic.AtomicReferenceArray" ||
     className == "java.util.concurrent.atomic.AtomicIntegerArray" ||
-    className == "java.util.concurrent.atomic.AtomicLongArray" ||
+    className == "java.util.concurrent.atomic.AtomicLongArray"
+
+internal fun isAtomicFUArrayClass(className: String) =
     // kotlinx.atomicfu
     className == "kotlinx.atomicfu.AtomicArray" ||
     className == "kotlinx.atomicfu.AtomicBooleanArray" ||

@@ -12,9 +12,9 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.lincheck.descriptors.*
 import org.jetbrains.lincheck.analysis.*
-import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.trace.isThisName
 import org.jetbrains.kotlinx.lincheck.transformation.toSimpleClassName
+import org.jetbrains.lincheck.util.*
 
 internal fun findOwnerName(
     className: String,
