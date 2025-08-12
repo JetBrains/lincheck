@@ -338,7 +338,9 @@ object LincheckJavaAgent {
                 } else {
                     // Optimization and safety net: do not analyze low-level
                     // class instances from the standard Java library.
-                    if (className.startsWith("jdk.") || className.startsWith("java.lang.") || className.startsWith("sun.misc.")) {
+                    if (className.startsWith("jdk.") ||
+                        className.startsWith("java.lang.") ||
+                        className.startsWith("sun.misc.")) {
                         return
                     }
                 }
@@ -353,9 +355,8 @@ object LincheckJavaAgent {
                 .filter { !it.type.isPrimitive }
                 .filter { !Modifier.isStatic(it.modifiers) }
                 .mapNotNull { readFieldSafely(obj, it).getOrNull() }
-                .forEach {
-                    ensureObjectIsTransformed(it, processedObjects)
-                }
+                .forEach { ensureObjectIsTransformed(it, processedObjects) }
+
             clazz = clazz.superclass ?: break
         }
     }
@@ -371,14 +372,15 @@ object LincheckJavaAgent {
             instrumentedClasses += clazz.name
             retransformClass(clazz)
         }
+
         // Traverse static fields.
         clazz.declaredFields
             .filter { !it.type.isPrimitive }
             .filter { Modifier.isStatic(it.modifiers) }
             .mapNotNull { readFieldSafely(null, it).getOrNull() }
-            .forEach {
-                ensureObjectIsTransformed(it, processedObjects)
-            }
+            .forEach { ensureObjectIsTransformed(it, processedObjects) }
+
+        // Traverse super classes, interfaces and enclosing class
         clazz.superclass?.let {
             if (it.name in instrumentedClasses) return // already instrumented
             ensureClassHierarchyIsTransformed(it, processedObjects)
