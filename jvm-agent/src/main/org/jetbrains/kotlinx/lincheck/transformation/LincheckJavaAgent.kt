@@ -281,7 +281,7 @@ object LincheckJavaAgent {
         }
         if (className in instrumentedClasses) return // already instrumented
 
-        val processedObjects: MutableSet<Any> = Collections.newSetFromMap(IdentityHashMap())
+        val processedObjects: MutableSet<Any> = identityHashSetOf()
         ensureClassHierarchyIsTransformed(Class.forName(className)) { obj ->
             ensureObjectIsTransformed(obj, processedObjects)
         }
@@ -298,7 +298,7 @@ object LincheckJavaAgent {
      */
     fun ensureObjectIsTransformed(obj: Any) {
         if (INSTRUMENT_ALL_CLASSES) return
-        ensureObjectIsTransformed(obj, Collections.newSetFromMap(IdentityHashMap()))
+        ensureObjectIsTransformed(obj, identityHashSetOf())
     }
 
     /**

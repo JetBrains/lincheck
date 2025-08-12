@@ -115,7 +115,7 @@ class SnapshotTracker {
     }
 
     fun restoreValues() {
-        val visitedObjects = Collections.newSetFromMap(IdentityHashMap<Any, Boolean>())
+        val visitedObjects = identityHashSetOf<Any>()
         trackedObjects.keys.forEach { restoreValues(it, visitedObjects) }
     }
 

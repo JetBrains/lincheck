@@ -72,7 +72,7 @@ internal fun traverseObjectGraph(
     if (!onObject(root)) return
 
     val queue = ArrayDeque<Any>()
-    val visitedObjects = processedObjects ?: Collections.newSetFromMap(IdentityHashMap())
+    val visitedObjects = processedObjects ?: identityHashSetOf()
 
     queue.add(root)
     visitedObjects.add(root)
