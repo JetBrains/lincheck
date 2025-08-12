@@ -78,35 +78,11 @@ internal fun traverseObjectGraph(
     visitedObjects.add(root)
 
     val processNextObject: (nextObject: Any?) -> Unit = { nextObject ->
-        var promotedObject = nextObject
-        if (config.promoteAtomicObjects) {
-            while (true) {
-                when {
-                    // Special treatment for java atomic classes, because they can be extended but user classes,
-                    // in case if a user extends java atomic class, we do not want to jump through it.
-                    (isJavaAtomic(promotedObject)) -> {
-                        val getMethod = promotedObject!!.javaClass.getMethod("get")
-                        promotedObject = getMethod.invoke(promotedObject)
-                    }
-                    // atomicfu.AtomicBool is handled separately because its value field is named differently
-                    isAtomicFUBoolean(promotedObject) -> {
-                        val valueField = promotedObject!!.javaClass.getDeclaredField("_value")
-                        promotedObject = readFieldViaUnsafe(promotedObject, valueField)
-                    }
-                    // other atomicfu types are handled uniformly
-                    isAtomicFU(promotedObject) -> {
-                        val valueField = promotedObject!!.javaClass.getDeclaredField("value")
-                        promotedObject = readFieldViaUnsafe(promotedObject, valueField)
-                    }
-                    // otherwise, the next object is not an atomic object, so we exit the promotion loop
-                    else -> break
-                }
-            }
-        }
-        if (shouldTraverseObject(promotedObject, config) && promotedObject !in visitedObjects) {
-            if (onObject(promotedObject!!)) {
-                queue.add(promotedObject)
-                visitedObjects.add(promotedObject)
+        val nextObject = promoteObject(nextObject, config)
+        if (shouldTraverseObject(nextObject, config) && nextObject !in visitedObjects) {
+            if (onObject(nextObject!!)) {
+                queue.add(nextObject)
+                visitedObjects.add(nextObject)
             }
         }
     }
@@ -190,6 +166,35 @@ internal inline fun traverseObjectFields(
             onField(obj, field, fieldValue)
         }
     }
+}
+
+private fun promoteObject(obj: Any?, config: ObjectGraphTraversalConfig): Any? {
+    var promotedObject = obj
+    if (config.promoteAtomicObjects) {
+        while (true) {
+            when {
+                // Special treatment for java atomic classes, because they can be extended but user classes,
+                // in case if a user extends java atomic class, we do not want to jump through it.
+                (isJavaAtomic(promotedObject)) -> {
+                    val getMethod = promotedObject!!.javaClass.getMethod("get")
+                    promotedObject = getMethod.invoke(promotedObject)
+                }
+                // atomicfu.AtomicBool is handled separately because its value field is named differently
+                isAtomicFUBoolean(promotedObject) -> {
+                    val valueField = promotedObject!!.javaClass.getDeclaredField("_value")
+                    promotedObject = readFieldViaUnsafe(promotedObject, valueField)
+                }
+                // other atomicfu types are handled uniformly
+                isAtomicFU(promotedObject) -> {
+                    val valueField = promotedObject!!.javaClass.getDeclaredField("value")
+                    promotedObject = readFieldViaUnsafe(promotedObject, valueField)
+                }
+                // otherwise, the next object is not an atomic object, so we exit the promotion loop
+                else -> break
+            }
+        }
+    }
+    return promotedObject
 }
 
 /**
