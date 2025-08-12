@@ -369,8 +369,7 @@ object LincheckJavaAgent {
      * @param processedObjects Set of objects that have already been processed to prevent duplicate transformation.
      */
     private fun ensureClassHierarchyIsTransformed(clazz: Class<*>, processedObjects: MutableSet<Any>) {
-        if (!shouldTransform(clazz.name, instrumentationMode)) return
-        if (canRetransformClass(clazz)) {
+        if (shouldTransform(clazz.name, instrumentationMode) && canRetransformClass(clazz)) {
             instrumentedClasses += clazz.name
             try {
                 instrumentation.retransformClasses(clazz)
