@@ -96,8 +96,11 @@ internal fun traverseObjectGraph(
                 }
             }
             else -> {
-                traverseObjectFields(currentObj,
-                    traverseStaticFields = config.traverseStaticFields
+                traverseObjectFields(
+                    currentObj,
+                    fieldPredicate = {
+                        config.traverseStaticFields || !Modifier.isStatic(it.modifiers)
+                    }
                 ) { _ /* obj */, field, fieldValue ->
                     processNextObject(onField(currentObj, field, fieldValue))
                 }
@@ -148,17 +151,17 @@ internal inline fun traverseArrayElements(array: Any, onArrayElement: (array: An
  * Traverses [obj] fields (including fields from superclasses).
  *
  * @param obj array which elements to traverse.
- * @param traverseStaticFields if true, then all static fields are also traversed,
- *   otherwise only non-static fields are traversed.
+ * @param fieldPredicate predicate to filter which fields should be traversed.
+ *   Should return true if the field should be processed.
  * @param onField callback which accepts `(obj, field, fieldValue)`.
  */
 internal inline fun traverseObjectFields(
     obj: Any,
-    traverseStaticFields: Boolean = false,
+    fieldPredicate: (Field) -> Boolean = { true },
     onField: (obj: Any, field: Field, value: Any?) -> Unit
 ) {
-    obj.javaClass.allDeclaredFieldWithSuperclasses.forEach { field ->
-        if (!traverseStaticFields && Modifier.isStatic(field.modifiers)) return@forEach
+    for (field in obj.javaClass.allDeclaredFieldWithSuperclasses) {
+        if (!fieldPredicate(field)) continue
         val result = readFieldSafely(obj, field)
         // do not pass non-readable fields
         if (result.isSuccess) {
