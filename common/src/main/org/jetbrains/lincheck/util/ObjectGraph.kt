@@ -10,7 +10,6 @@
 
 package org.jetbrains.lincheck.util
 
-import org.jetbrains.lincheck.util.*
 import java.util.concurrent.atomic.*
 import java.lang.reflect.*
 import java.math.BigDecimal
@@ -21,6 +20,7 @@ import java.util.*
 private typealias FieldCallback = (obj: Any, field: Field, value: Any?) -> Any?
 private typealias ArrayElementCallback = (array: Any, index: Int, element: Any?) -> Any?
 private typealias ObjectCallback = (obj: Any) -> Boolean
+private typealias ObjectExpansionCallback = (obj: Any) -> List<Any>
 
 /**
  * Traverses a subgraph of objects reachable from a given root object in BFS order.
@@ -51,6 +51,13 @@ private typealias ObjectCallback = (obj: Any) -> Boolean
  *   before it is traversed recursively.
  *   Should return boolean indicating whether the object should be traversed recursively.
  *   If not provided, defaults to true, indicating that any reached objects should be traversed recursively.
+ * @param expandObject Optional callback for custom object expansion during traversal,
+ *   beyond default fields and array elements traversal.
+ *   When provided, should return for an object a list of additional objects to be traversed.
+ * @param visitedObjects Optional set to track already visited objects during traversal.
+ *   Can be used to maintain object visit state across multiple traversal calls.
+ *   If not provided, a new identity-based hash set will be created.
+ *   Must use referential equality (identity-based comparison) for correct cycle detection in the traversal algorithm.
  */
 internal fun traverseObjectGraph(
     root: Any,
@@ -58,12 +65,14 @@ internal fun traverseObjectGraph(
     onField: FieldCallback = { _ /* obj */, _ /* field */, fieldValue -> fieldValue },
     onArrayElement: ArrayElementCallback = { _ /* array */, _ /* index */, elementValue -> elementValue },
     onObject: ObjectCallback = { _ /* obj */ -> true },
+    expandObject: ObjectExpansionCallback? = null,
+    visitedObjects: MutableSet<Any>? = null
 ) {
     if (!shouldTraverseObject(root, config)) return
     if (!onObject(root)) return
 
     val queue = ArrayDeque<Any>()
-    val visitedObjects = Collections.newSetFromMap<Any>(IdentityHashMap())
+    val visitedObjects = visitedObjects ?: Collections.newSetFromMap(IdentityHashMap())
 
     queue.add(root)
     visitedObjects.add(root)
@@ -116,6 +125,11 @@ internal fun traverseObjectGraph(
                 ) { _ /* obj */, field, fieldValue ->
                     processNextObject(onField(currentObj, field, fieldValue))
                 }
+            }
+        }
+        if (expandObject != null) {
+            expandObject(currentObj).forEach {
+                processNextObject(it)
             }
         }
     }
