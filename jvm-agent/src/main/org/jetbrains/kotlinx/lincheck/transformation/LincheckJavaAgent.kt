@@ -352,7 +352,7 @@ object LincheckJavaAgent {
      * @param processedObjects Set of objects that have already been processed to prevent duplicate transformation.
      */
     private fun ensureClassHierarchyIsTransformed(clazz: Class<*>, processedObjects: MutableSet<Any>) {
-        if (clazz.name in instrumentedClasses) return
+        if (clazz.name in instrumentedClasses) return // already instrumented
 
         if (shouldTransform(clazz, instrumentationMode)) {
             instrumentedClasses += clazz.name
@@ -368,14 +368,13 @@ object LincheckJavaAgent {
             .mapNotNull { readFieldSafely(null, it).getOrNull() }
             .forEach { ensureObjectIsTransformed(it, processedObjects) }
 
-        // Traverse super classes, interfaces and enclosing class
+        // Traverse super classes, interfaces, and enclosing class
         val classesToTransform =
             listOfNotNull(clazz.superclass) +
             listOfNotNull(clazz.enclosingClass) +
             clazz.interfaces.asList()
 
         classesToTransform.forEach {
-            if (it.name in instrumentedClasses) return // already instrumented
             ensureClassHierarchyIsTransformed(it, processedObjects)
         }
     }
