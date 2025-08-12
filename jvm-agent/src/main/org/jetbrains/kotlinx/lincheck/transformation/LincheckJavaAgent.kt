@@ -287,9 +287,10 @@ object LincheckJavaAgent {
 
     /**
      * Ensures that the given object and all its referenced objects are transformed for Lincheck analysis.
-     * If the INSTRUMENT_ALL_CLASSES_IN_MODEL_CHECKING_MODE flag is set to true, no transformation is performed.
+     * The function is called upon a test instance creation to ensure that
+     * all the classes related to it are transformed.
      *
-     * The function is called upon a test instance creation, to ensure that all the classes related to it are transformed.
+     * If the INSTRUMENT_ALL_CLASSES flag is set to true, no transformation is performed.
      *
      * @param obj the object to be transformed
      */
