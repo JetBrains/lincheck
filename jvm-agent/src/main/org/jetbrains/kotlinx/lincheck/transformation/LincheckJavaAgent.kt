@@ -333,9 +333,7 @@ object LincheckJavaAgent {
                 return
             }
             else -> {
-                if (instrumentation.isModifiableClass(clazz) &&
-                    shouldTransform(className, instrumentationMode)
-                ) {
+                if (shouldTransform(clazz, instrumentationMode)) {
                     ensureClassHierarchyIsTransformed(clazz)
                 } else {
                     // Optimization and safety net: do not analyze low-level
