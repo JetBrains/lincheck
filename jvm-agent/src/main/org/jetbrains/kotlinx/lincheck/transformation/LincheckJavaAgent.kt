@@ -313,8 +313,10 @@ object LincheckJavaAgent {
 
         when {
             isJavaLambdaClass(className) -> {
-                val enclosingClass = Class.forName(getJavaLambdaEnclosingClass(className))
-                ensureClassHierarchyIsTransformed(enclosingClass, processedObjects)
+                val enclosingClassName = getJavaLambdaEnclosingClass(className)
+                if (enclosingClassName !in instrumentedClasses) {
+                    ensureClassHierarchyIsTransformed(Class.forName(enclosingClassName), processedObjects)
+                }
             }
             obj is Array<*> -> {
                 obj.forEach {
