@@ -280,8 +280,6 @@ object LincheckJavaAgent {
             return
         }
         if (canonicalClassName in instrumentedClasses) return // already instrumented
-        // TODO: remove this check, it already done in `ensureClassHierarchyIsTransformed`
-        if (!shouldTransform(canonicalClassName, instrumentationMode)) return
         ensureClassHierarchyIsTransformed(Class.forName(canonicalClassName), Collections.newSetFromMap(IdentityHashMap()))
     }
 
