@@ -325,8 +325,10 @@ object LincheckJavaAgent {
                 ensureClassHierarchyIsTransformed(getJavaLambdaEnclosingClass(className))
             }
             obj is Array<*> -> {
-                obj.filterNotNull().forEach {
-                    ensureObjectIsTransformed(it, processedObjects)
+                obj.forEach {
+                    if (it !== null) {
+                        ensureObjectIsTransformed(it, processedObjects)
+                    }
                 }
                 return
             }
