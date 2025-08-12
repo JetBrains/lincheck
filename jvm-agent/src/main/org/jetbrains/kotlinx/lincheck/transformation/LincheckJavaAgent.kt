@@ -187,14 +187,16 @@ object LincheckJavaAgent {
         try {
             instrumentation.retransformClasses(*classes.toTypedArray())
         } catch (_: Throwable) {
-            classes.forEach {
-                try {
-                    instrumentation.retransformClasses(it)
-                } catch (t: Throwable) {
-                    Logger.error { "Failed to retransform class ${it.name}" }
-                    Logger.error(t)
-                }
-            }
+            classes.forEach { retransformClass(it) }
+        }
+    }
+
+    private fun retransformClass(clazz: Class<*>) {
+        try {
+            instrumentation.retransformClasses(clazz)
+        } catch (t: Throwable) {
+            Logger.error { "Failed to retransform class ${clazz.name}" }
+            Logger.error(t)
         }
     }
 
@@ -371,11 +373,7 @@ object LincheckJavaAgent {
     private fun ensureClassHierarchyIsTransformed(clazz: Class<*>, processedObjects: MutableSet<Any>) {
         if (shouldTransform(clazz, instrumentationMode)) {
             instrumentedClasses += clazz.name
-            try {
-                instrumentation.retransformClasses(clazz)
-            } catch (e: VerifyError) {
-                Logger.error { "Failed to retransform class ${clazz.name}" }
-            }
+            retransformClass(clazz)
         }
         // Traverse static fields.
         clazz.declaredFields
