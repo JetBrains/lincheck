@@ -284,6 +284,18 @@ object LincheckJavaAgent {
         ensureClassHierarchyIsTransformed(Class.forName(canonicalClassName), Collections.newSetFromMap(IdentityHashMap()))
     }
 
+    /**
+     * Ensures that the given class and all its superclasses are transformed if necessary.
+     *
+     * @param clazz the class to transform
+     */
+    private fun ensureClassHierarchyIsTransformed(clazz: Class<*>) {
+        if (INSTRUMENT_ALL_CLASSES) {
+            return
+        }
+        if (clazz.name in instrumentedClasses) return // already instrumented
+        ensureClassHierarchyIsTransformed(clazz, Collections.newSetFromMap(IdentityHashMap()))
+    }
 
     /**
      * Ensures that the given object and all its referenced objects are transformed for Lincheck analysis.
@@ -298,19 +310,6 @@ object LincheckJavaAgent {
             return
         }
         ensureObjectIsTransformed(obj, Collections.newSetFromMap(IdentityHashMap()))
-    }
-
-    /**
-     * Ensures that the given class and all its superclasses are transformed if necessary.
-     *
-     * @param clazz the class to transform
-     */
-    private fun ensureClassHierarchyIsTransformed(clazz: Class<*>) {
-        if (INSTRUMENT_ALL_CLASSES) {
-            return
-        }
-        if (clazz.name in instrumentedClasses) return // already instrumented
-        ensureClassHierarchyIsTransformed(clazz, Collections.newSetFromMap(IdentityHashMap()))
     }
 
     /**
