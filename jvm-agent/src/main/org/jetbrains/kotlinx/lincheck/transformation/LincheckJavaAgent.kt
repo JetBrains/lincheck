@@ -309,6 +309,9 @@ object LincheckJavaAgent {
         var clazz: Class<*> = obj.javaClass
         val className = clazz.name
 
+        if (processedObjects.contains(obj)) return
+        processedObjects += obj
+
         when {
             isJavaLambdaClass(className) -> {
                 ensureClassHierarchyIsTransformed(getJavaLambdaEnclosingClass(className))
@@ -331,9 +334,6 @@ object LincheckJavaAgent {
                 }
             }
         }
-
-        if (processedObjects.contains(obj)) return
-        processedObjects += obj
 
         while (true) {
             clazz.declaredFields
