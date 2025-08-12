@@ -272,15 +272,15 @@ object LincheckJavaAgent {
      * thus, initializing it here, in an ignored section of the analysis, re-transforming
      * the class after that.
      *
-     * @param canonicalClassName The name of the class to be transformed.
+     * @param className The name of the class to be transformed.
      */
-    fun ensureClassHierarchyIsTransformed(canonicalClassName: String) {
+    fun ensureClassHierarchyIsTransformed(className: String) {
         if (INSTRUMENT_ALL_CLASSES) {
-            Class.forName(canonicalClassName)
+            Class.forName(className)
             return
         }
-        if (canonicalClassName in instrumentedClasses) return // already instrumented
-        ensureClassHierarchyIsTransformed(Class.forName(canonicalClassName), Collections.newSetFromMap(IdentityHashMap()))
+        if (className in instrumentedClasses) return // already instrumented
+        ensureClassHierarchyIsTransformed(Class.forName(className), Collections.newSetFromMap(IdentityHashMap()))
     }
 
     /**
