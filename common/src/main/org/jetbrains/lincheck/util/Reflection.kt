@@ -19,11 +19,19 @@ import java.util.ArrayList
  * if they appear in the subclass and a parent class.
  */
 val Class<*>.allDeclaredFieldWithSuperclasses get(): List<Field> {
-    val fields: MutableList<Field> = ArrayList<Field>()
-    var currentClass: Class<*>? = this
-    while (currentClass != null) {
+    if (superclass == null && interfaces.isEmpty()) {
+        return this.declaredFields.asList()
+    }
+    val fields: MutableList<Field> = mutableListOf()
+    val queue: MutableList<Class<*>> = mutableListOf(this)
+    while (queue.isNotEmpty()) {
+        val currentClass = queue.removeLast()
         fields.addAll(currentClass.declaredFields)
-        currentClass = currentClass.superclass
+
+        queue.addAll(currentClass.interfaces)
+        if (currentClass.superclass != null) {
+            queue.add(currentClass.superclass)
+        }
     }
     return fields
 }
