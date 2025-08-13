@@ -1,0 +1,55 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| -------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                      Thread 1                                                                      |
+| -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                        |
+|   escape = "START" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:19)                                             |
+|   a.toString(): "0" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:28)                                            |
+|   escape = "0" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:28)                                                 |
+|   a.toString(): "1" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:28)                                            |
+|   escape = "1" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:28)                                                 |
+|   a.toString(): "2" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:28)                                            |
+|   escape = "2" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:28)                                                 |
+|   escape ➜ "2" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:31)                                                 |
+|   DirectMethodHandle.internalMemberName(DirectMethodHandle#1): MemberName#1 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
+|   MethodHandle.linkToStatic("%3-", "2", MemberName#1): "%3-2" at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)               |
+|   escape = "%3-2" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:31)                                              |
+|   a.toString(): "0" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:28)                                            |
+|   escape = "0" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:28)                                                 |
+|   a.toString(): "1" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:28)                                            |
+|   escape = "1" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:28)                                                 |
+|   a.toString(): "2" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:28)                                            |
+|   escape = "2" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:28)                                                 |
+|   escape ➜ "2" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:31)                                                 |
+|   DirectMethodHandle.internalMemberName(DirectMethodHandle#1): MemberName#1 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
+|   MethodHandle.linkToStatic("%3-", "2", MemberName#1): "%3-2" at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)               |
+|   escape = "%3-2" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:31)                                              |
+|   a.toString(): "0" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:28)                                            |
+|   escape = "0" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:28)                                                 |
+|   a.toString(): "1" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:28)                                            |
+|   escape = "1" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:28)                                                 |
+|   a.toString(): "2" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:28)                                            |
+|   escape = "2" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:28)                                                 |
+|   escape ➜ "2" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:31)                                                 |
+|   DirectMethodHandle.internalMemberName(DirectMethodHandle#1): MemberName#1 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
+|   MethodHandle.linkToStatic("%3-", "2", MemberName#1): "%3-2" at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)               |
+|   escape = "%3-2" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:31)                                              |
+|   a.toString(): "0" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:28)                                            |
+|   escape = "0" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:28)                                                 |
+|   escape = "END" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:34)                                               |
+|   result: void                                                                                                                                     |
+| -------------------------------------------------------------------------------------------------------------------------------------------------- |

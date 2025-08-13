@@ -1,0 +1,27 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| --------------------------------------------------------------------------------------------------------------- |
+|                                                    Thread 1                                                     |
+| --------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                     |
+|   escape = "START" at SimpleDoWhileLoopRepresentationTest.operation(SimpleDoWhileLoopRepresentationTest.kt:19)  |
+|   a.toString(): "2" at SimpleDoWhileLoopRepresentationTest.operation(SimpleDoWhileLoopRepresentationTest.kt:23) |
+|   escape = "2" at SimpleDoWhileLoopRepresentationTest.operation(SimpleDoWhileLoopRepresentationTest.kt:23)      |
+|   a.toString(): "3" at SimpleDoWhileLoopRepresentationTest.operation(SimpleDoWhileLoopRepresentationTest.kt:23) |
+|   escape = "3" at SimpleDoWhileLoopRepresentationTest.operation(SimpleDoWhileLoopRepresentationTest.kt:23)      |
+|   escape = "END" at SimpleDoWhileLoopRepresentationTest.operation(SimpleDoWhileLoopRepresentationTest.kt:26)    |
+|   result: void                                                                                                  |
+| --------------------------------------------------------------------------------------------------------------- |

@@ -1,0 +1,42 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| -------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                      Thread 1                                                                      |
+| -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                        |
+|   escape = "START" at ContinuedForLoopRepresentationTest.operation(ContinuedForLoopRepresentationTest.kt:19)                                       |
+|   a.toString(): "1" at ContinuedForLoopRepresentationTest.operation(ContinuedForLoopRepresentationTest.kt:22)                                      |
+|   escape = "1" at ContinuedForLoopRepresentationTest.operation(ContinuedForLoopRepresentationTest.kt:22)                                           |
+|   DirectMethodHandle.internalMemberName(DirectMethodHandle#1): MemberName#1 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
+|   MethodHandle.linkToStatic(1, " is odd", MemberName#1): "1 is odd" at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)         |
+|   escape = "1 is odd" at ContinuedForLoopRepresentationTest.operation(ContinuedForLoopRepresentationTest.kt:26)                                    |
+|   a.toString(): "2" at ContinuedForLoopRepresentationTest.operation(ContinuedForLoopRepresentationTest.kt:22)                                      |
+|   escape = "2" at ContinuedForLoopRepresentationTest.operation(ContinuedForLoopRepresentationTest.kt:22)                                           |
+|   a.toString(): "3" at ContinuedForLoopRepresentationTest.operation(ContinuedForLoopRepresentationTest.kt:22)                                      |
+|   escape = "3" at ContinuedForLoopRepresentationTest.operation(ContinuedForLoopRepresentationTest.kt:22)                                           |
+|   DirectMethodHandle.internalMemberName(DirectMethodHandle#1): MemberName#1 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
+|   MethodHandle.linkToStatic(3, " is odd", MemberName#1): "3 is odd" at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)         |
+|   escape = "3 is odd" at ContinuedForLoopRepresentationTest.operation(ContinuedForLoopRepresentationTest.kt:26)                                    |
+|   a.toString(): "4" at ContinuedForLoopRepresentationTest.operation(ContinuedForLoopRepresentationTest.kt:22)                                      |
+|   escape = "4" at ContinuedForLoopRepresentationTest.operation(ContinuedForLoopRepresentationTest.kt:22)                                           |
+|   a.toString(): "5" at ContinuedForLoopRepresentationTest.operation(ContinuedForLoopRepresentationTest.kt:22)                                      |
+|   escape = "5" at ContinuedForLoopRepresentationTest.operation(ContinuedForLoopRepresentationTest.kt:22)                                           |
+|   DirectMethodHandle.internalMemberName(DirectMethodHandle#1): MemberName#1 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
+|   MethodHandle.linkToStatic(5, " is odd", MemberName#1): "5 is odd" at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)         |
+|   escape = "5 is odd" at ContinuedForLoopRepresentationTest.operation(ContinuedForLoopRepresentationTest.kt:26)                                    |
+|   escape = "END" at ContinuedForLoopRepresentationTest.operation(ContinuedForLoopRepresentationTest.kt:28)                                         |
+|   result: void                                                                                                                                     |
+| -------------------------------------------------------------------------------------------------------------------------------------------------- |
