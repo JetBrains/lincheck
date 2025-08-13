@@ -90,14 +90,14 @@ class Spinner private constructor(
      */
     inline fun spinWaitUntil(condition: () -> Boolean) {
         var counter = 0
-        var limit = pollYieldLimit()
+        var yieldLimit = pollYieldLimit()
         while (!condition()) {
             counter++
-            if (counter % limit == 0) {
+            if (counter % yieldLimit == 0) {
                 Thread.yield()
             }
             if (counter % POLL_COUNT == 0) {
-                limit = pollYieldLimit()
+                yieldLimit = pollYieldLimit()
             }
         }
     }
@@ -116,15 +116,15 @@ class Spinner private constructor(
     inline fun Spinner.spinWaitBoundedUntil(condition: () -> Boolean): Boolean {
         var counter = 0
         var result = true
-        var limit = pollExitLimit()
+        var exitLimit = pollExitLimit()
         while (!condition()) {
-            if (counter >= limit) {
+            if (counter >= exitLimit) {
                 result = condition()
                 break
             }
             counter++
             if (counter % POLL_COUNT == 0) {
-                limit = pollExitLimit()
+                exitLimit = pollExitLimit()
             }
         }
         return result
