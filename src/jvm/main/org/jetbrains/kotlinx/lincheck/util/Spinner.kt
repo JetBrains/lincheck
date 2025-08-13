@@ -64,13 +64,13 @@ class Spinner private constructor(
      * the spin-loop should perform before yielding to other threads.
      */
     fun pollYieldLimit(): Int =
-        1 + if (isSpinning()) SPIN_CYCLES_LIMIT else 0
+        if (isSpinning()) YIELD_LIMIT else 1
 
     /**
      * Defines the limit for iterations in a spin-loop before it exits.
      */
     fun pollExitLimit(): Int =
-        if (isSpinning()) SPIN_CYCLES_LIMIT else 0
+        if (isSpinning()) EXIT_LIMIT else 0
 
     /**
      * Calculates the elapsed time in nanoseconds since the provided start time.
@@ -156,8 +156,9 @@ class Spinner private constructor(
     }
 
     companion object {
-        const val POLL_COUNT = 1_000
-        const val SPIN_CYCLES_LIMIT: Int = 1_000_000
+        const val POLL_COUNT        = 64            // 2^6
+        const val YIELD_LIMIT       = 4096          // 2^12
+        const val EXIT_LIMIT        = 1024 * 1024   // 2^20
     }
 }
 
