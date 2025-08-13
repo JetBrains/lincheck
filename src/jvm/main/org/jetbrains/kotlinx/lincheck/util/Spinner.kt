@@ -91,13 +91,12 @@ class Spinner private constructor(
     inline fun spinWaitUntil(condition: () -> Boolean) {
         var counter = 0
         var limit = pollYieldLimit()
-        val pollCount = SPIN_CYCLES_LIMITS_POLL_COUNT
         while (!condition()) {
             counter++
             if (counter % limit == 0) {
                 Thread.yield()
             }
-            if (counter % pollCount == 0) {
+            if (counter % POLL_COUNT == 0) {
                 limit = pollYieldLimit()
             }
         }
@@ -118,14 +117,13 @@ class Spinner private constructor(
         var counter = 0
         var result = true
         var limit = pollExitLimit()
-        val pollCount = SPIN_CYCLES_LIMITS_POLL_COUNT
         while (!condition()) {
             if (counter >= limit) {
                 result = condition()
                 break
             }
             counter++
-            if (counter % pollCount == 0) {
+            if (counter % POLL_COUNT == 0) {
                 limit = pollExitLimit()
             }
         }
@@ -145,17 +143,21 @@ class Spinner private constructor(
         var counter = 0
         val startTime = System.nanoTime()
         var elapsedTime = 0L
-        val pollCount = SPIN_CYCLES_LIMITS_POLL_COUNT
         while (!condition()) {
             if (elapsedTime >= timeoutNano) {
                 return -1
             }
             counter++
-            if (counter % pollCount == 0) {
+            if (counter % POLL_COUNT == 0) {
                 elapsedTime = pollElapsedTime(startTime)
             }
         }
         return pollElapsedTime(startTime)
+    }
+
+    companion object {
+        const val POLL_COUNT = 1_000
+        const val SPIN_CYCLES_LIMIT: Int = 1_000_000
     }
 }
 
@@ -190,8 +192,3 @@ internal inline fun <T> Spinner.spinWaitBoundedFor(getter: () -> T?): T? {
 internal fun SpinnerGroup(nThreads: Int): List<Spinner> {
     return Array(nThreads) { Spinner(nThreads) }.asList()
 }
-
-
-const val SPIN_CYCLES_LIMIT: Int = 1_000_000
-
-const val SPIN_CYCLES_LIMITS_POLL_COUNT = 1_000
