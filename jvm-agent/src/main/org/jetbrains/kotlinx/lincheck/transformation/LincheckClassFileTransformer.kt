@@ -14,11 +14,7 @@ import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.INSTRUMEN
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentationMode
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentedClasses
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
-import org.jetbrains.lincheck.util.Logger
-import org.jetbrains.lincheck.util.AnalysisProfile
-import org.jetbrains.lincheck.util.isThreadContainerClass
-import org.jetbrains.lincheck.util.isIntellijRuntimeAgentClass
-import org.jetbrains.lincheck.util.runInsideIgnoredSection
+import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.*
 import org.objectweb.asm.tree.ClassNode
 import java.lang.instrument.ClassFileTransformer

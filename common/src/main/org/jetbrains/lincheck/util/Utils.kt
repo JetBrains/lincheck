@@ -10,6 +10,11 @@
 
 package org.jetbrains.lincheck.util
 
+import java.lang.invoke.MethodHandle
+import java.lang.invoke.MethodHandles
+import java.lang.invoke.MethodHandles.Lookup
+import java.lang.invoke.MethodType
+
 // Trace agent modes
 private const val TRACE_DEBUGGER_MODE_PROPERTY = "lincheck.traceDebuggerMode"
 private const val TRACE_RECORDER_MODE_PROPERTY = "lincheck.traceRecorderMode"
@@ -74,6 +79,29 @@ fun isIntellijRuntimeCoverageAgentClass(className: String) =
 fun isIntellijRuntimeAgentClass(className: String) =
     isIntellijRuntimeDebuggerAgentClass(className) || isIntellijRuntimeCoverageAgentClass(className)
 
+/**
+ * Determines if a given class name represents a method handle related class,
+ * that is one of the following classes:
+ *   - [MethodHandle]
+ *   - [MethodHandles]
+ *   - [MethodHandles.Lookup]
+ *   - [MethodType]
+ */
+fun isMethodHandleRelatedClass(className: String): Boolean =
+    className.startsWith("java.lang.invoke") &&
+    (className.contains("MethodHandle") || className.contains("MethodType"))
+
+/**
+ * Determines whether the specified [MethodHandle] method should be ignored.
+ *
+ * We ignore all methods from [MethodHandle], except various `invoke` methods, such as:
+ *   - [MethodHandle.invoke]
+ *   - [MethodHandle.invokeExact]
+ *   - [MethodHandle.invokeWithArguments]
+ * These methods are not ignored because we need to analyze the invoked target method.
+ */
+fun isIgnoredMethodHandleMethod(className: String, methodName: String): Boolean =
+    isMethodHandleRelatedClass(className) && !methodName.contains("invoke")
 
 // Idea plugin flags
 

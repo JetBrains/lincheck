@@ -552,30 +552,6 @@ internal fun isLoadClassMethod(methodName: String, desc: String) =
     methodName == "loadClass" && desc == "(Ljava/lang/String;)Ljava/lang/Class;"
 
 /**
- * Determines if a given class name represents a method handle related class,
- * that is one of the following classes:
- *   - [MethodHandle]
- *   - [MethodHandles]
- *   - [MethodHandles.Lookup]
- *   - [MethodType]
- */
-internal fun isMethodHandleRelatedClass(className: String): Boolean =
-    className.startsWith("java.lang.invoke") &&
-    (className.contains("MethodHandle") || className.contains("MethodType"))
-
-/**
- * Determines whether the specified [MethodHandle] method should be ignored.
- *
- * We ignore all methods from [MethodHandle], except various `invoke` methods, such as:
- *   - [MethodHandle.invoke]
- *   - [MethodHandle.invokeExact]
- *   - [MethodHandle.invokeWithArguments]
- * These methods are not ignored because we need to analyze the invoked target method.
- */
-internal fun isIgnoredMethodHandleMethod(className: String, methodName: String): Boolean =
-    isMethodHandleRelatedClass(className) && !methodName.contains("invoke")
-
-/**
  * Tests if the provided [className] represents [StackTraceElement] class.
  */
 internal fun isStackTraceElementClass(className: String): Boolean =
