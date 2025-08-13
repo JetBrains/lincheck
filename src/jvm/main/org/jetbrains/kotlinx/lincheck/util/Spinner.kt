@@ -53,10 +53,10 @@ class Spinner private constructor(
      * If the number of processors is lower than the number of threads in the group,
      * then the spinner should exit the loop immediately.
      */
-    val isSpinning: Boolean = run {
+    fun isSpinning(): Boolean {
         val nThreads = threadCounter?.invoke() ?: threadCount
         val nProcessors = Runtime.getRuntime().availableProcessors()
-        (nProcessors > 1) && (nProcessors >= nThreads)
+        return (nProcessors > 1) && (nProcessors >= nThreads)
     }
 
     /**
@@ -64,13 +64,13 @@ class Spinner private constructor(
      * the spin-loop should perform before yielding to other threads.
      */
     fun pollYieldLimit(): Int =
-        1 + if (isSpinning) SPIN_CYCLES_LIMIT else 0
+        1 + if (isSpinning()) SPIN_CYCLES_LIMIT else 0
 
     /**
      * Defines the limit for iterations in a spin-loop before it exits.
      */
     fun pollExitLimit(): Int =
-        if (isSpinning) SPIN_CYCLES_LIMIT else 0
+        if (isSpinning()) SPIN_CYCLES_LIMIT else 0
 
     /**
      * Calculates the elapsed time in nanoseconds since the provided start time.
