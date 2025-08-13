@@ -101,10 +101,7 @@ internal fun traverseObjectGraph(
                     currentObj,
                     fieldPredicate = { field ->
                         // do not traverse static fields if static fields traversal is disabled
-                        (Modifier.isStatic(field.modifiers) implies config.traverseStaticFields) &&
-                        // do not traverse fields of primitive types if immutable objects traversal is disabled
-                        // (primitive types are a subset of immutable types)
-                        (field.type.isPrimitive implies config.traverseImmutableObjects)
+                        (Modifier.isStatic(field.modifiers) implies config.traverseStaticFields)
                     }
                 ) { _ /* obj */, field, fieldValue ->
                     processNextObject(onField(currentObj, field, fieldValue))
