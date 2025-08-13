@@ -29,7 +29,15 @@ Detailed trace:
 |         value ➜ 0 at CounterDerived.increment(MethodHandlesLookupTests.kt:176)                                                                                                  |
 |         value = 2 at CounterDerived.increment(MethodHandlesLookupTests.kt:176)                                                                                                  |
 |       methodHandle.invoke(CounterDerived#1) at MethodHandlesFindSpecialRepresentationTest.doTest(MethodHandlesLookupTests.kt:29)                                                |
+|         DirectMethodHandle.internalMemberName(Special#1): MemberName#1 at DirectMethodHandle.Holder.invokeSpecial(DirectMethodHandle$Holder:0)                                  |
+|         MethodHandle.linkToSpecial(CounterDerived#1, MemberName#1) at DirectMethodHandle.Holder.invokeSpecial(DirectMethodHandle$Holder:0)                                      |
+|           value ➜ 2 at Counter.increment(MethodHandlesLookupTests.kt:156)                                                                                                       |
+|           value = 3 at Counter.increment(MethodHandlesLookupTests.kt:156)                                                                                                       |
 |       methodHandle.invokeExact(CounterDerived#1) at MethodHandlesFindSpecialRepresentationTest.doTest(MethodHandlesLookupTests.kt:30)                                           |
+|         DirectMethodHandle.internalMemberName(Special#1): MemberName#1 at DirectMethodHandle.Holder.invokeSpecial(DirectMethodHandle$Holder:0)                                  |
+|         MethodHandle.linkToSpecial(CounterDerived#1, MemberName#1) at DirectMethodHandle.Holder.invokeSpecial(DirectMethodHandle$Holder:0)                                      |
+|           value ➜ 3 at Counter.increment(MethodHandlesLookupTests.kt:156)                                                                                                       |
+|           value = 4 at Counter.increment(MethodHandlesLookupTests.kt:156)                                                                                                       |
 |       counter.value ➜ 4 at MethodHandlesFindSpecialRepresentationTest.doTest(MethodHandlesLookupTests.kt:31)                                                                    |
 |   result: IllegalStateException #1                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
