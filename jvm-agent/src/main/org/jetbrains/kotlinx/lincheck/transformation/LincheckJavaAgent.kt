@@ -379,10 +379,13 @@ object LincheckJavaAgent {
         //
         // NOTE: traverses only current class' fields, as the loop below will process
         //   all superclasses' and interfaces' fields as a part of `ensureClassHierarchyIsTransformed`
-        clazz.declaredFields
-            .filter { !it.type.isPrimitive && Modifier.isStatic(it.modifiers) }
-            .mapNotNull { readFieldSafely(null, it).getOrNull() }
-            .forEach { transformObjectCallback(it) }
+        for (field in clazz.declaredFields) {
+            // traverse only static non-primitive fields
+            if (!Modifier.isStatic(field.modifiers) || field.type.isPrimitive) continue
+            readFieldSafely(null, field).getOrNull()?.let {
+                transformObjectCallback(it)
+            }
+        }
 
         // Traverse super classes, interfaces, and enclosing class
         val classesToTransform =
