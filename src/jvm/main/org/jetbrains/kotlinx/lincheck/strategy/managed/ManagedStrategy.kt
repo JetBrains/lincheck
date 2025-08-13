@@ -1894,7 +1894,7 @@ internal abstract class ManagedStrategy(
         deterministicMethodDescriptor: DeterministicMethodDescriptor<*, *>?,
     ): AnalysisSectionType {
         // Ignore static MethodHandle calls.
-        if (owner == null && className.startsWith("java.lang.invoke.") && className.contains("MethodHandle")) {
+        if (isIgnoredMethodHandleMethod(className, methodName)) {
             return AnalysisSectionType.IGNORED
         }
         // Ignore `toString()` on primitive and immutable types.
