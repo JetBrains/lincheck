@@ -18,8 +18,8 @@ The following interleaving leads to the error:
 
 Exception stack traces:
 #1: java.lang.IllegalArgumentException: Random range is empty: [1, 1).
-	at kotlin.random.RandomKt.checkRangeBounds(Random.kt:378)
-	at kotlin.random.Random.nextInt(Random.kt:65)
+	at kotlin.random.RandomKt.checkRangeBounds(Random.kt:382)
+	at kotlin.random.Random.nextInt(Random.kt:67)
 	at org.jetbrains.kotlinx.lincheck_test.representation.trace.debugger.FailingCustomRandomCallRepresentationTest.operation(RandomRepresentationTests.kt:40)
 	at java.base/java.lang.Thread.run(Thread.java:840)
 
@@ -29,14 +29,13 @@ Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | operation(): IllegalArgumentException #1                                                                                                         |
 |   INSTANCE.nextInt(1, 1): threw IllegalArgumentException at FailingCustomRandomCallRepresentationTest.operation(RandomRepresentationTests.kt:40) |
-|     RandomKt.checkRangeBounds(1, 1): threw IllegalArgumentException at Random.nextInt(Random.kt:65)                                              |
-|       RandomKt.boundsErrorMessage(1, 1): "Random range is empty: [1, 1)." at RandomKt.checkRangeBounds(Random.kt:378)                            |
-|         StringBuilder#1.append("Random range is empty: ["): StringBuilder#1 at RandomKt.boundsErrorMessage(Random.kt:382)                        |
-|         StringBuilder#1.append(1): StringBuilder#1 at RandomKt.boundsErrorMessage(Random.kt:382)                                                 |
-|         StringBuilder#1.append(", "): StringBuilder#1 at RandomKt.boundsErrorMessage(Random.kt:382)                                              |
-|         StringBuilder#1.append(1): StringBuilder#1 at RandomKt.boundsErrorMessage(Random.kt:382)                                                 |
-|         StringBuilder#1.append(")."): StringBuilder#1 at RandomKt.boundsErrorMessage(Random.kt:382)                                              |
-|         StringBuilder#1.toString(): "Random range is empty: [1, 1)." at RandomKt.boundsErrorMessage(Random.kt:382)                               |
-|       "Random range is empty: [1, 1).".toString(): "Random range is empty: [1, 1)." at RandomKt.checkRangeBounds(Random.kt:378)                  |
+|     RandomKt.checkRangeBounds(1, 1): threw IllegalArgumentException at Random.nextInt(Random.kt:67)                                              |
+|       RandomKt.boundsErrorMessage(1, 1): "Random range is empty: [1, 1)." at RandomKt.checkRangeBounds(Random.kt:382)                            |
+|         StringBuilder#1.append("Random range is empty: ["): StringBuilder#1 at RandomKt.boundsErrorMessage(Random.kt:386)                        |
+|         StringBuilder#1.append(1): StringBuilder#1 at RandomKt.boundsErrorMessage(Random.kt:386)                                                 |
+|         StringBuilder#1.append(", "): StringBuilder#1 at RandomKt.boundsErrorMessage(Random.kt:386)                                              |
+|         StringBuilder#1.append(1): StringBuilder#1 at RandomKt.boundsErrorMessage(Random.kt:386)                                                 |
+|         StringBuilder#1.append(")."): StringBuilder#1 at RandomKt.boundsErrorMessage(Random.kt:386)                                              |
+|         StringBuilder#1.toString(): "Random range is empty: [1, 1)." at RandomKt.boundsErrorMessage(Random.kt:386)                               |
 |   result: IllegalArgumentException #1                                                                                                            |
 | ------------------------------------------------------------------------------------------------------------------------------------------------ |
