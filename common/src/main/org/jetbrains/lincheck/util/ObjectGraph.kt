@@ -69,6 +69,7 @@ internal fun traverseObjectGraph(
     onObject: ObjectCallback = { _ /* obj */ -> true },
 ) {
     if (!shouldTraverseObject(root, config)) return
+    if (processedObjects != null && root in processedObjects) return
     if (!onObject(root)) return
 
     val queue = ArrayDeque<Any>()
