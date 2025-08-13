@@ -332,7 +332,7 @@ object LincheckJavaAgent {
                         }
                     }
                 }
-                else -> {
+                else -> if (shouldTransform(clazz, instrumentationMode)) {
                     ensureClassHierarchyIsTransformed(clazz) {
                         objectsToTransform.add(it)
                     }
@@ -342,22 +342,12 @@ object LincheckJavaAgent {
         }
 
         // this function is used to decide what objects should be traversed further
-        fun shouldTraverseObject(obj: Any): Boolean {
-            val clazz = obj.javaClass
-            val className = clazz.name
-            return (
-                // traverse (non-primitive) array elements
-                obj is Array<*> ||
-                // traverse fields of lambda class
-                isJavaLambdaClass(className) ||
-                // traverse objects which classes should be instrumented
-                (shouldTransform(clazz, instrumentationMode) &&
-                    // optimization and safety net: do not traverse low-level
-                    // class instances from the standard Java library.
-                    !isLowLevelJavaClass(className)
-                )
-            )
-        }
+        fun shouldTraverseObject(obj: Any): Boolean =
+            // optimization and safety net: do not traverse low-level
+            // class instances from the standard Java library
+            !isLowLevelJavaClass(obj.javaClass.name) ||
+            // unless the low-level class needs to be transformed
+            shouldTransform(obj.javaClass, instrumentationMode)
 
         traverseObjectGraph(obj, processedObjects, expandObject = ::expandObject) { obj ->
             shouldTraverseObject(obj)
