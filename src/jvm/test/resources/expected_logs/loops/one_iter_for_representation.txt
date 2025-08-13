@@ -13,13 +13,12 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| --------------------------------------------------------------------------------------------------------- |
-|                                                 Thread 1                                                  |
-| --------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                               |
-|   escape = "START" at OneIterForLoopRepresentationTest.operation(OneIterForLoopRepresentationTest.kt:19)  |
-|   a.toString(): "1" at OneIterForLoopRepresentationTest.operation(OneIterForLoopRepresentationTest.kt:22) |
-|   escape = "1" at OneIterForLoopRepresentationTest.operation(OneIterForLoopRepresentationTest.kt:22)      |
-|   escape = "END" at OneIterForLoopRepresentationTest.operation(OneIterForLoopRepresentationTest.kt:24)    |
-|   result: void                                                                                            |
-| --------------------------------------------------------------------------------------------------------- |
+| -------------------------------------------------------------------------------------------------------- |
+|                                                 Thread 1                                                 |
+| -------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                              |
+|   escape = "START" at OneIterForLoopRepresentationTest.operation(OneIterForLoopRepresentationTest.kt:19) |
+|   escape = "1" at OneIterForLoopRepresentationTest.operation(OneIterForLoopRepresentationTest.kt:22)     |
+|   escape = "END" at OneIterForLoopRepresentationTest.operation(OneIterForLoopRepresentationTest.kt:24)   |
+|   result: void                                                                                           |
+| -------------------------------------------------------------------------------------------------------- |

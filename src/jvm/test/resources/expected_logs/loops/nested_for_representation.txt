@@ -13,107 +13,23 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| -------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                      Thread 1                                                                      |
-| -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                                                        |
-|   escape = "START" at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:19)                                             |
-|   DirectMethodHandle.internalMemberName(DirectMethodHandle#1): MemberName#1 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
-|   MethodHandle.linkToStatic(1, MemberName#1): "1" at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                           |
-|   DirectMethodHandle.internalMemberName(DirectMethodHandle#2): MemberName#2 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
-|   MethodHandle.linkToStatic(1, 1, MemberName#2): 2 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                          |
-|   DirectMethodHandle#3.invokeBasic(2, "1"): 3 at DelegatingMethodHandle.Holder.reinvoke_L(DelegatingMethodHandle$Holder:0)                         |
-|     internalMemberName(DirectMethodHandle#3): MemberName#3 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                  |
-|     MethodHandle.linkToStatic(2, "1", MemberName#3): 3 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                      |
-|   DirectMethodHandle.internalMemberName(DirectMethodHandle#4): MemberName#4 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
-|   MethodHandle.linkToStatic(3, MemberName#4): ByteArray#1 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                   |
-|   DirectMethodHandle.internalMemberName(DirectMethodHandle#5): MemberName#5 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
-|   MethodHandle.linkToStatic(3, ByteArray#1, 1, ".", MemberName#5): 1 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)        |
-|   DirectMethodHandle.internalMemberName(DirectMethodHandle#6): MemberName#6 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
-|   MethodHandle.linkToStatic(1, ByteArray#1, "1", null, MemberName#6): 0 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)     |
-|   DirectMethodHandle.internalMemberName(DirectMethodHandle#7): MemberName#7 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
-|   MethodHandle.linkToStatic(ByteArray#1, 0, MemberName#7): "1.1" at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)            |
-|   escape = "1.1" at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:23)                                               |
-|   DirectMethodHandle.internalMemberName(DirectMethodHandle#1): MemberName#1 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
-|   MethodHandle.linkToStatic(1, MemberName#1): "1" at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                           |
-|   DirectMethodHandle.internalMemberName(DirectMethodHandle#2): MemberName#2 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
-|   MethodHandle.linkToStatic(1, 2, MemberName#2): 2 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                          |
-|   DirectMethodHandle#3.invokeBasic(2, "1"): 3 at DelegatingMethodHandle.Holder.reinvoke_L(DelegatingMethodHandle$Holder:0)                         |
-|     internalMemberName(DirectMethodHandle#3): MemberName#3 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                  |
-|     MethodHandle.linkToStatic(2, "1", MemberName#3): 3 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                      |
-|   DirectMethodHandle.internalMemberName(DirectMethodHandle#4): MemberName#4 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
-|   MethodHandle.linkToStatic(3, MemberName#4): ByteArray#2 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                   |
-|   DirectMethodHandle.internalMemberName(DirectMethodHandle#5): MemberName#5 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
-|   MethodHandle.linkToStatic(3, ByteArray#2, 2, ".", MemberName#5): 1 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)        |
-|   DirectMethodHandle.internalMemberName(DirectMethodHandle#6): MemberName#6 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
-|   MethodHandle.linkToStatic(1, ByteArray#2, "1", null, MemberName#6): 0 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)     |
-|   DirectMethodHandle.internalMemberName(DirectMethodHandle#7): MemberName#7 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
-|   MethodHandle.linkToStatic(ByteArray#2, 0, MemberName#7): "1.2" at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)            |
-|   escape = "1.2" at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:23)                                               |
-|   DirectMethodHandle.internalMemberName(DirectMethodHandle#1): MemberName#1 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
-|   MethodHandle.linkToStatic(1, MemberName#1): "1" at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                           |
-|   DirectMethodHandle.internalMemberName(DirectMethodHandle#2): MemberName#2 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
-|   MethodHandle.linkToStatic(1, 3, MemberName#2): 2 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                          |
-|   DirectMethodHandle#3.invokeBasic(2, "1"): 3 at DelegatingMethodHandle.Holder.reinvoke_L(DelegatingMethodHandle$Holder:0)                         |
-|     internalMemberName(DirectMethodHandle#3): MemberName#3 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                  |
-|     MethodHandle.linkToStatic(2, "1", MemberName#3): 3 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                      |
-|   DirectMethodHandle.internalMemberName(DirectMethodHandle#4): MemberName#4 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
-|   MethodHandle.linkToStatic(3, MemberName#4): ByteArray#3 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                   |
-|   DirectMethodHandle.internalMemberName(DirectMethodHandle#5): MemberName#5 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
-|   MethodHandle.linkToStatic(3, ByteArray#3, 3, ".", MemberName#5): 1 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)        |
-|   DirectMethodHandle.internalMemberName(DirectMethodHandle#6): MemberName#6 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
-|   MethodHandle.linkToStatic(1, ByteArray#3, "1", null, MemberName#6): 0 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)     |
-|   DirectMethodHandle.internalMemberName(DirectMethodHandle#7): MemberName#7 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
-|   MethodHandle.linkToStatic(ByteArray#3, 0, MemberName#7): "1.3" at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)            |
-|   escape = "1.3" at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:23)                                               |
-|   DirectMethodHandle.internalMemberName(DirectMethodHandle#1): MemberName#1 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
-|   MethodHandle.linkToStatic(2, MemberName#1): "2" at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                           |
-|   DirectMethodHandle.internalMemberName(DirectMethodHandle#2): MemberName#2 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
-|   MethodHandle.linkToStatic(1, 1, MemberName#2): 2 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                          |
-|   DirectMethodHandle#3.invokeBasic(2, "2"): 3 at DelegatingMethodHandle.Holder.reinvoke_L(DelegatingMethodHandle$Holder:0)                         |
-|     internalMemberName(DirectMethodHandle#3): MemberName#3 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                  |
-|     MethodHandle.linkToStatic(2, "2", MemberName#3): 3 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                      |
-|   DirectMethodHandle.internalMemberName(DirectMethodHandle#4): MemberName#4 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
-|   MethodHandle.linkToStatic(3, MemberName#4): ByteArray#4 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                   |
-|   DirectMethodHandle.internalMemberName(DirectMethodHandle#5): MemberName#5 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
-|   MethodHandle.linkToStatic(3, ByteArray#4, 1, ".", MemberName#5): 1 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)        |
-|   DirectMethodHandle.internalMemberName(DirectMethodHandle#6): MemberName#6 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
-|   MethodHandle.linkToStatic(1, ByteArray#4, "2", null, MemberName#6): 0 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)     |
-|   DirectMethodHandle.internalMemberName(DirectMethodHandle#7): MemberName#7 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
-|   MethodHandle.linkToStatic(ByteArray#4, 0, MemberName#7): "2.1" at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)            |
-|   escape = "2.1" at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:23)                                               |
-|   DirectMethodHandle.internalMemberName(DirectMethodHandle#1): MemberName#1 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
-|   MethodHandle.linkToStatic(2, MemberName#1): "2" at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                           |
-|   DirectMethodHandle.internalMemberName(DirectMethodHandle#2): MemberName#2 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
-|   MethodHandle.linkToStatic(1, 2, MemberName#2): 2 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                          |
-|   DirectMethodHandle#3.invokeBasic(2, "2"): 3 at DelegatingMethodHandle.Holder.reinvoke_L(DelegatingMethodHandle$Holder:0)                         |
-|     internalMemberName(DirectMethodHandle#3): MemberName#3 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                  |
-|     MethodHandle.linkToStatic(2, "2", MemberName#3): 3 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                      |
-|   DirectMethodHandle.internalMemberName(DirectMethodHandle#4): MemberName#4 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
-|   MethodHandle.linkToStatic(3, MemberName#4): ByteArray#5 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                   |
-|   DirectMethodHandle.internalMemberName(DirectMethodHandle#5): MemberName#5 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
-|   MethodHandle.linkToStatic(3, ByteArray#5, 2, ".", MemberName#5): 1 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)        |
-|   DirectMethodHandle.internalMemberName(DirectMethodHandle#6): MemberName#6 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
-|   MethodHandle.linkToStatic(1, ByteArray#5, "2", null, MemberName#6): 0 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)     |
-|   DirectMethodHandle.internalMemberName(DirectMethodHandle#7): MemberName#7 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
-|   MethodHandle.linkToStatic(ByteArray#5, 0, MemberName#7): "2.2" at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)            |
-|   escape = "2.2" at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:23)                                               |
-|   DirectMethodHandle.internalMemberName(DirectMethodHandle#1): MemberName#1 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
-|   MethodHandle.linkToStatic(2, MemberName#1): "2" at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                           |
-|   DirectMethodHandle.internalMemberName(DirectMethodHandle#2): MemberName#2 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
-|   MethodHandle.linkToStatic(1, 3, MemberName#2): 2 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                          |
-|   DirectMethodHandle#3.invokeBasic(2, "2"): 3 at DelegatingMethodHandle.Holder.reinvoke_L(DelegatingMethodHandle$Holder:0)                         |
-|     internalMemberName(DirectMethodHandle#3): MemberName#3 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                  |
-|     MethodHandle.linkToStatic(2, "2", MemberName#3): 3 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                      |
-|   DirectMethodHandle.internalMemberName(DirectMethodHandle#4): MemberName#4 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
-|   MethodHandle.linkToStatic(3, MemberName#4): ByteArray#6 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                   |
-|   DirectMethodHandle.internalMemberName(DirectMethodHandle#5): MemberName#5 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
-|   MethodHandle.linkToStatic(3, ByteArray#6, 3, ".", MemberName#5): 1 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)        |
-|   DirectMethodHandle.internalMemberName(DirectMethodHandle#6): MemberName#6 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
-|   MethodHandle.linkToStatic(1, ByteArray#6, "2", null, MemberName#6): 0 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)     |
-|   DirectMethodHandle.internalMemberName(DirectMethodHandle#7): MemberName#7 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0) |
-|   MethodHandle.linkToStatic(ByteArray#6, 0, MemberName#7): "2.3" at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)            |
-|   escape = "2.3" at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:23)                                               |
-|   escape = "END" at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:26)                                               |
-|   result: void                                                                                                                                     |
-| -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| -------------------------------------------------------------------------------------------------------------------------- |
+|                                                          Thread 1                                                          |
+| -------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                |
+|   escape = "START" at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:19)                     |
+|   DirectMethodHandle#1.invokeBasic(2, "1"): 3 at DelegatingMethodHandle.Holder.reinvoke_L(DelegatingMethodHandle$Holder:0) |
+|   escape = "1.1" at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:23)                       |
+|   DirectMethodHandle#1.invokeBasic(2, "1"): 3 at DelegatingMethodHandle.Holder.reinvoke_L(DelegatingMethodHandle$Holder:0) |
+|   escape = "1.2" at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:23)                       |
+|   DirectMethodHandle#1.invokeBasic(2, "1"): 3 at DelegatingMethodHandle.Holder.reinvoke_L(DelegatingMethodHandle$Holder:0) |
+|   escape = "1.3" at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:23)                       |
+|   DirectMethodHandle#1.invokeBasic(2, "2"): 3 at DelegatingMethodHandle.Holder.reinvoke_L(DelegatingMethodHandle$Holder:0) |
+|   escape = "2.1" at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:23)                       |
+|   DirectMethodHandle#1.invokeBasic(2, "2"): 3 at DelegatingMethodHandle.Holder.reinvoke_L(DelegatingMethodHandle$Holder:0) |
+|   escape = "2.2" at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:23)                       |
+|   DirectMethodHandle#1.invokeBasic(2, "2"): 3 at DelegatingMethodHandle.Holder.reinvoke_L(DelegatingMethodHandle$Holder:0) |
+|   escape = "2.3" at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:23)                       |
+|   escape = "END" at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:26)                       |
+|   result: void                                                                                                             |
+| -------------------------------------------------------------------------------------------------------------------------- |
