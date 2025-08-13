@@ -10,6 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck.util
 
+import kotlin.math.min
+
 /**
  * A spinner implements utility functions for spinning in a loop.
  */
@@ -67,6 +69,13 @@ class Spinner private constructor(
         if (isSpinning()) YIELD_LIMIT else 1
 
     /**
+     * Determines the maximum number of iterations
+     * the spin-loop should perform before yielding to other threads.
+     */
+    fun pollMaxYieldLimit(): Int =
+        if (isSpinning()) MAX_YIELD_LIMIT else 1
+
+    /**
      * Defines the limit for iterations in a spin-loop before it exits.
      */
     fun pollExitLimit(): Int =
@@ -95,9 +104,10 @@ class Spinner private constructor(
             counter++
             if (counter % yieldLimit == 0) {
                 Thread.yield()
+                yieldLimit = backoff(yieldLimit)
             }
             if (counter % POLL_COUNT == 0) {
-                yieldLimit = pollYieldLimit()
+                yieldLimit = min(pollMaxYieldLimit(), yieldLimit)
             }
         }
     }
@@ -126,10 +136,11 @@ class Spinner private constructor(
             counter++
             if (counter % yieldLimit == 0) {
                 Thread.yield()
+                yieldLimit = backoff(yieldLimit)
             }
             if (counter % POLL_COUNT == 0) {
                 exitLimit = pollExitLimit()
-                yieldLimit = pollYieldLimit()
+                yieldLimit = min(pollMaxYieldLimit(), yieldLimit)
             }
         }
         return result
@@ -156,19 +167,27 @@ class Spinner private constructor(
             counter++
             if (counter % yieldLimit == 0) {
                 Thread.yield()
+                yieldLimit = backoff(yieldLimit)
             }
             if (counter % POLL_COUNT == 0) {
                 elapsedTime = pollElapsedTime(startTime)
-                yieldLimit = pollYieldLimit()
+                yieldLimit = min(pollMaxYieldLimit(), yieldLimit)
             }
         }
         return pollElapsedTime(startTime)
     }
 
+    /**
+     * Implements exponential back-off strategy for thread yielding period adjustment.
+     */
+    fun backoff(yieldLimit: Int): Int =
+        minOf(yieldLimit * 2, MAX_YIELD_LIMIT)
+
     companion object {
         const val POLL_COUNT        = 64            // 2^6
-        const val YIELD_LIMIT       = 4096          // 2^12
+        const val YIELD_LIMIT       = 1024          // 2^10
         const val EXIT_LIMIT        = 1024 * 1024   // 2^20
+        const val MAX_YIELD_LIMIT   = EXIT_LIMIT    // 2^20
     }
 }
 
