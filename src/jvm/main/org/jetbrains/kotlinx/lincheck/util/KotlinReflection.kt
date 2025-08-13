@@ -13,6 +13,7 @@ package org.jetbrains.kotlinx.lincheck.util
 import org.jetbrains.kotlinx.lincheck.isSuspendable
 import org.jetbrains.lincheck.descriptors.MethodSignature
 import org.jetbrains.lincheck.descriptors.toMethodSignature
+import org.jetbrains.lincheck.util.*
 import java.lang.reflect.Executable
 import kotlin.coroutines.Continuation
 import java.lang.reflect.Method
@@ -97,10 +98,6 @@ private fun getCachedFilteredDeclaredMethods(className: String, methodName: Stri
  */
 internal val Any?.isCoroutinesSymbol get() =
     this != null && this::class.jvmName == "kotlinx.coroutines.internal.Symbol"
-
-internal infix fun <T> ((T) -> Boolean).and(other: (T) -> Boolean): (T) -> Boolean = { this(it) && other(it) }
-internal infix fun <T> ((T) -> Boolean).or(other: (T) -> Boolean): (T) -> Boolean = { this(it) || other(it) }
-internal fun <T> not(predicate: (T) -> Boolean): (T) -> Boolean = { !predicate(it) }
 
 internal val isPublic: (Executable) -> Boolean = { it.modifiers and Modifier.PUBLIC != 0 }
 internal val isProtected: (Executable) -> Boolean = { it.modifiers and Modifier.PROTECTED != 0 }
