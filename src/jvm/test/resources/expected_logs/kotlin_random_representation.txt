@@ -18,8 +18,8 @@ Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------ |
 | operation()                                                                                                        |
 |   Default.nextInt(): -1147404850 at KotlinRandomRepresentationTest.operation(KotlinRandomRepresentationTest.kt:17) |
-|     Random.access$getDefaultRandom$cp(): PlatformThreadLocalRandom#1 at Random.Default.nextInt(Random.kt:282)      |
-|     defaultRandom.nextInt(): -1147404850 at Random.Default.nextInt(Random.kt:282)                                  |
+|     Random.access$getDefaultRandom$cp(): PlatformThreadLocalRandom#1 at Random.Default.nextInt(Random.kt:286)      |
+|     defaultRandom.nextInt(): -1147404850 at Random.Default.nextInt(Random.kt:286)                                  |
 |       getImpl(): ThreadLocalRandom#1 at AbstractPlatformRandom.nextInt(PlatformRandom.kt:41)                       |
 |       ThreadLocalRandom#1.nextInt(): -1147404850 at AbstractPlatformRandom.nextInt(PlatformRandom.kt:41)           |
 |   a = -1147404850 at KotlinRandomRepresentationTest.operation(KotlinRandomRepresentationTest.kt:17)                |

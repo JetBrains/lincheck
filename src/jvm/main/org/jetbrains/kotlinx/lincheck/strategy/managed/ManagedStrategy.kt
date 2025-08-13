@@ -9,42 +9,35 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import sun.nio.ch.lincheck.*
+import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
+import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.ThreadState
 import org.jetbrains.kotlinx.lincheck.strategy.nativecalls.*
-import org.jetbrains.kotlinx.lincheck.beforeEvent as ideaPluginBeforeEvent
-import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.trace.*
+import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.util.*
-import org.objectweb.asm.ConstantDynamic
-import org.objectweb.asm.Handle
-import java.lang.invoke.CallSite
+import org.jetbrains.lincheck.*
+import org.jetbrains.lincheck.analysis.*
+import org.jetbrains.lincheck.datastructures.*
+import org.jetbrains.lincheck.descriptors.*
+import org.jetbrains.lincheck.trace.*
+import org.jetbrains.lincheck.util.*
+import org.objectweb.asm.*
+import sun.nio.ch.lincheck.*
+import java.lang.invoke.*
 import java.lang.reflect.*
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
-import kotlin.coroutines.Continuation
-import java.util.concurrent.TimeoutException
-import kotlinx.coroutines.CancellableContinuation
-import org.jetbrains.lincheck.GeneralPurposeModelCheckingWrapper
-import org.jetbrains.lincheck.descriptors.CodeLocations
-import org.jetbrains.lincheck.descriptors.FieldDescriptor
-import org.jetbrains.lincheck.trace.TRACE_CONTEXT
-import org.jetbrains.lincheck.descriptors.Types
-import org.jetbrains.lincheck.util.isArraysCopyOfIntrinsic
-import org.jetbrains.lincheck.util.isArraysCopyOfRangeIntrinsic
-import org.jetbrains.lincheck.datastructures.ManagedStrategyGuarantee
-import org.jetbrains.lincheck.analysis.*
-import org.jetbrains.lincheck.descriptors.*
-import org.jetbrains.lincheck.util.*
-import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
-import kotlin.text.isNotEmpty
-import kotlin.Result as KResult
+import java.util.concurrent.*
+import kotlin.coroutines.*
+import kotlin.coroutines.intrinsics.*
+import org.jetbrains.kotlinx.lincheck.beforeEvent as ideaPluginBeforeEvent
 import org.objectweb.asm.commons.Method.getMethod as getAsmMethod
+import kotlin.Result as KResult
 
 /**
  * This is an abstraction for all managed strategies, which encapsulated
@@ -1622,6 +1615,11 @@ internal abstract class ManagedStrategy(
                 toObject = atomicMethodDescriptor.getSetValue(receiver, params)
             )
         }
+        // Should this method call be ignored?
+        if (methodSection == AnalysisSectionType.IGNORED) {
+            enterAnalysisSection(threadId, methodSection)
+            return deterministicMethodDescriptor
+        }
         // in case of an atomic method, we create a switch point before the method call;
         // note that in case we resume atomic method there is no need to create the switch point,
         // since there is already a switch point between the suspension point and resumption
@@ -1728,7 +1726,7 @@ internal abstract class ManagedStrategy(
             atomicMethodDescriptor,
             deterministicMethodDescriptor,
         )
-        if (collectTrace) {
+        if (collectTrace && methodSection != AnalysisSectionType.IGNORED) {
             // an empty stack trace case is possible and can occur when we resume the coroutine,
             // and it results in a call to a top-level actor `suspend` function;
             // currently top-level actor functions are not represented in the `callStackTrace`,
@@ -1793,7 +1791,7 @@ internal abstract class ManagedStrategy(
             atomicMethodDescriptor,
             deterministicMethodDescriptor,
         )
-        if (collectTrace) {
+        if (collectTrace && methodSection != AnalysisSectionType.IGNORED) {
             // this case is possible and can occur when we resume the coroutine,
             // and it results in a call to a top-level actor `suspend` function;
             // currently top-level actor functions are not represented in the `callStackTrace`,
@@ -1895,18 +1893,34 @@ internal abstract class ManagedStrategy(
         atomicMethodDescriptor: AtomicMethodDescriptor?,
         deterministicMethodDescriptor: DeterministicMethodDescriptor<*, *>?,
     ): AnalysisSectionType {
-        val ownerName = owner?.javaClass?.canonicalName ?: className
-        if (atomicMethodDescriptor != null) {
-            return AnalysisSectionType.ATOMIC
+        // Ignore static MethodHandle calls.
+        if (isIgnoredMethodHandleMethod(className, methodName) &&
+            // in trace debugger mode, `invokedynamic` instructions are intercepted
+            // and are replaced with `MethodHandles` machinery to achieve deterministic execution
+            // TODO: investigate if we still can ignore these methods even with `invokedynamic` instrumentation
+            !isInTraceDebuggerMode
+        ) {
+            return AnalysisSectionType.IGNORED
         }
-        // TODO: decide if we need to introduce special `DETERMINISTIC` guarantee?
-        if (deterministicMethodDescriptor != null) {
+        // Ignore `toString()` on primitive and immutable types.
+        if (owner.isImmutable && methodName == "toString") {
             return AnalysisSectionType.IGNORED
         }
         // Ignore methods called on standard I/O streams
         when (owner) {
             System.`in`, System.out, System.err -> return AnalysisSectionType.IGNORED
         }
+        // TODO: decide if we need to introduce special `DETERMINISTIC` guarantee?
+        if (deterministicMethodDescriptor != null) {
+            // We use `ATOMIC` here to collect and print these calls.
+            return AnalysisSectionType.ATOMIC
+        }
+        // Should this call be atomic?
+        if (atomicMethodDescriptor != null) {
+            return AnalysisSectionType.ATOMIC
+        }
+        // Check user-defined guarantees.
+        val ownerName = owner?.javaClass?.canonicalName ?: className
         val section = analysisProfile.getAnalysisSectionFor(ownerName, methodName)
         userDefinedGuarantees?.forEach { guarantee ->
             if (guarantee.classPredicate(ownerName) && guarantee.methodPredicate(methodName)) {
@@ -1917,6 +1931,10 @@ internal abstract class ManagedStrategy(
     }
 
     private fun enterAnalysisSection(threadId: ThreadId, section: AnalysisSectionType) {
+        if (section == AnalysisSectionType.IGNORED) {
+            enterIgnoredSection()
+            return
+        }
         val analysisSectionStack = this.analysisSectionStack[threadId]!!
         val currentSection = analysisSectionStack.lastOrNull()
         if (currentSection != null && currentSection.isCallStackPropagating() && section < currentSection) {
@@ -1924,24 +1942,24 @@ internal abstract class ManagedStrategy(
         } else {
             analysisSectionStack.add(section)
         }
-        if (section == AnalysisSectionType.IGNORED ||
-            // TODO: atomic should have different semantics compared to ignored
-            section == AnalysisSectionType.ATOMIC
-        ) {
+        // TODO: atomic should have different semantics compared to ignored
+        if (section == AnalysisSectionType.ATOMIC) {
             enterIgnoredSection()
         }
     }
 
     private fun leaveAnalysisSection(threadId: ThreadId, section: AnalysisSectionType) {
-        if (section == AnalysisSectionType.IGNORED ||
-            // TODO: atomic should have different semantics compared to ignored
-            section == AnalysisSectionType.ATOMIC
-        ) {
+        if (section == AnalysisSectionType.IGNORED) {
             leaveIgnoredSection()
+            return
         }
         val analysisSectionStack = this.analysisSectionStack[threadId]!!
         analysisSectionStack.removeLast().ensure { currentSection ->
             currentSection == section || (currentSection.isCallStackPropagating() && section < currentSection)
+        }
+        // TODO: atomic should have different semantics compared to ignored
+        if (section == AnalysisSectionType.ATOMIC) {
+            leaveIgnoredSection()
         }
     }
 

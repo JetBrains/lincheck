@@ -17,12 +17,7 @@ import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.commons.*
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
 import org.jetbrains.kotlinx.lincheck.transformation.transformers.*
-import org.jetbrains.lincheck.util.Logger
-import org.jetbrains.lincheck.util.ideaPluginEnabled
-import org.jetbrains.lincheck.util.isInTraceDebuggerMode
-import org.jetbrains.lincheck.util.isThreadContainerClass
-import org.jetbrains.lincheck.util.isIntellijRuntimeAgentClass
-import org.jetbrains.lincheck.util.isThreadContainerThreadStartMethod
+import org.jetbrains.lincheck.util.*
 
 internal class LincheckClassVisitor(
     private val classVisitor: SafeClassWriter,
