@@ -40,22 +40,21 @@ The following interleaving leads to the error:
 | two(): <hung>                                     |                                                 |
 |   sharedState2.compareAndSet(false, true): false  |                                                 |
 |   meaninglessActions()                            |                                                 |
-|     random.nextInt(): -1147404850                 |                                                 |
 |     /* The following events repeat infinitely: */ |                                                 |
-| ┌╶> Array<Integer>#1[0] = -1147404850             |                                                 |
+| ┌╶> random.nextInt(): -1147404850                 |                                                 |
+| |   Array<Integer>#1[0] = -1147404850             |                                                 |
 | |   Array<Integer>#1[0] = -1147404849             |                                                 |
 | |   Array<Integer>#1[0] = -1147404848             |                                                 |
-| |   random.nextInt(): 780672281                   |                                                 |
 | └╶╶ switch (reason: active lock detected)         |                                                 |
 |                                                   |   sharedState1.set(false)                       |
 |                                                   |   sharedState2.set(false)                       |
 |                                                   |   result: 1                                     |
 |                                                   | one(): 1                                        |
 |     /* The following events repeat infinitely: */ |                                                 |
-| ┌╶> Array<Integer>#1[0] = 780672281               |                                                 |
+| ┌╶> random.nextInt(): 780672281                   |                                                 |
+| |   Array<Integer>#1[0] = 780672281               |                                                 |
 | |   Array<Integer>#1[0] = 780672282               |                                                 |
 | |   Array<Integer>#1[0] = 780672283               |                                                 |
-| |   random.nextInt(): -1373942436                 |                                                 |
 | └╶╶ switch (reason: active lock detected)         |                                                 |
 | --------------------------------------------------------------------------------------------------- |
 All unfinished threads are in deadlock
@@ -120,12 +119,11 @@ Detailed trace:
 | two(): <hung>                                                                                                                             |                                                                                                                |
 |   sharedState2.compareAndSet(false, true): false at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:313)                           |                                                                                                                |
 |   meaninglessActions() at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:314)                                                     |                                                                                                                |
-|     random.nextInt(): -1147404850 at SpinlockEventsCutInfiniteNoCycleWithParamsTest.meaninglessActions(SpinlockEventsCutTests.kt:237)     |                                                                                                                |
 |     /* The following events repeat infinitely: */                                                                                         |                                                                                                                |
-| ┌╶> Array<Integer>#1[0] = -1147404850 at SpinlockEventsCutInfiniteNoCycleWithParamsTest.meaninglessActions(SpinlockEventsCutTests.kt:238) |                                                                                                                |
+| ┌╶> random.nextInt(): -1147404850 at SpinlockEventsCutInfiniteNoCycleWithParamsTest.meaninglessActions(SpinlockEventsCutTests.kt:237)     |                                                                                                                |
+| |   Array<Integer>#1[0] = -1147404850 at SpinlockEventsCutInfiniteNoCycleWithParamsTest.meaninglessActions(SpinlockEventsCutTests.kt:238) |                                                                                                                |
 | |   Array<Integer>#1[0] = -1147404849 at SpinlockEventsCutInfiniteNoCycleWithParamsTest.meaninglessActions(SpinlockEventsCutTests.kt:239) |                                                                                                                |
 | |   Array<Integer>#1[0] = -1147404848 at SpinlockEventsCutInfiniteNoCycleWithParamsTest.meaninglessActions(SpinlockEventsCutTests.kt:240) |                                                                                                                |
-| |   random.nextInt(): 780672281 at SpinlockEventsCutInfiniteNoCycleWithParamsTest.meaninglessActions(SpinlockEventsCutTests.kt:237)       |                                                                                                                |
 | └╶╶ switch (reason: active lock detected)                                                                                                 |                                                                                                                |
 |                                                                                                                                           |   sharedState1.set(false) at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:305)                       |
 |                                                                                                                                           |   sharedState2.set(false) at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:306)                       |
@@ -137,10 +135,10 @@ Detailed trace:
 |                                                                                                                                           |   sharedState2.set(false) at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:306)                       |
 |                                                                                                                                           |   result: 1                                                                                                    |
 |     /* The following events repeat infinitely: */                                                                                         |                                                                                                                |
-| ┌╶> Array<Integer>#1[0] = 780672281 at SpinlockEventsCutInfiniteNoCycleWithParamsTest.meaninglessActions(SpinlockEventsCutTests.kt:238)   |                                                                                                                |
+| ┌╶> random.nextInt(): 780672281 at SpinlockEventsCutInfiniteNoCycleWithParamsTest.meaninglessActions(SpinlockEventsCutTests.kt:237)       |                                                                                                                |
+| |   Array<Integer>#1[0] = 780672281 at SpinlockEventsCutInfiniteNoCycleWithParamsTest.meaninglessActions(SpinlockEventsCutTests.kt:238)   |                                                                                                                |
 | |   Array<Integer>#1[0] = 780672282 at SpinlockEventsCutInfiniteNoCycleWithParamsTest.meaninglessActions(SpinlockEventsCutTests.kt:239)   |                                                                                                                |
 | |   Array<Integer>#1[0] = 780672283 at SpinlockEventsCutInfiniteNoCycleWithParamsTest.meaninglessActions(SpinlockEventsCutTests.kt:240)   |                                                                                                                |
-| |   random.nextInt(): -1373942436 at SpinlockEventsCutInfiniteNoCycleWithParamsTest.meaninglessActions(SpinlockEventsCutTests.kt:237)     |                                                                                                                |
 | └╶╶ switch (reason: active lock detected)                                                                                                 |                                                                                                                |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 All unfinished threads are in deadlock
