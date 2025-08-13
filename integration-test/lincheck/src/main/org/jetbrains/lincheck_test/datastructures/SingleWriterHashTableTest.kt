@@ -16,7 +16,7 @@ import kotlin.reflect.KClass
 import org.junit.Test
 
 class SingleWriterHashTableTest() {
-    val scenarios: Int = 100
+    val scenarios: Int = 300
     val threads: Int = 3
     val actorsBefore: Int = 1
 
