@@ -279,7 +279,13 @@ object LincheckJavaAgent {
             Class.forName(className)
             return
         }
+
         if (className in instrumentedClasses) return // already instrumented
+
+        // this check is important for performance reasons,
+        // as it allows to avoid `Class.forName` in case when class is already instrumented
+        // TODO: replace with `Class.forName` caching, see `classCache` in `Utils.kt`
+        if (!shouldTransform(className, instrumentationMode)) return
 
         val processedObjects: MutableSet<Any> = identityHashSetOf()
         ensureClassHierarchyIsTransformed(Class.forName(className)) { obj ->
