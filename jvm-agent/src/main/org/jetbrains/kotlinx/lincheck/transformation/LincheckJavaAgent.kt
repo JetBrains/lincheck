@@ -316,6 +316,9 @@ object LincheckJavaAgent {
      */
     private fun ensureObjectIsTransformed(obj: Any, processedObjects: MutableSet<Any>) {
 
+        // this function is used to transform traversed object's class
+        // and push additional objects-to-traverse to the queue
+        // (fields and array elements are traversed by default)
         fun expandObject(obj: Any): List<Any> {
             val clazz = obj.javaClass
             val className = clazz.name
@@ -338,6 +341,7 @@ object LincheckJavaAgent {
             return objectsToTransform
         }
 
+        // this function is used to decide what objects should be traversed further
         fun shouldTraverseObject(obj: Any): Boolean {
             val clazz = obj.javaClass
             val className = clazz.name
