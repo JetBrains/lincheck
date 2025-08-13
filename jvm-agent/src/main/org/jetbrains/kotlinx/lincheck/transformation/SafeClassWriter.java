@@ -102,8 +102,13 @@ public class SafeClassWriter extends ClassWriter {
                     return result;
                 }
             }
-        } catch (IOException e) {
-            throw new RuntimeException(e.toString());
+        } catch (IOException ignored) {
+            try {
+                // try to fallback to the default implementation
+                return super.getCommonSuperClass(type1, type2);
+            } catch (Exception e) {
+                throw new RuntimeException(e.toString());
+            }
         }
     }
 
