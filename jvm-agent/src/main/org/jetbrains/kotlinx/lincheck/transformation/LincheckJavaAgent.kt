@@ -348,7 +348,7 @@ object LincheckJavaAgent {
                 isJavaLambdaClass(className) ||
                 // traverse objects which classes should be instrumented
                 (shouldTransform(clazz, instrumentationMode) &&
-                    // Optimization and safety net: do not analyze low-level
+                    // optimization and safety net: do not traverse low-level
                     // class instances from the standard Java library.
                     !isLowLevelJavaClass(className)
                 )
@@ -364,7 +364,8 @@ object LincheckJavaAgent {
      * Ensures that the given class and all its superclasses are transformed.
      *
      * @param clazz The class to be transformed.
-     * @param processedObjects Set of objects that have already been processed to prevent duplicate transformation.
+     * @param transformObjectCallback A function called to transform objects discovered during
+     *   the traversal of class' static fields.
      */
     private fun ensureClassHierarchyIsTransformed(clazz: Class<*>, transformObjectCallback: (Any) -> Unit) {
         if (clazz.name in instrumentedClasses) return // already instrumented
