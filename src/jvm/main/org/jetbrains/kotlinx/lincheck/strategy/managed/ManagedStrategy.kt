@@ -1894,7 +1894,12 @@ internal abstract class ManagedStrategy(
         deterministicMethodDescriptor: DeterministicMethodDescriptor<*, *>?,
     ): AnalysisSectionType {
         // Ignore static MethodHandle calls.
-        if (isIgnoredMethodHandleMethod(className, methodName)) {
+        if (isIgnoredMethodHandleMethod(className, methodName) &&
+            // in trace debugger mode, `invokedynamic` instructions are intercepted
+            // and are replaced with `MethodHandles` machinery to achieve deterministic execution
+            // TODO: investigate if we still can ignore these methods even with `invokedynamic` instrumentation
+            !isInTraceDebuggerMode
+        ) {
             return AnalysisSectionType.IGNORED
         }
         // Ignore `toString()` on primitive and immutable types.
