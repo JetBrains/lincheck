@@ -117,14 +117,19 @@ class Spinner private constructor(
         var counter = 0
         var result = true
         var exitLimit = pollExitLimit()
+        var yieldLimit = pollYieldLimit()
         while (!condition()) {
             if (counter >= exitLimit) {
                 result = condition()
                 break
             }
             counter++
+            if (counter % yieldLimit == 0) {
+                Thread.yield()
+            }
             if (counter % POLL_COUNT == 0) {
                 exitLimit = pollExitLimit()
+                yieldLimit = pollYieldLimit()
             }
         }
         return result
@@ -143,13 +148,18 @@ class Spinner private constructor(
         var counter = 0
         val startTime = System.nanoTime()
         var elapsedTime = 0L
+        var yieldLimit = pollYieldLimit()
         while (!condition()) {
             if (elapsedTime >= timeoutNano) {
                 return -1
             }
             counter++
+            if (counter % yieldLimit == 0) {
+                Thread.yield()
+            }
             if (counter % POLL_COUNT == 0) {
                 elapsedTime = pollElapsedTime(startTime)
+                yieldLimit = pollYieldLimit()
             }
         }
         return pollElapsedTime(startTime)
