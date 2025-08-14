@@ -273,15 +273,14 @@ object LincheckJavaAgent {
      *
      * @param className The name of the class to be transformed.
      */
-    fun ensureClassHierarchyIsTransformed(className: String) {
+    fun ensureClassHierarchyIsTransformed(
+        className: String,
+        transformStaticFields: Boolean = true,
+    ) {
         if (INSTRUMENT_ALL_CLASSES) {
             Class.forName(className)
             return
         }
-        ensureClassHierarchyIsTransformed(className, transformStaticFields = true)
-    }
-
-    private fun ensureClassHierarchyIsTransformed(className: String, transformStaticFields: Boolean) {
         if (className in instrumentedClasses) return // already instrumented
 
         val clazz = Class.forName(className)
@@ -367,10 +366,8 @@ object LincheckJavaAgent {
     }
 
     private fun ensureStaticFieldsAreTransformed(clazz: Class<*>) {
-        // Traverse class static fields.
         val processedObjects: MutableSet<Any> = identityHashSetOf()
         for (field in clazz.allDeclaredFieldWithSuperclasses) {
-            // traverse only static non-primitive fields
             if (!Modifier.isStatic(field.modifiers) || field.type.isPrimitive) continue
             readFieldSafely(null, field).getOrNull()?.let { obj ->
                 ensureObjectIsTransformed(obj, processedObjects)
