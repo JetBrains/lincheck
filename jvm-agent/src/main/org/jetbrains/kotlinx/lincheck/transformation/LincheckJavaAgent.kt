@@ -273,10 +273,7 @@ object LincheckJavaAgent {
      *
      * @param className The name of the class to be transformed.
      */
-    fun ensureClassHierarchyIsTransformed(
-        className: String,
-        transformStaticFields: Boolean = false,
-    ) {
+    fun ensureClassHierarchyIsTransformed(className: String) {
         if (INSTRUMENT_ALL_CLASSES) {
             Class.forName(className)
             return
@@ -285,11 +282,6 @@ object LincheckJavaAgent {
 
         val clazz = Class.forName(className)
         ensureClassHierarchyIsTransformed(clazz)
-
-        // transform static fields only if it was requested and the class itself was transformed
-        if (transformStaticFields && className in instrumentedClasses) {
-            ensureStaticFieldsAreTransformed(clazz)
-        }
     }
 
     /**

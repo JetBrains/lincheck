@@ -91,7 +91,7 @@ object TraceDebuggerInjections {
 
     class TraceDebuggerStaticMethodWrapper {
         fun callStaticMethod(clazz: Class<*>, method: Method) {
-            LincheckJavaAgent.ensureClassHierarchyIsTransformed(clazz.name, transformStaticFields = true)
+            LincheckJavaAgent.ensureClassHierarchyIsTransformed(clazz.name)
             method.invoke(null)
         }
     }
