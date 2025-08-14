@@ -359,10 +359,11 @@ object LincheckJavaAgent {
         }
     }
 
-    private fun ensureStaticFieldsAreTransformed(clazz: Class<*>) {
+    fun ensureStaticFieldsAreTransformed(clazz: Class<*>, fieldName: String? = null) {
         val processedObjects: MutableSet<Any> = identityHashSetOf()
         for (field in clazz.allDeclaredFieldWithSuperclasses) {
             if (!Modifier.isStatic(field.modifiers) || field.type.isPrimitive) continue
+            if (fieldName != null && field.name != fieldName) continue
             readFieldSafely(null, field).getOrNull()?.let { obj ->
                 ensureObjectIsTransformed(obj, processedObjects)
             }
