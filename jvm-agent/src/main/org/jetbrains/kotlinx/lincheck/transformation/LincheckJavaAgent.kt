@@ -283,15 +283,12 @@ object LincheckJavaAgent {
 
     private fun ensureClassHierarchyIsTransformed(className: String, transformStaticFields: Boolean) {
         if (className in instrumentedClasses) return // already instrumented
-        // this check is important for performance reasons,
-        // as it allows to avoid `Class.forName` in case when class is already instrumented
-        // TODO: replace with `Class.forName` caching, see `classCache` in `Utils.kt`
-        if (!shouldTransform(className, instrumentationMode)) return
 
         val clazz = Class.forName(className)
         ensureClassHierarchyIsTransformed(clazz)
 
-        if (transformStaticFields) {
+        // transform static fields only if it was requested and the class itself was transformed
+        if (transformStaticFields && className in instrumentedClasses) {
             ensureStaticFieldsAreTransformed(clazz)
         }
     }
