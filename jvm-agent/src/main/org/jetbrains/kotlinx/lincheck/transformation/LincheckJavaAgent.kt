@@ -356,12 +356,17 @@ object LincheckJavaAgent {
         if (!shouldTransform(className, instrumentationMode)) return
 
         val clazz = Class.forName(className)
-        for (field in clazz.allDeclaredFieldWithSuperclasses) {
-            if (!Modifier.isStatic(field.modifiers) || field.type.isPrimitive) continue
-            if (fieldName != null && field.name != fieldName) continue
-            readFieldSafely(null, field).getOrNull()?.let { obj ->
-                ensureObjectIsTransformed(obj)
-            }
+        val field = clazz.allDeclaredFieldWithSuperclasses.find { it.name == fieldName }
+        check(field != null) {
+            "Field $fieldName not found in class $className"
+        }
+        check(Modifier.isStatic(field.modifiers)) {
+            "Field $fieldName is not static in class $className"
+        }
+        if (field.type.isPrimitive) return
+
+        readFieldSafely(null, field).getOrNull()?.let { obj ->
+            ensureObjectIsTransformed(obj)
         }
     }
 
