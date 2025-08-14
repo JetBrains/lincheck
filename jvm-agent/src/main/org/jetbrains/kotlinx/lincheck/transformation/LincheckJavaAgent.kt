@@ -223,10 +223,9 @@ object LincheckJavaAgent {
 
     private fun canRetransformClass(clazz: Class<*>): Boolean =
         instrumentation.isModifiableClass(clazz) &&
-        // Note: Java 8 has a bug and does not allow lambdas redefinition and retransformation
-        //  - https://bugs.openjdk.org/browse/JDK-8145964
-        //  - https://stackoverflow.com/questions/34162074/transforming-lambdas-in-java-8
-        (!isJdk8 || !isJavaLambdaClass(clazz.name))
+        // java lambda classes are special case --- they are not retransformed themselves,
+        // rather their enclosing class is retransformed, see below
+        !isJavaLambdaClass(clazz.name)
 
     private fun shouldTransform(clazz: Class<*>, instrumentationMode: InstrumentationMode): Boolean =
         // Filtering is done in the following order to hide lincheck source classes from
@@ -345,12 +344,12 @@ object LincheckJavaAgent {
     private fun ensureClassHierarchyIsTransformed(clazz: Class<*>) {
         if (clazz.name in instrumentedClasses) return // already instrumented
 
-        if (isJavaLambdaClass(clazz.name)) {
-            val enclosingClassName = getJavaLambdaEnclosingClass(clazz.name)
-            ensureClassHierarchyIsTransformed(enclosingClassName, transformStaticFields = false)
-        } else if (shouldTransform(clazz, instrumentationMode)) {
+        if (shouldTransform(clazz, instrumentationMode)) {
             instrumentedClasses += clazz.name
             retransformClass(clazz)
+        } else if (isJavaLambdaClass(clazz.name)) {
+            val enclosingClassName = getJavaLambdaEnclosingClass(clazz.name)
+            ensureClassHierarchyIsTransformed(enclosingClassName, transformStaticFields = false)
         }
 
         // Traverse super classes, interfaces, and enclosing class
