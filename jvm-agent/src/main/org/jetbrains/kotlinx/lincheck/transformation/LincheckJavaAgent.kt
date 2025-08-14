@@ -287,9 +287,17 @@ object LincheckJavaAgent {
         // TODO: replace with `Class.forName` caching, see `classCache` in `Utils.kt`
         if (!shouldTransform(className, instrumentationMode)) return
 
+        val clazz = Class.forName(className)
+        ensureClassHierarchyIsTransformed(clazz)
+
+        // Traverse class static fields.
         val processedObjects: MutableSet<Any> = identityHashSetOf()
-        ensureClassHierarchyIsTransformed(Class.forName(className)) { obj ->
-            ensureObjectIsTransformed(obj, processedObjects)
+        for (field in clazz.allDeclaredFieldWithSuperclasses) {
+            // traverse only static non-primitive fields
+            if (!Modifier.isStatic(field.modifiers) || field.type.isPrimitive) continue
+            readFieldSafely(null, field).getOrNull()?.let { obj ->
+                ensureObjectIsTransformed(obj, processedObjects)
+            }
         }
     }
 
@@ -327,15 +335,11 @@ object LincheckJavaAgent {
                 isJavaLambdaClass(className) -> {
                     val enclosingClassName = getJavaLambdaEnclosingClass(className)
                     if (enclosingClassName !in instrumentedClasses) {
-                        ensureClassHierarchyIsTransformed(Class.forName(enclosingClassName)) {
-                            objectsToTransform.add(it)
-                        }
+                        ensureClassHierarchyIsTransformed(Class.forName(enclosingClassName))
                     }
                 }
                 else -> if (shouldTransform(clazz, instrumentationMode)) {
-                    ensureClassHierarchyIsTransformed(clazz) {
-                        objectsToTransform.add(it)
-                    }
+                    ensureClassHierarchyIsTransformed(clazz)
                 }
             }
             return objectsToTransform
@@ -349,7 +353,12 @@ object LincheckJavaAgent {
             // unless the low-level class needs to be transformed
             shouldTransform(obj.javaClass, instrumentationMode)
 
-        traverseObjectGraph(obj, processedObjects, expandObject = ::expandObject) { obj ->
+        traverseObjectGraph(obj, processedObjects,
+            expandObject = ::expandObject,
+            config = ObjectGraphTraversalConfig(
+                traverseStaticFields = true,
+            )
+        ) { obj ->
             shouldTraverseObject(obj)
         }
     }
@@ -358,27 +367,13 @@ object LincheckJavaAgent {
      * Ensures that the given class and all its superclasses are transformed.
      *
      * @param clazz The class to be transformed.
-     * @param transformObjectCallback A function called to transform objects discovered during
-     *   the traversal of class' static fields.
      */
-    private fun ensureClassHierarchyIsTransformed(clazz: Class<*>, transformObjectCallback: (Any) -> Unit) {
+    private fun ensureClassHierarchyIsTransformed(clazz: Class<*>) {
         if (clazz.name in instrumentedClasses) return // already instrumented
 
         if (shouldTransform(clazz, instrumentationMode)) {
             instrumentedClasses += clazz.name
             retransformClass(clazz)
-        }
-
-        // Traverse static fields.
-        //
-        // NOTE: traverses only current class' fields, as the loop below will process
-        //   all superclasses' and interfaces' fields as a part of `ensureClassHierarchyIsTransformed`
-        for (field in clazz.declaredFields) {
-            // traverse only static non-primitive fields
-            if (!Modifier.isStatic(field.modifiers) || field.type.isPrimitive) continue
-            readFieldSafely(null, field).getOrNull()?.let {
-                transformObjectCallback(it)
-            }
         }
 
         // Traverse super classes, interfaces, and enclosing class
@@ -388,7 +383,7 @@ object LincheckJavaAgent {
             clazz.interfaces.asList()
 
         classesToTransform.forEach {
-            ensureClassHierarchyIsTransformed(it, transformObjectCallback)
+            ensureClassHierarchyIsTransformed(it)
         }
     }
 
