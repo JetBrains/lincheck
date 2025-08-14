@@ -275,7 +275,7 @@ object LincheckJavaAgent {
      */
     fun ensureClassHierarchyIsTransformed(
         className: String,
-        transformStaticFields: Boolean = true,
+        transformStaticFields: Boolean = false,
     ) {
         if (INSTRUMENT_ALL_CLASSES) {
             Class.forName(className)
@@ -345,7 +345,7 @@ object LincheckJavaAgent {
             retransformClass(clazz)
         } else if (isJavaLambdaClass(clazz.name)) {
             val enclosingClassName = getJavaLambdaEnclosingClass(clazz.name)
-            ensureClassHierarchyIsTransformed(enclosingClassName, transformStaticFields = false)
+            ensureClassHierarchyIsTransformed(enclosingClassName)
         }
 
         // Traverse super classes, interfaces, and enclosing class

@@ -1224,7 +1224,7 @@ internal abstract class ManagedStrategy(
         // We need to ensure all the classes related to the reading object are instrumented.
         // The following call checks all the static fields.
         if (fieldDescriptor.isStatic) {
-            LincheckJavaAgent.ensureClassHierarchyIsTransformed(fieldDescriptor.className)
+            LincheckJavaAgent.ensureClassHierarchyIsTransformed(fieldDescriptor.className, transformStaticFields = true)
         }
         // Do not track accesses to untracked objects
         if (!shouldTrackFieldAccess(obj, fieldDescriptor)) {
@@ -1425,7 +1425,7 @@ internal abstract class ManagedStrategy(
     }
 
     override fun beforeNewObjectCreation(className: String) = runInsideIgnoredSection {
-        LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
+        LincheckJavaAgent.ensureClassHierarchyIsTransformed(className, transformStaticFields = true)
     }
 
     override fun afterNewObjectCreation(obj: Any) {
@@ -1606,7 +1606,7 @@ internal abstract class ManagedStrategy(
         )
         // in case if a static method is called, ensure its class is instrumented
         if (receiver == null && methodSection < AnalysisSectionType.ATOMIC) {
-            LincheckJavaAgent.ensureClassHierarchyIsTransformed(methodDescriptor.className)
+            LincheckJavaAgent.ensureClassHierarchyIsTransformed(methodDescriptor.className, transformStaticFields = true)
         }
         // in the case of atomics API setter method call, notify the object tracker about a new link between objects
         if (atomicMethodDescriptor != null && atomicMethodDescriptor.kind.isSetter) {
