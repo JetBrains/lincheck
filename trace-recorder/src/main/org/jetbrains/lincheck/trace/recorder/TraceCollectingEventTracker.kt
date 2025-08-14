@@ -306,6 +306,7 @@ class TraceCollectingEventTracker(
         val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
         if (fieldDescriptor.isStatic) {
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
+            LincheckJavaAgent.ensureFieldValueIsTransformed(fieldDescriptor.className, fieldDescriptor.fieldName)
         }
         return
     }
