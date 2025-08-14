@@ -351,7 +351,7 @@ object LincheckJavaAgent {
         }
     }
 
-    fun ensureStaticFieldValueIsTransformed(className: String, fieldName: String? = null) {
+    fun ensureStaticFieldValueIsTransformed(className: String, fieldName: String) {
         if (INSTRUMENT_ALL_CLASSES) return
         if (!shouldTransform(className, instrumentationMode)) return
 
