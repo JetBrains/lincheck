@@ -351,7 +351,7 @@ object LincheckJavaAgent {
         }
     }
 
-    fun ensureStaticFieldValueIsTransformed(className: String, fieldName: String) {
+    fun ensureFieldValueIsTransformed(className: String, fieldName: String) {
         if (INSTRUMENT_ALL_CLASSES) return
         if (!shouldTransform(className, instrumentationMode)) return
 
@@ -359,9 +359,6 @@ object LincheckJavaAgent {
         val field = clazz.allDeclaredFieldWithSuperclasses.find { it.name == fieldName }
         check(field != null) {
             "Field $fieldName not found in class $className"
-        }
-        check(Modifier.isStatic(field.modifiers)) {
-            "Field $fieldName is not static in class $className"
         }
         if (field.type.isPrimitive) return
 
