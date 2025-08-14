@@ -304,30 +304,21 @@ object LincheckJavaAgent {
      * @param processedObjects A set of processed objects to avoid infinite recursion.
      */
     private fun ensureObjectIsTransformed(obj: Any, processedObjects: MutableSet<Any>) {
-
-        // this function is used to transform the traversed object's class
-        fun transformObject(obj: Any) {
-            ensureClassHierarchyIsTransformed(obj.javaClass)
-        }
-
-        // this function is used to decide what objects should be traversed further
-        fun shouldTraverseObject(obj: Any): Boolean =
-            // optimization and safety net: do not traverse low-level
-            // class instances from the standard Java library
-            !isLowLevelJavaClass(obj.javaClass.name) ||
-            // unless the low-level class needs to be transformed
-            shouldTransform(obj.javaClass, instrumentationMode)
-
         traverseObjectGraph(obj, processedObjects,
             config = ObjectGraphTraversalConfig(
                 traverseStaticFields = true,
             )
         ) { obj ->
-            val shouldTraverse = shouldTraverseObject(obj)
-            if (shouldTraverse) {
-                transformObject(obj)
-            }
-            shouldTraverse
+            ensureClassHierarchyIsTransformed(obj.javaClass)
+
+            val shouldTraverseObject =
+                // optimization and safety net: do not traverse low-level
+                // class instances from the standard Java library
+                !isLowLevelJavaClass(obj.javaClass.name) ||
+                // unless the low-level class needs to be transformed
+                shouldTransform(obj.javaClass, instrumentationMode)
+
+            return@traverseObjectGraph shouldTraverseObject
         }
     }
 
