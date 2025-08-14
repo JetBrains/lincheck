@@ -284,10 +284,10 @@ object LincheckJavaAgent {
         if (className in instrumentedClasses) return // already instrumented
 
         val clazz = Class.forName(className)
-        val wasTransformed = ensureClassHierarchyIsTransformed(clazz)
+        ensureClassHierarchyIsTransformed(clazz)
 
         // transform static fields only if it was requested and the class itself was transformed
-        if (transformStaticFields && wasTransformed) {
+        if (transformStaticFields && className in instrumentedClasses) {
             ensureStaticFieldsAreTransformed(clazz)
         }
     }
@@ -337,18 +337,15 @@ object LincheckJavaAgent {
      *
      * @param clazz The class to be transformed.
      */
-    private fun ensureClassHierarchyIsTransformed(clazz: Class<*>): Boolean {
-        if (clazz.name in instrumentedClasses) return false // already instrumented
+    private fun ensureClassHierarchyIsTransformed(clazz: Class<*>) {
+        if (clazz.name in instrumentedClasses) return // already instrumented
 
-        var wasTransformed = false
         if (shouldTransform(clazz, instrumentationMode)) {
             instrumentedClasses += clazz.name
             retransformClass(clazz)
-            wasTransformed = true
         } else if (isJavaLambdaClass(clazz.name)) {
             val enclosingClassName = getJavaLambdaEnclosingClass(clazz.name)
             ensureClassHierarchyIsTransformed(enclosingClassName, transformStaticFields = false)
-            wasTransformed = true
         }
 
         // Traverse super classes, interfaces, and enclosing class
@@ -358,11 +355,8 @@ object LincheckJavaAgent {
             clazz.interfaces.asList()
 
         classesToTransform.forEach {
-            wasTransformed = ensureClassHierarchyIsTransformed(it) || wasTransformed
-            // NOTE: order of disjuncts is important because of lazy evaluation rules of `||` arguments
+            ensureClassHierarchyIsTransformed(it)
         }
-
-        return wasTransformed
     }
 
     private fun ensureStaticFieldsAreTransformed(clazz: Class<*>) {
