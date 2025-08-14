@@ -1,0 +1,27 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| ------------------------------------------------------------------------------------------------ |
+|                                             Thread 1                                             |
+| ------------------------------------------------------------------------------------------------ |
+| operation()                                                                                      |
+|   escape = "START" at TwoForLoopRepresentationTest.operation(TwoForLoopRepresentationTest.kt:19) |
+|   escape = "A.1" at TwoForLoopRepresentationTest.operation(TwoForLoopRepresentationTest.kt:22)   |
+|   escape = "A.2" at TwoForLoopRepresentationTest.operation(TwoForLoopRepresentationTest.kt:22)   |
+|   escape = "B.1" at TwoForLoopRepresentationTest.operation(TwoForLoopRepresentationTest.kt:26)   |
+|   escape = "B.2" at TwoForLoopRepresentationTest.operation(TwoForLoopRepresentationTest.kt:26)   |
+|   escape = "END" at TwoForLoopRepresentationTest.operation(TwoForLoopRepresentationTest.kt:28)   |
+|   result: void                                                                                   |
+| ------------------------------------------------------------------------------------------------ |

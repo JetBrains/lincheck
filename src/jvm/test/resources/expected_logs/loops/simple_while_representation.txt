@@ -1,0 +1,26 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| ---------------------------------------------------------------------------------------------------------- |
+|                                                  Thread 1                                                  |
+| ---------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                |
+|   escape = "START" at SimpleWhileLoopRepresentationTest.operation(SimpleWhileLoopRepresentationTest.kt:19) |
+|   escape = "1" at SimpleWhileLoopRepresentationTest.operation(SimpleWhileLoopRepresentationTest.kt:23)     |
+|   escape = "2" at SimpleWhileLoopRepresentationTest.operation(SimpleWhileLoopRepresentationTest.kt:23)     |
+|   escape = "3" at SimpleWhileLoopRepresentationTest.operation(SimpleWhileLoopRepresentationTest.kt:23)     |
+|   escape = "END" at SimpleWhileLoopRepresentationTest.operation(SimpleWhileLoopRepresentationTest.kt:26)   |
+|   result: void                                                                                             |
+| ---------------------------------------------------------------------------------------------------------- |

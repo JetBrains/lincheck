@@ -1,0 +1,23 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| ---------------------------------------------------------------------------------------------------------- |
+|                                                  Thread 1                                                  |
+| ---------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                |
+|   escape = "START" at ZeroIterForLoopRepresentationTest.operation(ZeroIterForLoopRepresentationTest.kt:19) |
+|   escape = "END" at ZeroIterForLoopRepresentationTest.operation(ZeroIterForLoopRepresentationTest.kt:26)   |
+|   result: void                                                                                             |
+| ---------------------------------------------------------------------------------------------------------- |
