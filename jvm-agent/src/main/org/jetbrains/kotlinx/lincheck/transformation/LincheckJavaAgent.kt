@@ -363,7 +363,7 @@ object LincheckJavaAgent {
         if (field.type.isPrimitive) return
 
         readFieldSafely(null, field).getOrNull()?.let { obj ->
-            ensureObjectIsTransformed(obj)
+            ensureClassHierarchyIsTransformed(obj.javaClass)
         }
     }
 
