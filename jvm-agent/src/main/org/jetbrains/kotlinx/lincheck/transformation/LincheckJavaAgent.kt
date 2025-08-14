@@ -307,17 +307,7 @@ object LincheckJavaAgent {
 
         // this function is used to transform the traversed object's class
         fun transformObject(obj: Any) {
-            val clazz = obj.javaClass
-            val className = clazz.name
-            when {
-                isJavaLambdaClass(className) -> {
-                    val enclosingClassName = getJavaLambdaEnclosingClass(className)
-                    ensureClassHierarchyIsTransformed(enclosingClassName, transformStaticFields = false)
-                }
-                else -> if (shouldTransform(clazz, instrumentationMode)) {
-                    ensureClassHierarchyIsTransformed(clazz)
-                }
-            }
+            ensureClassHierarchyIsTransformed(obj.javaClass)
         }
 
         // this function is used to decide what objects should be traversed further
@@ -364,7 +354,10 @@ object LincheckJavaAgent {
     private fun ensureClassHierarchyIsTransformed(clazz: Class<*>) {
         if (clazz.name in instrumentedClasses) return // already instrumented
 
-        if (shouldTransform(clazz, instrumentationMode)) {
+        if (isJavaLambdaClass(clazz.name)) {
+            val enclosingClassName = getJavaLambdaEnclosingClass(clazz.name)
+            ensureClassHierarchyIsTransformed(enclosingClassName, transformStaticFields = false)
+        } else if (shouldTransform(clazz, instrumentationMode)) {
             instrumentedClasses += clazz.name
             retransformClass(clazz)
         }
