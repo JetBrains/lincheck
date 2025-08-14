@@ -1225,7 +1225,7 @@ internal abstract class ManagedStrategy(
         // The following call checks all the static fields.
         if (fieldDescriptor.isStatic) {
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(fieldDescriptor.className)
-            LincheckJavaAgent.ensureStaticFieldsAreTransformed(Class.forName(fieldDescriptor.className), fieldDescriptor.fieldName)
+            LincheckJavaAgent.ensureStaticFieldValueIsTransformed(fieldDescriptor.className, fieldDescriptor.fieldName)
         }
         // Do not track accesses to untracked objects
         if (!shouldTrackFieldAccess(obj, fieldDescriptor)) {

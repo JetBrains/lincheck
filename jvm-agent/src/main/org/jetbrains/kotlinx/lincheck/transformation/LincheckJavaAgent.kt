@@ -351,13 +351,16 @@ object LincheckJavaAgent {
         }
     }
 
-    fun ensureStaticFieldsAreTransformed(clazz: Class<*>, fieldName: String? = null) {
-        val processedObjects: MutableSet<Any> = identityHashSetOf()
+    fun ensureStaticFieldValueIsTransformed(className: String, fieldName: String? = null) {
+        if (INSTRUMENT_ALL_CLASSES) return
+        if (!shouldTransform(className, instrumentationMode)) return
+
+        val clazz = Class.forName(className)
         for (field in clazz.allDeclaredFieldWithSuperclasses) {
             if (!Modifier.isStatic(field.modifiers) || field.type.isPrimitive) continue
             if (fieldName != null && field.name != fieldName) continue
             readFieldSafely(null, field).getOrNull()?.let { obj ->
-                ensureObjectIsTransformed(obj, processedObjects)
+                ensureObjectIsTransformed(obj)
             }
         }
     }
