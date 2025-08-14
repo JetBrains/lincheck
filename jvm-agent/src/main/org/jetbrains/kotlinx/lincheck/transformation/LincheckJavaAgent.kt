@@ -282,6 +282,21 @@ object LincheckJavaAgent {
         ensureClassHierarchyIsTransformed(className, transformStaticFields = true)
     }
 
+    private fun ensureClassHierarchyIsTransformed(className: String, transformStaticFields: Boolean) {
+        if (className in instrumentedClasses) return // already instrumented
+        // this check is important for performance reasons,
+        // as it allows to avoid `Class.forName` in case when class is already instrumented
+        // TODO: replace with `Class.forName` caching, see `classCache` in `Utils.kt`
+        if (!shouldTransform(className, instrumentationMode)) return
+
+        val clazz = Class.forName(className)
+        ensureClassHierarchyIsTransformed(clazz)
+
+        if (transformStaticFields) {
+            ensureStaticFieldsAreTransformed(clazz)
+        }
+    }
+
     /**
      * Ensures that the given object and all its referenced objects are transformed for Lincheck analysis.
      * The function is called upon a test instance creation to ensure that
@@ -319,21 +334,6 @@ object LincheckJavaAgent {
                 shouldTransform(obj.javaClass, instrumentationMode)
 
             return@traverseObjectGraph shouldTraverseObject
-        }
-    }
-
-    private fun ensureClassHierarchyIsTransformed(className: String, transformStaticFields: Boolean) {
-        if (className in instrumentedClasses) return // already instrumented
-        // this check is important for performance reasons,
-        // as it allows to avoid `Class.forName` in case when class is already instrumented
-        // TODO: replace with `Class.forName` caching, see `classCache` in `Utils.kt`
-        if (!shouldTransform(className, instrumentationMode)) return
-
-        val clazz = Class.forName(className)
-        ensureClassHierarchyIsTransformed(clazz)
-
-        if (transformStaticFields) {
-            ensureStaticFieldsAreTransformed(clazz)
         }
     }
 
