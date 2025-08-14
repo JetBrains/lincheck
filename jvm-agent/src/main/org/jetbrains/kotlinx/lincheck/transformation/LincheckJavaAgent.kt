@@ -324,13 +324,10 @@ object LincheckJavaAgent {
      */
     private fun ensureObjectIsTransformed(obj: Any, processedObjects: MutableSet<Any>) {
 
-        // this function is used to transform traversed object's class
-        // and push additional objects-to-traverse to the queue
-        // (fields and array elements are traversed by default)
-        fun expandObject(obj: Any): List<Any> {
+        // this function is used to transform the traversed object's class
+        fun transformObject(obj: Any) {
             val clazz = obj.javaClass
             val className = clazz.name
-            val objectsToTransform = mutableListOf<Any>()
             when {
                 isJavaLambdaClass(className) -> {
                     val enclosingClassName = getJavaLambdaEnclosingClass(className)
@@ -342,7 +339,6 @@ object LincheckJavaAgent {
                     ensureClassHierarchyIsTransformed(clazz)
                 }
             }
-            return objectsToTransform
         }
 
         // this function is used to decide what objects should be traversed further
@@ -354,12 +350,15 @@ object LincheckJavaAgent {
             shouldTransform(obj.javaClass, instrumentationMode)
 
         traverseObjectGraph(obj, processedObjects,
-            expandObject = ::expandObject,
             config = ObjectGraphTraversalConfig(
                 traverseStaticFields = true,
             )
         ) { obj ->
-            shouldTraverseObject(obj)
+            val shouldTraverse = shouldTraverseObject(obj)
+            if (shouldTraverse) {
+                transformObject(obj)
+            }
+            shouldTraverse
         }
     }
 
