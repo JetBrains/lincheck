@@ -279,26 +279,7 @@ object LincheckJavaAgent {
             Class.forName(className)
             return
         }
-
-        if (className in instrumentedClasses) return // already instrumented
-
-        // this check is important for performance reasons,
-        // as it allows to avoid `Class.forName` in case when class is already instrumented
-        // TODO: replace with `Class.forName` caching, see `classCache` in `Utils.kt`
-        if (!shouldTransform(className, instrumentationMode)) return
-
-        val clazz = Class.forName(className)
-        ensureClassHierarchyIsTransformed(clazz)
-
-        // Traverse class static fields.
-        val processedObjects: MutableSet<Any> = identityHashSetOf()
-        for (field in clazz.allDeclaredFieldWithSuperclasses) {
-            // traverse only static non-primitive fields
-            if (!Modifier.isStatic(field.modifiers) || field.type.isPrimitive) continue
-            readFieldSafely(null, field).getOrNull()?.let { obj ->
-                ensureObjectIsTransformed(obj, processedObjects)
-            }
-        }
+        ensureClassHierarchyIsTransformed(className, transformStaticFields = true)
     }
 
     /**
@@ -331,9 +312,7 @@ object LincheckJavaAgent {
             when {
                 isJavaLambdaClass(className) -> {
                     val enclosingClassName = getJavaLambdaEnclosingClass(className)
-                    if (enclosingClassName !in instrumentedClasses) {
-                        ensureClassHierarchyIsTransformed(Class.forName(enclosingClassName))
-                    }
+                    ensureClassHierarchyIsTransformed(enclosingClassName, transformStaticFields = false)
                 }
                 else -> if (shouldTransform(clazz, instrumentationMode)) {
                     ensureClassHierarchyIsTransformed(clazz)
@@ -362,6 +341,21 @@ object LincheckJavaAgent {
         }
     }
 
+    private fun ensureClassHierarchyIsTransformed(className: String, transformStaticFields: Boolean) {
+        if (className in instrumentedClasses) return // already instrumented
+        // this check is important for performance reasons,
+        // as it allows to avoid `Class.forName` in case when class is already instrumented
+        // TODO: replace with `Class.forName` caching, see `classCache` in `Utils.kt`
+        if (!shouldTransform(className, instrumentationMode)) return
+
+        val clazz = Class.forName(className)
+        ensureClassHierarchyIsTransformed(clazz)
+
+        if (transformStaticFields) {
+            ensureStaticFieldsAreTransformed(clazz)
+        }
+    }
+
     /**
      * Ensures that the given class and all its superclasses are transformed.
      *
@@ -383,6 +377,18 @@ object LincheckJavaAgent {
 
         classesToTransform.forEach {
             ensureClassHierarchyIsTransformed(it)
+        }
+    }
+
+    private fun ensureStaticFieldsAreTransformed(clazz: Class<*>) {
+        // Traverse class static fields.
+        val processedObjects: MutableSet<Any> = identityHashSetOf()
+        for (field in clazz.allDeclaredFieldWithSuperclasses) {
+            // traverse only static non-primitive fields
+            if (!Modifier.isStatic(field.modifiers) || field.type.isPrimitive) continue
+            readFieldSafely(null, field).getOrNull()?.let { obj ->
+                ensureObjectIsTransformed(obj, processedObjects)
+            }
         }
     }
 
