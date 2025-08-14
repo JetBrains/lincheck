@@ -13,11 +13,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import org.jetbrains.kotlinx.lincheck.classCache
 import org.jetbrains.kotlinx.lincheck.findField
 import org.jetbrains.kotlinx.lincheck.strategy.managed.SnapshotTracker.MemoryNode.*
-import org.jetbrains.kotlinx.lincheck.util.*
-import org.jetbrains.lincheck.util.readArrayElementViaUnsafe
-import org.jetbrains.lincheck.util.readFieldSafely
-import org.jetbrains.lincheck.util.writeArrayElementViaUnsafe
-import org.jetbrains.lincheck.util.writeFieldViaUnsafe
+import org.jetbrains.lincheck.util.*
 import java.lang.Class
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
@@ -119,7 +115,7 @@ class SnapshotTracker {
     }
 
     fun restoreValues() {
-        val visitedObjects = Collections.newSetFromMap(IdentityHashMap<Any, Boolean>())
+        val visitedObjects = identityHashSetOf<Any>()
         trackedObjects.keys.forEach { restoreValues(it, visitedObjects) }
     }
 
@@ -195,7 +191,7 @@ class SnapshotTracker {
             },
             onField = { owner, field, fieldValue ->
                 // optimization to track only `value` field of java atomic classes
-                if (isAtomicJava(owner) && field.name != "value") null
+                if (isJavaAtomic(owner) && field.name != "value") null
                 // do not traverse fields of var-handles
                 else if (owner.javaClass.typeName == "java.lang.invoke.VarHandle") null
                 else {

@@ -187,14 +187,16 @@ object LincheckJavaAgent {
         try {
             instrumentation.retransformClasses(*classes.toTypedArray())
         } catch (_: Throwable) {
-            classes.forEach {
-                try {
-                    instrumentation.retransformClasses(it)
-                } catch (t: Throwable) {
-                    Logger.error { "Failed to retransform class ${it.name}" }
-                    Logger.error(t)
-                }
-            }
+            classes.forEach { retransformClass(it) }
+        }
+    }
+
+    private fun retransformClass(clazz: Class<*>) {
+        try {
+            instrumentation.retransformClasses(clazz)
+        } catch (t: Throwable) {
+            Logger.error { "Failed to retransform class ${clazz.name}" }
+            Logger.error(t)
         }
     }
 
@@ -217,21 +219,21 @@ object LincheckJavaAgent {
     }
 
     private fun getLoadedClassesToInstrument(): List<Class<*>> =
-        instrumentation.allLoadedClasses
-            // Filtering is done in the following order to hide lincheck source classes from
-            // `canRetransform` method which uses `TransformationUtilsKt::isJavaLambdaClass` internally.
-            // The other order causes class linkage error on double definition of `TransformationUtilsKt`
-            // when it itself is passed as argument to `canRetransformClass`.
-            .filter { shouldTransform(it.name, instrumentationMode) }
-            .filter(::canRetransformClass)
+        instrumentation.allLoadedClasses.filter { shouldTransform(it, instrumentationMode) }
 
-    private fun canRetransformClass(clazz: Class<*>): Boolean {
-        return instrumentation.isModifiableClass(clazz) &&
-               // Note: Java 8 has a bug and does not allow lambdas redefinition and retransformation
-               //  - https://bugs.openjdk.org/browse/JDK-8145964
-               //  - https://stackoverflow.com/questions/34162074/transforming-lambdas-in-java-8
-               (!isJdk8 || !isJavaLambdaClass(clazz.name))
-    }
+    private fun canRetransformClass(clazz: Class<*>): Boolean =
+        instrumentation.isModifiableClass(clazz) &&
+        // Note: Java 8 has a bug and does not allow lambdas redefinition and retransformation
+        //  - https://bugs.openjdk.org/browse/JDK-8145964
+        //  - https://stackoverflow.com/questions/34162074/transforming-lambdas-in-java-8
+        (!isJdk8 || !isJavaLambdaClass(clazz.name))
+
+    private fun shouldTransform(clazz: Class<*>, instrumentationMode: InstrumentationMode): Boolean =
+        // Filtering is done in the following order to hide lincheck source classes from
+        // the `canRetransform` method which uses `TransformationUtilsKt::isJavaLambdaClass` internally.
+        // The other order causes a class linkage error on double definition of `TransformationUtilsKt`
+        // when it itself is passed as an argument to `canRetransformClass`.
+        shouldTransform(clazz.name, instrumentationMode) && canRetransformClass(clazz)
 
     /**
      * Detaches [LincheckClassFileTransformer] from this JVM instance and re-transforms
@@ -270,45 +272,39 @@ object LincheckJavaAgent {
      * thus, initializing it here, in an ignored section of the analysis, re-transforming
      * the class after that.
      *
-     * @param canonicalClassName The name of the class to be transformed.
+     * @param className The name of the class to be transformed.
      */
-    fun ensureClassHierarchyIsTransformed(canonicalClassName: String) {
+    fun ensureClassHierarchyIsTransformed(className: String) {
         if (INSTRUMENT_ALL_CLASSES) {
-            Class.forName(canonicalClassName)
+            Class.forName(className)
             return
         }
-        if (!shouldTransform(canonicalClassName, instrumentationMode)) return
-        if (canonicalClassName in instrumentedClasses) return // already instrumented
-        ensureClassHierarchyIsTransformed(Class.forName(canonicalClassName), Collections.newSetFromMap(IdentityHashMap()))
-    }
 
+        if (className in instrumentedClasses) return // already instrumented
+
+        // this check is important for performance reasons,
+        // as it allows to avoid `Class.forName` in case when class is already instrumented
+        // TODO: replace with `Class.forName` caching, see `classCache` in `Utils.kt`
+        if (!shouldTransform(className, instrumentationMode)) return
+
+        val processedObjects: MutableSet<Any> = identityHashSetOf()
+        ensureClassHierarchyIsTransformed(Class.forName(className)) { obj ->
+            ensureObjectIsTransformed(obj, processedObjects)
+        }
+    }
 
     /**
      * Ensures that the given object and all its referenced objects are transformed for Lincheck analysis.
-     * If the INSTRUMENT_ALL_CLASSES_IN_MODEL_CHECKING_MODE flag is set to true, no transformation is performed.
+     * The function is called upon a test instance creation to ensure that
+     * all the classes related to it are transformed.
      *
-     * The function is called upon a test instance creation, to ensure that all the classes related to it are transformed.
+     * If the INSTRUMENT_ALL_CLASSES flag is set to true, no transformation is performed.
      *
      * @param obj the object to be transformed
      */
     fun ensureObjectIsTransformed(obj: Any) {
-        if (INSTRUMENT_ALL_CLASSES) {
-            return
-        }
-        ensureObjectIsTransformed(obj, Collections.newSetFromMap(IdentityHashMap()))
-    }
-
-    /**
-     * Ensures that the given class and all its superclasses are transformed if necessary.
-     *
-     * @param clazz the class to transform
-     */
-    private fun ensureClassHierarchyIsTransformed(clazz: Class<*>) {
-        if (INSTRUMENT_ALL_CLASSES) {
-            return
-        }
-        if (clazz.name in instrumentedClasses) return // already instrumented
-        ensureClassHierarchyIsTransformed(clazz, Collections.newSetFromMap(IdentityHashMap()))
+        if (INSTRUMENT_ALL_CLASSES) return
+        ensureObjectIsTransformed(obj, identityHashSetOf())
     }
 
     /**
@@ -319,46 +315,42 @@ object LincheckJavaAgent {
      * @param processedObjects A set of processed objects to avoid infinite recursion.
      */
     private fun ensureObjectIsTransformed(obj: Any, processedObjects: MutableSet<Any>) {
-        var clazz: Class<*> = obj.javaClass
-        val className = clazz.name
 
-        when {
-            isJavaLambdaClass(className) -> {
-                ensureClassHierarchyIsTransformed(getJavaLambdaEnclosingClass(className))
-            }
-            obj is Array<*> -> {
-                obj.filterNotNull().forEach {
-                    ensureObjectIsTransformed(it, processedObjects)
+        // this function is used to transform traversed object's class
+        // and push additional objects-to-traverse to the queue
+        // (fields and array elements are traversed by default)
+        fun expandObject(obj: Any): List<Any> {
+            val clazz = obj.javaClass
+            val className = clazz.name
+            val objectsToTransform = mutableListOf<Any>()
+            when {
+                isJavaLambdaClass(className) -> {
+                    val enclosingClassName = getJavaLambdaEnclosingClass(className)
+                    if (enclosingClassName !in instrumentedClasses) {
+                        ensureClassHierarchyIsTransformed(Class.forName(enclosingClassName)) {
+                            objectsToTransform.add(it)
+                        }
+                    }
                 }
-                return
-            }
-            else -> {
-                if (instrumentation.isModifiableClass(clazz) &&
-                    shouldTransform(className, instrumentationMode)
-                ) {
-                    ensureClassHierarchyIsTransformed(clazz)
-                } else {
-                    // Optimization and safety net: do not analyze low-level
-                    // class instances from the standard Java library.
-                    if (className.startsWith("jdk.") || className.startsWith("java.lang.") || className.startsWith("sun.misc.")) {
-                        return
+                else -> if (shouldTransform(clazz, instrumentationMode)) {
+                    ensureClassHierarchyIsTransformed(clazz) {
+                        objectsToTransform.add(it)
                     }
                 }
             }
+            return objectsToTransform
         }
 
-        if (processedObjects.contains(obj)) return
-        processedObjects += obj
+        // this function is used to decide what objects should be traversed further
+        fun shouldTraverseObject(obj: Any): Boolean =
+            // optimization and safety net: do not traverse low-level
+            // class instances from the standard Java library
+            !isLowLevelJavaClass(obj.javaClass.name) ||
+            // unless the low-level class needs to be transformed
+            shouldTransform(obj.javaClass, instrumentationMode)
 
-        while (true) {
-            clazz.declaredFields
-                .filter { !it.type.isPrimitive }
-                .filter { !Modifier.isStatic(it.modifiers) }
-                .mapNotNull { readFieldSafely(obj, it).getOrNull() }
-                .forEach {
-                    ensureObjectIsTransformed(it, processedObjects)
-                }
-            clazz = clazz.superclass ?: break
+        traverseObjectGraph(obj, processedObjects, expandObject = ::expandObject) { obj ->
+            shouldTraverseObject(obj)
         }
     }
 
@@ -366,39 +358,44 @@ object LincheckJavaAgent {
      * Ensures that the given class and all its superclasses are transformed.
      *
      * @param clazz The class to be transformed.
-     * @param processedObjects Set of objects that have already been processed to prevent duplicate transformation.
+     * @param transformObjectCallback A function called to transform objects discovered during
+     *   the traversal of class' static fields.
      */
-    private fun ensureClassHierarchyIsTransformed(clazz: Class<*>, processedObjects: MutableSet<Any>) {
-        if (!shouldTransform(clazz.name, instrumentationMode)) return
-        if (canRetransformClass(clazz)) {
+    private fun ensureClassHierarchyIsTransformed(clazz: Class<*>, transformObjectCallback: (Any) -> Unit) {
+        if (clazz.name in instrumentedClasses) return // already instrumented
+
+        if (shouldTransform(clazz, instrumentationMode)) {
             instrumentedClasses += clazz.name
-            try {
-                instrumentation.retransformClasses(clazz)
-            } catch (e: VerifyError) {
-                Logger.error { "Failed to retransform class ${clazz.name}" }
-            }
+            retransformClass(clazz)
         }
+
         // Traverse static fields.
-        clazz.declaredFields
-            .filter { !it.type.isPrimitive }
-            .filter { Modifier.isStatic(it.modifiers) }
-            .mapNotNull { readFieldSafely(null, it).getOrNull() }
-            .forEach {
-                ensureObjectIsTransformed(it, processedObjects)
+        //
+        // NOTE: traverses only current class' fields, as the loop below will process
+        //   all superclasses' and interfaces' fields as a part of `ensureClassHierarchyIsTransformed`
+        for (field in clazz.declaredFields) {
+            // traverse only static non-primitive fields
+            if (!Modifier.isStatic(field.modifiers) || field.type.isPrimitive) continue
+            readFieldSafely(null, field).getOrNull()?.let {
+                transformObjectCallback(it)
             }
-        clazz.superclass?.let {
-            if (it.name in instrumentedClasses) return // already instrumented
-            ensureClassHierarchyIsTransformed(it, processedObjects)
         }
-        clazz.interfaces.forEach {
-            if (it.name in instrumentedClasses) return // already instrumented
-            ensureClassHierarchyIsTransformed(it, processedObjects)
-        }
-        clazz.enclosingClass?.let {
-            if (it.name in instrumentedClasses) return // already instrumented
-            ensureClassHierarchyIsTransformed(it, processedObjects)
+
+        // Traverse super classes, interfaces, and enclosing class
+        val classesToTransform =
+            listOfNotNull(clazz.superclass) +
+            listOfNotNull(clazz.enclosingClass) +
+            clazz.interfaces.asList()
+
+        classesToTransform.forEach {
+            ensureClassHierarchyIsTransformed(it, transformObjectCallback)
         }
     }
+
+    private fun isLowLevelJavaClass(className: String) =
+        className.startsWith("jdk.") ||
+        className.startsWith("sun.misc.") ||
+        className.startsWith("java.lang.")
 
     /**
      * FOR TEST PURPOSE ONLY!

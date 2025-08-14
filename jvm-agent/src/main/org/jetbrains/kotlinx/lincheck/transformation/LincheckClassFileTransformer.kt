@@ -177,7 +177,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         }
         if (isEagerlyInstrumentedClass(className)) return true
 
-        return AnalysisProfile(analyzeStdLib = true).shouldTransform(className, "")
+        return AnalysisProfile.DEFAULT.shouldTransform(className, "")
     }
 
 

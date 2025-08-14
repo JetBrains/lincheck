@@ -10,6 +10,9 @@
 
 package org.jetbrains.lincheck.util
 
+import java.util.Collections
+import java.util.IdentityHashMap
+
 /**
  * Expands the list to the specified size by adding the given value
  * to the end of the list until it reaches the target size.
@@ -144,6 +147,25 @@ fun <T> MutableList<T>.move(from: IntRange, to: Int) {
     sublist.clear()
     addAll(adjustedTo, elements)
 }
+
+/**
+ * Creates a mutable set backed by an [IdentityHashMap].
+ * This set uses identity comparisons `===` to determine equality of elements, rather than the `equals` method.
+ *
+ * @return A new empty mutable identity hash set.
+ */
+fun <T> identityHashSetOf(): MutableSet<T> =
+    Collections.newSetFromMap(IdentityHashMap())
+
+/**
+ * Creates a mutable set backed by an [IdentityHashMap], initialized with the provided elements.
+ * This set uses identity comparisons (`===`) to determine equality of elements, rather than the `equals` method.
+ *
+ * @param elements Zero or more elements to initialize the set with.
+ * @return A new mutable identity hash set containing the provided elements.
+ */
+fun <T> identityHashSetOf(vararg elements: T): MutableSet<T> =
+    elements.toCollection(identityHashSetOf())
 
 fun <K, V> MutableMap<K, V>.update(key: K, default: V, transform: (V) -> V): V =
     compute(key) { _, current -> transform(current ?: default) }!!

@@ -1,18 +1,16 @@
 /*
  * Lincheck
  *
- * Copyright (C) 2019 - 2024 JetBrains s.r.o.
+ * Copyright (C) 2019 - 2025 JetBrains s.r.o.
  *
  * This Source Code Form is subject to the terms of the
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.util
+package org.jetbrains.lincheck.util
 
-import org.jetbrains.lincheck.util.*
 import java.util.concurrent.atomic.*
-import kotlin.reflect.jvm.jvmName
 import java.lang.reflect.*
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -22,6 +20,7 @@ import java.util.*
 private typealias FieldCallback = (obj: Any, field: Field, value: Any?) -> Any?
 private typealias ArrayElementCallback = (array: Any, index: Int, element: Any?) -> Any?
 private typealias ObjectCallback = (obj: Any) -> Boolean
+private typealias ObjectExpansionCallback = (obj: Any) -> List<Any>
 
 /**
  * Traverses a subgraph of objects reachable from a given root object in BFS order.
@@ -42,12 +41,19 @@ private typealias ObjectCallback = (obj: Any) -> Boolean
  *
  * @param root object to start the traversal from.
  * @param config configuration of the traversal, see [ObjectGraphTraversalConfig].
+ * @param processedObjects Optional set to track already processed objects during traversal.
+ *   Can be used to maintain object visit state across multiple traversal calls.
+ *   If not provided, a new identity-based hash set will be created.
+ *   Must use referential equality (identity-based comparison) for correct cycle detection in the traversal algorithm.
  * @param onField callback for fields traversal, accepts `(fieldOwner, field, fieldValue)`.
  *   Returns an object to be traversed next, or null if the field value should not be traversed.
  *   If not passed, by default, all fields of objects are traversed.
  * @param onArrayElement callback for array elements traversal, accepts `(array, index, elementValue)`.
  *   Returns an object to be traversed next, or null if the array element should not be traversed.
  *   If not passed, by default, all array elements are traversed.
+ * @param expandObject Optional callback for custom object expansion during traversal,
+ *   beyond default fields and array elements traversal.
+ *   When provided, should return for an object a list of additional objects to be traversed.
  * @param onObject Optional callback invoked for each distinct object encountered during traversal
  *   before it is traversed recursively.
  *   Should return boolean indicating whether the object should be traversed recursively.
@@ -55,50 +61,29 @@ private typealias ObjectCallback = (obj: Any) -> Boolean
  */
 internal fun traverseObjectGraph(
     root: Any,
+    processedObjects: MutableSet<Any>? = null,
     config: ObjectGraphTraversalConfig = ObjectGraphTraversalConfig(),
     onField: FieldCallback = { _ /* obj */, _ /* field */, fieldValue -> fieldValue },
     onArrayElement: ArrayElementCallback = { _ /* array */, _ /* index */, elementValue -> elementValue },
+    expandObject: ObjectExpansionCallback? = null,
     onObject: ObjectCallback = { _ /* obj */ -> true },
 ) {
     if (!shouldTraverseObject(root, config)) return
+    if (processedObjects != null && root in processedObjects) return
     if (!onObject(root)) return
 
     val queue = ArrayDeque<Any>()
-    val visitedObjects = Collections.newSetFromMap<Any>(IdentityHashMap())
+    val visitedObjects = processedObjects ?: identityHashSetOf()
 
     queue.add(root)
     visitedObjects.add(root)
 
     val processNextObject: (nextObject: Any?) -> Unit = { nextObject ->
-        var promotedObject = nextObject
-        if (config.promoteAtomicObjects) {
-            while (true) {
-                when {
-                    // Special treatment for java atomic classes, because they can be extended but user classes,
-                    // in case if a user extends java atomic class, we do not want to jump through it.
-                    (promotedObject?.javaClass?.name != null && isAtomicJavaClass(promotedObject.javaClass.name)) -> {
-                        val getMethod = promotedObject.javaClass.getMethod("get")
-                        promotedObject = getMethod.invoke(promotedObject)
-                    }
-                    // atomicfu.AtomicBool is handled separately because its value field is named differently
-                    promotedObject is kotlinx.atomicfu.AtomicBoolean -> {
-                        val valueField = promotedObject.javaClass.getDeclaredField("_value")
-                        promotedObject = readFieldViaUnsafe(promotedObject, valueField)
-                    }
-                    // other atomicfu types are handled uniformly
-                    isAtomicFU(promotedObject) -> {
-                        val valueField = promotedObject!!.javaClass.getDeclaredField("value")
-                        promotedObject = readFieldViaUnsafe(promotedObject, valueField)
-                    }
-                    // otherwise, the next object is not an atomic object, so we exit the promotion loop
-                    else -> break
-                }
-            }
-        }
-        if (shouldTraverseObject(promotedObject, config) && promotedObject !in visitedObjects) {
-            if (onObject(promotedObject!!)) {
-                queue.add(promotedObject)
-                visitedObjects.add(promotedObject)
+        val nextObject = promoteObject(nextObject, config)
+        if (shouldTraverseObject(nextObject, config) && nextObject !in visitedObjects) {
+            if (onObject(nextObject!!)) {
+                queue.add(nextObject)
+                visitedObjects.add(nextObject)
             }
         }
     }
@@ -112,11 +97,20 @@ internal fun traverseObjectGraph(
                 }
             }
             else -> {
-                traverseObjectFields(currentObj,
-                    traverseStaticFields = config.traverseStaticFields
+                traverseObjectFields(
+                    currentObj,
+                    fieldPredicate = { field ->
+                        // do not traverse static fields if static fields traversal is disabled
+                        (Modifier.isStatic(field.modifiers) implies config.traverseStaticFields)
+                    }
                 ) { _ /* obj */, field, fieldValue ->
                     processNextObject(onField(currentObj, field, fieldValue))
                 }
+            }
+        }
+        if (expandObject != null) {
+            expandObject(currentObj).forEach {
+                processNextObject(it)
             }
         }
     }
@@ -159,17 +153,17 @@ internal inline fun traverseArrayElements(array: Any, onArrayElement: (array: An
  * Traverses [obj] fields (including fields from superclasses).
  *
  * @param obj array which elements to traverse.
- * @param traverseStaticFields if true, then all static fields are also traversed,
- *   otherwise only non-static fields are traversed.
+ * @param fieldPredicate predicate to filter which fields should be traversed.
+ *   Should return true if the field should be processed.
  * @param onField callback which accepts `(obj, field, fieldValue)`.
  */
 internal inline fun traverseObjectFields(
     obj: Any,
-    traverseStaticFields: Boolean = false,
+    fieldPredicate: (Field) -> Boolean = { true },
     onField: (obj: Any, field: Field, value: Any?) -> Unit
 ) {
-    obj.javaClass.allDeclaredFieldWithSuperclasses.forEach { field ->
-        if (!traverseStaticFields && Modifier.isStatic(field.modifiers)) return@forEach
+    for (field in obj.javaClass.allDeclaredFieldWithSuperclasses) {
+        if (!fieldPredicate(field)) continue
         val result = readFieldSafely(obj, field)
         // do not pass non-readable fields
         if (result.isSuccess) {
@@ -177,6 +171,35 @@ internal inline fun traverseObjectFields(
             onField(obj, field, fieldValue)
         }
     }
+}
+
+private fun promoteObject(obj: Any?, config: ObjectGraphTraversalConfig): Any? {
+    var promotedObject = obj
+    if (config.promoteAtomicObjects) {
+        while (true) {
+            when {
+                // Special treatment for java atomic classes, because they can be extended but user classes,
+                // in case if a user extends java atomic class, we do not want to jump through it.
+                (isJavaAtomic(promotedObject)) -> {
+                    val getMethod = promotedObject!!.javaClass.getMethod("get")
+                    promotedObject = getMethod.invoke(promotedObject)
+                }
+                // atomicfu.AtomicBool is handled separately because its value field is named differently
+                isAtomicFUBoolean(promotedObject) -> {
+                    val valueField = promotedObject!!.javaClass.getDeclaredField("_value")
+                    promotedObject = readFieldViaUnsafe(promotedObject, valueField)
+                }
+                // other atomicfu types are handled uniformly
+                isAtomicFU(promotedObject) -> {
+                    val valueField = promotedObject!!.javaClass.getDeclaredField("value")
+                    promotedObject = readFieldViaUnsafe(promotedObject, valueField)
+                }
+                // otherwise, the next object is not an atomic object, so we exit the promotion loop
+                else -> break
+            }
+        }
+    }
+    return promotedObject
 }
 
 /**
@@ -243,12 +266,6 @@ internal val Any?.isPrimitive get() = when (this) {
     is Boolean, is Int, is Short, is Long, is Double, is Float, is Char, is Byte -> true
     else -> false
 }
-
-/**
- * Extension property to determine if the given object is a [kotlinx.coroutines] symbol.
- */
-internal val Any?.isCoroutinesSymbol get() =
-    this != null && this::class.jvmName == "kotlinx.coroutines.internal.Symbol"
 
 internal fun getArrayLength(arr: Any): Int {
     return when {
