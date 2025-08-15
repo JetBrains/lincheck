@@ -368,42 +368,6 @@ object LincheckJavaAgent {
         }
     }
 
-    /**
-     * Ensures that the value of the specified field in the given class is transformed for Lincheck analysis.
-     *
-     * Notably, this function **does not invoke** [ensureObjectIsTransformed]
-     * to transform all objects reachable from the given field,
-     * but rather only the [ensureClassHierarchyIsTransformed] on the class of the field value.
-     *
-     * Typically, this function should be called:
-     * - before reading a static field of the specified class.
-     * This is required to ensure that the read value is transformed as well.
-     * Otherwise, as the analysis might be invoked later, after the class is initialized,
-     * the transformation of the class might be skipped.
-     *
-     * The function should be called from an ignored section of the analysis.
-     * If the INSTRUMENT_ALL_CLASSES flag is set to true, no transformation is performed.
-     *
-     * @param className The fully qualified name of the class containing the field to transform.
-     * @param fieldName The name of the field in the specified class that needs to be transformed.
-     * @see ensureClassHierarchyIsTransformed
-     */
-    fun ensureFieldValueIsTransformed(className: String, fieldName: String) {
-        if (INSTRUMENT_ALL_CLASSES) return
-        if (!shouldTransform(className, instrumentationMode)) return
-
-        val clazz = ClassCache.forName(className)
-        val field = clazz.allDeclaredFieldWithSuperclasses.find { it.name == fieldName }
-        check(field != null) {
-            "Field $fieldName not found in class $className"
-        }
-        if (field.type.isPrimitive) return
-
-        readFieldSafely(null, field).getOrNull()?.let { obj ->
-            ensureClassHierarchyIsTransformed(obj.javaClass)
-        }
-    }
-
     private fun isLowLevelJavaClass(className: String) =
         className.startsWith("jdk.") ||
         className.startsWith("sun.misc.") ||
