@@ -325,7 +325,7 @@ object LincheckJavaAgent {
                 traverseStaticFields = true,
             )
         ) { obj ->
-            val shouldTransform = shouldTransform(obj.javaClass, instrumentationMode)
+            val shouldTransform = shouldTransform(obj.javaClass.name, instrumentationMode)
             val shouldTraverse =
                 // optimization and safety net: do not traverse low-level
                 // class instances from the standard Java library
