@@ -299,6 +299,35 @@ object LincheckJavaAgent {
     }
 
     /**
+     * Ensures that the whole hierarchy of the given class is transformed for Lincheck analysis.
+     * See the description above.
+     *
+     * @param clazz The class to be transformed.
+     */
+    fun ensureClassHierarchyIsTransformed(clazz: Class<*>) {
+        if (INSTRUMENT_ALL_CLASSES) return
+        if (clazz.name in instrumentedClasses) return // already instrumented
+
+        if (shouldTransform(clazz, instrumentationMode)) {
+            instrumentedClasses += clazz.name
+            retransformClass(clazz)
+        } else if (isJavaLambdaClass(clazz.name)) {
+            val enclosingClassName = getJavaLambdaEnclosingClass(clazz.name)
+            ensureClassHierarchyIsTransformed(enclosingClassName)
+        }
+
+        // Traverse super classes, interfaces, and enclosing class
+        val classesToTransform =
+            listOfNotNull(clazz.superclass) +
+            listOfNotNull(clazz.enclosingClass) +
+            clazz.interfaces.asList()
+
+        classesToTransform.forEach {
+            ensureClassHierarchyIsTransformed(it)
+        }
+    }
+
+    /**
      * Ensures that the given object and all objects reachable from it are transformed for Lincheck analysis.
      * The function is called upon a test instance creation to ensure that
      * all the classes related to it are transformed.
@@ -337,34 +366,6 @@ object LincheckJavaAgent {
                 ensureClassHierarchyIsTransformed(obj.javaClass)
             }
             return@traverseObjectGraph shouldTraverse
-        }
-    }
-
-    /**
-     * Ensures that the whole hierarchy of the given class is transformed for Lincheck analysis.
-     *
-     * @param clazz The class to be transformed.
-     */
-    fun ensureClassHierarchyIsTransformed(clazz: Class<*>) {
-        if (INSTRUMENT_ALL_CLASSES) return
-        if (clazz.name in instrumentedClasses) return // already instrumented
-
-        if (shouldTransform(clazz, instrumentationMode)) {
-            instrumentedClasses += clazz.name
-            retransformClass(clazz)
-        } else if (isJavaLambdaClass(clazz.name)) {
-            val enclosingClassName = getJavaLambdaEnclosingClass(clazz.name)
-            ensureClassHierarchyIsTransformed(enclosingClassName)
-        }
-
-        // Traverse super classes, interfaces, and enclosing class
-        val classesToTransform =
-            listOfNotNull(clazz.superclass) +
-            listOfNotNull(clazz.enclosingClass) +
-            clazz.interfaces.asList()
-
-        classesToTransform.forEach {
-            ensureClassHierarchyIsTransformed(it)
         }
     }
 
