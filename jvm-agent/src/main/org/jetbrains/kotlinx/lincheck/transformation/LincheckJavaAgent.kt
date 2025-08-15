@@ -289,12 +289,12 @@ object LincheckJavaAgent {
      */
     fun ensureClassHierarchyIsTransformed(className: String) {
         if (INSTRUMENT_ALL_CLASSES) {
-            Class.forName(className)
+            ClassCache.forName(className)
             return
         }
         if (className in instrumentedClasses) return // already instrumented
 
-        val clazz = Class.forName(className)
+        val clazz = ClassCache.forName(className)
         ensureClassHierarchyIsTransformed(clazz)
     }
 
@@ -391,7 +391,7 @@ object LincheckJavaAgent {
         if (INSTRUMENT_ALL_CLASSES) return
         if (!shouldTransform(className, instrumentationMode)) return
 
-        val clazz = Class.forName(className)
+        val clazz = ClassCache.forName(className)
         val field = clazz.allDeclaredFieldWithSuperclasses.find { it.name == fieldName }
         check(field != null) {
             "Field $fieldName not found in class $className"

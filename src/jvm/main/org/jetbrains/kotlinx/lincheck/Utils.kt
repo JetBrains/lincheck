@@ -240,6 +240,3 @@ internal fun <T> Class<T>.newDefaultInstance(): T {
 
     throw IllegalStateException("No suitable constructor found for ${this.canonicalName}")
 }
-
-// We store the class references in a local map to avoid repeated Class.forName calls and reflection overhead
-val classCache = ConcurrentHashMap<String, Class<*>>()
