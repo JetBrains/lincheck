@@ -439,8 +439,12 @@ class TraceCollectingEventTracker(
         val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
 
         val methodSection = methodAnalysisSectionType(receiver, methodDescriptor.className, methodDescriptor.methodName)
-        if (receiver == null && methodSection < AnalysisSectionType.ATOMIC) {
-            LincheckJavaAgent.ensureClassHierarchyIsTransformed(methodDescriptor.className)
+        if (methodSection < AnalysisSectionType.ATOMIC) {
+            if (receiver !== null) {
+                LincheckJavaAgent.ensureClassHierarchyIsTransformed(receiver.javaClass)
+            } else {
+                LincheckJavaAgent.ensureClassHierarchyIsTransformed(methodDescriptor.className)
+            }
         }
 
         val tracePoint = TRMethodCallTracePoint(
