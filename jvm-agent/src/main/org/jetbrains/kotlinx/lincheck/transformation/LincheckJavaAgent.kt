@@ -317,12 +317,13 @@ object LincheckJavaAgent {
         }
 
         // Traverse super classes, interfaces, and enclosing class
-        val classesToTransform =
-            listOfNotNull(clazz.superclass) +
-            listOfNotNull(clazz.enclosingClass) +
-            clazz.interfaces.asList()
-
-        classesToTransform.forEach {
+        clazz.superclass?.also {
+            ensureClassHierarchyIsTransformed(it)
+        }
+        clazz.enclosingClass?.also {
+            ensureClassHierarchyIsTransformed(it)
+        }
+        clazz.interfaces.forEach {
             ensureClassHierarchyIsTransformed(it)
         }
     }
