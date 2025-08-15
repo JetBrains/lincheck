@@ -1251,7 +1251,7 @@ internal abstract class ManagedStrategy(
         val eventId = getNextEventId()
         val threadId = threadScheduler.getCurrentThreadId()
         val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
-        if (fieldDescriptor.isStatic && value !== null) {
+        if (fieldDescriptor.isStatic && value !== null && !value.isImmutable) {
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(value.javaClass)
         }
         if (collectTrace) {

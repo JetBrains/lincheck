@@ -326,7 +326,7 @@ class TraceCollectingEventTracker(
     // and therefore all injected functions should run inside ignored section.
     override fun afterReadField(obj: Any?, codeLocation: Int, fieldId: Int, value: Any?) = runInsideIgnoredSection {
         val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
-        if (fieldDescriptor.isStatic && value !== null) {
+        if (fieldDescriptor.isStatic && value !== null && !value.isImmutable) {
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(value.javaClass)
         }
 
