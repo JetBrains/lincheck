@@ -325,6 +325,11 @@ class TraceCollectingEventTracker(
     // This means that technically any function marked as silent or ignored can be overshadowed 
     // and therefore all injected functions should run inside ignored section.
     override fun afterReadField(obj: Any?, codeLocation: Int, fieldId: Int, value: Any?) = runInsideIgnoredSection {
+        val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
+        if (fieldDescriptor.isStatic && value !== null && !value.isImmutable) {
+            LincheckJavaAgent.ensureClassHierarchyIsTransformed(value.javaClass)
+        }
+
         val threadData = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTrackerData as? ThreadData? ?: return
         val tracePoint = TRReadTracePoint(
             threadId = threadData.threadId,

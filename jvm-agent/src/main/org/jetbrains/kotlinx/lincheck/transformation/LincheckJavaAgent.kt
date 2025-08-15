@@ -22,7 +22,6 @@ import org.jetbrains.kotlinx.lincheck.transformation.transformers.coroutineCalli
 import org.jetbrains.lincheck.util.Logger
 import org.jetbrains.lincheck.util.*
 import java.lang.instrument.Instrumentation
-import java.lang.reflect.Modifier
 import java.io.File
 import java.util.jar.JarFile
 import java.util.*
@@ -223,10 +222,9 @@ object LincheckJavaAgent {
 
     private fun canRetransformClass(clazz: Class<*>): Boolean =
         instrumentation.isModifiableClass(clazz) &&
-        // Note: Java 8 has a bug and does not allow lambdas redefinition and retransformation
-        //  - https://bugs.openjdk.org/browse/JDK-8145964
-        //  - https://stackoverflow.com/questions/34162074/transforming-lambdas-in-java-8
-        (!isJdk8 || !isJavaLambdaClass(clazz.name))
+        // java lambda classes are special case --- they are not retransformed themselves,
+        // rather their enclosing class is retransformed, see below
+        !isJavaLambdaClass(clazz.name)
 
     private fun shouldTransform(clazz: Class<*>, instrumentationMode: InstrumentationMode): Boolean =
         // Filtering is done in the following order to hide lincheck source classes from
@@ -260,47 +258,85 @@ object LincheckJavaAgent {
     }
 
     /**
-     * Ensures that the specified class and all its superclasses are transformed.
+     * This function ensures that the whole hierarchy of the given class is transformed for Lincheck analysis.
      *
-     * This function is called before creating a new instance of the specified class
-     * or reading a static field of it. It ensures that the whole hierarchy of this class
-     * and the classes of all the static fields (this process is recursive) is transformed.
-     * Notably, some of these classes may not be loaded yet, and invoking the `<cinit>`
-     * during the analysis could cause non-deterministic behaviour (the class initialization
-     * is invoked only once, while Lincheck relies on the events reproducibility).
+     * For this function, under the term class hierarchy we assume the following set of classes:
+     * - class itself;
+     * - its superclasses;
+     * - its interfaces;
+     * - its enclosing class;
+     * - transitive closure of the above.
+     *
+     * Notably, some of these classes may not be loaded yet, and invoking the `<clinit>`
+     * during the analysis could cause non-deterministic behavior
+     * (the class initialization is invoked only once, while Lincheck relies on the events reproducibility).
      * To eliminate the issue, this function also loads the class before transformation,
-     * thus, initializing it here, in an ignored section of the analysis, re-transforming
-     * the class after that.
+     * thus, initializing it and re-transforming the class after that.
+     *
+     * Typically, this function should be called:
+     * - before creating a new instance of the specified class;
+     * - before reading a static field of the specified class;
+     * - before calling a static method of the specified class.
+     * As such, the invocation pattern of this function mimics the JVMS initialization semantics:
+     *   https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-5.html#jvms-5.5
+     * Also, naturally, this function should be called for the top-level class under analysis.
+     *
+     *
+     * The function should be called from an ignored section of the analysis.
+     * If the INSTRUMENT_ALL_CLASSES flag is set to true, no transformation is performed.
      *
      * @param className The name of the class to be transformed.
      */
     fun ensureClassHierarchyIsTransformed(className: String) {
         if (INSTRUMENT_ALL_CLASSES) {
-            Class.forName(className)
+            ClassCache.forName(className)
             return
         }
-
         if (className in instrumentedClasses) return // already instrumented
 
-        // this check is important for performance reasons,
-        // as it allows to avoid `Class.forName` in case when class is already instrumented
-        // TODO: replace with `Class.forName` caching, see `classCache` in `Utils.kt`
-        if (!shouldTransform(className, instrumentationMode)) return
+        val clazz = ClassCache.forName(className)
+        ensureClassHierarchyIsTransformed(clazz)
+    }
 
-        val processedObjects: MutableSet<Any> = identityHashSetOf()
-        ensureClassHierarchyIsTransformed(Class.forName(className)) { obj ->
-            ensureObjectIsTransformed(obj, processedObjects)
+    /**
+     * Ensures that the whole hierarchy of the given class is transformed for Lincheck analysis.
+     * See the description above.
+     *
+     * @param clazz The class to be transformed.
+     */
+    fun ensureClassHierarchyIsTransformed(clazz: Class<*>) {
+        if (INSTRUMENT_ALL_CLASSES) return
+        if (clazz.name in instrumentedClasses) return // already instrumented
+
+        if (shouldTransform(clazz, instrumentationMode)) {
+            instrumentedClasses += clazz.name
+            retransformClass(clazz)
+        } else if (isJavaLambdaClass(clazz.name)) {
+            val enclosingClassName = getJavaLambdaEnclosingClass(clazz.name)
+            ensureClassHierarchyIsTransformed(enclosingClassName)
+        }
+
+        // Traverse super classes, interfaces, and enclosing class
+        clazz.superclass?.also {
+            ensureClassHierarchyIsTransformed(it)
+        }
+        clazz.enclosingClass?.also {
+            ensureClassHierarchyIsTransformed(it)
+        }
+        clazz.interfaces.forEach {
+            ensureClassHierarchyIsTransformed(it)
         }
     }
 
     /**
-     * Ensures that the given object and all its referenced objects are transformed for Lincheck analysis.
+     * Ensures that the given object and all objects reachable from it are transformed for Lincheck analysis.
      * The function is called upon a test instance creation to ensure that
      * all the classes related to it are transformed.
      *
+     * The function should be called from an ignored section of the analysis.
      * If the INSTRUMENT_ALL_CLASSES flag is set to true, no transformation is performed.
      *
-     * @param obj the object to be transformed
+     * @param obj the object to be transformed.
      */
     fun ensureObjectIsTransformed(obj: Any) {
         if (INSTRUMENT_ALL_CLASSES) return
@@ -308,87 +344,29 @@ object LincheckJavaAgent {
     }
 
     /**
-     * Ensures that the given object and all its referenced objects are transformed according to the provided rules.
-     * The transformation is performed recursively, starting from the given object.
+     * Ensures that the given object and all objects reachable from it are transformed for Lincheck analysis.
      *
      * @param obj The object to be ensured for transformation.
-     * @param processedObjects A set of processed objects to avoid infinite recursion.
+     * @param processedObjects A set of already processed objects.
      */
     private fun ensureObjectIsTransformed(obj: Any, processedObjects: MutableSet<Any>) {
+        traverseObjectGraph(obj, processedObjects,
+            config = ObjectGraphTraversalConfig(
+                traverseStaticFields = true,
+            )
+        ) { obj ->
+            val shouldTransform = shouldTransform(obj.javaClass.name, instrumentationMode)
+            val shouldTraverse =
+                // optimization and safety net: do not traverse low-level
+                // class instances from the standard Java library
+                !isLowLevelJavaClass(obj.javaClass.name) ||
+                // unless the low-level class needs to be transformed
+                shouldTransform
 
-        // this function is used to transform traversed object's class
-        // and push additional objects-to-traverse to the queue
-        // (fields and array elements are traversed by default)
-        fun expandObject(obj: Any): List<Any> {
-            val clazz = obj.javaClass
-            val className = clazz.name
-            val objectsToTransform = mutableListOf<Any>()
-            when {
-                isJavaLambdaClass(className) -> {
-                    val enclosingClassName = getJavaLambdaEnclosingClass(className)
-                    if (enclosingClassName !in instrumentedClasses) {
-                        ensureClassHierarchyIsTransformed(Class.forName(enclosingClassName)) {
-                            objectsToTransform.add(it)
-                        }
-                    }
-                }
-                else -> if (shouldTransform(clazz, instrumentationMode)) {
-                    ensureClassHierarchyIsTransformed(clazz) {
-                        objectsToTransform.add(it)
-                    }
-                }
+            if (shouldTransform) {
+                ensureClassHierarchyIsTransformed(obj.javaClass)
             }
-            return objectsToTransform
-        }
-
-        // this function is used to decide what objects should be traversed further
-        fun shouldTraverseObject(obj: Any): Boolean =
-            // optimization and safety net: do not traverse low-level
-            // class instances from the standard Java library
-            !isLowLevelJavaClass(obj.javaClass.name) ||
-            // unless the low-level class needs to be transformed
-            shouldTransform(obj.javaClass, instrumentationMode)
-
-        traverseObjectGraph(obj, processedObjects, expandObject = ::expandObject) { obj ->
-            shouldTraverseObject(obj)
-        }
-    }
-
-    /**
-     * Ensures that the given class and all its superclasses are transformed.
-     *
-     * @param clazz The class to be transformed.
-     * @param transformObjectCallback A function called to transform objects discovered during
-     *   the traversal of class' static fields.
-     */
-    private fun ensureClassHierarchyIsTransformed(clazz: Class<*>, transformObjectCallback: (Any) -> Unit) {
-        if (clazz.name in instrumentedClasses) return // already instrumented
-
-        if (shouldTransform(clazz, instrumentationMode)) {
-            instrumentedClasses += clazz.name
-            retransformClass(clazz)
-        }
-
-        // Traverse static fields.
-        //
-        // NOTE: traverses only current class' fields, as the loop below will process
-        //   all superclasses' and interfaces' fields as a part of `ensureClassHierarchyIsTransformed`
-        for (field in clazz.declaredFields) {
-            // traverse only static non-primitive fields
-            if (!Modifier.isStatic(field.modifiers) || field.type.isPrimitive) continue
-            readFieldSafely(null, field).getOrNull()?.let {
-                transformObjectCallback(it)
-            }
-        }
-
-        // Traverse super classes, interfaces, and enclosing class
-        val classesToTransform =
-            listOfNotNull(clazz.superclass) +
-            listOfNotNull(clazz.enclosingClass) +
-            clazz.interfaces.asList()
-
-        classesToTransform.forEach {
-            ensureClassHierarchyIsTransformed(it, transformObjectCallback)
+            return@traverseObjectGraph shouldTraverse
         }
     }
 

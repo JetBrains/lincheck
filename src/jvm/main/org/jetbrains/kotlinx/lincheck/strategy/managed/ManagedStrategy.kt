@@ -1248,11 +1248,14 @@ internal abstract class ManagedStrategy(
     }
 
     override fun afterReadField(obj: Any?, codeLocation: Int, fieldId: Int, value: Any?) = runInsideIgnoredSection {
+        val eventId = getNextEventId()
+        val threadId = threadScheduler.getCurrentThreadId()
+        val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
+        if (fieldDescriptor.isStatic && value !== null && !value.isImmutable) {
+            LincheckJavaAgent.ensureClassHierarchyIsTransformed(value.javaClass)
+        }
         if (collectTrace) {
-            val eventId = getNextEventId()
-            val threadId = threadScheduler.getCurrentThreadId()
-            val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
-            if (value != null) {
+            if (value !== null) {
                 constants[value] = fieldDescriptor.fieldName
             }
             val valueRepresentation = objectTracker.getObjectRepresentation(value)

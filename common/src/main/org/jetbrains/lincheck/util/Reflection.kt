@@ -11,7 +11,28 @@
 package org.jetbrains.lincheck.util
 
 import java.lang.reflect.Field
-import java.util.ArrayList
+import java.util.concurrent.ConcurrentHashMap
+
+
+// We store the class references in a local map to avoid repeated Class.forName calls and reflection overhead
+
+/**
+ * Provides a thread-safe caching mechanism for [Class] lookup by its fully qualified class name.
+ */
+object ClassCache {
+    private val cache = ConcurrentHashMap<String, Class<*>>()
+
+    /**
+     * Retrieves the [Class] object associated with the given fully qualified class name.
+     * The method caches the result to avoid redundant lookups for the same class name.
+     *
+     * @param className the fully qualified name of the desired class
+     * @return the [Class] object representing the desired class
+     * @throws ClassNotFoundException if the class cannot be located by its name
+     */
+    fun forName(className: String): Class<*> =
+        cache.getOrPut(className) { Class.forName(className) }
+}
 
 /**
  * Returns all found fields in the hierarchy.
