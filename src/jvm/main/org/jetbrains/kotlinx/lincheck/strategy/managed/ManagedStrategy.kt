@@ -1608,8 +1608,12 @@ internal abstract class ManagedStrategy(
             deterministicMethodDescriptor,
         )
         // in case if a static method is called, ensure its class is instrumented
-        if (receiver == null && methodSection < AnalysisSectionType.ATOMIC) {
-            LincheckJavaAgent.ensureClassHierarchyIsTransformed(methodDescriptor.className)
+        if (methodSection < AnalysisSectionType.ATOMIC) {
+            if (receiver !== null) {
+                LincheckJavaAgent.ensureClassHierarchyIsTransformed(receiver.javaClass)
+            } else {
+                LincheckJavaAgent.ensureClassHierarchyIsTransformed(methodDescriptor.className)
+            }
         }
         // in the case of atomics API setter method call, notify the object tracker about a new link between objects
         if (atomicMethodDescriptor != null && atomicMethodDescriptor.kind.isSetter) {

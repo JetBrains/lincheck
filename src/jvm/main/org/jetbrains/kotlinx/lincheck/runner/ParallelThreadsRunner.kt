@@ -190,7 +190,8 @@ internal open class ParallelThreadsRunner(
             // that all the necessary classes and instrumented
             // after creating a test instance.
             if (!ensuredTestInstanceIsTransformed) {
-                LincheckJavaAgent.ensureObjectIsTransformed(testInstance)
+                // LincheckJavaAgent.ensureObjectIsTransformed(testInstance)
+                LincheckJavaAgent.ensureClassHierarchyIsTransformed(testInstance.javaClass)
                 ensuredTestInstanceIsTransformed = true
             }
         }
