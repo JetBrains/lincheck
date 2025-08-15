@@ -258,17 +258,32 @@ object LincheckJavaAgent {
     }
 
     /**
-     * Ensures that the specified class and all its superclasses are transformed.
+     * This function ensures that the whole hierarchy of the given class is transformed for Lincheck analysis.
      *
-     * This function is called before creating a new instance of the specified class
-     * or reading a static field of it. It ensures that the whole hierarchy of this class
-     * and the classes of all the static fields (this process is recursive) is transformed.
-     * Notably, some of these classes may not be loaded yet, and invoking the `<cinit>`
-     * during the analysis could cause non-deterministic behaviour (the class initialization
-     * is invoked only once, while Lincheck relies on the events reproducibility).
+     * For this function, under the term class hierarchy we assume the following set of classes:
+     * - class itself;
+     * - its superclasses;
+     * - its interfaces;
+     * - its enclosing class;
+     * - transitive closure of the above.
+     *
+     * Notably, some of these classes may not be loaded yet, and invoking the `<clinit>`
+     * during the analysis could cause non-deterministic behavior
+     * (the class initialization is invoked only once, while Lincheck relies on the events reproducibility).
      * To eliminate the issue, this function also loads the class before transformation,
-     * thus, initializing it here, in an ignored section of the analysis, re-transforming
-     * the class after that.
+     * thus, initializing it and re-transforming the class after that.
+     *
+     * Typically, this function should be called:
+     * - before creating a new instance of the specified class;
+     * - before reading a static field of the specified class;
+     * - before calling a static method of the specified class.
+     * As such, the invocation pattern of this function mimics the JVMS initialization semantics:
+     *   https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-5.html#jvms-5.5
+     * Also, naturally, this function should be called for the top-level class under analysis.
+     *
+     *
+     * The function should be called from an ignored section of the analysis.
+     * If the INSTRUMENT_ALL_CLASSES flag is set to true, no transformation is performed.
      *
      * @param className The name of the class to be transformed.
      */
@@ -284,13 +299,14 @@ object LincheckJavaAgent {
     }
 
     /**
-     * Ensures that the given object and all its referenced objects are transformed for Lincheck analysis.
+     * Ensures that the given object and all objects reachable from it are transformed for Lincheck analysis.
      * The function is called upon a test instance creation to ensure that
      * all the classes related to it are transformed.
      *
+     * The function should be called from an ignored section of the analysis.
      * If the INSTRUMENT_ALL_CLASSES flag is set to true, no transformation is performed.
      *
-     * @param obj the object to be transformed
+     * @param obj the object to be transformed.
      */
     fun ensureObjectIsTransformed(obj: Any) {
         if (INSTRUMENT_ALL_CLASSES) return
@@ -298,11 +314,10 @@ object LincheckJavaAgent {
     }
 
     /**
-     * Ensures that the given object and all its referenced objects are transformed according to the provided rules.
-     * The transformation is performed recursively, starting from the given object.
+     * Ensures that the given object and all objects reachable from it are transformed for Lincheck analysis.
      *
      * @param obj The object to be ensured for transformation.
-     * @param processedObjects A set of processed objects to avoid infinite recursion.
+     * @param processedObjects A set of already processed objects.
      */
     private fun ensureObjectIsTransformed(obj: Any, processedObjects: MutableSet<Any>) {
         traverseObjectGraph(obj, processedObjects,
@@ -326,7 +341,7 @@ object LincheckJavaAgent {
     }
 
     /**
-     * Ensures that the given class and all its superclasses are transformed.
+     * Ensures that the whole hierarchy of the given class is transformed for Lincheck analysis.
      *
      * @param clazz The class to be transformed.
      */
@@ -352,6 +367,26 @@ object LincheckJavaAgent {
         }
     }
 
+    /**
+     * Ensures that the value of the specified field in the given class is transformed for Lincheck analysis.
+     *
+     * Notably, this function **does not invoke** [ensureObjectIsTransformed]
+     * to transform all objects reachable from the given field,
+     * but rather only the [ensureClassHierarchyIsTransformed] on the class of the field value.
+     *
+     * Typically, this function should be called:
+     * - before reading a static field of the specified class.
+     * This is required to ensure that the read value is transformed as well.
+     * Otherwise, as the analysis might be invoked later, after the class is initialized,
+     * the transformation of the class might be skipped.
+     *
+     * The function should be called from an ignored section of the analysis.
+     * If the INSTRUMENT_ALL_CLASSES flag is set to true, no transformation is performed.
+     *
+     * @param className The fully qualified name of the class containing the field to transform.
+     * @param fieldName The name of the field in the specified class that needs to be transformed.
+     * @see ensureClassHierarchyIsTransformed
+     */
     fun ensureFieldValueIsTransformed(className: String, fieldName: String) {
         if (INSTRUMENT_ALL_CLASSES) return
         if (!shouldTransform(className, instrumentationMode)) return
