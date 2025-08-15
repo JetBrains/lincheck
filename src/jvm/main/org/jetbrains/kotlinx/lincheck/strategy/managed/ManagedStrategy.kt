@@ -1225,7 +1225,7 @@ internal abstract class ManagedStrategy(
         // The following call checks all the static fields.
         if (fieldDescriptor.isStatic) {
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(fieldDescriptor.className)
-            LincheckJavaAgent.ensureFieldValueIsTransformed(fieldDescriptor.className, fieldDescriptor.fieldName)
+            // LincheckJavaAgent.ensureFieldValueIsTransformed(fieldDescriptor.className, fieldDescriptor.fieldName)
         }
         // Do not track accesses to untracked objects
         if (!shouldTrackFieldAccess(obj, fieldDescriptor)) {
@@ -1249,11 +1249,14 @@ internal abstract class ManagedStrategy(
     }
 
     override fun afterReadField(obj: Any?, codeLocation: Int, fieldId: Int, value: Any?) = runInsideIgnoredSection {
+        val eventId = getNextEventId()
+        val threadId = threadScheduler.getCurrentThreadId()
+        val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
+        if (fieldDescriptor.isStatic && value !== null) {
+            LincheckJavaAgent.ensureClassHierarchyIsTransformed(value.javaClass)
+        }
         if (collectTrace) {
-            val eventId = getNextEventId()
-            val threadId = threadScheduler.getCurrentThreadId()
-            val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
-            if (value != null) {
+            if (value !== null) {
                 constants[value] = fieldDescriptor.fieldName
             }
             val valueRepresentation = objectTracker.getObjectRepresentation(value)

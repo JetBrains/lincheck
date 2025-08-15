@@ -345,7 +345,8 @@ object LincheckJavaAgent {
      *
      * @param clazz The class to be transformed.
      */
-    private fun ensureClassHierarchyIsTransformed(clazz: Class<*>) {
+    fun ensureClassHierarchyIsTransformed(clazz: Class<*>) {
+        if (INSTRUMENT_ALL_CLASSES) return
         if (clazz.name in instrumentedClasses) return // already instrumented
 
         if (shouldTransform(clazz, instrumentationMode)) {
