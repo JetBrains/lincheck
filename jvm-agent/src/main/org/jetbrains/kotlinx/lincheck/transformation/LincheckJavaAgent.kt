@@ -22,7 +22,6 @@ import org.jetbrains.kotlinx.lincheck.transformation.transformers.coroutineCalli
 import org.jetbrains.lincheck.util.Logger
 import org.jetbrains.lincheck.util.*
 import java.lang.instrument.Instrumentation
-import java.lang.reflect.Modifier
 import java.io.File
 import java.util.jar.JarFile
 import java.util.*
@@ -311,16 +310,18 @@ object LincheckJavaAgent {
                 traverseStaticFields = true,
             )
         ) { obj ->
-            ensureClassHierarchyIsTransformed(obj.javaClass)
-
-            val shouldTraverseObject =
+            val shouldTransform = shouldTransform(obj.javaClass, instrumentationMode)
+            val shouldTraverse =
                 // optimization and safety net: do not traverse low-level
                 // class instances from the standard Java library
                 !isLowLevelJavaClass(obj.javaClass.name) ||
                 // unless the low-level class needs to be transformed
-                shouldTransform(obj.javaClass, instrumentationMode)
+                shouldTransform
 
-            return@traverseObjectGraph shouldTraverseObject
+            if (shouldTransform) {
+                ensureClassHierarchyIsTransformed(obj.javaClass)
+            }
+            return@traverseObjectGraph shouldTraverse
         }
     }
 
