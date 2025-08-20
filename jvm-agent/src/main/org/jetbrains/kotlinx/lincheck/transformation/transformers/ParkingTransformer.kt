@@ -24,9 +24,10 @@ internal class ParkingTransformer(
     fileName: String,
     className: String,
     methodName: String,
+    metaInfo: MethodMetaInfo,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
-) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter, methodVisitor) {
+) : LincheckBaseMethodVisitor(fileName, className, methodName, metaInfo, adapter, methodVisitor) {
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
         when {

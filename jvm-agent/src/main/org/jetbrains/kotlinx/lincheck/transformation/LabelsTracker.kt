@@ -12,18 +12,18 @@ package org.jetbrains.kotlinx.lincheck.transformation
 
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
+import kotlin.time.measureTime
 
 /**
  * [LabelsTracker] tracks active regions of variables and status of the labels in the method.
  */
 internal class LabelsTracker(
     visitor: MethodVisitor,
-    val locals: MethodVariables,
-    val labels: MethodLabels
+    private val metaInfo: MethodMetaInfo
 ) : MethodVisitor(ASM_API, visitor) {
     override fun visitLabel(label: Label)  {
-        locals.visitLabel(label)
-        labels.visitLabel(label)
+        metaInfo.locals.visitLabel(label)
+        metaInfo.labels.visitLabel(label)
         super.visitLabel(label)
     }
 }

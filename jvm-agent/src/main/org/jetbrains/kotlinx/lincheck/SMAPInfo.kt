@@ -15,7 +15,7 @@ import java.io.IOException
 import java.io.Reader
 
 /**
- * Copied from intellij's [com.intellij.debugger.mockJDI.types.SMAPInfo]
+ * Copied and adapted from intellij's [com.intellij.debugger.mockJDI.types.SMAPInfo]
  */
 
 class SMAPInfo private constructor(smapReader: Reader) {

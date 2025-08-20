@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
+import org.jetbrains.kotlinx.lincheck.SMAPInfo
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.INSTRUMENT_ALL_CLASSES
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentationMode
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentedClasses
@@ -23,6 +24,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.io.StringWriter
 import java.io.PrintWriter
 import java.io.File
+import java.io.StringReader
 
 object LincheckClassFileTransformer : ClassFileTransformer {
     /*
@@ -87,11 +89,14 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         // MethodNode reset all labels on a re-visit (WHY?!).
         // Only one visit is possible to have labels stable.
         // Visiting components like `MethodNode.instructions` is safe.
-        val methodVariables = getMethodsLocalVariables(classNode)
-        val methodLabels = getMethodsLabels(classNode)
+        val metaInfo = ClassMetaInfo(
+            smap = getSMAP(classNode),
+            locals = getMethodsLocalVariables(classNode),
+            labels = getMethodsLabels(classNode)
+        )
 
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
-        val visitor = LincheckClassVisitor(writer, instrumentationMode, methodVariables, methodLabels)
+        val visitor = LincheckClassVisitor(writer, instrumentationMode, metaInfo)
         try {
             classNode.accept(visitor)
             writer.toByteArray().also {
@@ -154,6 +159,9 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         )
         .mapValues { MethodLabels(it.value) }
     }
+
+    private fun getSMAP(classNode: ClassNode): SMAPInfo? =
+        SMAPInfo.parse(StringReader(classNode.sourceDebug))
 
     private fun String.isOuterReceiverName() = this == "this$0"
 

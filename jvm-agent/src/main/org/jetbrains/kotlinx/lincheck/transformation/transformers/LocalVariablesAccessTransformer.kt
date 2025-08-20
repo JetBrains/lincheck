@@ -22,12 +22,12 @@ internal class LocalVariablesAccessTransformer(
     fileName: String,
     className: String,
     methodName: String,
+    metaInfo: MethodMetaInfo,
     desc: String,
     isStatic: Boolean,
-    private val locals: MethodVariables,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
-) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter, methodVisitor) {
+) : LincheckBaseMethodVisitor(fileName, className, methodName, metaInfo, adapter, methodVisitor) {
 
     private val numberOfLocals = convertAsmMethodType(desc).argumentTypes.size + if (isStatic) 0 else 1
 
@@ -112,7 +112,7 @@ internal class LocalVariablesAccessTransformer(
     }
 
     private fun getVariableName(varIndex: Int): LocalVariableInfo? {
-        return locals.activeVariables.find { it.index == varIndex }
+        return metaInfo.locals.activeVariables.find { it.index == varIndex }
     }
 
     private fun getVarInsOpcodeType(opcode: Int) = when (opcode) {

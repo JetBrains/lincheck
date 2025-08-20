@@ -32,9 +32,10 @@ internal class ObjectCreationMinimalTransformer(
     fileName: String,
     className: String,
     methodName: String,
+    metaInfo: MethodMetaInfo,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
-) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter, methodVisitor) {
+) : LincheckBaseMethodVisitor(fileName, className, methodName, metaInfo, adapter, methodVisitor,) {
 
     override fun visitTypeInsn(opcode: Int, type: String) = adapter.run {
         if (opcode == NEW && shouldTransform(type.toCanonicalClassName(), InstrumentationMode.TRACE_RECORDING)) {

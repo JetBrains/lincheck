@@ -11,6 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckBaseMethodVisitor
+import org.jetbrains.kotlinx.lincheck.transformation.MethodMetaInfo
 import org.jetbrains.kotlinx.lincheck.transformation.invokeIfInAnalyzedCode
 import org.jetbrains.kotlinx.lincheck.transformation.invokeStatic
 import org.objectweb.asm.MethodVisitor
@@ -29,9 +30,10 @@ internal class ConstantHashCodeTransformer(
     fileName: String,
     className: String,
     methodName: String,
+    metaInfo: MethodMetaInfo,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor
-) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter, methodVisitor) {
+) : LincheckBaseMethodVisitor(fileName, className, methodName, metaInfo, adapter, methodVisitor) {
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
         when {

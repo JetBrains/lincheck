@@ -21,6 +21,7 @@ internal open class LincheckBaseMethodVisitor(
     protected val fileName: String,
     protected val className: String,
     protected val methodName: String,
+    protected val metaInfo: MethodMetaInfo,
     val adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor
 ) : MethodVisitor(ASM_API, methodVisitor) {
