@@ -14,6 +14,9 @@ import java.io.BufferedReader
 import java.io.IOException
 import java.io.Reader
 
+const val KOTLIN_STRATA_NAME = "Kotlin"
+const val KOTLIN_DEBUG_STRATA_NAME = "KotlinDebug"
+
 /**
  * Copied and adapted from intellij's [com.intellij.debugger.mockJDI.types.SMAPInfo]
  */

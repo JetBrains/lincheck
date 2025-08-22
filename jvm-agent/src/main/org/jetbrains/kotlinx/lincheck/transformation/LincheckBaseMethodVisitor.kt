@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
+import org.jetbrains.kotlinx.lincheck.KOTLIN_STRATA_NAME
 import org.jetbrains.lincheck.descriptors.AccessPath
 import org.jetbrains.lincheck.descriptors.CodeLocations
 import org.jetbrains.lincheck.util.ideaPluginEnabled
