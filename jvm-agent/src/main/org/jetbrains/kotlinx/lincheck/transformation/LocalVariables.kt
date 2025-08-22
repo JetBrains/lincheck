@@ -67,7 +67,7 @@ data class MethodVariables(val variables: LocalVariablesMap = emptyMap()) {
     private val varsByName = variables.values.flatten().groupBy { it.name }
     private val activeVars: MutableSet<LocalVariableInfo> = mutableSetOf()
 
-    val hasInlines = variables.values.flatten().any { it.isInlineCallMarker }
+    val hasInlines = variables.values.flatten().any { it.isInlineCallMarker || it.isInlineLambdaMarker }
 
     fun visitLabel(label: Label?) {
         if (label != null) {

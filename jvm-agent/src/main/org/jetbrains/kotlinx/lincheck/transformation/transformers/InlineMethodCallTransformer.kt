@@ -63,7 +63,8 @@ internal class InlineMethodCallTransformer(
     // Cleanup when a problem will be solved properly.
     private val looksLikeBlocklistedMethod =
         (className == "kotlinx/coroutines/channels/BroadcastChannelImpl") ||
-        (className == "kotlinx/coroutines/JobSupport\$Finishing")
+        (className == "kotlinx/coroutines/JobSupport\$Finishing") ||
+        (className == "kotlinx/coroutines/JobSupport")
 
     // Sort local variables by their end labels (latest label goes first)
     // and then by index if labels are the same (to have a stable result).
@@ -339,10 +340,16 @@ internal class InlineMethodCallTransformer(
     // TODO Find out what the exact problem is here with "recoverStackTrace"
     //  and "synchronized" from kotlinx.coroutines.internal
     //  It is related to DR-278 and DR-279
+    //  Last two is lambdas for ReentrantReadWriteLock.{read|write|, whcih could lead to problems
+    //  Example is: CachedValueWithTTL.getOrCompute() in Intellij Monorepo
+    //  package com.intellij.openapi.projectRoots.impl.jdkDownloader
+    //  Yes, it is too broad, need to fix this.
     private fun isSupportedInline(lvar: LocalVariableInfo) = !lvar.name.endsWith("\$atomicfu")
             && lvar.inlineMethodName != "recoverStackTrace"
             && lvar.inlineMethodName != "synchronized"
             && lvar.inlineMethodName != "synchronizedImpl"
+            && lvar.inlineMethodName != "read\$Lambda"
+            && lvar.inlineMethodName != "write\$Lambda"
 
     private fun GeneratorAdapter.invokeIfTrueAndInAnalyzedCode(
         ifOpcode: Int,
