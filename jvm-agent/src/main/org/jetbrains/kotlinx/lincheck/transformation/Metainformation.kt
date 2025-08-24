@@ -13,7 +13,7 @@ package org.jetbrains.kotlinx.lincheck.transformation
 import org.jetbrains.kotlinx.lincheck.SMAPInfo
 
 internal data class ClassMetaInfo (
-    val smap: SMAPInfo?,
+    val smap: SMAPInfo,
     val locals: Map<String, MethodVariables>,
     val labels: Map<String, MethodLabels>
 ) {
@@ -26,7 +26,7 @@ internal data class ClassMetaInfo (
 }
 
 internal data class MethodMetaInfo(
-    val smap: SMAPInfo?,
+    val smap: SMAPInfo,
     val locals: MethodVariables,
     val labels: MethodLabels
 )

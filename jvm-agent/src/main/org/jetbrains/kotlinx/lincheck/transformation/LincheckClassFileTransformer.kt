@@ -24,7 +24,6 @@ import java.util.concurrent.ConcurrentHashMap
 import java.io.StringWriter
 import java.io.PrintWriter
 import java.io.File
-import java.io.StringReader
 
 object LincheckClassFileTransformer : ClassFileTransformer {
     /*
@@ -160,8 +159,8 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         .mapValues { MethodLabels(it.value) }
     }
 
-    private fun getSMAP(classNode: ClassNode): SMAPInfo? =
-        SMAPInfo.parse(StringReader(classNode.sourceDebug))
+    private fun getSMAP(classNode: ClassNode): SMAPInfo =
+        SMAPInfo(classNode.sourceDebug)
 
     private fun String.isOuterReceiverName() = this == "this$0"
 
