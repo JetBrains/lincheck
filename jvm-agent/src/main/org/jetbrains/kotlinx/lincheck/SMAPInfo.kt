@@ -118,6 +118,8 @@ class SMAPInfo {
             }
             private set
 
+        private var initialized = false
+
         override fun equals(other: Any?): Boolean {
             return (other is LineStratum)
                     && (lti == other.lti)
@@ -132,21 +134,22 @@ class SMAPInfo {
         }
 
         private fun calculateSourceInfo() {
-                if (sourceName != null) {
-                    // already done
-                    return
-                }
-                val fti = stiFileTableIndex(sti, lti)
-                if (fti == -1) {
-                    throw InternalError(
-                        "Bad SourceDebugExtension, no matching source id " +
-                                lineTable[lti].fileId + " jplsLine: " + jplsLine
-                    )
-                }
-                val ftr: FileTableRecord = fileTable[fti]
-                sourceName = ftr.sourceName
-                className = ftr.className
+            if (initialized) {
+                // already done
+                return
             }
+            val fti = stiFileTableIndex(sti, lti)
+            if (fti == -1) {
+                throw InternalError(
+                    "Bad SourceDebugExtension, no matching source id " +
+                            lineTable[lti].fileId + " jplsLine: " + jplsLine
+                )
+            }
+            val ftr: FileTableRecord = fileTable[fti]
+            sourceName = ftr.sourceName
+            className = ftr.className
+            initialized = true
+        }
     }
 
     private val fileTable: MutableList<FileTableRecord> = mutableListOf()
@@ -159,19 +162,14 @@ class SMAPInfo {
     private var baseStratumIndex = -2 /* so as not to match -1 above */
     private var sdePos = 0
 
-    val sourceDebugExtension: String
-    var jplsFilename: String? = null
-    var defaultStratumId: String? = null
-    var isValid: Boolean = false
+    private val sourceDebugExtension: String
+    private var jplsFilename: String = ""
+    private var defaultStratumId: String? = null
+    private var isValid: Boolean = false
 
     constructor(sourceDebugExtension: String) {
         this.sourceDebugExtension = sourceDebugExtension
         decode()
-    }
-
-    internal constructor() {
-        sourceDebugExtension = ""
-        createProxyForAbsentSDE()
     }
 
     private fun sdePeek(): Char {
@@ -194,10 +192,6 @@ class SMAPInfo {
 
     private fun syntax() {
         throw InternalError("Invalid SourceDebugExtension syntax - position $sdePos, raw: \"$sourceDebugExtension\"")
-    }
-
-    private fun syntax(msg: String) {
-        throw InternalError("Invalid SourceDebugExtension syntax: $msg")
     }
 
     private fun readLine(): String {
@@ -226,19 +220,19 @@ class SMAPInfo {
 
     private fun stratumTableIndex(stratumId: String?): Int {
         if (stratumId == null) {
-            return defaultStratumTableIndex()
+            return defaultStratumIndex
         }
         for (i in 0 ..< stratumTable.size) {
             if (stratumTable[i].id == stratumId) {
                 return i
             }
         }
-        return defaultStratumTableIndex()
+        return -1
     }
 
-    private fun stratum(stratumID: String?): Stratum {
+    private fun stratum(stratumID: String?): Stratum? {
         val sti = stratumTableIndex(stratumID)
-        return Stratum(sti)
+        return if (sti < 0) null else Stratum(sti)
     }
 
     fun availableStrata(): List<String> {
@@ -251,15 +245,14 @@ class SMAPInfo {
         return strata
     }
 
-    fun getLine(stratumID: String?, jplsLine: Int): LineAndSourcePath? {
-        val lineStratum: LineStratum? = stratum(stratumID).lineStratum(jplsLine)
-        if (lineStratum == null) return null
-        return LineAndSourcePath(lineStratum.lineNumber(), lineStratum.sourceName!!)
+    fun getLine(stratumID: String?, jplsLine: Int): LineClassAndSourcePath? {
+        val lineStratum: LineStratum = stratum(stratumID)?.lineStratum(jplsLine) ?: return null
+        return LineClassAndSourcePath(lineStratum.lineNumber(), lineStratum.sourceName!!, lineStratum.className)
     }
 
-    data class LineAndSourcePath(val line: Int, val sourceName: String)
+    data class LineClassAndSourcePath(val line: Int, val sourceName: String, val className: String?)
 
-    fun ignoreWhite() {
+    private fun ignoreWhite() {
         var ch: Char
 
         while (((sdePeek().also { ch = it }) == ' ') || (ch == '\t')) {
@@ -267,7 +260,7 @@ class SMAPInfo {
         }
     }
 
-    fun ignoreLine() {
+    private fun ignoreLine() {
         var ch: Char
 
         while (((sdeRead().also { ch = it }) != '\n') && (ch != '\r')) {
@@ -279,7 +272,7 @@ class SMAPInfo {
         ignoreWhite() /* leading white */
     }
 
-    fun readNumber(): Int {
+    private fun readNumber(): Int {
         var value = 0
         var positive = true
         var ch: Char
@@ -298,7 +291,7 @@ class SMAPInfo {
         return if (positive) value else -value
     }
 
-    fun fileLine() {
+    private fun fileLine() {
         /* is there a class name (in spec it is an absolute filename)? */
         val hasClassName = if (sdePeek() == '+') {
             sdeAdvance()
@@ -329,7 +322,7 @@ class SMAPInfo {
      * <NJ-start-line> [ # <file-id> ] [ , <line-count> ] :
      * <J-start-line> [ , <line-increment> ] CR
     </line-increment></J-start-line></line-count></file-id></NJ-start-line> */
-    fun lineLine() {
+    private fun lineLine() {
         var lineCount = 1
         var lineIncrement = 1
         val njplsStart: Int
@@ -377,7 +370,7 @@ class SMAPInfo {
      * Until the next stratum section, everything after this
      * is in stratumId - so, store the current indices.
      */
-    fun storeStratum(stratumId: String) {
+    private fun storeStratum(stratumId: String) {
         /* remove redundant strata */
         if (stratumTable.isNotEmpty()) {
             if ((stratumTable.last().fileIndex == fileTable.size) &&
@@ -401,18 +394,18 @@ class SMAPInfo {
     /**
      * The beginning of a stratum's info
      */
-    fun stratumSection() {
+    private fun stratumSection() {
         storeStratum(readLine())
     }
 
-    fun fileSection() {
+    private fun fileSection() {
         ignoreLine()
         while (sdePeek() != '*') {
             fileLine()
         }
     }
 
-    fun lineSection() {
+    private fun lineSection() {
         ignoreLine()
         while (sdePeek() != '*') {
             lineLine()
@@ -422,7 +415,7 @@ class SMAPInfo {
     /**
      * Ignore a section we don't know about.
      */
-    fun ignoreSection() {
+    private fun ignoreSection() {
         ignoreLine()
         while (sdePeek() != '*') {
             ignoreLine()
@@ -434,7 +427,7 @@ class SMAPInfo {
      * it is not in the SourceDebugExtension.
      * Create the base stratum.
      */
-    fun createJavaStratum() {
+    private fun createJavaStratum() {
         baseStratumIndex = stratumTable.size
         storeStratum(BASE_STRATUM_NAME)
         fileTable.add(
@@ -462,16 +455,18 @@ class SMAPInfo {
      * Decode a SourceDebugExtension which is in SourceMap format.
      * This is the entry point into the recursive descent parser.
      */
-    fun decode() {
+    private fun decode() {
         /* check for "SMAP" - allow EOF if not ours */
-        if ((sourceDebugExtension!!.length < 4) ||
+        if ((sourceDebugExtension.length < 4) ||
             (sdeRead() != 'S') ||
             (sdeRead() != 'M') ||
             (sdeRead() != 'A') ||
             (sdeRead() != 'P')
         ) {
+            createProxyForAbsentSDE()
             return  /* not our info */
         }
+
         ignoreLine() /* flush the rest */
         jplsFilename = readLine()
         defaultStratumId = readLine()
@@ -496,8 +491,8 @@ class SMAPInfo {
         }
     }
 
-    fun createProxyForAbsentSDE() {
-        jplsFilename = null
+    private fun createProxyForAbsentSDE() {
+        jplsFilename = ""
         defaultStratumId = BASE_STRATUM_NAME
         defaultStratumIndex = stratumTable.size
         createJavaStratum()

@@ -10,7 +10,6 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
-import org.jetbrains.kotlinx.lincheck.KOTLIN_STRATA_NAME
 import org.jetbrains.lincheck.descriptors.AccessPath
 import org.jetbrains.lincheck.descriptors.CodeLocations
 import org.jetbrains.lincheck.util.ideaPluginEnabled
@@ -40,7 +39,12 @@ internal open class LincheckBaseMethodVisitor(
     }
 
     protected fun loadNewCodeLocationId(accessPath: AccessPath? = null): Int = adapter.run {
-        val stackTraceElement = StackTraceElement(className, methodName, fileName, lineNumber)
+        val info = metaInfo.smap.getLine("Kotlin", lineNumber)
+        val stackTraceElement = if (info != null) {
+            StackTraceElement(info.className?.toCanonicalClassName()?.substringAfterLast(".") ?: "", methodName, info.sourceName, info.line)
+        } else {
+            StackTraceElement(className, methodName, fileName, lineNumber)
+        }
         val codeLocationId = CodeLocations.newCodeLocation(stackTraceElement, accessPath)
         push(codeLocationId)
         return codeLocationId

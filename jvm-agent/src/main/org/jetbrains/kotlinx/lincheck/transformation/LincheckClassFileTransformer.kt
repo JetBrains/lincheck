@@ -160,7 +160,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
     }
 
     private fun getSMAP(classNode: ClassNode): SMAPInfo =
-        SMAPInfo(classNode.sourceDebug)
+        SMAPInfo(classNode.sourceDebug ?: "")
 
     private fun String.isOuterReceiverName() = this == "this$0"
 
