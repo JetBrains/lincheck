@@ -343,6 +343,7 @@ internal class InlineMethodCallTransformer(
     //  Last two is lambdas for ReentrantReadWriteLock.{read|write|, whcih could lead to problems
     //  Example is: CachedValueWithTTL.getOrCompute() in Intellij Monorepo
     //  package com.intellij.openapi.projectRoots.impl.jdkDownloader
+    //  Also `com.intellij.ide.starter.telemetry.computeWithSpan` (monorepo)
     //  Yes, it is too broad, need to fix this.
     private fun isSupportedInline(lvar: LocalVariableInfo) = !lvar.name.endsWith("\$atomicfu")
             && lvar.inlineMethodName != "recoverStackTrace"
@@ -350,6 +351,8 @@ internal class InlineMethodCallTransformer(
             && lvar.inlineMethodName != "synchronizedImpl"
             && lvar.inlineMethodName != "read\$Lambda"
             && lvar.inlineMethodName != "write\$Lambda"
+            && lvar.inlineMethodName != "computeWithSpan\$Lambda"
+            && lvar.inlineMethodName != "synchronized\$Lambda"
 
     private fun GeneratorAdapter.invokeIfTrueAndInAnalyzedCode(
         ifOpcode: Int,
