@@ -11,19 +11,20 @@
 package org.jetbrains.kotlinx.lincheck.transformation
 
 import org.jetbrains.kotlinx.lincheck.SMAPInfo
+import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.INSTRUMENT_ALL_CLASSES
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentationMode
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentedClasses
-import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
 import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.*
 import org.objectweb.asm.tree.ClassNode
+import java.io.File
+import java.io.PrintWriter
+import java.io.StringWriter
 import java.lang.instrument.ClassFileTransformer
+import java.nio.charset.Charset
 import java.security.ProtectionDomain
 import java.util.concurrent.ConcurrentHashMap
-import java.io.StringWriter
-import java.io.PrintWriter
-import java.io.File
 
 object LincheckClassFileTransformer : ClassFileTransformer {
     /*
@@ -89,7 +90,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         // Only one visit is possible to have labels stable.
         // Visiting components like `MethodNode.instructions` is safe.
         val metaInfo = ClassMetaInfo(
-            smap = getSMAP(classNode),
+            smap = getSMAP(classNode, reader),
             locals = getMethodsLocalVariables(classNode),
             labels = getMethodsLabels(classNode)
         )
@@ -159,8 +160,40 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         .mapValues { MethodLabels(it.value) }
     }
 
-    private fun getSMAP(classNode: ClassNode): SMAPInfo =
-        SMAPInfo(classNode.sourceDebug ?: "")
+    private const val CONSTANT_UTF8_TAG = 1
+    private const val SMAP_START = "SMAP\n"
+    private const val SMAP_END = "*E\n"
+
+    private fun getSMAP(classNode: ClassNode, classReader: ClassReader): SMAPInfo {
+        // Try to get SMAP for Kotlin easy way
+        if (classNode.sourceDebug != null) {
+            return SMAPInfo(classNode.sourceDebug)
+        }
+
+        // Try to get it from a constant pool, attribute `sourceDebugExtension` can be stripped down by JVM:
+        // https://youtrack.jetbrains.com/issue/KT-53438
+        // Unfortunately, `classNode.invisibleAnnotations` can be stripped too, so we need to
+        // parse constant pool manually. Start from the end, as SMAP is written last by the kotlin compiler.
+        var buffer: ByteArray? = null
+        // Zero index in a constant pool is always 0, why?
+        for (idx in classReader.itemCount - 1 downTo 1) {
+            val offset = classReader.getItem(idx) - 1
+            // Sometimes offset = 0 even in the middle of constant pool
+            if (offset < 0) continue
+            val tag = classReader.readByte(offset)
+            // Check only UTF-8 tags
+            if (tag != CONSTANT_UTF8_TAG) continue
+            val len = classReader.readUnsignedShort(offset + 1)
+            if (buffer == null || buffer.size < len) buffer = ByteArray(len)
+            // We cannot call `ClassReader.readUTF8()` as it requires an offset to index, not to data
+            // And `ClassReader.readUtf()` is package-private in ClassReader
+            val str = readUtf(classReader, offset + 3, len, buffer)
+            if (str.startsWith(SMAP_START) && str.endsWith(SMAP_END)) {
+                return SMAPInfo(str)
+            }
+        }
+        return SMAPInfo("")
+    }
 
     private fun String.isOuterReceiverName() = this == "this$0"
 
@@ -199,4 +232,12 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         //  we should try to fix lazy class re-transformation logic
         isCoroutineDispatcherInternalClass(className) ||
         isCoroutineConcurrentKtInternalClass(className)
+
+    private fun readUtf(classReader: ClassReader, utfOffset: Int, utfLength: Int, buffer: ByteArray): String {
+        for (offset in 0 ..< utfLength) {
+            buffer[offset] = (classReader.readByte(offset + utfOffset) and 0xff).toByte()
+        }
+        return String(buffer, 0, utfLength, Charsets.UTF_8)
+    }
+
 }
