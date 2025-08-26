@@ -10,6 +10,9 @@
 
 package org.jetbrains.lincheck.trace
 
+import org.jetbrains.lincheck.descriptors.AccessLocation
+import org.jetbrains.lincheck.descriptors.AccessPath
+import org.jetbrains.lincheck.descriptors.ArrayElementByNameAccessLocation
 import org.jetbrains.lincheck.descriptors.ClassDescriptor
 import org.jetbrains.lincheck.descriptors.FieldDescriptor
 import org.jetbrains.lincheck.descriptors.MethodDescriptor
@@ -19,6 +22,7 @@ import java.nio.ByteBuffer
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.absoluteValue
+import kotlin.text.get
 
 // Buffer for saving trace in one piece
 private const val OUTPUT_BUFFER_SIZE: Int = 16 * 1024 * 1024
@@ -140,7 +144,7 @@ internal interface TraceWriter : DataOutput, Closeable {
 /**
  * Interface to check and mark if a given piece of reference data was already stored.
  */
-private interface ContextSavingState {
+internal interface ContextSavingState {
     fun isClassDescriptorSaved(id: Int): Boolean
     fun markClassDescriptorSaved(id: Int)
     fun isMethodDescriptorSaved(id: Int): Boolean
@@ -153,15 +157,26 @@ private interface ContextSavingState {
     fun markCodeLocationSaved(id: Int)
 
     /**
-     * Return positive string id if it was stored already and negative string id if it should be stored
+     * Return positive string id, if it was stored already, and negative, if it should be stored
      * with absolute value of this id.
      */
     fun isStringSaved(value: String): Int
 
     /**
-     * Mark string as stored. Do nothing if string was not passed tp [isStringSaved].
+     * Mark string as stored. Do nothing if it was not passed to [isStringSaved].
      */
     fun markStringSaved(value: String)
+
+    /**
+     * Return positive access path id, if it was stored already, and negative, if it should be stored
+     * with absolute value of this id.
+     */
+    fun isAccessPathSaved(value: AccessPath): Int
+
+    /**
+     * Mark access path as stored. Do nothing if it was not passed to [isAccessPathSaved].
+     */
+    fun markAccessPathSaved(value: AccessPath)
 }
 
 private sealed class TraceWriterBase(
@@ -305,11 +320,13 @@ private sealed class TraceWriterBase(
         if (contextState.isCodeLocationSaved(id)) return
 
         val codeLocation = context.stackTrace(id)
+        val accessPath = context.accessPath(id)
         // All strings only once. It will have duplications with class and method descriptors,
-        // but size loss is negligible and this way is simplier
+        // but size loss is negligible and this way is simpler
         val fileNameId = writeString(codeLocation.fileName)
         val classNameId = writeString(codeLocation.className)
         val methodNameId = writeString(codeLocation.methodName)
+        val accessPathId = writeAccessPath(accessPath)
 
         // Code location into data and position into index
         val position = currentDataPosition
@@ -319,6 +336,7 @@ private sealed class TraceWriterBase(
         data.writeInt(classNameId)
         data.writeInt(methodNameId)
         data.writeInt(codeLocation.lineNumber)
+        data.writeInt(accessPathId)
         contextState.markCodeLocationSaved(id)
 
         writeIndexCell(ObjectKind.CODE_LOCATION, id, position, -1)
@@ -341,6 +359,89 @@ private sealed class TraceWriterBase(
         writeIndexCell(ObjectKind.STRING, -id, position, -1)
 
         return -id
+    }
+
+    /**
+     * Writes access path [value] to the output stream.
+     *
+     * The method gets an order of all access paths that are inside the [value], in which
+     * they should be serialized (innermost go first -- top-sort).
+     * After that method first serializes all dependencies of the all access locations inside
+     * each access path and then saves access paths in top-sort order.
+     *
+     * ```
+     * first: [variable descriptor 1] [field descriptor 1] [variable descriptor 2] ...
+     * then: [ACCESS_LOCATION] [id 1] [locations count] [location type] [data] [location type] [data] ...
+     *       [ACCESS_LOCATION] [id 2] [locations count] [location type] [data] ...
+     * ```
+     *
+     * Such order is required, because [AccessPath] is a recursive structure, which may contain another access paths inside.
+     * They should come first in the serialization order for easier deserialization later. So when we need to construct
+     * an [AccessLocation] which expects [AccessPath] as an argument, we would be sure that it is
+     * present in the trace context and can be retrieved via id. So such locations are serialized the folowwing way:
+     * ```
+     * [location type] [another access path id]
+     * ```
+     *
+     * Also, each location inside access path may contain variable/field descriptors, which also should be
+     * serialized beforehand for easier deserialization later. Their structure looks similar way:
+     * ```
+     * [location type] [field/variable descriptor id]
+     * ```
+     */
+    private fun writeAccessPath(value: AccessPath?): Int {
+        check(!inTracepointBody) { "Cannot save reference data inside tracepoint" }
+        if (value == null) return -1
+
+        val id = contextState.isAccessPathSaved(value)
+        if (id > 0) return id
+
+        val savingOrder = collectAccessPathsInSavingOrder(value)
+        writeAccessPaths(savingOrder)
+        return -id
+    }
+
+    private fun writeAccessPaths(savingOrder: List<AccessPath>) {
+        savingOrder
+            // first, we save all references of every location inside each access path
+            .onEach { value ->
+                value.locations.forEach { location ->
+                    location.saveReferences(this, context)
+                }
+            }
+            // then, save the access paths in correct order
+            .onEach { value ->
+                val position = currentDataPosition
+                val id = contextState.isAccessPathSaved(value)
+                if (id > 0) return@onEach // already saved
+
+                data.writeKind(ObjectKind.ACCESS_PATH)
+                data.writeInt(-id)
+                data.writeInt(value.locations.size)
+
+                value.locations.forEach { location ->
+                    location.save(this, context, contextState)
+                }
+
+                contextState.markAccessPathSaved(value)
+                writeIndexCell(ObjectKind.ACCESS_PATH, -id, position, -1)
+            }
+    }
+
+    private fun collectAccessPathsInSavingOrder(value: AccessPath): List<AccessPath> {
+        val order = mutableListOf<AccessPath>()
+        collectAccessPathsInSavingOrder(value, mutableSetOf(), order)
+        return order
+    }
+
+    private fun collectAccessPathsInSavingOrder(current: AccessPath, visited: MutableSet<AccessPath>, order: MutableList<AccessPath>) {
+        visited.add(current)
+        current.locations.forEach { location ->
+            if (location is ArrayElementByNameAccessLocation && !visited.contains(location.indexAccessPath)) {
+                collectAccessPathsInSavingOrder(location.indexAccessPath, visited, order)
+            }
+        }
+        order.add(current)
     }
 
     protected fun resetTracepointState() {
@@ -441,7 +542,29 @@ private class SimpleContextSavingState: ContextSavingState {
     private var seenFieldDescriptors = BooleanArray(1024)
     private var seenVariableDescriptors = BooleanArray(1024)
     private var seenCodeLocations = BooleanArray(65536)
-    private val stringCache = mutableMapOf<String, Int>()
+//    private val stringCache = mutableMapOf<String, Int>()
+    private val stringCache = Enumerator<String>()
+    private val accessPathCache = Enumerator<AccessPath>()
+
+    private class Enumerator<T : Any> {
+        private val cache = mutableMapOf<T, Int>()
+
+        fun isSaved(value: T): Int {
+            val id = cache[value]
+            if (id != null && id > 0) {
+                return id
+            }
+            cache[value] = -(cache.size + 1)
+            return -cache.size
+        }
+
+        fun makeSaved(value: T) {
+            val id = cache[value]
+            if (id != null && id < 0) {
+                cache[value] = -id
+            }
+        }
+    }
 
     override fun isClassDescriptorSaved(id: Int): Boolean {
         return id < seenClassDescriptors.size && seenClassDescriptors[id]
@@ -489,19 +612,29 @@ private class SimpleContextSavingState: ContextSavingState {
     }
 
     override fun isStringSaved(value: String): Int {
-        val id = stringCache[value]
-        if (id != null && id > 0) {
-            return id
-        }
-        stringCache[value] = -(stringCache.size + 1)
-        return -stringCache.size
+        return stringCache.isSaved(value)
+//        val id = stringCache[value]
+//        if (id != null && id > 0) {
+//            return id
+//        }
+//        stringCache[value] = -(stringCache.size + 1)
+//        return -stringCache.size
     }
 
     override fun markStringSaved(value: String) {
-        val id = stringCache[value]
-        if (id != null && id < 0) {
-            stringCache[value] = -id
-        }
+        stringCache.makeSaved(value)
+//        val id = stringCache[value]
+//        if (id != null && id < 0) {
+//            stringCache[value] = -id
+//        }
+    }
+
+    override fun isAccessPathSaved(value: AccessPath): Int {
+        return accessPathCache.isSaved(value)
+    }
+
+    override fun markAccessPathSaved(value: AccessPath) {
+        accessPathCache.makeSaved(value)
     }
 
     private fun ensureSize(map: BooleanArray, id: Int): BooleanArray {
@@ -608,10 +741,27 @@ class FileStreamingTraceCollecting(
     private var seenFieldDescriptors = AtomicBitmap()
     private var seenVariableDescriptors = AtomicBitmap()
     private var seenCodeLocations = AtomicBitmap()
-    private val stringCache = ConcurrentHashMap<String, Int>()
-    private val stringIdGenerator = AtomicInteger(1)
+    private val stringEnumerator = Enumerator<String>()
+    private val accessPathEnumerator = Enumerator<AccessPath>()
+//    private val stringCache = ConcurrentHashMap<String, Int>()
+//    private val stringIdGenerator = AtomicInteger(1)
 
     private val writers = ConcurrentHashMap<Thread, BufferedTraceWriter>()
+
+    private class Enumerator<T : Any> {
+        private val idGenerator = AtomicInteger(1)
+        private val cache = ConcurrentHashMap<T, Int>()
+
+        fun isSaved(value: T): Int {
+            val id = cache.computeIfAbsent(value) { _ -> -idGenerator.getAndIncrement() }
+            return id
+        }
+
+        fun makeSaved(value: T) {
+            // Make positive!
+            cache.compute(value) { _, v -> v?.absoluteValue }
+        }
+    }
 
     init {
         data.writeLong(TRACE_MAGIC)
@@ -729,13 +879,23 @@ class FileStreamingTraceCollecting(
     override fun markCodeLocationSaved(id: Int): Unit = seenCodeLocations.set(id)
 
     override fun isStringSaved(value: String): Int {
-        val id = stringCache.computeIfAbsent(value) { _ -> -stringIdGenerator.getAndIncrement() }
-        return id
+        return stringEnumerator.isSaved(value)
+//        val id = stringCache.computeIfAbsent(value) { _ -> -stringIdGenerator.getAndIncrement() }
+//        return id
     }
 
     override fun markStringSaved(value: String) {
-        // Make positive!
-        stringCache.compute(value) { _, v -> v?.absoluteValue }
+        stringEnumerator.makeSaved(value)
+//        // Make positive!
+//        stringCache.compute(value) { _, v -> v?.absoluteValue }
+    }
+
+    override fun isAccessPathSaved(value: AccessPath): Int {
+        return accessPathEnumerator.isSaved(value)
+    }
+
+    override fun markAccessPathSaved(value: AccessPath) {
+        accessPathEnumerator.makeSaved(value)
     }
 }
 

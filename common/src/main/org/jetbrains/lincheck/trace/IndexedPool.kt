@@ -22,10 +22,19 @@ class IndexedPool<T> {
     }
 
     @Synchronized
+    fun getId(item: T): Int {
+        check(index.containsKey(item)) { "Element $item is not found in pool" }
+        return index[item]!!
+    }
+
+    @Synchronized
     fun getOrCreateId(item: T): Int = index.getOrPut(item) {
         items.add(item)
         items.lastIndex
     }
+
+    @Synchronized
+    fun contains(item: T): Boolean = index.contains(item)
 
     val content: List<T?> get() = items
 

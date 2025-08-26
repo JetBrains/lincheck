@@ -42,12 +42,22 @@ internal enum class ObjectKind {
     FIELD_DESCRIPTOR,
     VARIABLE_DESCRIPTOR,
     STRING,
+    ACCESS_PATH,
     CODE_LOCATION,
     TRACEPOINT,
     TRACEPOINT_FOOTER,
     BLOCK_START,
     BLOCK_END,
     EOF
+}
+
+internal enum class AccessLocationKind {
+    LOCAL_VARIABLE,
+    STATIC_FIELD,
+    OBJECT_FIELD,
+    ARRAY_ELEMENT_BY_INDEX,
+    ARRAY_ELEMENT_BY_NAME,
+    UNKNOWN
 }
 
 internal fun DataOutput.writeType(value: Types.Type) {
@@ -159,8 +169,45 @@ internal fun DataInput.readVariableDescriptor(): VariableDescriptor {
     return VariableDescriptor(readUTF())
 }
 
+internal fun DataInput.readAccessLocation(
+    context: TraceContext,
+    codeLocs: CodeLocationsContext,
+): AccessLocation {
+    val type = readByte().toInt()
+    val kind = if (type >= 0 && type < AccessLocationKind.entries.size) AccessLocationKind.entries[type]
+               else AccessLocationKind.UNKNOWN
+    when (kind) {
+        AccessLocationKind.LOCAL_VARIABLE -> {
+            val variableDescriptorId = readInt()
+            val variableDescriptor = context.getVariableDescriptor(variableDescriptorId)
+            return LocalVariableAccessLocation(variableDescriptor)
+        }
+        AccessLocationKind.STATIC_FIELD -> {
+            val fieldDescriptorId = readInt()
+            val fieldDescriptor = context.getFieldDescriptor(fieldDescriptorId)
+            return StaticFieldAccessLocation(fieldDescriptor)
+        }
+        AccessLocationKind.OBJECT_FIELD -> {
+            val fieldDescriptorId = readInt()
+            val fieldDescriptor = context.getFieldDescriptor(fieldDescriptorId)
+            return ObjectFieldAccessLocation(fieldDescriptor)
+        }
+        AccessLocationKind.ARRAY_ELEMENT_BY_INDEX -> {
+            val index = readInt()
+            return ArrayElementByIndexAccessLocation(index)
+        }
+        AccessLocationKind.ARRAY_ELEMENT_BY_NAME -> {
+            val accessPathId = readInt()
+            val accessPath = codeLocs.getLoadedAccessPath(accessPathId)
+            return ArrayElementByNameAccessLocation(accessPath)
+        }
+        AccessLocationKind.UNKNOWN -> error("Unknown access location kind: read byte is $type, while expected one of: ${AccessLocationKind.entries.map { it.ordinal }.joinToString(", ")}")
+    }
+}
 
 internal fun DataOutput.writeKind(value: ObjectKind): Unit = writeByte(value.ordinal)
+
+internal fun DataOutput.writeLocationKind(value: AccessLocationKind): Unit = writeByte(value.ordinal)
 
 internal fun DataInput.readKind(): ObjectKind {
     val ordinal = readByte()

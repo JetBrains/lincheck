@@ -74,6 +74,7 @@ val ArrayLengthAccessLocation = ObjectFieldAccessLocation(
     )
 )
 
+// TODO: add comparison?
 class AccessPath(val locations: List<AccessLocation>) {
 
     constructor(location: AccessLocation) : this(listOf(location))

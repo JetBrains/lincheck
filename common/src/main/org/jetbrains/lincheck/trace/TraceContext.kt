@@ -34,11 +34,17 @@ class TraceContext {
 
     val classDescriptors: List<ClassDescriptor?> get() = classes.content
 
+//    fun hasClassDescriptor(classDescriptor: ClassDescriptor): Boolean = classDescriptors.contains(classDescriptor)
+
     fun getOrCreateClassId(className: String): Int {
         return classes.getOrCreateId(ClassDescriptor(className))
     }
 
     fun getClassDescriptor(classId: Int): ClassDescriptor = classes[classId]
+
+//    fun getClassDescriptorId(classDescriptor: ClassDescriptor): Int {
+//        return classes.getId(classDescriptor)
+//    }
 
     fun restoreClassDescriptor(id: Int, value: ClassDescriptor) {
         classes.restore(id, value)
@@ -71,6 +77,9 @@ class TraceContext {
 
     val fieldDescriptors: List<FieldDescriptor?> get() = fields.content
 
+    fun hasFieldDescriptor(field: FieldDescriptor): Boolean =
+        fields.contains(field)
+
     fun getOrCreateFieldId(className: String, fieldName: String, isStatic: Boolean, isFinal: Boolean): Int {
         return fields.getOrCreateId(
             FieldDescriptor(
@@ -89,11 +98,17 @@ class TraceContext {
     fun getFieldDescriptor(fieldId: Int): FieldDescriptor =
         fields[fieldId]
 
+    fun getFieldDescriptorId(field: FieldDescriptor): Int =
+        fields.getId(field)
+
     fun restoreFieldDescriptor(id: Int, value: FieldDescriptor) {
         fields.restore(id, value)
     }
 
     val variableDescriptors: List<VariableDescriptor?> get() = variables.content
+
+    fun hasVariableDescriptor(variable: VariableDescriptor): Boolean =
+        variables.contains(variable)
 
     fun getOrCreateVariableId(variableName: String): Int {
         return variables.getOrCreateId(VariableDescriptor(variableName))
@@ -104,6 +119,9 @@ class TraceContext {
 
     fun getVariableDescriptor(variableId: Int): VariableDescriptor =
         variables[variableId]
+
+    fun getVariableDescriptorId(variable: VariableDescriptor): Int =
+        variables.getId(variable)
 
     fun restoreVariableDescriptor(id: Int, value: VariableDescriptor) {
         variables.restore(id, value)
