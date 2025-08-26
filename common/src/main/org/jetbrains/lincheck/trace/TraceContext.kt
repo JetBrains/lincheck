@@ -34,17 +34,11 @@ class TraceContext {
 
     val classDescriptors: List<ClassDescriptor?> get() = classes.content
 
-//    fun hasClassDescriptor(classDescriptor: ClassDescriptor): Boolean = classDescriptors.contains(classDescriptor)
-
     fun getOrCreateClassId(className: String): Int {
         return classes.getOrCreateId(ClassDescriptor(className))
     }
 
     fun getClassDescriptor(classId: Int): ClassDescriptor = classes[classId]
-
-//    fun getClassDescriptorId(classDescriptor: ClassDescriptor): Int {
-//        return classes.getId(classDescriptor)
-//    }
 
     fun restoreClassDescriptor(id: Int, value: ClassDescriptor) {
         classes.restore(id, value)
@@ -68,8 +62,7 @@ class TraceContext {
     fun getMethodDescriptor(className: String, methodName: String, desc: String): MethodDescriptor =
         getMethodDescriptor(getOrCreateMethodId(className, methodName, desc))
 
-    fun getMethodDescriptor(methodId: Int): MethodDescriptor =
-        methods[methodId]
+    fun getMethodDescriptor(methodId: Int): MethodDescriptor = methods[methodId]
 
     fun restoreMethodDescriptor(id: Int, value: MethodDescriptor) {
         methods.restore(id, value)
@@ -77,11 +70,12 @@ class TraceContext {
 
     val fieldDescriptors: List<FieldDescriptor?> get() = fields.content
 
-    fun hasFieldDescriptor(field: FieldDescriptor): Boolean =
-        fields.contains(field)
+    fun hasFieldDescriptor(field: FieldDescriptor): Boolean {
+        return fields.contains(field)
+    }
 
     fun getOrCreateFieldId(className: String, fieldName: String, isStatic: Boolean, isFinal: Boolean): Int {
-        return fields.getOrCreateId(
+        return getOrCreateFieldId(
             FieldDescriptor(
                 context = this,
                 classId = getOrCreateClassId(className),
@@ -92,14 +86,14 @@ class TraceContext {
         )
     }
 
+    fun getOrCreateFieldId(field: FieldDescriptor): Int {
+        return fields.getOrCreateId(field)
+    }
+
     fun getFieldDescriptor(className: String, fieldName: String, isStatic: Boolean, isFinal: Boolean): FieldDescriptor =
         getFieldDescriptor(getOrCreateFieldId(className, fieldName, isStatic, isFinal))
 
-    fun getFieldDescriptor(fieldId: Int): FieldDescriptor =
-        fields[fieldId]
-
-    fun getFieldDescriptorId(field: FieldDescriptor): Int =
-        fields.getId(field)
+    fun getFieldDescriptor(fieldId: Int): FieldDescriptor = fields[fieldId]
 
     fun restoreFieldDescriptor(id: Int, value: FieldDescriptor) {
         fields.restore(id, value)
@@ -107,21 +101,22 @@ class TraceContext {
 
     val variableDescriptors: List<VariableDescriptor?> get() = variables.content
 
-    fun hasVariableDescriptor(variable: VariableDescriptor): Boolean =
-        variables.contains(variable)
+    fun hasVariableDescriptor(variable: VariableDescriptor): Boolean {
+        return variables.contains(variable)
+    }
 
     fun getOrCreateVariableId(variableName: String): Int {
-        return variables.getOrCreateId(VariableDescriptor(variableName))
+        return getOrCreateVariableId(VariableDescriptor(variableName))
+    }
+
+    fun getOrCreateVariableId(variableDescriptor: VariableDescriptor): Int {
+        return variables.getOrCreateId(variableDescriptor)
     }
 
     fun getVariableDescriptor(variableName: String): VariableDescriptor =
         getVariableDescriptor(getOrCreateVariableId(variableName))
 
-    fun getVariableDescriptor(variableId: Int): VariableDescriptor =
-        variables[variableId]
-
-    fun getVariableDescriptorId(variable: VariableDescriptor): Int =
-        variables.getId(variable)
+    fun getVariableDescriptor(variableId: Int): VariableDescriptor = variables[variableId]
 
     fun restoreVariableDescriptor(id: Int, value: VariableDescriptor) {
         variables.restore(id, value)

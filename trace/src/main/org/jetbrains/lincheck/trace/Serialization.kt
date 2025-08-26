@@ -22,7 +22,6 @@ import java.nio.ByteBuffer
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.absoluteValue
-import kotlin.text.get
 
 // Buffer for saving trace in one piece
 private const val OUTPUT_BUFFER_SIZE: Int = 16 * 1024 * 1024
@@ -431,6 +430,9 @@ private sealed class TraceWriterBase(
         return rootId
     }
 
+    /**
+     * @return all `AccessPath`s, reachable from [value], in top-sort order (from innermost to outermost).
+     */
     private fun collectAccessPathsInSavingOrder(value: AccessPath): List<AccessPath> {
         val order = mutableListOf<AccessPath>()
         collectAccessPathsInSavingOrder(value, mutableSetOf(), order)
