@@ -547,7 +547,6 @@ private class SimpleContextSavingState: ContextSavingState {
     private var seenFieldDescriptors = BooleanArray(1024)
     private var seenVariableDescriptors = BooleanArray(1024)
     private var seenCodeLocations = BooleanArray(65536)
-//    private val stringCache = mutableMapOf<String, Int>()
     private val stringCache = Enumerator<String>()
     private val accessPathCache = Enumerator<AccessPath>()
 
@@ -618,20 +617,10 @@ private class SimpleContextSavingState: ContextSavingState {
 
     override fun isStringSaved(value: String): Int {
         return stringCache.isSaved(value)
-//        val id = stringCache[value]
-//        if (id != null && id > 0) {
-//            return id
-//        }
-//        stringCache[value] = -(stringCache.size + 1)
-//        return -stringCache.size
     }
 
     override fun markStringSaved(value: String) {
         stringCache.makeSaved(value)
-//        val id = stringCache[value]
-//        if (id != null && id < 0) {
-//            stringCache[value] = -id
-//        }
     }
 
     override fun isAccessPathSaved(value: AccessPath): Int {
@@ -748,8 +737,6 @@ class FileStreamingTraceCollecting(
     private var seenCodeLocations = AtomicBitmap()
     private val stringEnumerator = Enumerator<String>()
     private val accessPathEnumerator = Enumerator<AccessPath>()
-//    private val stringCache = ConcurrentHashMap<String, Int>()
-//    private val stringIdGenerator = AtomicInteger(1)
 
     private val writers = ConcurrentHashMap<Thread, BufferedTraceWriter>()
 
@@ -883,25 +870,13 @@ class FileStreamingTraceCollecting(
 
     override fun markCodeLocationSaved(id: Int): Unit = seenCodeLocations.set(id)
 
-    override fun isStringSaved(value: String): Int {
-        return stringEnumerator.isSaved(value)
-//        val id = stringCache.computeIfAbsent(value) { _ -> -stringIdGenerator.getAndIncrement() }
-//        return id
-    }
+    override fun isStringSaved(value: String): Int = stringEnumerator.isSaved(value)
 
-    override fun markStringSaved(value: String) {
-        stringEnumerator.makeSaved(value)
-//        // Make positive!
-//        stringCache.compute(value) { _, v -> v?.absoluteValue }
-    }
+    override fun markStringSaved(value: String): Unit = stringEnumerator.makeSaved(value)
 
-    override fun isAccessPathSaved(value: AccessPath): Int {
-        return accessPathEnumerator.isSaved(value)
-    }
+    override fun isAccessPathSaved(value: AccessPath): Int = accessPathEnumerator.isSaved(value)
 
-    override fun markAccessPathSaved(value: AccessPath) {
-        accessPathEnumerator.makeSaved(value)
-    }
+    override fun markAccessPathSaved(value: AccessPath): Unit = accessPathEnumerator.makeSaved(value)
 }
 
 /**
