@@ -56,6 +56,19 @@ data class LocalVariableInfo(
             return null
         }
 
+    val lambdaCallerInlineName: String?
+        get() {
+            if (!isInlineLambdaMarker) {
+                return null
+            }
+            val match = INLINE_LAMBDA_PATTERN.matchEntire(name)
+            if (match != null) {
+                return match.groups["inlineName"]?.value ?: "<unknown inline>"
+            } else {
+                return null
+            }
+        }
+
     val startLabel = labelIndexRange.first
     val endLabel = labelIndexRange.second
 }

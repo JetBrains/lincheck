@@ -45,6 +45,7 @@ internal class InlineMethodCallTransformer(
     )
 
     private companion object {
+        const val REPORT_LAMBDAS_WITHOUT_PARENTS = false
         val objectType: String = getObjectType("java/lang/Object").className
         val contType: String = getObjectType("kotlin/coroutines/Continuation").className
     }
@@ -106,6 +107,8 @@ internal class InlineMethodCallTransformer(
             .filter { it.inlineMethodName != methodName && isSupportedInline(it) }
             .sortedWith(localVarInlineStartComparator)
         ) {
+            // This cannot be inserted into `.filter` above because top-of-stack can change in this loop
+            if (isNakedLambda(lvar)) continue
             inlineStack.add(
                 emitInlineMethodPrologue(lvar)
             )
@@ -345,7 +348,8 @@ internal class InlineMethodCallTransformer(
     //  package com.intellij.openapi.projectRoots.impl.jdkDownloader
     //  Also `com.intellij.ide.starter.telemetry.computeWithSpan` (monorepo)
     //  Yes, it is too broad, need to fix this.
-    private fun isSupportedInline(lvar: LocalVariableInfo) = !lvar.name.endsWith("\$atomicfu")
+    private fun isSupportedInline(lvar: LocalVariableInfo): Boolean =
+              !lvar.name.endsWith("\$atomicfu")
             && lvar.inlineMethodName != "recoverStackTrace"
             && lvar.inlineMethodName != "synchronized"
             && lvar.inlineMethodName != "synchronizedImpl"
@@ -353,6 +357,28 @@ internal class InlineMethodCallTransformer(
             && lvar.inlineMethodName != "write\$Lambda"
             && lvar.inlineMethodName != "computeWithSpan\$Lambda"
             && lvar.inlineMethodName != "synchronized\$Lambda"
+
+    private fun isNakedLambda(lvar: LocalVariableInfo): Boolean {
+        if (!lvar.isInlineLambdaMarker || REPORT_LAMBDAS_WITHOUT_PARENTS) return false
+        if (inlineStack.isEmpty()) return true
+        // Do we have such thing in stack?
+        // It could be not top-of-the-stack, as it can be passed through
+        // several intermediate inline functions
+        // Maybe, there is possibly some tricky situation with nested lambdas for same call
+        // So, check for "open" one
+        var lambdasSeen = 0
+        for (stackElement in inlineStack.reversed()) {
+            if (stackElement.lvar.inlineMethodName == lvar.lambdaCallerInlineName) {
+                // No lambdas with the same name on stack — it is our caller, lambda is not naked
+                if (lambdasSeen == 0) return false
+                // We have seen lambdas with the same name on stack, this caller "consume" one
+                lambdasSeen--
+            } else if (stackElement.lvar.isInlineLambdaMarker && stackElement.lvar.inlineMethodName == lvar.inlineMethodName) {
+                lambdasSeen++
+            }
+        }
+        return true
+    }
 
     private fun GeneratorAdapter.invokeIfTrueAndInAnalyzedCode(
         ifOpcode: Int,
