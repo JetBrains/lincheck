@@ -81,6 +81,16 @@ class AccessPath(val locations: List<AccessLocation>) {
 
     constructor(vararg locations: AccessLocation) : this(locations.toList())
 
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is AccessPath) return false
+        return locations == other.locations
+    }
+
+    override fun hashCode(): Int {
+        return locations.hashCode()
+    }
+
     override fun toString(): String {
         val builder = StringBuilder()
 

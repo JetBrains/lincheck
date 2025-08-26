@@ -393,15 +393,14 @@ private sealed class TraceWriterBase(
         check(!inTracepointBody) { "Cannot save reference data inside tracepoint" }
         if (value == null) return -1
 
-        val id = contextState.isAccessPathSaved(value)
-        if (id > 0) return id
-
         val savingOrder = collectAccessPathsInSavingOrder(value)
-        writeAccessPaths(savingOrder)
-        return -id
+        val id = writeAccessPaths(value, savingOrder)
+        return id
     }
 
-    private fun writeAccessPaths(savingOrder: List<AccessPath>) {
+    private fun writeAccessPaths(root: AccessPath, savingOrder: List<AccessPath>): Int {
+        var rootId = 0
+
         savingOrder
             // first, we save all references of every location inside each access path
             .onEach { value ->
@@ -413,6 +412,7 @@ private sealed class TraceWriterBase(
             .onEach { value ->
                 val position = currentDataPosition
                 val id = contextState.isAccessPathSaved(value)
+                if (value == root) rootId = id.absoluteValue
                 if (id > 0) return@onEach // already saved
 
                 data.writeKind(ObjectKind.ACCESS_PATH)
@@ -426,6 +426,9 @@ private sealed class TraceWriterBase(
                 contextState.markAccessPathSaved(value)
                 writeIndexCell(ObjectKind.ACCESS_PATH, -id, position, -1)
             }
+
+        check(rootId > 0) { "Root access path $root was not added to the saved access paths: $savingOrder" }
+        return rootId
     }
 
     private fun collectAccessPathsInSavingOrder(value: AccessPath): List<AccessPath> {

@@ -162,7 +162,7 @@ internal class CodeLocationsContext {
                     /* fileName = */ stringCache[value.fileName] ?: "<unknown file>",
                     /* lineNumber = */ value.lineNumber
                 )
-                val accessPath = accessPathsCache[value.accessPath]
+                val accessPath = if (value.accessPath == -1) null else accessPathsCache[value.accessPath]
                 val location = CodeLocation(stackTraceElement, accessPath)
                 context.restoreCodeLocation(id, location)
             }
