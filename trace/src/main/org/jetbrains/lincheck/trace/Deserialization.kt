@@ -151,8 +151,6 @@ internal class CodeLocationsContext {
 
     fun loadCodeLocation(id: Int, value: ShallowCodeLocation): Unit = load(shallowCodeLocations, id, value)
 
-    // TODO: add shallow access path here as well and its restoring
-
     fun restoreAllCodeLocations(context: TraceContext) {
         shallowCodeLocations.forEachIndexed { id, value ->
             if (value != null) {
