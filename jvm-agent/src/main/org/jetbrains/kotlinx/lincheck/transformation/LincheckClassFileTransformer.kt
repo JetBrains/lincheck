@@ -10,7 +10,6 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
-import org.jetbrains.kotlinx.lincheck.transformation.SMAPInfo
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.INSTRUMENT_ALL_CLASSES
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentationMode
@@ -89,7 +88,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         // Only one visit is possible to have labels stable.
         // Visiting components like `MethodNode.instructions` is safe.
         val metaInfo = ClassInformation(
-            smap = getSMAP(classNode, reader),
+            smap = readClassSMAP(classNode, reader),
             locals = getMethodsLocalVariables(classNode),
             labels = getMethodsLabels(classNode)
         )
@@ -163,7 +162,18 @@ object LincheckClassFileTransformer : ClassFileTransformer {
     private const val SMAP_START = "SMAP\n"
     private const val SMAP_END = "*E\n"
 
-    private fun getSMAP(classNode: ClassNode, classReader: ClassReader): SMAPInfo {
+    /**
+     *  This function trys to get SMAP (SourceDebugExtension, SDE, JSR45) from parsed class.
+     * It try official SourceDebugExtension first. It could fail, as JVM strips it
+     * together with invisible annotations when runs without debugger attached.
+     *
+     *  Kotlin compiler saves its SMAP twice: as proper SourceDebugExtension attribute and
+     * as value of RuntimeInvisibleAnnotation. Again, RuntimeInvisibleAnnotation are stripped by JVM
+     * if there is no debugger attached, but its value still lives in constant pool.
+     *
+     *  This code trys to find SMAP in constant pool as a last resort (see ticket KT-53438).
+     */
+    private fun readClassSMAP(classNode: ClassNode, classReader: ClassReader): SMAPInfo {
         // Try to get SMAP for Kotlin easy way
         if (classNode.sourceDebug != null) {
             return SMAPInfo(classNode.sourceDebug)
