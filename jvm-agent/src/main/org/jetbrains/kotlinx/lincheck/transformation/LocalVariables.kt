@@ -56,6 +56,19 @@ data class LocalVariableInfo(
             return null
         }
 
+    val lambdaCallerInlineName: String?
+        get() {
+            if (!isInlineLambdaMarker) {
+                return null
+            }
+            val match = INLINE_LAMBDA_PATTERN.matchEntire(name)
+            if (match != null) {
+                return match.groups["inlineName"]?.value ?: "<unknown inline>"
+            } else {
+                return null
+            }
+        }
+
     val startLabel = labelIndexRange.first
     val endLabel = labelIndexRange.second
 }
@@ -67,7 +80,7 @@ data class MethodVariables(val variables: LocalVariablesMap = emptyMap()) {
     private val varsByName = variables.values.flatten().groupBy { it.name }
     private val activeVars: MutableSet<LocalVariableInfo> = mutableSetOf()
 
-    val hasInlines = variables.values.flatten().any { it.isInlineCallMarker }
+    val hasInlines = variables.values.flatten().any { it.isInlineCallMarker || it.isInlineLambdaMarker }
 
     fun visitLabel(label: Label?) {
         if (label != null) {

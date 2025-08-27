@@ -18,21 +18,21 @@ Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------ |
 | operation()                                                                                                                          |
 |   INSTANCE.nextBytes(ByteArray#1): ByteArray#1 at CustomRandomBytesCallRepresentationTest.operation(RandomRepresentationTests.kt:52) |
-|     nextBytes(ByteArray#1, 0, 10): ByteArray#1 at Random.nextBytes(Random.kt:253)                                                    |
-|       nextInt(): 0 at Random.nextBytes(Random.kt:229)                                                                                |
-|         nextBits(32): 0 at Random.nextInt(Random.kt:40)                                                                              |
-|       ByteArray#1[0] = 0 at Random.nextBytes(Random.kt:230)                                                                          |
-|       ByteArray#1[1] = 0 at Random.nextBytes(Random.kt:231)                                                                          |
-|       ByteArray#1[2] = 0 at Random.nextBytes(Random.kt:232)                                                                          |
-|       ByteArray#1[3] = 0 at Random.nextBytes(Random.kt:233)                                                                          |
-|       nextInt(): 0 at Random.nextBytes(Random.kt:229)                                                                                |
-|         nextBits(32): 0 at Random.nextInt(Random.kt:40)                                                                              |
-|       ByteArray#1[4] = 0 at Random.nextBytes(Random.kt:230)                                                                          |
-|       ByteArray#1[5] = 0 at Random.nextBytes(Random.kt:231)                                                                          |
-|       ByteArray#1[6] = 0 at Random.nextBytes(Random.kt:232)                                                                          |
-|       ByteArray#1[7] = 0 at Random.nextBytes(Random.kt:233)                                                                          |
-|       nextBits(16): 0 at Random.nextBytes(Random.kt:238)                                                                             |
-|       ByteArray#1[8] = 0 at Random.nextBytes(Random.kt:240)                                                                          |
-|       ByteArray#1[9] = 0 at Random.nextBytes(Random.kt:240)                                                                          |
+|     nextBytes(ByteArray#1, 0, 10): ByteArray#1 at Random.nextBytes(Random.kt:255)                                                    |
+|       nextInt(): 0 at Random.nextBytes(Random.kt:231)                                                                                |
+|         nextBits(32): 0 at Random.nextInt(Random.kt:42)                                                                              |
+|       ByteArray#1[0] = 0 at Random.nextBytes(Random.kt:232)                                                                          |
+|       ByteArray#1[1] = 0 at Random.nextBytes(Random.kt:233)                                                                          |
+|       ByteArray#1[2] = 0 at Random.nextBytes(Random.kt:234)                                                                          |
+|       ByteArray#1[3] = 0 at Random.nextBytes(Random.kt:235)                                                                          |
+|       nextInt(): 0 at Random.nextBytes(Random.kt:231)                                                                                |
+|         nextBits(32): 0 at Random.nextInt(Random.kt:42)                                                                              |
+|       ByteArray#1[4] = 0 at Random.nextBytes(Random.kt:232)                                                                          |
+|       ByteArray#1[5] = 0 at Random.nextBytes(Random.kt:233)                                                                          |
+|       ByteArray#1[6] = 0 at Random.nextBytes(Random.kt:234)                                                                          |
+|       ByteArray#1[7] = 0 at Random.nextBytes(Random.kt:235)                                                                          |
+|       nextBits(16): 0 at Random.nextBytes(Random.kt:240)                                                                             |
+|       ByteArray#1[8] = 0 at Random.nextBytes(Random.kt:242)                                                                          |
+|       ByteArray#1[9] = 0 at Random.nextBytes(Random.kt:242)                                                                          |
 |   result: void                                                                                                                       |
 | ------------------------------------------------------------------------------------------------------------------------------------ |
