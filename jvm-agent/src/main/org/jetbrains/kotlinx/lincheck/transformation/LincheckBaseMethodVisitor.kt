@@ -39,9 +39,9 @@ internal open class LincheckBaseMethodVisitor(
     }
 
     protected fun loadNewCodeLocationId(accessPath: AccessPath? = null): Int = adapter.run {
-        val info = metaInfo.smap.getLine("Kotlin", lineNumber)
-        val stackTraceElement = if (info != null) {
-            StackTraceElement(info.className?.toCanonicalClassName()?.substringAfterLast(".") ?: "", methodName, info.sourceName, info.line)
+        val mappedLocation = metaInfo.smap.getLine("Kotlin", lineNumber)
+        val stackTraceElement = if (mappedLocation != null) {
+            StackTraceElement(mappedLocation.className ?: "", methodName, mappedLocation.sourceName, mappedLocation.line)
         } else {
             StackTraceElement(className, methodName, fileName, lineNumber)
         }

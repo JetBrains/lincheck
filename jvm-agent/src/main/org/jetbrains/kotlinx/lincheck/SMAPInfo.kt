@@ -12,6 +12,9 @@ package org.jetbrains.kotlinx.lincheck
 
 import java.util.*
 
+/*
+  This code was heavily adapted from `SDE.java` from IDEA monorepo.
+ */
 class SMAPInfo {
     private data class FileTableRecord(
         val fileId: Int,

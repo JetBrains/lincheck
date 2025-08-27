@@ -186,7 +186,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             if (buffer == null || buffer.size < len) buffer = ByteArray(len)
             // We cannot call `ClassReader.readUTF8()` as it requires an offset to index, not to data
             // And `ClassReader.readUtf()` is package-private in ClassReader
-            val str = readUtf(classReader, offset + 3, len, buffer)
+            val str = readUTF(classReader, offset + 3, len, buffer)
             if (str.startsWith(SMAP_START) && str.endsWith(SMAP_END)) {
                 return SMAPInfo(str)
             }
@@ -232,7 +232,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         isCoroutineDispatcherInternalClass(className) ||
         isCoroutineConcurrentKtInternalClass(className)
 
-    private fun readUtf(classReader: ClassReader, utfOffset: Int, utfLength: Int, buffer: ByteArray): String {
+    private fun readUTF(classReader: ClassReader, utfOffset: Int, utfLength: Int, buffer: ByteArray): String {
         for (offset in 0 ..< utfLength) {
             buffer[offset] = (classReader.readByte(offset + utfOffset) and 0xff).toByte()
         }
