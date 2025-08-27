@@ -2324,6 +2324,14 @@ internal abstract class ManagedStrategy(
         )
     }
 
+    override fun beforeLoopIterationStarts(loopId: Int) {
+        // TODO
+    }
+
+    override fun beforeLoopIterationFinishes(loopId: Int) {
+        // TODO
+    }
+
     // == IDEA PLUGIN INTEGRATION METHODS ==
 
     fun enableReplayModeForIdeaPlugin() {

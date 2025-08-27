@@ -590,6 +590,24 @@ public class Injections {
         getEventTracker().onInlineMethodCallException(methodId, t);
     }
 
+    /**
+     * Called before a loop iteration starts.
+     *
+     * @param loopId the ID of the loop
+     */
+    public static void beforeLoopIterationStarts(int loopId) {
+        getEventTracker().beforeLoopIterationStarts(loopId);
+    }
+
+    /**
+     * Called before a loop iteration finishes.
+     *
+     * @param finishedIterations the number of finished iterations
+     */
+    public static void beforeLoopIterationFinishes(int finishedIterations) {
+        getEventTracker().beforeLoopIterationFinishes(finishedIterations);
+    }
+
     // == Methods required for the IDEA Plugin integration ==
 
     /**

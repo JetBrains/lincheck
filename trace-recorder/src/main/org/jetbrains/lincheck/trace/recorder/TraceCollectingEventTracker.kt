@@ -156,6 +156,13 @@ class TraceCollectingEventTracker(
     private val threads = ConcurrentHashMap<Thread, ThreadData>()
 
     private val strategy: TraceCollectingStrategy
+    override fun beforeLoopIterationStarts(loopId: Int) {
+        // TODO
+    }
+
+    override fun beforeLoopIterationFinishes(finishedIterations: Int) {
+        // TODO
+    }
 
     init {
         when (mode) {
