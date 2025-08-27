@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
-import org.jetbrains.kotlinx.lincheck.SMAPInfo
+import org.jetbrains.kotlinx.lincheck.transformation.SMAPInfo
 
 /**
  *  This class consolidates all information about class extracted after
