@@ -22,7 +22,6 @@ import java.io.File
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.lang.instrument.ClassFileTransformer
-import java.nio.charset.Charset
 import java.security.ProtectionDomain
 import java.util.concurrent.ConcurrentHashMap
 
@@ -89,7 +88,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         // MethodNode reset all labels on a re-visit (WHY?!).
         // Only one visit is possible to have labels stable.
         // Visiting components like `MethodNode.instructions` is safe.
-        val metaInfo = ClassMetaInfo(
+        val metaInfo = ClassInformation(
             smap = getSMAP(classNode, reader),
             locals = getMethodsLocalVariables(classNode),
             labels = getMethodsLabels(classNode)

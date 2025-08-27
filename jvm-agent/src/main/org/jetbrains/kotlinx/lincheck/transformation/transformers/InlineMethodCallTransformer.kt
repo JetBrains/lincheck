@@ -31,7 +31,7 @@ internal class InlineMethodCallTransformer(
     fileName: String,
     className: String,
     methodName: String,
-    metaInfo: MethodMetaInfo,
+    metaInfo: MethodInformation,
     desc: String,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor

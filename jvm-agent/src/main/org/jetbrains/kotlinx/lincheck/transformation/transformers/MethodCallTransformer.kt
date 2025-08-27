@@ -31,7 +31,7 @@ internal class MethodCallTransformer(
     fileName: String,
     className: String,
     methodName: String,
-    metaInfo: MethodMetaInfo,
+    metaInfo: MethodInformation,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
 ) : MethodCallTransformerBase(fileName, className, methodName, metaInfo, adapter, methodVisitor) {

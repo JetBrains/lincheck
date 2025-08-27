@@ -20,7 +20,7 @@ internal class ConstructorArgumentsSnapshotTrackerTransformer(
     fileName: String,
     className: String,
     methodName: String,
-    metaInfo: MethodMetaInfo,
+    metaInfo: MethodInformation,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
     // `SafeClassWriter::isInstanceOf` method which checks the subclassing without loading the classes to VM

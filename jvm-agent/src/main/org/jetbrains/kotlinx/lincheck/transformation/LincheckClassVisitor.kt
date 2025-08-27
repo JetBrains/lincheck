@@ -22,7 +22,7 @@ import org.jetbrains.lincheck.util.*
 internal class LincheckClassVisitor(
     private val classVisitor: SafeClassWriter,
     private val instrumentationMode: InstrumentationMode,
-    private val classMetaInfo: ClassMetaInfo
+    private val classInformation: ClassInformation
 ) : ClassVisitor(ASM_API, classVisitor) {
     private var classVersion = 0
 
@@ -71,7 +71,7 @@ internal class LincheckClassVisitor(
     ): MethodVisitor {
         val isStatic = (access and ACC_STATIC != 0)
         val isNative = (access and ACC_NATIVE != 0)
-        val metaInfo = this@LincheckClassVisitor.classMetaInfo.methodMetaInfo(methodName, desc)
+        val metaInfo = this@LincheckClassVisitor.classInformation.methodInformation(methodName, desc)
 
         var mv = super.visitMethod(access, methodName, desc, signature, exceptions)
 
@@ -325,7 +325,7 @@ internal class LincheckClassVisitor(
     private fun applySynchronizationTrackingTransformers(
         access: Int,
         methodName: String,
-        metaInfo: MethodMetaInfo,
+        metaInfo: MethodInformation,
         adapter: GeneratorAdapter,
         methodVisitor: MethodVisitor,
     ): MethodVisitor {
@@ -342,7 +342,7 @@ internal class LincheckClassVisitor(
 
     private fun applySharedMemoryAccessTransformer(
         methodName: String,
-        metaInfo: MethodMetaInfo,
+        metaInfo: MethodInformation,
         adapter: GeneratorAdapter,
         methodVisitor: MethodVisitor,
     ): SharedMemoryAccessTransformer {
@@ -360,7 +360,7 @@ internal class LincheckClassVisitor(
         access: Int,
         methodName: String,
         descriptor: String,
-        metaInfo: MethodMetaInfo,
+        metaInfo: MethodInformation,
         methodVisitor: MethodVisitor,
         methodCallTransformer: MethodCallTransformerBase?,
         sharedMemoryAccessTransformer: SharedMemoryAccessTransformer?,

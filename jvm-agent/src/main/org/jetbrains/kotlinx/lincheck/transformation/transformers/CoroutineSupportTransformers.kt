@@ -24,7 +24,7 @@ internal class CoroutineCancellabilitySupportTransformer(
     fileName: String,
     className: String,
     methodName: String,
-    metaInfo: MethodMetaInfo,
+    metaInfo: MethodInformation,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
 ) : LincheckBaseMethodVisitor(fileName, className, methodName, metaInfo, adapter, methodVisitor) {
@@ -59,7 +59,7 @@ internal class CoroutineDelaySupportTransformer(
     fileName: String,
     className: String,
     methodName: String,
-    metaInfo: MethodMetaInfo,
+    metaInfo: MethodInformation,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
 ) : LincheckBaseMethodVisitor(fileName, className, methodName, metaInfo, adapter, methodVisitor) {

@@ -30,7 +30,7 @@ internal class ThreadTransformer(
     fileName: String,
     className: String,
     methodName: String,
-    metaInfo: MethodMetaInfo,
+    metaInfo: MethodInformation,
     private val desc: String,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,

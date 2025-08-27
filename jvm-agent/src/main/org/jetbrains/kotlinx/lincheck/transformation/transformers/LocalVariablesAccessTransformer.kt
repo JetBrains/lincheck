@@ -22,7 +22,7 @@ internal class LocalVariablesAccessTransformer(
     fileName: String,
     className: String,
     methodName: String,
-    metaInfo: MethodMetaInfo,
+    metaInfo: MethodInformation,
     desc: String,
     isStatic: Boolean,
     adapter: GeneratorAdapter,

@@ -41,7 +41,7 @@ internal class DeterministicInvokeDynamicTransformer(
     fileName: String,
     className: String,
     methodName: String,
-    metaInfo: MethodMetaInfo,
+    metaInfo: MethodInformation,
     private val classVersion: Int,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor

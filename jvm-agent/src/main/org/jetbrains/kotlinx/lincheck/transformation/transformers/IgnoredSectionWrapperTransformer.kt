@@ -12,7 +12,7 @@ package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import sun.nio.ch.lincheck.Injections
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckBaseMethodVisitor
-import org.jetbrains.kotlinx.lincheck.transformation.MethodMetaInfo
+import org.jetbrains.kotlinx.lincheck.transformation.MethodInformation
 import org.jetbrains.kotlinx.lincheck.transformation.invokeStatic
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.Opcodes.*
@@ -23,7 +23,7 @@ internal class IgnoredSectionWrapperTransformer(
     fileName: String,
     className: String,
     methodName: String,
-    metaInfo: MethodMetaInfo,
+    metaInfo: MethodInformation,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
 ) : LincheckBaseMethodVisitor(fileName, className, methodName, metaInfo, adapter, methodVisitor) {
