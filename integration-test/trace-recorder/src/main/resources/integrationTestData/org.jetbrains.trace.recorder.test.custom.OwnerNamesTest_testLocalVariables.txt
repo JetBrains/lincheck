@@ -1,0 +1,6 @@
+# Thread 1
+OwnerNamesTest.testLocalVariables() at :0
+  aField = A@1 at OwnerNamesTest.kt:39
+  aField ➜ A@1 at OwnerNamesTest.kt:40
+  aField.setField(20) at OwnerNamesTest.kt:40
+    field = 20 at OwnerNamesTest.kt:15
