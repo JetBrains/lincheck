@@ -26,6 +26,7 @@ const val UNKNOWN_CODE_LOCATION_ID = -1
 private val EMPTY_STACK_TRACE = StackTraceElement("", "", "", 0)
 
 class TraceContext {
+    private val accessPaths = ArrayList<AccessPath?>()
     private val locations = ArrayList<CodeLocation?>()
     private val classes = IndexedPool<ClassDescriptor>()
     private val methods = IndexedPool<MethodDescriptor>()
@@ -149,8 +150,20 @@ class TraceContext {
         return loc.accessPath
     }
 
+    fun getAccessPath(id: Int): AccessPath = accessPaths[id] ?: error("Referenced access path $id not loaded")
+
+    fun restoreAccessPath(id: Int, accessPath: AccessPath) {
+        check(id >= accessPaths.size || accessPaths[id] == null || accessPaths[id] == accessPath) {
+            "AccessPath with id $id is already present in context and differs from $accessPath"
+        }
+        while (accessPaths.size <= id) {
+            accessPaths.add(null)
+        }
+        accessPaths[id] = accessPath
+    }
+
     fun restoreCodeLocation(id: Int, location: CodeLocation) {
-        check (id >= locations.size || locations[id] == null || locations[id] == location) {
+        check(id >= locations.size || locations[id] == null || locations[id] == location) {
             "CodeLocation with id $id is already present in context and differs from $location"
         }
         while (locations.size <= id) {
@@ -160,6 +173,7 @@ class TraceContext {
     }
 
     fun clear() {
+        accessPaths.clear()
         locations.clear()
         classes.clear()
         methods.clear()

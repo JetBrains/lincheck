@@ -169,37 +169,30 @@ internal fun DataInput.readVariableDescriptor(): VariableDescriptor {
     return VariableDescriptor(readUTF())
 }
 
-internal fun DataInput.readAccessLocation(
-    context: TraceContext,
-    codeLocs: CodeLocationsContext,
-): AccessLocation {
+internal fun DataInput.readAccessLocation(): ShallowAccessLocation {
     val type = readByte().toInt()
     val kind = if (type >= 0 && type < AccessLocationKind.entries.size) AccessLocationKind.entries[type]
                else AccessLocationKind.UNKNOWN
     when (kind) {
         AccessLocationKind.LOCAL_VARIABLE -> {
             val variableDescriptorId = readInt()
-            val variableDescriptor = context.getVariableDescriptor(variableDescriptorId)
-            return LocalVariableAccessLocation(variableDescriptor)
+            return ShallowLocalVariableAccessLocation(variableDescriptorId)
         }
         AccessLocationKind.STATIC_FIELD -> {
             val fieldDescriptorId = readInt()
-            val fieldDescriptor = context.getFieldDescriptor(fieldDescriptorId)
-            return StaticFieldAccessLocation(fieldDescriptor)
+            return ShallowStaticFieldAccessLocation(fieldDescriptorId)
         }
         AccessLocationKind.OBJECT_FIELD -> {
             val fieldDescriptorId = readInt()
-            val fieldDescriptor = context.getFieldDescriptor(fieldDescriptorId)
-            return ObjectFieldAccessLocation(fieldDescriptor)
+            return ShallowObjectFieldAccessLocation(fieldDescriptorId)
         }
         AccessLocationKind.ARRAY_ELEMENT_BY_INDEX -> {
             val index = readInt()
-            return ArrayElementByIndexAccessLocation(index)
+            return ShallowArrayElementByIndexAccessLocation(index)
         }
         AccessLocationKind.ARRAY_ELEMENT_BY_NAME -> {
             val accessPathId = readInt()
-            val accessPath = codeLocs.getLoadedAccessPath(accessPathId)
-            return ArrayElementByNameAccessLocation(accessPath)
+            return ShallowArrayElementByNameAccessLocation(accessPathId)
         }
         AccessLocationKind.UNKNOWN -> error("Unknown access location kind: read byte is $type, while expected one of: ${AccessLocationKind.entries.map { it.ordinal }.joinToString(", ")}")
     }
