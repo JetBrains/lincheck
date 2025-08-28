@@ -1,6 +1,0 @@
-# Thread 1
-OwnerNamesTest.testFields() at :0
-  a.field ➜ 10 at OwnerNamesTest.kt:46
-  a.setField(20) at OwnerNamesTest.kt:46
-    field = 20 at OwnerNamesTest.kt:15
-  a.field ➜ 20 at OwnerNamesTest.kt:47
