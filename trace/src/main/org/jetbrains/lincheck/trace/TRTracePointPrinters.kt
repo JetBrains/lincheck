@@ -268,6 +268,7 @@ abstract class AbstractTRArrayTracePointPrinter {
         return this
     }
 
+    // TODO: DR-356 `ArrayElementByIndexAccessLocation` and `ArrayElementByNameAccessLocation` do not appear in trace
     protected fun TRAppendable.appendOwner(tracePoint: TRArrayTracePoint): TRAppendable {
         val ownerName = CodeLocations.accessPath(tracePoint.codeLocationId)
         if (ownerName != null) {
