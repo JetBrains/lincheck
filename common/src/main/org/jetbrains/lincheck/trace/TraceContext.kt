@@ -19,7 +19,32 @@ import org.jetbrains.lincheck.descriptors.MethodSignature
 import org.jetbrains.lincheck.descriptors.VariableDescriptor
 import org.jetbrains.lincheck.descriptors.Types
 
-val TRACE_CONTEXT: TraceContext = TraceContext()
+var TRACE_CONTEXT: TraceContext = TraceContext()
+    private set
+
+val TRACE_CONTEXT_LOCK = Any()
+
+fun setGlobalTraceContext(traceContext: TraceContext) {
+    TRACE_CONTEXT = traceContext
+}
+
+/**
+ * Run [block] with global trace context set to [context], restore global after run.
+ *
+ * This function is effectively `synchronized`, it prevents concurrent access
+ * to global trace context to avoid races.
+ */
+inline fun <R> withTraceContext(context: TraceContext, block: () -> R): R {
+    synchronized(TRACE_CONTEXT_LOCK) {
+        val saveContext = TRACE_CONTEXT
+        setGlobalTraceContext(context)
+        try {
+            return block()
+        } finally {
+            setGlobalTraceContext(saveContext)
+        }
+    }
+}
 
 const val UNKNOWN_CODE_LOCATION_ID = -1
 
