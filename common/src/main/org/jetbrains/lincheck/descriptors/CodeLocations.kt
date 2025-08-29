@@ -24,6 +24,7 @@ class CodeLocation(
  * along with their corresponding code locations. To minimize overhead, Lincheck assigns unique IDs to all
  * code locations it analyses, and stores more detailed information necessary for trace generation in this object.
  */
+@Deprecated("Use TraceContext")
 object CodeLocations {
     /**
      * Registers a new code location and returns its unique ID.

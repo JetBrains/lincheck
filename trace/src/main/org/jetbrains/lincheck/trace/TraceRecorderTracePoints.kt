@@ -11,7 +11,6 @@
 package org.jetbrains.lincheck.trace
 
 import org.jetbrains.lincheck.descriptors.ClassDescriptor
-import org.jetbrains.lincheck.descriptors.CodeLocations
 import org.jetbrains.lincheck.descriptors.FieldDescriptor
 import org.jetbrains.lincheck.descriptors.MethodDescriptor
 import org.jetbrains.lincheck.descriptors.VariableDescriptor
@@ -20,7 +19,6 @@ import org.jetbrains.lincheck.trace.DefaultTRArrayTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRFieldTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRLocalVariableTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRMethodCallTracePointPrinter.append
-import org.jetbrains.lincheck.trace.append
 import java.io.DataInput
 import java.io.DataOutput
 import java.math.BigDecimal
@@ -50,15 +48,24 @@ sealed class TRTracePoint(
         out.writeCodeLocation(codeLocationId)
     }
 
-    val codeLocation: StackTraceElement get() = CodeLocations.stackTrace(codeLocationId)
+    val TraceContext.codeLocation: StackTraceElement get() = this.stackTrace(codeLocationId)
 
-    fun toText(verbose: Boolean): String {
+    @Deprecated("Uses global context, use [TraceContext.codeLocation] instead")
+    val codeLocation: StackTraceElement get() = TRACE_CONTEXT.stackTrace(codeLocationId)
+
+    fun TraceContext.toText(verbose: Boolean): String {
         val sb = StringBuilder()
         toText(DefaultTRTextAppendable(sb, verbose))
         return sb.toString()
     }
 
-    abstract fun toText(appendable: TRAppendable)
+    @Deprecated("Uses global context, use [TraceContext.toText] instead")
+    fun toText(verbose: Boolean): String = TRACE_CONTEXT.toText(verbose)
+
+    abstract fun TraceContext.toText(appendable: TRAppendable)
+
+    @Deprecated("Uses global context, use [TraceContext.toText] instead")
+    fun toText(appendable: TRAppendable) = TRACE_CONTEXT.toText(appendable)
 }
 
 // Only trace point which is "container"
@@ -76,14 +83,27 @@ class TRMethodCallTracePoint(
     private var children: ChunkedList<TRTracePoint> = ChunkedList()
     private var childrenAddresses: AddressIndex = AddressIndex.create()
 
-    // TODO Make parametrized
+    val TraceContext.methodDescriptor: MethodDescriptor get() = this.getMethodDescriptor(methodId)
+    val TraceContext.classDescriptor: ClassDescriptor get() = methodDescriptor.classDescriptor
+
+    @Deprecated("Uses global context, use [TraceContext.methodDescriptor] instead")
     val methodDescriptor: MethodDescriptor get() = TRACE_CONTEXT.getMethodDescriptor(methodId)
+    @Deprecated("Uses global context, use [TraceContext.classDescriptor] instead")
     val classDescriptor: ClassDescriptor get() = methodDescriptor.classDescriptor
 
     // Shortcuts
+    val TraceContext.className: String get() = methodDescriptor.className
+    val TraceContext.methodName: String get() = methodDescriptor.methodName
+    val TraceContext.argumentTypes: List<Types.Type> get() = methodDescriptor.argumentTypes
+    val TraceContext.returnType: Types.Type get() = methodDescriptor.returnType
+
+    @Deprecated("Uses global context, use [TraceContext.className] instead")
     val className: String get() = methodDescriptor.className
+    @Deprecated("Uses global context, use [TraceContext.methodName] instead")
     val methodName: String get() = methodDescriptor.methodName
+    @Deprecated("Uses global context, use [TraceContext.argumentTypes] instead")
     val argumentTypes: List<Types.Type> get() = methodDescriptor.argumentTypes
+    @Deprecated("Uses global context, use [TraceContext.returnType] instead")
     val returnType: Types.Type get() = methodDescriptor.returnType
 
     val events: List<TRTracePoint?> get() = children
@@ -164,8 +184,8 @@ class TRMethodCallTracePoint(
         }
     }
 
-    override fun toText(appendable: TRAppendable) {
-        appendable.append(tracePoint = this)
+    override fun TraceContext.toText(appendable: TRAppendable) {
+        appendable.append(tracePoint = this@TRMethodCallTracePoint)
     }
 
     internal companion object {
@@ -228,8 +248,8 @@ sealed class TRFieldTracePoint(
         out.preWriteTRObject(value)
     }
 
-    override fun toText(appendable: TRAppendable) {
-        appendable.append(tracePoint = this)
+    override fun TraceContext.toText(appendable: TRAppendable) {
+        appendable.append(tracePoint = this@TRFieldTracePoint)
     }
 }
 
@@ -310,8 +330,8 @@ sealed class TRLocalVariableTracePoint(
         out.preWriteTRObject(value)
     }
 
-    override fun toText(appendable: TRAppendable) {
-        appendable.append(tracePoint = this)
+    override fun TraceContext.toText(appendable: TRAppendable) {
+        appendable.append(tracePoint = this@TRLocalVariableTracePoint)
     }
 }
 
@@ -386,8 +406,8 @@ sealed class TRArrayTracePoint(
         out.preWriteTRObject(value)
     }
 
-    override fun toText(appendable: TRAppendable) {
-        appendable.append(tracePoint = this)
+    override fun TraceContext.toText(appendable: TRAppendable) {
+        appendable.append(tracePoint = this@TRArrayTracePoint)
     }
 }
 
