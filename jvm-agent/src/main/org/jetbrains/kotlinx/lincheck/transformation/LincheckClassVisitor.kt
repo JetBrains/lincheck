@@ -115,10 +115,13 @@ internal class LincheckClassVisitor(
                 return mv
             }
 
+            // We need this in TRACE_RECORDING mode to register new threads
+            mv = ThreadTransformer(fileName, className, methodName, desc, adapter, mv)
             // If it is Thread don't instrument all other things in it
-            if (isThreadSubClass(className)) {
-                // We need this in TRACE_RECORDING mode to register new threads
-                mv = ThreadTransformer(fileName, className, methodName, desc, adapter, mv)
+            if (
+                isThreadClass(className.toCanonicalClassName()) ||
+                isThreadContainerThreadStartMethod(className.toCanonicalClassName(), methodName)
+            ) {
                 return mv
             }
 
