@@ -126,7 +126,7 @@ internal fun findAtomicOwnerName(
         apiKind == AtomicApiKind.ATOMIC_ARRAY
     ) {
         ownerName =
-            // first try to find the receiver field name
+            // try to find the receiver field name
             shadowStackFrame.findCurrentReceiverFieldReferringTo(atomic)
             ?.let { fieldAccess ->
                 getOwnerName(
@@ -135,10 +135,6 @@ internal fun findAtomicOwnerName(
                     location = fieldAccess,
                 )
             }
-            // then try to search in local variables
-            ?: shadowStackFrame.findLocalVariableReferringTo(atomic)?.toString()
-            // then try to search in local variables' fields
-            ?: shadowStackFrame.findLocalVariableFieldReferringTo(atomic)?.toString()
     }
 
     var arrayAccess = "" // will contain `[i]` string denoting the accessed element index
