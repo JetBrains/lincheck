@@ -2174,7 +2174,7 @@ internal abstract class ManagedStrategy(
     ): Pair<String, List<Any?>> {
         val threadId = threadScheduler.getCurrentThreadId()
         val shadowStackFrame = shadowStack[threadId]!!.last()
-        return findAtomicOwnerName(atomic, arguments, this, shadowStackFrame, objectTracker, constants)
+        return findAtomicOwnerName(atomic, arguments, this, shadowStackFrame, objectTracker)
     }
 
     /* Methods to control the current call context. */
