@@ -33,7 +33,7 @@ data class MethodDescriptor(
 ) {
     var isIntrinsic: Boolean = false
 
-    val classDescriptor: ClassDescriptor = context.getClassDescriptor(classId)
+    val classDescriptor: ClassDescriptor get() = context.getClassDescriptor(classId)
     val className: String get() = classDescriptor.name
     val methodName: String get() = methodSignature.name
     val returnType: Types.Type get() = methodSignature.methodType.returnType
@@ -49,7 +49,7 @@ data class FieldDescriptor(
     val isStatic: Boolean,
     val isFinal: Boolean,
 ) {
-    val classDescriptor: ClassDescriptor = context.getClassDescriptor(classId)
+    val classDescriptor: ClassDescriptor get() = context.getClassDescriptor(classId)
     val className: String get() = classDescriptor.name
 }
 
