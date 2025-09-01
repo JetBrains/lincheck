@@ -16,6 +16,13 @@ import org.jetbrains.lincheck.trace.isThisName
 import org.jetbrains.lincheck.jvm.agent.toSimpleClassName
 import org.jetbrains.lincheck.util.*
 
+/**
+ * Determines the name of the owner, if needed, based on the class name and the shadow stack frame.
+ *
+ * @param className the fully qualified class name of the field or method.
+ * @param shadowStackFrame the current shadow stack frame, representing the program's stack state during execution.
+ * @return the determined owner name as a string, or null if no explicit owner name is required.
+ */
 internal fun findOwnerName(
     className: String,
     shadowStackFrame: ShadowStackFrame,
@@ -29,6 +36,19 @@ internal fun findOwnerName(
     return className.toSimpleClassName()
 }
 
+/**
+ * Finds the owner name of a given object.
+ * The owner name can originate from various sources such as local variable names,
+ * constants referencing the object, instance field names,
+ * or as a last resort, the object's string representation.
+ *
+ * @param obj The object whose owner name needs to be determined. Can be null.
+ * @param className The name of the class, required when obj is null. Used in case of static field/method accesses.
+ * @param codeLocationId the ID of the code location, used to look up the code location's access path.
+ * @param shadowStackFrame the current shadow stack frame, representing the program's stack state during execution.
+ * @param objectTracker the object tracker, used to provide representations of tracked objects.
+ * @return the determined owner name as a string, or null if no explicit owner name is required.
+ */
 fun findOwnerName(
     obj: Any?,
     className: String,
