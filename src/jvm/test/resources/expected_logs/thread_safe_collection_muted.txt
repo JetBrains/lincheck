@@ -21,8 +21,8 @@ Detailed trace:
 |   block(): threw IllegalStateException at ThreadSafeCollectionMutedRepresentationTest.block(StdLibRepresentationTests.kt:21)                                                    |
 |     concurrentMap.put(1, 1): null at ThreadSafeCollectionMutedRepresentationTest.block(StdLibRepresentationTests.kt:27)                                                         |
 |       sizeCtl.compareAndSetInt(0, -1): true at ConcurrentHashMap.initTable(ConcurrentHashMap.java:2296)                                                                         |
-|       tab[1].getReferenceAcquire(): null at ConcurrentHashMap.tabAt(ConcurrentHashMap.java:760)                                                                                 |
-|       tab[1].compareAndSetReference(null, Node#1): true at ConcurrentHashMap.casTabAt(ConcurrentHashMap.java:765)                                                               |
+|       Array<Node>#1[1].getReferenceAcquire(): null at ConcurrentHashMap.tabAt(ConcurrentHashMap.java:760)                                                                       |
+|       Array<Node>#1[1].compareAndSetReference(null, Node#1): true at ConcurrentHashMap.casTabAt(ConcurrentHashMap.java:765)                                                     |
 |       baseCount.compareAndSetLong(0, 1): true at ConcurrentHashMap.addCount(ConcurrentHashMap.java:2327)                                                                        |
 |     a ➜ 1 at ThreadSafeCollectionMutedRepresentationTest.block(StdLibRepresentationTests.kt:28)                                                                                 |
 |     a = 2 at ThreadSafeCollectionMutedRepresentationTest.block(StdLibRepresentationTests.kt:28)                                                                                 |
