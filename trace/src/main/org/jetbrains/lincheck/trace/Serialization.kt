@@ -110,6 +110,12 @@ internal interface TraceWriter : DataOutput, Closeable {
     fun endWriteContainerTracepointFooter(id: Int)
 
     /**
+     * Write [name] of the thread.
+     * This must be called before [startWriteAnyTracepoint] or [startWriteContainerTracepointFooter] for all thread names.
+     */
+    fun writeThreadName(id: Int, name: String)
+
+    /**
      * Write [ClassDescriptor] from context referred by given `id`, if needed.
      * This must be called before [startWriteAnyTracepoint] or [startWriteContainerTracepointFooter] for all used class descriptors.
      */
@@ -190,7 +196,7 @@ private sealed class TraceWriterBase(
     private var footerPosition: Long = -1
 
     protected abstract val currentDataPosition: Long
-    protected abstract val writerId: Int
+    abstract val writerId: Int
 
     override fun close() {
         data.writeKind(ObjectKind.EOF)
@@ -254,6 +260,16 @@ private sealed class TraceWriterBase(
 
         inTracepointBody = false
         footerPosition = -1
+    }
+
+    override fun writeThreadName(id: Int, name: String) {
+        check(!inTracepointBody) { "Cannot write thread name inside tracepoint" }
+
+        val position = currentDataPosition
+        data.writeKind(ObjectKind.THREAD_NAME)
+        data.writeInt(id)
+        data.writeUTF(name)
+        writeIndexCell(ObjectKind.THREAD_NAME, id, position, -1)
     }
 
     override fun writeClassDescriptor(id: Int) {
@@ -776,6 +792,7 @@ class FileStreamingTraceCollecting(
                     saveDataAndIndexBlockImpl(writerId, logicalBlockStart,dataBlock, indexList)
             }
         )
+        context.setThreadName(threadId, t.name)
     }
 
     override fun finishCurrentThread() {
@@ -813,6 +830,10 @@ class FileStreamingTraceCollecting(
     }
 
     override fun traceEnded() {
+        writers.entries.forEach { (t, w) ->
+            // writerId matches the assigned id of the thread
+            w.writeThreadName(w.writerId, t.name)
+        }
         writers.values.forEach { it.close() }
 
         data.writeKind(ObjectKind.EOF)
@@ -896,6 +917,7 @@ fun saveRecorderTrace(data: OutputStream, index: OutputStream, context: TraceCon
     DirectTraceWriter(data, index, context).use { tw ->
         rootCallsPerThread.forEachIndexed { id, root ->
             tw.startNewRoot(id)
+            tw.writeThreadName(id, context.getThreadName(id))
             saveTRTracepoint(tw, root)
             tw.endRoot()
         }
