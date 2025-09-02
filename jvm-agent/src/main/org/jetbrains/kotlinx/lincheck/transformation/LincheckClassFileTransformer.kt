@@ -173,6 +173,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         }
         if (instrumentationMode == TRACE_RECORDING) {
             if (className == "java.lang.Thread") return true
+            if (className.startsWith("kotlin.concurrent.ThreadsKt")) return true
             if (className.startsWith("java.") || className.startsWith("kotlin.") || className.startsWith("jdk.")) return false
         }
         if (isEagerlyInstrumentedClass(className)) return true
