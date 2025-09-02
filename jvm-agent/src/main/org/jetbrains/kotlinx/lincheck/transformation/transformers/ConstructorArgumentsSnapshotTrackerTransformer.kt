@@ -20,11 +20,13 @@ internal class ConstructorArgumentsSnapshotTrackerTransformer(
     fileName: String,
     className: String,
     methodName: String,
+    descriptor: String,
+    access: Int,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
     // `SafeClassWriter::isInstanceOf` method which checks the subclassing without loading the classes to VM
     private val isInstanceOf: (actualType: String, expectedSuperType: String) -> Boolean
-) : LincheckMethodVisitor(fileName, className, methodName, adapter, methodVisitor) {
+) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, adapter, methodVisitor) {
 
     /**
      * Searches for invocations of constructors `className::<init>(args)` and inserts bytecode

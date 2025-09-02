@@ -31,12 +31,13 @@ internal class InlineMethodCallTransformer(
     fileName: String,
     className: String,
     methodName: String,
-    desc: String,
+    descriptor: String,
+    access: Int,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
     val locals: MethodVariables,
     val labelSorter: MethodLabels
-) : LincheckMethodVisitor(fileName, className, methodName, adapter, methodVisitor) {
+) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, adapter, methodVisitor) {
     private data class InlineStackElement(
         val lvar: LocalVariableInfo,
         val methodId: Int,
@@ -50,7 +51,7 @@ internal class InlineMethodCallTransformer(
         val contType: String = getObjectType("kotlin/coroutines/Continuation").className
     }
 
-    private val methodType = getMethodType(desc)
+    private val methodType = getMethodType(descriptor)
     private val looksLikeSuspendMethod =
         methodType.returnType.className == objectType &&
         methodType.argumentTypes.lastOrNull()?.className == contType &&

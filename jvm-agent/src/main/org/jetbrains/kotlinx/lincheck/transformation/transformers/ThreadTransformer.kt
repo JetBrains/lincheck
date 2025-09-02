@@ -31,9 +31,10 @@ internal class ThreadTransformer(
     className: String,
     methodName: String,
     private val desc: String,
+    access: Int,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
-) : LincheckMethodVisitor(fileName, className, methodName, adapter, methodVisitor)  {
+) : LincheckMethodVisitor(fileName, className, methodName, desc, access, adapter, methodVisitor)  {
 
     private val runMethodTryBlockStart: Label = adapter.newLabel()
     private val runMethodTryBlockEnd: Label = adapter.newLabel()
