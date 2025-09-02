@@ -17,7 +17,7 @@ import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.commons.GeneratorAdapter
 
-internal open class LincheckBaseMethodVisitor(
+internal open class LincheckMethodVisitor(
     protected val fileName: String,
     protected val className: String,
     protected val methodName: String,

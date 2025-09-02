@@ -36,7 +36,7 @@ internal class InlineMethodCallTransformer(
     methodVisitor: MethodVisitor,
     val locals: MethodVariables,
     val labelSorter: MethodLabels
-) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter, methodVisitor) {
+) : LincheckMethodVisitor(fileName, className, methodName, adapter, methodVisitor) {
     private data class InlineStackElement(
         val lvar: LocalVariableInfo,
         val methodId: Int,

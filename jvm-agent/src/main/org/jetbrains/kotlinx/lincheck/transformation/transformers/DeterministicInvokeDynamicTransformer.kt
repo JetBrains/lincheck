@@ -44,7 +44,7 @@ internal class DeterministicInvokeDynamicTransformer(
     private val classVersion: Int,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor
-) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter, methodVisitor) {
+) : LincheckMethodVisitor(fileName, className, methodName, adapter, methodVisitor) {
 
     override fun visitInvokeDynamicInsn(
         name: String,
