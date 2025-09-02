@@ -21,6 +21,8 @@ internal open class LincheckMethodVisitor(
     protected val fileName: String,
     protected val className: String,
     protected val methodName: String,
+    protected val descriptor: String,
+    protected val access: Int,
     protected val methodInfo: MethodInformation,
     val adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor

@@ -24,10 +24,12 @@ internal class CoroutineCancellabilitySupportTransformer(
     fileName: String,
     className: String,
     methodName: String,
-    metaInfo: MethodInformation,
+    descriptor: String,
+    access: Int,
+    methodInfo: MethodInformation,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
-) : LincheckMethodVisitor(fileName, className, methodName, metaInfo, adapter, methodVisitor) {
+) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
         val isGetResult = (name == "getResult") && (
@@ -59,10 +61,12 @@ internal class CoroutineDelaySupportTransformer(
     fileName: String,
     className: String,
     methodName: String,
-    metaInfo: MethodInformation,
+    descriptor: String,
+    access: Int,
+    methodInfo: MethodInformation,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
-) : LincheckMethodVisitor(fileName, className, methodName, metaInfo, adapter, methodVisitor) {
+) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
         if (!isCoroutineDelay(owner, name, desc)) {

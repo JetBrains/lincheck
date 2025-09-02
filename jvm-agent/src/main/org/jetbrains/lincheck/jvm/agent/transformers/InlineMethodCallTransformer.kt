@@ -31,11 +31,14 @@ internal class InlineMethodCallTransformer(
     fileName: String,
     className: String,
     methodName: String,
-    metaInfo: MethodInformation,
-    desc: String,
+    descriptor: String,
+    access: Int,
+    methodInfo: MethodInformation,
     adapter: GeneratorAdapter,
-    methodVisitor: MethodVisitor
-) : LincheckMethodVisitor(fileName, className, methodName, metaInfo, adapter, methodVisitor) {
+    methodVisitor: MethodVisitor,
+    val locals: MethodVariables,
+    val labelSorter: MethodLabels
+) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
     private data class InlineStackElement(
         val lvar: LocalVariableInfo,
         val methodId: Int,
@@ -49,14 +52,14 @@ internal class InlineMethodCallTransformer(
         val contType: String = getObjectType("kotlin/coroutines/Continuation").className
     }
 
-    private val methodType = getMethodType(desc)
+    private val methodType = getMethodType(descriptor)
     private val looksLikeSuspendMethod =
         methodType.returnType.className == objectType &&
         methodType.argumentTypes.lastOrNull()?.className == contType &&
         (
-            metaInfo.locals.hasVarByName("\$completion") ||
-            metaInfo.locals.hasVarByName("\$continuation") ||
-            metaInfo.locals.hasVarByName("\$result")
+            methodInfo.locals.hasVarByName("\$completion") ||
+            methodInfo.locals.hasVarByName("\$continuation") ||
+            methodInfo.locals.hasVarByName("\$result")
         )
 
     // List of blocklisted methods due to https://youtrack.jetbrains.com/issue/DR-278
@@ -69,7 +72,7 @@ internal class InlineMethodCallTransformer(
     // Sort local variables by their end labels (latest label goes first)
     // and then by index if labels are the same (to have a stable result).
     private val localVarInlineStartComparator = Comparator<LocalVariableInfo>
-    { a, b -> metaInfo.labels.compare(b.endLabel, a.endLabel) }
+    { a, b -> methodInfo.labels.compare(b.endLabel, a.endLabel) }
         .thenComparing { it.index }
 
     private val inlineStack = mutableListOf<InlineStackElement>()

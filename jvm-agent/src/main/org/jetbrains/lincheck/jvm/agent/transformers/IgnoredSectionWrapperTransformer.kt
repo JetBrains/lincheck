@@ -23,10 +23,12 @@ internal class IgnoredSectionWrapperTransformer(
     fileName: String,
     className: String,
     methodName: String,
-    metaInfo: MethodInformation,
+    descriptor: String,
+    access: Int,
+    methodInfo: MethodInformation,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
-) : LincheckMethodVisitor(fileName, className, methodName, metaInfo, adapter, methodVisitor) {
+) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
 
     private val tryBlock: Label = adapter.newLabel()
     private val catchBlock: Label = adapter.newLabel()
