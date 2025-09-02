@@ -83,9 +83,9 @@ internal class SynchronizedMethodTransformer(
     descriptor: String,
     access: Int,
     methodInfo: MethodInformation,
+    private val classVersion: Int,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
-    private val classVersion: Int,
 ) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
 
     private val isStatic: Boolean = (access and ACC_STATIC != 0)

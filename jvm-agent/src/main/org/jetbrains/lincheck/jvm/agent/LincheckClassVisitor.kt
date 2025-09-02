@@ -179,7 +179,7 @@ internal class LincheckClassVisitor(
             if (instrumentationMode == TRACE_DEBUGGING) {
                 // Lincheck does not support true identity hash codes (it always uses zeroes),
                 // so there is no need for the `DeterministicInvokeDynamicTransformer` there.
-                mv = DeterministicInvokeDynamicTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv, classVersion)
+                mv = DeterministicInvokeDynamicTransformer(fileName, className, methodName, desc, access, methodInfo, classVersion, adapter, mv)
             }
             return mv
         }
@@ -220,7 +220,7 @@ internal class LincheckClassVisitor(
         if (instrumentationMode == TRACE_DEBUGGING) {
             // Lincheck does not support true identity hash codes (it always uses zeroes),
             // so there is no need for the `DeterministicInvokeDynamicTransformer` there.
-            mv = DeterministicInvokeDynamicTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv, classVersion)
+            mv = DeterministicInvokeDynamicTransformer(fileName, className, methodName, desc, access, methodInfo, classVersion, adapter, mv)
         } else {
             // In trace debugger mode we record hash codes of tracked objects and substitute them on re-run,
             // otherwise, we track all hash code calls in the instrumented code
@@ -323,7 +323,7 @@ internal class LincheckClassVisitor(
         var mv = methodVisitor
         val isSynchronized = (access and ACC_SYNCHRONIZED != 0)
         if (isSynchronized) {
-            mv = SynchronizedMethodTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv, classVersion)
+            mv = SynchronizedMethodTransformer(fileName, className, methodName, desc, access, methodInfo, classVersion, adapter, mv)
         }
         mv = MonitorTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
         mv = WaitNotifyTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
