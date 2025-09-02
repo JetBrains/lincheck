@@ -257,7 +257,7 @@ object DefaultTRLocalVariableTracePointPrinter: AbstractTRLocalVariableTracePoin
 abstract class AbstractTRArrayTracePointPrinter {
 
     protected fun TRAppendable.appendTracePoint(tracePoint: TRArrayTracePoint): TRAppendable {
-        appendArray(tracePoint.array)
+        appendOwner(tracePoint)
         appendSpecialSymbol("[")
         appendArrayIndex(tracePoint.index)
         appendSpecialSymbol("]")
@@ -265,6 +265,19 @@ abstract class AbstractTRArrayTracePointPrinter {
         appendSpecialSymbol(tracePoint.accessSymbol())
         append(" ")
         appendObject(tracePoint.value)
+        return this
+    }
+
+    // TODO: DR-356 `ArrayElementByIndexAccessLocation` and `ArrayElementByNameAccessLocation` do not appear in trace
+    protected fun TRAppendable.appendOwner(tracePoint: TRArrayTracePoint): TRAppendable {
+        val ownerName = CodeLocations.accessPath(tracePoint.codeLocationId)
+        if (ownerName != null) {
+            ownerName.filterThisAccesses().takeIf { !it.isEmpty() }?.let {
+                appendAccessPath(it)
+            }
+        } else {
+            appendArray(tracePoint.array)
+        }
         return this
     }
 }

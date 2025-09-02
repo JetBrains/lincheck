@@ -26,6 +26,7 @@ const val UNKNOWN_CODE_LOCATION_ID = -1
 private val EMPTY_STACK_TRACE = StackTraceElement("", "", "", 0)
 
 class TraceContext {
+    private val accessPaths = ArrayList<AccessPath?>()
     private val locations = ArrayList<CodeLocation?>()
     private val classes = IndexedPool<ClassDescriptor>()
     private val methods = IndexedPool<MethodDescriptor>()
@@ -62,8 +63,7 @@ class TraceContext {
     fun getMethodDescriptor(className: String, methodName: String, desc: String): MethodDescriptor =
         getMethodDescriptor(getOrCreateMethodId(className, methodName, desc))
 
-    fun getMethodDescriptor(methodId: Int): MethodDescriptor =
-        methods[methodId]
+    fun getMethodDescriptor(methodId: Int): MethodDescriptor = methods[methodId]
 
     fun restoreMethodDescriptor(id: Int, value: MethodDescriptor) {
         methods.restore(id, value)
@@ -71,8 +71,12 @@ class TraceContext {
 
     val fieldDescriptors: List<FieldDescriptor?> get() = fields.content
 
+    fun hasFieldDescriptor(field: FieldDescriptor): Boolean {
+        return fields.contains(field)
+    }
+
     fun getOrCreateFieldId(className: String, fieldName: String, isStatic: Boolean, isFinal: Boolean): Int {
-        return fields.getOrCreateId(
+        return getOrCreateFieldId(
             FieldDescriptor(
                 context = this,
                 classId = getOrCreateClassId(className),
@@ -83,11 +87,14 @@ class TraceContext {
         )
     }
 
+    fun getOrCreateFieldId(field: FieldDescriptor): Int {
+        return fields.getOrCreateId(field)
+    }
+
     fun getFieldDescriptor(className: String, fieldName: String, isStatic: Boolean, isFinal: Boolean): FieldDescriptor =
         getFieldDescriptor(getOrCreateFieldId(className, fieldName, isStatic, isFinal))
 
-    fun getFieldDescriptor(fieldId: Int): FieldDescriptor =
-        fields[fieldId]
+    fun getFieldDescriptor(fieldId: Int): FieldDescriptor = fields[fieldId]
 
     fun restoreFieldDescriptor(id: Int, value: FieldDescriptor) {
         fields.restore(id, value)
@@ -95,15 +102,22 @@ class TraceContext {
 
     val variableDescriptors: List<VariableDescriptor?> get() = variables.content
 
+    fun hasVariableDescriptor(variable: VariableDescriptor): Boolean {
+        return variables.contains(variable)
+    }
+
     fun getOrCreateVariableId(variableName: String): Int {
-        return variables.getOrCreateId(VariableDescriptor(variableName))
+        return getOrCreateVariableId(VariableDescriptor(variableName))
+    }
+
+    fun getOrCreateVariableId(variableDescriptor: VariableDescriptor): Int {
+        return variables.getOrCreateId(variableDescriptor)
     }
 
     fun getVariableDescriptor(variableName: String): VariableDescriptor =
         getVariableDescriptor(getOrCreateVariableId(variableName))
 
-    fun getVariableDescriptor(variableId: Int): VariableDescriptor =
-        variables[variableId]
+    fun getVariableDescriptor(variableId: Int): VariableDescriptor = variables[variableId]
 
     fun restoreVariableDescriptor(id: Int, value: VariableDescriptor) {
         variables.restore(id, value)
@@ -136,8 +150,20 @@ class TraceContext {
         return loc.accessPath
     }
 
+    fun getAccessPath(id: Int): AccessPath = accessPaths[id] ?: error("Referenced access path $id not loaded")
+
+    fun restoreAccessPath(id: Int, accessPath: AccessPath) {
+        check(id >= accessPaths.size || accessPaths[id] == null || accessPaths[id] == accessPath) {
+            "AccessPath with id $id is already present in context and differs from $accessPath"
+        }
+        while (accessPaths.size <= id) {
+            accessPaths.add(null)
+        }
+        accessPaths[id] = accessPath
+    }
+
     fun restoreCodeLocation(id: Int, location: CodeLocation) {
-        check (id >= locations.size || locations[id] == null || locations[id] == location) {
+        check(id >= locations.size || locations[id] == null || locations[id] == location) {
             "CodeLocation with id $id is already present in context and differs from $location"
         }
         while (locations.size <= id) {
@@ -147,6 +173,7 @@ class TraceContext {
     }
 
     fun clear() {
+        accessPaths.clear()
         locations.clear()
         classes.clear()
         methods.clear()

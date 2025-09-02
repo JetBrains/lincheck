@@ -27,6 +27,9 @@ class IndexedPool<T> {
         items.lastIndex
     }
 
+    @Synchronized
+    fun contains(item: T): Boolean = index.contains(item)
+
     val content: List<T?> get() = items
 
     @Synchronized

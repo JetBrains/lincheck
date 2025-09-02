@@ -10,6 +10,10 @@
 
 package org.jetbrains.lincheck.trace
 
+import org.jetbrains.lincheck.descriptors.AccessLocation
+import org.jetbrains.lincheck.descriptors.AccessPath
+import org.jetbrains.lincheck.descriptors.ArrayElementByIndexAccessLocation
+import org.jetbrains.lincheck.descriptors.ArrayElementByNameAccessLocation
 import org.jetbrains.lincheck.util.Logger
 import java.io.Closeable
 import java.io.DataInput
@@ -20,6 +24,9 @@ import java.nio.file.Files
 import java.nio.file.StandardOpenOption
 import kotlin.io.path.Path
 import org.jetbrains.lincheck.descriptors.CodeLocation
+import org.jetbrains.lincheck.descriptors.LocalVariableAccessLocation
+import org.jetbrains.lincheck.descriptors.ObjectFieldAccessLocation
+import org.jetbrains.lincheck.descriptors.StaticFieldAccessLocation
 
 private const val INPUT_BUFFER_SIZE: Int = 16 * 1024 * 1024
 
@@ -37,7 +44,7 @@ private interface BlockConsumer {
 }
 
 private class DataBlock(
-    physicalStart : Long,
+    physicalStart: Long,
     physicalEnd: Long,
     accDataSize: Long
 ) {
@@ -122,29 +129,48 @@ private fun BlockList.dataSize(): Long {
 }
 
 
-private data class ShallowStackTraceElement(
+internal data class ShallowCodeLocation(
     val className: Int,
     val methodName: Int,
     val fileName: Int,
-    val lineNumber: Int
+    val lineNumber: Int,
+    val accessPath: Int
 )
+
+internal class ShallowAccessPath(val locations: MutableList<ShallowAccessLocation>)
+
+internal sealed class ShallowAccessLocation
+internal data class ShallowLocalVariableAccessLocation(val variableDescriptorId: Int) : ShallowAccessLocation()
+internal data class ShallowStaticFieldAccessLocation(val fieldDescriptorId: Int) : ShallowAccessLocation()
+internal data class ShallowObjectFieldAccessLocation(val fieldDescriptorId: Int) : ShallowAccessLocation()
+internal data class ShallowArrayElementByIndexAccessLocation(val index: Int): ShallowAccessLocation()
+internal data class ShallowArrayElementByNameAccessLocation(val accessPathId: Int): ShallowAccessLocation()
+
 
 /**
  * This class is used to load code locations without referring strings too early.
  *
  * It is possible, that code location ([StackTraceElement]) can be loaded before
  * its strings are loaded due to data blocks serialization order.
+ * The same applies for the access paths
+ * (for them [org.jetbrains.lincheck.descriptors.VariableDescriptor] or [org.jetbrains.lincheck.descriptors.FieldDescriptor]
+ * might be yet not loaded when the access path is read).
+ *
  */
-private class CodeLocationsContext {
+internal class CodeLocationsContext {
     private val stringCache: MutableList<String?> = ArrayList()
-    private val shallowSTEs: MutableList<ShallowStackTraceElement?> = ArrayList()
+    private val shallowAccessPathsCache: MutableList<ShallowAccessPath?> = ArrayList()
+    private val shallowCodeLocations: MutableList<ShallowCodeLocation?> = ArrayList()
 
     fun loadString(id: Int, value: String): Unit = load(stringCache, id, value)
 
-    fun loadCodeLocation(id: Int, value: ShallowStackTraceElement): Unit = load(shallowSTEs, id, value)
+    fun loadAccessPath(id: Int, value: ShallowAccessPath): Unit = load(shallowAccessPathsCache, id, value)
+
+    fun loadCodeLocation(id: Int, value: ShallowCodeLocation): Unit = load(shallowCodeLocations, id, value)
 
     fun restoreAllCodeLocations(context: TraceContext) {
-        shallowSTEs.forEachIndexed { id, value ->
+        restoreAllAccessPaths(context)
+        shallowCodeLocations.forEachIndexed { id, value ->
             if (value != null) {
                 val stackTraceElement = StackTraceElement(
                     /* declaringClass = */ stringCache[value.className] ?: "<unknown class>",
@@ -152,8 +178,34 @@ private class CodeLocationsContext {
                     /* fileName = */ stringCache[value.fileName] ?: "<unknown file>",
                     /* lineNumber = */ value.lineNumber
                 )
-                val location = CodeLocation(stackTraceElement)
+                val accessPath = if (value.accessPath == -1) null else context.getAccessPath(value.accessPath)
+                val location = CodeLocation(stackTraceElement, accessPath)
                 context.restoreCodeLocation(id, location)
+            }
+        }
+    }
+
+    private fun restoreAllAccessPaths(context: TraceContext) {
+        shallowAccessPathsCache.forEachIndexed { id, value ->
+            if (value != null) {
+                val locations: List<AccessLocation> = value.locations.map { shallowLocation: ShallowAccessLocation ->
+                    when (shallowLocation) {
+                        is ShallowLocalVariableAccessLocation -> LocalVariableAccessLocation(
+                            context.getVariableDescriptor(shallowLocation.variableDescriptorId)
+                        )
+                        is ShallowStaticFieldAccessLocation -> StaticFieldAccessLocation(
+                            context.getFieldDescriptor(shallowLocation.fieldDescriptorId)
+                        )
+                        is ShallowObjectFieldAccessLocation -> ObjectFieldAccessLocation(
+                            context.getFieldDescriptor(shallowLocation.fieldDescriptorId)
+                        )
+                        is ShallowArrayElementByIndexAccessLocation -> ArrayElementByIndexAccessLocation(shallowLocation.index)
+                        is ShallowArrayElementByNameAccessLocation -> ArrayElementByNameAccessLocation(
+                            context.getAccessPath(shallowLocation.accessPathId)
+                        )
+                    }
+                }
+                context.restoreAccessPath(id, AccessPath(locations))
             }
         }
     }
@@ -401,6 +453,7 @@ class LazyTraceReader(
                             ObjectKind.FIELD_DESCRIPTOR -> loadFieldDescriptor(data, context, true)
                             ObjectKind.VARIABLE_DESCRIPTOR -> loadVariableDescriptor(data, context, true)
                             ObjectKind.STRING -> loadString(data, codeLocs, true)
+                            ObjectKind.ACCESS_PATH -> loadAccessPath(data, context, codeLocs, true)
                             ObjectKind.CODE_LOCATION -> loadCodeLocation(data, codeLocs, true)
                             ObjectKind.BLOCK_START -> {
                                 val list = dataBlocks.computeIfAbsent(id) { mutableListOf() }
@@ -719,6 +772,7 @@ private fun loadObjects(
             ObjectKind.FIELD_DESCRIPTOR -> loadFieldDescriptor(input, context, restore)
             ObjectKind.VARIABLE_DESCRIPTOR -> loadVariableDescriptor(input, context, restore)
             ObjectKind.STRING -> loadString(input, codeLocs, restore)
+            ObjectKind.ACCESS_PATH -> loadAccessPath(input, context, codeLocs, restore)
             ObjectKind.CODE_LOCATION -> loadCodeLocation(input, codeLocs, restore)
             // Tracepoint reader returns "true" if a read is complete and "false" if it encountered the end of the block
             ObjectKind.TRACEPOINT -> if (!tracePointReader(input, context, codeLocs)) return ObjectKind.BLOCK_END
@@ -793,6 +847,24 @@ private fun loadString(
     return id
 }
 
+private fun loadAccessPath(
+    input: DataInput,
+    context: TraceContext,
+    codeLocs: CodeLocationsContext,
+    restore: Boolean
+): Int {
+    val id = input.readInt()
+    val len = input.readInt()
+    val locations = mutableListOf<ShallowAccessLocation>()
+    repeat(len) {
+        locations.add(input.readAccessLocation())
+    }
+    if (restore) {
+        codeLocs.loadAccessPath(id, ShallowAccessPath(locations))
+    }
+    return id
+}
+
 private fun loadCodeLocation(
     input: DataInput,
     codeLocs: CodeLocationsContext,
@@ -804,15 +876,17 @@ private fun loadCodeLocation(
     val classNameId = input.readInt()
     val methodNameId = input.readInt()
     val lineNumber = input.readInt()
+    val accessPathId = input.readInt()
 
     if (restore) {
-        val ste = ShallowStackTraceElement(
+        val scl = ShallowCodeLocation(
             className = classNameId,
             methodName = methodNameId,
             fileName = fileNameId,
-            lineNumber = lineNumber
+            lineNumber = lineNumber,
+            accessPath = accessPathId
         )
-        codeLocs.loadCodeLocation(id, ste)
+        codeLocs.loadCodeLocation(id, scl)
     }
     return id
 }

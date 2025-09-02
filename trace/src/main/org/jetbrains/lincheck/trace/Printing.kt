@@ -10,10 +10,46 @@
 
 package org.jetbrains.lincheck.trace
 
+import java.io.File
 import java.io.OutputStream
 import java.io.PrintStream
 
 private const val OUTPUT_BUFFER_SIZE: Int = 16*1024*1024
+
+
+fun printPostProcessedTrace(outputFileName: String?, context: TraceContext, rootCallsPerThread: List<TRTracePoint>, verbose: Boolean) {
+    val input = File.createTempFile("lincheck-trace", ".tmp")
+    saveRecorderTrace(input.absolutePath, context, rootCallsPerThread)
+    printPostProcessedTrace(outputFileName, input.absolutePath, verbose)
+    input.delete()
+}
+
+fun printPostProcessedTrace(outputFileName: String?, inputFileName: String, verbose: Boolean) {
+    val output = if (outputFileName == null) System.out else openNewFile(outputFileName)
+    val reader = LazyTraceReader(inputFileName)
+    val roots = reader.readRoots()
+
+    PrintStream(output.buffered(OUTPUT_BUFFER_SIZE)).use { output ->
+        roots.forEachIndexed { i, root ->
+            output.println("# Thread ${i+1}")
+            lazyPrintTRPoint(output, reader, root, 0, verbose)
+        }
+    }
+}
+
+private fun lazyPrintTRPoint(output: PrintStream, reader: LazyTraceReader, node: TRTracePoint, depth: Int, verbose: Boolean) {
+    output.print(" ".repeat(depth * 2))
+    output.println(node.toText(verbose))
+    if (node is TRMethodCallTracePoint && node.events.isNotEmpty()) {
+        reader.loadAllChildren(node)
+        node.events.forEach { event ->
+            if (event != null) {
+                lazyPrintTRPoint(output, reader, event, depth + 1, verbose)
+            }
+        }
+        node.unloadAllChildren()
+    }
+}
 
 fun printRecorderTrace(fileName: String?, context: TraceContext, rootCallsPerThread: List<TRTracePoint>, verbose: Boolean) =
     printRecorderTrace(

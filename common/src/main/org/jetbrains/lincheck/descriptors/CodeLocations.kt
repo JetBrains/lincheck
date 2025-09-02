@@ -12,7 +12,7 @@ package org.jetbrains.lincheck.descriptors
 
 import org.jetbrains.lincheck.trace.TRACE_CONTEXT
 
-class CodeLocation(
+data class CodeLocation(
     val stackTraceElement: StackTraceElement,
     val accessPath: AccessPath? = null
 )
