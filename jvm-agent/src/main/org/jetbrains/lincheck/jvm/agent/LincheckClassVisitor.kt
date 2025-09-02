@@ -135,7 +135,7 @@ internal class LincheckClassVisitor(
             mv = sharedMemoryAccessTransformer
 
             mv = LocalVariablesAccessTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv, methodInfo.locals)
-            mv = InlineMethodCallTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv, methodInfo.locals, methodInfo.labels)
+            mv = InlineMethodCallTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
 
             mv = applyOwnerNameAnalyzerAdapter(access, methodName, desc, methodInfo, mv,
                 methodCallTransformer,
@@ -237,7 +237,7 @@ internal class LincheckClassVisitor(
         mv = sharedMemoryAccessTransformer
 
         mv = LocalVariablesAccessTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv, methodInfo.locals)
-        mv = InlineMethodCallTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv, methodInfo.locals, methodInfo.labels)
+        mv = InlineMethodCallTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
 
         mv = applyAnalyzerAdapter(access, methodName, desc, mv,
             sharedMemoryAccessTransformer,
