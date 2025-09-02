@@ -11,7 +11,7 @@
 package org.jetbrains.lincheck.jvm.agent.transformers
 
 import sun.nio.ch.lincheck.Injections
-import org.jetbrains.lincheck.jvm.agent.LincheckBaseMethodVisitor
+import org.jetbrains.lincheck.jvm.agent.LincheckMethodVisitor
 import org.jetbrains.lincheck.jvm.agent.MethodInformation
 import org.jetbrains.lincheck.jvm.agent.invokeStatic
 import org.objectweb.asm.commons.GeneratorAdapter
@@ -26,7 +26,7 @@ internal class IgnoredSectionWrapperTransformer(
     metaInfo: MethodInformation,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
-) : LincheckBaseMethodVisitor(fileName, className, methodName, metaInfo, adapter, methodVisitor) {
+) : LincheckMethodVisitor(fileName, className, methodName, metaInfo, adapter, methodVisitor) {
 
     private val tryBlock: Label = adapter.newLabel()
     private val catchBlock: Label = adapter.newLabel()

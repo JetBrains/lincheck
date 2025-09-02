@@ -27,7 +27,7 @@ internal class LocalVariablesAccessTransformer(
     isStatic: Boolean,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
-) : LincheckBaseMethodVisitor(fileName, className, methodName, metaInfo, adapter, methodVisitor) {
+) : LincheckMethodVisitor(fileName, className, methodName, metaInfo, adapter, methodVisitor) {
 
     private val numberOfLocals = convertAsmMethodType(desc).argumentTypes.size + if (isStatic) 0 else 1
 

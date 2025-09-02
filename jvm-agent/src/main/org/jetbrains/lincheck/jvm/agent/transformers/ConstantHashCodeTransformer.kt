@@ -10,7 +10,7 @@
 
 package org.jetbrains.lincheck.jvm.agent.transformers
 
-import org.jetbrains.lincheck.jvm.agent.LincheckBaseMethodVisitor
+import org.jetbrains.lincheck.jvm.agent.LincheckMethodVisitor
 import org.jetbrains.lincheck.jvm.agent.MethodInformation
 import org.jetbrains.lincheck.jvm.agent.invokeIfInAnalyzedCode
 import org.jetbrains.lincheck.jvm.agent.invokeStatic
@@ -33,7 +33,7 @@ internal class ConstantHashCodeTransformer(
     metaInfo: MethodInformation,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor
-) : LincheckBaseMethodVisitor(fileName, className, methodName, metaInfo, adapter, methodVisitor) {
+) : LincheckMethodVisitor(fileName, className, methodName, metaInfo, adapter, methodVisitor) {
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
         when {

@@ -30,7 +30,7 @@ internal abstract class MethodCallTransformerBase(
     metaInfo: MethodInformation,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
-) : LincheckBaseMethodVisitor(fileName, className, methodName, metaInfo, adapter, methodVisitor) {
+) : LincheckMethodVisitor(fileName, className, methodName, metaInfo, adapter, methodVisitor) {
 
     var ownerNameAnalyzer: OwnerNameAnalyzerAdapter? = null
 

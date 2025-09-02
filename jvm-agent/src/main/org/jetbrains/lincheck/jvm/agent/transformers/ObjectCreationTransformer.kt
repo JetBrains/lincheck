@@ -29,7 +29,7 @@ internal class ObjectCreationTransformer(
     metaInfo: MethodInformation,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
-) : LincheckBaseMethodVisitor(fileName, className, methodName, metaInfo, adapter, methodVisitor) {
+) : LincheckMethodVisitor(fileName, className, methodName, metaInfo, adapter, methodVisitor) {
 
     /* To track object creation, this transformer inserts `Injections::afterNewObjectCreation` calls
      * after an object is allocated and initialized.
