@@ -23,8 +23,9 @@ internal open class LincheckMethodVisitor(
     protected val methodName: String,
     protected val descriptor: String,
     protected val access: Int,
+    protected val metaInfo: MethodInformation,
     val adapter: GeneratorAdapter,
-    methodVisitor: MethodVisitor
+    methodVisitor: MethodVisitor,
 ) : MethodVisitor(ASM_API, methodVisitor) {
     private var lineNumber = 0
 

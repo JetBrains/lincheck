@@ -36,9 +36,10 @@ internal class MethodCallMinimalTransformer(
     methodName: String,
     descriptor: String,
     access: Int,
+    metaInfo: MethodInformation,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
-) : MethodCallTransformerBase(fileName, className, methodName, descriptor, access, adapter, methodVisitor) {
+) : MethodCallTransformerBase(fileName, className, methodName, descriptor, access, metaInfo, adapter, methodVisitor) {
 
     override fun processMethodCall(desc: String, opcode: Int, owner: String, name: String, itf: Boolean) = adapter.run {
         val receiverType = getType("L$owner;")
