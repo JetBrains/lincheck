@@ -116,11 +116,6 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    // Tracks content of constants (i.e., static final fields).
-    // Stores a map `object -> fieldName`,
-    // mapping an object to a constant name referencing this object.
-    private val constants = IdentityHashMap<Any, String>()
-
     // InvocationResult that was observed by the strategy during the execution (e.g., a deadlock).
     @Volatile
     protected var suddenInvocationResult: InvocationResult? = null
@@ -238,7 +233,6 @@ internal abstract class ManagedStrategy(
         objectTracker.reset()
         monitorTracker.reset()
         parkingTracker.reset()
-        constants.clear()
         currentEventId = -1
         resetThreads()
     }
@@ -1255,9 +1249,6 @@ internal abstract class ManagedStrategy(
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(value.javaClass)
         }
         if (collectTrace) {
-            if (value !== null) {
-                constants[value] = fieldDescriptor.fieldName
-            }
             val valueRepresentation = objectTracker.getObjectRepresentation(value)
             val typeRepresentation = objectFqTypeName(value)
             if (shouldTrackFieldAccess(obj, fieldDescriptor)) {
