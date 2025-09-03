@@ -101,6 +101,15 @@ internal fun getAtomicMethodDescriptor(obj: Any?, methodName: String): AtomicMet
     }
 }
 
+internal fun AtomicMethodDescriptor.getAccessedObjectIndex(obj: Any?, params: Array<Any?>): Int = when {
+    apiKind == ATOMIC_FIELD_UPDATER ||
+    apiKind == VAR_HANDLE ||
+    apiKind == UNSAFE ->
+        0
+    else ->
+        -1
+}
+
 internal fun AtomicMethodDescriptor.getAccessedObject(obj: Any?, params: Array<Any?>): Any? = when {
     apiKind == ATOMIC_FIELD_UPDATER ||
     apiKind == VAR_HANDLE ||

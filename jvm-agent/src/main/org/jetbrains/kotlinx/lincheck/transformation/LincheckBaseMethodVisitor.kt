@@ -37,9 +37,12 @@ internal open class LincheckBaseMethodVisitor(
         }
     }
 
-    protected fun loadNewCodeLocationId(accessPath: AccessPath? = null): Int = adapter.run {
+    protected fun loadNewCodeLocationId(
+        accessPath: AccessPath? = null,
+        argumentNames: List<AccessPath?>? = null,
+    ): Int = adapter.run {
         val stackTraceElement = StackTraceElement(className, methodName, fileName, lineNumber)
-        val codeLocationId = CodeLocations.newCodeLocation(stackTraceElement, accessPath)
+        val codeLocationId = CodeLocations.newCodeLocation(stackTraceElement, accessPath, argumentNames)
         push(codeLocationId)
         return codeLocationId
     }

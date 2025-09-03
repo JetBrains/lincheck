@@ -2127,7 +2127,7 @@ internal abstract class ManagedStrategy(
         val (ownerName, params) = if (atomicMethodDescriptor == null) {
             findOwnerName(owner, className, codeLocation) to methodParams.asList()
         } else {
-            atomicMethodDescriptor.findAtomicOwnerName(owner!!, methodParams)
+            atomicMethodDescriptor.findAtomicOwnerName(owner!!, methodParams, codeLocation)
         }
         val tracePoint = MethodCallTracePoint(
             eventId = eventId,
@@ -2171,10 +2171,11 @@ internal abstract class ManagedStrategy(
     private fun AtomicMethodDescriptor.findAtomicOwnerName(
         atomic: Any,
         arguments: Array<Any?>,
+        codeLocationId: Int,
     ): Pair<String, List<Any?>> {
         val threadId = threadScheduler.getCurrentThreadId()
         val shadowStackFrame = shadowStack[threadId]!!.last()
-        return findAtomicOwnerName(atomic, arguments, this, shadowStackFrame, objectTracker)
+        return findAtomicOwnerName(atomic, arguments, this, codeLocationId, shadowStackFrame, objectTracker)
     }
 
     /* Methods to control the current call context. */
