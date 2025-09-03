@@ -22,6 +22,7 @@ import java.io.PrintWriter
 import java.io.StringWriter
 import java.lang.instrument.ClassFileTransformer
 import java.security.ProtectionDomain
+import java.util.SortedSet
 import java.util.concurrent.ConcurrentHashMap
 
 object LincheckClassFileTransformer : ClassFileTransformer {
@@ -87,14 +88,17 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         // MethodNode reset all labels on a re-visit (WHY?!).
         // Only one visit is possible to have labels stable.
         // Visiting components like `MethodNode.instructions` is safe.
-        val metaInfo = ClassInformation(
+        val (lineRanges, linesToMethodNames) = getMethodsLineRanges(classNode)
+        val classInfo = ClassInformation(
             smap = readClassSMAP(classNode, reader),
             locals = getMethodsLocalVariables(classNode),
-            labels = getMethodsLabels(classNode)
+            labels = getMethodsLabels(classNode),
+            methodsToLineRanges = lineRanges,
+            linesToMethodNames = linesToMethodNames
         )
 
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
-        val visitor = LincheckClassVisitor(writer, instrumentationMode, metaInfo)
+        val visitor = LincheckClassVisitor(writer, instrumentationMode, classInfo)
         try {
             classNode.accept(visitor)
             writer.toByteArray().also {
@@ -156,6 +160,92 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             }
         )
         .mapValues { MethodLabels(it.value) }
+    }
+
+
+    private val NESTED_LAMBDA_RE = Regex($$"^([^$]+)\\$lambda\\$")
+    /*
+     * Collect all line numbers of all methods.
+     * Some line numbers could be beyond source file line count and need to be mapped.
+     * Sort all methods by first line (we believe it is true first line) and truncate all
+     * lines beyond next method first line.
+     *
+     * It doesn't work for last method, but it is better than nothing
+     */
+    private fun getMethodsLineRanges(
+        classNode: ClassNode
+    ): Pair<Map<String, Pair<Int, Int>>, List<Triple<Int, Int, Set<String>>>> {
+        fun isSetterGetterPair(a: String, b: String): Boolean {
+            return a.length == b.length
+                    && a.length > 3
+                    && (
+                           (a.startsWith("set") && b.startsWith("get"))
+                        || (a.startsWith("get") && b.startsWith("set"))
+                       )
+                    && a.substring(3) == b.substring(3)
+        }
+
+        val allMethods = mutableListOf<Triple<String, String, SortedSet<Int>>>()
+        classNode.methods.forEach { m ->
+            val extractor = LinesCollectorMethodVisitor()
+            m.instructions.accept(extractor)
+            if (extractor.allLines.isNotEmpty()) {
+                allMethods.add(Triple(m.name, m.desc, extractor.allLines))
+            }
+        }
+        if (allMethods.isEmpty()) {
+            return emptyMap<String, Pair<Int, Int>>() to emptyList()
+        }
+
+        // Remove all lambda-methods (non inlined lambdas), as they
+        // are nested to normal methods and should be covered by
+        // enclosing method, because logically it is code in
+        // enclosing method
+        val allMethodNames = allMethods.map { it.first }.toSet()
+        allMethods.removeAll {
+            val (name, _, _) = it
+            val match = NESTED_LAMBDA_RE.find(name) ?: return@removeAll false
+            val enclosingName = match.groupValues.getOrNull(1)
+            return@removeAll allMethodNames.contains(enclosingName)
+        }
+
+        // Sort all remaining methods by start line
+        allMethods.sortBy { it.third.first() }
+
+        // Special case: on-line setter and getter for same name can share this line
+        for (i in 0 ..< allMethods.size - 1) {
+            val (curName, _, curLines) = allMethods[i]
+            val (nxtName, _, nxtLines) = allMethods[i + 1]
+            if (isSetterGetterPair(
+                    curName,
+                    nxtName
+                ) && curLines.size == 1 && nxtLines.size == 1 && curLines == nxtLines
+            ) {
+                continue
+            }
+            curLines.tailSet(nxtLines.first()).clear()
+        }
+
+        val methodsToLines = allMethods.associateBy(
+            keySelector = { it.first + it.second },
+            valueTransform = {
+                (it.third.firstOrNull() ?: 0) to (it.third.lastOrNull() ?: 0)
+            }
+        )
+
+        val linesToMethodNames =  allMethods
+            .filter { (it.third.firstOrNull() ?: 0) > 0 && (it.third.lastOrNull() ?: 0) > 0 }
+            .groupBy(
+                keySelector = { it.third.first() to it.third.last() },
+                valueTransform = { it.first }
+            )
+            .map {
+                val (k, v) = it
+                Triple(k.first, k.second, v.toSet())
+            }
+        linesToMethodNames.sortedWith { a, b ->  a.first.compareTo(b.first) }
+
+        return methodsToLines to linesToMethodNames
     }
 
     private const val CONSTANT_UTF8_TAG = 1

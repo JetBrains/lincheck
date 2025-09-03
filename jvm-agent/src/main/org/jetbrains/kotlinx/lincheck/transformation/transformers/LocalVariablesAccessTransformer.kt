@@ -112,7 +112,7 @@ internal class LocalVariablesAccessTransformer(
     }
 
     private fun getVariableName(varIndex: Int): LocalVariableInfo? {
-        return metaInfo.locals.activeVariables.find { it.index == varIndex }
+        return methodInfo.locals.activeVariables.find { it.index == varIndex }
     }
 
     private fun getVarInsOpcodeType(opcode: Int) = when (opcode) {

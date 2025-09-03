@@ -21,7 +21,7 @@ internal open class LincheckBaseMethodVisitor(
     protected val fileName: String,
     protected val className: String,
     protected val methodName: String,
-    protected val metaInfo: MethodInformation,
+    protected val methodInfo: MethodInformation,
     val adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor
 ) : MethodVisitor(ASM_API, methodVisitor) {
@@ -39,11 +39,39 @@ internal open class LincheckBaseMethodVisitor(
     }
 
     protected fun loadNewCodeLocationId(accessPath: AccessPath? = null): Int = adapter.run {
-        val mappedLocation = metaInfo.smap.getLine("Kotlin", lineNumber)
+        val mappedLocation = methodInfo.smap.getLine("Kotlin", lineNumber)
         val stackTraceElement = if (mappedLocation != null) {
-            StackTraceElement(mappedLocation.className ?: "", methodName, mappedLocation.sourceName, mappedLocation.line)
+            if (mappedLocation.className == className) {
+                if (mappedLocation.line in methodInfo.lineRange.first .. methodInfo.lineRange.second) {
+                    StackTraceElement(
+                        /* declaringClass = */ mappedLocation.className,
+                        /* methodName = */ methodName,
+                        /* fileName = */ mappedLocation.sourceName,
+                        /* lineNumber = */ mappedLocation.line
+                    )
+                } else {
+                    StackTraceElement(
+                        /* declaringClass = */ mappedLocation.className,
+                        /* methodName = */ methodInfo.findMethodByLine(mappedLocation.line, methodName),
+                        /* fileName = */ mappedLocation.sourceName,
+                        /* lineNumber = */ mappedLocation.line
+                    )
+                }
+            } else {
+                // Reset method name, as it is other class or out of current method line range.
+                StackTraceElement(
+                    /* declaringClass = */ mappedLocation.className,
+                    /* methodName = */ UNKNOWN_METHOD_MARKER,
+                    /* fileName = */ mappedLocation.sourceName,
+                    /* lineNumber = */ mappedLocation.line
+                )
+            }
         } else {
-            StackTraceElement(className, methodName, fileName, lineNumber)
+            StackTraceElement(
+                /* declaringClass = */ className,
+                /* methodName = */ methodName,
+                /* fileName = */ fileName,
+                /* lineNumber = */ lineNumber)
         }
         val codeLocationId = CodeLocations.newCodeLocation(stackTraceElement, accessPath)
         push(codeLocationId)
