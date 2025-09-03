@@ -60,24 +60,50 @@ inline fun withLincheckJavaAgent(instrumentationMode: InstrumentationMode, block
 
 enum class InstrumentationMode {
     /**
-     * In this mode, Lincheck transforms bytecode
-     * only to track coroutine suspensions.
+     * Stress testing mode.
+     *
+     * In this mode, Lincheck transforms bytecode only to track coroutine suspensions.
      */
     STRESS,
 
     /**
-     * In this mode, Lincheck tracks
-     * all shared memory manipulations.
+     * Model checking mode.
+     *
+     * In this mode, Lincheck tracks:
+     *  - all shared memory accesses;
+     *  - various synchronization operations (monitors' enter/exit, wait/notify, etc.);
+     *  - coroutine suspensions;
+     *  - method calls/exits;
+     *  - new thread forks and joins.
+     *
+     * For these events Lincheck inserts potential switch points
+     * and creates trace points to collect an execution trace.
+     *
+     * This mode enforces deterministic execution by controlling
+     * the thread scheduling using injected switch points.
      */
     MODEL_CHECKING,
 
     /**
-     * In this mode, lincheck tracks and records events in configured method
-     * but don't enforce determinism or does any analysis.
+     * Trace debugging mode.
+     *
+     * This mode is similar to [MODEL_CHECKING] mode: it tracks a similar set of events,
+     * inserts potential switch points and creates trace points,
+     * enforces deterministic execution.
+     *
+     * The difference is that in this mode Lincheck does not enumerate various interleavings of events
+     * but rather collects a single execution trace and then replays it deterministically.
+     */
+    TRACE_DEBUGGING,
+
+    /**
+     * Trace recording mode.
+     *
+     * In this mode, Lincheck only tracks requested events to collect an execution trace.
+     *
+     * This mode does not enforce determinism or perform any analysis.
      */
     TRACE_RECORDING,
-
-    TRACE_DEBUGGING,
 }
 
 val InstrumentationMode.supportsLazyTransformation: Boolean get() = when (this) {
