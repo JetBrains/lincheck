@@ -19,8 +19,12 @@ import org.jetbrains.lincheck.descriptors.MethodDescriptor
 import org.jetbrains.lincheck.descriptors.VariableDescriptor
 import java.io.*
 import java.nio.ByteBuffer
+import java.nio.file.Files
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
+import kotlin.io.path.Path
 import kotlin.math.absoluteValue
 
 // Buffer for saving trace in one piece
@@ -642,7 +646,7 @@ private class DirectTraceWriter (
     dataStream: OutputStream,
     indexStream: OutputStream,
     context: TraceContext,
-    private val pos: PositionCalculatingOutputStream = PositionCalculatingOutputStream(dataStream)
+    private val pos: PositionCalculatingOutputStream = PositionCalculatingOutputStream(dataStream),
 ) : TraceWriterBase(
     context = context,
     contextState = SimpleContextSavingState(),
@@ -899,6 +903,45 @@ fun saveRecorderTrace(data: OutputStream, index: OutputStream, context: TraceCon
             saveTRTracepoint(tw, root)
             tw.endRoot()
         }
+    }
+}
+
+fun packRecordedTrace(baseFileName: String, deleteSources: Boolean = true) {
+    val dataName = baseFileName
+    val indexName = baseFileName + INDEX_FILENAME_SUFFIX
+    val outputName = baseFileName + PACK_FILENAME_SUFFIX
+
+    try {
+        ZipOutputStream(openNewFile(outputName).buffered(OUTPUT_BUFFER_SIZE)).use { zip ->
+            var input: InputStream
+
+            // Don't compress for now, but STORED requires pre-compute CRC32, and we don't want to do it.
+            zip.setMethod(ZipOutputStream.DEFLATED);
+            zip.setLevel(0);
+
+            // Store data
+            zip.putNextEntry(ZipEntry(PACKED_DATA_ITEM_NAME))
+            input = openExistingFile(dataName) ?: throw IllegalArgumentException("Cannot open trace file \"$dataName\"")
+            input.use { data ->
+                data.copyTo(zip)
+            }
+            zip.closeEntry()
+
+            // Store Index
+            zip.putNextEntry(ZipEntry(PACKED_INDEX_ITEM_NAME))
+            input = openExistingFile(indexName) ?: throw IllegalArgumentException("Cannot open trace index file \"$indexName\"")
+            input.use { data ->
+                data.copyTo(zip)
+            }
+            zip.closeEntry()
+        }
+        if (deleteSources) {
+            Files.deleteIfExists(Path(dataName))
+            Files.deleteIfExists(Path(indexName))
+        }
+    } catch (e: Throwable) {
+        Files.deleteIfExists(Path(outputName))
+        throw e
     }
 }
 

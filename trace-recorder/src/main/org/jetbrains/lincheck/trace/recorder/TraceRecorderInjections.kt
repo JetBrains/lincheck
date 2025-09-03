@@ -31,7 +31,8 @@ internal object TraceRecorderInjections {
             methodName = TraceAgentParameters.methodUnderTraceDebugging,
             traceFileName = TraceAgentParameters.traceDumpFilePath,
             format = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FORMAT),
-            formatOption = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FOPTION)
+            formatOption = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FOPTION),
+            pack = (TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_PACK) ?: "true").toBoolean()
         )
     }
 

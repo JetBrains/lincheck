@@ -146,7 +146,8 @@ class TraceCollectingEventTracker(
     private val className: String,
     private val methodName: String,
     private val traceDumpPath: String?,
-    private val mode: TraceCollectorMode
+    private val mode: TraceCollectorMode,
+    private val combine: Boolean
 ) : EventTracker {
     // We don't want to re-create this object each time we need it
     private val analysisProfile: AnalysisProfile = AnalysisProfile(false)
@@ -634,6 +635,9 @@ class TraceCollectingEventTracker(
         startTime = System.currentTimeMillis()
 
         if (mode == TraceCollectorMode.BINARY_STREAM) {
+            if (combine) {
+                packRecordedTrace(traceDumpPath!!)
+            }
             return
         }
 
@@ -660,10 +664,15 @@ class TraceCollectingEventTracker(
                 }
             }
             when (mode) {
-                TraceCollectorMode.BINARY_DUMP -> saveRecorderTrace(traceDumpPath!!, TRACE_CONTEXT, roots)
+                TraceCollectorMode.BINARY_DUMP -> {
+                    saveRecorderTrace(traceDumpPath!!, TRACE_CONTEXT, roots)
+                    if (combine) {
+                        packRecordedTrace(traceDumpPath)
+                    }
+                }
                 TraceCollectorMode.TEXT -> printPostProcessedTrace(traceDumpPath, TRACE_CONTEXT, roots, false)
                 TraceCollectorMode.TEXT_VERBOSE -> printPostProcessedTrace(traceDumpPath, TRACE_CONTEXT, roots, true)
-                TraceCollectorMode.BINARY_STREAM -> Unit // Do nothing, everything is written
+                TraceCollectorMode.BINARY_STREAM -> {}
             }
         } catch (t: Throwable) {
             System.err.println("TraceRecorder: Cannot write output file $traceDumpPath: ${t.message} at ${t.stackTraceToString()}")

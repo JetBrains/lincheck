@@ -27,6 +27,9 @@ import org.jetbrains.lincheck.descriptors.CodeLocation
 import org.jetbrains.lincheck.descriptors.LocalVariableAccessLocation
 import org.jetbrains.lincheck.descriptors.ObjectFieldAccessLocation
 import org.jetbrains.lincheck.descriptors.StaticFieldAccessLocation
+import java.io.File
+import java.io.FileInputStream
+import java.util.zip.ZipInputStream
 
 private const val INPUT_BUFFER_SIZE: Int = 16 * 1024 * 1024
 
@@ -222,11 +225,64 @@ internal class CodeLocationsContext {
 /**
  * This needs a file name as it uses a seekable file channel, it is easier than seekable stream
  */
-class LazyTraceReader(
-    private val dataFileName: String,
-    private val index: DataInputStream?,
+class LazyTraceReader private constructor(
+    private val traceFileName: String,
+    private val input: TwoStreamProvider,
     private val postprocessor: TracePostprocessor
 ) : Closeable {
+
+    private class TwoStreamProvider(val baseFileName: String): AutoCloseable {
+        private var tmpDataFile: File? = null
+        private var zip: ZipInputStream? = null
+
+        var indexStream: DataInputStream? = null
+            private set
+
+        init {
+            val input = openExistingFile(baseFileName)?.buffered(INPUT_BUFFER_SIZE) ?:
+                throw IllegalArgumentException("Trace file \"$baseFileName\" doesn't exist")
+           // Try to unpack zip
+            zip = ZipInputStream(input)
+            try {
+                run {
+                    val dataEntry = zip?.nextEntry ?: return@run // null -> not a ZIP
+                    if (dataEntry.name != PACKED_DATA_ITEM_NAME) throw IllegalArgumentException("File \"$baseFileName\" is ZIP but not packed trace")
+                    val tmpDataFile = File.createTempFile("unpacked-trace-data", ".bin")
+                    tmpDataFile.deleteOnExit()
+
+                    try {
+                        val dataOutput = openNewFile(tmpDataFile.absolutePath)
+                        dataOutput.use {
+                            zip?.copyTo(it)
+                        }
+                        this.tmpDataFile = tmpDataFile
+                    } catch (e: IOException) {
+                        tmpDataFile.delete()
+                        return@run
+                    }
+
+                    val indexEntry = zip?.nextEntry
+                        ?: throw IllegalArgumentException("File \"$baseFileName\" is ZIP but not packed trace")
+                    if (indexEntry.name != PACKED_INDEX_ITEM_NAME) throw IllegalArgumentException("File \"$baseFileName\" is ZIP but not packed trace")
+                }
+            } catch (e: Throwable) {
+                zip?.close()
+                throw e
+            }
+            indexStream = wrapStream(zip)
+            if (indexStream == null) {
+                indexStream = wrapStream(openExistingFile(baseFileName + INDEX_FILENAME_SUFFIX))
+            }
+        }
+
+        val dataFileName: String = tmpDataFile?.absolutePath ?: baseFileName
+
+        override fun close() {
+            tmpDataFile?.delete()
+            indexStream?.close()
+            zip?.close()
+        }
+    }
 
     private fun interface TracepointRegistrator {
         fun register(indexInParent: Int, tracePoint: TRTracePoint, physicalOffset: Long)
@@ -234,8 +290,8 @@ class LazyTraceReader(
 
     constructor(baseFileName: String, postprocessor: TracePostprocessor = CompressingPostprocessor) :
             this(
-                dataFileName = baseFileName,
-                index = wrapStream(openExistingFile(baseFileName + INDEX_FILENAME_SUFFIX)),
+                traceFileName = baseFileName,
+                input = TwoStreamProvider(baseFileName),
                 postprocessor = postprocessor
             )
 
@@ -254,7 +310,7 @@ class LazyTraceReader(
     private val callTracepointChildren = RangeIndex.create()
 
     init {
-        val channel = Files.newByteChannel(Path(dataFileName), StandardOpenOption.READ)
+        val channel = Files.newByteChannel(Path(input.dataFileName), StandardOpenOption.READ)
         dataStream = SeekableChannelBufferedInputStream(channel)
         data = SeekableDataInput(dataStream)
 
@@ -262,14 +318,14 @@ class LazyTraceReader(
             checkDataHeader(data)
         } catch (t: Throwable) {
             data.close()
-            index?.close()
+            input.close()
             throw t
         }
     }
 
     override fun close() {
         data.close()
-        index?.close()
+        input.close()
     }
 
     fun readRoots(): List<TRTracePoint> {
@@ -397,11 +453,12 @@ class LazyTraceReader(
     }
 
     private fun loadContext() {
+        val index = input.indexStream
         if (index == null) {
-            System.err.println("TraceRecorder: No index file is given for ${this.dataFileName}: read whole data file to re-create context")
+            System.err.println("TraceRecorder: No index file is given for $traceFileName: read whole data file to re-create context")
             loadContextWithoutIndex()
         } else if (!loadContextWithIndex()) {
-            System.err.println("TraceRecorder: Index file for $dataFileName id corrupted: read whole data file to re-create context")
+            System.err.println("TraceRecorder: Index file for $traceFileName is corrupted: read whole data file to re-create context")
             context.clear()
             dataBlocks.clear()
             loadContextWithoutIndex()
@@ -412,6 +469,7 @@ class LazyTraceReader(
     }
 
     private fun loadContextWithIndex(): Boolean {
+        val index = input.indexStream
         if (index == null) return false
         index.use { index ->
             try {
@@ -481,7 +539,7 @@ class LazyTraceReader(
                     error("Wrong final index magic 0x${(magic.toString(16))}, expected ${TRACE_MAGIC.toString(16)}")
                 }
             } catch (t: IOException) {
-                System.err.println("TraceRecorder: Error reading index for $dataFileName: ${t.message}")
+                System.err.println("TraceRecorder: Error reading index for $traceFileName: ${t.message}")
                 return false
             }
         }
@@ -624,6 +682,29 @@ data class TraceWithContext(
     val context: TraceContext,
     val roots: List<TRTracePoint>
 )
+
+fun loadRecordedTrace(traceFileName: String): TraceWithContext {
+    // Maybe zip?
+    val input = openExistingFile(traceFileName)?.buffered(INPUT_BUFFER_SIZE)
+    require(input != null) { "Cannot open trace \"$traceFileName\"" }
+    val zip = ZipInputStream(input)
+    val entry = zip.nextEntry
+    if (entry != null) {
+        input.use {
+            zip.use {
+                require(entry.name == PACKED_DATA_ITEM_NAME) { "Trace file \"$traceFileName\" is ZIP but not packed trace" }
+                return loadRecordedTrace(zip)
+            }
+        }
+    } else {
+        input.close()
+        val rawInput = openExistingFile(traceFileName)?.buffered(INPUT_BUFFER_SIZE)
+        require(rawInput != null) { "Cannot open trace \"$traceFileName\"" }
+        rawInput.use {
+            return loadRecordedTrace(it)
+        }
+    }
+}
 
 fun loadRecordedTrace(inp: InputStream): TraceWithContext {
     DataInputStream(inp.buffered(INPUT_BUFFER_SIZE)).use { input ->
