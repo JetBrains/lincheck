@@ -118,6 +118,7 @@ internal fun findAtomicOwnerName(
             val ownerIndex = atomicMethodDescriptor.getAccessedObjectIndex(atomic, arguments)
             if (ownerIndex == -1) codeLocation?.accessPath else codeLocation?.argumentNames?.getOrNull(ownerIndex)
         }
+        ?.takeIf { it.isNotEmpty() }
         return when (location) {
             is ArrayElementByIndexAccessLocation -> {
                 (owner ?: "this") + "[${location.index}]"
