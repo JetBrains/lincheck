@@ -44,7 +44,7 @@ internal class MethodCallMinimalTransformer(
         val receiverType = getType("L$owner;")
         val returnType = getReturnType(desc)
         val ownerName = getOwnerName(desc, opcode)
-        val argumentNames = getArgumentNames(desc)
+        val argumentNames = getArgumentNames(desc, opcode)
         // STACK: receiver?, arguments
         val argumentLocals = storeArguments(desc)
         val argumentsArrayLocal = newLocal(OBJECT_ARRAY_TYPE).also {

@@ -186,11 +186,11 @@ internal abstract class MethodCallTransformerBase(
         }
     }
 
-    protected fun getArgumentNames(desc: String): List<AccessPath?>? {
+    protected fun getArgumentNames(desc: String, opcode: Int): List<AccessPath?>? {
         return ownerNameAnalyzer?.stack?.let { stack ->
             var position = 0
             val argumentTypes = getArgumentTypes(desc)
-            return argumentTypes.map { argType ->
+            return argumentTypes.reversed().map { argType ->
                 val argPath = stack.getStackElementAt(position)
                 position += argType.size
                 argPath
