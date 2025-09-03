@@ -15,10 +15,12 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.TRACE_DEBUGGING
+import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.MODEL_CHECKING
 import org.jetbrains.lincheck.withLincheckTestContext
 import org.jetbrains.lincheck.datastructures.scenario
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
+import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import kotlin.reflect.*
 import org.junit.Assert
 
@@ -35,7 +37,8 @@ internal fun modelCheckerTest(
         parallel { thread { actor(testOperation) } }
     }
     val verifier = CollectResultsVerifier()
-    withLincheckTestContext(InstrumentationMode.MODEL_CHECKING) {
+    val instrumentationMode = if (isInTraceDebuggerMode) TRACE_DEBUGGING else MODEL_CHECKING
+    withLincheckTestContext(instrumentationMode) {
         val strategy = createStrategy(testClass.java, scenario, stdLibAnalysis)
         val failure = strategy.runIteration(invocations, verifier)
         if (expectedFailure != null) {
