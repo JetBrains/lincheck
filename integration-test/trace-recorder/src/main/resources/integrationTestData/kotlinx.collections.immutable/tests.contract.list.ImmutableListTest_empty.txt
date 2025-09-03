@@ -153,7 +153,7 @@ ImmutableListTest.empty() at :0
               getter.invoke(SmallPersistentVector@1): true at ComparisonDSL.kt:21
                 propertyEquals.containsAll(SmallPersistentVector@1): true at CollectionBehaviors.kt:111
                   SmallPersistentVector@1.all() at AbstractPersistentList.kt:56
-                    isEmpty(): true at AbstractPersistentList.kt:69
+                    isEmpty(): true at _Collections.kt:1734
                       buffer ➜ Object;@1 at SmallPersistentVector.kt:22
               AssertionsKt.assertEquals(true, true, "") at ComparisonDSL.kt:21
             collectionBehavior.compareProperty(CollectionBehaviorsKt$$Lambda@1, CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:113
@@ -632,8 +632,8 @@ ImmutableListTest.empty() at :0
             expected ➜ EmptyList@1 at ComparisonDSL.kt:15
           EmptyList@1.size(): 0 at CollectionBehaviors.kt:18
           CompareContext@1.propertyFailsWith() at CollectionBehaviors.kt:21
-            CollectionBehaviorsKt$listBehavior$$inlined$propertyFailsWith$1.INSTANCE ➜ CollectionBehaviorsKt$listBehavior$$inlined$propertyFailsWith$1@1 at CollectionBehaviors.kt:119
-            propertyFailsWith(CollectionBehaviorsKt$listBehavior$$inlined$propertyFailsWith$1@1, CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:119
+            CollectionBehaviorsKt$listBehavior$$inlined$propertyFailsWith$1.INSTANCE ➜ CollectionBehaviorsKt$listBehavior$$inlined$propertyFailsWith$1@1 at ComparisonDSL.kt:24
+            propertyFailsWith(CollectionBehaviorsKt$listBehavior$$inlined$propertyFailsWith$1@1, CollectionBehaviorsKt$$Lambda@1) at ComparisonDSL.kt:24
               assertFailEquals(CompareContext$$Lambda@1, CompareContext$$Lambda@1, CollectionBehaviorsKt$listBehavior$$inlined$propertyFailsWith$1@1) at ComparisonDSL.kt:25
                 Result.Companion ➜ Result.Companion@1 at ComparisonDSL.kt:31
                 expected.invoke(): threw java.lang.IndexOutOfBoundsException at ComparisonDSL.kt:31
