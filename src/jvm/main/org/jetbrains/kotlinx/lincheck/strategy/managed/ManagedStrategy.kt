@@ -116,11 +116,6 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    // Tracks content of constants (i.e., static final fields).
-    // Stores a map `object -> fieldName`,
-    // mapping an object to a constant name referencing this object.
-    private val constants = IdentityHashMap<Any, String>()
-
     // InvocationResult that was observed by the strategy during the execution (e.g., a deadlock).
     @Volatile
     protected var suddenInvocationResult: InvocationResult? = null
@@ -238,7 +233,6 @@ internal abstract class ManagedStrategy(
         objectTracker.reset()
         monitorTracker.reset()
         parkingTracker.reset()
-        constants.clear()
         currentEventId = -1
         resetThreads()
     }
@@ -1255,9 +1249,6 @@ internal abstract class ManagedStrategy(
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(value.javaClass)
         }
         if (collectTrace) {
-            if (value !== null) {
-                constants[value] = fieldDescriptor.fieldName
-            }
             val valueRepresentation = objectTracker.getObjectRepresentation(value)
             val typeRepresentation = objectFqTypeName(value)
             if (shouldTrackFieldAccess(obj, fieldDescriptor)) {
@@ -1379,53 +1370,9 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    override fun afterLocalRead(codeLocation: Int, variableId: Int, value: Any?) = runInsideIgnoredSection {
-        if (!collectTrace) return
-        val threadId = threadScheduler.getCurrentThreadId()
-        val shadowStackFrame = shadowStack[threadId]!!.last()
-        val variableDescriptor = TRACE_CONTEXT.getVariableDescriptor(variableId)
-        shadowStackFrame.setLocalVariable(variableDescriptor.name, value)
-        // TODO: enable local vars tracking in the trace after further polishing
-        // TODO: add a flag to enable local vars tracking in the trace conditionally
-        // val tracePoint = if (collectTrace) {
-        //     ReadTracePoint(
-        //         ownerRepresentation = null,
-        //         iThread = iThread,
-        //         actorId = currentActorId[iThread]!!,
-        //         callStackTrace = callStackTrace[iThread]!!,
-        //         fieldName = variableDescriptor.name,
-        //         codeLocation = codeLocation,
-        //         isLocal = true,
-        //     ).also { it.initializeReadValue(adornedStringRepresentation(value), objectFqTypeName(value)) }
-        // } else {
-        //     null
-        // }
-        // traceCollector!!.passCodeLocation(tracePoint)
-    }
+    override fun afterLocalRead(codeLocation: Int, variableId: Int, value: Any?) {}
 
-    override fun afterLocalWrite(codeLocation: Int, variableId: Int, value: Any?) = runInsideIgnoredSection {
-        if (!collectTrace) return
-        val threadId = threadScheduler.getCurrentThreadId()
-        val shadowStackFrame = shadowStack[threadId]!!.last()
-        val variableDescriptor = TRACE_CONTEXT.getVariableDescriptor(variableId)
-        shadowStackFrame.setLocalVariable(variableDescriptor.name, value)
-        // TODO: enable local vars tracking in the trace after further polishing
-        // TODO: add a flag to enable local vars tracking in the trace conditionally
-        // val tracePoint = if (collectTrace) {
-        //     WriteTracePoint(
-        //         ownerRepresentation = null,
-        //         iThread = iThread,
-        //         actorId = currentActorId[iThread]!!,
-        //         callStackTrace = callStackTrace[iThread]!!,
-        //         fieldName = variableDescriptor.name,
-        //         codeLocation = codeLocation,
-        //         isLocal = true,
-        //     ).also { it.initializeWrittenValue(adornedStringRepresentation(value), objectFqTypeName(value)) }
-        // } else {
-        //     null
-        // }
-        // traceCollector!!.passCodeLocation(tracePoint)
-    }
+    override fun afterLocalWrite(codeLocation: Int, variableId: Int, value: Any?) {}
 
     override fun beforeNewObjectCreation(className: String) = runInsideIgnoredSection {
         LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
@@ -2127,7 +2074,7 @@ internal abstract class ManagedStrategy(
         val (ownerName, params) = if (atomicMethodDescriptor == null) {
             findOwnerName(owner, className, codeLocation) to methodParams.asList()
         } else {
-            atomicMethodDescriptor.findAtomicOwnerName(owner!!, methodParams)
+            atomicMethodDescriptor.findAtomicOwnerName(owner!!, methodParams, codeLocation)
         }
         val tracePoint = MethodCallTracePoint(
             eventId = eventId,
@@ -2171,10 +2118,11 @@ internal abstract class ManagedStrategy(
     private fun AtomicMethodDescriptor.findAtomicOwnerName(
         atomic: Any,
         arguments: Array<Any?>,
+        codeLocationId: Int,
     ): Pair<String, List<Any?>> {
         val threadId = threadScheduler.getCurrentThreadId()
         val shadowStackFrame = shadowStack[threadId]!!.last()
-        return findAtomicOwnerName(atomic, arguments, this, shadowStackFrame, objectTracker, constants)
+        return findAtomicOwnerName(atomic, arguments, this, codeLocationId, shadowStackFrame, objectTracker)
     }
 
     /* Methods to control the current call context. */

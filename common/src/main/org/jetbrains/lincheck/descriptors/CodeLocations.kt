@@ -14,7 +14,11 @@ import org.jetbrains.lincheck.trace.TRACE_CONTEXT
 
 data class CodeLocation(
     val stackTraceElement: StackTraceElement,
-    val accessPath: AccessPath? = null
+    val accessPath: AccessPath? = null,
+
+    // TODO: this only makes sense for method call code locations,
+    //   consider introducing proper type hierarchy for code locations
+    val argumentNames: List<AccessPath?>? = null
 )
 
 /**
@@ -33,8 +37,12 @@ object CodeLocations {
      */
     @JvmStatic
     @Synchronized
-    fun newCodeLocation(stackTraceElement: StackTraceElement, accessPath: AccessPath? = null): Int =
-        TRACE_CONTEXT.newCodeLocation(stackTraceElement, accessPath)
+    fun newCodeLocation(
+        stackTraceElement: StackTraceElement,
+        accessPath: AccessPath? = null,
+        argumentNames: List<AccessPath?>? = null,
+    ): Int =
+        TRACE_CONTEXT.newCodeLocation(stackTraceElement, accessPath, argumentNames)
 
     /**
      * Returns the [StackTraceElement] associated with the specified code location ID.

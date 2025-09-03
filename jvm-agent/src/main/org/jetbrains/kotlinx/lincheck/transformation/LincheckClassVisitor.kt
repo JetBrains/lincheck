@@ -238,7 +238,6 @@ internal class LincheckClassVisitor(
         val sharedMemoryAccessTransformer = applySharedMemoryAccessTransformer(methodName, adapter, mv)
         mv = sharedMemoryAccessTransformer
 
-        mv = LocalVariablesAccessTransformer(fileName, className, methodName, desc, isStatic, locals, adapter, mv)
         mv = InlineMethodCallTransformer(fileName, className, methodName, desc, adapter, mv, locals, labels)
 
         mv = applyAnalyzerAdapter(access, methodName, desc, mv,

@@ -20,27 +20,20 @@ import org.jetbrains.lincheck.util.*
  * @property instance the object on which the method was invoked, null in the case of a static method.
   */
 class ShadowStackFrame(val instance: Any?) {
-    private val _localVariables: MutableMap<String, LocalVariableState> = mutableMapOf()
-    val localVariables: Map<String, LocalVariableState> get() = _localVariables
-
-    private var accessCounter: Int = 0
+    private val _localVariables: MutableMap<String, Any?> = mutableMapOf()
+    val localVariables: Map<String, Any?> get() = _localVariables
 
     val instanceClassName = instance?.javaClass?.name
 
-    data class LocalVariableState(
-        val value: Any?,
-        val accessCounter: Int,
-    )
-
     fun getLocalVariables(): List<Pair<String, Any?>> =
-        _localVariables.map { (name, state) -> name to state.value }
+        _localVariables.map { (name, value) -> name to value }
 
     fun getLocalVariable(name: String): Any? {
         return _localVariables[name]
     }
 
     fun setLocalVariable(name: String, value: Any?) {
-        _localVariables[name] = LocalVariableState(value, accessCounter++)
+        _localVariables[name] = value
     }
 }
 
@@ -54,9 +47,8 @@ fun ShadowStackFrame.findCurrentReceiverFieldReferringTo(obj: Any): FieldAccessL
 
 fun ShadowStackFrame.findLocalVariableReferringTo(obj: Any): LocalVariableAccessLocation? {
     return localVariables
-        .filter { (name, state) -> (state.value === obj) && !isInlineThisIVName(name) }
-        .maxByOrNull { (_, state) -> state.accessCounter }
-        ?.let {
+        .filter { (name, value) -> (value === obj) && !isInlineThisIVName(name) }
+        .firstNotNullOfOrNull {
             val descriptor = TRACE_CONTEXT.getVariableDescriptor(it.key)
             LocalVariableAccessLocation(descriptor)
         }
