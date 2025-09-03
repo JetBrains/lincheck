@@ -48,7 +48,7 @@ internal fun findOwnerName(
  * @param codeLocationId the ID of the code location, used to look up the code location's access path.
  * @param shadowStackFrame the current shadow stack frame, representing the program's stack state during execution.
  * @param objectTracker the object tracker, used to provide representations of tracked objects.
- * @param ownerNameLookup a back-up callback used to look up the owner name
+ * @param accessPathLookup a back-up callback used to look up the access path
  *   in case when lookup by the code location fails.
  * @return the determined owner name as a string, or null if no explicit owner name is required.
  */
@@ -58,7 +58,7 @@ fun findOwnerName(
     codeLocationId: Int,
     shadowStackFrame: ShadowStackFrame,
     objectTracker: ObjectTracker,
-    ownerNameLookup: () -> OwnerName? = { null },
+    accessPathLookup: () -> AccessPath? = { null },
 ): String? {
     if (obj == null) {
         return findOwnerName(className!!, shadowStackFrame)
@@ -70,7 +70,7 @@ fun findOwnerName(
     // if the current owner is `this` - no owner needed
     if (shadowStackFrame.isCurrentStackFrameReceiver(obj)) return null
     // lookup for a statically inferred owner name
-    val ownerName = CodeLocations.accessPath(codeLocationId) ?: ownerNameLookup()
+    val ownerName = CodeLocations.accessPath(codeLocationId) ?: accessPathLookup()
     if (ownerName != null) {
         return if (isThisName(ownerName.toString())) null else ownerName.toString()
     }
