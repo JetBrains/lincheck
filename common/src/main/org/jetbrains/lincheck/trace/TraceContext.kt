@@ -131,12 +131,19 @@ class TraceContext {
 
     val codeLocations: List<CodeLocation?> get() = locations
 
-    fun newCodeLocation(stackTraceElement: StackTraceElement, accessPath: AccessPath? = null): Int {
+    fun newCodeLocation(
+        stackTraceElement: StackTraceElement,
+        accessPath: AccessPath? = null,
+        argumentNames: List<AccessPath?>? = null,
+    ): Int {
         val id = locations.size
-        val location = CodeLocation(stackTraceElement, accessPath)
+        val location = CodeLocation(stackTraceElement, accessPath, argumentNames)
         locations.add(location)
         return id
     }
+
+    fun codeLocation(codeLocationId: Int): CodeLocation? =
+        locations[codeLocationId]
 
     fun stackTrace(codeLocationId: Int): StackTraceElement {
         if (codeLocationId == UNKNOWN_CODE_LOCATION_ID) return EMPTY_STACK_TRACE

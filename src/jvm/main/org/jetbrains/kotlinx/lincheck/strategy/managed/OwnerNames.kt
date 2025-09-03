@@ -14,6 +14,7 @@ import org.jetbrains.lincheck.descriptors.*
 import org.jetbrains.lincheck.analysis.*
 import org.jetbrains.lincheck.trace.isThisName
 import org.jetbrains.lincheck.jvm.agent.toSimpleClassName
+import org.jetbrains.lincheck.trace.TRACE_CONTEXT
 import org.jetbrains.lincheck.util.*
 
 /**
@@ -47,6 +48,8 @@ internal fun findOwnerName(
  * @param codeLocationId the ID of the code location, used to look up the code location's access path.
  * @param shadowStackFrame the current shadow stack frame, representing the program's stack state during execution.
  * @param objectTracker the object tracker, used to provide representations of tracked objects.
+ * @param ownerNameLookup a back-up callback used to look up the owner name
+ *   in case when lookup by the code location fails.
  * @return the determined owner name as a string, or null if no explicit owner name is required.
  */
 fun findOwnerName(
@@ -55,6 +58,7 @@ fun findOwnerName(
     codeLocationId: Int,
     shadowStackFrame: ShadowStackFrame,
     objectTracker: ObjectTracker,
+    ownerNameLookup: () -> OwnerName? = { null },
 ): String? {
     if (obj == null) {
         return findOwnerName(className!!, shadowStackFrame)
@@ -66,9 +70,9 @@ fun findOwnerName(
     // if the current owner is `this` - no owner needed
     if (shadowStackFrame.isCurrentStackFrameReceiver(obj)) return null
     // lookup for a statically inferred owner name
-    val ownerName = CodeLocations.accessPath(codeLocationId)?.toString()
+    val ownerName = CodeLocations.accessPath(codeLocationId) ?: ownerNameLookup()
     if (ownerName != null) {
-        return if (isThisName(ownerName)) null else ownerName
+        return if (isThisName(ownerName.toString())) null else ownerName.toString()
     }
     // lookup for a field name in the current stack frame `this`
     shadowStackFrame.findCurrentReceiverFieldReferringTo(obj)?.let { access ->
@@ -100,6 +104,7 @@ internal fun findAtomicOwnerName(
     atomic: Any,
     arguments: Array<Any?>,
     atomicMethodDescriptor: AtomicMethodDescriptor,
+    codeLocationId: Int,
     shadowStackFrame: ShadowStackFrame,
     objectTracker: ObjectTracker,
 ): Pair<String, List<Any?>> {
@@ -108,7 +113,11 @@ internal fun findAtomicOwnerName(
     var params: List<Any?>? = null
 
     fun getOwnerName(owner: Any?, className: String?, location: AccessLocation): String {
-        val owner = findOwnerName(owner, className, UNKNOWN_CODE_LOCATION, shadowStackFrame, objectTracker)
+        val owner = findOwnerName(owner, className, UNKNOWN_CODE_LOCATION, shadowStackFrame, objectTracker) {
+            val codeLocation = TRACE_CONTEXT.codeLocation(codeLocationId)
+            val ownerIndex = atomicMethodDescriptor.getAccessedObjectIndex(atomic, arguments)
+            if (ownerIndex == -1) codeLocation?.accessPath else codeLocation?.argumentNames?.getOrNull(ownerIndex)
+        }
         return when (location) {
             is ArrayElementByIndexAccessLocation -> {
                 (owner ?: "this") + "[${location.index}]"
