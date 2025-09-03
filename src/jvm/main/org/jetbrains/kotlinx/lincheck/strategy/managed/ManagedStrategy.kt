@@ -1379,53 +1379,9 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    override fun afterLocalRead(codeLocation: Int, variableId: Int, value: Any?) = runInsideIgnoredSection {
-        if (!collectTrace) return
-        val threadId = threadScheduler.getCurrentThreadId()
-        val shadowStackFrame = shadowStack[threadId]!!.last()
-        val variableDescriptor = TRACE_CONTEXT.getVariableDescriptor(variableId)
-        shadowStackFrame.setLocalVariable(variableDescriptor.name, value)
-        // TODO: enable local vars tracking in the trace after further polishing
-        // TODO: add a flag to enable local vars tracking in the trace conditionally
-        // val tracePoint = if (collectTrace) {
-        //     ReadTracePoint(
-        //         ownerRepresentation = null,
-        //         iThread = iThread,
-        //         actorId = currentActorId[iThread]!!,
-        //         callStackTrace = callStackTrace[iThread]!!,
-        //         fieldName = variableDescriptor.name,
-        //         codeLocation = codeLocation,
-        //         isLocal = true,
-        //     ).also { it.initializeReadValue(adornedStringRepresentation(value), objectFqTypeName(value)) }
-        // } else {
-        //     null
-        // }
-        // traceCollector!!.passCodeLocation(tracePoint)
-    }
+    override fun afterLocalRead(codeLocation: Int, variableId: Int, value: Any?) {}
 
-    override fun afterLocalWrite(codeLocation: Int, variableId: Int, value: Any?) = runInsideIgnoredSection {
-        if (!collectTrace) return
-        val threadId = threadScheduler.getCurrentThreadId()
-        val shadowStackFrame = shadowStack[threadId]!!.last()
-        val variableDescriptor = TRACE_CONTEXT.getVariableDescriptor(variableId)
-        shadowStackFrame.setLocalVariable(variableDescriptor.name, value)
-        // TODO: enable local vars tracking in the trace after further polishing
-        // TODO: add a flag to enable local vars tracking in the trace conditionally
-        // val tracePoint = if (collectTrace) {
-        //     WriteTracePoint(
-        //         ownerRepresentation = null,
-        //         iThread = iThread,
-        //         actorId = currentActorId[iThread]!!,
-        //         callStackTrace = callStackTrace[iThread]!!,
-        //         fieldName = variableDescriptor.name,
-        //         codeLocation = codeLocation,
-        //         isLocal = true,
-        //     ).also { it.initializeWrittenValue(adornedStringRepresentation(value), objectFqTypeName(value)) }
-        // } else {
-        //     null
-        // }
-        // traceCollector!!.passCodeLocation(tracePoint)
-    }
+    override fun afterLocalWrite(codeLocation: Int, variableId: Int, value: Any?) {}
 
     override fun beforeNewObjectCreation(className: String) = runInsideIgnoredSection {
         LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
