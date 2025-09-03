@@ -60,12 +60,13 @@ fun printRecorderTrace(fileName: String?, context: TraceContext, rootCallsPerThr
     )
 
 fun printRecorderTrace(output: OutputStream, context: TraceContext, rootCallsPerThread: List<TRTracePoint>, verbose: Boolean) {
-    check(context == TRACE_CONTEXT) { "Now only global TRACE_CONTEXT is supported" }
-    PrintStream(output.buffered(OUTPUT_BUFFER_SIZE)).use { output ->
-        val appendable = DefaultTRTextAppendable(output, verbose)
-        rootCallsPerThread.forEachIndexed { i, root ->
-            output.println("# Thread ${i+1}")
-            printTRPoint(appendable, root, 0)
+    withTraceContext(context) {
+        PrintStream(output.buffered(OUTPUT_BUFFER_SIZE)).use { output ->
+            val appendable = DefaultTRTextAppendable(output, verbose)
+            rootCallsPerThread.forEachIndexed { i, root ->
+                output.println("# Thread ${i + 1}")
+                printTRPoint(appendable, root, 0)
+            }
         }
     }
 }
