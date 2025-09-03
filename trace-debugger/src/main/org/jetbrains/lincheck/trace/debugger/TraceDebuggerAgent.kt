@@ -43,7 +43,7 @@ object TraceDebuggerAgent {
             "`lincheck.traceRecorderMode`. Only one of them expected to be `true`. " +
             "Rerun with `-Dlincheck.traceDebuggerMode=true` or `-Dlincheck.traceRecorderMode=true` but not both."
         }
-        TraceAgentParameters.parseArgs(agentArgs)
+        TraceAgentParameters.parseArgs(agentArgs, emptyList())
         LincheckJavaAgent.instrumentation = inst
         isTraceJavaAgentAttached = true
         isInstrumentationInitialized = true
