@@ -19,14 +19,14 @@ Detailed trace:
 | operation()                                                                                                                                                 |
 |   escape = "START" at InlineLambdaConditionalNotTakenFullReturnFinallyTest.operation(InlineLambdaConditionalNotTakenFullReturnFinallyTest.kt:32)            |
 |   run() at InlineLambdaConditionalNotTakenFullReturnFinallyTest.operation(InlineLambdaConditionalNotTakenFullReturnFinallyTest.kt:33)                       |
-|     setEscape("BEFORE BLOCK") at InlineLambdaConditionalNotTakenFullReturnFinallyTest.operation(InlineLambdaConditionalNotTakenFullReturnFinallyTest.kt:54) |
+|     setEscape("BEFORE BLOCK") at InlineLambdaConditionalNotTakenFullReturnFinallyTest.run(InlineLambdaConditionalNotTakenFullReturnFinallyTest.kt:42)       |
 |       escape = "BEFORE BLOCK" at InlineLambdaConditionalNotTakenFullReturnFinallyTest.setEscape(InlineLambdaConditionalNotTakenFullReturnFinallyTest.kt:20) |
-|     run$Lambda() at InlineLambdaConditionalNotTakenFullReturnFinallyTest.operation(InlineLambdaConditionalNotTakenFullReturnFinallyTest.kt:56)              |
+|     run$Lambda() at InlineLambdaConditionalNotTakenFullReturnFinallyTest.run(InlineLambdaConditionalNotTakenFullReturnFinallyTest.kt:44)                    |
 |       escape = "IN LAMBDA" at InlineLambdaConditionalNotTakenFullReturnFinallyTest.operation(InlineLambdaConditionalNotTakenFullReturnFinallyTest.kt:34)    |
-|   run() at InlineLambdaConditionalNotTakenFullReturnFinallyTest.operation(InlineLambdaConditionalNotTakenFullReturnFinallyTest.kt:58)                       |
-|     run$Lambda() at InlineLambdaConditionalNotTakenFullReturnFinallyTest.operation(InlineLambdaConditionalNotTakenFullReturnFinallyTest.kt:58)              |
+|   run() at InlineLambdaConditionalNotTakenFullReturnFinallyTest.run(InlineLambdaConditionalNotTakenFullReturnFinallyTest.kt:46)                             |
+|     run$Lambda() at InlineLambdaConditionalNotTakenFullReturnFinallyTest.run(InlineLambdaConditionalNotTakenFullReturnFinallyTest.kt:46)                    |
 |       escape = "AFTER LAMBDA" at InlineLambdaConditionalNotTakenFullReturnFinallyTest.operation(InlineLambdaConditionalNotTakenFullReturnFinallyTest.kt:36) |
-|     setEscape("AFTER BLOCK") at InlineLambdaConditionalNotTakenFullReturnFinallyTest.operation(InlineLambdaConditionalNotTakenFullReturnFinallyTest.kt:58)  |
+|     setEscape("AFTER BLOCK") at InlineLambdaConditionalNotTakenFullReturnFinallyTest.run(InlineLambdaConditionalNotTakenFullReturnFinallyTest.kt:46)        |
 |       escape = "AFTER BLOCK" at InlineLambdaConditionalNotTakenFullReturnFinallyTest.setEscape(InlineLambdaConditionalNotTakenFullReturnFinallyTest.kt:20)  |
 |   escape = "END" at InlineLambdaConditionalNotTakenFullReturnFinallyTest.operation(InlineLambdaConditionalNotTakenFullReturnFinallyTest.kt:38)              |
 |   result: void                                                                                                                                              |

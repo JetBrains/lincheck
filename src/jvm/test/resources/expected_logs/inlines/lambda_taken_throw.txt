@@ -13,17 +13,17 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| ---------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                 Thread 1                                                                 |
-| ---------------------------------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                                              |
-|   escape = "START" at InlineLambdaConditionalTakenThrowTest.operation(InlineLambdaConditionalTakenThrowTest.kt:32)                       |
-|   run(): threw RuntimeException at InlineLambdaConditionalTakenThrowTest.operation(InlineLambdaConditionalTakenThrowTest.kt:34)          |
-|     setEscape("BEFORE BLOCK") at InlineLambdaConditionalTakenThrowTest.operation(InlineLambdaConditionalTakenThrowTest.kt:55)            |
-|       escape = "BEFORE BLOCK" at InlineLambdaConditionalTakenThrowTest.setEscape(InlineLambdaConditionalTakenThrowTest.kt:20)            |
-|     run$Lambda(): threw RuntimeException at InlineLambdaConditionalTakenThrowTest.operation(InlineLambdaConditionalTakenThrowTest.kt:56) |
-|       escape = "IN LAMBDA" at InlineLambdaConditionalTakenThrowTest.operation(InlineLambdaConditionalTakenThrowTest.kt:35)               |
-|   escape = "CATCH" at InlineLambdaConditionalTakenThrowTest.operation(InlineLambdaConditionalTakenThrowTest.kt:40)                       |
-|   escape = "END" at InlineLambdaConditionalTakenThrowTest.operation(InlineLambdaConditionalTakenThrowTest.kt:42)                         |
-|   result: void                                                                                                                           |
-| ---------------------------------------------------------------------------------------------------------------------------------------- |
+| ---------------------------------------------------------------------------------------------------------------------------------- |
+|                                                              Thread 1                                                              |
+| ---------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                        |
+|   escape = "START" at InlineLambdaConditionalTakenThrowTest.operation(InlineLambdaConditionalTakenThrowTest.kt:32)                 |
+|   run(): threw RuntimeException at InlineLambdaConditionalTakenThrowTest.operation(InlineLambdaConditionalTakenThrowTest.kt:34)    |
+|     setEscape("BEFORE BLOCK") at InlineLambdaConditionalTakenThrowTest.run(InlineLambdaConditionalTakenThrowTest.kt:46)            |
+|       escape = "BEFORE BLOCK" at InlineLambdaConditionalTakenThrowTest.setEscape(InlineLambdaConditionalTakenThrowTest.kt:20)      |
+|     run$Lambda(): threw RuntimeException at InlineLambdaConditionalTakenThrowTest.run(InlineLambdaConditionalTakenThrowTest.kt:47) |
+|       escape = "IN LAMBDA" at InlineLambdaConditionalTakenThrowTest.operation(InlineLambdaConditionalTakenThrowTest.kt:35)         |
+|   escape = "CATCH" at InlineLambdaConditionalTakenThrowTest.operation(InlineLambdaConditionalTakenThrowTest.kt:40)                 |
+|   escape = "END" at InlineLambdaConditionalTakenThrowTest.operation(InlineLambdaConditionalTakenThrowTest.kt:42)                   |
+|   result: void                                                                                                                     |
+| ---------------------------------------------------------------------------------------------------------------------------------- |

@@ -19,20 +19,20 @@ Detailed trace:
 | operation()                                                                                                                                                                             |
 |   escape = "START" at InlineLambdaConditionalNotTaken2ndLevelReturnTest.operation(InlineLambdaConditionalNotTaken2ndLevelReturnTest.kt:32)                                              |
 |   run() at InlineLambdaConditionalNotTaken2ndLevelReturnTest.operation(InlineLambdaConditionalNotTaken2ndLevelReturnTest.kt:33)                                                         |
-|     setEscape("BEFORE BLOCK") at InlineLambdaConditionalNotTaken2ndLevelReturnTest.operation(InlineLambdaConditionalNotTaken2ndLevelReturnTest.kt:55)                                   |
+|     setEscape("BEFORE BLOCK") at InlineLambdaConditionalNotTaken2ndLevelReturnTest.run(InlineLambdaConditionalNotTaken2ndLevelReturnTest.kt:46)                                         |
 |       escape = "BEFORE BLOCK" at InlineLambdaConditionalNotTaken2ndLevelReturnTest.setEscape(InlineLambdaConditionalNotTaken2ndLevelReturnTest.kt:20)                                   |
-|     run$Lambda() at InlineLambdaConditionalNotTaken2ndLevelReturnTest.operation(InlineLambdaConditionalNotTaken2ndLevelReturnTest.kt:56)                                                |
+|     run$Lambda() at InlineLambdaConditionalNotTaken2ndLevelReturnTest.run(InlineLambdaConditionalNotTaken2ndLevelReturnTest.kt:47)                                                      |
 |       escape = "IN LAMBDA 1" at InlineLambdaConditionalNotTaken2ndLevelReturnTest.operation(InlineLambdaConditionalNotTaken2ndLevelReturnTest.kt:34)                                    |
 |       InlineLambdaConditionalNotTaken2ndLevelReturnTest#1.run() at InlineLambdaConditionalNotTaken2ndLevelReturnTest.operation(InlineLambdaConditionalNotTaken2ndLevelReturnTest.kt:35) |
-|         setEscape("BEFORE BLOCK") at InlineLambdaConditionalNotTaken2ndLevelReturnTest.operation(InlineLambdaConditionalNotTaken2ndLevelReturnTest.kt:57)                               |
+|         setEscape("BEFORE BLOCK") at InlineLambdaConditionalNotTaken2ndLevelReturnTest.run(InlineLambdaConditionalNotTaken2ndLevelReturnTest.kt:46)                                     |
 |           escape = "BEFORE BLOCK" at InlineLambdaConditionalNotTaken2ndLevelReturnTest.setEscape(InlineLambdaConditionalNotTaken2ndLevelReturnTest.kt:20)                               |
-|         run$Lambda() at InlineLambdaConditionalNotTaken2ndLevelReturnTest.operation(InlineLambdaConditionalNotTaken2ndLevelReturnTest.kt:58)                                            |
+|         run$Lambda() at InlineLambdaConditionalNotTaken2ndLevelReturnTest.run(InlineLambdaConditionalNotTaken2ndLevelReturnTest.kt:47)                                                  |
 |           escape = "IN LAMBDA 2" at InlineLambdaConditionalNotTaken2ndLevelReturnTest.operation(InlineLambdaConditionalNotTaken2ndLevelReturnTest.kt:36)                                |
 |           escape = "AFTER LAMBDA 2" at InlineLambdaConditionalNotTaken2ndLevelReturnTest.operation(InlineLambdaConditionalNotTaken2ndLevelReturnTest.kt:38)                             |
-|         setEscape("AFTER BLOCK") at InlineLambdaConditionalNotTaken2ndLevelReturnTest.operation(InlineLambdaConditionalNotTaken2ndLevelReturnTest.kt:59)                                |
+|         setEscape("AFTER BLOCK") at InlineLambdaConditionalNotTaken2ndLevelReturnTest.run(InlineLambdaConditionalNotTaken2ndLevelReturnTest.kt:48)                                      |
 |           escape = "AFTER BLOCK" at InlineLambdaConditionalNotTaken2ndLevelReturnTest.setEscape(InlineLambdaConditionalNotTaken2ndLevelReturnTest.kt:20)                                |
 |       escape = "AFTER LAMBDA 1" at InlineLambdaConditionalNotTaken2ndLevelReturnTest.operation(InlineLambdaConditionalNotTaken2ndLevelReturnTest.kt:40)                                 |
-|     setEscape("AFTER BLOCK") at InlineLambdaConditionalNotTaken2ndLevelReturnTest.operation(InlineLambdaConditionalNotTaken2ndLevelReturnTest.kt:61)                                    |
+|     setEscape("AFTER BLOCK") at InlineLambdaConditionalNotTaken2ndLevelReturnTest.run(InlineLambdaConditionalNotTaken2ndLevelReturnTest.kt:48)                                          |
 |       escape = "AFTER BLOCK" at InlineLambdaConditionalNotTaken2ndLevelReturnTest.setEscape(InlineLambdaConditionalNotTaken2ndLevelReturnTest.kt:20)                                    |
 |   escape = "END" at InlineLambdaConditionalNotTaken2ndLevelReturnTest.operation(InlineLambdaConditionalNotTaken2ndLevelReturnTest.kt:42)                                                |
 |   result: void                                                                                                                                                                          |

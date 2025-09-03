@@ -19,11 +19,11 @@ Detailed trace:
 | operation()                                                                                                                     |
 |   escape = "START" at InlineLambdaConditionalTakenReturnTest.operation(InlineLambdaConditionalTakenReturnTest.kt:32)            |
 |   run() at InlineLambdaConditionalTakenReturnTest.operation(InlineLambdaConditionalTakenReturnTest.kt:33)                       |
-|     setEscape("BEFORE BLOCK") at InlineLambdaConditionalTakenReturnTest.operation(InlineLambdaConditionalTakenReturnTest.kt:51) |
+|     setEscape("BEFORE BLOCK") at InlineLambdaConditionalTakenReturnTest.run(InlineLambdaConditionalTakenReturnTest.kt:42)       |
 |       escape = "BEFORE BLOCK" at InlineLambdaConditionalTakenReturnTest.setEscape(InlineLambdaConditionalTakenReturnTest.kt:20) |
-|     run$Lambda() at InlineLambdaConditionalTakenReturnTest.operation(InlineLambdaConditionalTakenReturnTest.kt:52)              |
+|     run$Lambda() at InlineLambdaConditionalTakenReturnTest.run(InlineLambdaConditionalTakenReturnTest.kt:43)                    |
 |       escape = "IN LAMBDA" at InlineLambdaConditionalTakenReturnTest.operation(InlineLambdaConditionalTakenReturnTest.kt:34)    |
-|     setEscape("AFTER BLOCK") at InlineLambdaConditionalTakenReturnTest.operation(InlineLambdaConditionalTakenReturnTest.kt:53)  |
+|     setEscape("AFTER BLOCK") at InlineLambdaConditionalTakenReturnTest.run(InlineLambdaConditionalTakenReturnTest.kt:44)        |
 |       escape = "AFTER BLOCK" at InlineLambdaConditionalTakenReturnTest.setEscape(InlineLambdaConditionalTakenReturnTest.kt:20)  |
 |   escape = "END" at InlineLambdaConditionalTakenReturnTest.operation(InlineLambdaConditionalTakenReturnTest.kt:38)              |
 |   result: void                                                                                                                  |

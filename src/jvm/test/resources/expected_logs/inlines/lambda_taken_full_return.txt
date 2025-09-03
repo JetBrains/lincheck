@@ -19,9 +19,9 @@ Detailed trace:
 | operation()                                                                                                                             |
 |   escape = "START" at InlineLambdaConditionalTakenFullReturnTest.operation(InlineLambdaConditionalTakenFullReturnTest.kt:32)            |
 |   run() at InlineLambdaConditionalTakenFullReturnTest.operation(InlineLambdaConditionalTakenFullReturnTest.kt:33)                       |
-|     setEscape("BEFORE BLOCK") at InlineLambdaConditionalTakenFullReturnTest.operation(InlineLambdaConditionalTakenFullReturnTest.kt:51) |
+|     setEscape("BEFORE BLOCK") at InlineLambdaConditionalTakenFullReturnTest.run(InlineLambdaConditionalTakenFullReturnTest.kt:42)       |
 |       escape = "BEFORE BLOCK" at InlineLambdaConditionalTakenFullReturnTest.setEscape(InlineLambdaConditionalTakenFullReturnTest.kt:20) |
-|     run$Lambda() at InlineLambdaConditionalTakenFullReturnTest.operation(InlineLambdaConditionalTakenFullReturnTest.kt:52)              |
+|     run$Lambda() at InlineLambdaConditionalTakenFullReturnTest.run(InlineLambdaConditionalTakenFullReturnTest.kt:43)                    |
 |       escape = "IN LAMBDA" at InlineLambdaConditionalTakenFullReturnTest.operation(InlineLambdaConditionalTakenFullReturnTest.kt:34)    |
 |   result: void                                                                                                                          |
 | --------------------------------------------------------------------------------------------------------------------------------------- |

@@ -19,12 +19,12 @@ Detailed trace:
 | operation()                                                                                                                           |
 |   escape = "START" at InlineLambdaConditionalNotTakenReturnTest.operation(InlineLambdaConditionalNotTakenReturnTest.kt:32)            |
 |   run() at InlineLambdaConditionalNotTakenReturnTest.operation(InlineLambdaConditionalNotTakenReturnTest.kt:33)                       |
-|     setEscape("BEFORE BLOCK") at InlineLambdaConditionalNotTakenReturnTest.operation(InlineLambdaConditionalNotTakenReturnTest.kt:51) |
+|     setEscape("BEFORE BLOCK") at InlineLambdaConditionalNotTakenReturnTest.run(InlineLambdaConditionalNotTakenReturnTest.kt:42)       |
 |       escape = "BEFORE BLOCK" at InlineLambdaConditionalNotTakenReturnTest.setEscape(InlineLambdaConditionalNotTakenReturnTest.kt:20) |
-|     run$Lambda() at InlineLambdaConditionalNotTakenReturnTest.operation(InlineLambdaConditionalNotTakenReturnTest.kt:52)              |
+|     run$Lambda() at InlineLambdaConditionalNotTakenReturnTest.run(InlineLambdaConditionalNotTakenReturnTest.kt:43)                    |
 |       escape = "IN LAMBDA" at InlineLambdaConditionalNotTakenReturnTest.operation(InlineLambdaConditionalNotTakenReturnTest.kt:34)    |
 |       escape = "AFTER LAMBDA" at InlineLambdaConditionalNotTakenReturnTest.operation(InlineLambdaConditionalNotTakenReturnTest.kt:36) |
-|     setEscape("AFTER BLOCK") at InlineLambdaConditionalNotTakenReturnTest.operation(InlineLambdaConditionalNotTakenReturnTest.kt:53)  |
+|     setEscape("AFTER BLOCK") at InlineLambdaConditionalNotTakenReturnTest.run(InlineLambdaConditionalNotTakenReturnTest.kt:44)        |
 |       escape = "AFTER BLOCK" at InlineLambdaConditionalNotTakenReturnTest.setEscape(InlineLambdaConditionalNotTakenReturnTest.kt:20)  |
 |   escape = "END" at InlineLambdaConditionalNotTakenReturnTest.operation(InlineLambdaConditionalNotTakenReturnTest.kt:38)              |
 |   result: void                                                                                                                        |

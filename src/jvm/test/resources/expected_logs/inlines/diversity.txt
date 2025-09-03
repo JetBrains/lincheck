@@ -13,16 +13,16 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| ------------------------------------------------------------------------------------------------------------------------------ |
-|                                                            Thread 1                                                            |
-| ------------------------------------------------------------------------------------------------------------------------------ |
-| operation()                                                                                                                    |
-|   escape = "START" at InlineDiversityRepresentationTest.operation(InlineDiversityRepresentationTest.kt:25)                     |
-|   thisClassInlineFunc() at InlineDiversityRepresentationTest.operation(InlineDiversityRepresentationTest.kt:26)                |
-|     isc.otherClassInlineFunc() at InlineDiversityRepresentationTest.operation(InlineDiversityRepresentationTest.kt:21)         |
-|       outsideInlineFunc() at InlineSetterClass.operation(InlineDiversityRepresentationTest.kt:35)                              |
-|         thisClassInlineFunc$Lambda() at InlineDiversityRepresentationTestKt.operation(InlineDiversityRepresentationTest.kt:40) |
-|           escape = "INLINE" at InlineDiversityRepresentationTest.operation(InlineDiversityRepresentationTest.kt:27)            |
-|   escape = "END" at InlineDiversityRepresentationTest.operation(InlineDiversityRepresentationTest.kt:29)                       |
-|   result: void                                                                                                                 |
-| ------------------------------------------------------------------------------------------------------------------------------ |
+| ------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                               Thread 1                                                                |
+| ------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                           |
+|   escape = "START" at InlineDiversityRepresentationTest.operation(InlineDiversityRepresentationTest.kt:25)                            |
+|   thisClassInlineFunc() at InlineDiversityRepresentationTest.operation(InlineDiversityRepresentationTest.kt:26)                       |
+|     isc.otherClassInlineFunc() at InlineDiversityRepresentationTest.thisClassInlineFunc(InlineDiversityRepresentationTest.kt:21)      |
+|       outsideInlineFunc() at InlineSetterClass.<unknown method>(InlineDiversityRepresentationTest.kt:35)                              |
+|         thisClassInlineFunc$Lambda() at InlineDiversityRepresentationTestKt.<unknown method>(InlineDiversityRepresentationTest.kt:40) |
+|           escape = "INLINE" at InlineDiversityRepresentationTest.operation(InlineDiversityRepresentationTest.kt:27)                   |
+|   escape = "END" at InlineDiversityRepresentationTest.operation(InlineDiversityRepresentationTest.kt:29)                              |
+|   result: void                                                                                                                        |
+| ------------------------------------------------------------------------------------------------------------------------------------- |

@@ -20,11 +20,11 @@ Detailed trace:
 |   returnInt(): -1 at InlineLambdaConditionalTakenFullReturnValueFinallyTest.operation(InlineLambdaConditionalTakenFullReturnValueFinallyTest.kt:32)               |
 |     escape = "START" at InlineLambdaConditionalTakenFullReturnValueFinallyTest.returnInt(InlineLambdaConditionalTakenFullReturnValueFinallyTest.kt:36)            |
 |     run() at InlineLambdaConditionalTakenFullReturnValueFinallyTest.returnInt(InlineLambdaConditionalTakenFullReturnValueFinallyTest.kt:37)                       |
-|       setEscape("BEFORE BLOCK") at InlineLambdaConditionalTakenFullReturnValueFinallyTest.returnInt(InlineLambdaConditionalTakenFullReturnValueFinallyTest.kt:60) |
+|       setEscape("BEFORE BLOCK") at InlineLambdaConditionalTakenFullReturnValueFinallyTest.run(InlineLambdaConditionalTakenFullReturnValueFinallyTest.kt:48)       |
 |         escape = "BEFORE BLOCK" at InlineLambdaConditionalTakenFullReturnValueFinallyTest.setEscape(InlineLambdaConditionalTakenFullReturnValueFinallyTest.kt:20) |
-|       run$Lambda() at InlineLambdaConditionalTakenFullReturnValueFinallyTest.returnInt(InlineLambdaConditionalTakenFullReturnValueFinallyTest.kt:62)              |
+|       run$Lambda() at InlineLambdaConditionalTakenFullReturnValueFinallyTest.run(InlineLambdaConditionalTakenFullReturnValueFinallyTest.kt:50)                    |
 |         escape = "IN LAMBDA" at InlineLambdaConditionalTakenFullReturnValueFinallyTest.returnInt(InlineLambdaConditionalTakenFullReturnValueFinallyTest.kt:38)    |
-|     setEscape("AFTER BLOCK") at InlineLambdaConditionalTakenFullReturnValueFinallyTest.returnInt(InlineLambdaConditionalTakenFullReturnValueFinallyTest.kt:64)    |
+|     setEscape("AFTER BLOCK") at InlineLambdaConditionalTakenFullReturnValueFinallyTest.run(InlineLambdaConditionalTakenFullReturnValueFinallyTest.kt:52)          |
 |       escape = "AFTER BLOCK" at InlineLambdaConditionalTakenFullReturnValueFinallyTest.setEscape(InlineLambdaConditionalTakenFullReturnValueFinallyTest.kt:20)    |
 |   result: void                                                                                                                                                    |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
