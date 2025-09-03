@@ -62,10 +62,9 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         if (!shouldTransform(internalClassName.toCanonicalClassName(), instrumentationMode)) {
             return null
         }
-        // In the model checking mode, we transform classes lazily,
+        // If lazy mode is used, transform classes lazily,
         // once they are used in the testing code.
-        if (!INSTRUMENT_ALL_CLASSES &&
-            (instrumentationMode == MODEL_CHECKING || instrumentationMode == TRACE_RECORDING) &&
+        if (!INSTRUMENT_ALL_CLASSES && instrumentationMode.supportsLazyTransformation &&
             // do not re-transform already instrumented classes
             internalClassName.toCanonicalClassName() !in instrumentedClasses &&
             // always transform eagerly instrumented classes

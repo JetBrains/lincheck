@@ -78,6 +78,11 @@ enum class InstrumentationMode {
     TRACE_RECORDING
 }
 
+val InstrumentationMode.supportsLazyTransformation: Boolean get() = when (this) {
+    MODEL_CHECKING, TRACE_RECORDING -> true
+    STRESS -> false
+}
+
 /**
  * LincheckJavaAgent represents the Lincheck Java agent responsible for instrumenting bytecode.
  *
@@ -155,8 +160,8 @@ object LincheckJavaAgent {
                 instrumentedClasses.addAll(classes.map { it.name })
             }
 
-            // In the model checking mode, Lincheck processes classes lazily, only when they are used.
-            instrumentationMode == MODEL_CHECKING || instrumentationMode == TRACE_RECORDING -> {
+            // In a lazy transformation mode, Lincheck processes classes lazily, only when they are used.
+            instrumentationMode.supportsLazyTransformation -> {
                 // Clear the set of instrumented classes in case something get wrong during `uninstall`.
                 // For instance, it is possible that Lincheck detects a deadlock, `uninstall` is called,
                 // but one of the "deadlocked" thread calls `ensureClassHierarchyIsTransformed` after that,
