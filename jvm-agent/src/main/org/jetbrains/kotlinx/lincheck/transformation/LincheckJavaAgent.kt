@@ -15,9 +15,9 @@ import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.install
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentation
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentationMode
-import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.transformedClassesStress
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.isEagerlyInstrumentedClass
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.shouldTransform
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.transformedClassesCache
 import org.jetbrains.kotlinx.lincheck.transformation.transformers.coroutineCallingClasses
 import org.jetbrains.lincheck.util.Logger
 import org.jetbrains.lincheck.util.*
@@ -60,22 +60,55 @@ inline fun withLincheckJavaAgent(instrumentationMode: InstrumentationMode, block
 
 enum class InstrumentationMode {
     /**
-     * In this mode, Lincheck transforms bytecode
-     * only to track coroutine suspensions.
+     * Stress testing mode.
+     *
+     * In this mode, Lincheck transforms bytecode only to track coroutine suspensions.
      */
     STRESS,
 
     /**
-     * In this mode, Lincheck tracks
-     * all shared memory manipulations.
+     * Model checking mode.
+     *
+     * In this mode, Lincheck tracks:
+     *  - all shared memory accesses;
+     *  - various synchronization operations (monitors' enter/exit, wait/notify, etc.);
+     *  - coroutine suspensions;
+     *  - method calls/exits;
+     *  - new thread forks and joins.
+     *
+     * For these events Lincheck inserts potential switch points
+     * and creates trace points to collect an execution trace.
+     *
+     * This mode enforces deterministic execution by controlling
+     * the thread scheduling using injected switch points.
      */
     MODEL_CHECKING,
 
     /**
-     * In this mode, lincheck tracks and records events in configured method
-     * but don't enforce determinism or does any analysis.
+     * Trace debugging mode.
+     *
+     * This mode is similar to [MODEL_CHECKING] mode: it tracks a similar set of events,
+     * inserts potential switch points and creates trace points,
+     * enforces deterministic execution.
+     *
+     * The difference is that in this mode Lincheck does not enumerate various interleavings of events
+     * but rather collects a single execution trace and then replays it deterministically.
      */
-    TRACE_RECORDING
+    TRACE_DEBUGGING,
+
+    /**
+     * Trace recording mode.
+     *
+     * In this mode, Lincheck only tracks requested events to collect an execution trace.
+     *
+     * This mode does not enforce determinism or perform any analysis.
+     */
+    TRACE_RECORDING,
+}
+
+val InstrumentationMode.supportsLazyTransformation: Boolean get() = when (this) {
+    MODEL_CHECKING, TRACE_RECORDING, TRACE_DEBUGGING -> true
+    STRESS -> false
 }
 
 /**
@@ -147,7 +180,7 @@ object LincheckJavaAgent {
                 val classes = getLoadedClassesToInstrument().filter {
                     val canonicalClassName = it.name
                     // new classes that were loaded after the latest STRESS mode re-transformation
-                    !transformedClassesStress.containsKey(canonicalClassName) ||
+                    !transformedClassesCache.containsKey(canonicalClassName) ||
                     // old classes that were already loaded before and have coroutine method calls inside
                     canonicalClassName in coroutineCallingClasses
                 }
@@ -155,8 +188,8 @@ object LincheckJavaAgent {
                 instrumentedClasses.addAll(classes.map { it.name })
             }
 
-            // In the model checking mode, Lincheck processes classes lazily, only when they are used.
-            instrumentationMode == MODEL_CHECKING || instrumentationMode == TRACE_RECORDING -> {
+            // In a lazy transformation mode, Lincheck processes classes lazily, only when they are used.
+            instrumentationMode.supportsLazyTransformation -> {
                 // Clear the set of instrumented classes in case something get wrong during `uninstall`.
                 // For instance, it is possible that Lincheck detects a deadlock, `uninstall` is called,
                 // but one of the "deadlocked" thread calls `ensureClassHierarchyIsTransformed` after that,

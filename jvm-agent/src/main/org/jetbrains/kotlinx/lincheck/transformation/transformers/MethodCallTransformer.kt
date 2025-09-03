@@ -11,7 +11,8 @@
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.jetbrains.kotlinx.lincheck.transformation.*
-import org.jetbrains.lincheck.util.isInTraceDebuggerMode
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentationMode
+import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.TRACE_DEBUGGING
 import org.jetbrains.lincheck.trace.TRACE_CONTEXT
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
@@ -104,7 +105,7 @@ internal class MethodCallTransformer(
     }
 
     private fun GeneratorAdapter.pushDeterministicCallId(deterministicMethodDescriptorLocal: Int) {
-        if (!isInTraceDebuggerMode) {
+        if (instrumentationMode != TRACE_DEBUGGING) {
             push(0L)
             return
         }

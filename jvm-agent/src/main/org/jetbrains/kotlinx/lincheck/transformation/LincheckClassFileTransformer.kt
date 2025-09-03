@@ -31,16 +31,11 @@ object LincheckClassFileTransformer : ClassFileTransformer {
      * Notice that the transformation depends on the [InstrumentationMode].
      * Additionally, this object caches bytes of non-transformed classes.
      */
-    val transformedClassesModelChecking = ConcurrentHashMap<String, ByteArray>()
-    val transformedClassesStress = ConcurrentHashMap<String, ByteArray>()
-    val transformedClassesTraceRecroding = ConcurrentHashMap<String, ByteArray>()
+    private val transformedClassesCachesByMode =
+        ConcurrentHashMap<InstrumentationMode, ConcurrentHashMap<String, ByteArray>>()
 
-    private val transformedClassesCache
-        get() = when (instrumentationMode) {
-            STRESS -> transformedClassesStress
-            MODEL_CHECKING -> transformedClassesModelChecking
-            TRACE_RECORDING -> transformedClassesTraceRecroding
-        }
+    val transformedClassesCache
+        get() = transformedClassesCachesByMode.computeIfAbsent(instrumentationMode) { ConcurrentHashMap() }
 
     override fun transform(
         loader: ClassLoader?,
@@ -62,10 +57,9 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         if (!shouldTransform(internalClassName.toCanonicalClassName(), instrumentationMode)) {
             return null
         }
-        // In the model checking mode, we transform classes lazily,
+        // If lazy mode is used, transform classes lazily,
         // once they are used in the testing code.
-        if (!INSTRUMENT_ALL_CLASSES &&
-            (instrumentationMode == MODEL_CHECKING || instrumentationMode == TRACE_RECORDING) &&
+        if (!INSTRUMENT_ALL_CLASSES && instrumentationMode.supportsLazyTransformation &&
             // do not re-transform already instrumented classes
             internalClassName.toCanonicalClassName() !in instrumentedClasses &&
             // always transform eagerly instrumented classes

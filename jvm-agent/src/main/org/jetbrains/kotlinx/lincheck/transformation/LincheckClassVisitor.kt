@@ -178,8 +178,7 @@ internal class LincheckClassVisitor(
         // to ensure the event numeration will remain the same.
         if (ideaPluginEnabled && isToStringMethod(methodName, desc)) {
             mv = ObjectCreationTransformer(fileName, className, methodName, adapter, mv)
-            // TODO: replace with proper instrumentation mode for debugger, don't use globals
-            if (isInTraceDebuggerMode) {
+            if (instrumentationMode == TRACE_DEBUGGING) {
                 // Lincheck does not support true identity hash codes (it always uses zeroes),
                 // so there is no need for the `DeterministicInvokeDynamicTransformer` there.
                 mv = DeterministicInvokeDynamicTransformer(fileName, className, methodName, classVersion, adapter, mv)
@@ -189,14 +188,8 @@ internal class LincheckClassVisitor(
         // Currently, constructors are treated in a special way to avoid problems
         // with `VerificationError` due to leaking this problem,
         // see: https://github.com/JetBrains/lincheck/issues/424
-        if ((methodName == "<init>" && !isInTraceDebuggerMode)) {
+        if ((methodName == "<init>" && instrumentationMode == MODEL_CHECKING)) {
             mv = ObjectCreationTransformer(fileName, className, methodName, adapter, mv)
-            // TODO: replace with proper instrumentation mode for debugger, don't use globals
-            if (isInTraceDebuggerMode) {
-                // Lincheck does not support true identity hash codes (it always uses zeroes),
-                // so there is no need for the `DeterministicInvokeDynamicTransformer` there.
-                mv = DeterministicInvokeDynamicTransformer(fileName, className, methodName, classVersion, adapter, mv)
-            }
             val sharedMemoryAccessTransformer = applySharedMemoryAccessTransformer(methodName, adapter, mv)
             mv = sharedMemoryAccessTransformer
             mv = applyAnalyzerAdapter(access, methodName, desc, sharedMemoryAccessTransformer, mv)
@@ -226,8 +219,7 @@ internal class LincheckClassVisitor(
 
         mv = ObjectCreationTransformer(fileName, className, methodName, adapter, mv)
 
-        // TODO: replace with proper instrumentation mode for debugger, don't use globals
-        if (isInTraceDebuggerMode) {
+        if (instrumentationMode == TRACE_DEBUGGING) {
             // Lincheck does not support true identity hash codes (it always uses zeroes),
             // so there is no need for the `DeterministicInvokeDynamicTransformer` there.
             mv = DeterministicInvokeDynamicTransformer(fileName, className, methodName, classVersion, adapter, mv)
