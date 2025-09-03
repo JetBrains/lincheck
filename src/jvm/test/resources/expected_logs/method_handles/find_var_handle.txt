@@ -23,8 +23,8 @@ Detailed trace:
 |     doTest() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:53)                                                                                  |
 |       Companion.create(): Counter#1 at MethodHandlesFindVarHandleRepresentationTest.doTest(MethodHandlesLookupTests.kt:39)                                                      |
 |         Counter.shared = Counter#1 at Counter.Companion.create(MethodHandlesLookupTests.kt:165)                                                                                 |
-|       Counter#1.value.set(42) at MethodHandlesFindVarHandleRepresentationTest.doTest(MethodHandlesLookupTests.kt:42)                                                            |
-|       Counter#1.value.get(): 42 at MethodHandlesFindVarHandleRepresentationTest.doTest(MethodHandlesLookupTests.kt:43)                                                          |
+|       counter.value.set(42) at MethodHandlesFindVarHandleRepresentationTest.doTest(MethodHandlesLookupTests.kt:42)                                                              |
+|       counter.value.get(): 42 at MethodHandlesFindVarHandleRepresentationTest.doTest(MethodHandlesLookupTests.kt:43)                                                            |
 |       counter.value ➜ 42 at MethodHandlesFindVarHandleRepresentationTest.doTest(MethodHandlesLookupTests.kt:44)                                                                 |
 |   result: IllegalStateException #1                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
