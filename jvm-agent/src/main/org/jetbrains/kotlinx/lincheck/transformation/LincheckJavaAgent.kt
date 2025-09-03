@@ -75,11 +75,13 @@ enum class InstrumentationMode {
      * In this mode, lincheck tracks and records events in configured method
      * but don't enforce determinism or does any analysis.
      */
-    TRACE_RECORDING
+    TRACE_RECORDING,
+
+    TRACE_DEBUGGING,
 }
 
 val InstrumentationMode.supportsLazyTransformation: Boolean get() = when (this) {
-    MODEL_CHECKING, TRACE_RECORDING -> true
+    MODEL_CHECKING, TRACE_RECORDING, TRACE_DEBUGGING -> true
     STRESS -> false
 }
 

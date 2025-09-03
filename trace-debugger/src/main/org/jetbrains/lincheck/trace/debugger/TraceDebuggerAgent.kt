@@ -12,7 +12,7 @@ package org.jetbrains.lincheck.trace.debugger
 
 import org.jetbrains.kotlinx.lincheck.trace.agent.TraceAgentParameters
 import org.jetbrains.kotlinx.lincheck.trace.agent.TraceAgentTransformer
-import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.MODEL_CHECKING
+import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.transformation.isInstrumentationInitialized
 import org.jetbrains.kotlinx.lincheck.transformation.isTraceJavaAgentAttached
@@ -49,7 +49,6 @@ object TraceDebuggerAgent {
         isInstrumentationInitialized = true
         // We are in Trace debugger mode
         LincheckJavaAgent.instrumentation.addTransformer(TraceAgentTransformer(::TraceDebuggerMethodTransformer), true)
-        // Trace debugger uses regular lincheck MODEL_CHECKING mode
-        LincheckJavaAgent.install(MODEL_CHECKING)
+        LincheckJavaAgent.install(InstrumentationMode.TRACE_DEBUGGING)
     }
 }
