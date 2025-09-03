@@ -15,9 +15,9 @@ import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.install
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentation
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentationMode
-import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.transformedClassesStress
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.isEagerlyInstrumentedClass
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.shouldTransform
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.transformedClassesCache
 import org.jetbrains.kotlinx.lincheck.transformation.transformers.coroutineCallingClasses
 import org.jetbrains.lincheck.util.Logger
 import org.jetbrains.lincheck.util.*
@@ -152,7 +152,7 @@ object LincheckJavaAgent {
                 val classes = getLoadedClassesToInstrument().filter {
                     val canonicalClassName = it.name
                     // new classes that were loaded after the latest STRESS mode re-transformation
-                    !transformedClassesStress.containsKey(canonicalClassName) ||
+                    !transformedClassesCache.containsKey(canonicalClassName) ||
                     // old classes that were already loaded before and have coroutine method calls inside
                     canonicalClassName in coroutineCallingClasses
                 }

@@ -31,16 +31,11 @@ object LincheckClassFileTransformer : ClassFileTransformer {
      * Notice that the transformation depends on the [InstrumentationMode].
      * Additionally, this object caches bytes of non-transformed classes.
      */
-    val transformedClassesModelChecking = ConcurrentHashMap<String, ByteArray>()
-    val transformedClassesStress = ConcurrentHashMap<String, ByteArray>()
-    val transformedClassesTraceRecroding = ConcurrentHashMap<String, ByteArray>()
+    private val transformedClassesCachesByMode =
+        ConcurrentHashMap<InstrumentationMode, ConcurrentHashMap<String, ByteArray>>()
 
-    private val transformedClassesCache
-        get() = when (instrumentationMode) {
-            STRESS -> transformedClassesStress
-            MODEL_CHECKING -> transformedClassesModelChecking
-            TRACE_RECORDING -> transformedClassesTraceRecroding
-        }
+    val transformedClassesCache
+        get() = transformedClassesCachesByMode.computeIfAbsent(instrumentationMode) { ConcurrentHashMap() }
 
     override fun transform(
         loader: ClassLoader?,
