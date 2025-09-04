@@ -17,11 +17,11 @@ Detailed trace:
 |                                                                    Thread 1                                                                    |
 | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | operation()                                                                                                                                    |
-|   escape = "START" at InlineLambdaConditionalTakenFullReturnTest.operation(InlineLambdaConditionalTakenFullReturnTest.kt:32)                   |
-|   run() at InlineLambdaConditionalTakenFullReturnTest.operation(InlineLambdaConditionalTakenFullReturnTest.kt:33)                              |
+|   escape = "START" at InlineLambdaConditionalTakenFullReturnTest.<unknown method>(InlineLambdaConditionalTakenFullReturnTest.kt:32)            |
+|   run() at InlineLambdaConditionalTakenFullReturnTest.<unknown method>(InlineLambdaConditionalTakenFullReturnTest.kt:33)                       |
 |     setEscape("BEFORE BLOCK") at InlineLambdaConditionalTakenFullReturnTest.<unknown method>(InlineLambdaConditionalTakenFullReturnTest.kt:42) |
-|       escape = "BEFORE BLOCK" at InlineLambdaConditionalTakenFullReturnTest.setEscape(InlineLambdaConditionalTakenFullReturnTest.kt:20)        |
+|       escape = "BEFORE BLOCK" at InlineLambdaConditionalTakenFullReturnTest.<unknown method>(InlineLambdaConditionalTakenFullReturnTest.kt:20) |
 |     run$Lambda() at InlineLambdaConditionalTakenFullReturnTest.<unknown method>(InlineLambdaConditionalTakenFullReturnTest.kt:43)              |
-|       escape = "IN LAMBDA" at InlineLambdaConditionalTakenFullReturnTest.operation(InlineLambdaConditionalTakenFullReturnTest.kt:34)           |
+|       escape = "IN LAMBDA" at InlineLambdaConditionalTakenFullReturnTest.<unknown method>(InlineLambdaConditionalTakenFullReturnTest.kt:34)    |
 |   result: void                                                                                                                                 |
 | ---------------------------------------------------------------------------------------------------------------------------------------------- |

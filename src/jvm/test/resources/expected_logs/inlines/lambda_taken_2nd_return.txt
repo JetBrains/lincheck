@@ -13,26 +13,26 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-|                                                                                    Thread 1                                                                                    |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| operation()                                                                                                                                                                    |
-|   escape = "START" at InlineLambdaConditionalTaken2ndLevelReturnTest.operation(InlineLambdaConditionalTaken2ndLevelReturnTest.kt:32)                                           |
-|   run() at InlineLambdaConditionalTaken2ndLevelReturnTest.operation(InlineLambdaConditionalTaken2ndLevelReturnTest.kt:33)                                                      |
-|     setEscape("BEFORE BLOCK") at InlineLambdaConditionalTaken2ndLevelReturnTest.<unknown method>(InlineLambdaConditionalTaken2ndLevelReturnTest.kt:46)                         |
-|       escape = "BEFORE BLOCK" at InlineLambdaConditionalTaken2ndLevelReturnTest.setEscape(InlineLambdaConditionalTaken2ndLevelReturnTest.kt:20)                                |
-|     run$Lambda() at InlineLambdaConditionalTaken2ndLevelReturnTest.<unknown method>(InlineLambdaConditionalTaken2ndLevelReturnTest.kt:47)                                      |
-|       escape = "IN LAMBDA 1" at InlineLambdaConditionalTaken2ndLevelReturnTest.operation(InlineLambdaConditionalTaken2ndLevelReturnTest.kt:34)                                 |
-|       InlineLambdaConditionalTaken2ndLevelReturnTest#1.run() at InlineLambdaConditionalTaken2ndLevelReturnTest.operation(InlineLambdaConditionalTaken2ndLevelReturnTest.kt:35) |
-|         setEscape("BEFORE BLOCK") at InlineLambdaConditionalTaken2ndLevelReturnTest.<unknown method>(InlineLambdaConditionalTaken2ndLevelReturnTest.kt:46)                     |
-|           escape = "BEFORE BLOCK" at InlineLambdaConditionalTaken2ndLevelReturnTest.setEscape(InlineLambdaConditionalTaken2ndLevelReturnTest.kt:20)                            |
-|         run$Lambda() at InlineLambdaConditionalTaken2ndLevelReturnTest.<unknown method>(InlineLambdaConditionalTaken2ndLevelReturnTest.kt:47)                                  |
-|           escape = "IN LAMBDA 2" at InlineLambdaConditionalTaken2ndLevelReturnTest.operation(InlineLambdaConditionalTaken2ndLevelReturnTest.kt:36)                             |
-|         setEscape("AFTER BLOCK") at InlineLambdaConditionalTaken2ndLevelReturnTest.<unknown method>(InlineLambdaConditionalTaken2ndLevelReturnTest.kt:48)                      |
-|           escape = "AFTER BLOCK" at InlineLambdaConditionalTaken2ndLevelReturnTest.setEscape(InlineLambdaConditionalTaken2ndLevelReturnTest.kt:20)                             |
-|       escape = "AFTER LAMBDA 1" at InlineLambdaConditionalTaken2ndLevelReturnTest.operation(InlineLambdaConditionalTaken2ndLevelReturnTest.kt:40)                              |
-|     setEscape("AFTER BLOCK") at InlineLambdaConditionalTaken2ndLevelReturnTest.<unknown method>(InlineLambdaConditionalTaken2ndLevelReturnTest.kt:48)                          |
-|       escape = "AFTER BLOCK" at InlineLambdaConditionalTaken2ndLevelReturnTest.setEscape(InlineLambdaConditionalTaken2ndLevelReturnTest.kt:20)                                 |
-|   escape = "END" at InlineLambdaConditionalTaken2ndLevelReturnTest.operation(InlineLambdaConditionalTaken2ndLevelReturnTest.kt:42)                                             |
-|   result: void                                                                                                                                                                 |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                       Thread 1                                                                                        |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                                                           |
+|   escape = "START" at InlineLambdaConditionalTaken2ndLevelReturnTest.<unknown method>(InlineLambdaConditionalTaken2ndLevelReturnTest.kt:32)                                           |
+|   run() at InlineLambdaConditionalTaken2ndLevelReturnTest.<unknown method>(InlineLambdaConditionalTaken2ndLevelReturnTest.kt:33)                                                      |
+|     setEscape("BEFORE BLOCK") at InlineLambdaConditionalTaken2ndLevelReturnTest.<unknown method>(InlineLambdaConditionalTaken2ndLevelReturnTest.kt:46)                                |
+|       escape = "BEFORE BLOCK" at InlineLambdaConditionalTaken2ndLevelReturnTest.<unknown method>(InlineLambdaConditionalTaken2ndLevelReturnTest.kt:20)                                |
+|     run$Lambda() at InlineLambdaConditionalTaken2ndLevelReturnTest.<unknown method>(InlineLambdaConditionalTaken2ndLevelReturnTest.kt:47)                                             |
+|       escape = "IN LAMBDA 1" at InlineLambdaConditionalTaken2ndLevelReturnTest.<unknown method>(InlineLambdaConditionalTaken2ndLevelReturnTest.kt:34)                                 |
+|       InlineLambdaConditionalTaken2ndLevelReturnTest#1.run() at InlineLambdaConditionalTaken2ndLevelReturnTest.<unknown method>(InlineLambdaConditionalTaken2ndLevelReturnTest.kt:35) |
+|         setEscape("BEFORE BLOCK") at InlineLambdaConditionalTaken2ndLevelReturnTest.<unknown method>(InlineLambdaConditionalTaken2ndLevelReturnTest.kt:46)                            |
+|           escape = "BEFORE BLOCK" at InlineLambdaConditionalTaken2ndLevelReturnTest.<unknown method>(InlineLambdaConditionalTaken2ndLevelReturnTest.kt:20)                            |
+|         run$Lambda() at InlineLambdaConditionalTaken2ndLevelReturnTest.<unknown method>(InlineLambdaConditionalTaken2ndLevelReturnTest.kt:47)                                         |
+|           escape = "IN LAMBDA 2" at InlineLambdaConditionalTaken2ndLevelReturnTest.<unknown method>(InlineLambdaConditionalTaken2ndLevelReturnTest.kt:36)                             |
+|         setEscape("AFTER BLOCK") at InlineLambdaConditionalTaken2ndLevelReturnTest.<unknown method>(InlineLambdaConditionalTaken2ndLevelReturnTest.kt:48)                             |
+|           escape = "AFTER BLOCK" at InlineLambdaConditionalTaken2ndLevelReturnTest.<unknown method>(InlineLambdaConditionalTaken2ndLevelReturnTest.kt:20)                             |
+|       escape = "AFTER LAMBDA 1" at InlineLambdaConditionalTaken2ndLevelReturnTest.<unknown method>(InlineLambdaConditionalTaken2ndLevelReturnTest.kt:40)                              |
+|     setEscape("AFTER BLOCK") at InlineLambdaConditionalTaken2ndLevelReturnTest.<unknown method>(InlineLambdaConditionalTaken2ndLevelReturnTest.kt:48)                                 |
+|       escape = "AFTER BLOCK" at InlineLambdaConditionalTaken2ndLevelReturnTest.<unknown method>(InlineLambdaConditionalTaken2ndLevelReturnTest.kt:20)                                 |
+|   escape = "END" at InlineLambdaConditionalTaken2ndLevelReturnTest.<unknown method>(InlineLambdaConditionalTaken2ndLevelReturnTest.kt:42)                                             |
+|   result: void                                                                                                                                                                        |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

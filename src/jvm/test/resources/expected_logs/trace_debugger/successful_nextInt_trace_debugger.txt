@@ -18,8 +18,8 @@ Detailed trace:
 | ---------------------------------------------------------------------------------------------------------------------- |
 | operation()                                                                                                            |
 |   INSTANCE.nextInt(0, 1): 0 at SuccessfulCustomRandomCallRepresentationTest.operation(RandomRepresentationTests.kt:28) |
-|     RandomKt.checkRangeBounds(0, 1) at Random.nextInt(Random.kt:65)                                                    |
-|     RandomKt.fastLog2(1): 0 at Random.nextInt(Random.kt:69)                                                            |
-|     nextBits(0): 0 at Random.nextInt(Random.kt:70)                                                                     |
+|     RandomKt.checkRangeBounds(0, 1) at Random.<unknown method>(Random.kt:67)                                           |
+|     RandomKt.fastLog2(1): 0 at Random.<unknown method>(Random.kt:71)                                                   |
+|     nextBits(0): 0 at Random.<unknown method>(Random.kt:72)                                                            |
 |   result: void                                                                                                         |
 | ---------------------------------------------------------------------------------------------------------------------- |

@@ -17,15 +17,15 @@ Detailed trace:
 |                                                                       Thread 1                                                                       |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | operation()                                                                                                                                          |
-|   escape = "START" at InlineLambdaConditionalNotTakenFullReturnTest.operation(InlineLambdaConditionalNotTakenFullReturnTest.kt:32)                   |
-|   run() at InlineLambdaConditionalNotTakenFullReturnTest.operation(InlineLambdaConditionalNotTakenFullReturnTest.kt:33)                              |
+|   escape = "START" at InlineLambdaConditionalNotTakenFullReturnTest.<unknown method>(InlineLambdaConditionalNotTakenFullReturnTest.kt:32)            |
+|   run() at InlineLambdaConditionalNotTakenFullReturnTest.<unknown method>(InlineLambdaConditionalNotTakenFullReturnTest.kt:33)                       |
 |     setEscape("BEFORE BLOCK") at InlineLambdaConditionalNotTakenFullReturnTest.<unknown method>(InlineLambdaConditionalNotTakenFullReturnTest.kt:42) |
-|       escape = "BEFORE BLOCK" at InlineLambdaConditionalNotTakenFullReturnTest.setEscape(InlineLambdaConditionalNotTakenFullReturnTest.kt:20)        |
+|       escape = "BEFORE BLOCK" at InlineLambdaConditionalNotTakenFullReturnTest.<unknown method>(InlineLambdaConditionalNotTakenFullReturnTest.kt:20) |
 |     run$Lambda() at InlineLambdaConditionalNotTakenFullReturnTest.<unknown method>(InlineLambdaConditionalNotTakenFullReturnTest.kt:43)              |
-|       escape = "IN LAMBDA" at InlineLambdaConditionalNotTakenFullReturnTest.operation(InlineLambdaConditionalNotTakenFullReturnTest.kt:34)           |
-|       escape = "AFTER LAMBDA" at InlineLambdaConditionalNotTakenFullReturnTest.operation(InlineLambdaConditionalNotTakenFullReturnTest.kt:36)        |
+|       escape = "IN LAMBDA" at InlineLambdaConditionalNotTakenFullReturnTest.<unknown method>(InlineLambdaConditionalNotTakenFullReturnTest.kt:34)    |
+|       escape = "AFTER LAMBDA" at InlineLambdaConditionalNotTakenFullReturnTest.<unknown method>(InlineLambdaConditionalNotTakenFullReturnTest.kt:36) |
 |     setEscape("AFTER BLOCK") at InlineLambdaConditionalNotTakenFullReturnTest.<unknown method>(InlineLambdaConditionalNotTakenFullReturnTest.kt:44)  |
-|       escape = "AFTER BLOCK" at InlineLambdaConditionalNotTakenFullReturnTest.setEscape(InlineLambdaConditionalNotTakenFullReturnTest.kt:20)         |
-|   escape = "END" at InlineLambdaConditionalNotTakenFullReturnTest.operation(InlineLambdaConditionalNotTakenFullReturnTest.kt:38)                     |
+|       escape = "AFTER BLOCK" at InlineLambdaConditionalNotTakenFullReturnTest.<unknown method>(InlineLambdaConditionalNotTakenFullReturnTest.kt:20)  |
+|   escape = "END" at InlineLambdaConditionalNotTakenFullReturnTest.<unknown method>(InlineLambdaConditionalNotTakenFullReturnTest.kt:38)              |
 |   result: void                                                                                                                                       |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------- |

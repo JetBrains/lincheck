@@ -17,10 +17,10 @@ Detailed trace:
 |                                                          Thread 1                                                          |
 | -------------------------------------------------------------------------------------------------------------------------- |
 | operation()                                                                                                                |
-|   escape = "START" at InlineExtFuncRepresentationTest.operation(InlineExtFuncRepresentationTest.kt:37)                     |
-|   1.setEscape() at InlineExtFuncRepresentationTest.operation(InlineExtFuncRepresentationTest.kt:38)                        |
+|   escape = "START" at InlineExtFuncRepresentationTest.<unknown method>(InlineExtFuncRepresentationTest.kt:37)              |
+|   1.setEscape() at InlineExtFuncRepresentationTest.<unknown method>(InlineExtFuncRepresentationTest.kt:38)                 |
 |     DirectMethodHandle#1.invokeBasic(4, 1): 5 at DelegatingMethodHandle.Holder.reinvoke_L(DelegatingMethodHandle$Holder:0) |
 |     escape = "1SOME" at InlineExtFuncRepresentationTest.<unknown method>(InlineExtFuncRepresentationTest.kt:33)            |
-|   escape = "END" at InlineExtFuncRepresentationTest.operation(InlineExtFuncRepresentationTest.kt:39)                       |
+|   escape = "END" at InlineExtFuncRepresentationTest.<unknown method>(InlineExtFuncRepresentationTest.kt:39)                |
 |   result: void                                                                                                             |
 | -------------------------------------------------------------------------------------------------------------------------- |

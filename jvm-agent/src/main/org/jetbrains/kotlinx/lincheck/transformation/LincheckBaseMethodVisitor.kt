@@ -43,9 +43,10 @@ internal open class LincheckBaseMethodVisitor(
         val stackTraceElement = if (mappedLocation != null) {
             if (mappedLocation.className == className) {
                 if (mappedLocation.line in methodInfo.lineRange.first .. methodInfo.lineRange.second) {
+                    // See comment in `else` branch
                     StackTraceElement(
                         /* declaringClass = */ mappedLocation.className,
-                        /* methodName = */ methodName,
+                        /* methodName = */ UNKNOWN_METHOD_MARKER, // methodName,
                         /* fileName = */ mappedLocation.sourceName,
                         /* lineNumber = */ mappedLocation.line
                     )
