@@ -90,7 +90,7 @@ object Lincheck {
     }
 
     private fun ManagedCTestConfiguration.createStrategy(block: Runnable): ManagedStrategy {
-        val runner = LambdaRunner(timeoutMs = timeoutMs) { block.run() }
+        val runner = LambdaRunner(timeoutMs = timeoutMs, block)
         return ModelCheckingStrategy(runner, createSettings()).also {
             runner.initializeStrategy(it)
         }

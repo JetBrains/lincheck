@@ -55,7 +55,7 @@ internal abstract class ManagedStrategy(
 
     val executionMode: ExecutionMode = when {
         isInTraceDebuggerMode -> ExecutionMode.TRACE_DEBUGGER
-        (runner is LambdaRunner<*>) -> ExecutionMode.GENERAL_PURPOSE_MODEL_CHECKER
+        (runner is LambdaRunner) -> ExecutionMode.GENERAL_PURPOSE_MODEL_CHECKER
         (runner is ExecutionScenarioRunner) -> ExecutionMode.DATA_STRUCTURES
 
         else -> error("Unexpected runner type: ${runner.javaClass.name}")
@@ -67,6 +67,10 @@ internal abstract class ManagedStrategy(
     // The number of parallel threads.
     protected val nScenarioThreads: Int =
         scenario?.nThreads ?: 0
+
+    // The number of runner threads
+    protected val nRunnerThreads: Int =
+        if (runner is ExecutionScenarioRunner) runner.scenarioThreads.size else 1
 
     // Test instance object, if defined by the runner
     internal val testInstance: Any?
@@ -110,7 +114,7 @@ internal abstract class ManagedStrategy(
 
     // Snapshot of the memory, which will be restored between invocations
     protected val memorySnapshot = SnapshotTracker().apply {
-        if (runner is LambdaRunner<*>) {
+        if (runner is LambdaRunner) {
             // save fields referenced by lambda for restoring by the snapshot tracker
             val lambdaBlock = runner.block
             lambdaBlock.javaClass.declaredFields
@@ -677,7 +681,7 @@ internal abstract class ManagedStrategy(
         // do not track unregistered threads
         if (currentThreadId < 0) return
         // scenario threads are handled separately
-        if (isTestThread(currentThreadId)) return
+        if (currentThreadId < nScenarioThreads) return
 
         onThreadStart(currentThreadId)
 
@@ -707,7 +711,7 @@ internal abstract class ManagedStrategy(
         // do not track unregistered threads
         if (currentThreadId < 0) return
         // scenario threads are handled separately by the runner itself
-        if (isTestThread(currentThreadId)) return
+        if (currentThreadId < nScenarioThreads) return
 
         val eventId = getNextEventId()
         val threadRunTracePoint = callStackTrace[currentThreadId]?.firstOrNull()?.tracePoint
@@ -728,7 +732,7 @@ internal abstract class ManagedStrategy(
         // do not track unregistered threads
         if (currentThreadId < 0) return
         // scenario threads are handled separately by the runner itself
-        if (isTestThread(currentThreadId)) return
+        if (currentThreadId < nScenarioThreads) return
         // check if the exception is internal
         if (isInternalException(exception)) {
             onInternalException(currentThreadId, exception)
@@ -819,8 +823,7 @@ internal abstract class ManagedStrategy(
      * Checks if [threadId] is a `TestThread` instance (threads created and managed by lincheck itself).
      */
     private fun isTestThread(threadId: Int): Boolean {
-        val nThreads = if (runner is ExecutionScenarioRunner) runner.scenarioThreads.size else 1
-        return threadId in (0 ..< nThreads)
+        return threadId in (0 ..< nRunnerThreads)
     }
 
     /**
@@ -842,7 +845,7 @@ internal abstract class ManagedStrategy(
     private fun tryAbortingUserThreads(threadId: Int, blockingReason: BlockingReason?) {
         val userThreadsAbortionPossible =
             // all `TestThread`s are finished (including main: with id of zero)
-            (0 ..< nScenarioThreads).all(threadScheduler::isFinished) &&
+            (0 ..< nRunnerThreads).all(threadScheduler::isFinished) &&
             // The main thread finished its execution (actually all `TestThread`s did): successfully or not, we don't care.
             // If all user threads (those that are not `TestThread` instances) are not blocked, then abort
             // the running user threads. Essentially treating them as "daemons", which completion we do not wait for.

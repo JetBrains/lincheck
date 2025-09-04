@@ -21,9 +21,9 @@ import org.jetbrains.kotlinx.lincheck.util.threadMapOf
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeoutException
 
-internal class LambdaRunner<R>(
+internal class LambdaRunner(
     private val timeoutMs: Long, // for deadlock or livelock detection
-    val block: () -> R
+    val block: Runnable
 ) : AbstractActiveThreadPoolRunner() {
 
     private val testName =
@@ -52,14 +52,14 @@ internal class LambdaRunner<R>(
         }
     }
 
-    private class LambdaWrapper<R>(val strategy: Strategy, val block: () -> R) : Runnable {
-        var result: kotlin.Result<R>? = null
+    private class LambdaWrapper(val strategy: Strategy, val block: Runnable) : Runnable {
+        var result: kotlin.Result<Unit>? = null
 
         override fun run() {
             result = kotlin.runCatching {
                 onStart()
                 try {
-                    block()
+                    block.run()
                 } finally {
                     onFinish()
                 }
@@ -80,7 +80,7 @@ internal class LambdaRunner<R>(
 
     // TODO: currently we have to use `ExecutionResult`,
     //   even though in case of `LambdaRunner` the result can be simplified
-    private fun collectExecutionResults(wrapper: LambdaWrapper<*>) = ExecutionResult(
+    private fun collectExecutionResults(wrapper: LambdaWrapper) = ExecutionResult(
         parallelResultsWithClock = listOf(listOf(
             ResultWithClock(wrapper.result?.toLinCheckResult() ?: NoResult, emptyClock(1))
         )),
@@ -91,7 +91,7 @@ internal class LambdaRunner<R>(
         afterPostStateRepresentation = null,
     )
 
-    private fun RunnerTimeoutInvocationResult(wrapper: LambdaWrapper<*>): RunnerTimeoutInvocationResult {
+    private fun RunnerTimeoutInvocationResult(wrapper: LambdaWrapper): RunnerTimeoutInvocationResult {
         val threadDump = collectThreadDump()
         return RunnerTimeoutInvocationResult(threadDump, collectExecutionResults(wrapper))
     }
