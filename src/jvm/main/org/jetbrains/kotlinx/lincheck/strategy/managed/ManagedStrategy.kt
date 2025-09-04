@@ -819,7 +819,8 @@ internal abstract class ManagedStrategy(
      * Checks if [threadId] is a `TestThread` instance (threads created and managed by lincheck itself).
      */
     private fun isTestThread(threadId: Int): Boolean {
-        return threadId in (0 ..< nScenarioThreads)
+        val nThreads = if (runner is ExecutionScenarioRunner) runner.scenarioThreads.size else 1
+        return threadId in (0 ..< nThreads)
     }
 
     /**
