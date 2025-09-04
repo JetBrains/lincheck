@@ -16,7 +16,6 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.ThreadState
 import org.jetbrains.kotlinx.lincheck.strategy.nativecalls.*
 import org.jetbrains.kotlinx.lincheck.trace.*
 import org.jetbrains.lincheck.jvm.agent.*
@@ -55,9 +54,11 @@ internal abstract class ManagedStrategy(
 ) : Strategy(), EventTracker {
 
     val executionMode: ExecutionMode = when {
-        testClass == GeneralPurposeModelCheckingWrapper::class.java -> ExecutionMode.GENERAL_PURPOSE_MODEL_CHECKER
         isInTraceDebuggerMode -> ExecutionMode.TRACE_DEBUGGER
-        else -> ExecutionMode.DATA_STRUCTURES
+        (runner is LambdaRunner<*>) -> ExecutionMode.GENERAL_PURPOSE_MODEL_CHECKER
+        (runner is ExecutionScenarioRunner) -> ExecutionMode.DATA_STRUCTURES
+
+        else -> error("Unexpected runner type: ${runner.javaClass.name}")
     }
 
     private val scenario: ExecutionScenario?
@@ -109,11 +110,10 @@ internal abstract class ManagedStrategy(
 
     // Snapshot of the memory, which will be restored between invocations
     protected val memorySnapshot = SnapshotTracker().apply {
-        if (isGeneralPurposeModelCheckingScenario(scenario)) {
+        if (runner is LambdaRunner<*>) {
             // save fields referenced by lambda for restoring by the snapshot tracker
-            val actor = scenario.parallelExecution.getOrNull(0)?.getOrNull(0)
-            val lambdaBlock = actor?.arguments?.firstOrNull()
-            lambdaBlock?.javaClass?.declaredFields
+            val lambdaBlock = runner.block
+            lambdaBlock.javaClass.declaredFields
                 ?.mapNotNull { readFieldSafely(lambdaBlock, it).getOrNull() }
                 ?.forEach(::trackObjectAsRoot)
         }
@@ -388,7 +388,7 @@ internal abstract class ManagedStrategy(
         val threadId = threadScheduler.getCurrentThreadId()
         val actorId = currentActorId[threadId] ?: -1
         // only scenario threads can have blocking actors
-        if (currentThreadId >= nScenarioThreads) return false
+        if (threadId >= nScenarioThreads) return false
         // Handle the case when the first actor has not yet started,
         // see https://github.com/JetBrains/lincheck/pull/277
         if (actorId < 0) return false
@@ -502,7 +502,7 @@ internal abstract class ManagedStrategy(
             isTestThread(iThread) &&
             // TODO: coroutine suspensions are currently handled separately from `ThreadScheduler`
             isSuspended[iThread]!! &&
-            !runner.isCoroutineResumed(iThread, currentActorId[iThread]!!)
+            !((runner as? ExecutionScenarioRunner)?.isCoroutineResumed(iThread, currentActorId[iThread]!!) ?: false)
         )
 
     /**
@@ -563,7 +563,7 @@ internal abstract class ManagedStrategy(
            return iThread
         }
         // try to resume some suspended thread
-        val suspendedThread = (0 until nThreads).firstOrNull {
+        val suspendedThread = (0 until nScenarioThreads).firstOrNull {
            !threadScheduler.isFinished(it) && isSuspended[it]!!
         }
         if (suspendedThread != null) {
@@ -621,7 +621,7 @@ internal abstract class ManagedStrategy(
      * Threads to which an execution can be switched from thread [iThread].
      */
     private fun switchableThreads(iThread: Int) =
-        if (runner.currentExecutionPart == PARALLEL) {
+        if (currentExecutionPart == PARALLEL) {
             (0 until threadScheduler.nThreads).filter { it != iThread && isActive(it) }
         } else {
             emptyList()
@@ -635,7 +635,7 @@ internal abstract class ManagedStrategy(
      * TODO: somehow refactor suspended TestThread and add them here as well.
      */
     private fun resumableThreads(iThread: Int): List<Int> =
-        if (runner.currentExecutionPart == PARALLEL) {
+        if (currentExecutionPart == PARALLEL) {
             (0 until threadScheduler.nThreads).filter { it != iThread && threadScheduler.isLiveLocked(it) }
         } else {
             emptyList()
@@ -684,7 +684,7 @@ internal abstract class ManagedStrategy(
         val tracePoint = addBeforeMethodCallTracePoint(
             eventId = getNextEventId(),
             threadId = currentThreadId,
-            owner = runner.testInstance,
+            owner = testInstance,
             className = "java.lang.Thread",
             methodName = "run",
             codeLocation = UNKNOWN_CODE_LOCATION,
@@ -765,7 +765,7 @@ internal abstract class ManagedStrategy(
         currentActorId[threadId] = if (isTestThread(threadId)) -1 else 0
         callStackTrace[threadId] = mutableListOf()
         suspendedFunctionsStack[threadId] = mutableListOf()
-        shadowStack[threadId] = arrayListOf(ShadowStackFrame(runner.testInstance))
+        shadowStack[threadId] = arrayListOf(ShadowStackFrame(testInstance))
         analysisSectionStack[threadId] = arrayListOf()
         randoms[threadId] = InjectedRandom(threadId + 239L)
         objectTracker.registerThread(threadId, thread)
@@ -819,7 +819,7 @@ internal abstract class ManagedStrategy(
      * Checks if [threadId] is a `TestThread` instance (threads created and managed by lincheck itself).
      */
     private fun isTestThread(threadId: Int): Boolean {
-        return threadId in (0 ..< nThreads)
+        return threadId in (0 ..< nScenarioThreads)
     }
 
     /**
@@ -841,7 +841,7 @@ internal abstract class ManagedStrategy(
     private fun tryAbortingUserThreads(threadId: Int, blockingReason: BlockingReason?) {
         val userThreadsAbortionPossible =
             // all `TestThread`s are finished (including main: with id of zero)
-            (0 ..< scenario.nThreads).all(threadScheduler::isFinished) &&
+            (0 ..< nScenarioThreads).all(threadScheduler::isFinished) &&
             // The main thread finished its execution (actually all `TestThread`s did): successfully or not, we don't care.
             // If all user threads (those that are not `TestThread` instances) are not blocked, then abort
             // the running user threads. Essentially treating them as "daemons", which completion we do not wait for.
@@ -867,7 +867,7 @@ internal abstract class ManagedStrategy(
      *
      * @param threadId the thread id of the started thread.
      */
-    open fun onThreadStart(threadId: ThreadId) = runInIgnoredSection {
+    open fun onThreadStart(threadId: ThreadId) = runInsideIgnoredSection {
         threadScheduler.awaitTurn(threadId)
         threadScheduler.startThread(threadId)
     }
@@ -877,7 +877,7 @@ internal abstract class ManagedStrategy(
      *
      * @param threadId the thread id of the finished thread.
      */
-    open fun onThreadFinish(threadId: ThreadId) = runInIgnoredSection {
+    open fun onThreadFinish(threadId: ThreadId) = runInsideIgnoredSection {
         if (currentExecutionPart !== PARALLEL) return
         threadScheduler.awaitTurn(threadId)
         threadScheduler.finishThread(threadId)
@@ -896,7 +896,7 @@ internal abstract class ManagedStrategy(
      * @param threadId the thread id of the thread where exception was thrown.
      * @param exception the exception that was thrown.
      */
-    open fun onInternalException(threadId: Int, exception: Throwable) = runInIgnoredSection {
+    open fun onInternalException(threadId: Int, exception: Throwable): Unit = runInsideIgnoredSection {
         check(isInternalException(exception))
         // This method is called only if the exception cannot be treated as a normal result,
         // so we exit testing code to avoid trace collection resume or some bizarre bugs
@@ -915,14 +915,17 @@ internal abstract class ManagedStrategy(
     }
 
     override fun onActorStart(iThread: Int) = runInsideIgnoredSection {
+        check(runner is ExecutionScenarioRunner)
+
         val actorId = 1 + currentActorId[iThread]!!
         currentActorId[iThread] = actorId
         callStackTrace[iThread]!!.clear()
         suspendedFunctionsStack[iThread]!!.clear()
         loopDetector.onActorStart(iThread)
 
+        val scenario = runner.scenario
         val actor = if (actorId < scenario.threads[iThread].size) scenario.threads[iThread][actorId]
-                    else validationFunction
+                    else runner.validationFunction
         check(actor != null) { "Could not find current actor" }
 
         val methodDescriptor = getAsmMethod(actor.method).descriptor
@@ -948,6 +951,7 @@ internal abstract class ManagedStrategy(
     }
 
     override fun onActorFinish(iThread: Int) = runInsideIgnoredSection {
+        check(runner is ExecutionScenarioRunner)
         val actorStartTracePoint = traceCollector?.trace
                 ?.filterIsInstance<MethodCallTracePoint>()
                 ?.firstOrNull { it.isActor && it.actorId == currentActorId[iThread] && it.iThread == iThread }
@@ -1944,7 +1948,7 @@ internal abstract class ManagedStrategy(
      *
      * @param iThread number of invoking thread.
      */
-    internal fun afterCoroutineSuspended(iThread: Int) = runInIgnoredSection {
+    internal fun afterCoroutineSuspended(iThread: Int) = runInsideIgnoredSection {
         check(threadScheduler.getCurrentThreadId() == iThread)
         check(runner is ExecutionScenarioRunner)
         check(isTestThread(iThread)) {
@@ -1961,7 +1965,7 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    internal fun afterCoroutineResumed(iThread: Int) = runInIgnoredSection {
+    internal fun afterCoroutineResumed(iThread: Int) = runInsideIgnoredSection {
         check(threadScheduler.getCurrentThreadId() == iThread)
         check(isTestThread(iThread)) {
             "Special coroutines handling methods should only be called from test threads"
@@ -1977,20 +1981,24 @@ internal abstract class ManagedStrategy(
         lastCoroutineCancellationTracePoint[iThread] = createAndLogCancellationTracePoint()
     }
 
-    internal fun afterCoroutineCancellation(iThread: Int, cancellationResult: CancellationResult) = runInIgnoredSection {
+    internal fun afterCoroutineCancellation(iThread: Int, cancellationResult: CancellationResult) = runInsideIgnoredSection {
         check(threadScheduler.getCurrentThreadId() == iThread)
+        check(isTestThread(iThread)) {
+            "Special coroutines handling methods should only be called from test threads"
+        }
         lastCoroutineCancellationTracePoint[iThread]?.initializeCancellationResult(cancellationResult)
         if (cancellationResult != CANCELLATION_FAILED) {
-            check(isTestThread(iThread)) {
-            "Special coroutines handling methods should only be called from test threads"
-        }isSuspended[iThread] = false
+            isSuspended[iThread] = false
             // method will not be resumed after suspension, so clear the suspended functions stack
             suspendedFunctionsStack[iThread]!!.clear()
         }
     }
 
-    fun afterCoroutineCancellation(iThread: Int, cancellationException: Throwable) = runInIgnoredSection {
+    fun afterCoroutineCancellation(iThread: Int, cancellationException: Throwable) = runInsideIgnoredSection {
         check(threadScheduler.getCurrentThreadId() == iThread)
+        check(isTestThread(iThread)) {
+            "Special coroutines handling methods should only be called from test threads"
+        }
         lastCoroutineCancellationTracePoint[iThread]?.initializeException(cancellationException)
     }
 
@@ -2291,10 +2299,6 @@ internal abstract class ManagedStrategy(
 
     // == IDEA PLUGIN INTEGRATION METHODS ==
 
-    fun enableReplayModeForIdeaPlugin() {
-        inIdeaPluginReplayMode = true
-    }
-
     override fun shouldInvokeBeforeEvent(): Boolean {
         // We do not check `inIgnoredSection` here because this method is called from instrumented code
         // that should be invoked only outside the ignored section.
@@ -2329,6 +2333,9 @@ internal abstract class ManagedStrategy(
         return objectTracker.enumerateAllObjects()
     }
 }
+
+private fun TracePoint.isActorMethodCallTracePoint() =
+    (this is MethodCallTracePoint && this.isRootCall)
 
 // represents an unknown code location
 internal const val UNKNOWN_CODE_LOCATION = -1
