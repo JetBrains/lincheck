@@ -596,9 +596,12 @@ internal data class ExceptionStackTracesResult(val exceptionStackTraces: Map<Thr
  */
 internal fun collectExceptionStackTraces(executionResult: ExecutionResult): ExceptionsProcessingResult {
     val exceptionStackTraces = mutableMapOf<Throwable, ExceptionNumberAndStacktrace>()
-    listOf(
-        executionResult.initResults + executionResult.parallelResults[0] + executionResult.postResults,
-        *executionResult.parallelResults.drop(1).toTypedArray())
+    val allResults = listOf(
+        executionResult.initResults + executionResult.parallelResults.getOrNull(0) + executionResult.postResults,
+        *executionResult.parallelResults.drop(1).toTypedArray()
+    )
+
+    allResults
         .flatMap { it.mapIndexed { index, result -> Pair(index, result) } }
         .sortedBy { (index, _) -> index }
         .map { (_, exception) -> exception }
