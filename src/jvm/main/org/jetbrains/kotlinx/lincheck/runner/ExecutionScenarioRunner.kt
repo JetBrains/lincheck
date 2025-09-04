@@ -472,10 +472,6 @@ internal class ExecutionScenarioRunner(
         (strategy as? ManagedStrategy)?.onThreadFinish(iThread)
     }
 
-    fun onInternalException(iThread: Int, throwable: Throwable) {
-        (strategy as? ManagedStrategy)?.onInternalException(iThread, throwable)
-    }
-
     fun beforePart(part: ExecutionPart) {
         completedOrSuspendedThreads.set(0)
         currentExecutionPart = part
@@ -496,6 +492,27 @@ internal class ExecutionScenarioRunner(
      */
     fun onActorFinish(iThread: Int) {
         strategy.onActorFinish(iThread)
+    }
+
+    /**
+     * Is invoked if an actor execution has thrown an exception.
+     *
+     * Default implementation checks if the failure
+     * was caused by an internal exception (see [isInternalException]) and re-throw in this case,
+     * otherwise it treats the exception as a normal actor result.
+     *
+     * @param iThread the number of the invoking thread where the failure occurred.
+     * @param throwable the exception that caused the actor failure.
+     */
+    // used in byte-code generation
+    fun onActorFailure(iThread: Int, throwable: Throwable) {
+        if (isInternalException(throwable)) {
+            if (strategy is ManagedStrategy) {
+                (strategy as ManagedStrategy).onInternalException(iThread, throwable)
+            } else {
+                throw throwable
+            }
+        }
     }
 
     /**
