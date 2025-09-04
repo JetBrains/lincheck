@@ -597,14 +597,14 @@ internal data class ExceptionStackTracesResult(val exceptionStackTraces: Map<Thr
 internal fun collectExceptionStackTraces(executionResult: ExecutionResult): ExceptionsProcessingResult {
     val exceptionStackTraces = mutableMapOf<Throwable, ExceptionNumberAndStacktrace>()
     val allResults = listOf(
-        executionResult.initResults + executionResult.parallelResults.getOrNull(0) + executionResult.postResults,
+        executionResult.initResults + executionResult.parallelResults.getOrNull(0).orEmpty() + executionResult.postResults,
         *executionResult.parallelResults.drop(1).toTypedArray()
-    )
+    ).flatten()
 
     allResults
-        .flatMap { it.mapIndexed { index, result -> Pair(index, result) } }
+        .mapIndexed { index, result -> Pair(index, result) }
         .sortedBy { (index, _) -> index }
-        .map { (_, exception) -> exception }
+        .map { (_, result) -> result }
         .filterIsInstance<ExceptionResult>()
         .forEachIndexed { index, exceptionResult ->
             val exception = exceptionResult.throwable
