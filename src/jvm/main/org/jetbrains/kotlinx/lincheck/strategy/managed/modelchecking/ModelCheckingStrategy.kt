@@ -100,7 +100,7 @@ internal class ModelCheckingStrategy(
 
     override fun onSwitchPoint(iThread: Int) {
         check(iThread == -1 /* initial thread choice */ || iThread == threadScheduler.scheduledThreadId)
-        if (runner.currentExecutionPart != PARALLEL) return
+        if (currentExecutionPart != PARALLEL) return
         // in case if `tryAbortingUserThreads` succeeded in aborting execution,
         // we should not insert switch points after it
         if (threadScheduler.areAllThreadsFinishedOrAborted()) return

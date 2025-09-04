@@ -14,6 +14,8 @@ import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.chooseSequentialSpecification
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.runner.ExecutionScenarioRunner
+import org.jetbrains.kotlinx.lincheck.runner.UseClocks
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
@@ -99,11 +101,26 @@ class ModelCheckingCTestConfiguration(
         scenario: ExecutionScenario,
         validationFunction: Actor?,
         stateRepresentationMethod: Method?,
-    ): Strategy = ModelCheckingStrategy(
-        testClass,
-        scenario,
-        validationFunction,
-        stateRepresentationMethod,
-        createSettings()
-    )
+    ): Strategy {
+        val runner = ExecutionScenarioRunner(
+            scenario = scenario,
+            testClass = testClass,
+            validationFunction = validationFunction,
+            stateRepresentationFunction = stateRepresentationMethod,
+            timeoutMs = getTimeOutMs(inIdeaPluginReplayMode, timeoutMs),
+            useClocks = UseClocks.ALWAYS
+        )
+        return ModelCheckingStrategy(runner, createSettings(), inIdeaPluginReplayMode).also {
+            runner.initializeStrategy(it)
+        }
+    }
 }
+
+internal fun getTimeOutMs(inIdeaPluginReplayMode: Boolean, defaultTimeOutMs: Long): Long =
+    if (inIdeaPluginReplayMode) INFINITE_TIMEOUT else defaultTimeOutMs
+
+/**
+ * With idea plugin enabled, we should not use default Lincheck timeout
+ * as debugging may take more time than default timeout.
+ */
+private const val INFINITE_TIMEOUT = 1000L * 60 * 60 * 24 * 365
