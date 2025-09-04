@@ -22,7 +22,7 @@ Detailed trace:
 |     ensureConcurrentHashMapIsInstrumented() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:50)                                                   |
 |     doTest() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:53)                                                                                  |
 |       Companion.create(): Counter#1 at MethodHandlesBindToRepresentationTest.doTest(MethodHandlesLookupTests.kt:131)                                                            |
-|         Counter.shared = Counter#1 at Counter.Companion.create(MethodHandlesLookupTests.kt:165)                                                                                 |
+|         Counter.shared = Counter#1 at Counter.Companion.<unknown method>(MethodHandlesLookupTests.kt:165)                                                                       |
 |       MethodType.methodType(Class#1): MethodType#1 at MethodHandlesBindToRepresentationTest.doTest(MethodHandlesLookupTests.kt:134)                                             |
 |       Lookup#1.findVirtual(Class#2, "increment", MethodType#1): DirectMethodHandle#1 at MethodHandlesBindToRepresentationTest.doTest(MethodHandlesLookupTests.kt:133)           |
 |       DirectMethodHandle#1.bindTo(Counter#1): BoundMethodHandle$Species_LL#1 at MethodHandlesBindToRepresentationTest.doTest(MethodHandlesLookupTests.kt:136)                   |

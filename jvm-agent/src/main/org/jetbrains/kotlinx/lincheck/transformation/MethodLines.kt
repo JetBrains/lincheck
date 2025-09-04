@@ -12,17 +12,14 @@ package org.jetbrains.kotlinx.lincheck.transformation
 
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
+import java.util.SortedSet
+import java.util.TreeSet
 
-/**
- * [LabelsTracker] tracks active regions of variables and status of the labels in the method.
- */
-internal class LabelsTracker(
-    visitor: MethodVisitor,
-    private val metaInfo: MethodInformation
-) : MethodVisitor(ASM_API, visitor) {
-    override fun visitLabel(label: Label)  {
-        metaInfo.locals.visitLabel(label)
-        metaInfo.labels.visitLabel(label)
-        super.visitLabel(label)
+internal class LinesCollectorMethodVisitor: MethodVisitor(ASM_API, null) {
+    val allLines: SortedSet<Int> = TreeSet()
+
+    override fun visitLineNumber(line: Int, start: Label?) {
+        if (line == 0) return
+        allLines.add(line)
     }
 }

@@ -21,6 +21,7 @@ internal open class LincheckBaseMethodVisitor(
     protected val fileName: String,
     protected val className: String,
     protected val methodName: String,
+    protected val methodInfo: MethodInformation,
     val adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor
 ) : MethodVisitor(ASM_API, methodVisitor) {
@@ -38,7 +39,46 @@ internal open class LincheckBaseMethodVisitor(
     }
 
     protected fun loadNewCodeLocationId(accessPath: AccessPath? = null): Int = adapter.run {
-        val stackTraceElement = StackTraceElement(className, methodName, fileName, lineNumber)
+        val mappedLocation = methodInfo.smap.getLine("Kotlin", lineNumber)
+        val stackTraceElement = if (mappedLocation != null) {
+            if (mappedLocation.className == className) {
+                if (mappedLocation.line in methodInfo.lineRange.first .. methodInfo.lineRange.second) {
+                    // See comment in `else` branch
+                    StackTraceElement(
+                        /* declaringClass = */ mappedLocation.className,
+                        /* methodName = */ UNKNOWN_METHOD_MARKER, // methodName,
+                        /* fileName = */ mappedLocation.sourceName,
+                        /* lineNumber = */ mappedLocation.line
+                    )
+                } else {
+                    // TODO: "Smart" behavior leads to flaky tests on TeamCity
+                    //  Investigate, why.
+                    //  Tests in question are:
+                    //  - org.jetbrains.kotlinx.lincheck_test.representation.SuspendTraceReportingTest.test
+                    //  - org.jetbrains.kotlinx.lincheck_test.representation.CoroutineCancellationTraceReportingTest.test
+                    StackTraceElement(
+                        /* declaringClass = */ mappedLocation.className,
+                        /* methodName = */ UNKNOWN_METHOD_MARKER, // methodInfo.findMethodByLine(mappedLocation.line, methodName),
+                        /* fileName = */ mappedLocation.sourceName,
+                        /* lineNumber = */ mappedLocation.line
+                    )
+                }
+            } else {
+                // Reset method name, as it is other class or out of current method line range.
+                StackTraceElement(
+                    /* declaringClass = */ mappedLocation.className,
+                    /* methodName = */ UNKNOWN_METHOD_MARKER,
+                    /* fileName = */ mappedLocation.sourceName,
+                    /* lineNumber = */ mappedLocation.line
+                )
+            }
+        } else {
+            StackTraceElement(
+                /* declaringClass = */ className,
+                /* methodName = */ methodName,
+                /* fileName = */ fileName,
+                /* lineNumber = */ lineNumber)
+        }
         val codeLocationId = CodeLocations.newCodeLocation(stackTraceElement, accessPath)
         push(codeLocationId)
         return codeLocationId

@@ -36,6 +36,8 @@ abstract class AbstractTraceIntegrationTest {
         extraAgentArgs: List<String>,
     ): String {
         val pathToFatJar = File(Paths.get("build", "libs", fatJarName).toString())
+        // We need to escape it twice, as our argument parser will de-escape it when split into array
+        val pathToOutput = fileToDump.absolutePath.escape().escape()
         return """
             gradle.taskGraph.whenReady {
                 val jvmTasks = allTasks.filter { task -> task is JavaForkOptions }
@@ -44,7 +46,7 @@ abstract class AbstractTraceIntegrationTest {
                         val options = task as JavaForkOptions
                         val jvmArgs = options.jvmArgs?.toMutableList() ?: mutableListOf()
                         jvmArgs.addAll(listOf(${extraJvmArgs.joinToString(", ") { "\"$it\"" }}))
-                        jvmArgs.add("-javaagent:${pathToFatJar.absolutePath.escape()}=$testClassName,$testMethodName,${fileToDump.absolutePath.escape()}${if (extraAgentArgs.isNotEmpty()) ",${extraAgentArgs.joinToString(",")}" else ""}")
+                        jvmArgs.add("-javaagent:${pathToFatJar.absolutePath.escape()}=$testClassName,$testMethodName,$pathToOutput${if (extraAgentArgs.isNotEmpty()) ",${extraAgentArgs.joinToString(",")}" else ""}")
                         options.jvmArgs = jvmArgs
                     }
                 }

@@ -13,23 +13,23 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-|                                                                              Thread 1                                                                              |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| operation()                                                                                                                                                        |
-|   escape = "START" at InlineLambdaConditionalTakenDeepReturnTest.operation(InlineLambdaConditionalTakenDeepReturnTest.kt:32)                                       |
-|   run() at InlineLambdaConditionalTakenDeepReturnTest.operation(InlineLambdaConditionalTakenDeepReturnTest.kt:33)                                                  |
-|     setEscape("BEFORE BLOCK") at InlineLambdaConditionalTakenDeepReturnTest.operation(InlineLambdaConditionalTakenDeepReturnTest.kt:55)                            |
-|       escape = "BEFORE BLOCK" at InlineLambdaConditionalTakenDeepReturnTest.setEscape(InlineLambdaConditionalTakenDeepReturnTest.kt:20)                            |
-|     run$Lambda() at InlineLambdaConditionalTakenDeepReturnTest.operation(InlineLambdaConditionalTakenDeepReturnTest.kt:56)                                         |
-|       escape = "IN LAMBDA 1" at InlineLambdaConditionalTakenDeepReturnTest.operation(InlineLambdaConditionalTakenDeepReturnTest.kt:34)                             |
-|       InlineLambdaConditionalTakenDeepReturnTest#1.run() at InlineLambdaConditionalTakenDeepReturnTest.operation(InlineLambdaConditionalTakenDeepReturnTest.kt:35) |
-|         setEscape("BEFORE BLOCK") at InlineLambdaConditionalTakenDeepReturnTest.operation(InlineLambdaConditionalTakenDeepReturnTest.kt:57)                        |
-|           escape = "BEFORE BLOCK" at InlineLambdaConditionalTakenDeepReturnTest.setEscape(InlineLambdaConditionalTakenDeepReturnTest.kt:20)                        |
-|         run$Lambda() at InlineLambdaConditionalTakenDeepReturnTest.operation(InlineLambdaConditionalTakenDeepReturnTest.kt:58)                                     |
-|           escape = "IN LAMBDA 2" at InlineLambdaConditionalTakenDeepReturnTest.operation(InlineLambdaConditionalTakenDeepReturnTest.kt:36)                         |
-|     setEscape("AFTER BLOCK") at InlineLambdaConditionalTakenDeepReturnTest.operation(InlineLambdaConditionalTakenDeepReturnTest.kt:61)                             |
-|       escape = "AFTER BLOCK" at InlineLambdaConditionalTakenDeepReturnTest.setEscape(InlineLambdaConditionalTakenDeepReturnTest.kt:20)                             |
-|   escape = "END" at InlineLambdaConditionalTakenDeepReturnTest.operation(InlineLambdaConditionalTakenDeepReturnTest.kt:42)                                         |
-|   result: void                                                                                                                                                     |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                 Thread 1                                                                                  |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                                               |
+|   escape = "START" at InlineLambdaConditionalTakenDeepReturnTest.<unknown method>(InlineLambdaConditionalTakenDeepReturnTest.kt:32)                                       |
+|   run() at InlineLambdaConditionalTakenDeepReturnTest.<unknown method>(InlineLambdaConditionalTakenDeepReturnTest.kt:33)                                                  |
+|     setEscape("BEFORE BLOCK") at InlineLambdaConditionalTakenDeepReturnTest.<unknown method>(InlineLambdaConditionalTakenDeepReturnTest.kt:46)                            |
+|       escape = "BEFORE BLOCK" at InlineLambdaConditionalTakenDeepReturnTest.<unknown method>(InlineLambdaConditionalTakenDeepReturnTest.kt:20)                            |
+|     run$Lambda() at InlineLambdaConditionalTakenDeepReturnTest.<unknown method>(InlineLambdaConditionalTakenDeepReturnTest.kt:47)                                         |
+|       escape = "IN LAMBDA 1" at InlineLambdaConditionalTakenDeepReturnTest.<unknown method>(InlineLambdaConditionalTakenDeepReturnTest.kt:34)                             |
+|       InlineLambdaConditionalTakenDeepReturnTest#1.run() at InlineLambdaConditionalTakenDeepReturnTest.<unknown method>(InlineLambdaConditionalTakenDeepReturnTest.kt:35) |
+|         setEscape("BEFORE BLOCK") at InlineLambdaConditionalTakenDeepReturnTest.<unknown method>(InlineLambdaConditionalTakenDeepReturnTest.kt:46)                        |
+|           escape = "BEFORE BLOCK" at InlineLambdaConditionalTakenDeepReturnTest.<unknown method>(InlineLambdaConditionalTakenDeepReturnTest.kt:20)                        |
+|         run$Lambda() at InlineLambdaConditionalTakenDeepReturnTest.<unknown method>(InlineLambdaConditionalTakenDeepReturnTest.kt:47)                                     |
+|           escape = "IN LAMBDA 2" at InlineLambdaConditionalTakenDeepReturnTest.<unknown method>(InlineLambdaConditionalTakenDeepReturnTest.kt:36)                         |
+|     setEscape("AFTER BLOCK") at InlineLambdaConditionalTakenDeepReturnTest.<unknown method>(InlineLambdaConditionalTakenDeepReturnTest.kt:48)                             |
+|       escape = "AFTER BLOCK" at InlineLambdaConditionalTakenDeepReturnTest.<unknown method>(InlineLambdaConditionalTakenDeepReturnTest.kt:20)                             |
+|   escape = "END" at InlineLambdaConditionalTakenDeepReturnTest.<unknown method>(InlineLambdaConditionalTakenDeepReturnTest.kt:42)                                         |
+|   result: void                                                                                                                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

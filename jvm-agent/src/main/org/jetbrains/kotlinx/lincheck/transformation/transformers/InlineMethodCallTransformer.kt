@@ -31,12 +31,11 @@ internal class InlineMethodCallTransformer(
     fileName: String,
     className: String,
     methodName: String,
+    metaInfo: MethodInformation,
     desc: String,
     adapter: GeneratorAdapter,
-    methodVisitor: MethodVisitor,
-    val locals: MethodVariables,
-    val labelSorter: MethodLabels
-) : LincheckBaseMethodVisitor(fileName, className, methodName, adapter, methodVisitor) {
+    methodVisitor: MethodVisitor
+) : LincheckBaseMethodVisitor(fileName, className, methodName, metaInfo, adapter, methodVisitor) {
     private data class InlineStackElement(
         val lvar: LocalVariableInfo,
         val methodId: Int,
@@ -55,9 +54,9 @@ internal class InlineMethodCallTransformer(
         methodType.returnType.className == objectType &&
         methodType.argumentTypes.lastOrNull()?.className == contType &&
         (
-            locals.hasVarByName("\$completion") ||
-            locals.hasVarByName("\$continuation") ||
-            locals.hasVarByName("\$result")
+            metaInfo.locals.hasVarByName("\$completion") ||
+            metaInfo.locals.hasVarByName("\$continuation") ||
+            metaInfo.locals.hasVarByName("\$result")
         )
 
     // List of blocklisted methods due to https://youtrack.jetbrains.com/issue/DR-278
@@ -70,14 +69,14 @@ internal class InlineMethodCallTransformer(
     // Sort local variables by their end labels (latest label goes first)
     // and then by index if labels are the same (to have a stable result).
     private val localVarInlineStartComparator = Comparator<LocalVariableInfo>
-    { a, b -> labelSorter.compare(b.endLabel, a.endLabel) }
+    { a, b -> metaInfo.labels.compare(b.endLabel, a.endLabel) }
         .thenComparing { it.index }
 
     private val inlineStack = mutableListOf<InlineStackElement>()
     private var currentInlineDepth = 0
 
     override fun visitLabel(label: Label) {
-        if (!locals.hasInlines || looksLikeSuspendMethod || looksLikeBlocklistedMethod) {
+        if (!methodInfo.locals.hasInlines || looksLikeSuspendMethod || looksLikeBlocklistedMethod) {
             super.visitLabel(label)
             return
         }
@@ -86,7 +85,7 @@ internal class InlineMethodCallTransformer(
         // the start of another one. Nothing wrong instrument exists first.
         while (inlineStack.isNotEmpty()) {
             val (lvar, methodId, tryEndsCatchBeginsLabel, savedInlineDepth) = inlineStack.last()
-            val cmp = labelSorter.compare(lvar.endLabel, label)
+            val cmp = methodInfo.labels.compare(lvar.endLabel, label)
             if (cmp > 0) break
             if (cmp < 0) {
                 Logger.warn { "${className}.${methodName}: Inline call to ${lvar.inlineMethodName} should be finished at label ${lvar.endLabel} but still alive at ${label}." }
@@ -103,7 +102,7 @@ internal class InlineMethodCallTransformer(
         // One end label can mark several returns for sure.
         // Support multiple starts to be sure.
         // Sort starts by end labels (it provides proper nesting) and then variable slots (it provides stable sort)
-        for (lvar in locals.inlinesStartAt(label)
+        for (lvar in methodInfo.locals.inlinesStartAt(label)
             .filter { it.inlineMethodName != methodName && isSupportedInline(it) }
             .sortedWith(localVarInlineStartComparator)
         ) {
@@ -129,7 +128,7 @@ internal class InlineMethodCallTransformer(
                 instrumented = {
                     // Stop when we jump inside the inline method, comparison is strict because
                     // "normal" exit code will be generated BEFORE this label (as method epilogue)
-                    exitFromInlineMethods { labelSorter.compare(it.endLabel, label) > 0 }
+                    exitFromInlineMethods { methodInfo.labels.compare(it.endLabel, label) > 0 }
                 }
             )
 
@@ -146,7 +145,7 @@ internal class InlineMethodCallTransformer(
                 adapter.invokeIfTrueAndInAnalyzedCode(opcode) {
                     // Stop when we jump inside the inline method, comparison is strict because
                     // "normal" exit code will be generated BEFORE this label (as method epilogue)
-                    exitFromInlineMethods { labelSorter.compare(it.endLabel, label) > 0 }
+                    exitFromInlineMethods { methodInfo.labels.compare(it.endLabel, label) > 0 }
                 }
             }
 
@@ -163,7 +162,7 @@ internal class InlineMethodCallTransformer(
                 adapter.invokeIfTrueAndInAnalyzedCode(opcode) {
                     // Stop when we jump inside the inline method, comparison is strict because
                     // "normal" exit code will be generated BEFORE this label (as method epilogue)
-                    exitFromInlineMethods { labelSorter.compare(it.endLabel, label) > 0 }
+                    exitFromInlineMethods { methodInfo.labels.compare(it.endLabel, label) > 0 }
                 }
             }
 
@@ -237,8 +236,8 @@ internal class InlineMethodCallTransformer(
         // function was defined and `$this$<func-name>$iv` will show to virtual `this`, with
         // which function should really work.
         // Prefer the second variant if possible.
-        val this_ = locals.activeVariables.firstOrNull { it.name == "\$this$$inlineMethodName$suffix" }
-            ?: locals.activeVariables.firstOrNull { it.name == "this_$suffix" }
+        val this_ = methodInfo.locals.activeVariables.firstOrNull { it.name == "\$this$$inlineMethodName$suffix" }
+            ?: methodInfo.locals.activeVariables.firstOrNull { it.name == "this_$suffix" }
         val className = this_?.type?.className ?: ""
 
         val methodId = getInlineMethodId(className.toCanonicalClassName(), inlineMethodName)
@@ -332,10 +331,10 @@ internal class InlineMethodCallTransformer(
         )
 
     private fun topOfStackEndsBeforeLabel(label: Label): Boolean =
-        inlineStack.isNotEmpty() && labelSorter.compare(inlineStack.last().lvar.endLabel, label) < 0
+        inlineStack.isNotEmpty() && methodInfo.labels.compare(inlineStack.last().lvar.endLabel, label) < 0
 
     private fun topOfStackEndsBeforeOrAtLabel(label: Label): Boolean =
-        inlineStack.isNotEmpty() && labelSorter.compare(inlineStack.last().lvar.endLabel, label) <= 0
+        inlineStack.isNotEmpty() && methodInfo.labels.compare(inlineStack.last().lvar.endLabel, label) <= 0
 
     // Don't support atomicfu for now, it is messed with stack
     // Maybe we will need to expand it later

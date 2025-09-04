@@ -13,19 +13,19 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| ----------------------------------------------------------------------------------------------------------------------------------- |
-|                                                              Thread 1                                                               |
-| ----------------------------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                                         |
-|   escape = "START" at InlineLambdaConditionalNotTakenThrowTest.operation(InlineLambdaConditionalNotTakenThrowTest.kt:32)            |
-|   run() at InlineLambdaConditionalNotTakenThrowTest.operation(InlineLambdaConditionalNotTakenThrowTest.kt:34)                       |
-|     setEscape("BEFORE BLOCK") at InlineLambdaConditionalNotTakenThrowTest.operation(InlineLambdaConditionalNotTakenThrowTest.kt:55) |
-|       escape = "BEFORE BLOCK" at InlineLambdaConditionalNotTakenThrowTest.setEscape(InlineLambdaConditionalNotTakenThrowTest.kt:20) |
-|     run$Lambda() at InlineLambdaConditionalNotTakenThrowTest.operation(InlineLambdaConditionalNotTakenThrowTest.kt:56)              |
-|       escape = "IN LAMBDA" at InlineLambdaConditionalNotTakenThrowTest.operation(InlineLambdaConditionalNotTakenThrowTest.kt:35)    |
-|       escape = "AFTER LAMBDA" at InlineLambdaConditionalNotTakenThrowTest.operation(InlineLambdaConditionalNotTakenThrowTest.kt:37) |
-|     setEscape("AFTER BLOCK") at InlineLambdaConditionalNotTakenThrowTest.operation(InlineLambdaConditionalNotTakenThrowTest.kt:57)  |
-|       escape = "AFTER BLOCK" at InlineLambdaConditionalNotTakenThrowTest.setEscape(InlineLambdaConditionalNotTakenThrowTest.kt:20)  |
-|   escape = "END" at InlineLambdaConditionalNotTakenThrowTest.operation(InlineLambdaConditionalNotTakenThrowTest.kt:42)              |
-|   result: void                                                                                                                      |
-| ----------------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------------------------------------------------------------------------------------------------------------------ |
+|                                                                  Thread 1                                                                  |
+| ------------------------------------------------------------------------------------------------------------------------------------------ |
+| operation()                                                                                                                                |
+|   escape = "START" at InlineLambdaConditionalNotTakenThrowTest.<unknown method>(InlineLambdaConditionalNotTakenThrowTest.kt:32)            |
+|   run() at InlineLambdaConditionalNotTakenThrowTest.<unknown method>(InlineLambdaConditionalNotTakenThrowTest.kt:34)                       |
+|     setEscape("BEFORE BLOCK") at InlineLambdaConditionalNotTakenThrowTest.<unknown method>(InlineLambdaConditionalNotTakenThrowTest.kt:46) |
+|       escape = "BEFORE BLOCK" at InlineLambdaConditionalNotTakenThrowTest.<unknown method>(InlineLambdaConditionalNotTakenThrowTest.kt:20) |
+|     run$Lambda() at InlineLambdaConditionalNotTakenThrowTest.<unknown method>(InlineLambdaConditionalNotTakenThrowTest.kt:47)              |
+|       escape = "IN LAMBDA" at InlineLambdaConditionalNotTakenThrowTest.<unknown method>(InlineLambdaConditionalNotTakenThrowTest.kt:35)    |
+|       escape = "AFTER LAMBDA" at InlineLambdaConditionalNotTakenThrowTest.<unknown method>(InlineLambdaConditionalNotTakenThrowTest.kt:37) |
+|     setEscape("AFTER BLOCK") at InlineLambdaConditionalNotTakenThrowTest.<unknown method>(InlineLambdaConditionalNotTakenThrowTest.kt:48)  |
+|       escape = "AFTER BLOCK" at InlineLambdaConditionalNotTakenThrowTest.<unknown method>(InlineLambdaConditionalNotTakenThrowTest.kt:20)  |
+|   escape = "END" at InlineLambdaConditionalNotTakenThrowTest.<unknown method>(InlineLambdaConditionalNotTakenThrowTest.kt:42)              |
+|   result: void                                                                                                                             |
+| ------------------------------------------------------------------------------------------------------------------------------------------ |

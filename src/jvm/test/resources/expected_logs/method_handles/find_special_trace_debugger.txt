@@ -22,7 +22,7 @@ Detailed trace:
 |     ensureConcurrentHashMapIsInstrumented() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:50)                                                   |
 |     doTest() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:53)                                                                                  |
 |       Companion.create(): CounterDerived#1 at MethodHandlesFindSpecialRepresentationTest.doTest(MethodHandlesLookupTests.kt:21)                                                 |
-|         Counter.shared = CounterDerived#1 at CounterDerived.Companion.create(MethodHandlesLookupTests.kt:182)                                                                   |
+|         Counter.shared = CounterDerived#1 at CounterDerived.Companion.<unknown method>(MethodHandlesLookupTests.kt:182)                                                         |
 |       MethodType.methodType(Class#1): MethodType#1 at MethodHandlesFindSpecialRepresentationTest.doTest(MethodHandlesLookupTests.kt:25)                                         |
 |       lookup.findSpecial(Class#2, "increment", MethodType#1, Class#3): Special#1 at MethodHandlesFindSpecialRepresentationTest.doTest(MethodHandlesLookupTests.kt:24)           |
 |       counter.increment() at MethodHandlesFindSpecialRepresentationTest.doTest(MethodHandlesLookupTests.kt:28)                                                                  |
