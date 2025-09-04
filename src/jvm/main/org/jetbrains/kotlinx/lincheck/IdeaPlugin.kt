@@ -147,13 +147,15 @@ private fun createStrategy(
     scenario: ExecutionScenario,
     validationFunction: Actor?,
     stateRepresentationMethod: Method?,
-) = ModelCheckingStrategy(
+) {
+    return ModelCheckingStrategy(
         testClass,
         scenario,
         validationFunction,
         stateRepresentationMethod,
         settings
     )
+}
 
 /**
  * If the plugin enabled and the failure has a trace, passes information about
@@ -423,7 +425,8 @@ private fun visualizeTrace(): Array<Any>? = runCatching {
     val strategyObject = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTracker
         ?: return null
     val strategy = strategyObject as ModelCheckingStrategy
-    val testObject = strategy.testInstance!! // TODO: can be null
+    val runner = strategy.runner as? ExecutionScenarioRunner
+    val testObject = runner?.testInstance
     return strategy.createObjectToNumberMapAsArray(testObject)
 }.getOrNull()
 

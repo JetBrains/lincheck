@@ -16,6 +16,8 @@ import org.jetbrains.lincheck.datastructures.Options
 import org.jetbrains.kotlinx.lincheck.chooseSequentialSpecification
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.runner.ExecutionScenarioRunner
+import org.jetbrains.kotlinx.lincheck.runner.UseClocks
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.STRESS
@@ -91,6 +93,16 @@ class StressCTestConfiguration(
         validationFunction: Actor?,
         stateRepresentationMethod: Method?
     ): Strategy {
-        return StressStrategy(testClass, scenario, validationFunction, stateRepresentationMethod, this.timeoutMs)
+        val runner = ExecutionScenarioRunner(
+            scenario = scenario,
+            testClass = testClass,
+            validationFunction = validationFunction,
+            stateRepresentationFunction = stateRepresentationMethod,
+            timeoutMs = timeoutMs,
+            useClocks = UseClocks.RANDOM
+        )
+        return StressStrategy(runner).also {
+            runner.initializeStrategy(it)
+        }
     }
 }

@@ -73,7 +73,7 @@ internal abstract class ManagedStrategy(
         get() = (runner as? ExecutionScenarioRunner)?.testInstance
 
     // Current execution part, if defined by the runner, `PARALLEL` otherwise
-    private val currentExecutionPart: ExecutionPart
+    protected val currentExecutionPart: ExecutionPart
         get() = (runner as? ExecutionScenarioRunner)?.currentExecutionPart ?: PARALLEL
 
     // == EXECUTION CONTROL FIELDS ==

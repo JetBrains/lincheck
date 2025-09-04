@@ -472,8 +472,8 @@ internal class ExecutionScenarioRunner(
         (strategy as? ManagedStrategy)?.onThreadFinish(iThread)
     }
 
-    fun onThreadFailure(iThread: Int, throwable: Throwable) {
-        (strategy as? ManagedStrategy)?.onThreadFailure(iThread, throwable)
+    fun onInternalException(iThread: Int, throwable: Throwable) {
+        (strategy as? ManagedStrategy)?.onInternalException(iThread, throwable)
     }
 
     fun beforePart(part: ExecutionPart) {
@@ -494,8 +494,8 @@ internal class ExecutionScenarioRunner(
      * Is invoked after each actor execution from the specified thread, even if a legal exception was thrown.
      * The invocations are inserted into the generated code.
      */
-    fun onActorFinish() {
-        strategy.onActorFinish()
+    fun onActorFinish(iThread: Int) {
+        strategy.onActorFinish(iThread)
     }
 
     /**
@@ -570,7 +570,7 @@ internal class ExecutionScenarioRunner(
     fun constructStateRepresentation(): String? {
         if (stateRepresentationFunction == null) return null
         // enter an ignored section, because `Runner will call transformed state representation method
-        return runInIgnoredSection {
+        return runInsideIgnoredSection {
             stateRepresentationFunction.invoke(testInstance) as String?
         }
     }
