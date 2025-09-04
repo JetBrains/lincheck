@@ -50,9 +50,11 @@ internal open class LincheckBaseMethodVisitor(
                         /* lineNumber = */ mappedLocation.line
                     )
                 } else {
+                    // TODO: "Smart" behavior leads to flaky tests on TeamCity
+                    //  Investigate, why.
                     StackTraceElement(
                         /* declaringClass = */ mappedLocation.className,
-                        /* methodName = */ methodInfo.findMethodByLine(mappedLocation.line, methodName),
+                        /* methodName = */ UNKNOWN_METHOD_MARKER, // methodInfo.findMethodByLine(mappedLocation.line, methodName),
                         /* fileName = */ mappedLocation.sourceName,
                         /* lineNumber = */ mappedLocation.line
                     )

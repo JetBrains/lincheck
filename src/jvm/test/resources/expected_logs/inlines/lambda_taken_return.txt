@@ -13,18 +13,18 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| ------------------------------------------------------------------------------------------------------------------------------- |
-|                                                            Thread 1                                                             |
-| ------------------------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                                     |
-|   escape = "START" at InlineLambdaConditionalTakenReturnTest.operation(InlineLambdaConditionalTakenReturnTest.kt:32)            |
-|   run() at InlineLambdaConditionalTakenReturnTest.operation(InlineLambdaConditionalTakenReturnTest.kt:33)                       |
-|     setEscape("BEFORE BLOCK") at InlineLambdaConditionalTakenReturnTest.run(InlineLambdaConditionalTakenReturnTest.kt:42)       |
-|       escape = "BEFORE BLOCK" at InlineLambdaConditionalTakenReturnTest.setEscape(InlineLambdaConditionalTakenReturnTest.kt:20) |
-|     run$Lambda() at InlineLambdaConditionalTakenReturnTest.run(InlineLambdaConditionalTakenReturnTest.kt:43)                    |
-|       escape = "IN LAMBDA" at InlineLambdaConditionalTakenReturnTest.operation(InlineLambdaConditionalTakenReturnTest.kt:34)    |
-|     setEscape("AFTER BLOCK") at InlineLambdaConditionalTakenReturnTest.run(InlineLambdaConditionalTakenReturnTest.kt:44)        |
-|       escape = "AFTER BLOCK" at InlineLambdaConditionalTakenReturnTest.setEscape(InlineLambdaConditionalTakenReturnTest.kt:20)  |
-|   escape = "END" at InlineLambdaConditionalTakenReturnTest.operation(InlineLambdaConditionalTakenReturnTest.kt:38)              |
-|   result: void                                                                                                                  |
-| ------------------------------------------------------------------------------------------------------------------------------- |
+| -------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                Thread 1                                                                |
+| -------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                            |
+|   escape = "START" at InlineLambdaConditionalTakenReturnTest.operation(InlineLambdaConditionalTakenReturnTest.kt:32)                   |
+|   run() at InlineLambdaConditionalTakenReturnTest.operation(InlineLambdaConditionalTakenReturnTest.kt:33)                              |
+|     setEscape("BEFORE BLOCK") at InlineLambdaConditionalTakenReturnTest.<unknown method>(InlineLambdaConditionalTakenReturnTest.kt:42) |
+|       escape = "BEFORE BLOCK" at InlineLambdaConditionalTakenReturnTest.setEscape(InlineLambdaConditionalTakenReturnTest.kt:20)        |
+|     run$Lambda() at InlineLambdaConditionalTakenReturnTest.<unknown method>(InlineLambdaConditionalTakenReturnTest.kt:43)              |
+|       escape = "IN LAMBDA" at InlineLambdaConditionalTakenReturnTest.operation(InlineLambdaConditionalTakenReturnTest.kt:34)           |
+|     setEscape("AFTER BLOCK") at InlineLambdaConditionalTakenReturnTest.<unknown method>(InlineLambdaConditionalTakenReturnTest.kt:44)  |
+|       escape = "AFTER BLOCK" at InlineLambdaConditionalTakenReturnTest.setEscape(InlineLambdaConditionalTakenReturnTest.kt:20)         |
+|   escape = "END" at InlineLambdaConditionalTakenReturnTest.operation(InlineLambdaConditionalTakenReturnTest.kt:38)                     |
+|   result: void                                                                                                                         |
+| -------------------------------------------------------------------------------------------------------------------------------------- |

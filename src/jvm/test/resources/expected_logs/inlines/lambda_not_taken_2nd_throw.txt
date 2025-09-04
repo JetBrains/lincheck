@@ -19,20 +19,20 @@ Detailed trace:
 | operation()                                                                                                                                                                          |
 |   escape = "START" at InlineLambdaConditionalNotTaken2ndLevelThrowTest.operation(InlineLambdaConditionalNotTaken2ndLevelThrowTest.kt:32)                                             |
 |   run() at InlineLambdaConditionalNotTaken2ndLevelThrowTest.operation(InlineLambdaConditionalNotTaken2ndLevelThrowTest.kt:34)                                                        |
-|     setEscape("BEFORE BLOCK") at InlineLambdaConditionalNotTaken2ndLevelThrowTest.run(InlineLambdaConditionalNotTaken2ndLevelThrowTest.kt:50)                                        |
+|     setEscape("BEFORE BLOCK") at InlineLambdaConditionalNotTaken2ndLevelThrowTest.<unknown method>(InlineLambdaConditionalNotTaken2ndLevelThrowTest.kt:50)                           |
 |       escape = "BEFORE BLOCK" at InlineLambdaConditionalNotTaken2ndLevelThrowTest.setEscape(InlineLambdaConditionalNotTaken2ndLevelThrowTest.kt:20)                                  |
-|     run$Lambda() at InlineLambdaConditionalNotTaken2ndLevelThrowTest.run(InlineLambdaConditionalNotTaken2ndLevelThrowTest.kt:51)                                                     |
+|     run$Lambda() at InlineLambdaConditionalNotTaken2ndLevelThrowTest.<unknown method>(InlineLambdaConditionalNotTaken2ndLevelThrowTest.kt:51)                                        |
 |       escape = "IN LAMBDA 1" at InlineLambdaConditionalNotTaken2ndLevelThrowTest.operation(InlineLambdaConditionalNotTaken2ndLevelThrowTest.kt:35)                                   |
 |       InlineLambdaConditionalNotTaken2ndLevelThrowTest#1.run() at InlineLambdaConditionalNotTaken2ndLevelThrowTest.operation(InlineLambdaConditionalNotTaken2ndLevelThrowTest.kt:36) |
-|         setEscape("BEFORE BLOCK") at InlineLambdaConditionalNotTaken2ndLevelThrowTest.run(InlineLambdaConditionalNotTaken2ndLevelThrowTest.kt:50)                                    |
+|         setEscape("BEFORE BLOCK") at InlineLambdaConditionalNotTaken2ndLevelThrowTest.<unknown method>(InlineLambdaConditionalNotTaken2ndLevelThrowTest.kt:50)                       |
 |           escape = "BEFORE BLOCK" at InlineLambdaConditionalNotTaken2ndLevelThrowTest.setEscape(InlineLambdaConditionalNotTaken2ndLevelThrowTest.kt:20)                              |
-|         run$Lambda() at InlineLambdaConditionalNotTaken2ndLevelThrowTest.run(InlineLambdaConditionalNotTaken2ndLevelThrowTest.kt:51)                                                 |
+|         run$Lambda() at InlineLambdaConditionalNotTaken2ndLevelThrowTest.<unknown method>(InlineLambdaConditionalNotTaken2ndLevelThrowTest.kt:51)                                    |
 |           escape = "IN LAMBDA 2" at InlineLambdaConditionalNotTaken2ndLevelThrowTest.operation(InlineLambdaConditionalNotTaken2ndLevelThrowTest.kt:37)                               |
 |           escape = "AFTER LAMBDA 2" at InlineLambdaConditionalNotTaken2ndLevelThrowTest.operation(InlineLambdaConditionalNotTaken2ndLevelThrowTest.kt:39)                            |
-|         setEscape("AFTER BLOCK") at InlineLambdaConditionalNotTaken2ndLevelThrowTest.run(InlineLambdaConditionalNotTaken2ndLevelThrowTest.kt:52)                                     |
+|         setEscape("AFTER BLOCK") at InlineLambdaConditionalNotTaken2ndLevelThrowTest.<unknown method>(InlineLambdaConditionalNotTaken2ndLevelThrowTest.kt:52)                        |
 |           escape = "AFTER BLOCK" at InlineLambdaConditionalNotTaken2ndLevelThrowTest.setEscape(InlineLambdaConditionalNotTaken2ndLevelThrowTest.kt:20)                               |
 |       escape = "AFTER LAMBDA 1" at InlineLambdaConditionalNotTaken2ndLevelThrowTest.operation(InlineLambdaConditionalNotTaken2ndLevelThrowTest.kt:41)                                |
-|     setEscape("AFTER BLOCK") at InlineLambdaConditionalNotTaken2ndLevelThrowTest.run(InlineLambdaConditionalNotTaken2ndLevelThrowTest.kt:52)                                         |
+|     setEscape("AFTER BLOCK") at InlineLambdaConditionalNotTaken2ndLevelThrowTest.<unknown method>(InlineLambdaConditionalNotTaken2ndLevelThrowTest.kt:52)                            |
 |       escape = "AFTER BLOCK" at InlineLambdaConditionalNotTaken2ndLevelThrowTest.setEscape(InlineLambdaConditionalNotTaken2ndLevelThrowTest.kt:20)                                   |
 |   escape = "END" at InlineLambdaConditionalNotTaken2ndLevelThrowTest.operation(InlineLambdaConditionalNotTaken2ndLevelThrowTest.kt:46)                                               |
 |   result: void                                                                                                                                                                       |

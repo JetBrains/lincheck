@@ -13,21 +13,21 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                Thread 1                                                                                 |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                                                                             |
-|   returnInt(): -5 at InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.operation(InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.kt:32)               |
-|     escape = "START" at InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.returnInt(InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.kt:36)            |
-|     run() at InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.returnInt(InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.kt:37)                       |
-|       setEscape("BEFORE BLOCK") at InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.run(InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.kt:48)       |
-|         escape = "BEFORE BLOCK" at InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.setEscape(InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.kt:20) |
-|       run$Lambda() at InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.run(InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.kt:50)                    |
-|         escape = "IN LAMBDA" at InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.returnInt(InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.kt:38)    |
-|     run() at InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.run(InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.kt:52)                             |
-|       run$Lambda() at InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.run(InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.kt:52)                    |
-|         escape = "AFTER LAMBDA" at InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.returnInt(InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.kt:40) |
-|     setEscape("AFTER BLOCK") at InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.run(InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.kt:52)          |
-|       escape = "AFTER BLOCK" at InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.setEscape(InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.kt:20)    |
-|   result: void                                                                                                                                                          |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|                                                                                    Thread 1                                                                                    |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| operation()                                                                                                                                                                    |
+|   returnInt(): -5 at InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.operation(InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.kt:32)                      |
+|     escape = "START" at InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.returnInt(InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.kt:36)                   |
+|     run() at InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.returnInt(InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.kt:37)                              |
+|       setEscape("BEFORE BLOCK") at InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.<unknown method>(InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.kt:48) |
+|         escape = "BEFORE BLOCK" at InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.setEscape(InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.kt:20)        |
+|       run$Lambda() at InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.<unknown method>(InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.kt:50)              |
+|         escape = "IN LAMBDA" at InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.returnInt(InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.kt:38)           |
+|     run() at InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.<unknown method>(InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.kt:52)                       |
+|       run$Lambda() at InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.<unknown method>(InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.kt:52)              |
+|         escape = "AFTER LAMBDA" at InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.returnInt(InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.kt:40)        |
+|     setEscape("AFTER BLOCK") at InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.<unknown method>(InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.kt:52)    |
+|       escape = "AFTER BLOCK" at InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.setEscape(InlineLambdaConditionalNotTakenFullReturnValueFinallyTest.kt:20)           |
+|   result: void                                                                                                                                                                 |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

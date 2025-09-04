@@ -65,6 +65,8 @@ internal data class MethodInformation(
     val lineRange: Pair<Int, Int>,
     private val linesToMethodNames: List<Triple<Int, Int, Set<String>>>
 ) {
+    // TODO: This method should be used by [LincheckBaseMethodVisitor],
+    //  but now it leads to flaky tests on TeamCity.
     fun findMethodByLine(line: Int, currentMethodName: String): String {
         val idx = linesToMethodNames.binarySearch {
             val (from, to, _) = it

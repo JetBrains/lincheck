@@ -13,17 +13,17 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| -------------------------------------------------------------------------------------------------- |
-|                                              Thread 1                                              |
-| -------------------------------------------------------------------------------------------------- |
-| operation()                                                                                        |
-|   escape = "START" at InlineLambdaThrowTest.operation(InlineLambdaThrowTest.kt:32)                 |
-|   run(): threw RuntimeException at InlineLambdaThrowTest.operation(InlineLambdaThrowTest.kt:34)    |
-|     setEscape("BEFORE BLOCK") at InlineLambdaThrowTest.run(InlineLambdaThrowTest.kt:45)            |
-|       escape = "BEFORE BLOCK" at InlineLambdaThrowTest.setEscape(InlineLambdaThrowTest.kt:20)      |
-|     run$Lambda(): threw RuntimeException at InlineLambdaThrowTest.run(InlineLambdaThrowTest.kt:46) |
-|       escape = "IN LAMBDA" at InlineLambdaThrowTest.operation(InlineLambdaThrowTest.kt:35)         |
-|   escape = "CATCH" at InlineLambdaThrowTest.operation(InlineLambdaThrowTest.kt:39)                 |
-|   escape = "END" at InlineLambdaThrowTest.operation(InlineLambdaThrowTest.kt:41)                   |
-|   result: void                                                                                     |
-| -------------------------------------------------------------------------------------------------- |
+| --------------------------------------------------------------------------------------------------------------- |
+|                                                    Thread 1                                                     |
+| --------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                     |
+|   escape = "START" at InlineLambdaThrowTest.operation(InlineLambdaThrowTest.kt:32)                              |
+|   run(): threw RuntimeException at InlineLambdaThrowTest.operation(InlineLambdaThrowTest.kt:34)                 |
+|     setEscape("BEFORE BLOCK") at InlineLambdaThrowTest.<unknown method>(InlineLambdaThrowTest.kt:45)            |
+|       escape = "BEFORE BLOCK" at InlineLambdaThrowTest.setEscape(InlineLambdaThrowTest.kt:20)                   |
+|     run$Lambda(): threw RuntimeException at InlineLambdaThrowTest.<unknown method>(InlineLambdaThrowTest.kt:46) |
+|       escape = "IN LAMBDA" at InlineLambdaThrowTest.operation(InlineLambdaThrowTest.kt:35)                      |
+|   escape = "CATCH" at InlineLambdaThrowTest.operation(InlineLambdaThrowTest.kt:39)                              |
+|   escape = "END" at InlineLambdaThrowTest.operation(InlineLambdaThrowTest.kt:41)                                |
+|   result: void                                                                                                  |
+| --------------------------------------------------------------------------------------------------------------- |

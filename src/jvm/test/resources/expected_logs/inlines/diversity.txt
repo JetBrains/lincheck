@@ -19,7 +19,7 @@ Detailed trace:
 | operation()                                                                                                                           |
 |   escape = "START" at InlineDiversityRepresentationTest.operation(InlineDiversityRepresentationTest.kt:25)                            |
 |   thisClassInlineFunc() at InlineDiversityRepresentationTest.operation(InlineDiversityRepresentationTest.kt:26)                       |
-|     isc.otherClassInlineFunc() at InlineDiversityRepresentationTest.thisClassInlineFunc(InlineDiversityRepresentationTest.kt:21)      |
+|     isc.otherClassInlineFunc() at InlineDiversityRepresentationTest.<unknown method>(InlineDiversityRepresentationTest.kt:21)         |
 |       outsideInlineFunc() at InlineSetterClass.<unknown method>(InlineDiversityRepresentationTest.kt:35)                              |
 |         thisClassInlineFunc$Lambda() at InlineDiversityRepresentationTestKt.<unknown method>(InlineDiversityRepresentationTest.kt:40) |
 |           escape = "INLINE" at InlineDiversityRepresentationTest.operation(InlineDiversityRepresentationTest.kt:27)                   |
