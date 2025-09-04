@@ -52,6 +52,9 @@ internal open class LincheckBaseMethodVisitor(
                 } else {
                     // TODO: "Smart" behavior leads to flaky tests on TeamCity
                     //  Investigate, why.
+                    //  Tests in question are:
+                    //  - org.jetbrains.kotlinx.lincheck_test.representation.SuspendTraceReportingTest.test
+                    //  - org.jetbrains.kotlinx.lincheck_test.representation.CoroutineCancellationTraceReportingTest.test
                     StackTraceElement(
                         /* declaringClass = */ mappedLocation.className,
                         /* methodName = */ UNKNOWN_METHOD_MARKER, // methodInfo.findMethodByLine(mappedLocation.line, methodName),
