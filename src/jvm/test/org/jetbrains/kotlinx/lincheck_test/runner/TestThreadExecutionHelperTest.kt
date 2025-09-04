@@ -45,33 +45,6 @@ class TestThreadExecutionHelperTest {
             useClocks = UseClocks.ALWAYS,
         ).apply {
             initializeStrategy(strategy)
-        runner = object : Runner(
-            strategy,
-            ArrayDeque::class.java,
-            null,
-            null,
-        ) {
-            override fun isCoroutineResumed(iThread: Int, actorId: Int): Boolean {
-                return false
-            }
-
-            override fun afterCoroutineCancelled(iThread: Int) {}
-
-            override fun afterCoroutineResumed(iThread: Int) {}
-
-            override fun afterCoroutineSuspended(iThread: Int) {}
-
-            override fun onThreadFinish(iThread: Int) {}
-
-            override fun onThreadStart(iThread: Int) {}
-
-            override fun run(): InvocationResult {
-                throw UnsupportedOperationException()
-            }
-
-            override fun isCurrentRunnerThread(thread: Thread): Boolean {
-                return false
-            }
         }
     }
 

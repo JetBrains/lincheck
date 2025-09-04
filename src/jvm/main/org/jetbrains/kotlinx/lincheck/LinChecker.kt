@@ -14,9 +14,9 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.*
 import org.jetbrains.lincheck.datastructures.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.lincheck.datastructures.verifier.*
 import org.jetbrains.lincheck.util.*
-import kotlin.concurrent.*
 import kotlin.reflect.*
 
 /**
@@ -132,11 +132,7 @@ constructor(private val testClass: Class<*>, options: Options<*, *>?) {
         if (ideaPluginEnabled && this is ManagedCTestConfiguration) {
             enableReplayModeForIdeaPlugin()
             runPluginReplay(
-                settings = this.createSettings(),
-                testClass = testClass,
-                scenario = failure.scenario,
-                validationFunction = testStructure.validationFunction,
-                stateRepresentationMethod = testStructure.stateRepresentation,
+                replayStrategy = createStrategy(failure.scenario) as ManagedStrategy,
                 invocations = invocationsPerIteration,
                 verifier = verifier
             )

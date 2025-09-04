@@ -18,12 +18,15 @@ import org.jetbrains.lincheck.datastructures.CTestConfiguration
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
+import org.jetbrains.kotlinx.lincheck.runner.LambdaRunner
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.runIteration
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent.ensureObjectIsTransformed
 import org.jetbrains.lincheck.jvm.agent.withLincheckJavaAgent
+import org.jetbrains.lincheck.datastructures.ManagedCTestConfiguration
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
@@ -62,42 +65,22 @@ object Lincheck {
         settings: LincheckSettings,
         block: Runnable
     ) {
-        val scenario = ExecutionScenario(
-            initExecution = emptyList(),
-            parallelExecution = listOf(
-                listOf( // Main thread
-                    Actor(method = runGPMCTestMethod, arguments = listOf(block))
-                )
-            ),
-            postExecution = emptyList(),
-            validationFunction = null
-        )
-
         val options = ModelCheckingOptions()
-            .iterations(0)
-            .addCustomScenario(scenario)
-            .invocationsPerIteration(invocations)
             .analyzeStdLib(settings.analyzeStdLib)
-            .verifier(NoExceptionVerifier::class.java)
+        val testCfg = options.createTestConfigurations(block::class.java)
 
-        val testCfg = options.createTestConfigurations(GeneralPurposeModelCheckingWrapper::class.java)
         withLincheckTestContext(testCfg.instrumentationMode) {
             ensureObjectIsTransformed(block)
-            val verifier = testCfg.createVerifier()
-            val wrapperClass = GeneralPurposeModelCheckingWrapper::class.java
-            testCfg.createStrategy(wrapperClass, scenario, null, null).use { strategy ->
+            val verifier = NoExceptionVerifier()
+            testCfg.createStrategy(block).use { strategy ->
                 val failure = strategy.runIteration(invocations, verifier)
                 if (failure != null) {
                     check(strategy is ModelCheckingStrategy)
                     if (ideaPluginEnabled) {
                         runPluginReplay(
-                            settings = testCfg.createSettings(),
-                            testClass = wrapperClass,
-                            scenario = scenario,
-                            validationFunction = null,
-                            stateRepresentationMethod = null,
+                            replayStrategy = testCfg.createStrategy(block),
                             invocations = invocations,
-                            verifier = verifier
+                            verifier = verifier,
                         )
                     }
                     throw LincheckAssertionError(failure)
@@ -106,20 +89,20 @@ object Lincheck {
         }
     }
 
+    private fun ManagedCTestConfiguration.createStrategy(block: Runnable): ManagedStrategy {
+        val runner = LambdaRunner(timeoutMs = timeoutMs) { block.run() }
+        return ModelCheckingStrategy(runner, createSettings()).also {
+            runner.initializeStrategy(it)
+        }
+    }
+
     internal const val DEFAULT_INVOCATIONS = CTestConfiguration.DEFAULT_INVOCATIONS
 }
-
-internal class GeneralPurposeModelCheckingWrapper {
-    fun runGPMCTest(block: Runnable) = block.run()
-}
-
-private val runGPMCTestMethod =
-    GeneralPurposeModelCheckingWrapper::class.java.getDeclaredMethod("runGPMCTest", Runnable::class.java)
 
 /**
  * [NoExceptionVerifier] checks that the lambda passed into [Lincheck.runConcurrentTestInternal] does not throw an exception.
  */
-internal class NoExceptionVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : Verifier {
+internal class NoExceptionVerifier() : Verifier {
     override fun verifyResults(scenario: ExecutionScenario, results: ExecutionResult): Boolean =
         results.parallelResults[0][0] !is ExceptionResult
 }

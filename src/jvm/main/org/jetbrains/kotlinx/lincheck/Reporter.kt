@@ -16,10 +16,8 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.trace.appendTrace
 import org.jetbrains.lincheck.util.*
 import org.jetbrains.lincheck.util.LoggingLevel.*
-import org.jetbrains.lincheck.GeneralPurposeModelCheckingWrapper
 import java.io.*
 import kotlin.math.max
-import kotlin.reflect.jvm.javaMethod
 
 class Reporter(private val logLevel: LoggingLevel) {
     private val out: PrintStream = System.out
