@@ -448,6 +448,7 @@ class LazyTraceReader(
                             "Object $objNum: expected $kind but datafile has $dataKind"
                         }
                         val dataId = when (kind) {
+                            ObjectKind.THREAD_NAME -> loadThreadName(data, context, true)
                             ObjectKind.CLASS_DESCRIPTOR -> loadClassDescriptor(data, context, true)
                             ObjectKind.METHOD_DESCRIPTOR -> loadMethodDescriptor(data, context, true)
                             ObjectKind.FIELD_DESCRIPTOR -> loadFieldDescriptor(data, context, true)
@@ -767,6 +768,7 @@ private fun loadObjects(
 ): ObjectKind {
     while (true) {
         when (val kind = input.readKind()) {
+            ObjectKind.THREAD_NAME -> loadThreadName(input, context, restore)
             ObjectKind.CLASS_DESCRIPTOR -> loadClassDescriptor(input, context, restore)
             ObjectKind.METHOD_DESCRIPTOR -> loadMethodDescriptor(input, context, restore)
             ObjectKind.FIELD_DESCRIPTOR -> loadFieldDescriptor(input, context, restore)
@@ -783,6 +785,19 @@ private fun loadObjects(
                 -> return kind
         }
     }
+}
+
+private fun loadThreadName(
+    input: DataInput,
+    context: TraceContext,
+    restore: Boolean
+): Int {
+    val id = input.readInt()
+    val name = input.readUTF()
+    if (restore) {
+        context.setThreadName(id, name)
+    }
+    return id
 }
 
 private fun loadClassDescriptor(

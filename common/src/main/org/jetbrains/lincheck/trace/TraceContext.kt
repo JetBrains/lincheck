@@ -18,6 +18,7 @@ import org.jetbrains.lincheck.descriptors.MethodDescriptor
 import org.jetbrains.lincheck.descriptors.MethodSignature
 import org.jetbrains.lincheck.descriptors.VariableDescriptor
 import org.jetbrains.lincheck.descriptors.Types
+import java.util.concurrent.ConcurrentHashMap
 
 val TRACE_CONTEXT: TraceContext = TraceContext()
 
@@ -26,12 +27,17 @@ const val UNKNOWN_CODE_LOCATION_ID = -1
 private val EMPTY_STACK_TRACE = StackTraceElement("", "", "", 0)
 
 class TraceContext {
+    private val threadNames = ConcurrentHashMap<Int, String>()
     private val accessPaths = ArrayList<AccessPath?>()
     private val locations = ArrayList<CodeLocation?>()
     private val classes = IndexedPool<ClassDescriptor>()
     private val methods = IndexedPool<MethodDescriptor>()
     private val fields = IndexedPool<FieldDescriptor>()
     private val variables = IndexedPool<VariableDescriptor>()
+
+    fun setThreadName(id: Int, name: String) { threadNames[id] = name }
+
+    fun getThreadName(id: Int): String = threadNames[id] ?: ""
 
     val classDescriptors: List<ClassDescriptor?> get() = classes.content
 
