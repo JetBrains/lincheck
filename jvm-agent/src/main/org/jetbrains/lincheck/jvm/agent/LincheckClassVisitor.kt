@@ -108,7 +108,7 @@ internal class LincheckClassVisitor(
             }
 
             if (methodName == "<init>") {
-                mv = ObjectCreationMinimalTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+                mv = applyObjectCreationTransformer(methodName, desc, access, methodInfo, adapter, mv)
                 return mv
             }
 
@@ -122,9 +122,9 @@ internal class LincheckClassVisitor(
                 return mv
             }
 
-            mv = ObjectCreationMinimalTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+            mv = applyObjectCreationTransformer(methodName, desc, access, methodInfo, adapter, mv)
 
-            val methodCallTransformer = MethodCallMinimalTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+            val methodCallTransformer = applyMethodCallTransformer(methodName, desc, access, methodInfo, adapter, mv)
             mv = methodCallTransformer
 
             // `SharedMemoryAccessTransformer` goes first because it relies on `AnalyzerAdapter`,
@@ -174,7 +174,7 @@ internal class LincheckClassVisitor(
         // We need to ensure there are no `beforeEvents` calls inside `toString()`
         // to ensure the event numeration will remain the same.
         if (ideaPluginEnabled && isToStringMethod(methodName, desc)) {
-            mv = ObjectCreationTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+            mv = applyObjectCreationTransformer(methodName, desc, access, methodInfo, adapter, mv)
             mv = applyDeterministicInvokeDynamicTransformer(methodName, desc, access, methodInfo, adapter, mv)
             return mv
         }
@@ -183,7 +183,7 @@ internal class LincheckClassVisitor(
         // with `VerificationError` due to leaking this problem,
         // see: https://github.com/JetBrains/lincheck/issues/424
         if ((methodName == "<init>" && instrumentationMode == MODEL_CHECKING)) {
-            mv = ObjectCreationTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+            mv = applyObjectCreationTransformer(methodName, desc, access, methodInfo, adapter, mv)
             val sharedMemoryAccessTransformer = applySharedMemoryAccessTransformer(methodName, desc, access, methodInfo, adapter, mv)
             mv = sharedMemoryAccessTransformer
             mv = applyAnalyzerAdapter(access, methodName, desc, mv, sharedMemoryAccessTransformer)
@@ -208,10 +208,10 @@ internal class LincheckClassVisitor(
             return mv
         }
 
-        val methodCallTransformer = MethodCallTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+        val methodCallTransformer = applyMethodCallTransformer(methodName, desc, access, methodInfo, adapter, mv)
         mv = methodCallTransformer
 
-        mv = ObjectCreationTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+        mv = applyObjectCreationTransformer(methodName, desc, access, methodInfo, adapter, mv)
 
         mv = applyDeterministicInvokeDynamicTransformer(methodName, desc, access, methodInfo, adapter, mv)
         mv = applyConstantHashCodeTransformer(methodName, desc, access, methodInfo, adapter, mv)
@@ -298,6 +298,40 @@ internal class LincheckClassVisitor(
             return true
 
         return false
+    }
+
+    private fun applyObjectCreationTransformer(
+        methodName: String,
+        desc: String,
+        access: Int,
+        methodInfo: MethodInformation,
+        adapter: GeneratorAdapter,
+        methodVisitor: MethodVisitor,
+    ): MethodVisitor {
+        var mv = methodVisitor
+        if (instrumentationMode == TRACE_RECORDING) {
+            mv = ObjectCreationMinimalTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+        } else {
+            mv = ObjectCreationTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+        }
+        return mv
+    }
+
+    private fun applyMethodCallTransformer(
+        methodName: String,
+        desc: String,
+        access: Int,
+        methodInfo: MethodInformation,
+        adapter: GeneratorAdapter,
+        methodVisitor: MethodVisitor,
+    ): MethodVisitor {
+        var mv = methodVisitor
+        if (instrumentationMode == TRACE_RECORDING) {
+            mv = MethodCallMinimalTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+        } else {
+            mv = MethodCallTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+        }
+        return mv
     }
 
     private fun applySynchronizationTrackingTransformers(
