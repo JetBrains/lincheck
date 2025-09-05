@@ -14,7 +14,7 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.ExceptionResult.Companion.create
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
-import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
+import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.withLincheckTestContext
 import org.junit.Assert
 import org.junit.Before

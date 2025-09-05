@@ -10,9 +10,9 @@
 
 package org.jetbrains.lincheck.trace.recorder
 
-import org.jetbrains.kotlinx.lincheck.trace.agent.TraceAgentParameters
-import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
-import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
+import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
+import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent
 
 internal object TraceRecorderInjections {
 

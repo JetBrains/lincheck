@@ -16,8 +16,8 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressStrategy
-import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
-import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.STRESS
+import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
+import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.STRESS
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import java.lang.reflect.Method
 

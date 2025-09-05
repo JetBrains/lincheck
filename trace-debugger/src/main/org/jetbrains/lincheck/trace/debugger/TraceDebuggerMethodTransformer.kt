@@ -10,9 +10,9 @@
 
 package org.jetbrains.lincheck.trace.debugger
 
-import org.jetbrains.kotlinx.lincheck.transformation.ASM_API
-import org.jetbrains.kotlinx.lincheck.transformation.ifStatement
-import org.jetbrains.kotlinx.lincheck.transformation.invokeStatic
+import org.jetbrains.lincheck.jvm.agent.ASM_API
+import org.jetbrains.lincheck.jvm.agent.ifStatement
+import org.jetbrains.lincheck.jvm.agent.invokeStatic
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.commons.GeneratorAdapter
 

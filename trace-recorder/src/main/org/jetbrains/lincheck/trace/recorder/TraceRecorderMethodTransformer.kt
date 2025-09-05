@@ -10,8 +10,8 @@
 
 package org.jetbrains.lincheck.trace.recorder
 
-import org.jetbrains.kotlinx.lincheck.transformation.ASM_API
-import org.jetbrains.kotlinx.lincheck.transformation.invokeStatic
+import org.jetbrains.lincheck.jvm.agent.ASM_API
+import org.jetbrains.lincheck.jvm.agent.invokeStatic
 import org.objectweb.asm.Label
 import org.objectweb.asm.commons.AdviceAdapter
 import org.objectweb.asm.commons.GeneratorAdapter

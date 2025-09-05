@@ -10,7 +10,7 @@
 package org.jetbrains.kotlinx.lincheck_test.isolated
 
 import org.jetbrains.kotlinx.lincheck.runner.*
-import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.withLincheckTestContext
 import org.junit.*
 import sun.nio.ch.lincheck.TestThread

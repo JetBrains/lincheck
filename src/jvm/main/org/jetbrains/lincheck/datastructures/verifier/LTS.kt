@@ -14,7 +14,7 @@ import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.lincheck.datastructures.verifier.LTS.*
 import org.jetbrains.lincheck.datastructures.verifier.OperationType.*
-import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
+import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent
 import sun.nio.ch.lincheck.Injections.lastSuspendedCancellableContinuationDuringVerification
 import java.util.*
 import kotlin.coroutines.*

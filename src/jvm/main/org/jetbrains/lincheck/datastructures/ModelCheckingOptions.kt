@@ -16,9 +16,9 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
-import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
-import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.TRACE_DEBUGGING
-import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.MODEL_CHECKING
+import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
+import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.TRACE_DEBUGGING
+import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.MODEL_CHECKING
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import java.lang.reflect.Method
