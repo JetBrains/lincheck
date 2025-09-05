@@ -101,14 +101,14 @@ internal class LincheckClassVisitor(
             val adapter = GeneratorAdapter(mv, access, methodName, desc)
             mv = adapter
 
-            if (methodName == "<init>") {
-                mv = ObjectCreationMinimalTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
-                return mv
-            }
-
             if (shouldWrapInIgnoredSection(className, methodName, desc)) {
                 // Note: <clinit> case is handle here as well
                 mv = IgnoredSectionWrapperTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+                return mv
+            }
+
+            if (methodName == "<init>") {
+                mv = ObjectCreationMinimalTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
                 return mv
             }
 
@@ -182,6 +182,7 @@ internal class LincheckClassVisitor(
             }
             return mv
         }
+
         // Currently, constructors are treated in a special way to avoid problems
         // with `VerificationError` due to leaking this problem,
         // see: https://github.com/JetBrains/lincheck/issues/424
