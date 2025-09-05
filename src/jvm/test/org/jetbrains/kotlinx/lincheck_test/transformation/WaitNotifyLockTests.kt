@@ -8,6 +8,7 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+@file:Suppress("DEPRECATION")
 package org.jetbrains.kotlinx.lincheck_test.transformation
 
 import org.jetbrains.kotlinx.lincheck.LinChecker
