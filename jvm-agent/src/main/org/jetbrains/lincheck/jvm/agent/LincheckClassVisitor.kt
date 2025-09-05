@@ -124,14 +124,18 @@ internal class LincheckClassVisitor(
 
             mv = applyObjectCreationTransformer(methodName, desc, access, methodInfo, adapter, mv)
 
-            val methodCallTransformer = applyMethodCallTransformer(methodName, desc, access, methodInfo, adapter, mv)
-            mv = methodCallTransformer
+            var methodCallTransformer: MethodCallTransformerBase? = null
+            mv = applyMethodCallTransformer(methodName, desc, access, methodInfo, adapter, mv).also {
+                methodCallTransformer = it
+            }
 
             // `SharedMemoryAccessTransformer` goes first because it relies on `AnalyzerAdapter`,
             // which should be put in front of the byte-code transformer chain,
             // so that it can correctly analyze the byte-code and compute required type-information
-            val sharedMemoryAccessTransformer = applySharedMemoryAccessTransformer(methodName, desc, access, methodInfo, adapter, mv)
-            mv = sharedMemoryAccessTransformer
+            var sharedMemoryAccessTransformer: SharedMemoryAccessTransformer? = null
+            mv = applySharedMemoryAccessTransformer(methodName, desc, access, methodInfo, adapter, mv).also {
+                sharedMemoryAccessTransformer = it
+            }
 
             mv = LocalVariablesAccessTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv, methodInfo.locals)
             mv = InlineMethodCallTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
@@ -183,9 +187,11 @@ internal class LincheckClassVisitor(
         // with `VerificationError` due to leaking this problem,
         // see: https://github.com/JetBrains/lincheck/issues/424
         if ((methodName == "<init>" && instrumentationMode == MODEL_CHECKING)) {
+            var sharedMemoryAccessTransformer: SharedMemoryAccessTransformer? = null
             mv = applyObjectCreationTransformer(methodName, desc, access, methodInfo, adapter, mv)
-            val sharedMemoryAccessTransformer = applySharedMemoryAccessTransformer(methodName, desc, access, methodInfo, adapter, mv)
-            mv = sharedMemoryAccessTransformer
+            mv = applySharedMemoryAccessTransformer(methodName, desc, access, methodInfo, adapter, mv).also {
+                sharedMemoryAccessTransformer = it
+            }
             mv = applyAnalyzerAdapter(access, methodName, desc, mv, sharedMemoryAccessTransformer)
             mv = applyOwnerNameAnalyzerAdapter(access, methodName, desc, methodInfo, mv,
                 methodCallTransformer = null,
@@ -208,8 +214,10 @@ internal class LincheckClassVisitor(
             return mv
         }
 
-        val methodCallTransformer = applyMethodCallTransformer(methodName, desc, access, methodInfo, adapter, mv)
-        mv = methodCallTransformer
+        var methodCallTransformer: MethodCallTransformerBase? = null
+        mv = applyMethodCallTransformer(methodName, desc, access, methodInfo, adapter, mv).also {
+            methodCallTransformer = it
+        }
 
         mv = applyObjectCreationTransformer(methodName, desc, access, methodInfo, adapter, mv)
 
@@ -221,8 +229,10 @@ internal class LincheckClassVisitor(
         // `SharedMemoryAccessTransformer` goes first because it relies on `AnalyzerAdapter`,
         // which should be put in front of the byte-code transformer chain,
         // so that it can correctly analyze the byte-code and compute required type-information
-        val sharedMemoryAccessTransformer = applySharedMemoryAccessTransformer(methodName, desc, access, methodInfo, adapter, mv)
-        mv = sharedMemoryAccessTransformer
+        var sharedMemoryAccessTransformer: SharedMemoryAccessTransformer? = null
+        mv = applySharedMemoryAccessTransformer(methodName, desc, access, methodInfo, adapter, mv).also {
+            sharedMemoryAccessTransformer = it
+        }
 
         mv = LocalVariablesAccessTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv, methodInfo.locals)
         mv = InlineMethodCallTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
@@ -324,7 +334,7 @@ internal class LincheckClassVisitor(
         methodInfo: MethodInformation,
         adapter: GeneratorAdapter,
         methodVisitor: MethodVisitor,
-    ): MethodVisitor {
+    ): MethodCallTransformerBase {
         var mv = methodVisitor
         if (instrumentationMode == TRACE_RECORDING) {
             mv = MethodCallMinimalTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
@@ -429,10 +439,10 @@ internal class LincheckClassVisitor(
         methodName: String,
         descriptor: String,
         methodVisitor: MethodVisitor,
-        sharedMemoryAccessTransformer: SharedMemoryAccessTransformer,
+        sharedMemoryAccessTransformer: SharedMemoryAccessTransformer?,
     ): AnalyzerAdapter {
         val analyzerAdapter = AnalyzerAdapter(className, access, methodName, descriptor, methodVisitor)
-        sharedMemoryAccessTransformer.analyzer = analyzerAdapter
+        sharedMemoryAccessTransformer?.analyzer = analyzerAdapter
         return analyzerAdapter
     }
 }
