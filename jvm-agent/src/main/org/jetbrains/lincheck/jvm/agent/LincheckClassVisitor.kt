@@ -71,6 +71,8 @@ internal class LincheckClassVisitor(
     ): MethodVisitor {
         var mv = super.visitMethod(access, methodName, desc, signature, exceptions)
 
+        val methodInfo = classInformation.methodInformation(methodName, desc)
+
         val isNative = (access and ACC_NATIVE != 0)
         if (isNative) {
             Logger.debug { "Skipping transformation of the native method $className.$methodName" }

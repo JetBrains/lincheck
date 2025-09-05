@@ -43,27 +43,28 @@ class TransformationConfiguration(
 )
 
 internal fun TransformationConfiguration.shouldApplyTransformer(transformer: LincheckTransformer): Boolean {
+    TODO()
 
-    return when (transformer) {
-        is ObjectCreationTransformer -> trackObjectCreations
-        is ObjectCreationMinimalTransformer -> trackObjectCreations
-
-        is LocalVariablesAccessTransformer -> trackLocalVariableAccesses
-        is SharedMemoryAccessTransformer -> trackSharedMemoryAccesses
-
-        is MethodCallTransformer -> trackMethodCalls
-        is MethodCallMinimalTransformer -> trackMethodCalls
-        is InlineMethodCallTransformer -> trackInlineMethodCalls
-
-        is ThreadTransformer -> trackThreadsOperations
-        is MonitorTransformer -> trackMonitorsOperations
-        is WaitNotifyTransformer -> trackWaitNotifyOperations
-        is SynchronizedMethodTransformer -> trackSynchronizedBlocks
-        is ParkingTransformer -> trackParkingOperations
-
-        is DeterministicInvokeDynamicTransformer -> interceptInvokeDynamic
-
-        else -> TODO()
-    }
+    // return when (transformer) {
+    //     is ObjectCreationTransformer -> trackObjectCreations
+    //     is ObjectCreationMinimalTransformer -> trackObjectCreations
+    //
+    //     is LocalVariablesAccessTransformer -> trackLocalVariableAccesses
+    //     is SharedMemoryAccessTransformer -> trackSharedMemoryAccesses
+    //
+    //     is MethodCallTransformer -> trackMethodCalls
+    //     is MethodCallMinimalTransformer -> trackMethodCalls
+    //     is InlineMethodCallTransformer -> trackInlineMethodCalls
+    //
+    //     is ThreadTransformer -> trackThreadsOperations
+    //     is MonitorTransformer -> trackMonitorsOperations
+    //     is WaitNotifyTransformer -> trackWaitNotifyOperations
+    //     is SynchronizedMethodTransformer -> trackSynchronizedBlocks
+    //     is ParkingTransformer -> trackParkingOperations
+    //
+    //     is DeterministicInvokeDynamicTransformer -> interceptInvokeDynamic
+    //
+    //     else -> TODO()
+    // }
 
 }
