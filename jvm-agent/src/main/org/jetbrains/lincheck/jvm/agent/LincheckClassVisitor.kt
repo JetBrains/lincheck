@@ -300,42 +300,6 @@ internal class LincheckClassVisitor(
         return false
     }
 
-    private fun applyDeterministicInvokeDynamicTransformer(
-        methodName: String,
-        desc: String,
-        access: Int,
-        methodInfo: MethodInformation,
-        adapter: GeneratorAdapter,
-        methodVisitor: MethodVisitor,
-    ): MethodVisitor {
-        var mv = methodVisitor
-        // In trace debugger mode we record hash codes of tracked objects and substitute them on re-run.
-        // In model checking mode we track all hash code calls in the instrumented code.
-        // Since in model checking we always use constant for identity hash codes,
-        // there is no need for the `DeterministicInvokeDynamicTransformer` there.
-        if (instrumentationMode == TRACE_DEBUGGING) {
-            mv = DeterministicInvokeDynamicTransformer(fileName, className, methodName, desc, access, methodInfo, classVersion, adapter, mv)
-        }
-        return mv
-    }
-
-    private fun applyConstantHashCodeTransformer(
-        methodName: String,
-        desc: String,
-        access: Int,
-        methodInfo: MethodInformation,
-        adapter: GeneratorAdapter,
-        methodVisitor: MethodVisitor,
-    ): MethodVisitor {
-        var mv = methodVisitor
-        // In trace debugger mode we record hash codes of tracked objects and substitute them on re-run.
-        // In model checking mode we track all hash code calls in the instrumented code.
-        if (instrumentationMode == MODEL_CHECKING) {
-            mv = ConstantHashCodeTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
-        }
-        return mv
-    }
-
     private fun applySynchronizationTrackingTransformers(
         methodName: String,
         desc: String,
@@ -370,6 +334,42 @@ internal class LincheckClassVisitor(
             classVisitor::isInstanceOf
         )
         mv = SharedMemoryAccessTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+        return mv
+    }
+
+    private fun applyDeterministicInvokeDynamicTransformer(
+        methodName: String,
+        desc: String,
+        access: Int,
+        methodInfo: MethodInformation,
+        adapter: GeneratorAdapter,
+        methodVisitor: MethodVisitor,
+    ): MethodVisitor {
+        var mv = methodVisitor
+        // In trace debugger mode we record hash codes of tracked objects and substitute them on re-run.
+        // In model checking mode we track all hash code calls in the instrumented code.
+        // Since in model checking we always use constant for identity hash codes,
+        // there is no need for the `DeterministicInvokeDynamicTransformer` there.
+        if (instrumentationMode == TRACE_DEBUGGING) {
+            mv = DeterministicInvokeDynamicTransformer(fileName, className, methodName, desc, access, methodInfo, classVersion, adapter, mv)
+        }
+        return mv
+    }
+
+    private fun applyConstantHashCodeTransformer(
+        methodName: String,
+        desc: String,
+        access: Int,
+        methodInfo: MethodInformation,
+        adapter: GeneratorAdapter,
+        methodVisitor: MethodVisitor,
+    ): MethodVisitor {
+        var mv = methodVisitor
+        // In trace debugger mode we record hash codes of tracked objects and substitute them on re-run.
+        // In model checking mode we track all hash code calls in the instrumented code.
+        if (instrumentationMode == MODEL_CHECKING) {
+            mv = ConstantHashCodeTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+        }
         return mv
     }
 
