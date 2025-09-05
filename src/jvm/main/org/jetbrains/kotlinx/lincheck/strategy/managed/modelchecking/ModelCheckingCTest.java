@@ -24,6 +24,7 @@ import static org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.Mode
 /**
  * This annotation configures concurrent test using {@link ModelCheckingStrategy managed} strategy.
  */
+@Deprecated(message = "Deprecated in favor of options-based configuration. Use ModelCheckingOptions (or unified Lincheck options) instead of @ModelCheckingCTest.")
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 @Repeatable(ModelCheckingCTest.ModelCheckingCTests.class)
@@ -132,6 +133,7 @@ public @interface ModelCheckingCTest {
     /**
      * Holder annotation for {@link ModelCheckingCTest}.
      */
+    @Deprecated(message = "Deprecated along with @ModelCheckingCTest")
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.TYPE)
     @Inherited
