@@ -11,9 +11,9 @@
 package org.jetbrains.kotlinx.lincheck_test.util
 
 import net.bytebuddy.dynamic.loading.ByteArrayClassLoader
-import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
-import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer
-import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
+import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
+import org.jetbrains.lincheck.jvm.agent.LincheckClassFileTransformer
+import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes

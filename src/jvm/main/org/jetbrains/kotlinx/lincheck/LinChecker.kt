@@ -11,7 +11,7 @@ package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.*
 import org.jetbrains.lincheck.datastructures.*
 import org.jetbrains.lincheck.datastructures.verifier.*

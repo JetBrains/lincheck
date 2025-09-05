@@ -18,7 +18,7 @@ import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
-import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
+import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.util.ensure
 import org.jetbrains.lincheck.util.runInsideIgnoredSection

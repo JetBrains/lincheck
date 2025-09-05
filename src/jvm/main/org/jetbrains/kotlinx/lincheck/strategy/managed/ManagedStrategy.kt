@@ -19,7 +19,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.ThreadState
 import org.jetbrains.kotlinx.lincheck.strategy.nativecalls.*
 import org.jetbrains.kotlinx.lincheck.trace.*
-import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.*
 import org.jetbrains.lincheck.analysis.*

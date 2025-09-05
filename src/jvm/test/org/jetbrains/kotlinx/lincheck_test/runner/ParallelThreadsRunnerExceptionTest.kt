@@ -16,7 +16,7 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
+import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.withLincheckTestContext
 import org.jetbrains.kotlinx.lincheck_test.verifier.*
 import org.jetbrains.lincheck.datastructures.actor

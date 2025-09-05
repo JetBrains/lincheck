@@ -17,7 +17,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfiguration
-import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.datastructures.verifier.*
 import org.jetbrains.lincheck.util.DEFAULT_LOG_LEVEL
 import org.jetbrains.lincheck.util.LoggingLevel

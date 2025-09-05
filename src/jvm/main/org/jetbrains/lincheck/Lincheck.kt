@@ -21,9 +21,9 @@ import org.jetbrains.kotlinx.lincheck.execution.parallelResults
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.runIteration
-import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
-import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.ensureObjectIsTransformed
-import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
+import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
+import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent.ensureObjectIsTransformed
+import org.jetbrains.lincheck.jvm.agent.withLincheckJavaAgent
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
