@@ -24,6 +24,7 @@ import java.lang.annotation.*;
 /**
  * This annotation configures concurrent test using stress strategy.
  */
+@kotlin.Deprecated(message = "Deprecated in favor of options-based configuration. Use StressOptions (or unified Lincheck options) instead of @StressCTest.")
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 @Repeatable(StressCTest.StressCTests.class)
@@ -116,6 +117,7 @@ public @interface StressCTest {
     /**
      * Holder annotation for {@link StressCTest}.
      */
+    @kotlin.Deprecated(message = "Deprecated along with @StressCTest")
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.TYPE)
     @Inherited
