@@ -8,10 +8,7 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.transformation
-
-import org.jetbrains.kotlinx.lincheck.transformation.transformers.*
-import org.jetbrains.kotlinx.lincheck.trace.recorder.transformers.*
+package org.jetbrains.lincheck.jvm.agent
 
 interface TransformationProfile {
     fun getMethodConfiguration(className: String, methodName: String, methodDescriptor: String): TransformationConfiguration?
