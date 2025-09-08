@@ -176,46 +176,9 @@ internal class LincheckClassVisitor(
             return mv
         }
 
-        // Debugger implicitly evaluates `toString()` for variables rendering.
-        // We need to ensure there are no `beforeEvents` calls inside `toString()`
-        // to ensure the event numeration will remain the same.
-        if (ideaPluginEnabled && isToStringMethod(methodName, desc)) {
-            mv = applyObjectCreationTransformer(methodName, desc, access, methodInfo, adapter, mv)
-            mv = applyDeterministicInvokeDynamicTransformer(methodName, desc, access, methodInfo, adapter, mv)
-            return mv
-        }
-
-        // Currently, constructors are treated in a special way to avoid problems
-        // with `VerificationError` due to leaking this problem,
-        // see: https://github.com/JetBrains/lincheck/issues/424
-        if ((methodName == "<init>" && instrumentationMode == MODEL_CHECKING)) {
-            var sharedMemoryAccessTransformer: SharedMemoryAccessTransformer? = null
-            mv = applyObjectCreationTransformer(methodName, desc, access, methodInfo, adapter, mv)
-            mv = applySharedMemoryAccessTransformer(methodName, desc, access, methodInfo, adapter, mv).also {
-                sharedMemoryAccessTransformer = it
-            }
-            mv = applyAnalyzerAdapter(access, methodName, desc, mv, sharedMemoryAccessTransformer)
-            mv = applyOwnerNameAnalyzerAdapter(access, methodName, desc, methodInfo, mv,
-                methodCallTransformer = null,
-                sharedMemoryAccessTransformer,
-            )
-            return mv
-        }
-
-        // For `java.lang.Thread` class (and `ThreadContainer.start()` method),
-        // we only apply `ThreadTransformer` and skip all other transformations
-        if (isThreadClass(className.toCanonicalClassName()) ||
-            isThreadContainerThreadStartMethod(className.toCanonicalClassName(), methodName)
-        ) {
-            mv = ThreadTransformer(fileName, className, methodName, methodInfo, desc, access, adapter, mv)
-            // Must appear last in the code, to completely hide intrinsic candidate methods from all transformers
-            mv = IntrinsicCandidateMethodFilter(className, methodName, desc, initialVisitor, mv)
-            return mv
-        }
-
         val profile = instrumentationMode.transformationProfile
         val chain = TransformerChain(
-            config = profile.getMethodConfiguration(className, methodName, desc),
+            config = profile.getMethodConfiguration(className.toCanonicalClassName(), methodName, desc),
             adapter = adapter,
             initialMethodVisitor = mv,
         )
