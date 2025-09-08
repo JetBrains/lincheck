@@ -71,10 +71,10 @@ internal class LincheckClassVisitor(
     ): MethodVisitor {
         var mv = super.visitMethod(access, methodName, desc, signature, exceptions)
 
-        val methodInfo = classInformation.methodInformation(methodName, desc)
-
         val isNative = (access and ACC_NATIVE != 0)
         val isSynchronized = (access and ACC_SYNCHRONIZED != 0)
+
+        val methodInfo = classInformation.methodInformation(methodName, desc)
 
         if (isNative) {
             Logger.debug { "Skipping transformation of the native method $className.$methodName" }
@@ -100,6 +100,7 @@ internal class LincheckClassVisitor(
             initialMethodVisitor = mv,
         )
 
+        // ======== Coroutines ========
         chain.addTransformer { adapter, mv ->
             CoroutineCancellabilitySupportTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
         }
@@ -107,26 +108,32 @@ internal class LincheckClassVisitor(
             CoroutineDelaySupportTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
         }
 
+        // ======== Threads ========
         chain.addTransformer { adapter, mv ->
             ThreadTransformer(fileName, className, methodName, methodInfo, desc, access, adapter, mv)
         }
 
+        // ======== Method Calls ========
         chain.addTransformer { adapter, mv ->
             applyMethodCallTransformer(methodName, desc, access, methodInfo, adapter, mv)
         }
 
+        // ======== Object Creation ========
         chain.addTransformer { adapter, mv ->
             applyObjectCreationTransformer(methodName, desc, access, methodInfo, adapter, mv)
         }
 
+        // ======== Invokedynamic ========
         chain.addTransformer { adapter, mv ->
             DeterministicInvokeDynamicTransformer(fileName, className, methodName, desc, access, methodInfo, classVersion, adapter, mv)
         }
 
+        // ======== Hash codes ========
         chain.addTransformer { adapter, mv ->
             ConstantHashCodeTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
         }
 
+        // ======== Synchronization primitives ========
         if (isSynchronized) {
             chain.addTransformer { adapter, mv ->
                 SynchronizedMethodTransformer(fileName, className, methodName, desc, access, methodInfo, classVersion, adapter, mv)
@@ -142,6 +149,7 @@ internal class LincheckClassVisitor(
             ParkingTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
         }
 
+        // ======== Field, Array, and Local Variables accesses ========
         chain.addTransformer { adapter, mv ->
             applySharedMemoryAccessTransformer(methodName, desc, access, methodInfo, adapter, mv)
         }
@@ -149,10 +157,12 @@ internal class LincheckClassVisitor(
             LocalVariablesAccessTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv, methodInfo.locals)
         }
 
+        // ======== Inline Method Calls ========
         chain.addTransformer { adapter, mv ->
             InlineMethodCallTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
         }
 
+        // ======== Analyzers ========
         chain.addTransformer { _, mv ->
             AnalyzerAdapter(className, access, methodName, desc, mv)
         }
