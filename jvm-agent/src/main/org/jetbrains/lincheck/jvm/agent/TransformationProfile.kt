@@ -243,7 +243,6 @@ object ModelCheckingTransformationProfile : TransformationProfile {
         if (ideaPluginEnabled && isToStringMethod(methodName, descriptor)) {
             return config.apply {
                 trackObjectCreations = true
-                // config.interceptInvokeDynamic = true
             }
         }
 
