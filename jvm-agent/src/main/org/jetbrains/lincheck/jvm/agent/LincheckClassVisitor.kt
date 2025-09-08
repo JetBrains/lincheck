@@ -320,7 +320,7 @@ internal class LincheckClassVisitor(
         methodInfo: MethodInformation,
         adapter: GeneratorAdapter,
         methodVisitor: MethodVisitor,
-    ): MethodVisitor {
+    ): ObjectCreationTransformerBase {
         var mv = methodVisitor
         if (instrumentationMode == TRACE_RECORDING) {
             mv = ObjectCreationMinimalTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
