@@ -277,18 +277,17 @@ object ModelCheckingTransformationProfile : TransformationProfile {
     }
 }
 
-// TODO: rollback to `private`
-internal fun shouldWrapInIgnoredSection(className: String, methodName: String, descriptor: String): Boolean {
+private fun shouldWrapInIgnoredSection(className: String, methodName: String, descriptor: String): Boolean {
     // Wrap static initialization blocks into ignored sections.
     if (methodName == "<clinit>")
         return true
     // Wrap `ClassLoader::loadClass(className)` calls into ignored sections
     // to ensure their code is not analyzed by the Lincheck.
-    if (isClassLoaderClassName(className.toCanonicalClassName()) && isLoadClassMethod(methodName, descriptor))
+    if (isClassLoaderClassName(className) && isLoadClassMethod(methodName, descriptor))
         return true
     // Wrap `MethodHandles.Lookup.findX` and related methods into ignored sections
     // to ensure their code is not analyzed by the Lincheck.
-    if (isIgnoredMethodHandleMethod(className.toCanonicalClassName(), methodName))
+    if (isIgnoredMethodHandleMethod(className, methodName))
         return true
     // Wrap all methods of the `StackTraceElement` class into ignored sections.
     // Although `StackTraceElement` own bytecode should not be instrumented,
@@ -301,30 +300,29 @@ internal fun shouldWrapInIgnoredSection(className: String, methodName: String, d
     // See the following issues:
     //   - https://github.com/JetBrains/lincheck/issues/376
     //   - https://github.com/JetBrains/lincheck/issues/419
-    if (isStackTraceElementClass(className.toCanonicalClassName()))
+    if (isStackTraceElementClass(className))
         return true
     // Ignore methods of JDK 20+ `ThreadContainer` classes, except the `start` method.
-    if (isThreadContainerClass(className.toCanonicalClassName()) &&
-        !isThreadContainerThreadStartMethod(className.toCanonicalClassName(), methodName))
+    if (isThreadContainerClass(className) &&
+        !isThreadContainerThreadStartMethod(className, methodName))
         return true
     // Wrap IntelliJ IDEA runtime agent's methods into an ignored section.
-    if (isIntellijRuntimeAgentClass(className.toCanonicalClassName()))
+    if (isIntellijRuntimeAgentClass(className))
         return true
 
     return false
 }
 
-// TODO: rollback to `private`
-internal fun shouldNotInstrument(className: String, methodName: String, descriptor: String): Boolean {
+private fun shouldNotInstrument(className: String, methodName: String, descriptor: String): Boolean {
     // Do not instrument `ClassLoader` methods.
-    if (isClassLoaderClassName(className.toCanonicalClassName()))
+    if (isClassLoaderClassName(className))
         return true
     // Instrumentation of `java.util.Arrays` class causes some subtle flaky bugs.
     // See details in https://github.com/JetBrains/lincheck/issues/717.
-    if (isJavaUtilArraysClass(className.toCanonicalClassName()))
+    if (isJavaUtilArraysClass(className))
         return true
     // Do not instrument coroutines' internal machinery.
-    if (isCoroutineInternalClass(className.toCanonicalClassName()))
+    if (isCoroutineInternalClass(className))
         return true
 
     return false
