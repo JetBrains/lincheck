@@ -206,6 +206,9 @@ object TraceDebuggerTransformationProfile : TransformationProfile {
 
             trackThreadsOperations = true
             trackAllSynchronizationOperations = true
+
+            trackCoroutineSuspensions = true
+            interceptCoroutineDelays = true
         }
     }
 }
@@ -268,6 +271,9 @@ object ModelCheckingTransformationProfile : TransformationProfile {
             // In model checking mode we track all hash code calls in the instrumented code
             // and substitute them with a constant value.
             interceptIdentityHashCodes = true
+
+            trackCoroutineSuspensions = true
+            interceptCoroutineDelays = true
         }
     }
 }
