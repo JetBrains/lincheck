@@ -16,24 +16,25 @@ import org.objectweb.asm.commons.GeneratorAdapter
 internal class TransformerChain(
     val config: TransformationConfiguration,
     val adapter: GeneratorAdapter,
-    val initialMethodVisitor: MethodVisitor,
+    initialMethodVisitor: MethodVisitor,
 ) {
-    var methodVisitor: MethodVisitor = initialMethodVisitor
-        private set
-
-    val methodVisitors: List<MethodVisitor> get() {
-        val visitors = mutableListOf<MethodVisitor>()
-        var currentVisitor = methodVisitor
-        while (currentVisitor !== initialMethodVisitor) {
-            visitors += currentVisitor
-            currentVisitor = currentVisitor.delegate ?: break
-        }
-        return visitors.reversed()
-    }
+    private val _methodVisitors = mutableListOf(initialMethodVisitor)
+    val methodVisitors: List<MethodVisitor> get() = _methodVisitors
 
     inline fun <reified T : MethodVisitor> addTransformer(crossinline factory: (GeneratorAdapter, MethodVisitor) -> T) {
         if (config.shouldApplyVisitor(T::class.java)) {
-            methodVisitor = factory(adapter, methodVisitor)
+            val visitor = factory(adapter, methodVisitors.last())
+            _methodVisitors += visitor.getVisitors(methodVisitors.last())
         }
     }
+}
+
+private fun MethodVisitor.getVisitors(initialVisitor: MethodVisitor): List<MethodVisitor> {
+    val visitors = mutableListOf<MethodVisitor>()
+    var currentVisitor = this
+    while (currentVisitor !== initialVisitor) {
+        visitors.add(currentVisitor)
+        currentVisitor = currentVisitor.delegate ?: break
+    }
+    return visitors.reversed()
 }
