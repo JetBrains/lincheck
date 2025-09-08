@@ -50,14 +50,6 @@ class TransformationConfiguration(
     //     before `injectBeforeSharedReadAccess` and/or `injectAfterSharedReadAccess`.
     //   - and other ...
 ) {
-
-    // fun trackAllSynchronizationOperations() {
-    //     trackMonitorsOperations = true
-    //     trackWaitNotifyOperations = true
-    //     trackSynchronizedBlocks = true
-    //     trackParkingOperations = true
-    // }
-
     var trackAllSynchronizationOperations: Boolean
         get() =
             trackMonitorsOperations &&
