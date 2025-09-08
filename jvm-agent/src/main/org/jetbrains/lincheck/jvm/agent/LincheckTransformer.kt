@@ -13,13 +13,13 @@ package org.jetbrains.lincheck.jvm.agent
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.commons.GeneratorAdapter
 
-internal abstract class LincheckTransformer {
-    abstract fun apply(adapter: GeneratorAdapter, methodVisitor: MethodVisitor): MethodVisitor
+internal interface LincheckTransformer {
+    fun apply(adapter: GeneratorAdapter, methodVisitor: MethodVisitor): MethodVisitor
 }
 
 internal class LincheckTransformerChain(
     private val config: TransformationConfiguration,
-) : LincheckTransformer() {
+) : LincheckTransformer {
     private val _transformers = mutableListOf<LincheckTransformer>()
     val transformers: List<LincheckTransformer> get() = _transformers
 
@@ -30,11 +30,22 @@ internal class LincheckTransformerChain(
         _transformers.add(transformer)
     }
 
+    inline fun <reified T : MethodVisitor> addTransformer(crossinline factory: (GeneratorAdapter, MethodVisitor) -> T) {
+        if (config.shouldApplyVisitor(T::class.java)) {
+            val transformer = object : LincheckTransformer {
+                override fun apply(adapter: GeneratorAdapter, methodVisitor: MethodVisitor): MethodVisitor =
+                    factory(adapter, methodVisitor)
+            }
+            _transformers.add(transformer)
+        }
+    }
+
     override fun apply(adapter: GeneratorAdapter, methodVisitor: MethodVisitor): MethodVisitor {
         var mv = methodVisitor
         for (transformer in _transformers) {
-            if (config.shouldApplyTransformer(transformer)) {
-                mv = transformer.apply(adapter, mv)
+            val prev = mv
+            mv = transformer.apply(adapter, mv)
+            if (mv !== prev) {
                 _methodVisitors.add(mv)
             }
         }
