@@ -30,8 +30,10 @@ internal open class LincheckMethodVisitor(
 ) : MethodVisitor(ASM_API, methodVisitor) {
     private var lineNumber = 0
 
-    lateinit var analyzer: AnalyzerAdapter
+    open val requiresTypeAnalyzer: Boolean = false
+    open val requiresOwnerNameAnalyzer: Boolean = false
 
+    var typeAnalyzer: AnalyzerAdapter? = null
     var ownerNameAnalyzer: OwnerNameAnalyzerAdapter? = null
 
     /**

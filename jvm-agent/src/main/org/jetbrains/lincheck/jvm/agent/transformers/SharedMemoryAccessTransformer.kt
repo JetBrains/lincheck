@@ -14,7 +14,6 @@ import org.jetbrains.lincheck.trace.TRACE_CONTEXT
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
 import org.objectweb.asm.Type.*
-import org.objectweb.asm.commons.AnalyzerAdapter
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import org.jetbrains.lincheck.jvm.agent.*
@@ -35,6 +34,9 @@ internal class SharedMemoryAccessTransformer(
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
 ) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
+
+    override val requiresTypeAnalyzer: Boolean = true
+    override val requiresOwnerNameAnalyzer: Boolean = true
 
     override fun visitFieldInsn(opcode: Int, owner: String, fieldName: String, desc: String) = adapter.run {
         if (
@@ -342,8 +344,8 @@ internal class SharedMemoryAccessTransformer(
      * (according to the ASM docs, this can happen, for example, when the visited instruction is unreachable).
      */
     private fun getArrayAccessTypeFromStack(position: Int): Type? {
-        if (analyzer.stack == null) return null
-        val arrayDesc = analyzer.stack.getStackElementAt(position)
+        val stack = typeAnalyzer?.stack ?: return null
+        val arrayDesc = stack.getStackElementAt(position)
         check(arrayDesc is String)
         val arrayType = getType(arrayDesc)
         check(arrayType.sort == ARRAY)

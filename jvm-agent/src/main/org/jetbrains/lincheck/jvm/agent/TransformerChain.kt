@@ -22,23 +22,42 @@ internal class TransformerChain(
     private val _methodVisitors = mutableListOf(initialMethodVisitor)
     val methodVisitors: List<MethodVisitor> get() = _methodVisitors
 
-    inline fun <reified T : MethodVisitor> addTransformer(crossinline factory: (GeneratorAdapter, MethodVisitor) -> T) {
+    inline fun <reified T : MethodVisitor> addTransformer(crossinline factory: (GeneratorAdapter, MethodVisitor) -> T): T? {
         if (config.shouldApplyVisitor(T::class.java)) {
             val newVisitor = factory(adapter, methodVisitors.last())
             _methodVisitors += newVisitor.getVisitors(methodVisitors.last())
+            return newVisitor
+        }
+        return null
+    }
 
-            if (newVisitor is AnalyzerAdapter) {
-                for (visitor in methodVisitors) {
-                    if (visitor is LincheckMethodVisitor) {
-                        visitor.analyzer = newVisitor
-                    }
+    fun addAnalyzerAdapter(access: Int, className: String, methodName: String, desc: String) {
+        val requiresTypeAnalyzer = methodVisitors.any {
+            it is LincheckMethodVisitor && it.requiresTypeAnalyzer
+        }
+        if (requiresTypeAnalyzer) {
+            val analyzer = addTransformer { _, mv ->
+                AnalyzerAdapter(className, access, methodName, desc, mv)
+            }
+            for (visitor in methodVisitors) {
+                if (visitor is LincheckMethodVisitor && visitor.requiresTypeAnalyzer) {
+                    visitor.typeAnalyzer = analyzer
                 }
             }
-            if (newVisitor is OwnerNameAnalyzerAdapter) {
-                for (visitor in methodVisitors) {
-                    if (visitor is LincheckMethodVisitor) {
-                        visitor.ownerNameAnalyzer = newVisitor
-                    }
+        }
+    }
+
+    fun addOwnerNameAnalyzerAdapter(access: Int, className: String, methodName: String, desc: String, methodInfo: MethodInformation) {
+        val requiresOwnerNameAnalyzer = methodVisitors.any {
+            it is LincheckMethodVisitor && it.requiresOwnerNameAnalyzer
+        }
+        if (requiresOwnerNameAnalyzer) {
+            val analyzer = addTransformer { _, mv ->
+                OwnerNameAnalyzerAdapter(className, access, methodName, desc, mv, methodInfo.locals)
+            }
+            for (visitor in methodVisitors) {
+                if (visitor is LincheckMethodVisitor && visitor.requiresOwnerNameAnalyzer) {
+                    visitor.ownerNameAnalyzer = analyzer
                 }
             }
         }
