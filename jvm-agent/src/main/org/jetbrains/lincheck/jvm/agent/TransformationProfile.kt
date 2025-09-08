@@ -11,11 +11,8 @@
 package org.jetbrains.lincheck.jvm.agent
 
 import org.jetbrains.lincheck.jvm.agent.transformers.*
-import org.jetbrains.lincheck.util.ideaPluginEnabled
-import org.jetbrains.lincheck.util.isIgnoredMethodHandleMethod
-import org.jetbrains.lincheck.util.isIntellijRuntimeAgentClass
-import org.jetbrains.lincheck.util.isThreadContainerClass
-import org.jetbrains.lincheck.util.isThreadContainerThreadStartMethod
+import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.*
+import org.jetbrains.lincheck.util.*
 
 interface TransformationProfile {
     fun getMethodConfiguration(className: String, methodName: String, descriptor: String): TransformationConfiguration
@@ -96,6 +93,13 @@ internal fun TransformationConfiguration.shouldApplyVisitor(visitorClass: Class<
         // so they should be applied by default
         else -> true
     }
+}
+
+val InstrumentationMode.transformationProfile: TransformationProfile get() = when (this) {
+    STRESS -> StressTransformationProfile
+    TRACE_RECORDING -> TraceRecorderTransformationProfile
+    TRACE_DEBUGGING -> TraceDebuggerTransformationProfile
+    MODEL_CHECKING -> ModelCheckingTransformationProfile
 }
 
 object StressTransformationProfile : TransformationProfile {

@@ -74,6 +74,8 @@ internal class LincheckClassVisitor(
         val methodInfo = classInformation.methodInformation(methodName, desc)
 
         val isNative = (access and ACC_NATIVE != 0)
+        val isSynchronized = (access and ACC_SYNCHRONIZED != 0)
+
         if (isNative) {
             Logger.debug { "Skipping transformation of the native method $className.$methodName" }
             return mv
@@ -211,41 +213,74 @@ internal class LincheckClassVisitor(
             return mv
         }
 
-        mv = CoroutineCancellabilitySupportTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
-        mv = CoroutineDelaySupportTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+        val profile = instrumentationMode.transformationProfile
+        val chain = TransformerChain(
+            config = profile.getMethodConfiguration(className, methodName, desc),
+            adapter = adapter,
+            initialMethodVisitor = mv,
+        )
 
-        mv = ThreadTransformer(fileName, className, methodName, methodInfo, desc, access, adapter, mv)
-
-        var methodCallTransformer: MethodCallTransformerBase? = null
-        mv = applyMethodCallTransformer(methodName, desc, access, methodInfo, adapter, mv).also {
-            methodCallTransformer = it
+        chain.addTransformer { adapter, mv ->
+            CoroutineCancellabilitySupportTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+        }
+        chain.addTransformer { adapter, mv ->
+            CoroutineDelaySupportTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
         }
 
-        mv = applyObjectCreationTransformer(methodName, desc, access, methodInfo, adapter, mv)
-
-        mv = applyDeterministicInvokeDynamicTransformer(methodName, desc, access, methodInfo, adapter, mv)
-        mv = applyConstantHashCodeTransformer(methodName, desc, access, methodInfo, adapter, mv)
-
-        mv = applySynchronizationTrackingTransformers(methodName, desc, access, methodInfo, adapter, mv)
-
-        // `SharedMemoryAccessTransformer` goes first because it relies on `AnalyzerAdapter`,
-        // which should be put in front of the byte-code transformer chain,
-        // so that it can correctly analyze the byte-code and compute required type-information
-        var sharedMemoryAccessTransformer: SharedMemoryAccessTransformer? = null
-        mv = applySharedMemoryAccessTransformer(methodName, desc, access, methodInfo, adapter, mv).also {
-            sharedMemoryAccessTransformer = it
+        chain.addTransformer { adapter, mv ->
+            ThreadTransformer(fileName, className, methodName, methodInfo, desc, access, adapter, mv)
         }
 
-        mv = LocalVariablesAccessTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv, methodInfo.locals)
-        mv = InlineMethodCallTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+        chain.addTransformer { adapter, mv ->
+            applyMethodCallTransformer(methodName, desc, access, methodInfo, adapter, mv)
+        }
 
-        mv = applyAnalyzerAdapter(access, methodName, desc, mv,
-            sharedMemoryAccessTransformer,
-        )
-        mv = applyOwnerNameAnalyzerAdapter(access, methodName, desc, methodInfo, mv,
-            methodCallTransformer,
-            sharedMemoryAccessTransformer,
-        )
+        chain.addTransformer { adapter, mv ->
+            applyObjectCreationTransformer(methodName, desc, access, methodInfo, adapter, mv)
+        }
+
+        chain.addTransformer { adapter, mv ->
+            DeterministicInvokeDynamicTransformer(fileName, className, methodName, desc, access, methodInfo, classVersion, adapter, mv)
+        }
+
+        chain.addTransformer { adapter, mv ->
+            ConstantHashCodeTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+        }
+
+        if (isSynchronized) {
+            chain.addTransformer { adapter, mv ->
+                SynchronizedMethodTransformer(fileName, className, methodName, desc, access, methodInfo, classVersion, adapter, mv)
+            }
+        }
+        chain.addTransformer { adapter, mv ->
+            MonitorTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+        }
+        chain.addTransformer { adapter, mv ->
+            WaitNotifyTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+        }
+        chain.addTransformer { adapter, mv ->
+            ParkingTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+        }
+
+        chain.addTransformer { adapter, mv ->
+            applySharedMemoryAccessTransformer(methodName, desc, access, methodInfo, adapter, mv)
+        }
+        chain.addTransformer { adapter, mv ->
+            LocalVariablesAccessTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv, methodInfo.locals)
+        }
+
+        chain.addTransformer { adapter, mv ->
+            InlineMethodCallTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+        }
+
+        chain.addTransformer { _, mv ->
+            AnalyzerAdapter(className, access, methodName, desc, mv)
+        }
+        chain.addTransformer { _, mv ->
+            OwnerNameAnalyzerAdapter(className, access, methodName, desc, mv, methodInfo.locals)
+        }
+
+        mv = chain.methodVisitors.last()
 
         // This tacker must be before all transformers that use MethodVariables to track variable regions
         mv = LabelsTracker(mv, methodInfo)
