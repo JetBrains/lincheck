@@ -83,21 +83,11 @@ internal class LincheckClassVisitor(
             Logger.debug { "Transforming method $className.$methodName" }
         }
 
-        if (instrumentationMode == STRESS) {
-            if (methodName == "<clinit>" || methodName == "<init>") return mv
-
-            val adapter = GeneratorAdapter(mv, access, methodName, desc)
-            mv = adapter
-
-            // in Stress mode we apply only `CoroutineCancellabilitySupportTransformer`
-            // to track coroutine suspension points
-            mv = CoroutineCancellabilitySupportTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
-
-            return mv
+        // in stress mode there are no complex transformations, so we do not need to handle try-catch blocks
+        if (instrumentationMode != STRESS) {
+            mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
+            mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
         }
-
-        mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
-        mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
 
         val initialVisitor = mv
         val adapter = GeneratorAdapter(mv, access, methodName, desc)
