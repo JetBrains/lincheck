@@ -281,7 +281,7 @@ internal fun shouldWrapInIgnoredSection(className: String, methodName: String, d
     // to ensure their code is not analyzed by the Lincheck.
     if (isIgnoredMethodHandleMethod(className.toCanonicalClassName(), methodName))
         return true
-    // Wrap all methods of the ` StackTraceElement ` class into ignored sections.
+    // Wrap all methods of the `StackTraceElement` class into ignored sections.
     // Although `StackTraceElement` own bytecode should not be instrumented,
     // it may call functions from `java.util` classes (e.g., `HashMap`),
     // which can be instrumented and analyzed.
@@ -294,11 +294,11 @@ internal fun shouldWrapInIgnoredSection(className: String, methodName: String, d
     //   - https://github.com/JetBrains/lincheck/issues/419
     if (isStackTraceElementClass(className.toCanonicalClassName()))
         return true
-    // Ignore methods of JDK 20+ `ThreadContainer` classes, except `start` method.
+    // Ignore methods of JDK 20+ `ThreadContainer` classes, except the `start` method.
     if (isThreadContainerClass(className.toCanonicalClassName()) &&
         !isThreadContainerThreadStartMethod(className.toCanonicalClassName(), methodName))
         return true
-    // Wrap IntelliJ IDEA runtime agent's methods into ignored section.
+    // Wrap IntelliJ IDEA runtime agent's methods into an ignored section.
     if (isIntellijRuntimeAgentClass(className.toCanonicalClassName()))
         return true
 
@@ -314,7 +314,7 @@ internal fun shouldNotInstrument(className: String, methodName: String, descript
     // See details in https://github.com/JetBrains/lincheck/issues/717.
     if (isJavaUtilArraysClass(className.toCanonicalClassName()))
         return true
-    // Do not instrument coroutines' internals machinery
+    // Do not instrument coroutines' internal machinery.
     if (isCoroutineInternalClass(className.toCanonicalClassName()))
         return true
 
