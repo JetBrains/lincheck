@@ -36,10 +36,6 @@ internal class SharedMemoryAccessTransformer(
     methodVisitor: MethodVisitor,
 ) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
 
-    lateinit var analyzer: AnalyzerAdapter
-
-    var ownerNameAnalyzer: OwnerNameAnalyzerAdapter? = null
-
     override fun visitFieldInsn(opcode: Int, owner: String, fieldName: String, desc: String) = adapter.run {
         if (
             isCoroutineInternalClass(owner.toCanonicalClassName()) ||

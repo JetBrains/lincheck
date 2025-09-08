@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.jvm.agent
 
 import org.objectweb.asm.MethodVisitor
+import org.objectweb.asm.commons.AnalyzerAdapter
 import org.objectweb.asm.commons.GeneratorAdapter
 
 internal class TransformerChain(
@@ -23,8 +24,23 @@ internal class TransformerChain(
 
     inline fun <reified T : MethodVisitor> addTransformer(crossinline factory: (GeneratorAdapter, MethodVisitor) -> T) {
         if (config.shouldApplyVisitor(T::class.java)) {
-            val visitor = factory(adapter, methodVisitors.last())
-            _methodVisitors += visitor.getVisitors(methodVisitors.last())
+            val newVisitor = factory(adapter, methodVisitors.last())
+            _methodVisitors += newVisitor.getVisitors(methodVisitors.last())
+
+            if (newVisitor is AnalyzerAdapter) {
+                for (visitor in methodVisitors) {
+                    if (visitor is LincheckMethodVisitor) {
+                        visitor.analyzer = newVisitor
+                    }
+                }
+            }
+            if (newVisitor is OwnerNameAnalyzerAdapter) {
+                for (visitor in methodVisitors) {
+                    if (visitor is LincheckMethodVisitor) {
+                        visitor.ownerNameAnalyzer = newVisitor
+                    }
+                }
+            }
         }
     }
 }

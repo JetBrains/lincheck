@@ -34,8 +34,6 @@ internal abstract class MethodCallTransformerBase(
     methodVisitor: MethodVisitor,
 ) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
 
-    var ownerNameAnalyzer: OwnerNameAnalyzerAdapter? = null
-
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
         // TODO: do not ignore <init>
         if (name == "<init>" || isIgnoredMethod(className = owner)) {
