@@ -96,85 +96,12 @@ internal class LincheckClassVisitor(
             return mv
         }
 
-        if (instrumentationMode == TRACE_RECORDING) {
-            mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
-            mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
-
-            val adapter = GeneratorAdapter(mv, access, methodName, desc)
-            mv = adapter
-
-            if (shouldWrapInIgnoredSection(className, methodName, desc)) {
-                // Note: <clinit> case is handle here as well
-                mv = IgnoredSectionWrapperTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
-                return mv
-            }
-
-            if (methodName == "<init>") {
-                mv = applyObjectCreationTransformer(methodName, desc, access, methodInfo, adapter, mv)
-                return mv
-            }
-
-            // We need this in TRACE_RECORDING mode to register new threads
-            mv = ThreadTransformer(fileName, className, methodName, methodInfo, desc, access, adapter, mv)
-            // If it is Thread don't instrument all other things in it
-            if (
-                isThreadClass(className.toCanonicalClassName()) ||
-                isThreadContainerThreadStartMethod(className.toCanonicalClassName(), methodName)
-            ) {
-                return mv
-            }
-
-            mv = applyObjectCreationTransformer(methodName, desc, access, methodInfo, adapter, mv)
-
-            var methodCallTransformer: MethodCallTransformerBase? = null
-            mv = applyMethodCallTransformer(methodName, desc, access, methodInfo, adapter, mv).also {
-                methodCallTransformer = it
-            }
-
-            // `SharedMemoryAccessTransformer` goes first because it relies on `AnalyzerAdapter`,
-            // which should be put in front of the byte-code transformer chain,
-            // so that it can correctly analyze the byte-code and compute required type-information
-            var sharedMemoryAccessTransformer: SharedMemoryAccessTransformer? = null
-            mv = applySharedMemoryAccessTransformer(methodName, desc, access, methodInfo, adapter, mv).also {
-                sharedMemoryAccessTransformer = it
-            }
-
-            mv = LocalVariablesAccessTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv, methodInfo.locals)
-            mv = InlineMethodCallTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
-
-            mv = applyOwnerNameAnalyzerAdapter(access, methodName, desc, methodInfo, mv,
-                methodCallTransformer,
-                sharedMemoryAccessTransformer,
-            )
-            mv = applyAnalyzerAdapter(access, methodName, desc, mv,
-                sharedMemoryAccessTransformer,
-            )
-
-            // This tacker must be before all transformers that use MethodVariables to track variable regions
-            mv = LabelsTracker(mv, methodInfo)
-
-            return mv
-        }
-
         mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
         mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
 
         val initialVisitor = mv
         val adapter = GeneratorAdapter(mv, access, methodName, desc)
         mv = adapter
-
-        // NOTE: `shouldWrapInIgnoredSection` should be before `shouldNotInstrument`,
-        //       otherwise we may incorrectly forget to add some ignored sections
-        //       and start tracking events in unexpected places
-        if (shouldWrapInIgnoredSection(className, methodName, desc)) {
-            mv = IgnoredSectionWrapperTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
-            return mv
-        }
-        if (shouldNotInstrument(className, methodName, desc)) {
-            // Must appear last in the code, to completely hide intrinsic candidate methods from all transformers
-            mv = IntrinsicCandidateMethodFilter(className, methodName, desc, initialVisitor, mv)
-            return mv
-        }
 
         val profile = instrumentationMode.transformationProfile
         val chain = TransformerChain(
@@ -252,10 +179,14 @@ internal class LincheckClassVisitor(
         // It can appear earlier in code than `IntrinsicCandidateMethodFilter` because if kover instruments intrinsic methods
         // (which cannot disallow) then we don't need to hide coverage instrumentation from lincheck,
         // because lincheck will not see intrinsic method bodies at all.
-        mv = CoverageBytecodeFilter(initialVisitor, mv)
+        if (instrumentationMode == MODEL_CHECKING || instrumentationMode == TRACE_DEBUGGING) {
+            mv = CoverageBytecodeFilter(initialVisitor, mv)
+        }
 
         // Must appear last in the code, to completely hide intrinsic candidate methods from all transformers
-        mv = IntrinsicCandidateMethodFilter(className, methodName, desc, initialVisitor, mv)
+        if (instrumentationMode == MODEL_CHECKING || instrumentationMode == TRACE_DEBUGGING) {
+            mv = IntrinsicCandidateMethodFilter(className, methodName, desc, initialVisitor, mv)
+        }
 
         return mv
     }
