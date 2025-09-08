@@ -262,57 +262,6 @@ internal class LincheckClassVisitor(
         return mv
     }
 
-    private fun shouldWrapInIgnoredSection(className: String, methodName: String, descriptor: String): Boolean {
-        // Wrap static initialization blocks into ignored sections.
-        if (methodName == "<clinit>")
-            return true
-        // Wrap `ClassLoader::loadClass(className)` calls into ignored sections
-        // to ensure their code is not analyzed by the Lincheck.
-        if (isClassLoaderClassName(className.toCanonicalClassName()) && isLoadClassMethod(methodName, descriptor))
-            return true
-        // Wrap `MethodHandles.Lookup.findX` and related methods into ignored sections
-        // to ensure their code is not analyzed by the Lincheck.
-        if (isIgnoredMethodHandleMethod(className.toCanonicalClassName(), methodName))
-            return true
-        // Wrap all methods of the ` StackTraceElement ` class into ignored sections.
-        // Although `StackTraceElement` own bytecode should not be instrumented,
-        // it may call functions from `java.util` classes (e.g., `HashMap`),
-        // which can be instrumented and analyzed.
-        // At the same time, `StackTraceElement` methods can be called almost at any point
-        // (e.g., when an exception is thrown and its stack trace is being collected),
-        // and we should ensure that these calls are not analyzed by Lincheck.
-        //
-        // See the following issues:
-        //   - https://github.com/JetBrains/lincheck/issues/376
-        //   - https://github.com/JetBrains/lincheck/issues/419
-        if (isStackTraceElementClass(className.toCanonicalClassName()))
-            return true
-        // Ignore methods of JDK 20+ `ThreadContainer` classes, except `start` method.
-        if (isThreadContainerClass(className.toCanonicalClassName()) &&
-            !isThreadContainerThreadStartMethod(className.toCanonicalClassName(), methodName))
-            return true
-        // Wrap IntelliJ IDEA runtime agent's methods into ignored section.
-        if (isIntellijRuntimeAgentClass(className.toCanonicalClassName()))
-            return true
-
-        return false
-    }
-
-    private fun shouldNotInstrument(className: String, methodName: String, descriptor: String): Boolean {
-        // Do not instrument `ClassLoader` methods.
-        if (isClassLoaderClassName(className.toCanonicalClassName()))
-            return true
-        // Instrumentation of `java.util.Arrays` class causes some subtle flaky bugs.
-        // See details in https://github.com/JetBrains/lincheck/issues/717.
-        if (isJavaUtilArraysClass(className.toCanonicalClassName()))
-            return true
-        // Do not instrument coroutines' internals machinery
-        if (isCoroutineInternalClass(className.toCanonicalClassName()))
-            return true
-
-        return false
-    }
-
     private fun applyObjectCreationTransformer(
         methodName: String,
         desc: String,

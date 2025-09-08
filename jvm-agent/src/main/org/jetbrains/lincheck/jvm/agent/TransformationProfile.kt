@@ -12,6 +12,9 @@ package org.jetbrains.lincheck.jvm.agent
 
 import org.jetbrains.lincheck.jvm.agent.transformers.*
 import org.jetbrains.lincheck.util.ideaPluginEnabled
+import org.jetbrains.lincheck.util.isIgnoredMethodHandleMethod
+import org.jetbrains.lincheck.util.isIntellijRuntimeAgentClass
+import org.jetbrains.lincheck.util.isThreadContainerClass
 import org.jetbrains.lincheck.util.isThreadContainerThreadStartMethod
 
 interface TransformationProfile {
@@ -114,8 +117,11 @@ object TraceRecorderTransformationProfile : TransformationProfile {
     override fun getMethodConfiguration(className: String, methodName: String, descriptor: String): TransformationConfiguration {
         val config = TransformationConfiguration()
 
-        // TODO: handle `shouldWrapInIgnoredSection`
-        // TODO: handle `shouldNotInstrument`
+        if (shouldWrapInIgnoredSection(className, methodName, descriptor)) {
+            return config.apply {
+                wrapInIgnoredSection = true
+            }
+        }
 
         // For `java.lang.Thread` class (and `ThreadContainer.start()` method),
         // we only apply `ThreadTransformer` and skip all other transformations
@@ -151,8 +157,17 @@ object TraceDebuggerTransformationProfile : TransformationProfile {
     override fun getMethodConfiguration(className: String, methodName: String, descriptor: String): TransformationConfiguration {
         val config = TransformationConfiguration()
 
-        // TODO: handle `shouldWrapInIgnoredSection`
-        // TODO: handle `shouldNotInstrument`
+        // NOTE: `shouldWrapInIgnoredSection` should be before `shouldNotInstrument`,
+        //       otherwise we may incorrectly forget to add some ignored sections
+        //       and start tracking events in unexpected places
+        if (shouldWrapInIgnoredSection(className, methodName, descriptor)) {
+            return config.apply {
+                wrapInIgnoredSection = true
+            }
+        }
+        if (shouldNotInstrument(className, methodName, descriptor)) {
+            return config
+        }
 
         // For `java.lang.Thread` class (and `ThreadContainer.start()` method),
         // we only apply `ThreadTransformer` and skip all other transformations
@@ -195,8 +210,17 @@ object ModelCheckingTransformationProfile : TransformationProfile {
     override fun getMethodConfiguration(className: String, methodName: String, descriptor: String): TransformationConfiguration {
         val config = TransformationConfiguration()
 
-        // TODO: handle `shouldWrapInIgnoredSection`
-        // TODO: handle `shouldNotInstrument`
+        // NOTE: `shouldWrapInIgnoredSection` should be before `shouldNotInstrument`,
+        //       otherwise we may incorrectly forget to add some ignored sections
+        //       and start tracking events in unexpected places
+        if (shouldWrapInIgnoredSection(className, methodName, descriptor)) {
+            return config.apply {
+                wrapInIgnoredSection = true
+            }
+        }
+        if (shouldNotInstrument(className, methodName, descriptor)) {
+            return config
+        }
 
         // For `java.lang.Thread` class (and `ThreadContainer.start()` method),
         // we only apply `ThreadTransformer` and skip all other transformations
@@ -242,4 +266,57 @@ object ModelCheckingTransformationProfile : TransformationProfile {
             interceptIdentityHashCodes = true
         }
     }
+}
+
+// TODO: rollback to `private`
+internal fun shouldWrapInIgnoredSection(className: String, methodName: String, descriptor: String): Boolean {
+    // Wrap static initialization blocks into ignored sections.
+    if (methodName == "<clinit>")
+        return true
+    // Wrap `ClassLoader::loadClass(className)` calls into ignored sections
+    // to ensure their code is not analyzed by the Lincheck.
+    if (isClassLoaderClassName(className.toCanonicalClassName()) && isLoadClassMethod(methodName, descriptor))
+        return true
+    // Wrap `MethodHandles.Lookup.findX` and related methods into ignored sections
+    // to ensure their code is not analyzed by the Lincheck.
+    if (isIgnoredMethodHandleMethod(className.toCanonicalClassName(), methodName))
+        return true
+    // Wrap all methods of the ` StackTraceElement ` class into ignored sections.
+    // Although `StackTraceElement` own bytecode should not be instrumented,
+    // it may call functions from `java.util` classes (e.g., `HashMap`),
+    // which can be instrumented and analyzed.
+    // At the same time, `StackTraceElement` methods can be called almost at any point
+    // (e.g., when an exception is thrown and its stack trace is being collected),
+    // and we should ensure that these calls are not analyzed by Lincheck.
+    //
+    // See the following issues:
+    //   - https://github.com/JetBrains/lincheck/issues/376
+    //   - https://github.com/JetBrains/lincheck/issues/419
+    if (isStackTraceElementClass(className.toCanonicalClassName()))
+        return true
+    // Ignore methods of JDK 20+ `ThreadContainer` classes, except `start` method.
+    if (isThreadContainerClass(className.toCanonicalClassName()) &&
+        !isThreadContainerThreadStartMethod(className.toCanonicalClassName(), methodName))
+        return true
+    // Wrap IntelliJ IDEA runtime agent's methods into ignored section.
+    if (isIntellijRuntimeAgentClass(className.toCanonicalClassName()))
+        return true
+
+    return false
+}
+
+// TODO: rollback to `private`
+internal fun shouldNotInstrument(className: String, methodName: String, descriptor: String): Boolean {
+    // Do not instrument `ClassLoader` methods.
+    if (isClassLoaderClassName(className.toCanonicalClassName()))
+        return true
+    // Instrumentation of `java.util.Arrays` class causes some subtle flaky bugs.
+    // See details in https://github.com/JetBrains/lincheck/issues/717.
+    if (isJavaUtilArraysClass(className.toCanonicalClassName()))
+        return true
+    // Do not instrument coroutines' internals machinery
+    if (isCoroutineInternalClass(className.toCanonicalClassName()))
+        return true
+
+    return false
 }
