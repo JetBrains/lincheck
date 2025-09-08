@@ -11,9 +11,7 @@
 package org.jetbrains.lincheck.jvm.agent.transformers
 
 import sun.nio.ch.lincheck.Injections
-import org.jetbrains.lincheck.jvm.agent.LincheckMethodVisitor
-import org.jetbrains.lincheck.jvm.agent.MethodInformation
-import org.jetbrains.lincheck.jvm.agent.invokeStatic
+import org.jetbrains.lincheck.jvm.agent.*
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Label

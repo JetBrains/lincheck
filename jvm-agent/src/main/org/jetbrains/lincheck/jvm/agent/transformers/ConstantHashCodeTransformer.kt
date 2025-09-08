@@ -10,13 +10,10 @@
 
 package org.jetbrains.lincheck.jvm.agent.transformers
 
-import org.jetbrains.lincheck.jvm.agent.LincheckMethodVisitor
-import org.jetbrains.lincheck.jvm.agent.MethodInformation
-import org.jetbrains.lincheck.jvm.agent.invokeIfInAnalyzedCode
-import org.jetbrains.lincheck.jvm.agent.invokeStatic
+import sun.nio.ch.lincheck.Injections
+import org.jetbrains.lincheck.jvm.agent.*
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.commons.GeneratorAdapter
-import sun.nio.ch.lincheck.Injections
 
 /**
  * [ConstantHashCodeTransformer] tracks invocations of [Object.hashCode] and [System.identityHashCode] methods,

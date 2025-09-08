@@ -10,8 +10,7 @@
 
 package org.jetbrains.lincheck.jvm.agent.transformers
 
-import org.jetbrains.lincheck.jvm.agent.LincheckMethodVisitor
-import org.jetbrains.lincheck.jvm.agent.MethodInformation
+import org.jetbrains.lincheck.jvm.agent.*
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.commons.GeneratorAdapter
 
