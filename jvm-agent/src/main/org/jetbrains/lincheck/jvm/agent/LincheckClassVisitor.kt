@@ -200,19 +200,21 @@ internal class LincheckClassVisitor(
             return mv
         }
 
-        mv = CoroutineCancellabilitySupportTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
-        mv = CoroutineDelaySupportTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
-
-        mv = ThreadTransformer(fileName, className, methodName, methodInfo, desc, access, adapter, mv)
         // For `java.lang.Thread` class (and `ThreadContainer.start()` method),
         // we only apply `ThreadTransformer` and skip all other transformations
         if (isThreadClass(className.toCanonicalClassName()) ||
             isThreadContainerThreadStartMethod(className.toCanonicalClassName(), methodName)
         ) {
+            mv = ThreadTransformer(fileName, className, methodName, methodInfo, desc, access, adapter, mv)
             // Must appear last in the code, to completely hide intrinsic candidate methods from all transformers
             mv = IntrinsicCandidateMethodFilter(className, methodName, desc, initialVisitor, mv)
             return mv
         }
+
+        mv = CoroutineCancellabilitySupportTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+        mv = CoroutineDelaySupportTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+
+        mv = ThreadTransformer(fileName, className, methodName, methodInfo, desc, access, adapter, mv)
 
         var methodCallTransformer: MethodCallTransformerBase? = null
         mv = applyMethodCallTransformer(methodName, desc, access, methodInfo, adapter, mv).also {
