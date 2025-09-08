@@ -100,6 +100,11 @@ internal class LincheckClassVisitor(
             initialMethodVisitor = mv,
         )
 
+        // ======== Ignored Sections ========
+        chain.addTransformer { adapter, mv ->
+            IgnoredSectionWrapperTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+        }
+
         // ======== Coroutines ========
         chain.addTransformer { adapter, mv ->
             CoroutineCancellabilitySupportTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
