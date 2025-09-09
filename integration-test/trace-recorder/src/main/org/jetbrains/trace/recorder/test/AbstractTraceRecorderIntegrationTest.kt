@@ -29,11 +29,12 @@ abstract class AbstractTraceRecorderIntegrationTest : AbstractTraceIntegrationTe
             extraJvmArgs + listOf(
                 "-Dlincheck.traceRecorderMode=true",
                 "-XX:+UnlockExperimentalVMOptions",
-                "-XX:hashCode=2"
+                "-XX:hashCode=2",
             ),
-            extraAgentArgs
-                .plus("text")
-                .plus("verbose"),
+            extraAgentArgs + listOf(
+                "format=text",
+                "formatOption=verbose",
+            ),
             gradleCommands,
             checkRepresentation
         )

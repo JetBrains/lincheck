@@ -46,7 +46,7 @@ abstract class AbstractTraceIntegrationTest {
                         val options = task as JavaForkOptions
                         val jvmArgs = options.jvmArgs?.toMutableList() ?: mutableListOf()
                         jvmArgs.addAll(listOf(${extraJvmArgs.joinToString(", ") { "\"$it\"" }}))
-                        jvmArgs.add("-javaagent:${pathToFatJar.absolutePath.escape()}=$testClassName,$testMethodName,$pathToOutput${if (extraAgentArgs.isNotEmpty()) ",${extraAgentArgs.joinToString(",")}" else ""}")
+                        jvmArgs.add("-javaagent:${pathToFatJar.absolutePath.escape()}=class=$testClassName,method=$testMethodName,output=$pathToOutput${if (extraAgentArgs.isNotEmpty()) ",${extraAgentArgs.joinToString(",")}" else ""}")
                         options.jvmArgs = jvmArgs
                     }
                 }
