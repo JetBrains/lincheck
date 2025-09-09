@@ -15,6 +15,10 @@ sourceSets {
         java.srcDirs("src/main")
     }
 
+    test {
+        java.srcDirs("src/test")
+    }
+
     dependencies {
         // main
         val kotlinVersion: String by project
@@ -31,8 +35,14 @@ sourceSets {
         api("org.ow2.asm:asm-util:${asmVersion}")
         api("net.bytebuddy:byte-buddy:${byteBuddyVersion}")
         api("net.bytebuddy:byte-buddy-agent:${byteBuddyVersion}")
+
+        val junitVersion: String by project
+
+        testImplementation("junit:junit:$junitVersion")
     }
 }
+
+setupTestsJDK(project)
 
 tasks {
     named<JavaCompile>("compileTestJava") {

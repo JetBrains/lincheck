@@ -10,6 +10,8 @@
 
 import org.gradle.api.Project
 import org.gradle.api.tasks.testing.Test
+import org.gradle.jvm.toolchain.JavaLanguageVersion
+import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.kotlin.dsl.provideDelegate
 
 fun Test.configureJvmTestCommon(project: Project) {
@@ -55,4 +57,20 @@ fun Test.configureJvmTestCommon(project: Project) {
     project.findProperty("lincheck.logLevel")?.let { extraArgs.add("-Dlincheck.logLevel=${it as String}") }
 
     jvmArgs(extraArgs)
+}
+
+fun setupTestsJDK(project: Project) {
+    project.tasks.withType(Test::class.java) {
+        val javaToolchains: JavaToolchainService = project.extensions.getByType(JavaToolchainService::class.java)
+        javaLauncher.set(
+            javaToolchains.launcherFor {
+                val jdkToolchainVersion: String by project
+                val testInTraceDebuggerMode: String by project
+                val jdkVersion = jdkToolchainVersion.toInt()
+                // https://github.com/JetBrains/lincheck/issues/500
+                val jreVersion = if (testInTraceDebuggerMode.toBoolean() && jdkVersion == 8) 17 else jdkVersion
+                languageVersion.set(JavaLanguageVersion.of(jreVersion))
+            }
+        )
+    }
 }

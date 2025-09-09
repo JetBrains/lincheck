@@ -30,8 +30,8 @@ internal object TraceRecorderInjections {
             className = TraceAgentParameters.classUnderTraceDebugging,
             methodName = TraceAgentParameters.methodUnderTraceDebugging,
             traceFileName = TraceAgentParameters.traceDumpFilePath,
-            outputMode = TraceAgentParameters.getRestOfArgs().getOrNull(0),
-            outputOption = TraceAgentParameters.getRestOfArgs().getOrNull(1)
+            format = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FORMAT),
+            formatOption = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FOPTION)
         )
     }
 

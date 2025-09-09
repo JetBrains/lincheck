@@ -26,6 +26,12 @@ import java.lang.instrument.Instrumentation
  * accordingly.
  */
 internal object TraceRecorderAgent {
+    const val ARGUMENT_FORMAT = "format"
+    const val ARGUMENT_FOPTION = "formatOption"
+
+    // Allowed additional arguments
+    private val ADDITIONAL_ARGS = listOf(ARGUMENT_FORMAT, ARGUMENT_FOPTION)
+
     @JvmStatic
     fun premain(agentArgs: String?, inst: Instrumentation) {
         /*
@@ -48,7 +54,7 @@ internal object TraceRecorderAgent {
             "`lincheck.traceRecorderMode`. Only one of them expected to be `true`. " +
             "Rerun with `-Dlincheck.traceDebuggerMode=true` or `-Dlincheck.traceRecorderMode=true` but not both."
         }
-        TraceAgentParameters.parseArgs(agentArgs)
+        TraceAgentParameters.parseArgs(agentArgs, ADDITIONAL_ARGS)
         LincheckJavaAgent.instrumentation = inst
         isTraceJavaAgentAttached = true
         isInstrumentationInitialized = true
