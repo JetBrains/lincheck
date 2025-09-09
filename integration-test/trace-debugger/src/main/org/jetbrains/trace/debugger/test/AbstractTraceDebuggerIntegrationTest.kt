@@ -22,6 +22,7 @@ abstract class AbstractTraceDebuggerIntegrationTest : AbstractTraceIntegrationTe
         extraAgentArgs: List<String>,
         gradleCommands: List<String>,
         checkRepresentation: Boolean,
+        testNameSuffix: String?,
     ) {
         runGradleTestImpl(
             testClassName,
