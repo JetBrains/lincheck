@@ -61,7 +61,7 @@ object TraceAgentParameters {
             methodUnderTraceDebugging = kvArguments[ARGUMENT_METHOD] ?: error("Method name argument \"$ARGUMENT_METHOD\" was not provided")
             traceDumpFilePath = kvArguments[ARGUMENT_OUTPUT]
 
-            val allowedKeys = mutableSetOf(ARGUMENT_CLASS, ARGUMENT_OUTPUT, ARGUMENT_OUTPUT)
+            val allowedKeys = mutableSetOf(ARGUMENT_CLASS, ARGUMENT_METHOD, ARGUMENT_OUTPUT)
             allowedKeys.addAll(validAdditionalArgs)
 
             val unsupportedKeys = kvArguments.keys - allowedKeys
