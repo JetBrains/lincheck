@@ -11,12 +11,16 @@
 package org.jetbrains.lincheck.trace
 
 import org.jetbrains.lincheck.descriptors.*
+import org.jetbrains.lincheck.util.Logger
+import java.io.BufferedReader
 import java.io.DataInput
 import java.io.DataOutput
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
+import java.io.InputStreamReader
 import java.io.OutputStream
+import kotlin.math.exp
 
 /**
  * This file contains data structures and extensions for DataInput and DataOutput to save "primitive" trace data.
@@ -40,6 +44,192 @@ internal const val PACKED_META_ITEM_NAME = "info.txt"
 
 internal const val BLOCK_HEADER_SIZE: Int = Byte.SIZE_BYTES + Int.SIZE_BYTES
 internal const val BLOCK_FOOTER_SIZE: Int = Byte.SIZE_BYTES
+
+/**
+ * Information about conditions in which trace was collected.
+ *
+ *  - [className] — Name of traced class.
+ *  - [methodName] — Name of traced method.
+ *  - [startTime] — start time of trace collection, as returned by [System.currentTimeMillis]
+ *  - [endTime] — end time of trace collection, as returned by [System.currentTimeMillis]
+ *  - [systemProperties] — state of system properties ([System.getProperties]) at the beginning of trace collection.
+ *  - [environment] — state of system environment ([System.getenv]) at the beginning of trace collection.
+ */
+@ConsistentCopyVisibility
+data class TraceMetaInfo private constructor(
+    val className: String,
+    val methodName: String,
+    val startTime: Long
+) {
+    var endTime: Long = 1
+        private set
+
+    private val props: MutableMap<String, String> = mutableMapOf()
+    private val env: MutableMap<String, String> = mutableMapOf()
+
+    val systemProperties: Map<String, String> get() = props
+    val environment: Map<String, String> get() = env
+
+    fun traceEnded() {
+        if (endTime <= 0) {
+            endTime = System.currentTimeMillis()
+        }
+    }
+
+    /**
+     * Prints this meta info in human-readable way to given [Appendable].
+     */
+    fun print(printer: Appendable): Unit = with(printer) {
+        appendLine("$CLASS_HEADER$className")
+        appendLine("$METHOD_HEADER$methodName")
+        appendLine("$START_TIME_HEADER$startTime")
+        appendLine("$END_TIME_HEADER$endTime")
+        appendMap(PROPERTIES_HEADER, props)
+        appendLine()
+        appendMap(ENV_HEADER, env)
+    }
+
+    companion object {
+        private const val CLASS_HEADER: String = "Class: "
+        private const val METHOD_HEADER: String = "Method: "
+        private const val START_TIME_HEADER: String = "Start time: "
+        private const val END_TIME_HEADER: String = "End time: "
+        private const val PROPERTIES_HEADER: String = "Properties:"
+        private const val ENV_HEADER: String = "Environment:"
+
+        /**
+         * Creates new object: sets [className] and [methodName] to passed parameters,
+         * [startTime] to current time and fetch current system properties and environment.
+         */
+        fun start(className: String, methodName: String): TraceMetaInfo {
+            val meta = TraceMetaInfo(className, methodName, System.currentTimeMillis())
+            with (meta) {
+                System.getProperties().forEach {
+                    props[it.key as String] = it.value as String
+                }
+                env.putAll(System.getenv())
+            }
+            return meta
+        }
+
+        /**
+         * Read meta info in same format as [print] writes.
+         */
+        fun read(input: InputStream): TraceMetaInfo? {
+            val reader = BufferedReader(InputStreamReader(input))
+
+            val className = reader.readLine(CLASS_HEADER) ?: return null
+            val methodName = reader.readLine(METHOD_HEADER) ?: return null
+            val startTime = reader.readLong(START_TIME_HEADER) ?: return null
+            val endTime = reader.readLong(END_TIME_HEADER) ?: return null
+
+            val meta = TraceMetaInfo(className, methodName, startTime)
+            meta.endTime = endTime
+
+            if (!reader.readMap(PROPERTIES_HEADER, meta.props)) return null
+            if (!reader.readMap(ENV_HEADER, meta.env)) return null
+
+            return meta
+        }
+
+        private fun BufferedReader.readLine(prefix: String): String? {
+            val line = readLine() ?: return readError("No \"$prefix\" line")
+            if (!line.startsWith(prefix)) return readError("Wrong \"$prefix\" line")
+            return line.substring(prefix.length)
+        }
+
+        private fun BufferedReader.readLong(prefix: String): Long? {
+            val str = readLine(prefix) ?: return null
+            val long = str.toLongOrNull() ?: return readError("Invalid format for \"$prefix\": not a number")
+            return long
+        }
+
+        private fun BufferedReader.checkHeader(prefix: String): Boolean {
+            val str = readLine(prefix) ?: return false
+            if (str.isEmpty()) return true
+            readError<Any>("Section header \"$prefix\" contains unexpected characters")
+            return false
+        }
+
+        private fun BufferedReader.readMap(header: String, map: MutableMap<String, String>): Boolean {
+            if (!checkHeader(header)) return false
+            while (true) {
+                val line = readLine() ?: break // EOF is Ok
+                if (line.isEmpty()) break // Empty line is end-of-map, Ok
+                if (line[0] != ' ') {
+                    readError<Any>("Wrong line in \"$header\" section: must start from space")
+                    return false
+                }
+                val p = line.parseKV()
+                if (p == null) {
+                    readError<Any>("Wrong line in \"$header\" section: doesn't contains '='")
+                    return false
+                }
+                map[p.first] = p.second
+            }
+            return true
+        }
+
+        private fun String.parseKV(): Pair<String, String>? {
+            val (idx, key) = unescape(1, '=', false)
+            if (idx == length) return null
+            val (_, value) = unescape(idx + 1)
+            return key to value
+        }
+
+        private fun String.unescape(from: Int, upTo: Char? = null, special: Boolean = true): Pair<Int, String> {
+            var escape = false
+            var idx = from
+            val sb = StringBuilder()
+            while (idx < length) {
+                val c = this[idx]
+                if (escape) {
+                    if (special) {
+                        when (c) {
+                            'r' -> sb.append('\r')
+                            'n' -> sb.append('\n')
+                            't' -> sb.append('\t')
+                            else -> sb.append(c)
+                        }
+                    } else {
+                        sb.append(c)
+                    }
+                    escape = false
+                } else if (c == '\\') {
+                    escape = true
+                } else if (c == upTo) {
+                    break
+                } else {
+                    sb.append(c)
+                }
+                idx++
+            }
+            return idx to sb.toString()
+        }
+
+        private fun <T> readError(msg: String): T? {
+            Logger.error { "Cannot read trace meta info: $msg" }
+            return null
+        }
+
+        private fun Appendable.appendMap(header: String, map: Map<String, String>) {
+            appendLine(header)
+            map.keys.sorted().forEach {
+                appendLine(" ${it.escapeKey()}=${map[it]?.escapeValue()}")
+            }
+        }
+
+        private fun String.escapeKey(): String =
+            replace("\\", "\\\\")
+            .replace("=", "\\=")
+
+        private fun String.escapeValue(): String =
+            replace("\\", "\\\\")
+            .replace("\r", "\\r")
+            .replace("\n", "\\n")
+            .replace("\t", "\\t")
+    }
+}
 
 internal enum class ObjectKind {
     CLASS_DESCRIPTOR,

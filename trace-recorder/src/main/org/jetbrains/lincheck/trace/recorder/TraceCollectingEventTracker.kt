@@ -152,6 +152,8 @@ class TraceCollectingEventTracker(
     // We don't want to re-create this object each time we need it
     private val analysisProfile: AnalysisProfile = AnalysisProfile(false)
 
+    private val metaInfo = TraceMetaInfo.start(className, methodName)
+
     // [ThreadDescriptor.eventTrackerData] is weak ref, so store it here too, but use
     // only at the end
     private val threads = ConcurrentHashMap<Thread, ThreadData>()
@@ -630,13 +632,14 @@ class TraceCollectingEventTracker(
         threads.clear()
 
         strategy.traceEnded()
+        metaInfo.traceEnded()
 
         System.err.println("Trace collected in ${System.currentTimeMillis() - startTime} ms")
         startTime = System.currentTimeMillis()
 
         if (mode == TraceCollectorMode.BINARY_STREAM) {
             if (combine) {
-                packRecordedTrace(traceDumpPath!!, className, methodName)
+                packRecordedTrace(traceDumpPath!!, metaInfo)
             }
             return
         }
@@ -667,7 +670,7 @@ class TraceCollectingEventTracker(
                 TraceCollectorMode.BINARY_DUMP -> {
                     saveRecorderTrace(traceDumpPath!!, TRACE_CONTEXT, roots)
                     if (combine) {
-                        packRecordedTrace(traceDumpPath, className, methodName)
+                        packRecordedTrace(traceDumpPath, metaInfo)
                     }
                 }
                 TraceCollectorMode.TEXT -> printPostProcessedTrace(traceDumpPath, TRACE_CONTEXT, roots, false)

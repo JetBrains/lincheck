@@ -25,7 +25,7 @@ fun main(args: Array<String>) {
 }
 
 private fun eagerLoadAndPrintTrace(fileName: String) {
-    val trace = loadRecordedTrace(FileInputStream(fileName))
+    val trace = loadRecordedTrace(fileName)
     printRecorderTrace(System.out, trace.context, trace.roots, true)
 }
 

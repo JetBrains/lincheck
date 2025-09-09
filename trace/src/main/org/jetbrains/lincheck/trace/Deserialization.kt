@@ -28,7 +28,6 @@ import org.jetbrains.lincheck.descriptors.LocalVariableAccessLocation
 import org.jetbrains.lincheck.descriptors.ObjectFieldAccessLocation
 import org.jetbrains.lincheck.descriptors.StaticFieldAccessLocation
 import java.io.File
-import java.io.FileInputStream
 import java.util.zip.ZipInputStream
 
 private const val INPUT_BUFFER_SIZE: Int = 16 * 1024 * 1024
@@ -238,6 +237,8 @@ class LazyTraceReader private constructor(
         var indexStream: DataInputStream? = null
             private set
 
+        var metaInfo: TraceMetaInfo? = null
+
         init {
             val input = openExistingFile(baseFileName)?.buffered(INPUT_BUFFER_SIZE) ?:
                 throw IllegalArgumentException("Trace file \"$baseFileName\" doesn't exist")
@@ -245,8 +246,12 @@ class LazyTraceReader private constructor(
             zip = ZipInputStream(input)
             try {
                 run {
-                    val dataEntry = zip?.nextEntry ?: return@run // null -> not a ZIP
-                    if (dataEntry.name != PACKED_DATA_ITEM_NAME) throw IllegalArgumentException("File \"$baseFileName\" is ZIP but not packed trace")
+                    val metaInfoEntry = zip?.nextEntry ?: return@run // null -> not a ZIP
+                    if (metaInfoEntry.name != PACKED_META_ITEM_NAME) throwZipError(baseFileName)
+                    metaInfo = TraceMetaInfo.read(zip!!)
+
+                    val dataEntry = zip?.nextEntry ?: throwZipError(baseFileName)
+                    if (dataEntry.name != PACKED_DATA_ITEM_NAME) throwZipError(baseFileName)
                     val tmpDataFile = File.createTempFile("unpacked-trace-data", ".bin")
                     tmpDataFile.deleteOnExit()
 
@@ -261,15 +266,15 @@ class LazyTraceReader private constructor(
                         return@run
                     }
 
-                    val indexEntry = zip?.nextEntry
-                        ?: throw IllegalArgumentException("File \"$baseFileName\" is ZIP but not packed trace")
-                    if (indexEntry.name != PACKED_INDEX_ITEM_NAME) throw IllegalArgumentException("File \"$baseFileName\" is ZIP but not packed trace")
+                    val indexEntry = zip?.nextEntry ?: throwZipError(baseFileName)
+                    if (indexEntry.name != PACKED_INDEX_ITEM_NAME) throwZipError(baseFileName)
+                    // zip as stream is positioned at index start now!
+                    indexStream = wrapStream(zip)
                 }
             } catch (e: Throwable) {
                 zip?.close()
                 throw e
             }
-            indexStream = wrapStream(zip)
             if (indexStream == null) {
                 indexStream = wrapStream(openExistingFile(baseFileName + INDEX_FILENAME_SUFFIX))
             }
@@ -303,6 +308,8 @@ class LazyTraceReader private constructor(
 
     // TODO: Create new
     val context: TraceContext = TRACE_CONTEXT
+
+    val metaInfo: TraceMetaInfo? get() = input.metaInfo
 
     private val dataStream: SeekableInputStream
     private val data: SeekableDataInput
@@ -678,35 +685,76 @@ class LazyTraceReader private constructor(
     }
 }
 
+/**
+ * Class which describes fully loaded trace.
+ */
 data class TraceWithContext(
+    /**
+     * Trace context with all descriptors belonging to given trace
+     */
     val context: TraceContext,
+    /**
+     * Trace meta info. Can be `null` if trace is loaded from non-packed (single) data file.
+     */
+    val metaInfo: TraceMetaInfo?,
+    /**
+     * List of all root calls for all traced threads.
+     */
     val roots: List<TRTracePoint>
 )
 
+/**
+ * Load trace from file. File can contain unpacked binary trace (without index)
+ * or packed trace with metainfo, data and index inside.
+ *
+ * If trace was loaded from packed file, [TraceWithContext.metaInfo] must be filled in,
+ * it will be `null` otherwise.
+ */
 fun loadRecordedTrace(traceFileName: String): TraceWithContext {
-    // Maybe zip?
     val input = openExistingFile(traceFileName)?.buffered(INPUT_BUFFER_SIZE)
     require(input != null) { "Cannot open trace \"$traceFileName\"" }
-    val zip = ZipInputStream(input)
-    val entry = zip.nextEntry
-    if (entry != null) {
-        input.use {
-            zip.use {
-                require(entry.name == PACKED_DATA_ITEM_NAME) { "Trace file \"$traceFileName\" is ZIP but not packed trace" }
-                return loadRecordedTrace(zip)
-            }
+
+    input.use {
+        // Try as ZIP
+        val (stream, meta) = run {
+            val zip = ZipInputStream(input)
+            val metaEntry = zip.nextEntry ?: return@run null to null // Not ZIP
+            if (metaEntry.name != PACKED_META_ITEM_NAME) throwZipError(traceFileName)
+            // Try to load metainfo
+            val meta = TraceMetaInfo.read(zip)
+
+            // Check next entry
+            val dataEntry = zip.nextEntry ?: throwZipError(traceFileName)
+            if (dataEntry.name != PACKED_DATA_ITEM_NAME) throwZipError(traceFileName)
+
+            zip to meta
         }
-    } else {
-        input.close()
-        val rawInput = openExistingFile(traceFileName)?.buffered(INPUT_BUFFER_SIZE)
-        require(rawInput != null) { "Cannot open trace \"$traceFileName\"" }
-        rawInput.use {
-            return loadRecordedTrace(it)
+
+        if (stream != null) {
+            stream.use {
+                return loadRecordedTrace(it, meta)
+            }
+        } else {
+            // Not ZIP at all, raw trace
+            input.close()
+            val rawInput = openExistingFile(traceFileName)?.buffered(INPUT_BUFFER_SIZE)
+            require(rawInput != null) { "Cannot open trace \"$traceFileName\"" }
+            rawInput.use {
+                return loadRecordedTrace(it, null)
+            }
         }
     }
 }
 
-fun loadRecordedTrace(inp: InputStream): TraceWithContext {
+/**
+ * Load unpacked trace. [inp] must be stream pointing to binary trace format, not
+ * packed in any way.
+
+ * [TraceWithContext.metaInfo] will be `null`.
+ */
+fun loadRecordedTrace(inp: InputStream): TraceWithContext = loadRecordedTrace(inp, null)
+
+private fun loadRecordedTrace(inp: InputStream, meta: TraceMetaInfo?): TraceWithContext {
     DataInputStream(inp.buffered(INPUT_BUFFER_SIZE)).use { input ->
         checkDataHeader(input)
 
@@ -738,7 +786,7 @@ fun loadRecordedTrace(inp: InputStream): TraceWithContext {
             }
         }
 
-        return TraceWithContext(context, roots.values.map { it.first() })
+        return TraceWithContext(context, meta, roots.values.map { it.first() })
     }
 }
 
@@ -982,4 +1030,9 @@ private fun checkDataHeader(input: DataInput) {
     check(version == TRACE_VERSION) {
         "Wrong version $version (expected $TRACE_VERSION)"
     }
+}
+
+@Suppress("NOTHING_TO_INLINE")
+private inline fun throwZipError(fileName: String): Nothing {
+    throw IllegalArgumentException("File \"$fileName\" is a ZIP archive but is not a packed trace")
 }

@@ -906,7 +906,7 @@ fun saveRecorderTrace(data: OutputStream, index: OutputStream, context: TraceCon
     }
 }
 
-fun packRecordedTrace(baseFileName: String, className:String, methodName: String, deleteSources: Boolean = true) {
+fun packRecordedTrace(baseFileName: String, metaInfo: TraceMetaInfo, deleteSources: Boolean = true) {
     val dataName = baseFileName
     val indexName = baseFileName + INDEX_FILENAME_SUFFIX
     val outputName = baseFileName + PACK_FILENAME_SUFFIX
@@ -918,6 +918,13 @@ fun packRecordedTrace(baseFileName: String, className:String, methodName: String
             // Don't compress for now, but STORED requires pre-compute CRC32, and we don't want to do it.
             zip.setMethod(ZipOutputStream.DEFLATED);
             zip.setLevel(0);
+
+            // Store metadata first
+            zip.putNextEntry(ZipEntry(PACKED_META_ITEM_NAME))
+            val printer = PrintWriter(zip)
+            metaInfo.print(printer)
+            printer.flush() // Don't close, it will close ZIP stream too!
+            zip.closeEntry()
 
             // Store data
             zip.putNextEntry(ZipEntry(PACKED_DATA_ITEM_NAME))
@@ -934,11 +941,6 @@ fun packRecordedTrace(baseFileName: String, className:String, methodName: String
                 data.copyTo(zip)
             }
             zip.closeEntry()
-
-            // Store meta data
-            zip.putNextEntry(ZipEntry(PACKED_META_ITEM_NAME))
-            printTraceInfo(zip, className, methodName)
-            zip.closeEntry()
         }
         if (deleteSources) {
             Files.deleteIfExists(Path(dataName))
@@ -947,23 +949,6 @@ fun packRecordedTrace(baseFileName: String, className:String, methodName: String
     } catch (e: Throwable) {
         Files.deleteIfExists(Path(outputName))
         throw e
-    }
-}
-
-private fun printTraceInfo(out: OutputStream, className: String, methodName: String) {
-    with (PrintWriter(out)) {
-        println("Class: $className")
-        println("Method: $methodName")
-        println("System properties:")
-        System.getProperties().keys.sortedWith { a, b -> (a as String).compareTo(b as String)  }.forEach {
-            println(" $it=${System.getProperty(it as String)}")
-        }
-        println("Environment:")
-        System.getenv().keys.sortedWith { a, b -> (a as String).compareTo(b as String)  }.forEach {
-            println(" $it=${System.getenv(it as String)}")
-        }
-        // Don't close zip stream
-        flush()
     }
 }
 
