@@ -95,14 +95,14 @@ internal fun TransformationConfiguration.shouldApplyVisitor(visitorClass: Class<
     }
 }
 
-val InstrumentationMode.transformationProfile: TransformationProfile get() = when (this) {
-    STRESS -> StressTransformationProfile
-    TRACE_RECORDING -> TraceRecorderTransformationProfile
-    TRACE_DEBUGGING -> TraceDebuggerTransformationProfile
-    MODEL_CHECKING -> ModelCheckingTransformationProfile
+fun createTransformationProfile(mode: InstrumentationMode): TransformationProfile = when (mode) {
+    STRESS -> StressDefaultTransformationProfile
+    TRACE_RECORDING -> TraceRecorderDefaultTransformationProfile
+    TRACE_DEBUGGING -> TraceDebuggerDefaultTransformationProfile
+    MODEL_CHECKING -> ModelCheckingDefaultTransformationProfile
 }
 
-object StressTransformationProfile : TransformationProfile {
+object StressDefaultTransformationProfile : TransformationProfile {
     override fun getMethodConfiguration(className: String, methodName: String, descriptor: String): TransformationConfiguration {
         val config = TransformationConfiguration()
 
@@ -117,7 +117,7 @@ object StressTransformationProfile : TransformationProfile {
     }
 }
 
-object TraceRecorderTransformationProfile : TransformationProfile {
+object TraceRecorderDefaultTransformationProfile : TransformationProfile {
     override fun getMethodConfiguration(className: String, methodName: String, descriptor: String): TransformationConfiguration {
         val config = TransformationConfiguration()
 
@@ -157,7 +157,7 @@ object TraceRecorderTransformationProfile : TransformationProfile {
     }
 }
 
-object TraceDebuggerTransformationProfile : TransformationProfile {
+object TraceDebuggerDefaultTransformationProfile : TransformationProfile {
     override fun getMethodConfiguration(className: String, methodName: String, descriptor: String): TransformationConfiguration {
         val config = TransformationConfiguration()
 
@@ -213,7 +213,7 @@ object TraceDebuggerTransformationProfile : TransformationProfile {
     }
 }
 
-object ModelCheckingTransformationProfile : TransformationProfile {
+object ModelCheckingDefaultTransformationProfile : TransformationProfile {
     override fun getMethodConfiguration(className: String, methodName: String, descriptor: String): TransformationConfiguration {
         val config = TransformationConfiguration()
 

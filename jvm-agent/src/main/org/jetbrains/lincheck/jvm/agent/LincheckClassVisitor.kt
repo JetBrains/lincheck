@@ -93,7 +93,7 @@ internal class LincheckClassVisitor(
         val adapter = GeneratorAdapter(mv, access, methodName, desc)
         mv = adapter
 
-        val profile = instrumentationMode.transformationProfile
+        val profile = createTransformationProfile(instrumentationMode)
         val chain = TransformerChain(
             config = profile.getMethodConfiguration(className.toCanonicalClassName(), methodName, desc),
             adapter = adapter,
