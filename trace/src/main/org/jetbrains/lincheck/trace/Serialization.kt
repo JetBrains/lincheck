@@ -906,7 +906,7 @@ fun saveRecorderTrace(data: OutputStream, index: OutputStream, context: TraceCon
     }
 }
 
-fun packRecordedTrace(baseFileName: String, deleteSources: Boolean = true) {
+fun packRecordedTrace(baseFileName: String, className:String, methodName: String, deleteSources: Boolean = true) {
     val dataName = baseFileName
     val indexName = baseFileName + INDEX_FILENAME_SUFFIX
     val outputName = baseFileName + PACK_FILENAME_SUFFIX
@@ -934,6 +934,11 @@ fun packRecordedTrace(baseFileName: String, deleteSources: Boolean = true) {
                 data.copyTo(zip)
             }
             zip.closeEntry()
+
+            // Store meta data
+            zip.putNextEntry(ZipEntry(PACKED_META_ITEM_NAME))
+            printTraceInfo(zip, className, methodName)
+            zip.closeEntry()
         }
         if (deleteSources) {
             Files.deleteIfExists(Path(dataName))
@@ -942,6 +947,23 @@ fun packRecordedTrace(baseFileName: String, deleteSources: Boolean = true) {
     } catch (e: Throwable) {
         Files.deleteIfExists(Path(outputName))
         throw e
+    }
+}
+
+private fun printTraceInfo(out: OutputStream, className: String, methodName: String) {
+    with (PrintWriter(out)) {
+        println("Class: $className")
+        println("Method: $methodName")
+        println("System properties:")
+        System.getProperties().keys.sortedWith { a, b -> (a as String).compareTo(b as String)  }.forEach {
+            println(" $it=${System.getProperty(it as String)}")
+        }
+        println("Environment:")
+        System.getenv().keys.sortedWith { a, b -> (a as String).compareTo(b as String)  }.forEach {
+            println(" $it=${System.getenv(it as String)}")
+        }
+        // Don't close zip stream
+        flush()
     }
 }
 

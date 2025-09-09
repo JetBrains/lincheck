@@ -36,6 +36,7 @@ internal const val PACK_FILENAME_SUFFIX = ".packedtrace"
 
 internal const val PACKED_DATA_ITEM_NAME = "trace.data"
 internal const val PACKED_INDEX_ITEM_NAME = "trace$INDEX_FILENAME_SUFFIX"
+internal const val PACKED_META_ITEM_NAME = "info.txt"
 
 internal const val BLOCK_HEADER_SIZE: Int = Byte.SIZE_BYTES + Int.SIZE_BYTES
 internal const val BLOCK_FOOTER_SIZE: Int = Byte.SIZE_BYTES

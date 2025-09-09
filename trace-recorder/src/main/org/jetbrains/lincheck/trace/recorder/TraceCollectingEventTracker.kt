@@ -636,7 +636,7 @@ class TraceCollectingEventTracker(
 
         if (mode == TraceCollectorMode.BINARY_STREAM) {
             if (combine) {
-                packRecordedTrace(traceDumpPath!!)
+                packRecordedTrace(traceDumpPath!!, className, methodName)
             }
             return
         }
@@ -667,7 +667,7 @@ class TraceCollectingEventTracker(
                 TraceCollectorMode.BINARY_DUMP -> {
                     saveRecorderTrace(traceDumpPath!!, TRACE_CONTEXT, roots)
                     if (combine) {
-                        packRecordedTrace(traceDumpPath)
+                        packRecordedTrace(traceDumpPath, className, methodName)
                     }
                 }
                 TraceCollectorMode.TEXT -> printPostProcessedTrace(traceDumpPath, TRACE_CONTEXT, roots, false)
