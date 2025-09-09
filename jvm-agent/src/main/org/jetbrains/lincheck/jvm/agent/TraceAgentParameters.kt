@@ -14,6 +14,63 @@ import org.jetbrains.annotations.TestOnly
 import org.jetbrains.lincheck.util.Logger
 import java.lang.reflect.Method
 
+/**
+ * Parses and stores arguments passed to Lincheck JVM javaagents (trace-recorder and trace-debugger).
+ *
+ * Arguments are provided as a comma-separated string of key=value pairs.
+ * Keys must be valid Java identifiers (letters/digits/underscore, not starting with a digit).
+ * Values may use quotation or escape characters, see below.
+ *
+ * Example:
+ * - java -javaagent:path/to/agent.jar=class=org.example.MyTest,method=run,output="/tmp/trace.bin" -jar yourApp.jar
+ *
+ * Supported arguments:
+ * - class — fully qualified class name to run/transform (required).
+ *       Example: `class=org.example.MyTest`
+ *
+ * - method (required) — name of the public method in that class (required).
+ *       Example: `method=run`
+ *
+ * - output — path to a file for trace dump, if supported by the agent (optional)
+ *       Example: `output="/tmp/trace.bin"`
+ *
+ * - include — semicolon-separated list of include patterns (optional)
+ *       Example: `include="org.example.*;com.acme.util.*"`
+ *
+ * - exclude — semicolon-separated list of exclude patterns (optional)
+ *       Example: `exclude="org.example.internal.*;**.generated.*"`
+ *
+ * Quotation rules:
+ * - Unquoted values may contain any character; use backslash to escape comma (,) and backslash (\\).
+ * - Values can be enclosed in double quotes ("...") to avoid escaping.
+ *   Inside quotes only the double quote character must be escaped with a backslash (\").
+ *   Backslashes and all other characters go as-is, which is handy for Windows paths.
+ *   Examples:
+ *   - `output="C:\\Users\\me\\Temp\\trace.bin"`
+ *   - `output="/tmp/some \"quoted\" name.bin"`
+ *
+ * Old legacy positional format (deprecated, still supported for backward compatibility):
+ *   1. class — fully qualified name of the class under test (required).
+ *   2. method — public method name inside that class to run (required).
+ *   3. output — path to a file where the trace will be written (optional).
+ *   4+. agent-specific extra arguments in the order provided by a particular agent.
+ * Example: `-javaagent:path/to/agent.jar=org.example.MyTest,run,/tmp/trace.bin`.
+ *
+ *
+ * Notes:
+ *
+ * - Patterns (include/exclude): value is a single string with items separated by ';'.
+ *   Each item is trimmed; empty items are ignored; duplicates are removed.
+ *   Semicolons inside a single pattern are not supported — split into separate items instead.
+ *
+ * - Unknown keys are accepted but warned about in logs.
+ *
+ * - The parser first tries `key=value` style.
+ *   On error, it falls back to positional style and emits a warning suggesting to migrate.
+ *
+ * - Individual agents pass the list of additional supported keys via `validAdditionalArgs`;
+ *   unknown extra keys are warned in logs, but parsing proceeds.
+ */
 object TraceAgentParameters {
     const val ARGUMENT_CLASS = "class"
     const val ARGUMENT_METHOD = "method"
@@ -44,7 +101,7 @@ object TraceAgentParameters {
         // Store for metainformation
         rawArgs = args
 
-        // Try to parse new-style
+        // Try to parse key=value format
         val kvArguments = parseKVArgs(args)
         if (kvArguments == null) {
             Logger.warn { "Looks like old-style arguments found, consider migrate to key-value arguments" }
