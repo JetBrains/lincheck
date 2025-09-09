@@ -62,6 +62,10 @@ class TransformationConfiguration(
             trackSynchronizedBlocks = value
             trackParkingOperations = value
         }
+
+    companion object {
+        val UNTRACKED = TransformationConfiguration()
+    }
 }
 
 internal fun TransformationConfiguration.shouldApplyVisitor(visitorClass: Class<*>): Boolean {
@@ -113,12 +117,12 @@ class FilteredTransformationProfile(
     override fun getMethodConfiguration(className: String, methodName: String, descriptor: String): TransformationConfiguration {
         // exclude has a higher priority
         if (excludeRegexes.any { it.matches(className) }) {
-            return TransformationConfiguration()
+            return TransformationConfiguration.UNTRACKED
         }
 
         // if the include list is specified, instrument only included classes
         if (includeRegexes.isNotEmpty() && !includeRegexes.any { it.matches(className) }) {
-            return TransformationConfiguration()
+            return TransformationConfiguration.UNTRACKED
         }
 
         // otherwise, delegate decision to the base profile
