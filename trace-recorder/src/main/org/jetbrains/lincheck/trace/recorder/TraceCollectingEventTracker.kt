@@ -54,14 +54,6 @@ private class ThreadData(
 
     fun getStack(): List<StackFrame> = stack
 
-    fun afterLocalRead(variableName: String, value: Any?) {
-        stack.last().shadow.setLocalVariable(variableName, value)
-    }
-
-    fun afterLocalWrite(variableName: String, value: Any?) {
-        stack.last().shadow.setLocalVariable(variableName, value)
-    }
-
     fun enterAnalysisSection(section: AnalysisSectionType) {
         val currentSection = analysisSectionStack.lastOrNull()
         if (currentSection != null && currentSection.isCallStackPropagating() && section < currentSection) {
@@ -413,9 +405,6 @@ class TraceCollectingEventTracker(
         )
         strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
 */
-
-        val variableDescriptor = TRACE_CONTEXT.getVariableDescriptor(variableId)
-        threadData.afterLocalRead(variableDescriptor.name, value)
     }
 
     override fun afterLocalWrite(codeLocation: Int, variableId: Int, value: Any?) = runInsideIgnoredSection {
@@ -428,9 +417,6 @@ class TraceCollectingEventTracker(
             value = TRObjectOrNull(value)
         )
         strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
-
-        val variableDescriptor = TRACE_CONTEXT.getVariableDescriptor(variableId)
-        threadData.afterLocalWrite(variableDescriptor.name, value)
     }
 
     override fun onMethodCall(
