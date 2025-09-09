@@ -99,17 +99,27 @@ internal fun TransformationConfiguration.shouldApplyVisitor(visitorClass: Class<
     }
 }
 
-fun createTransformationProfile(mode: InstrumentationMode): TransformationProfile = when (mode) {
-    STRESS -> StressDefaultTransformationProfile
-    TRACE_RECORDING -> TraceRecorderDefaultTransformationProfile
-    TRACE_DEBUGGING -> TraceDebuggerDefaultTransformationProfile
-    MODEL_CHECKING -> ModelCheckingDefaultTransformationProfile
+fun createTransformationProfile(
+    mode: InstrumentationMode,
+    includeClasses: List<String> = emptyList(),
+    excludeClasses: List<String> = emptyList(),
+): TransformationProfile {
+    val defaultProfile = when (mode) {
+        STRESS -> StressDefaultTransformationProfile
+        TRACE_RECORDING -> TraceRecorderDefaultTransformationProfile
+        TRACE_DEBUGGING -> TraceDebuggerDefaultTransformationProfile
+        MODEL_CHECKING -> ModelCheckingDefaultTransformationProfile
+    }
+    if (includeClasses.isNotEmpty() || excludeClasses.isNotEmpty()) {
+        return FilteredTransformationProfile(includeClasses, excludeClasses, defaultProfile)
+    }
+    return defaultProfile
 }
 
 class FilteredTransformationProfile(
+    val includeClasses: List<String>,
+    val excludeClasses: List<String>,
     val baseProfile: TransformationProfile,
-    private val includeClasses: List<String> = emptyList(),
-    private val excludeClasses: List<String> = emptyList(),
 ) : TransformationProfile {
     private val includeRegexes: List<Regex> = includeClasses.map { it.toGlobRegex() }
     private val excludeRegexes: List<Regex> = excludeClasses.map { it.toGlobRegex() }
