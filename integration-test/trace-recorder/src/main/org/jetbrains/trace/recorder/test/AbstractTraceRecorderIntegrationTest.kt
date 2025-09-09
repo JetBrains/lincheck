@@ -22,6 +22,7 @@ abstract class AbstractTraceRecorderIntegrationTest : AbstractTraceIntegrationTe
         extraAgentArgs: List<String>,
         gradleCommands: List<String>,
         checkRepresentation: Boolean,
+        testNameSuffix: String?,
     ) {
         runGradleTestImpl(
             testClassName,
@@ -36,7 +37,8 @@ abstract class AbstractTraceRecorderIntegrationTest : AbstractTraceIntegrationTe
                 "formatOption=verbose",
             ),
             gradleCommands,
-            checkRepresentation
+            checkRepresentation,
+            testNameSuffix,
         )
     }
 }

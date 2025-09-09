@@ -40,4 +40,32 @@ class KotlinImmutableCollectionsTraceRecorderIntegrationTest : AbstractTraceReco
             checkRepresentation = false
         )
     }
+
+    @Test
+    fun `tests_contract_list_ImmutableListTest empty with include filter`() {
+        runGradleTest(
+            testClassName = "tests.contract.list.ImmutableListTest",
+            testMethodName = "empty",
+            gradleCommands = listOf(
+                ":kotlinx-collections-immutable:cleanJvmTest",
+                ":kotlinx-collections-immutable:jvmTest",
+            ),
+            extraAgentArgs = listOf("include=tests.contract.list.ImmutableListTest"),
+            testNameSuffix = "with_include_filter",
+        )
+    }
+
+    @Test
+    fun `tests_contract_list_ImmutableListTest empty with exclude filter`() {
+        runGradleTest(
+            testClassName = "tests.contract.list.ImmutableListTest",
+            testMethodName = "empty",
+            gradleCommands = listOf(
+                ":kotlinx-collections-immutable:cleanJvmTest",
+                ":kotlinx-collections-immutable:jvmTest",
+            ),
+            extraAgentArgs = listOf("exclude=kotlinx.collections.immutable.*"),
+            testNameSuffix = "with_exclude_filter",
+        )
+    }
 }

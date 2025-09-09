@@ -54,9 +54,10 @@ abstract class AbstractTraceIntegrationTest {
         """.trimIndent()
     }
 
-    private fun getGoldenDataFileFor(testClassName: String, testMethodName: String): File {
+    private fun getGoldenDataFileFor(testClassName: String, testMethodName: String, testNameSuffix: String? = null): File {
         val projectName = File(projectPath).name
-        return File(Paths.get("src", "main", "resources", "integrationTestData", projectName, "${testClassName}_$testMethodName.txt").toString())
+        val fileName = "${testClassName}_$testMethodName${ testNameSuffix?.let { "_$it" }.orEmpty() }.txt"
+        return File(Paths.get("src", "main", "resources", "integrationTestData", projectName, fileName).toString())
     }
 
     private fun createInitScriptAsTempFile(content: String): File {
@@ -72,6 +73,7 @@ abstract class AbstractTraceIntegrationTest {
         extraAgentArgs: List<String> = emptyList(),
         gradleCommands: List<String>,
         checkRepresentation: Boolean = true,
+        testNameSuffix: String? = null,
     )
 
     fun runGradleTests(
@@ -108,6 +110,7 @@ abstract class AbstractTraceIntegrationTest {
         extraAgentArgs: List<String> = emptyList(),
         gradleCommands: List<String>,
         checkRepresentation: Boolean = true,
+        testNameSuffix: String? = null,
     ) {
         val tmpFile = File.createTempFile(testClassName + "_" + testMethodName, "")
 
@@ -127,7 +130,7 @@ abstract class AbstractTraceIntegrationTest {
 
         // TODO decide how to test: with gold data or run twice?
         if (checkRepresentation) { // otherwise we just want to make sure that tests do not fail
-            val expectedOutput = getGoldenDataFileFor(testClassName, testMethodName)
+            val expectedOutput = getGoldenDataFileFor(testClassName, testMethodName, testNameSuffix)
             if (expectedOutput.exists()) {
                 Assert.assertEquals(expectedOutput.readText(), tmpFile.readText())
             } else {

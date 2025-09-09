@@ -1,0 +1,21 @@
+# Thread 1
+ImmutableListTest.empty() at :0
+  ExtensionsKt.persistentListOf(): SmallPersistentVector@1 at ImmutableListTest.kt:20
+  ExtensionsKt.persistentListOf(): SmallPersistentVector@1 at ImmutableListTest.kt:21
+  AssertionsKt.assertEquals$default(SmallPersistentVector@1, SmallPersistentVector@1, null, 4, null) at ImmutableListTest.kt:22
+  CollectionsKt.emptyList(): EmptyList@1 at ImmutableListTest.kt:23
+  AssertionsKt.assertEquals$default(EmptyList@1, SmallPersistentVector@1, null, 4, null) at ImmutableListTest.kt:23
+  AssertionsKt.assertTrue$default(true, null, 2, null) at ImmutableListTest.kt:24
+  Reflection.getOrCreateKotlinClass(Class@1): KClassImpl@1 at ImmutableListTest.kt:26
+  Result.Companion ➜ Result.Companion@1 at ImmutableListTest.kt:26
+  empty1.iterator(): BufferIterator@1 at ImmutableListTest.kt:26
+  BufferIterator@1.next(): threw java.util.NoSuchElementException at ImmutableListTest.kt:26
+  Result.Companion ➜ Result.Companion@1 at ImmutableListTest.kt:26
+  ResultKt.createFailure(NoSuchElementException@1): Result.Failure@1 at ImmutableListTest.kt:26
+  Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ImmutableListTest.kt:26
+  AssertionsKt.checkResultIsFailure(KClassImpl@1, null, Result.Failure@1): NoSuchElementException@1 at ImmutableListTest.kt:26
+  CollectionsKt.emptyList(): EmptyList@1 at ImmutableListTest.kt:28
+  compareLists(EmptyList@1, SmallPersistentVector@1) at ImmutableListTest.kt:28
+    ComparisonDSLKt.compare(EmptyList@1, SmallPersistentVector@1, ImmutableListTest$$Lambda@1) at ImmutableListTest.kt:16
+      CollectionBehaviorsKt.listBehavior(CompareContext@1) at ImmutableListTest.kt:16
+      Unit.INSTANCE ➜ Unit at ImmutableListTest.kt:16
