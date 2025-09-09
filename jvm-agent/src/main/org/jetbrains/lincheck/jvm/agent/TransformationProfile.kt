@@ -102,6 +102,36 @@ fun createTransformationProfile(mode: InstrumentationMode): TransformationProfil
     MODEL_CHECKING -> ModelCheckingDefaultTransformationProfile
 }
 
+class FilteredTransformationProfile(
+    val baseProfile: TransformationProfile,
+    private val includeClasses: List<String> = emptyList(),
+    private val excludeClasses: List<String> = emptyList(),
+) : TransformationProfile {
+    private val includeRegexes: List<Regex> = includeClasses.map { it.toGlobRegex() }
+    private val excludeRegexes: List<Regex> = excludeClasses.map { it.toGlobRegex() }
+
+    override fun getMethodConfiguration(className: String, methodName: String, descriptor: String): TransformationConfiguration {
+        // exclude has a higher priority
+        if (excludeRegexes.any { it.matches(className) }) {
+            return TransformationConfiguration()
+        }
+
+        // if the include list is specified, instrument only included classes
+        if (includeRegexes.isNotEmpty() && !includeRegexes.any { it.matches(className) }) {
+            return TransformationConfiguration()
+        }
+
+        // otherwise, delegate decision to the base profile
+        return baseProfile.getMethodConfiguration(className, methodName, descriptor)
+    }
+
+    private fun String.toGlobRegex(): Regex {
+        // treat input as a fully qualified class name with '*' wildcards; escape regex meta except '*'
+        val escaped = Regex.escape(this).replace("\\*", ".*")
+        return ("^$escaped$").toRegex()
+    }
+}
+
 object StressDefaultTransformationProfile : TransformationProfile {
     override fun getMethodConfiguration(className: String, methodName: String, descriptor: String): TransformationConfiguration {
         val config = TransformationConfiguration()
