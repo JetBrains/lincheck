@@ -179,23 +179,21 @@ internal abstract class MethodCallTransformerBase(
     }
 
     protected fun getOwnerName(desc: String, opcode: Int): AccessPath? {
-        return ownerNameAnalyzer?.stack?.let { stack ->
-            if (opcode == INVOKESTATIC) return@let null
-            val position = getArgumentTypes(desc).sumOf { it.size }
-            stack.getStackElementAt(position)
-        }
+        val stack = ownerNameAnalyzer?.stack ?: return null
+        if (opcode == INVOKESTATIC) return null
+        val position = getArgumentTypes(desc).sumOf { it.size }
+        return stack.getStackElementAt(position)
     }
 
     protected fun getArgumentNames(desc: String, opcode: Int): List<AccessPath?>? {
-        return ownerNameAnalyzer?.stack?.let { stack ->
-            var position = 0
-            val argumentTypes = getArgumentTypes(desc)
-            return argumentTypes.reversed().map { argType ->
-                val argPath = stack.getStackElementAt(position)
-                position += argType.size
-                argPath
-            }.reversed()
-        }
+        val stack = ownerNameAnalyzer?.stack ?: return null
+        var position = 0
+        val argumentTypes = getArgumentTypes(desc)
+        return argumentTypes.reversed().map { argType ->
+            val argPath = stack.getStackElementAt(position)
+            position += argType.size
+            argPath
+        }.reversed()
     }
 
     protected fun isIgnoredMethod(className: String) =
