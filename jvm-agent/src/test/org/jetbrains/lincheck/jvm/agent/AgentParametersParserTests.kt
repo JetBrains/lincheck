@@ -180,4 +180,60 @@ class AgentParametersParserTests {
     fun testNewStyleNeedSomeEscape() {
         TraceAgentParameters.parseArgs("key1=xxx\\", emptyList())
     }
+
+    @Test
+    fun testIncludeParsing_single() {
+        TraceAgentParameters.parseArgs("class=org.C,method=m,include=org.jetbrains.*", emptyList())
+        assertEquals(listOf("org.jetbrains.*"), TraceAgentParameters.getIncludePatterns())
+        assertEquals(emptyList<String>(), TraceAgentParameters.getExcludePatterns())
+    }
+
+    @Test
+    fun testExcludeParsing_single() {
+        TraceAgentParameters.parseArgs("class=org.C,method=m,exclude=api.Internal", emptyList())
+        assertEquals(emptyList<String>(), TraceAgentParameters.getIncludePatterns())
+        assertEquals(listOf("api.Internal"), TraceAgentParameters.getExcludePatterns())
+    }
+
+    @Test
+    fun testIncludeExcludeParsing_multiple() {
+        TraceAgentParameters.parseArgs(
+            "class=org.C,method=m,include=org.jetbrains.*;com.app.Service;*Test,exclude=api.Internal;*Impl;org.ignored.*",
+            emptyList()
+        )
+        assertEquals(listOf("org.jetbrains.*", "com.app.Service", "*Test"), TraceAgentParameters.getIncludePatterns())
+        assertEquals(listOf("api.Internal", "*Impl", "org.ignored.*"), TraceAgentParameters.getExcludePatterns())
+    }
+
+    @Test
+    fun testIncludeExcludeParsing_ignoresEmptyEntries() {
+        TraceAgentParameters.parseArgs(
+            "class=org.C,method=m,include=org.A;;org.B;;,exclude=;",
+            emptyList()
+        )
+        assertEquals(listOf("org.A", "org.B"), TraceAgentParameters.getIncludePatterns())
+        assertEquals(emptyList<String>(), TraceAgentParameters.getExcludePatterns())
+    }
+
+    @Test
+    fun testIncludeParsing_trimsWhitespace() {
+        TraceAgentParameters.parseArgs(
+            "class=org.C,method=m,include=  org.A  ;   org.B.*   ;   *Test   ,exclude=   api.Internal   ;   *Impl   ",
+            emptyList()
+        )
+        assertEquals(listOf("org.A", "org.B.*", "*Test"), TraceAgentParameters.getIncludePatterns())
+        assertEquals(listOf("api.Internal", "*Impl"), TraceAgentParameters.getExcludePatterns())
+    }
+
+    // final complex scenario combining include/exclude, multiple patterns, empties and trimming
+    @Test
+    fun testIncludeExcludeParsing_complexMultipleAndTrim() {
+        TraceAgentParameters.reset()
+        TraceAgentParameters.parseArgs(
+            "class=org.C,method=m,include= org.jetbrains.* ; com.app.Service ; ; *Test ; ,exclude= api.Internal ; *Impl ",
+            emptyList()
+        )
+        assertEquals(listOf("org.jetbrains.*", "com.app.Service", "*Test"), TraceAgentParameters.getIncludePatterns())
+        assertEquals(listOf("api.Internal", "*Impl"), TraceAgentParameters.getExcludePatterns())
+    }
 }
