@@ -140,9 +140,12 @@ class FilteredTransformationProfile(
     }
 
     private fun String.toGlobRegex(): Regex {
-        // treat input as a fully qualified class name with '*' wildcards; escape regex meta except '*'
-        val escaped = Regex.escape(this).replace("\\*", ".*")
-        return ("^$escaped$").toRegex()
+        // Convert a simple glob with '*' to a proper anchored regex.
+        // Escape all regex meta-characters in literal segments and replace '*' with '.*'.
+        if (this == "*") return ".*".toRegex()
+        val parts = this.split("*")
+        val pattern = parts.joinToString(".*") { Regex.escape(it) }
+        return ("^$pattern$").toRegex()
     }
 }
 
