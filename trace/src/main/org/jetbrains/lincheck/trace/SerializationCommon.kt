@@ -29,7 +29,7 @@ import java.io.OutputStream
 
 internal const val TRACE_MAGIC : Long = 0x706e547124ee5f70L
 internal const val INDEX_MAGIC : Long = TRACE_MAGIC.inv()
-internal const val TRACE_VERSION : Long = 9
+internal const val TRACE_VERSION : Long = 10
 
 internal const val INDEX_FILENAME_SUFFIX = ".idx"
 
@@ -37,6 +37,7 @@ internal const val BLOCK_HEADER_SIZE: Int = Byte.SIZE_BYTES + Int.SIZE_BYTES
 internal const val BLOCK_FOOTER_SIZE: Int = Byte.SIZE_BYTES
 
 internal enum class ObjectKind {
+    THREAD_NAME,
     CLASS_DESCRIPTOR,
     METHOD_DESCRIPTOR,
     FIELD_DESCRIPTOR,
