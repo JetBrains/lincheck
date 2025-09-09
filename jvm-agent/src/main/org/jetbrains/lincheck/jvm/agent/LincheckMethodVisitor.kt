@@ -47,7 +47,10 @@ internal open class LincheckMethodVisitor(
         }
     }
 
-    protected fun loadNewCodeLocationId(accessPath: AccessPath? = null): Int = adapter.run {
+    protected fun loadNewCodeLocationId(
+        accessPath: AccessPath? = null,
+        argumentNames: List<AccessPath?>? = null,
+    ): Int = adapter.run {
         val mappedLocation = methodInfo.smap.getLine("Kotlin", lineNumber)
         val stackTraceElement = if (mappedLocation != null) {
             if (mappedLocation.className == className) {
@@ -88,7 +91,7 @@ internal open class LincheckMethodVisitor(
                 /* fileName = */ fileName,
                 /* lineNumber = */ lineNumber)
         }
-        val codeLocationId = CodeLocations.newCodeLocation(stackTraceElement, accessPath)
+        val codeLocationId = CodeLocations.newCodeLocation(stackTraceElement, accessPath, argumentNames)
         push(codeLocationId)
         return codeLocationId
     }
