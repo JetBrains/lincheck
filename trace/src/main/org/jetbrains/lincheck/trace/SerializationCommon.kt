@@ -29,7 +29,7 @@ import java.io.OutputStream
 
 internal const val TRACE_MAGIC : Long = 0x706e547124ee5f70L
 internal const val INDEX_MAGIC : Long = TRACE_MAGIC.inv()
-internal const val TRACE_VERSION : Long = 9
+internal const val TRACE_VERSION : Long = 10
 
 internal const val INDEX_FILENAME_SUFFIX = ".idx"
 
