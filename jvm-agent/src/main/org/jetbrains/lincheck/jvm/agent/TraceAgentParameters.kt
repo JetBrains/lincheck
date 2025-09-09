@@ -18,6 +18,8 @@ object TraceAgentParameters {
     const val ARGUMENT_CLASS = "class"
     const val ARGUMENT_METHOD = "method"
     const val ARGUMENT_OUTPUT = "output"
+    const val ARGUMENT_INCLUDE = "include"
+    const val ARGUMENT_EXCLUDE = "exclude"
 
     @JvmStatic
     lateinit var rawArgs: String
@@ -63,8 +65,10 @@ object TraceAgentParameters {
                 namedArgs[validAdditionalArgs[idx - 3]] = actualArguments[idx]
             }
         } else {
-            classUnderTraceDebugging = kvArguments[ARGUMENT_CLASS] ?: error("Class name argument \"$ARGUMENT_CLASS\" was not provided")
-            methodUnderTraceDebugging = kvArguments[ARGUMENT_METHOD] ?: error("Method name argument \"$ARGUMENT_METHOD\" was not provided")
+            classUnderTraceDebugging = kvArguments[ARGUMENT_CLASS]
+                ?: error("Class name argument \"$ARGUMENT_CLASS\" was not provided")
+            methodUnderTraceDebugging = kvArguments[ARGUMENT_METHOD]
+                ?: error("Method name argument \"$ARGUMENT_METHOD\" was not provided")
             traceDumpFilePath = kvArguments[ARGUMENT_OUTPUT]
 
             val allowedKeys = mutableSetOf(ARGUMENT_CLASS, ARGUMENT_METHOD, ARGUMENT_OUTPUT)
@@ -81,6 +85,20 @@ object TraceAgentParameters {
 
     @JvmStatic
     fun getArg(name: String) = namedArgs[name]
+
+    @JvmStatic
+    fun getIncludePatterns(): List<String> = splitPatterns(namedArgs[ARGUMENT_INCLUDE])
+
+    @JvmStatic
+    fun getExcludePatterns(): List<String> = splitPatterns(namedArgs[ARGUMENT_EXCLUDE])
+
+    private fun splitPatterns(value: String?): List<String> {
+        if (value.isNullOrBlank()) return emptyList()
+        return value.split(';')
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .distinct()
+    }
 
     @JvmStatic
     fun getClassAndMethod(): Pair<Class<*>, Method> {
