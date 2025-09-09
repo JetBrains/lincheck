@@ -15,9 +15,11 @@ import org.junit.Test
 
 class TransformationProfileTests {
     private object TestBaseProfile : TransformationProfile {
+        // A distinctive configuration that indicates that the base profile was used
+        val testConfiguration = TransformationConfiguration(trackMethodCalls = true)
+
         override fun getMethodConfiguration(className: String, methodName: String, descriptor: String): TransformationConfiguration {
-            // A distinctive configuration that indicates that base profile was used
-            return TransformationConfiguration(trackMethodCalls = true)
+            return testConfiguration
         }
     }
 
@@ -25,7 +27,7 @@ class TransformationProfileTests {
         FilteredTransformationProfile(include, exclude, TestBaseProfile)
 
     private fun isInstrumented(profile: TransformationProfile, clazz: String): Boolean =
-        profile.getMethodConfiguration(clazz, "m", "()V").trackMethodCalls
+        profile.getMethodConfiguration(clazz, "m", "()V") === TestBaseProfile.testConfiguration
 
     private fun assertInstrumented(profile: TransformationProfile, clazz: String) =
         assertTrue("Expected $clazz to be instrumented", isInstrumented(profile, clazz))
