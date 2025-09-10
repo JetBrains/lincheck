@@ -13,6 +13,7 @@ package org.jetbrains.lincheck.jvm.agent.transformers
 import sun.nio.ch.lincheck.*
 import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.jvm.agent.LincheckClassFileTransformer.shouldTransform
+import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent.instrumentationMode
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.commons.GeneratorAdapter
@@ -32,13 +33,15 @@ internal class ObjectCreationMinimalTransformer(
     fileName: String,
     className: String,
     methodName: String,
-    metaInfo: MethodInformation,
+    descriptor: String,
+    access: Int,
+    methodInfo: MethodInformation,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
-) : LincheckBaseMethodVisitor(fileName, className, methodName, metaInfo, adapter, methodVisitor,) {
+) : ObjectCreationTransformerBase(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
 
     override fun visitTypeInsn(opcode: Int, type: String) = adapter.run {
-        if (opcode == NEW && shouldTransform(type.toCanonicalClassName(), InstrumentationMode.TRACE_RECORDING)) {
+        if (opcode == NEW && shouldTransform(type.toCanonicalClassName(), instrumentationMode)) {
             invokeIfInAnalyzedCode(
                 original = {},
                 instrumented = {

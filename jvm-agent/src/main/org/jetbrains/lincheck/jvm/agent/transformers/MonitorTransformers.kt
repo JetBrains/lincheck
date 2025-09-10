@@ -26,10 +26,12 @@ internal class MonitorTransformer(
     fileName: String,
     className: String,
     methodName: String,
-    metaInfo: MethodInformation,
+    descriptor: String,
+    access: Int,
+    methodInfo: MethodInformation,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
-) : LincheckBaseMethodVisitor(fileName, className, methodName, metaInfo, adapter, methodVisitor) {
+) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
 
     override fun visitInsn(opcode: Int) = adapter.run {
         when (opcode) {
@@ -78,12 +80,13 @@ internal class SynchronizedMethodTransformer(
     fileName: String,
     className: String,
     methodName: String,
-    metaInfo: MethodInformation,
-    private val access: Int,
+    descriptor: String,
+    access: Int,
+    methodInfo: MethodInformation,
     private val classVersion: Int,
     adapter: GeneratorAdapter,
-    methodVisitor: MethodVisitor
-) : LincheckBaseMethodVisitor(fileName, className, methodName, metaInfo, adapter, methodVisitor) {
+    methodVisitor: MethodVisitor,
+) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
 
     private val isStatic: Boolean = (access and ACC_STATIC != 0)
 
@@ -174,10 +177,12 @@ internal class WaitNotifyTransformer(
     fileName: String,
     className: String,
     methodName: String,
-    metaInfo: MethodInformation,
+    descriptor: String,
+    access: Int,
+    methodInfo: MethodInformation,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
-) : LincheckBaseMethodVisitor(fileName, className, methodName, metaInfo, adapter, methodVisitor) {
+) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
         if (opcode == INVOKEVIRTUAL) {

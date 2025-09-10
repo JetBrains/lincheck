@@ -15,17 +15,26 @@ import org.jetbrains.lincheck.descriptors.CodeLocations
 import org.jetbrains.lincheck.util.ideaPluginEnabled
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
+import org.objectweb.asm.commons.AnalyzerAdapter
 import org.objectweb.asm.commons.GeneratorAdapter
 
-internal open class LincheckBaseMethodVisitor(
+internal open class LincheckMethodVisitor(
     protected val fileName: String,
     protected val className: String,
     protected val methodName: String,
+    protected val descriptor: String,
+    protected val access: Int,
     protected val methodInfo: MethodInformation,
     val adapter: GeneratorAdapter,
-    methodVisitor: MethodVisitor
+    methodVisitor: MethodVisitor,
 ) : MethodVisitor(ASM_API, methodVisitor) {
     private var lineNumber = 0
+
+    open val requiresTypeAnalyzer: Boolean = false
+    open val requiresOwnerNameAnalyzer: Boolean = false
+
+    var typeAnalyzer: AnalyzerAdapter? = null
+    var ownerNameAnalyzer: OwnerNameAnalyzerAdapter? = null
 
     /**
      * Injects `beforeEvent` method invocation if IDEA plugin is enabled.

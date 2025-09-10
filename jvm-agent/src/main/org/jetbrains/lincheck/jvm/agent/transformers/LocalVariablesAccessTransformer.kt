@@ -14,6 +14,7 @@ import org.jetbrains.lincheck.trace.TRACE_CONTEXT
 import org.jetbrains.lincheck.descriptors.Types.convertAsmMethodType
 import org.jetbrains.lincheck.jvm.agent.*
 import org.objectweb.asm.*
+import org.objectweb.asm.Opcodes.ACC_STATIC
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import sun.nio.ch.lincheck.Injections
@@ -22,14 +23,17 @@ internal class LocalVariablesAccessTransformer(
     fileName: String,
     className: String,
     methodName: String,
-    metaInfo: MethodInformation,
-    desc: String,
-    isStatic: Boolean,
+    descriptor: String,
+    access: Int,
+    methodInfo: MethodInformation,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
-) : LincheckBaseMethodVisitor(fileName, className, methodName, metaInfo, adapter, methodVisitor) {
+    private val locals: MethodVariables,
+) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
 
-    private val numberOfLocals = convertAsmMethodType(desc).argumentTypes.size + if (isStatic) 0 else 1
+    private val isStatic: Boolean = (access and ACC_STATIC != 0)
+
+    private val numberOfLocals = convertAsmMethodType(descriptor).argumentTypes.size + if (isStatic) 0 else 1
 
     override fun visitVarInsn(opcode: Int, varIndex: Int) = adapter.run {
         val localVariableInfo = getVariableName(varIndex)?.takeIf { it.name != "this" }

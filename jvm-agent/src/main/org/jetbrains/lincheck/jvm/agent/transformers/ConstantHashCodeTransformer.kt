@@ -10,13 +10,10 @@
 
 package org.jetbrains.lincheck.jvm.agent.transformers
 
-import org.jetbrains.lincheck.jvm.agent.LincheckBaseMethodVisitor
-import org.jetbrains.lincheck.jvm.agent.MethodInformation
-import org.jetbrains.lincheck.jvm.agent.invokeIfInAnalyzedCode
-import org.jetbrains.lincheck.jvm.agent.invokeStatic
+import sun.nio.ch.lincheck.Injections
+import org.jetbrains.lincheck.jvm.agent.*
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.commons.GeneratorAdapter
-import sun.nio.ch.lincheck.Injections
 
 /**
  * [ConstantHashCodeTransformer] tracks invocations of [Object.hashCode] and [System.identityHashCode] methods,
@@ -30,10 +27,12 @@ internal class ConstantHashCodeTransformer(
     fileName: String,
     className: String,
     methodName: String,
-    metaInfo: MethodInformation,
+    descriptor: String,
+    access: Int,
+    methodInfo: MethodInformation,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor
-) : LincheckBaseMethodVisitor(fileName, className, methodName, metaInfo, adapter, methodVisitor) {
+) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
         when {
