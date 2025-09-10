@@ -13,6 +13,7 @@ package org.jetbrains.lincheck.trace.recorder
 import org.jetbrains.lincheck.analysis.ShadowStackFrame
 import org.jetbrains.lincheck.trace.TRACE_CONTEXT
 import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.util.*
 import sun.nio.ch.lincheck.*
@@ -146,10 +147,13 @@ class TraceCollectingEventTracker(
     private val className: String,
     private val methodName: String,
     private val traceDumpPath: String?,
-    private val mode: TraceCollectorMode
+    private val mode: TraceCollectorMode,
+    private val packTrace: Boolean
 ) : EventTracker {
     // We don't want to re-create this object each time we need it
     private val analysisProfile: AnalysisProfile = AnalysisProfile(false)
+
+    private val metaInfo = TraceMetaInfo.start(TraceAgentParameters.rawArgs, className, methodName)
 
     // [ThreadDescriptor.eventTrackerData] is weak ref, so store it here too, but use
     // only at the end
@@ -629,11 +633,15 @@ class TraceCollectingEventTracker(
         threads.clear()
 
         strategy.traceEnded()
+        metaInfo.traceEnded()
 
         System.err.println("Trace collected in ${System.currentTimeMillis() - startTime} ms")
         startTime = System.currentTimeMillis()
 
         if (mode == TraceCollectorMode.BINARY_STREAM) {
+            if (packTrace) {
+                packRecordedTrace(traceDumpPath!!, metaInfo)
+            }
             return
         }
 
@@ -660,10 +668,15 @@ class TraceCollectingEventTracker(
                 }
             }
             when (mode) {
-                TraceCollectorMode.BINARY_DUMP -> saveRecorderTrace(traceDumpPath!!, TRACE_CONTEXT, roots)
+                TraceCollectorMode.BINARY_DUMP -> {
+                    saveRecorderTrace(traceDumpPath!!, TRACE_CONTEXT, roots)
+                    if (packTrace) {
+                        packRecordedTrace(traceDumpPath, metaInfo)
+                    }
+                }
                 TraceCollectorMode.TEXT -> printPostProcessedTrace(traceDumpPath, TRACE_CONTEXT, roots, false)
                 TraceCollectorMode.TEXT_VERBOSE -> printPostProcessedTrace(traceDumpPath, TRACE_CONTEXT, roots, true)
-                TraceCollectorMode.BINARY_STREAM -> Unit // Do nothing, everything is written
+                TraceCollectorMode.BINARY_STREAM -> {}
             }
         } catch (t: Throwable) {
             System.err.println("TraceRecorder: Cannot write output file $traceDumpPath: ${t.message} at ${t.stackTraceToString()}")

@@ -28,9 +28,10 @@ import java.lang.instrument.Instrumentation
 internal object TraceRecorderAgent {
     const val ARGUMENT_FORMAT = "format"
     const val ARGUMENT_FOPTION = "formatOption"
+    const val ARGUMENT_PACK = "pack"
 
     // Allowed additional arguments
-    private val ADDITIONAL_ARGS = listOf(ARGUMENT_FORMAT, ARGUMENT_FOPTION)
+    private val ADDITIONAL_ARGS = listOf(ARGUMENT_FORMAT, ARGUMENT_FOPTION, ARGUMENT_PACK)
 
     @JvmStatic
     fun premain(agentArgs: String?, inst: Instrumentation) {
