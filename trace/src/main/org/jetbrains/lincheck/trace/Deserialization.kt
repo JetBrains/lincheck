@@ -226,11 +226,28 @@ internal class CodeLocationsContext {
  */
 class LazyTraceReader private constructor(
     private val traceFileName: String,
-    private val input: TwoStreamProvider,
+    private val input: TraceDataProvider,
     private val postprocessor: TracePostprocessor
 ) : Closeable {
 
-    private class TwoStreamProvider(val baseFileName: String): AutoCloseable {
+    /**
+     * This class try to detect is provided path points to packed (ZIP) trace or
+     * raw data file.
+     *
+     * If provided file is packed trace, it unpacks data file as it needs to be seekable
+     * and packed file is not seekable, unfortunately.
+     *
+     * In any case it provides three data elements:
+     *
+     *  - [dataFileName] — name of file with main trace data. It is [traceFileName] if trace in question
+     *    is not packed and name of temporary file with data unpacked to temporary file which will be deleted
+     *    after trace is closed.
+     *  - [indexStream] — stream with index, if it exists. It can be separate file in case of unpacked trace
+     *    ot ZIP stream prepared for reading index entry. Index is only read sequential, so reading directly
+     *    from ZIP is Ok.
+     *  - [metaInfo] — Trace meta information, if it exists for provided trace.
+     */
+    private class TraceDataProvider(val baseFileName: String): AutoCloseable {
         private var tmpDataFile: File? = null
         private var zip: ZipInputStream? = null
 
@@ -238,6 +255,7 @@ class LazyTraceReader private constructor(
             private set
 
         var metaInfo: TraceMetaInfo? = null
+            private set
 
         init {
             val input = openExistingFile(baseFileName)?.buffered(INPUT_BUFFER_SIZE) ?:
@@ -296,7 +314,7 @@ class LazyTraceReader private constructor(
     constructor(baseFileName: String, postprocessor: TracePostprocessor = CompressingPostprocessor) :
             this(
                 traceFileName = baseFileName,
-                input = TwoStreamProvider(baseFileName),
+                input = TraceDataProvider(baseFileName),
                 postprocessor = postprocessor
             )
 

@@ -20,6 +20,7 @@ import java.io.IOException
 import java.io.InputStream
 import java.io.InputStreamReader
 import java.io.OutputStream
+import java.lang.management.ManagementFactory
 import kotlin.math.exp
 
 /**
@@ -57,6 +58,8 @@ internal const val BLOCK_FOOTER_SIZE: Int = Byte.SIZE_BYTES
  */
 @ConsistentCopyVisibility
 data class TraceMetaInfo private constructor(
+    val jvmArgs: String,
+    val agentArgs: String,
     val className: String,
     val methodName: String,
     val startTime: Long
@@ -84,6 +87,8 @@ data class TraceMetaInfo private constructor(
         appendLine("$METHOD_HEADER$methodName")
         appendLine("$START_TIME_HEADER$startTime")
         appendLine("$END_TIME_HEADER$endTime")
+        appendLine("$JVM_ARGS_HEADER$jvmArgs")
+        appendLine("$AGENT_ARGS_HEADER$agentArgs")
         appendMap(PROPERTIES_HEADER, props)
         appendLine()
         appendMap(ENV_HEADER, env)
@@ -94,6 +99,8 @@ data class TraceMetaInfo private constructor(
         private const val METHOD_HEADER: String = "Method: "
         private const val START_TIME_HEADER: String = "Start time: "
         private const val END_TIME_HEADER: String = "End time: "
+        private const val JVM_ARGS_HEADER: String = "JVM arguments: "
+        private const val AGENT_ARGS_HEADER: String = "Agent arguments: "
         private const val PROPERTIES_HEADER: String = "Properties:"
         private const val ENV_HEADER: String = "Environment:"
 
@@ -101,8 +108,14 @@ data class TraceMetaInfo private constructor(
          * Creates new object: sets [className] and [methodName] to passed parameters,
          * [startTime] to current time and fetch current system properties and environment.
          */
-        fun start(className: String, methodName: String): TraceMetaInfo {
-            val meta = TraceMetaInfo(className, methodName, System.currentTimeMillis())
+        fun start(agentArgs: String, className: String, methodName: String): TraceMetaInfo {
+            val bean = ManagementFactory.getRuntimeMXBean()
+            // Read JVM args
+            val jvmArgs = bean.inputArguments
+                .map { arg -> arg.escapeShell()}
+                .joinToString(" ")
+
+            val meta = TraceMetaInfo(jvmArgs, agentArgs, className, methodName, System.currentTimeMillis())
             with (meta) {
                 System.getProperties().forEach {
                     props[it.key as String] = it.value as String
@@ -122,8 +135,10 @@ data class TraceMetaInfo private constructor(
             val methodName = reader.readLine(METHOD_HEADER) ?: return null
             val startTime = reader.readLong(START_TIME_HEADER) ?: return null
             val endTime = reader.readLong(END_TIME_HEADER) ?: return null
+            val jvmArgs = reader.readLine(JVM_ARGS_HEADER) ?: return null
+            val agentArgs = reader.readLine(AGENT_ARGS_HEADER) ?: return null
 
-            val meta = TraceMetaInfo(className, methodName, startTime)
+            val meta = TraceMetaInfo(jvmArgs, agentArgs, className, methodName, startTime)
             meta.endTime = endTime
 
             if (!reader.readMap(PROPERTIES_HEADER, meta.props)) return null
@@ -219,15 +234,23 @@ data class TraceMetaInfo private constructor(
             }
         }
 
-        private fun String.escapeKey(): String =
-            replace("\\", "\\\\")
+        private fun String.escapeKey(): String = this
+            .replace("\\", "\\\\")
             .replace("=", "\\=")
 
-        private fun String.escapeValue(): String =
-            replace("\\", "\\\\")
+        private fun String.escapeValue(): String = this
+            .replace("\\", "\\\\")
             .replace("\r", "\\r")
             .replace("\n", "\\n")
             .replace("\t", "\\t")
+
+        private fun String.escapeShell(): String {
+            return if (contains(' ') || contains('*') || contains('?') || contains('[')) {
+                "\"" + replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+            } else {
+                replace("\\", "\\\\").replace("\"", "\\\"").replace("'", "\\'")
+            }
+        }
     }
 }
 

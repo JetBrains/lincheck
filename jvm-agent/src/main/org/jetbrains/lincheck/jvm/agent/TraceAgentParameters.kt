@@ -20,6 +20,9 @@ object TraceAgentParameters {
     const val ARGUMENT_OUTPUT = "output"
 
     @JvmStatic
+    lateinit var rawArgs: String
+
+    @JvmStatic
     lateinit var classUnderTraceDebugging: String
 
     @JvmStatic
@@ -36,6 +39,9 @@ object TraceAgentParameters {
         if (args == null) {
             error("Please provide class and method names as arguments")
         }
+        // Store for metainformation
+        rawArgs = args
+
         // Try to parse new-style
         val kvArguments = parseKVArgs(args)
         if (kvArguments == null) {
