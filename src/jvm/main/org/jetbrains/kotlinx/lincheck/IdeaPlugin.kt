@@ -122,10 +122,12 @@ fun onThreadSwitchesOrActorFinishes() {}
 // ======================================================================================================== //
 
 internal fun runPluginReplay(
+    failure: LincheckFailure,
     replayStrategy: ManagedStrategy,
     invocations: Int,
     verifier: Verifier,
 ) {
+    if (failure is TimeoutFailure) return // cannot replay timeout failure
     val replayedFailure = replayStrategy.runIteration(invocations, verifier)
     check(replayedFailure != null)
     replayStrategy.runReplayIfPluginEnabled(replayedFailure)
