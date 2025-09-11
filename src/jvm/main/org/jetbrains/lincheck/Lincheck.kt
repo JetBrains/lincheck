@@ -78,6 +78,7 @@ object Lincheck {
                     check(strategy is ModelCheckingStrategy)
                     if (ideaPluginEnabled) {
                         runPluginReplay(
+                            failure = failure,
                             replayStrategy = testCfg.createStrategy(block),
                             invocations = invocations,
                             verifier = verifier,
