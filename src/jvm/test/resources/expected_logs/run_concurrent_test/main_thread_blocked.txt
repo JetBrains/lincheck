@@ -25,6 +25,7 @@ The following interleaving leads to the error:
 |               isReleasable(): false                      |
 |               LockSupport.park()                         |
 |                 PARK                                     |
+|   result: LincheckAnalysisAbortedError #1                |
 | -------------------------------------------------------- |
 All unfinished threads are in deadlock
 
@@ -84,5 +85,6 @@ Detailed trace:
 |                 Thread#0.isInterrupted(): false at AbstractQueuedSynchronizer.ConditionNode.isReleasable(AbstractQueuedSynchronizer.java:502)      |
 |               LockSupport.park() at AbstractQueuedSynchronizer.ConditionNode.block(AbstractQueuedSynchronizer.java:506)                            |
 |                 PARK at LockSupport.park(LockSupport.java:341)                                                                                     |
+|   result: LincheckAnalysisAbortedError #1                                                                                                          |
 | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 All unfinished threads are in deadlock
