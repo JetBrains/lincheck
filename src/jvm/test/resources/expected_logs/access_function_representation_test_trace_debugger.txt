@@ -19,7 +19,7 @@ Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:51) |
 |   block(): threw IllegalStateException at AccessFunctionRepresentationTest.block(AccessFunctionRepresentationTest.kt:13)                                                        |
-|     AccessFunctionRepresentationTestKt.runLambda(Lambda#2) at AccessFunctionRepresentationTest.block(AccessFunctionRepresentationTest.kt:19)                                    |
+|     AccessFunctionRepresentationTestKt.runLambda(Lambda#1) at AccessFunctionRepresentationTest.block(AccessFunctionRepresentationTest.kt:19)                                    |
 |       r.invoke() at AccessFunctionRepresentationTestKt.runLambda(AccessFunctionRepresentationTest.kt:40)                                                                        |
 |         inc1() at AccessFunctionRepresentationTest.block$lambda$0(AccessFunctionRepresentationTest.kt:19)                                                                       |
 |           Nested#1.inc2() at AccessFunctionRepresentationTest.inc1(AccessFunctionRepresentationTest.kt:24)                                                                      |
