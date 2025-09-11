@@ -29,24 +29,27 @@ abstract class AbstractTraceIntegrationTest {
     private var runtimeClasspathUrls: Array<URL> = emptyArray()
 
     private fun buildGradleInitScriptToDumpTrace(
+        gradleCommands: List<String>,
         testClassName: String,
         testMethodName: String,
         fileToDump: File,
         extraJvmArgs: List<String>,
         extraAgentArgs: List<String>,
     ): String {
+        fun String.replaceDollar() = replace("$", "\\$")
         val pathToFatJar = File(Paths.get("build", "libs", fatJarName).toString())
         // We need to escape it twice, as our argument parser will de-escape it when split into array
         val pathToOutput = fileToDump.absolutePath.escape().escape()
         return """
             gradle.taskGraph.whenReady {
-                val jvmTasks = allTasks.filter { task -> task is JavaForkOptions }
-                jvmTasks.forEach { task ->
+                val gradleCommands = listOf(${gradleCommands.joinToString(",") { "\"$it\"" }})
+                val jvmTasks = allTasks.filter { task -> task is JavaForkOptions && gradleCommands.contains(task.path) }
+                jvmTasks.forEach { task ->            
                     task.doFirst {
                         val options = task as JavaForkOptions
                         val jvmArgs = options.jvmArgs?.toMutableList() ?: mutableListOf()
                         jvmArgs.addAll(listOf(${extraJvmArgs.joinToString(", ") { "\"$it\"" }}))
-                        jvmArgs.add("-javaagent:${pathToFatJar.absolutePath.escape()}=$testClassName,$testMethodName,$pathToOutput${if (extraAgentArgs.isNotEmpty()) ",${extraAgentArgs.joinToString(",")}" else ""}")
+                        jvmArgs.add("-javaagent:${pathToFatJar.absolutePath.escape()}=${testClassName.replaceDollar()},${testMethodName.replaceDollar()},${pathToOutput.replaceDollar()}${if (extraAgentArgs.isNotEmpty()) ",${extraAgentArgs.joinToString(",")}" else ""}")
                         options.jvmArgs = jvmArgs
                     }
                 }
@@ -117,7 +120,7 @@ abstract class AbstractTraceIntegrationTest {
                 .setStandardError(System.err)
                 .addArguments(
                     "--init-script",
-                    createInitScriptAsTempFile(buildGradleInitScriptToDumpTrace(testClassName, testMethodName, tmpFile, extraJvmArgs, extraAgentArgs)).absolutePath,
+                    createInitScriptAsTempFile(buildGradleInitScriptToDumpTrace(gradleCommands, testClassName, testMethodName, tmpFile, extraJvmArgs, extraAgentArgs)).absolutePath,
                 ).forTasks(
                     *gradleCommands.toTypedArray(),
                     "--tests",
@@ -222,10 +225,8 @@ abstract class AbstractTraceIntegrationTest {
         return """
             gradle.taskGraph.whenReady {
                 val buildTasks = listOf(${gradleBuildCommands.joinToString(",") { "\"$it\"" }})
-                    .map { if (it.startsWith(":")) it.drop(1) else it }
-    
                 allTasks.forEach { task ->
-                    if (task.name in buildTasks) {
+                    if (task.path in buildTasks) {
                         task.doLast {
                             val project = task.project
                             val classpath = project.configurations.findByName("jvmTestRuntimeClasspath") ?:
