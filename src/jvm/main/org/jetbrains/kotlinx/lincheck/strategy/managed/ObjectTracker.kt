@@ -348,7 +348,7 @@ private data class ClassNameRepresentation(
 private fun Any.getSpecialClassNameRepresentation(): ClassNameRepresentation? = when {
     this is Thread                                -> ClassNameRepresentation("Thread", Thread::class.java)
     this is Continuation<*>                       -> ClassNameRepresentation("Continuation", Continuation::class.java)
-    isJavaLambdaClass(javaClass.name) -> ClassNameRepresentation("Lambda", Lambda::class.java)
+    isJavaLambdaClass(javaClass.name)             -> ClassNameRepresentation("Lambda", Lambda::class.java)
     else                                          -> null
 }
 
@@ -367,7 +367,7 @@ private class Lambda
  * and managing objects and their entries in the registry.
  */
 open class BaseObjectTracker(
-    val executionMode: ExecutionMode
+    val isFirstThreadMain: Boolean,
 ) : ObjectTracker {
 
     // counter of all registered objects
@@ -408,7 +408,7 @@ open class BaseObjectTracker(
 
     protected fun computeObjectDisplayNumber(obj: Any): Int {
         // In the case of general-purpose model checking mode, the thread numeration starts from 0.
-        val offset = if (obj is Thread && executionMode == ExecutionMode.GENERAL_PURPOSE_MODEL_CHECKER) -1 else 0
+        val offset = if (obj is Thread && isFirstThreadMain) -1 else 0
         val objClassKey = obj.getSpecialClassNameRepresentation()?.classKey ?: obj.javaClass
         return perClassObjectNumeration.update(objClassKey, default = offset) { it + 1 }
     }
