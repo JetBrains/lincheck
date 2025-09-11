@@ -63,10 +63,10 @@ class TransformationConfiguration(
             trackSynchronizedBlocks = value
             trackParkingOperations = value
         }
-    
+
     val trackSharedMemoryAccesses: Boolean
         get() = trackSharedMemoryReads || trackSharedMemoryWrites
-    
+
     var trackAllSharedMemoryAccesses: Boolean
         get() = trackSharedMemoryReads && trackSharedMemoryWrites
         set(value) {
@@ -316,7 +316,6 @@ object ModelCheckingDefaultTransformationProfile : TransformationProfile {
 
         return config.apply {
             trackObjectCreations = true
-            trackLocalVariableAccesses = true
             trackAllSharedMemoryAccesses = true
 
             trackMethodCalls = true
