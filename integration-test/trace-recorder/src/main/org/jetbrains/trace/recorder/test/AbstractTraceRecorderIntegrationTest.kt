@@ -19,7 +19,7 @@ abstract class AbstractTraceRecorderIntegrationTest : AbstractTraceIntegrationTe
         testClassName: String,
         testMethodName: String,
         extraJvmArgs: List<String>,
-        extraAgentArgs: List<String>,
+        extraAgentArgs: Map<String, String>,
         gradleCommands: List<String>,
         checkRepresentation: Boolean,
         testNameSuffix: String?,
@@ -32,9 +32,9 @@ abstract class AbstractTraceRecorderIntegrationTest : AbstractTraceIntegrationTe
                 "-XX:+UnlockExperimentalVMOptions",
                 "-XX:hashCode=2",
             ),
-            extraAgentArgs + listOf(
-                "format=text",
-                "formatOption=verbose",
+            extraAgentArgs + mapOf(
+                "format" to "text",
+                "formatOption" to "verbose",
             ),
             gradleCommands,
             checkRepresentation,

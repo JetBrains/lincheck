@@ -33,11 +33,15 @@ abstract class AbstractTraceIntegrationTest {
         testMethodName: String,
         fileToDump: File,
         extraJvmArgs: List<String>,
-        extraAgentArgs: List<String>,
+        extraAgentArgs: Map<String, String>,
     ): String {
-        val pathToFatJar = File(Paths.get("build", "libs", fatJarName).toString())
+        val pathToFatJar = File(Paths.get("build", "libs", fatJarName).toString()).absolutePath.escape()
         // We need to escape it twice, as our argument parser will de-escape it when split into array
         val pathToOutput = fileToDump.absolutePath.escape().escape()
+        val agentArgs = "class=$testClassName,method=$testMethodName,output=$pathToOutput" +
+                        extraAgentArgs.entries
+                            .joinToString(",") { "${it.key}=${it.value}" }
+                            .let { if (it.isNotEmpty()) ",$it" else it }
         return """
             gradle.taskGraph.whenReady {
                 val jvmTasks = allTasks.filter { task -> task is JavaForkOptions }
@@ -46,7 +50,7 @@ abstract class AbstractTraceIntegrationTest {
                         val options = task as JavaForkOptions
                         val jvmArgs = options.jvmArgs?.toMutableList() ?: mutableListOf()
                         jvmArgs.addAll(listOf(${extraJvmArgs.joinToString(", ") { "\"$it\"" }}))
-                        jvmArgs.add("-javaagent:${pathToFatJar.absolutePath.escape()}=class=$testClassName,method=$testMethodName,output=$pathToOutput${if (extraAgentArgs.isNotEmpty()) ",${extraAgentArgs.joinToString(",")}" else ""}")
+                        jvmArgs.add("-javaagent:$pathToFatJar=$agentArgs")
                         options.jvmArgs = jvmArgs
                     }
                 }
@@ -70,7 +74,7 @@ abstract class AbstractTraceIntegrationTest {
         testClassName: String,
         testMethodName: String,
         extraJvmArgs: List<String> = emptyList(),
-        extraAgentArgs: List<String> = emptyList(),
+        extraAgentArgs: Map<String, String> = emptyMap(),
         gradleCommands: List<String>,
         checkRepresentation: Boolean = true,
         testNameSuffix: String? = null,
@@ -79,7 +83,7 @@ abstract class AbstractTraceIntegrationTest {
     fun runGradleTests(
         testClassNamePrefix: String,
         extraJvmArgs: List<String> = emptyList(),
-        extraAgentArgs: List<String> = emptyList(),
+        extraAgentArgs: Map<String, String> = emptyMap(),
         gradleBuildCommands: List<String>,
         gradleTestCommands: List<String>,
         checkRepresentation: Boolean = true,
@@ -107,7 +111,7 @@ abstract class AbstractTraceIntegrationTest {
         testClassName: String,
         testMethodName: String,
         extraJvmArgs: List<String> = emptyList(),
-        extraAgentArgs: List<String> = emptyList(),
+        extraAgentArgs: Map<String, String> = emptyMap(),
         gradleCommands: List<String>,
         checkRepresentation: Boolean = true,
         testNameSuffix: String? = null,

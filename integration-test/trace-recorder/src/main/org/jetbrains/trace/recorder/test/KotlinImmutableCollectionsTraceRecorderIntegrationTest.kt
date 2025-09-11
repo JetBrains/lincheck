@@ -50,7 +50,7 @@ class KotlinImmutableCollectionsTraceRecorderIntegrationTest : AbstractTraceReco
                 ":kotlinx-collections-immutable:cleanJvmTest",
                 ":kotlinx-collections-immutable:jvmTest",
             ),
-            extraAgentArgs = listOf("include=tests.contract.list.ImmutableListTest"),
+            extraAgentArgs = mapOf("include" to "tests.contract.list.ImmutableListTest"),
             testNameSuffix = "with_include_filter",
         )
     }
@@ -64,7 +64,7 @@ class KotlinImmutableCollectionsTraceRecorderIntegrationTest : AbstractTraceReco
                 ":kotlinx-collections-immutable:cleanJvmTest",
                 ":kotlinx-collections-immutable:jvmTest",
             ),
-            extraAgentArgs = listOf("exclude=kotlinx.collections.immutable.*"),
+            extraAgentArgs = mapOf("exclude" to "kotlinx.collections.immutable.*"),
             testNameSuffix = "with_exclude_filter",
         )
     }
