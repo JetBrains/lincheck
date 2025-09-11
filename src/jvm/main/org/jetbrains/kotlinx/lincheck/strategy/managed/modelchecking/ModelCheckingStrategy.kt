@@ -13,6 +13,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.runner.Runner
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
+import org.jetbrains.kotlinx.lincheck.runner.LambdaRunner
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.util.*
 import java.lang.ref.WeakReference
@@ -60,10 +61,14 @@ internal class ModelCheckingStrategy(
     private var isReplayingSpinCycle = false
 
     // Tracker of objects' allocations and object graph topology.
-    override val objectTracker: ObjectTracker =
-        if (isInTraceDebuggerMode) BaseObjectTracker(executionMode) else LocalObjectManager(executionMode)
+    override val objectTracker: ObjectTracker = run {
+        val isFirstThreadMain = (runner is LambdaRunner)
+        if (isInTraceDebuggerMode) BaseObjectTracker(isFirstThreadMain) else LocalObjectManager(isFirstThreadMain)
+    }
+
     // Tracker of the monitors' operations.
     override val monitorTracker: MonitorTracker = ModelCheckingMonitorTracker()
+
     // Tracker of the thread parking.
     override val parkingTracker: ParkingTracker = ModelCheckingParkingTracker(allowSpuriousWakeUps = true)
 
@@ -435,8 +440,8 @@ internal class ModelCheckingStrategy(
  * objects triggers switch points in the model checking strategy.
  */
 internal class LocalObjectManager(
-    executionMode: ExecutionMode
-) : BaseObjectTracker(executionMode) {
+    isFirstThreadMain: Boolean,
+) : BaseObjectTracker(isFirstThreadMain) {
 
     override fun registerThread(threadId: Int, thread: Thread) {
         super.registerThread(threadId, thread)
