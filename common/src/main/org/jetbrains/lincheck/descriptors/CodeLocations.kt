@@ -11,15 +11,30 @@
 package org.jetbrains.lincheck.descriptors
 
 import org.jetbrains.lincheck.trace.TRACE_CONTEXT
+import java.util.Objects
 
-data class CodeLocation(
+class CodeLocation(
     val stackTraceElement: StackTraceElement,
     val accessPath: AccessPath? = null,
 
     // TODO: this only makes sense for method call code locations,
     //   consider introducing proper type hierarchy for code locations
     val argumentNames: List<AccessPath?>? = null
-)
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is CodeLocation) return false
+
+        // TODO: argumentNames are not considered here,
+        //   because of some weird bug that occurs if we consider them;
+        //   likely, this is related to the fact that we currently do not (de)serialize them
+        return (stackTraceElement == other.stackTraceElement) && (accessPath == other.accessPath)
+    }
+
+    override fun hashCode(): Int {
+        return Objects.hash(stackTraceElement, accessPath)
+    }
+}
 
 /**
  * [CodeLocations] object is used to maintain the mapping between unique IDs and code locations.
