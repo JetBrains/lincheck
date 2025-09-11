@@ -19,9 +19,10 @@ abstract class AbstractTraceRecorderIntegrationTest : AbstractTraceIntegrationTe
         testClassName: String,
         testMethodName: String,
         extraJvmArgs: List<String>,
-        extraAgentArgs: List<String>,
+        extraAgentArgs: Map<String, String>,
         gradleCommands: List<String>,
         checkRepresentation: Boolean,
+        testNameSuffix: String?,
     ) {
         runGradleTestImpl(
             testClassName,
@@ -29,13 +30,15 @@ abstract class AbstractTraceRecorderIntegrationTest : AbstractTraceIntegrationTe
             extraJvmArgs + listOf(
                 "-Dlincheck.traceRecorderMode=true",
                 "-XX:+UnlockExperimentalVMOptions",
-                "-XX:hashCode=2"
+                "-XX:hashCode=2",
             ),
-            extraAgentArgs
-                .plus("text")
-                .plus("verbose"),
+            extraAgentArgs + mapOf(
+                "format" to "text",
+                "formatOption" to "verbose",
+            ),
             gradleCommands,
-            checkRepresentation
+            checkRepresentation,
+            testNameSuffix,
         )
     }
 }

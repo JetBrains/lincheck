@@ -97,8 +97,19 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             linesToMethodNames = linesToMethodNames
         )
 
+        val (includeClasses, excludeClasses) = if (instrumentationMode == TRACE_RECORDING) {
+            TraceAgentParameters.getIncludePatterns() to TraceAgentParameters.getExcludePatterns()
+        } else {
+            emptyList<String>() to emptyList<String>()
+        }
+        val profile = createTransformationProfile(
+            instrumentationMode,
+            includeClasses = includeClasses,
+            excludeClasses = excludeClasses,
+        )
+
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
-        val visitor = LincheckClassVisitor(writer, instrumentationMode, classInfo)
+        val visitor = LincheckClassVisitor(writer, classInfo, instrumentationMode, profile)
         try {
             classNode.accept(visitor)
             writer.toByteArray().also {

@@ -33,11 +33,15 @@ abstract class AbstractTraceIntegrationTest {
         testMethodName: String,
         fileToDump: File,
         extraJvmArgs: List<String>,
-        extraAgentArgs: List<String>,
+        extraAgentArgs: Map<String, String>,
     ): String {
-        val pathToFatJar = File(Paths.get("build", "libs", fatJarName).toString())
+        val pathToFatJar = File(Paths.get("build", "libs", fatJarName).toString()).absolutePath.escape()
         // We need to escape it twice, as our argument parser will de-escape it when split into array
         val pathToOutput = fileToDump.absolutePath.escape().escape()
+        val agentArgs = "class=$testClassName,method=$testMethodName,output=$pathToOutput" +
+                        extraAgentArgs.entries
+                            .joinToString(",") { "${it.key}=${it.value}" }
+                            .let { if (it.isNotEmpty()) ",$it" else it }
         return """
             gradle.taskGraph.whenReady {
                 val jvmTasks = allTasks.filter { task -> task is JavaForkOptions }
@@ -46,7 +50,7 @@ abstract class AbstractTraceIntegrationTest {
                         val options = task as JavaForkOptions
                         val jvmArgs = options.jvmArgs?.toMutableList() ?: mutableListOf()
                         jvmArgs.addAll(listOf(${extraJvmArgs.joinToString(", ") { "\"$it\"" }}))
-                        jvmArgs.add("-javaagent:${pathToFatJar.absolutePath.escape()}=$testClassName,$testMethodName,$pathToOutput${if (extraAgentArgs.isNotEmpty()) ",${extraAgentArgs.joinToString(",")}" else ""}")
+                        jvmArgs.add("-javaagent:$pathToFatJar=$agentArgs")
                         options.jvmArgs = jvmArgs
                     }
                 }
@@ -54,9 +58,10 @@ abstract class AbstractTraceIntegrationTest {
         """.trimIndent()
     }
 
-    private fun getGoldenDataFileFor(testClassName: String, testMethodName: String): File {
+    private fun getGoldenDataFileFor(testClassName: String, testMethodName: String, testNameSuffix: String? = null): File {
         val projectName = File(projectPath).name
-        return File(Paths.get("src", "main", "resources", "integrationTestData", projectName, "${testClassName}_$testMethodName.txt").toString())
+        val fileName = "${testClassName}_$testMethodName${ testNameSuffix?.let { "_$it" }.orEmpty() }.txt"
+        return File(Paths.get("src", "main", "resources", "integrationTestData", projectName, fileName).toString())
     }
 
     private fun createInitScriptAsTempFile(content: String): File {
@@ -69,15 +74,16 @@ abstract class AbstractTraceIntegrationTest {
         testClassName: String,
         testMethodName: String,
         extraJvmArgs: List<String> = emptyList(),
-        extraAgentArgs: List<String> = emptyList(),
+        extraAgentArgs: Map<String, String> = emptyMap(),
         gradleCommands: List<String>,
         checkRepresentation: Boolean = true,
+        testNameSuffix: String? = null,
     )
 
     fun runGradleTests(
         testClassNamePrefix: String,
         extraJvmArgs: List<String> = emptyList(),
-        extraAgentArgs: List<String> = emptyList(),
+        extraAgentArgs: Map<String, String> = emptyMap(),
         gradleBuildCommands: List<String>,
         gradleTestCommands: List<String>,
         checkRepresentation: Boolean = true,
@@ -105,9 +111,10 @@ abstract class AbstractTraceIntegrationTest {
         testClassName: String,
         testMethodName: String,
         extraJvmArgs: List<String> = emptyList(),
-        extraAgentArgs: List<String> = emptyList(),
+        extraAgentArgs: Map<String, String> = emptyMap(),
         gradleCommands: List<String>,
         checkRepresentation: Boolean = true,
+        testNameSuffix: String? = null,
     ) {
         val tmpFile = File.createTempFile(testClassName + "_" + testMethodName, "")
 
@@ -127,7 +134,7 @@ abstract class AbstractTraceIntegrationTest {
 
         // TODO decide how to test: with gold data or run twice?
         if (checkRepresentation) { // otherwise we just want to make sure that tests do not fail
-            val expectedOutput = getGoldenDataFileFor(testClassName, testMethodName)
+            val expectedOutput = getGoldenDataFileFor(testClassName, testMethodName, testNameSuffix)
             if (expectedOutput.exists()) {
                 Assert.assertEquals(expectedOutput.readText(), tmpFile.readText())
             } else {

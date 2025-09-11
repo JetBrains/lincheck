@@ -21,8 +21,9 @@ import org.jetbrains.lincheck.util.*
 
 internal class LincheckClassVisitor(
     private val classVisitor: SafeClassWriter,
+    private val classInformation: ClassInformation,
     private val instrumentationMode: InstrumentationMode,
-    private val classInformation: ClassInformation
+    private val profile: TransformationProfile,
 ) : ClassVisitor(ASM_API, classVisitor) {
     private var classVersion = 0
 
@@ -93,7 +94,6 @@ internal class LincheckClassVisitor(
         val adapter = GeneratorAdapter(mv, access, methodName, desc)
         mv = adapter
 
-        val profile = createTransformationProfile(instrumentationMode)
         val chain = TransformerChain(
             config = profile.getMethodConfiguration(className.toCanonicalClassName(), methodName, desc),
             adapter = adapter,

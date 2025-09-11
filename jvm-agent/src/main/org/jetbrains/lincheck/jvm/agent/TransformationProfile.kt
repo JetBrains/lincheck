@@ -62,6 +62,10 @@ class TransformationConfiguration(
             trackSynchronizedBlocks = value
             trackParkingOperations = value
         }
+
+    companion object {
+        val UNTRACKED = TransformationConfiguration()
+    }
 }
 
 internal fun TransformationConfiguration.shouldApplyVisitor(visitorClass: Class<*>): Boolean {
@@ -95,11 +99,54 @@ internal fun TransformationConfiguration.shouldApplyVisitor(visitorClass: Class<
     }
 }
 
-fun createTransformationProfile(mode: InstrumentationMode): TransformationProfile = when (mode) {
-    STRESS -> StressDefaultTransformationProfile
-    TRACE_RECORDING -> TraceRecorderDefaultTransformationProfile
-    TRACE_DEBUGGING -> TraceDebuggerDefaultTransformationProfile
-    MODEL_CHECKING -> ModelCheckingDefaultTransformationProfile
+fun createTransformationProfile(
+    mode: InstrumentationMode,
+    includeClasses: List<String> = emptyList(),
+    excludeClasses: List<String> = emptyList(),
+): TransformationProfile {
+    val defaultProfile = when (mode) {
+        STRESS -> StressDefaultTransformationProfile
+        TRACE_RECORDING -> TraceRecorderDefaultTransformationProfile
+        TRACE_DEBUGGING -> TraceDebuggerDefaultTransformationProfile
+        MODEL_CHECKING -> ModelCheckingDefaultTransformationProfile
+    }
+    if (includeClasses.isNotEmpty() || excludeClasses.isNotEmpty()) {
+        return FilteredTransformationProfile(includeClasses, excludeClasses, defaultProfile)
+    }
+    return defaultProfile
+}
+
+class FilteredTransformationProfile(
+    val includeClasses: List<String>,
+    val excludeClasses: List<String>,
+    val baseProfile: TransformationProfile,
+) : TransformationProfile {
+    private val includeRegexes: List<Regex> = includeClasses.map { it.toGlobRegex() }
+    private val excludeRegexes: List<Regex> = excludeClasses.map { it.toGlobRegex() }
+
+    override fun getMethodConfiguration(className: String, methodName: String, descriptor: String): TransformationConfiguration {
+        // exclude has a higher priority
+        if (excludeRegexes.any { it.matches(className) }) {
+            return TransformationConfiguration.UNTRACKED
+        }
+
+        // if the include list is specified, instrument only included classes
+        if (includeRegexes.isNotEmpty() && !includeRegexes.any { it.matches(className) }) {
+            return TransformationConfiguration.UNTRACKED
+        }
+
+        // otherwise, delegate decision to the base profile
+        return baseProfile.getMethodConfiguration(className, methodName, descriptor)
+    }
+
+    private fun String.toGlobRegex(): Regex {
+        // Convert a simple glob with '*' to a proper anchored regex.
+        // Escape all regex meta-characters in literal segments and replace '*' with '.*'.
+        if (this == "*") return ".*".toRegex()
+        val parts = this.split("*")
+        val pattern = parts.joinToString(".*") { Regex.escape(it) }
+        return ("^$pattern$").toRegex()
+    }
 }
 
 object StressDefaultTransformationProfile : TransformationProfile {
