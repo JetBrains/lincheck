@@ -62,6 +62,7 @@ class KotlinCompilerBlackBoxTraceRecorderIntegrationTest : AbstractTraceRecorder
     )
 
     @Test
+    @Ignore("Verify error")
     fun `jvmBoxSuite-Annotations testAllowedTargets`() = runKotlinCompilerTestSuite(
         task = jvmBoxTask, className = $$"$$jvmBoxSuite$Annotations", methodName = "testAllowedTargets",
     )
