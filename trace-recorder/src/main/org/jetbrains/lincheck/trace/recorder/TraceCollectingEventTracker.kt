@@ -154,7 +154,7 @@ class TraceCollectingEventTracker(
     private val threads = ConcurrentHashMap<Thread, ThreadData>()
 
     // For proper completion of threads which are not tracked from the start of the agent,
-    // of of those threads which are not joined by the Main thread,
+    // of those threads which are not joined by the Main thread,
     // we need to perform operations in them under locks.
     // Note: the only place where there is a contention on the locks is
     // when Main thread finishes and decides to "finish" all other running threads.

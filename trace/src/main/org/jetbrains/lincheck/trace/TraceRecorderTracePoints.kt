@@ -440,8 +440,8 @@ class TRWriteArrayTracePoint(
     }
 }
 
-private const val READ_ACCESS_SYMBOL  = "➜"
-private const val WRITE_ACCESS_SYMBOL = "="
+const val READ_ACCESS_SYMBOL  = "➜"
+const val WRITE_ACCESS_SYMBOL = "="
 
 fun loadTRTracePoint(inp: DataInput): TRTracePoint {
     val loader = getLoaderByClassId(inp.readByte())
@@ -496,7 +496,9 @@ val TR_OBJECT_NULL = TRObject(TR_OBJECT_NULL_CLASSNAME, 0, null)
 
 const val TR_OBJECT_VOID_CLASSNAME = -2
 val TR_OBJECT_VOID = TRObject(TR_OBJECT_VOID_CLASSNAME, 0, null)
-val TR_OBJECT_UNFINISHED_METHOD_RESULT = TRObject(TR_OBJECT_P_STRING, 0, "<unfinished method>")
+
+const val UNFINISHED_METHOD_RESULT_SYMBOL = "<unfinished method>"
+val TR_OBJECT_UNFINISHED_METHOD_RESULT = TRObject(TR_OBJECT_P_STRING, 0, UNFINISHED_METHOD_RESULT_SYMBOL)
 
 const val TR_OBJECT_P_BYTE = TR_OBJECT_VOID_CLASSNAME - 1
 const val TR_OBJECT_P_SHORT = TR_OBJECT_P_BYTE - 1
