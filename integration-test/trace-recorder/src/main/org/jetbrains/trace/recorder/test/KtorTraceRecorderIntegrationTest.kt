@@ -16,6 +16,7 @@ import java.nio.file.Paths
 
 class KtorTraceRecorderIntegrationTest : AbstractTraceRecorderIntegrationTest() {
     override val projectPath: String = Paths.get("build", "integrationTestProjects", "ktor").toString()
+    override val formatArgs: Map<String, String> = mapOf("format" to "binary", "formatOption" to "stream")
     
     private fun runKtorTests(vararg submodules: String, checkRepresentation: Boolean = false) {
         require(submodules.isNotEmpty()) { "At least one submodule should be specified" }

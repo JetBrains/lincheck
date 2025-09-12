@@ -15,6 +15,10 @@ import withStdErrTee
 
 abstract class AbstractTraceRecorderIntegrationTest : AbstractTraceIntegrationTest() {
     override val fatJarName: String = "trace-recorder-fat.jar"
+    open val formatArgs: Map<String, String> = mapOf(
+        "format" to "text",
+        "formatOption" to "verbose",
+    )
 
     final override fun runGradleTest(
         testClassName: String,
@@ -35,9 +39,7 @@ abstract class AbstractTraceRecorderIntegrationTest : AbstractTraceIntegrationTe
                     "-XX:+UnlockExperimentalVMOptions",
                     "-XX:hashCode=2",
                 ),
-                extraAgentArgs+ mapOf(
-                    "format" to "text",
-                    "formatOption" to "verbose",),
+                extraAgentArgs + formatArgs,
                 gradleCommands,
                 checkRepresentation,
                 testNameSuffix,

@@ -18,6 +18,7 @@ import kotlin.io.path.createTempFile
 
 class KotlinCompilerBlackBoxTraceRecorderIntegrationTest : AbstractTraceRecorderIntegrationTest() {
     override val projectPath: String = Paths.get("build", "integrationTestProjects", "kotlin").toString()
+    override val formatArgs: Map<String, String> = mapOf("format" to "binary", "formatOption" to "stream")
     
     private fun <T> withPermissions(block: (File) -> T) : T {
         val permissions = createTempFile("permissions", "txt").toFile()
