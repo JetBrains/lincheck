@@ -23,6 +23,7 @@ class TransformationConfiguration(
 
     var trackLocalVariableAccesses: Boolean = false,
     var trackSharedMemoryAccesses: Boolean = false,
+    var trackSharedMemoryReads: Boolean = false,
 
     var trackMethodCalls: Boolean = false,
     var trackInlineMethodCalls: Boolean = false,
@@ -195,6 +196,7 @@ object TraceRecorderDefaultTransformationProfile : TransformationProfile {
             trackObjectCreations = true
             trackLocalVariableAccesses = true
             trackSharedMemoryAccesses = true
+            trackSharedMemoryReads = false
 
             trackMethodCalls = true
             trackInlineMethodCalls = true
@@ -247,6 +249,7 @@ object TraceDebuggerDefaultTransformationProfile : TransformationProfile {
             trackObjectCreations = true
             trackLocalVariableAccesses = true
             trackSharedMemoryAccesses = true
+            trackSharedMemoryReads = true
 
             trackMethodCalls = true
             trackInlineMethodCalls = true
@@ -300,6 +303,7 @@ object ModelCheckingDefaultTransformationProfile : TransformationProfile {
             return config.apply {
                 trackObjectCreations = true
                 trackSharedMemoryAccesses = true
+                trackSharedMemoryReads = true
             }
         }
 
@@ -307,6 +311,7 @@ object ModelCheckingDefaultTransformationProfile : TransformationProfile {
             trackObjectCreations = true
             trackLocalVariableAccesses = true
             trackSharedMemoryAccesses = true
+            trackSharedMemoryReads = true
 
             trackMethodCalls = true
             trackInlineMethodCalls = true

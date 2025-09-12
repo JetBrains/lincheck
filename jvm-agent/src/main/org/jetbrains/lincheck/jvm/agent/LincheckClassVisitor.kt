@@ -94,8 +94,9 @@ internal class LincheckClassVisitor(
         val adapter = GeneratorAdapter(mv, access, methodName, desc)
         mv = adapter
 
+        val config = profile.getMethodConfiguration(className.toCanonicalClassName(), methodName, desc)
         val chain = TransformerChain(
-            config = profile.getMethodConfiguration(className.toCanonicalClassName(), methodName, desc),
+            config = config,
             adapter = adapter,
             initialMethodVisitor = mv,
         )
@@ -156,7 +157,7 @@ internal class LincheckClassVisitor(
 
         // ======== Field, Array, and Local Variables accesses ========
         chain.addTransformer { adapter, mv ->
-            applySharedMemoryAccessTransformer(methodName, desc, access, methodInfo, adapter, mv)
+            applySharedMemoryAccessTransformer(methodName, desc, access, methodInfo, config, adapter, mv)
         }
         chain.addTransformer { adapter, mv ->
             LocalVariablesAccessTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv, methodInfo.locals)
@@ -231,6 +232,7 @@ internal class LincheckClassVisitor(
         desc: String,
         access: Int,
         methodInfo: MethodInformation,
+        configuration: TransformationConfiguration,
         adapter: GeneratorAdapter,
         methodVisitor: MethodVisitor,
     ): SharedMemoryAccessTransformer {
@@ -243,7 +245,7 @@ internal class LincheckClassVisitor(
                 classVisitor::isInstanceOf
             )
         }
-        mv = SharedMemoryAccessTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+        mv = SharedMemoryAccessTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv, configuration)
         return mv
     }
 }
