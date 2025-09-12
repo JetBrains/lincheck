@@ -29,22 +29,26 @@ abstract class AbstractTraceIntegrationTest {
     private var runtimeClasspathUrls: Array<URL> = emptyArray()
 
     private fun buildGradleInitScriptToDumpTrace(
+        gradleCommands: List<String>,
         testClassName: String,
         testMethodName: String,
         fileToDump: File,
         extraJvmArgs: List<String>,
         extraAgentArgs: Map<String, String>,
     ): String {
+        fun String.replaceDollar() = replace("$", "\\$")
+
         val pathToFatJar = File(Paths.get("build", "libs", fatJarName).toString()).absolutePath.escape()
         // We need to escape it twice, as our argument parser will de-escape it when split into array
         val pathToOutput = fileToDump.absolutePath.escape().escape()
-        val agentArgs = "class=$testClassName,method=$testMethodName,output=$pathToOutput" +
+        val agentArgs = "class=${testClassName.replaceDollar()},method=${testMethodName.replaceDollar()},output=${pathToOutput.replaceDollar()}" +
                         extraAgentArgs.entries
-                            .joinToString(",") { "${it.key}=${it.value}" }
+                            .joinToString(",") { "${it.key}=${it.value.replaceDollar()}" }
                             .let { if (it.isNotEmpty()) ",$it" else it }
         return """
             gradle.taskGraph.whenReady {
-                val jvmTasks = allTasks.filter { task -> task is JavaForkOptions }
+                val gradleCommands = listOf(${gradleCommands.joinToString(",") { "\"$it\"" }})
+                val jvmTasks = allTasks.filter { task -> task is JavaForkOptions && gradleCommands.contains(task.path) }
                 jvmTasks.forEach { task ->
                     task.doFirst {
                         val options = task as JavaForkOptions
@@ -69,6 +73,12 @@ abstract class AbstractTraceIntegrationTest {
         tempFile.writeText(content)
         return tempFile
     }
+    
+    val failOnErrorInStdErr: (String) -> Unit = {
+        if (it.lines().any { line -> line.startsWith("[ERROR] ") }) {
+            Assert.fail("Error output in stderr:\n$it")
+        }
+    }
 
     protected abstract fun runGradleTest(
         testClassName: String,
@@ -78,32 +88,45 @@ abstract class AbstractTraceIntegrationTest {
         gradleCommands: List<String>,
         checkRepresentation: Boolean = true,
         testNameSuffix: String? = null,
+        onStdErrOutput: (String) -> Unit = failOnErrorInStdErr,
     )
 
     fun runGradleTests(
-        testClassNamePrefix: String,
+        testClassNamePrefix: String = "",
         extraJvmArgs: List<String> = emptyList(),
         extraAgentArgs: Map<String, String> = emptyMap(),
         gradleBuildCommands: List<String>,
         gradleTestCommands: List<String>,
         checkRepresentation: Boolean = true,
+        rootPath: String = projectPath,
+        onStdErrOutput: (String) -> Unit = failOnErrorInStdErr,
     ) {
-        buildTests(gradleBuildCommands)
-        collectTestClasses(testClassNamePrefix)
-            .asTestSuite()
-            .forEach { (testClass, testMethods) ->
-                testMethods.forEach { testMethod ->
-                    println("Running test: ${testClass.name}::${testMethod.name}(${testMethod.parameters.joinToString(", ") { it.type.simpleName }})")
-                    runGradleTest(
-                        testClass.name,
-                        testMethod.name,
-                        extraJvmArgs,
-                        extraAgentArgs,
-                        gradleTestCommands,
-                        checkRepresentation
-                    )
+        val (_, output) = withStdErrTee {
+            buildTests(gradleBuildCommands)
+            collectTestClasses(testClassNamePrefix, rootPath)
+                .asTestSuite()
+                .forEach { (testClass, testMethods) ->
+                    testMethods.forEach { testMethod ->
+                        println(
+                            "Running test: ${testClass.name}::${testMethod.name}(${
+                                testMethod.parameters.joinToString(
+                                    ", "
+                                ) { it.type.simpleName }
+                            })"
+                        )
+                        runGradleTest(
+                            testClass.name,
+                            testMethod.name,
+                            extraJvmArgs,
+                            extraAgentArgs,
+                            gradleTestCommands,
+                            checkRepresentation,
+                        )
+                    }
                 }
-            }
+        }
+        
+        onStdErrOutput(output)
     }
 
     // TODO: rewrite to accept array of tests (or TestSuite maybe better)
@@ -124,7 +147,7 @@ abstract class AbstractTraceIntegrationTest {
                 .setStandardError(System.err)
                 .addArguments(
                     "--init-script",
-                    createInitScriptAsTempFile(buildGradleInitScriptToDumpTrace(testClassName, testMethodName, tmpFile, extraJvmArgs, extraAgentArgs)).absolutePath,
+                    createInitScriptAsTempFile(buildGradleInitScriptToDumpTrace(gradleCommands, testClassName, testMethodName, tmpFile, extraJvmArgs, extraAgentArgs)).absolutePath,
                 ).forTasks(
                     *gradleCommands.toTypedArray(),
                     "--tests",
@@ -149,6 +172,8 @@ abstract class AbstractTraceIntegrationTest {
                     )
                 }
             }
+        } else if (tmpFile.readText().isEmpty()) {
+            Assert.fail("No output was produced by the test.")
         }
     }
 
@@ -200,7 +225,7 @@ abstract class AbstractTraceIntegrationTest {
             connection.newBuild()
                 .setStandardError(System.err)
                 .forTasks(*gradleBuildCommands.toTypedArray())
-                .withArguments("--init-script", initScriptFile.absolutePath)
+                .withArguments("--no-configuration-cache", "--init-script", initScriptFile.absolutePath)
                 .run()
 
             // Read the classpath from the file
@@ -226,13 +251,12 @@ abstract class AbstractTraceIntegrationTest {
      * Creates an init script that outputs the test runtime classpath to a file.
      */
     private fun createInitScriptToOutputClasspath(outputFile: File, gradleBuildCommands: List<String>): String {
-        return """
+        return $$"""
             gradle.taskGraph.whenReady {
-                val buildTasks = listOf(${gradleBuildCommands.joinToString(",") { "\"$it\"" }})
-                    .map { if (it.startsWith(":")) it.drop(1) else it }
-    
+                val buildTasks = listOf($${gradleBuildCommands.joinToString(",") { "\"$it\"" }})
+
                 allTasks.forEach { task ->
-                    if (task.name in buildTasks) {
+                    if (task.path in buildTasks) {
                         task.doLast {
                             val project = task.project
                             val classpath = project.configurations.findByName("jvmTestRuntimeClasspath") ?:
@@ -240,7 +264,7 @@ abstract class AbstractTraceIntegrationTest {
 
                             if (classpath != null) {
                                 val classpathString = classpath.files.joinToString(File.pathSeparator)
-                                val outputFile = File("${outputFile.absolutePath.escape()}")
+                                val outputFile = File("$${outputFile.absolutePath.escape()}")
                                 outputFile.writeText(classpathString)
                             }
                         }
@@ -258,9 +282,12 @@ abstract class AbstractTraceIntegrationTest {
         .forProjectDirectory(File(projectPath))
         .connect()
 
-    private fun collectTestClasses(testClassNamePrefix: String): List<Class<*>> {
-        val projectDir = File(projectPath)
-        val classFilesPatterns = listOf("classes/kotlin/jvm/test/", "classes/kotlin/test/", "classes/java/test/")
+    private fun collectTestClasses(testClassNamePrefix: String, rootPath: String): List<Class<*>> {
+        val projectDir = File(rootPath)
+        val classFilesPatterns = listOf(
+            "classes/kotlin/jvm/test/", "classes/kotlin/test/", "classes/java/test/",
+            "classes/atomicfu/jvm/test/", "classes/atomicfu-orig/jvm/test/",
+        )
         val testClassesPaths = projectDir.walk()
             .filter {
                 it.isFile &&
@@ -280,7 +307,7 @@ abstract class AbstractTraceIntegrationTest {
                 .firstOrNull { pattern -> path.contains(pattern) }
                 ?.let { pattern ->
                     val index = path.lastIndexOf(pattern) + pattern.length
-                    path.substring(0, index)
+                    path.take(index)
                 }
                 ?: path
             File(containingDirectoryPath).toURI().toURL()

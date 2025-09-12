@@ -11,6 +11,7 @@
 package org.jetbrains.trace.debugger.test
 
 import AbstractTraceIntegrationTest
+import withStdErrTee
 
 abstract class AbstractTraceDebuggerIntegrationTest : AbstractTraceIntegrationTest() {
     override val fatJarName: String = "trace-debugger-fat.jar"
@@ -23,17 +24,22 @@ abstract class AbstractTraceDebuggerIntegrationTest : AbstractTraceIntegrationTe
         gradleCommands: List<String>,
         checkRepresentation: Boolean,
         testNameSuffix: String?,
+        onStdErrOutput: (String) -> Unit,
     ) {
-        runGradleTestImpl(
-            testClassName,
-            testMethodName,
-            extraJvmArgs + listOf(
-                "-Dlincheck.traceDebuggerMode=true",
-                "-XX:+UnlockExperimentalVMOptions",
-                "-XX:hashCode=2"
-            ),
-            extraAgentArgs,
-            gradleCommands
-        )
+        val (_, output) = withStdErrTee {
+            runGradleTestImpl(
+                testClassName,
+                testMethodName,
+                extraJvmArgs + listOf(
+                    "-Dlincheck.traceDebuggerMode=true",
+                    "-XX:+UnlockExperimentalVMOptions",
+                    "-XX:hashCode=2"
+                ),
+                extraAgentArgs,
+                gradleCommands,
+                checkRepresentation,
+            )
+        }
+        onStdErrOutput(output)
     }
 }

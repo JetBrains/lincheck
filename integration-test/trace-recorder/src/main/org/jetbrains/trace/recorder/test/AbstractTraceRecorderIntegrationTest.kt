@@ -11,6 +11,7 @@
 package org.jetbrains.trace.recorder.test
 
 import AbstractTraceIntegrationTest
+import withStdErrTee
 
 abstract class AbstractTraceRecorderIntegrationTest : AbstractTraceIntegrationTest() {
     override val fatJarName: String = "trace-recorder-fat.jar"
@@ -23,22 +24,25 @@ abstract class AbstractTraceRecorderIntegrationTest : AbstractTraceIntegrationTe
         gradleCommands: List<String>,
         checkRepresentation: Boolean,
         testNameSuffix: String?,
+        onStdErrOutput: (String) -> Unit,
     ) {
-        runGradleTestImpl(
-            testClassName,
-            testMethodName,
-            extraJvmArgs + listOf(
-                "-Dlincheck.traceRecorderMode=true",
-                "-XX:+UnlockExperimentalVMOptions",
-                "-XX:hashCode=2",
-            ),
-            extraAgentArgs + mapOf(
-                "format" to "text",
-                "formatOption" to "verbose",
-            ),
-            gradleCommands,
-            checkRepresentation,
-            testNameSuffix,
-        )
+        val (_, output) = withStdErrTee {
+            runGradleTestImpl(
+                testClassName,
+                testMethodName,
+                extraJvmArgs + listOf(
+                    "-Dlincheck.traceRecorderMode=true",
+                    "-XX:+UnlockExperimentalVMOptions",
+                    "-XX:hashCode=2",
+                ),
+                extraAgentArgs+ mapOf(
+                    "format" to "text",
+                    "formatOption" to "verbose",),
+                gradleCommands,
+                checkRepresentation,
+                testNameSuffix,
+            )
+        }
+        onStdErrOutput(output)
     }
 }

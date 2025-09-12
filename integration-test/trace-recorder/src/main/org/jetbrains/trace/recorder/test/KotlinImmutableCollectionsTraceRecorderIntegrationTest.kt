@@ -32,7 +32,7 @@ class KotlinImmutableCollectionsTraceRecorderIntegrationTest : AbstractTraceReco
     fun `tests_contract_list_ImmutableListTest`() {
         runGradleTests(
             testClassNamePrefix = "tests.contract.list.ImmutableListTest",
-            gradleBuildCommands = listOf("compileTestKotlinJvm"),
+            gradleBuildCommands = listOf(":kotlinx-collections-immutable:compileTestKotlinJvm"),
             gradleTestCommands = listOf(
                 ":kotlinx-collections-immutable:cleanJvmTest",
                 ":kotlinx-collections-immutable:jvmTest",

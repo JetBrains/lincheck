@@ -111,9 +111,7 @@ data class TraceMetaInfo private constructor(
         fun start(agentArgs: String, className: String, methodName: String): TraceMetaInfo {
             val bean = ManagementFactory.getRuntimeMXBean()
             // Read JVM args
-            val jvmArgs = bean.inputArguments
-                .map { arg -> arg.escapeShell()}
-                .joinToString(" ")
+            val jvmArgs = bean.inputArguments.joinToString(" ") { arg -> arg.escapeShell() }
 
             val meta = TraceMetaInfo(jvmArgs, agentArgs, className, methodName, System.currentTimeMillis())
             with (meta) {

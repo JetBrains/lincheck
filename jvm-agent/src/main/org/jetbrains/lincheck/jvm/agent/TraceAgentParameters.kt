@@ -253,8 +253,8 @@ private fun splitArgs(args: String): List<String> {
 internal fun parseKVArgs(args: String): Map<String, String>? {
     var idx = 0
 
-    fun error(m: String): Map<String, String>? {
-        Logger.error { "Agent arguments error at position $idx: $m" }
+    fun warn(m: String): Map<String, String>? {
+        Logger.warn { "Agent arguments error at position $idx: $m" }
         return null
     }
 
@@ -274,7 +274,7 @@ internal fun parseKVArgs(args: String): Map<String, String>? {
                 key.clear()
                 value.clear()
                 if (!ch.isJavaIdentifierStart()) {
-                    return error("Invalid first key character '$ch'")
+                    return warn("Invalid first key character '$ch'")
                 }
                 key.append(ch)
                 state = KVParserState.KEY
@@ -283,7 +283,7 @@ internal fun parseKVArgs(args: String): Map<String, String>? {
                 if (ch == '=') {
                     state = KVParserState.VALUESTART
                 } else if (!ch.isJavaIdentifierPart()) {
-                    return error("Invalid key character '$ch'")
+                    return warn("Invalid key character '$ch'")
                 } else {
                     key.append(ch)
                 }
@@ -327,7 +327,7 @@ internal fun parseKVArgs(args: String): Map<String, String>? {
             }
             KVParserState.NEEDCOMMA -> {
                 if (ch != ',') {
-                    return error("Need ','")
+                    return warn("Need ','")
                 }
                 state = KVParserState.KEYSTART
             }
@@ -335,10 +335,10 @@ internal fun parseKVArgs(args: String): Map<String, String>? {
     }
 
     when (state) {
-        KVParserState.KEY -> return error("Cannot find value for last key")
+        KVParserState.KEY -> return warn("Cannot find value for last key")
         KVParserState.QUOTEESCAPE,
-        KVParserState.QUOTEDVALUE -> return error("Last value is unfinished, expect '\"'")
-        KVParserState.ESCAPE -> return error("Unfinished escape in last value")
+        KVParserState.QUOTEDVALUE -> return warn("Last value is unfinished, expect '\"'")
+        KVParserState.ESCAPE -> return warn("Unfinished escape in last value")
         else -> {} // All other states are ACCEPT ones
     }
 

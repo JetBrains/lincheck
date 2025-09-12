@@ -28,7 +28,17 @@ private val projectsToTest = listOf(
         organization = "ivandev0",
         repositoryName = "TraceDebuggerExamples",
         commitHash = "e3f39b1cb9dd8b3b4942015d57ef5ce0f5f37c6b"
-    )
+    ),
+    GithubProjectSnapshot(
+        organization = "JetBrains",
+        repositoryName = "kotlin",
+        commitHash = "09113198e9031cbcc0240352fd4537dc74f7be79"
+    ),
+    GithubProjectSnapshot(
+        organization = "ktorio",
+        repositoryName = "ktor",
+        commitHash = "40eb608b9b561c9e6d7d2d998f2a7c39bd63869d"
+    ),
 )
 
 lateinit var traceAgentIntegrationTestsPrerequisites: TaskProvider<Task>
