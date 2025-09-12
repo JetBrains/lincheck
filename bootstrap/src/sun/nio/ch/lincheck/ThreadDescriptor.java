@@ -70,6 +70,11 @@ public class ThreadDescriptor {
      */
     private int ignoredSectionDepth = 0;
 
+    /**
+     * This flag indicates whether the thread is tracked from the start by the attached agent.
+     */
+    private boolean isTrackedFromStart = true;
+
     public ThreadDescriptor(Thread thread) {
         if (thread == null) {
             throw new IllegalArgumentException("Thread must not be null");
@@ -95,6 +100,14 @@ public class ThreadDescriptor {
 
     public void setEventTrackerData(Object eventTrackerData) {
         this.eventTrackerData = new WeakReference<>(eventTrackerData);
+    }
+
+    public boolean isTrackedFromStart() {
+        return isTrackedFromStart;
+    }
+
+    public void setTrackedFromStart(boolean trackedFromStart) {
+        isTrackedFromStart = trackedFromStart;
     }
 
     public void setAsRootDescriptor() {
@@ -130,6 +143,13 @@ public class ThreadDescriptor {
      */
     public boolean inAnalyzedCode() {
         return isAnalysisEnabled && (ignoredSectionDepth == 0);
+    }
+
+    /**
+     * @return `true` if analysis is enabled for this thread, `false` otherwise.
+     */
+    public boolean isAnalysisEnabled() {
+        return isAnalysisEnabled;
     }
 
     /**

@@ -20,7 +20,6 @@ import org.jetbrains.lincheck.trace.DefaultTRArrayTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRFieldTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRLocalVariableTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRMethodCallTracePointPrinter.append
-import org.jetbrains.lincheck.trace.append
 import java.io.DataInput
 import java.io.DataOutput
 import java.math.BigDecimal
@@ -497,6 +496,7 @@ val TR_OBJECT_NULL = TRObject(TR_OBJECT_NULL_CLASSNAME, 0, null)
 
 const val TR_OBJECT_VOID_CLASSNAME = -2
 val TR_OBJECT_VOID = TRObject(TR_OBJECT_VOID_CLASSNAME, 0, null)
+val TR_OBJECT_UNFINISHED_METHOD_RESULT = TRObject(TR_OBJECT_P_STRING, 0, "<unfinished method>")
 
 const val TR_OBJECT_P_BYTE = TR_OBJECT_VOID_CLASSNAME - 1
 const val TR_OBJECT_P_SHORT = TR_OBJECT_P_BYTE - 1

@@ -46,9 +46,9 @@ interface TraceCollectingStrategy {
     fun registerCurrentThread(threadId: Int)
 
     /**
-     * Mark the thread as finished in strategy.
+     * Makes sure that thread has written all of its recorded data.
      */
-    fun finishCurrentThread()
+    fun completeThread(thread: Thread)
 
     /**
      * Must be called when a new tracepoint is created.
@@ -61,9 +61,10 @@ interface TraceCollectingStrategy {
     /**
      * Must be called when the method call is ended and the call stack is popped.
      *
+     * @param thread thread to which belongs [callTracepoint].
      * @param callTracepoint tracepoint popped from the call stack.
      */
-    fun callEnded(callTracepoint: TRMethodCallTracePoint)
+    fun callEnded(thread: Thread, callTracepoint: TRMethodCallTracePoint)
 
     /**
      * Must be called when trace is finished
@@ -716,7 +717,7 @@ private class DirectTraceWriter (
 
 class MemoryTraceCollecting: TraceCollectingStrategy {
     override fun registerCurrentThread(threadId: Int) {}
-    override fun finishCurrentThread() {}
+    override fun completeThread(thread: Thread) {}
 
     override fun tracePointCreated(
         parent: TRMethodCallTracePoint?,
@@ -725,7 +726,7 @@ class MemoryTraceCollecting: TraceCollectingStrategy {
         parent?.addChild(created)
     }
 
-    override fun callEnded(callTracepoint: TRMethodCallTracePoint) {}
+    override fun callEnded(thread: Thread, callTracepoint: TRMethodCallTracePoint) {}
 
     /**
      * Do nothing.
@@ -784,9 +785,9 @@ class FileStreamingTraceCollecting(
     }
 
     override fun registerCurrentThread(threadId: Int) {
-        val t = Thread.currentThread()
-        if (writers[t] != null) return
-        writers[t] = BufferedTraceWriter(
+        val thread = Thread.currentThread()
+        if (writers[thread] != null) return
+        writers[thread] = BufferedTraceWriter(
             writerId = threadId,
             context = context,
             contextState = this,
@@ -796,11 +797,11 @@ class FileStreamingTraceCollecting(
                     saveDataAndIndexBlockImpl(writerId, logicalBlockStart,dataBlock, indexList)
             }
         )
-        context.setThreadName(threadId, t.name)
+        context.setThreadName(threadId, thread.name)
     }
 
-    override fun finishCurrentThread() {
-        val writer = writers[Thread.currentThread()] ?: return
+    override fun completeThread(thread: Thread) {
+        val writer = writers[thread] ?: return
         writer.flush()
     }
 
@@ -820,8 +821,8 @@ class FileStreamingTraceCollecting(
         }
     }
 
-    override fun callEnded(callTracepoint: TRMethodCallTracePoint) {
-        val writer = writers[Thread.currentThread()] ?: return
+    override fun callEnded(thread: Thread, callTracepoint: TRMethodCallTracePoint) {
+        val writer = writers[thread] ?: return
         try {
             writer.mark()
             callTracepoint.saveFooter(writer)

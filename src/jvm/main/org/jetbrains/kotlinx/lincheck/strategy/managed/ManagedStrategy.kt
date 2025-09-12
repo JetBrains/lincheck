@@ -657,6 +657,10 @@ internal abstract class ManagedStrategy(
 
     // == LISTENING METHODS ==
 
+    override fun beforeExistingThreadTracking(thread: Thread, descriptor: ThreadDescriptor) {
+        error("Lincheck managed strategy does not support tracking of threads, started before agent attach.")
+    }
+
     override fun beforeThreadFork(thread: Thread, descriptor: ThreadDescriptor): Unit = runInsideIgnoredSection {
         val currentThreadId = threadScheduler.getCurrentThreadId()
         // do not track threads forked from unregistered threads

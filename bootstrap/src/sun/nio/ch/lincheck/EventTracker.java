@@ -18,6 +18,7 @@ import java.lang.invoke.CallSite;
  */
 public interface EventTracker {
 
+    void beforeExistingThreadTracking(Thread thread, ThreadDescriptor descriptor);
     void beforeThreadFork(Thread thread, ThreadDescriptor descriptor);
     void beforeThreadStart();
     void afterThreadFinish();
