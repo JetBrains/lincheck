@@ -4,7 +4,7 @@ java.lang.IllegalStateException: Check failed.
 	at org.jetbrains.kotlinx.lincheck_test.representation.SimpleThreadCreationRepresentationTest.block(ThreadCreationRepresentationTest.kt:51)
 	at org.jetbrains.kotlinx.lincheck_test.representation.SimpleThreadCreationRepresentationTest.block(ThreadCreationRepresentationTest.kt:39)
 	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:51)
-	at java.base/java.lang.Thread.run(Thread.java:840)
+	at java.base/java.lang.Thread.run(Unknown Source)
 
 The following interleaving leads to the error:
 | ----------------------------------------------------------------- |
@@ -12,7 +12,7 @@ The following interleaving leads to the error:
 | ----------------------------------------------------------------- |
 | $this_runCatching.block(): threw IllegalStateException |          |
 |   block(): threw IllegalStateException                 |          |
-|     thread(block = Lambda#2): Thread#1                 |          |
+|     thread(block = Lambda#1): Thread#1                 |          |
 |     switch (reason: waiting for Thread 1 to finish)    |          |
 |                                                        | run()    |
 |                                                        |   a ➜ 0  |
@@ -27,7 +27,7 @@ Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:51) |                                                                                                          |
 |   block(): threw IllegalStateException at SimpleThreadCreationRepresentationTest.block(ThreadCreationRepresentationTest.kt:39)                                                  |                                                                                                          |
-|     thread(block = Lambda#2): Thread#1 at SimpleThreadCreationRepresentationTest.block(ThreadCreationRepresentationTest.kt:47)                                                  |                                                                                                          |
+|     thread(block = Lambda#1): Thread#1 at SimpleThreadCreationRepresentationTest.block(ThreadCreationRepresentationTest.kt:47)                                                  |                                                                                                          |
 |       Thread#1.start() at ThreadsKt.<unknown method>(Thread.kt:42)                                                                                                              |                                                                                                          |
 |     switch (reason: waiting for Thread 1 to finish)                                                                                                                             |                                                                                                          |
 |                                                                                                                                                                                 | run()                                                                                                    |

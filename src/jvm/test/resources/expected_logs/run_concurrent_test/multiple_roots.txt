@@ -2,14 +2,14 @@
 
 java.lang.IllegalStateException: Check failed.
 	at org.jetbrains.kotlinx.lincheck_test.representation.MultipleRootsInRunConcurrent.multipleRootsTest$lambda$3$lambda$2(MultipleRootsInRunConcurrent.kt:36)
-	at java.base/java.lang.Thread.run(Thread.java:840)
+	at java.base/java.lang.Thread.run(Unknown Source)
 
 The following interleaving leads to the error:
 | ------------------------------------------------------------------------------- |
 |                   Main Thread                   |   Thread 1    |   Thread 2    |
 | ------------------------------------------------------------------------------- |
-| thread(block = Lambda#2): Thread#1              |               |               |
-| thread(block = Lambda#3): Thread#2              |               |               |
+| thread(block = Lambda#1): Thread#1              |               |               |
+| thread(block = Lambda#2): Thread#2              |               |               |
 | switch (reason: waiting for Thread 1 to finish) |               |               |
 |                                                 |               | run()         |
 |                                                 |               |   counter ➜ 0 |
@@ -27,9 +27,9 @@ Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 |                                                                Main Thread                                                                 |                                                            Thread 1                                                            |                                                            Thread 2                                                            |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| thread(block = Lambda#2): Thread#1 at MultipleRootsInRunConcurrent.multipleRootsTest$lambda$3$lambda$2(MultipleRootsInRunConcurrent.kt:30) |                                                                                                                                |                                                                                                                                |
+| thread(block = Lambda#1): Thread#1 at MultipleRootsInRunConcurrent.multipleRootsTest$lambda$3$lambda$2(MultipleRootsInRunConcurrent.kt:30) |                                                                                                                                |                                                                                                                                |
 |   Thread#1.start() at ThreadsKt.<unknown method>(Thread.kt:42)                                                                             |                                                                                                                                |                                                                                                                                |
-| thread(block = Lambda#3): Thread#2 at MultipleRootsInRunConcurrent.multipleRootsTest$lambda$3$lambda$2(MultipleRootsInRunConcurrent.kt:31) |                                                                                                                                |                                                                                                                                |
+| thread(block = Lambda#2): Thread#2 at MultipleRootsInRunConcurrent.multipleRootsTest$lambda$3$lambda$2(MultipleRootsInRunConcurrent.kt:31) |                                                                                                                                |                                                                                                                                |
 |   Thread#2.start() at ThreadsKt.<unknown method>(Thread.kt:42)                                                                             |                                                                                                                                |                                                                                                                                |
 | switch (reason: waiting for Thread 1 to finish)                                                                                            |                                                                                                                                |                                                                                                                                |
 |                                                                                                                                            |                                                                                                                                | run()                                                                                                                          |
