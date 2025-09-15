@@ -10,7 +10,6 @@
 
 package org.jetbrains.trace.recorder.test
 
-import org.junit.Ignore
 import org.junit.Test
 import java.nio.file.Paths
 
@@ -37,23 +36,18 @@ class KtorTraceRecorderIntegrationTest : AbstractTraceRecorderIntegrationTest() 
     }
 
     @Test
-    @Ignore("No output")
     fun `ktor-http`() = runKtorTests("http")
 
     @Test
-    @Ignore("Verify error")
     fun `ktor-http-cio`() = runKtorTests("http", "cio") 
 
     @Test
-    @Ignore("Out of bounds")
     fun `ktor-io`() = runKtorTests("io")
 
     @Test
-    @Ignore("Inline method error")
     fun `ktor-network`() = runKtorTests("network")
 
     @Test
-    @Ignore("No output")
     fun `ktor-network-tls`() = runKtorTests("network", "tls")
 
     @Test
@@ -66,10 +60,8 @@ class KtorTraceRecorderIntegrationTest : AbstractTraceRecorderIntegrationTest() 
     )
 
     @Test
-    @Ignore("Inline method error")
     fun `ktor-utils`() = runKtorTests("utils")
 
     @Test
-    @Ignore("Verify error")
     fun `ktor-server-cio`() = runKtorTests("server", "cio")
 }
