@@ -61,7 +61,7 @@ sealed class TRTracePoint(
 }
 
 // Only trace point which is "container"
-class TRMethodCallTracePoint(
+open class TRMethodCallTracePoint(
     threadId: Int,
     codeLocationId: Int,
     val methodId: Int,
@@ -181,6 +181,39 @@ class TRMethodCallTracePoint(
             }
 
             val tracePoint = TRMethodCallTracePoint(
+                threadId = threadId,
+                codeLocationId = codeLocationId,
+                methodId = methodId,
+                obj = obj,
+                parameters = parameters,
+                eventId = eventId,
+            )
+
+            return tracePoint
+        }
+    }
+}
+
+class TRIncompleteMethodCallTracePoint(
+    threadId: Int,
+    codeLocationId: Int,
+    methodId: Int,
+    obj: TRObject?,
+    parameters: List<TRObject?>,
+    eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
+) : TRMethodCallTracePoint(threadId, codeLocationId, methodId, obj, parameters, eventId) {
+
+    internal companion object {
+        fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRIncompleteMethodCallTracePoint {
+            val methodId = inp.readInt()
+            val obj = inp.readTRObject()
+            val pcount = inp.readInt()
+            val parameters = mutableListOf<TRObject?>()
+            repeat(pcount) {
+                parameters.add(inp.readTRObject())
+            }
+
+            val tracePoint = TRIncompleteMethodCallTracePoint(
                 threadId = threadId,
                 codeLocationId = codeLocationId,
                 methodId = methodId,
@@ -609,25 +642,27 @@ private typealias TRLoader = (DataInput, Int, Int, Int) -> TRTracePoint
 
 private fun getClassId(point: TRTracePoint): Int {
     return when (point) {
-        is TRMethodCallTracePoint -> 0
-        is TRReadArrayTracePoint -> 1
-        is TRReadLocalVariableTracePoint -> 2
-        is TRReadTracePoint -> 3
-        is TRWriteArrayTracePoint -> 4
-        is TRWriteLocalVariableTracePoint -> 5
-        is TRWriteTracePoint -> 6
+        is TRIncompleteMethodCallTracePoint -> 0
+        is TRMethodCallTracePoint -> 1
+        is TRReadArrayTracePoint -> 2
+        is TRReadLocalVariableTracePoint -> 3
+        is TRReadTracePoint -> 4
+        is TRWriteArrayTracePoint -> 5
+        is TRWriteLocalVariableTracePoint -> 6
+        is TRWriteTracePoint -> 7
     }
 }
 
 private fun getLoaderByClassId(id: Byte): TRLoader {
     return when (id.toInt()) {
-        0 -> TRMethodCallTracePoint::load
-        1 -> TRReadArrayTracePoint::load
-        2 -> TRReadLocalVariableTracePoint::load
-        3 -> TRReadTracePoint::load
-        4 -> TRWriteArrayTracePoint::load
-        5 -> TRWriteLocalVariableTracePoint::load
-        6 -> TRWriteTracePoint::load
+        0 -> TRIncompleteMethodCallTracePoint::load
+        1 -> TRMethodCallTracePoint::load
+        2 -> TRReadArrayTracePoint::load
+        3 -> TRReadLocalVariableTracePoint::load
+        4 -> TRReadTracePoint::load
+        5 -> TRWriteArrayTracePoint::load
+        6 -> TRWriteLocalVariableTracePoint::load
+        7 -> TRWriteTracePoint::load
         else -> error("Unknown TRTracePoint class id $id")
     }
 }

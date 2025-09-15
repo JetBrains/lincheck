@@ -52,7 +52,6 @@ public class Injections {
             ThreadDescriptor.setThreadDescriptor(t, descriptor);
         }
         descriptor.setEventTracker(allThreadsEventTracker);
-        descriptor.setTrackedFromStart(false);
         ThreadDescriptor.setCurrentThreadDescriptor(descriptor);
         allThreadsEventTracker.beforeExistingThreadTracking(t, descriptor);
         return descriptor;

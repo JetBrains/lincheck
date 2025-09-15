@@ -185,20 +185,36 @@ class TraceCollectingEventTracker(
             ThreadDescriptor.getThreadDescriptor(thread).eventTrackerData = threadData
             threadData
         }
+        val thread = Thread.currentThread()
         descriptor.enableAnalysis()
+
+        fun appendMethodCall(obj: TRObject?, className: String, methodName: String, methodDesc: String, codeLocationId: Int = -1, params: List<TRObject> = emptyList()) {
+            val methodCall = TRIncompleteMethodCallTracePoint(
+                threadId = threadData.threadId,
+                codeLocationId = codeLocationId,
+                methodId = TRACE_CONTEXT.getOrCreateMethodId(className, methodName, methodDesc),
+                obj = obj,
+                parameters = params
+            )
+            val parentTracePoint = if (threadData.getStack().isEmpty()) null
+                                   else threadData.currentMethodCallTracePoint()
+            strategy.tracePointCreated(parentTracePoint, methodCall)
+            threadData.pushStackFrame(methodCall, thread, isInline = false)
+        }
 
         runInsideInjectedCode {
             strategy.registerCurrentThread(threadData.threadId)
-            // TODO: create a proper virtual trace point for starting the existing thread
-            val tracePoint = TRMethodCallTracePoint(
-                threadId = threadData.threadId,
-                codeLocationId = -1,
-                methodId = TRACE_CONTEXT.getOrCreateMethodId("Thread", "run", "()V"),
-                obj = TRObject(thread),
-                parameters = emptyList()
-            )
-            strategy.tracePointCreated(null, tracePoint)
-            threadData.pushStackFrame(tracePoint, Thread.currentThread(), isInline = false)
+            for (frame in thread.stackTrace.reversed()) {
+                if (frame.className == "sun.nio.ch.lincheck.Injections") break
+                if (
+                    !frame.isLincheckInternals &&
+                    !frame.isNativeMethod &&
+                    !analysisProfile.shouldBeHidden(frame.className, frame.methodName)
+                ) {
+                    // TODO: should code locations be computed from the frame?
+                    appendMethodCall(null, frame.className, frame.methodName, "()V")
+                }
+            }
         }
     }
 
