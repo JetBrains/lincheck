@@ -153,15 +153,15 @@ class TraceCollectingEventTracker(
     // only at the end
     private val threads = ConcurrentHashMap<Thread, ThreadData>()
 
+    private val strategy: TraceCollectingStrategy
+
     // For proper completion of threads which are not tracked from the start of the agent,
     // of those threads which are not joined by the Main thread,
-    // we need to perform operations in them under locks.
-    // Note: the only place where there is a contention on the locks is
+    // we need to perform operations in them under the flag `inInjectedCode`.
+    // Note: the only place where there is a waiting on the spinner is
     // when Main thread finishes and decides to "finish" all other running threads.
     // By "finish" here we imply that it will dump their recorded data.
-    private val locks = ConcurrentHashMap<Thread, ReentrantLock>()
-
-    private val strategy: TraceCollectingStrategy
+    private val spinner = Spinner()
 
     init {
         when (mode) {
@@ -179,35 +179,15 @@ class TraceCollectingEventTracker(
         }
     }
 
-    /**
-     * Runs [block] under the `lock` of the `thread`, stored in the thread descriptor
-     * with the condition that analysis in that thread is still enabled.
-     */
-    private inline fun ThreadDescriptor.runUnderLockIfAnalysisEnabled(block: () -> Unit) {
-        locks.computeIfAbsent(thread) { ReentrantLock() }.withLock {
-            if (isAnalysisEnabled) {
-                block()
-            }
-        }
-    }
-
-    /**
-     * Runs [block] under the `lock` of the `thread`, stored in the thread descriptor.
-     */
-    private inline fun ThreadDescriptor.runUnderLock(block: () -> Unit) {
-        locks.computeIfAbsent(thread) { ReentrantLock() }.withLock {
-            block()
-        }
-    }
-
-    override fun beforeExistingThreadTracking(thread: Thread, descriptor: ThreadDescriptor) {
+    override fun beforeExistingThreadTracking(thread: Thread, descriptor: ThreadDescriptor): Unit = runInsideIgnoredSection {
         val threadData = threads.computeIfAbsent(thread) {
             val threadData = ThreadData(threads.size)
             ThreadDescriptor.getThreadDescriptor(thread).eventTrackerData = threadData
             threadData
         }
+        descriptor.enableAnalysis()
 
-        descriptor.runUnderLock {
+        runInsideInjectedCode {
             strategy.registerCurrentThread(threadData.threadId)
             // TODO: create a proper virtual trace point for starting the existing thread
             val tracePoint = TRMethodCallTracePoint(
@@ -219,18 +199,16 @@ class TraceCollectingEventTracker(
             )
             strategy.tracePointCreated(null, tracePoint)
             threadData.pushStackFrame(tracePoint, Thread.currentThread(), isInline = false)
-            descriptor.enableAnalysis()
         }
     }
 
-    override fun beforeThreadFork(thread: Thread, descriptor: ThreadDescriptor) = runInsideIgnoredSection {
+    override fun beforeThreadFork(thread: Thread, descriptor: ThreadDescriptor) = runInsideInjectedCode {
         ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         // Create new thread handle
         val forkedThreadData = ThreadData(threads.size)
         val threadDescriptor = ThreadDescriptor.getThreadDescriptor(thread)
         threadDescriptor.eventTrackerData = forkedThreadData
         threads[thread] = forkedThreadData
-        locks[thread] = ReentrantLock()
         // We are ready to use this
     }
 
@@ -238,8 +216,9 @@ class TraceCollectingEventTracker(
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
         val thread = Thread.currentThread()
+        threadDescriptor.enableAnalysis()
 
-        threadDescriptor.runUnderLock {
+        runInsideInjectedCode {
             strategy.registerCurrentThread(threadData.threadId)
             val tracePoint = TRMethodCallTracePoint(
                 threadId = threadData.threadId,
@@ -250,38 +229,33 @@ class TraceCollectingEventTracker(
             )
             strategy.tracePointCreated(null, tracePoint)
             threadData.pushStackFrame(tracePoint, thread, isInline = false)
-            threadDescriptor.enableAnalysis()
         }
     }
 
-    override fun afterThreadFinish() = runInsideIgnoredSection {
+    override fun afterThreadFinish() = runInsideInjectedCode {
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
         val thread = Thread.currentThread()
 
-        threadDescriptor.runUnderLockIfAnalysisEnabled {
-            // Don't pop, we need it
-            val tracePoint = threadData.firstMethodCallTracePoint()
-            tracePoint.result = TR_OBJECT_VOID
-            strategy.callEnded(thread, tracePoint)
-            strategy.completeThread(thread)
-            threadDescriptor.disableAnalysis()
-        }
+        // Don't pop, we need it
+        val tracePoint = threadData.firstMethodCallTracePoint()
+        tracePoint.result = TR_OBJECT_VOID
+        strategy.callEnded(thread, tracePoint)
+        strategy.completeThread(thread)
+        threadDescriptor.disableAnalysis()
     }
 
     override fun threadJoin(thread: Thread?, withTimeout: Boolean) = Unit
 
-    override fun onThreadRunException(exception: Throwable) = runInsideIgnoredSection {
+    override fun onThreadRunException(exception: Throwable) = runInsideInjectedCode {
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: throw exception
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: throw exception
         // Don't pop, we need it
-        threadDescriptor.runUnderLockIfAnalysisEnabled {
-            val tracePoint = threadData.firstMethodCallTracePoint()
-            tracePoint.exceptionClassName = exception::class.java.name
-            strategy.callEnded(Thread.currentThread(), tracePoint)
-            threadDescriptor.disableAnalysis()
-            throw exception
-        }
+        val tracePoint = threadData.firstMethodCallTracePoint()
+        tracePoint.exceptionClassName = exception::class.java.name
+        strategy.callEnded(Thread.currentThread(), tracePoint)
+        threadDescriptor.disableAnalysis()
+        throw exception
     }
 
     override fun beforeLock(codeLocation: Int) = runInsideIgnoredSection {
@@ -362,7 +336,7 @@ class TraceCollectingEventTracker(
         obj: Any?,
         codeLocation: Int,
         fieldId: Int
-    ): Unit = runInsideIgnoredSection {
+    ): Unit = runInsideInjectedCode {
         val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
         if (fieldDescriptor.isStatic) {
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
@@ -374,7 +348,7 @@ class TraceCollectingEventTracker(
         array: Any,
         index: Int,
         codeLocation: Int
-    ) {}
+    ) = Unit
 
     // Needs to run inside ignored section
     // as uninstrumented std lib code can be overshadowed by instrumented project code.
@@ -384,7 +358,7 @@ class TraceCollectingEventTracker(
     //
     // This means that technically any function marked as silent or ignored can be overshadowed 
     // and therefore all injected functions should run inside ignored section.
-    override fun afterReadField(obj: Any?, codeLocation: Int, fieldId: Int, value: Any?) = runInsideIgnoredSection {
+    override fun afterReadField(obj: Any?, codeLocation: Int, fieldId: Int, value: Any?) = runInsideInjectedCode {
         val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
         if (fieldDescriptor.isStatic && value !== null && !value.isImmutable) {
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(value.javaClass)
@@ -392,32 +366,28 @@ class TraceCollectingEventTracker(
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
-        threadDescriptor.runUnderLockIfAnalysisEnabled {
-            val tracePoint = TRReadTracePoint(
-                threadId = threadData.threadId,
-                codeLocationId = codeLocation,
-                fieldId = fieldId,
-                obj = TRObjectOrNull(obj),
-                value = TRObjectOrNull(value)
-            )
-            strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
-        }
+        val tracePoint = TRReadTracePoint(
+            threadId = threadData.threadId,
+            codeLocationId = codeLocation,
+            fieldId = fieldId,
+            obj = TRObjectOrNull(obj),
+            value = TRObjectOrNull(value)
+        )
+        strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
     }
 
-    override fun afterReadArrayElement(array: Any, index: Int, codeLocation: Int, value: Any?) = runInsideIgnoredSection {
+    override fun afterReadArrayElement(array: Any, index: Int, codeLocation: Int, value: Any?) = runInsideInjectedCode {
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
-        threadDescriptor.runUnderLockIfAnalysisEnabled {
-            val tracePoint = TRReadArrayTracePoint(
-                threadId = threadData.threadId,
-                codeLocationId = codeLocation,
-                array = TRObject(array),
-                index = index,
-                value = TRObjectOrNull(value)
-            )
-            strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
-        }
+        val tracePoint = TRReadArrayTracePoint(
+            threadId = threadData.threadId,
+            codeLocationId = codeLocation,
+            array = TRObject(array),
+            index = index,
+            value = TRObjectOrNull(value)
+        )
+        strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
     }
 
     override fun beforeWriteField(
@@ -425,7 +395,7 @@ class TraceCollectingEventTracker(
         value: Any?,
         codeLocation: Int,
         fieldId: Int
-    ): Unit = runInsideIgnoredSection {
+    ): Unit = runInsideInjectedCode {
         val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
         if (!fieldDescriptor.isStatic && obj == null) {
             // Ignore, NullPointerException will be thrown
@@ -434,16 +404,14 @@ class TraceCollectingEventTracker(
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
-        threadDescriptor.runUnderLockIfAnalysisEnabled {
-            val tracePoint = TRWriteTracePoint(
-                threadId = threadData.threadId,
-                codeLocationId = codeLocation,
-                fieldId = fieldId,
-                obj = TRObjectOrNull(obj),
-                value = TRObjectOrNull(value)
-            )
-            strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
-        }
+        val tracePoint = TRWriteTracePoint(
+            threadId = threadData.threadId,
+            codeLocationId = codeLocation,
+            fieldId = fieldId,
+            obj = TRObjectOrNull(obj),
+            value = TRObjectOrNull(value)
+        )
+        strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
     }
 
     override fun beforeWriteArrayElement(
@@ -451,25 +419,23 @@ class TraceCollectingEventTracker(
         index: Int,
         value: Any?,
         codeLocation: Int
-    ): Unit = runInsideIgnoredSection {
+    ): Unit = runInsideInjectedCode {
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
-        threadDescriptor.runUnderLockIfAnalysisEnabled {
-            val tracePoint = TRWriteArrayTracePoint(
-                threadId = threadData.threadId,
-                codeLocationId = codeLocation,
-                array = TRObject(array),
-                index = index,
-                value = TRObjectOrNull(value)
-            )
-            strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
-        }
+        val tracePoint = TRWriteArrayTracePoint(
+            threadId = threadData.threadId,
+            codeLocationId = codeLocation,
+            array = TRObject(array),
+            index = index,
+            value = TRObjectOrNull(value)
+        )
+        strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
     }
 
     override fun afterWrite() = Unit
 
-    override fun afterLocalRead(codeLocation: Int, variableId: Int, value: Any?) = runInsideIgnoredSection {
+    override fun afterLocalRead(codeLocation: Int, variableId: Int, value: Any?) = runInsideInjectedCode {
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
@@ -485,19 +451,17 @@ class TraceCollectingEventTracker(
 */
     }
 
-    override fun afterLocalWrite(codeLocation: Int, variableId: Int, value: Any?) = runInsideIgnoredSection {
+    override fun afterLocalWrite(codeLocation: Int, variableId: Int, value: Any?) = runInsideInjectedCode {
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
-        threadDescriptor.runUnderLockIfAnalysisEnabled {
-            val tracePoint = TRWriteLocalVariableTracePoint(
-                threadId = threadData.threadId,
-                codeLocationId = codeLocation,
-                localVariableId = variableId,
-                value = TRObjectOrNull(value)
-            )
-            strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
-        }
+        val tracePoint = TRWriteLocalVariableTracePoint(
+            threadId = threadData.threadId,
+            codeLocationId = codeLocation,
+            localVariableId = variableId,
+            value = TRObjectOrNull(value)
+        )
+        strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
     }
 
     override fun onMethodCall(
@@ -505,7 +469,7 @@ class TraceCollectingEventTracker(
         methodId: Int,
         receiver: Any?,
         params: Array<Any?>
-    ): Any? = runInsideIgnoredSection {
+    ): Any? = runInsideInjectedCode {
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return null
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return null
         val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
@@ -515,19 +479,17 @@ class TraceCollectingEventTracker(
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(methodDescriptor.className)
         }
 
-        threadDescriptor.runUnderLockIfAnalysisEnabled {
-            val tracePoint = TRMethodCallTracePoint(
-                threadId = threadData.threadId,
-                codeLocationId = codeLocation,
-                methodId = methodId,
-                obj = TRObjectOrNull(receiver),
-                parameters = params.map { TRObjectOrNull(it) }
-            )
-            strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
-            threadData.pushStackFrame(tracePoint, receiver, isInline = false)
-            // if the method has certain guarantees, enter the corresponding section
-            threadData.enterAnalysisSection(methodSection)
-        }
+        val tracePoint = TRMethodCallTracePoint(
+            threadId = threadData.threadId,
+            codeLocationId = codeLocation,
+            methodId = methodId,
+            obj = TRObjectOrNull(receiver),
+            parameters = params.map { TRObjectOrNull(it) }
+        )
+        strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
+        threadData.pushStackFrame(tracePoint, receiver, isInline = false)
+        // if the method has certain guarantees, enter the corresponding section
+        threadData.enterAnalysisSection(methodSection)
         return null
     }
 
@@ -538,29 +500,27 @@ class TraceCollectingEventTracker(
         receiver: Any?,
         params: Array<Any?>,
         result: Any?
-    ): Any? = runInsideIgnoredSection {
+    ): Any? = runInsideInjectedCode {
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return result
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return result
         val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
 
-        threadDescriptor.runUnderLockIfAnalysisEnabled {
-            while (threadData.isCurrentMethodCallInline()) {
-                val inlineTracePoint = threadData.currentMethodCallTracePoint()
-                Logger.error { "Forced exit from inline method ${inlineTracePoint.methodId} (${inlineTracePoint.className}.${inlineTracePoint.methodName}) due to return from method $methodId (${methodDescriptor.className}.${methodDescriptor.methodName})" }
-                onInlineMethodCallReturn(inlineTracePoint.methodId)
-            }
-
-            val tracePoint = threadData.popStackFrame()
-            if (tracePoint.methodId != methodId) {
-                Logger.error { "Return from method $methodId (${methodDescriptor.className}.${methodDescriptor.methodName}) but on stack ${tracePoint.methodId} (${tracePoint.className}.${tracePoint.methodName})" }
-            }
-
-            tracePoint.result = TRObjectOrVoid(result)
-            strategy.callEnded(Thread.currentThread(), tracePoint)
-
-            val methodSection = methodAnalysisSectionType(receiver, tracePoint.className, tracePoint.methodName)
-            threadData.leaveAnalysisSection(methodSection)
+        while (threadData.isCurrentMethodCallInline()) {
+            val inlineTracePoint = threadData.currentMethodCallTracePoint()
+            Logger.error { "Forced exit from inline method ${inlineTracePoint.methodId} (${inlineTracePoint.className}.${inlineTracePoint.methodName}) due to return from method $methodId (${methodDescriptor.className}.${methodDescriptor.methodName})" }
+            onInlineMethodCallReturn(inlineTracePoint.methodId)
         }
+
+        val tracePoint = threadData.popStackFrame()
+        if (tracePoint.methodId != methodId) {
+            Logger.error { "Return from method $methodId (${methodDescriptor.className}.${methodDescriptor.methodName}) but on stack ${tracePoint.methodId} (${tracePoint.className}.${tracePoint.methodName})" }
+        }
+
+        tracePoint.result = TRObjectOrVoid(result)
+        strategy.callEnded(Thread.currentThread(), tracePoint)
+
+        val methodSection = methodAnalysisSectionType(receiver, tracePoint.className, tracePoint.methodName)
+        threadData.leaveAnalysisSection(methodSection)
 
         return result
     }
@@ -572,29 +532,27 @@ class TraceCollectingEventTracker(
         receiver: Any?,
         params: Array<Any?>,
         t: Throwable
-    ): Throwable = runInsideIgnoredSection {
+    ): Throwable = runInsideInjectedCode(t) {
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return t
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return t
         val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
 
-        threadDescriptor.runUnderLockIfAnalysisEnabled {
-            while (threadData.isCurrentMethodCallInline()) {
-                val inlineTracePoint = threadData.currentMethodCallTracePoint()
-                Logger.error { "Forced exit from inline method ${inlineTracePoint.methodId} (${inlineTracePoint.className}.${inlineTracePoint.methodName}) due to exception in method $methodId (${methodDescriptor.className}.${methodDescriptor.methodName})" }
-                onInlineMethodCallException(inlineTracePoint.methodId, t)
-            }
-
-            val tracePoint = threadData.popStackFrame()
-            if (tracePoint.methodId != methodId) {
-                Logger.error { "Exception in method $methodId (${methodDescriptor.className}.${methodDescriptor.methodName}) but on stack ${tracePoint.methodId} (${tracePoint.className}.${tracePoint.methodName})" }
-            }
-
-            tracePoint.exceptionClassName = t.javaClass.name
-            strategy.callEnded(Thread.currentThread(), tracePoint)
-
-            val methodSection = methodAnalysisSectionType(receiver, tracePoint.className, tracePoint.methodName)
-            threadData.leaveAnalysisSection(methodSection)
+        while (threadData.isCurrentMethodCallInline()) {
+            val inlineTracePoint = threadData.currentMethodCallTracePoint()
+            Logger.error { "Forced exit from inline method ${inlineTracePoint.methodId} (${inlineTracePoint.className}.${inlineTracePoint.methodName}) due to exception in method $methodId (${methodDescriptor.className}.${methodDescriptor.methodName})" }
+            onInlineMethodCallException(inlineTracePoint.methodId, t)
         }
+
+        val tracePoint = threadData.popStackFrame()
+        if (tracePoint.methodId != methodId) {
+            Logger.error { "Exception in method $methodId (${methodDescriptor.className}.${methodDescriptor.methodName}) but on stack ${tracePoint.methodId} (${tracePoint.className}.${tracePoint.methodName})" }
+        }
+
+        tracePoint.exceptionClassName = t.javaClass.name
+        strategy.callEnded(Thread.currentThread(), tracePoint)
+
+        val methodSection = methodAnalysisSectionType(receiver, tracePoint.className, tracePoint.methodName)
+        threadData.leaveAnalysisSection(methodSection)
 
         return t
     }
@@ -603,52 +561,46 @@ class TraceCollectingEventTracker(
         methodId: Int,
         codeLocation: Int,
         owner: Any?,
-    ): Unit = runInsideIgnoredSection {
+    ): Unit = runInsideInjectedCode {
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
-        threadDescriptor.runUnderLockIfAnalysisEnabled {
-            val tracePoint = TRMethodCallTracePoint(
-                threadId = threadData.threadId,
-                codeLocationId = codeLocation,
-                methodId = methodId,
-                obj = TRObjectOrNull(owner),
-                parameters = emptyList()
-            )
-            strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
-            threadData.pushStackFrame(tracePoint, owner, isInline = true)
-        }
+        val tracePoint = TRMethodCallTracePoint(
+            threadId = threadData.threadId,
+            codeLocationId = codeLocation,
+            methodId = methodId,
+            obj = TRObjectOrNull(owner),
+            parameters = emptyList()
+        )
+        strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
+        threadData.pushStackFrame(tracePoint, owner, isInline = true)
     }
 
-    override fun onInlineMethodCallReturn(methodId: Int): Unit = runInsideIgnoredSection {
+    override fun onInlineMethodCallReturn(methodId: Int): Unit = runInsideInjectedCode {
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
-        threadDescriptor.runUnderLockIfAnalysisEnabled {
-            val tracePoint = threadData.popStackFrame()
-            if (tracePoint.methodId != methodId) {
-                val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
-                Logger.error { "Return from inline method $methodId (${methodDescriptor.className}.${methodDescriptor.methodName}) but on stack ${tracePoint.methodId} (${tracePoint.className}.${tracePoint.methodName})" }
-            }
-            tracePoint.result = TR_OBJECT_VOID
-            strategy.callEnded(Thread.currentThread(), tracePoint)
+        val tracePoint = threadData.popStackFrame()
+        if (tracePoint.methodId != methodId) {
+            val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
+            Logger.error { "Return from inline method $methodId (${methodDescriptor.className}.${methodDescriptor.methodName}) but on stack ${tracePoint.methodId} (${tracePoint.className}.${tracePoint.methodName})" }
         }
+        tracePoint.result = TR_OBJECT_VOID
+        strategy.callEnded(Thread.currentThread(), tracePoint)
     }
 
-    override fun onInlineMethodCallException(methodId: Int, t: Throwable): Unit = runInsideIgnoredSection {
+    override fun onInlineMethodCallException(methodId: Int, t: Throwable): Unit = runInsideInjectedCode {
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
-        threadDescriptor.runUnderLockIfAnalysisEnabled {
-            val tracePoint = threadData.popStackFrame()
-            if (tracePoint.methodId != methodId) {
-                val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
-                Logger.error { "Exception in inline method $methodId (${methodDescriptor.className}.${methodDescriptor.methodName}) but on stack ${tracePoint.methodId} (${tracePoint.className}.${tracePoint.methodName})" }
-            }
-
-            tracePoint.exceptionClassName = t.javaClass.name
-            strategy.callEnded(Thread.currentThread(), tracePoint)
+        val tracePoint = threadData.popStackFrame()
+        if (tracePoint.methodId != methodId) {
+            val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
+            Logger.error { "Exception in inline method $methodId (${methodDescriptor.className}.${methodDescriptor.methodName}) but on stack ${tracePoint.methodId} (${tracePoint.className}.${tracePoint.methodName})" }
         }
+
+        tracePoint.exceptionClassName = t.javaClass.name
+        strategy.callEnded(Thread.currentThread(), tracePoint)
     }
 
     override fun invokeDeterministicallyOrNull(
@@ -710,17 +662,21 @@ class TraceCollectingEventTracker(
     fun finishRunningThread(thread: Thread) {
         val threadDescriptor = ThreadDescriptor.getThreadDescriptor(thread) ?: return
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
+        if (!threadDescriptor.isAnalysisEnabled) return // we skip already finished threads
 
-        threadDescriptor.runUnderLockIfAnalysisEnabled {
-            val stackFrames = threadData.getStack().asReversed()
-            stackFrames.forEach { frame ->
-                val tracePoint = frame.call
-                tracePoint.result = TR_OBJECT_UNFINISHED_METHOD_RESULT
-                strategy.callEnded(thread, tracePoint)
-            }
-            strategy.completeThread(thread)
-            threadDescriptor.disableAnalysis()
+        // tell that thread not to track any tracepoints anymore
+        threadDescriptor.disableAnalysis()
+        // wait until that thread finishes whatever injected code it is executing right now
+        spinner.spinWaitUntil { !threadDescriptor.isInsideInjectedCode }
+        // now, we are sure that another thread has finished its injected code
+        // and will not attempt to execute anything else, because we disabled analysis in it
+        val stackFrames = threadData.getStack().asReversed()
+        stackFrames.forEach { frame ->
+            val tracePoint = frame.call
+            tracePoint.result = TR_OBJECT_UNFINISHED_METHOD_RESULT
+            strategy.callEnded(thread, tracePoint)
         }
+        strategy.completeThread(thread)
     }
 
     fun finishAndDumpTrace() {

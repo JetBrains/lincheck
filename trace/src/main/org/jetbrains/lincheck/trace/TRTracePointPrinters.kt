@@ -162,7 +162,7 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
             appendKeyword("threw")
             append(" ")
             append(tracePoint.exceptionClassName)
-        } else if (tracePoint.result == TR_OBJECT_UNFINISHED_METHOD_RESULT) {
+        } else if (tracePoint.isMethodUnfinished()) {
             append(": ")
             appendSpecialSymbol(UNFINISHED_METHOD_RESULT_SYMBOL)
         } else if (tracePoint.result != TR_OBJECT_VOID) {

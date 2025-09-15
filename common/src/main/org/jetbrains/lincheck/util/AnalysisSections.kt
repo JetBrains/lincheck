@@ -157,6 +157,42 @@ inline fun <R> runInsideIgnoredSection(block: () -> R): R {
 }
 
 /**
+ * Executes a given block of code within an injected code under condition that analysis is enabled.
+ * This method is used to account for the situation when the Main thread is finished and it wants
+ * to logically "finish" all other threads which still record some events.
+ *
+ * NOTE: there are other overloads that have different return values. They are useful for some
+ * [sun.nio.ch.lincheck.EventTracker] methods, which do not have return values or require a non-null result.
+ *
+ * @param block the code to execute within the injected code.
+ * @return result of the [block] invocation.
+ */
+inline fun <R> runInsideInjectedCode(block: () -> R): R? {
+    val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: return block()
+
+    desc.enterInjectedCode()
+    if (!desc.isAnalysisEnabled) {
+        desc.leaveInjectedCode()
+        return null
+    }
+    desc.enterIgnoredSection()
+    try {
+        return block()
+    } finally {
+        desc.leaveIgnoredSection()
+        desc.leaveInjectedCode()
+    }
+}
+
+inline fun runInsideInjectedCode(block: () -> Unit) {
+    runInsideInjectedCode<Unit>(block)
+}
+
+inline fun <R> runInsideInjectedCode(default: R, block: () -> R): R {
+    return runInsideInjectedCode(block) ?: default
+}
+
+/**
  * Exits the ignored section and invokes the provided [block] outside an ignored section,
  * restoring the ignored section back after the [block] is executed.
  *

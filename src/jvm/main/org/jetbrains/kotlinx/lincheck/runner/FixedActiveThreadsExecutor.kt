@@ -10,8 +10,10 @@
 package org.jetbrains.kotlinx.lincheck.runner
 
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.lincheck.util.Spinner
+import org.jetbrains.lincheck.util.SpinnerGroup
 import org.jetbrains.lincheck.util.runInsideIgnoredSection
+import org.jetbrains.lincheck.util.spinWaitBoundedFor
 import sun.nio.ch.lincheck.TestThread
 import java.io.*
 import java.lang.*

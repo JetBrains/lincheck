@@ -1,14 +1,14 @@
 /*
  * Lincheck
  *
- * Copyright (C) 2019 - 2024 JetBrains s.r.o.
+ * Copyright (C) 2019 - 2025 JetBrains s.r.o.
  *
  * This Source Code Form is subject to the terms of the
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.util
+package org.jetbrains.lincheck.util
 
 /**
  * A spinner implements utility functions for spinning in a loop.
@@ -170,7 +170,7 @@ class Spinner private constructor(
  *
  * @see Spinner.spinWaitBoundedFor
  */
-internal inline fun <T> Spinner.spinWaitBoundedFor(getter: () -> T?): T? {
+inline fun <T> Spinner.spinWaitBoundedFor(getter: () -> T?): T? {
     spinWaitBoundedUntil {
         val result = getter()
         if (result != null)
@@ -187,7 +187,7 @@ internal inline fun <T> Spinner.spinWaitBoundedFor(getter: () -> T?): T? {
  * @param nThreads The number of threads in the group.
  */
 @Suppress("FunctionName")
-internal fun SpinnerGroup(nThreads: Int): List<Spinner> {
+fun SpinnerGroup(nThreads: Int): List<Spinner> {
     return Array(nThreads) { Spinner(nThreads) }.asList()
 }
 

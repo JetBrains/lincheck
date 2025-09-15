@@ -61,7 +61,20 @@ public class ThreadDescriptor {
     /**
      * This flag indicates whether the Lincheck analysis is currently enabled in this thread.
      */
-    private boolean isAnalysisEnabled = false;
+    private volatile boolean isAnalysisEnabled = false;
+
+    /**
+     * This flag indicates whether the thread is currently executing injected code (e.g., method from {@code EventTracker}).
+     * <br><br>
+     * This flag is used together with {@code isAnalysisEnabled}, they allow for proper synchronization in
+     * case if Trace Recorder is used with {@code allThreadsTracked} flag enabled.
+     * <br>
+     * When the Main thread wants to dump the trace, it needs to logically "finish" all currently running threads
+     * so that they stop writing their trace points. For that Main marks some thread's {@code isAnalysisEnabled} flag as false,
+     * and then waits until that thread's {@code isInsideInjectedCode} flag is also false,
+     * afterward Main thread dumps the remaining tracepoints of thread that it waited for.
+     */
+    private volatile boolean isInsideInjectedCode = false;
 
     /**
      * Counter keeping track of the ignored section re-entrance depth.
@@ -164,6 +177,27 @@ public class ThreadDescriptor {
      */
     public void disableAnalysis() {
         isAnalysisEnabled = false;
+    }
+
+    /**
+     * @return `true` if the thread is currently executing injected code, `false` otherwise.
+     */
+    public boolean isInsideInjectedCode() {
+        return isInsideInjectedCode;
+    }
+
+    /**
+     * Marks the thread as executing injected code.
+     */
+    public void enterInjectedCode() {
+        isInsideInjectedCode = true;
+    }
+
+    /**
+     * Marks the thread as no longer executing injected code.
+     */
+    public void leaveInjectedCode() {
+        isInsideInjectedCode = false;
     }
 
     /**

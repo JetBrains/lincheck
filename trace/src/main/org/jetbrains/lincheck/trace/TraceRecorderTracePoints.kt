@@ -122,6 +122,9 @@ class TRMethodCallTracePoint(
         children.forgetAll()
     }
 
+    fun isMethodUnfinished(): Boolean =
+        result == TR_OBJECT_UNFINISHED_METHOD_RESULT
+
     override fun save(out: TraceWriter) {
         super.save(out)
         out.writeInt(methodId)
