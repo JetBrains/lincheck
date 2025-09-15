@@ -66,6 +66,12 @@ tasks {
         outputs.upToDateWhen { false } // Always run tests when called
         dependsOn(traceAgentIntegrationTestsPrerequisites)
         dependsOn(copyTraceRecorderFatJar)
-        dependsOn(traceRecorderIntegrationTest) // Extended depends on basic
+    }
+    
+    val traceRecorderIntegrationTestAll = register<Test>("traceRecorderIntegrationTestAll") {
+        group = "verification"
+        
+        dependsOn(traceRecorderIntegrationTest)
+        dependsOn(traceRecorderIntegrationTestExtended)
     }
 }
