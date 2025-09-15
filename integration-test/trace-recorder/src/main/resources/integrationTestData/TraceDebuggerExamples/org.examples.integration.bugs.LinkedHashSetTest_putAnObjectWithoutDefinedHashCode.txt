@@ -4,4 +4,3 @@ LinkedHashSetTest.putAnObjectWithoutDefinedHashCode() at :0
   SetsKt.linkedSetOf(LinkedHashSetTest.A;@1): LinkedHashSet@1 at LinkedHashSetTest.kt:10
   linkedHashSet.add(LinkedHashSetTest.A@1): true at LinkedHashSetTest.kt:11
   linkedHashSet.size(): 2 at LinkedHashSetTest.kt:12
-  _Assertions.ENABLED ➜ true at LinkedHashSetTest.kt:12
