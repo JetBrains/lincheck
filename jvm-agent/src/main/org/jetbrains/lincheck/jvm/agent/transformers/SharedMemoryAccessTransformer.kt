@@ -71,7 +71,7 @@ internal class SharedMemoryAccessTransformer(
                     }
                 )
             }
-            PUTSTATIC -> {
+            PUTSTATIC if configuration.trackSharedMemoryWrites -> {
                 invokeIfInAnalyzedCode(
                     original = {
                         super.visitFieldInsn(opcode, owner, fieldName, desc)
@@ -81,7 +81,7 @@ internal class SharedMemoryAccessTransformer(
                     }
                 )
             }
-            PUTFIELD -> {
+            PUTFIELD if configuration.trackSharedMemoryWrites -> {
                 invokeIfInAnalyzedCode(
                     original = {
                         super.visitFieldInsn(opcode, owner, fieldName, desc)
@@ -211,18 +211,24 @@ internal class SharedMemoryAccessTransformer(
                             processArrayLoad(opcode)
                         }
                     )
-                } else super.visitInsn(opcode)
+                } else {
+                    super.visitInsn(opcode)
+                }
             }
 
             AASTORE, IASTORE, FASTORE, BASTORE, CASTORE, SASTORE, LASTORE, DASTORE -> {
-                invokeIfInAnalyzedCode(
-                    original = {
-                        super.visitInsn(opcode)
-                    },
-                    instrumented = {
-                        processArrayStore(opcode)
-                    }
-                )
+                if (configuration.trackSharedMemoryWrites) {
+                    invokeIfInAnalyzedCode(
+                        original = {
+                            super.visitInsn(opcode)
+                        },
+                        instrumented = {
+                            processArrayStore(opcode)
+                        }
+                    )
+                } else {
+                    super.visitInsn(opcode)
+                }
             }
 
             else -> {

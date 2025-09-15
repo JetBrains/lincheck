@@ -22,8 +22,8 @@ class TransformationConfiguration(
     var trackObjectCreations: Boolean = false,
 
     var trackLocalVariableAccesses: Boolean = false,
-    var trackSharedMemoryAccesses: Boolean = false,
     var trackSharedMemoryReads: Boolean = false,
+    var trackSharedMemoryWrites: Boolean = false,
 
     var trackMethodCalls: Boolean = false,
     var trackInlineMethodCalls: Boolean = false,
@@ -62,6 +62,16 @@ class TransformationConfiguration(
             trackWaitNotifyOperations = value
             trackSynchronizedBlocks = value
             trackParkingOperations = value
+        }
+    
+    val trackSharedMemoryAccesses: Boolean
+        get() = trackSharedMemoryReads || trackSharedMemoryWrites
+    
+    var trackAllSharedMemoryAccesses: Boolean
+        get() = trackSharedMemoryReads && trackSharedMemoryWrites
+        set(value) {
+            trackSharedMemoryReads = value
+            trackSharedMemoryWrites = value
         }
 
     companion object {
@@ -195,8 +205,7 @@ object TraceRecorderDefaultTransformationProfile : TransformationProfile {
         return config.apply {
             trackObjectCreations = true
             trackLocalVariableAccesses = true
-            trackSharedMemoryAccesses = true
-            trackSharedMemoryReads = false
+            trackSharedMemoryWrites = true
 
             trackMethodCalls = true
             trackInlineMethodCalls = true
@@ -248,8 +257,7 @@ object TraceDebuggerDefaultTransformationProfile : TransformationProfile {
         return config.apply {
             trackObjectCreations = true
             trackLocalVariableAccesses = true
-            trackSharedMemoryAccesses = true
-            trackSharedMemoryReads = true
+            trackAllSharedMemoryAccesses = true
 
             trackMethodCalls = true
             trackInlineMethodCalls = true
@@ -302,16 +310,14 @@ object ModelCheckingDefaultTransformationProfile : TransformationProfile {
         if ((methodName == "<init>")) {
             return config.apply {
                 trackObjectCreations = true
-                trackSharedMemoryAccesses = true
-                trackSharedMemoryReads = true
+                trackAllSharedMemoryAccesses = true
             }
         }
 
         return config.apply {
             trackObjectCreations = true
             trackLocalVariableAccesses = true
-            trackSharedMemoryAccesses = true
-            trackSharedMemoryReads = true
+            trackAllSharedMemoryAccesses = true
 
             trackMethodCalls = true
             trackInlineMethodCalls = true
