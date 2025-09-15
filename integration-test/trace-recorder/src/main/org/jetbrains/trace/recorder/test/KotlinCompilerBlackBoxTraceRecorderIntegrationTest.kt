@@ -54,9 +54,11 @@ class KotlinCompilerBlackBoxTraceRecorderIntegrationTest : AbstractTraceRecorder
 
     private val jvmBoxSuite = "org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated"
     private val jsBoxSuite = "org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated"
+    private val wasmBoxSuite = "org.jetbrains.kotlin.wasm.test.FirWasmJsCodegenBoxTestGenerated"
     private val frontendSuite = "org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated"
     private val jvmBoxTask = ":compiler:fir:fir2ir:test"
     private val jsBoxTask = ":js:js.tests:test"
+    private val wasmBoxTask = ":wasm:wasm.tests:test"
     private val frontendTask = ":compiler:fir:analysis-tests:test"
 
     @Test
@@ -78,6 +80,11 @@ class KotlinCompilerBlackBoxTraceRecorderIntegrationTest : AbstractTraceRecorder
     @Ignore("Takes too long")
     fun `jsBoxSuite-Annotations testAnnotations0`() = runKotlinCompilerTestSuite(
         task = jsBoxTask, className = $$"$$jsBoxSuite$Annotations", methodName = "testAnnotations0",
+    )
+
+    @Test
+    fun `wasmBoxSuite-Annotations testAnnotations0`() = runKotlinCompilerTestSuite(
+        task = wasmBoxTask, className = $$"$$wasmBoxSuite$Annotations", methodName = "testAnnotations0",
     )
     
     @Test
