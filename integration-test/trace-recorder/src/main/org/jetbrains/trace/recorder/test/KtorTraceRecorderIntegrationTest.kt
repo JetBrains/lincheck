@@ -11,8 +11,10 @@
 package org.jetbrains.trace.recorder.test
 
 import org.junit.Test
+import org.junit.experimental.categories.Category
 import java.nio.file.Paths
 
+@Category(ExtendedTraceRecorderTest::class)
 class KtorTraceRecorderIntegrationTest : AbstractTraceRecorderIntegrationTest() {
     override val projectPath: String = Paths.get("build", "integrationTestProjects", "ktor").toString()
     override val formatArgs: Map<String, String> = mapOf("format" to "binary", "formatOption" to "stream")

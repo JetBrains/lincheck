@@ -40,8 +40,32 @@ tasks {
         testClassesDirs = sourceSets["main"].output.classesDirs
         classpath = sourceSets["main"].runtimeClasspath
 
+        // Do not run extended tests in the basic task
+        useJUnit {
+            excludeCategories("org.jetbrains.trace.recorder.test.ExtendedTraceRecorderTest")
+        }
+
         outputs.upToDateWhen { false } // Always run tests when called
         dependsOn(traceAgentIntegrationTestsPrerequisites)
         dependsOn(copyTraceRecorderFatJar)
+    }
+
+    val traceRecorderIntegrationTestExtended = register<Test>("traceRecorderIntegrationTestExtended") {
+        configureJvmTestCommon(project)
+        group = "verification"
+
+        // Use the same source set as the basic integration tests
+        testClassesDirs = sourceSets["main"].output.classesDirs
+        classpath = sourceSets["main"].runtimeClasspath
+
+        // Only run tests marked as extended
+        useJUnit {
+            includeCategories("org.jetbrains.trace.recorder.test.ExtendedTraceRecorderTest")
+        }
+
+        outputs.upToDateWhen { false } // Always run tests when called
+        dependsOn(traceAgentIntegrationTestsPrerequisites)
+        dependsOn(copyTraceRecorderFatJar)
+        dependsOn(traceRecorderIntegrationTest) // Extended depends on basic
     }
 }

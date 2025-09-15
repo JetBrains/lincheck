@@ -12,10 +12,12 @@ package org.jetbrains.trace.recorder.test
 
 import org.junit.Ignore
 import org.junit.Test
+import org.junit.experimental.categories.Category
 import java.io.File
 import java.nio.file.Paths
 import kotlin.io.path.createTempFile
 
+@Category(ExtendedTraceRecorderTest::class)
 class KotlinCompilerBlackBoxTraceRecorderIntegrationTest : AbstractTraceRecorderIntegrationTest() {
     override val projectPath: String = Paths.get("build", "integrationTestProjects", "kotlin").toString()
     override val formatArgs: Map<String, String> = mapOf("format" to "binary", "formatOption" to "stream")

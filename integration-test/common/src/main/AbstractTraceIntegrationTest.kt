@@ -172,8 +172,23 @@ abstract class AbstractTraceIntegrationTest {
                     )
                 }
             }
-        } else if (tmpFile.readText().isEmpty()) {
-            Assert.fail("No output was produced by the test.")
+        } else {
+            fun checkNonEmptyNess(file: File, filePurpose: String = "output") {
+                if (file.readText().isEmpty()) {
+                    Assert.fail("Empty $filePurpose file was produced by the test: $file.")
+                }
+            }
+            
+            if (tmpFile.exists()) {
+                checkNonEmptyNess(tmpFile)
+            } else {
+                val packedTraceFile = File("${tmpFile.absolutePath}.packedtrace")
+                if (packedTraceFile.exists()) {
+                    checkNonEmptyNess(packedTraceFile)
+                } else {
+                    Assert.fail("No output was produced by the test.")
+                }
+            }
         }
     }
 
