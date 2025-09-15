@@ -308,12 +308,14 @@ internal abstract class ManagedStrategy(
     // == BASIC STRATEGY METHODS ==
 
     override fun beforePart(part: ExecutionPart) = runInsideIgnoredSection {
-        val tracePoint = SectionDelimiterTracePoint(
-            context = context,
-            eventId = getNextEventId(),
-            executionPart = part,
-        )
-        traceCollector?.addTracePointInternal(tracePoint)
+        // add section delimiter trace point only in data structures mode
+        if (executionMode == ExecutionMode.DATA_STRUCTURES) {
+            val tracePoint = SectionDelimiterTracePoint(
+                context = context,eventId = getNextEventId(),
+                executionPart = part,
+            )
+            traceCollector?.addTracePointInternal(tracePoint)
+        }
 
         val nextThread = when (part) {
             INIT -> 0
