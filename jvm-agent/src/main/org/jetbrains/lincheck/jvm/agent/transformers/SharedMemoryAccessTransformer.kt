@@ -33,6 +33,7 @@ internal class SharedMemoryAccessTransformer(
     methodInfo: MethodInformation,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
+    val configuration: TransformationConfiguration,
 ) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
 
     override val requiresTypeAnalyzer: Boolean = true
@@ -50,7 +51,7 @@ internal class SharedMemoryAccessTransformer(
             return
         }
         when (opcode) {
-            GETSTATIC -> {
+            GETSTATIC if configuration.trackSharedMemoryReads -> {
                 invokeIfInAnalyzedCode(
                     original = {
                         super.visitFieldInsn(opcode, owner, fieldName, desc)
@@ -60,8 +61,7 @@ internal class SharedMemoryAccessTransformer(
                     }
                 )
             }
-
-            GETFIELD -> {
+            GETFIELD if configuration.trackSharedMemoryReads -> {
                 invokeIfInAnalyzedCode(
                     original = {
                         super.visitFieldInsn(opcode, owner, fieldName, desc)
@@ -71,8 +71,7 @@ internal class SharedMemoryAccessTransformer(
                     }
                 )
             }
-
-            PUTSTATIC -> {
+            PUTSTATIC if configuration.trackSharedMemoryWrites -> {
                 invokeIfInAnalyzedCode(
                     original = {
                         super.visitFieldInsn(opcode, owner, fieldName, desc)
@@ -82,8 +81,7 @@ internal class SharedMemoryAccessTransformer(
                     }
                 )
             }
-
-            PUTFIELD -> {
+            PUTFIELD if configuration.trackSharedMemoryWrites -> {
                 invokeIfInAnalyzedCode(
                     original = {
                         super.visitFieldInsn(opcode, owner, fieldName, desc)
@@ -93,11 +91,7 @@ internal class SharedMemoryAccessTransformer(
                     }
                 )
             }
-
-            else -> {
-                // All opcodes are covered above. However, in case a new one is added, Lincheck should not fail.
-                super.visitFieldInsn(opcode, owner, fieldName, desc)
-            }
+            else -> super.visitFieldInsn(opcode, owner, fieldName, desc)
         }
     }
 
@@ -208,25 +202,33 @@ internal class SharedMemoryAccessTransformer(
     override fun visitInsn(opcode: Int) = adapter.run {
         when (opcode) {
             AALOAD, LALOAD, FALOAD, DALOAD, IALOAD, BALOAD, CALOAD, SALOAD -> {
-                invokeIfInAnalyzedCode(
-                    original = {
-                        super.visitInsn(opcode)
-                    },
-                    instrumented = {
-                        processArrayLoad(opcode)
-                    }
-                )
+                if (configuration.trackSharedMemoryReads) {
+                    invokeIfInAnalyzedCode(
+                        original = {
+                            super.visitInsn(opcode)
+                        },
+                        instrumented = {
+                            processArrayLoad(opcode)
+                        }
+                    )
+                } else {
+                    super.visitInsn(opcode)
+                }
             }
 
             AASTORE, IASTORE, FASTORE, BASTORE, CASTORE, SASTORE, LASTORE, DASTORE -> {
-                invokeIfInAnalyzedCode(
-                    original = {
-                        super.visitInsn(opcode)
-                    },
-                    instrumented = {
-                        processArrayStore(opcode)
-                    }
-                )
+                if (configuration.trackSharedMemoryWrites) {
+                    invokeIfInAnalyzedCode(
+                        original = {
+                            super.visitInsn(opcode)
+                        },
+                        instrumented = {
+                            processArrayStore(opcode)
+                        }
+                    )
+                } else {
+                    super.visitInsn(opcode)
+                }
             }
 
             else -> {
