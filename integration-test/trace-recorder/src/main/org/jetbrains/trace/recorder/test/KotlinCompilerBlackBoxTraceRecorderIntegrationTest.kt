@@ -77,7 +77,6 @@ class KotlinCompilerBlackBoxTraceRecorderIntegrationTest : AbstractTraceRecorder
     )
 
     @Test
-    @Ignore("Takes too long")
     fun `jsBoxSuite-Annotations testAnnotations0`() = runKotlinCompilerTestSuite(
         task = jsBoxTask, className = $$"$$jsBoxSuite$Annotations", methodName = "testAnnotations0",
     )
