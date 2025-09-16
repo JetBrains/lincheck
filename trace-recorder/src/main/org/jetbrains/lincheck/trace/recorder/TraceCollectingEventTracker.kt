@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.trace.recorder
 
 import org.jetbrains.lincheck.analysis.ShadowStackFrame
+import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.trace.TRACE_CONTEXT
 import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
@@ -188,11 +189,11 @@ class TraceCollectingEventTracker(
         // that method internally checks that the analysis is enabled before calling the provided lambda
         descriptor.enableAnalysis()
 
-        fun appendMethodCall(obj: TRObject?, className: String, methodName: String, methodDesc: String, codeLocationId: Int = -1, params: List<TRObject> = emptyList()) {
+        fun appendMethodCall(obj: TRObject?, className: String, methodName: String, methodType: Types.MethodType, codeLocationId: Int = -1, params: List<TRObject> = emptyList()) {
             val methodCall = TRIncompleteMethodCallTracePoint(
                 threadId = threadData.threadId,
                 codeLocationId = codeLocationId,
-                methodId = TRACE_CONTEXT.getOrCreateMethodId(className, methodName, methodDesc),
+                methodId = TRACE_CONTEXT.getOrCreateMethodId(className, methodName, methodType),
                 obj = obj,
                 parameters = params
             )
@@ -214,7 +215,7 @@ class TraceCollectingEventTracker(
                     !analysisProfile.shouldBeHidden(frame.className, frame.methodName)
                 ) {
                     // TODO: should code locations be computed from the frame?
-                    appendMethodCall(null, frame.className, frame.methodName, "()V")
+                    appendMethodCall(null, frame.className, frame.methodName,  Types.MethodType(Types.VOID_TYPE))
                 }
             }
         }
@@ -243,7 +244,7 @@ class TraceCollectingEventTracker(
             val tracePoint = TRMethodCallTracePoint(
                 threadId = threadData.threadId,
                 codeLocationId = -1,
-                methodId = TRACE_CONTEXT.getOrCreateMethodId("Thread", "run", "()V"),
+                methodId = TRACE_CONTEXT.getOrCreateMethodId("Thread", "run", Types.MethodType(Types.VOID_TYPE)),
                 obj = TRObject(thread),
                 parameters = emptyList()
             )
@@ -668,7 +669,7 @@ class TraceCollectingEventTracker(
         val tracePoint = TRMethodCallTracePoint(
             threadId = threadData.threadId,
             codeLocationId = UNKNOWN_CODE_LOCATION_ID,
-            methodId = TRACE_CONTEXT.getOrCreateMethodId(className, methodName, "()V"),
+            methodId = TRACE_CONTEXT.getOrCreateMethodId(className, methodName, Types.MethodType(Types.VOID_TYPE)),
             obj = null,
             parameters = emptyList()
         )

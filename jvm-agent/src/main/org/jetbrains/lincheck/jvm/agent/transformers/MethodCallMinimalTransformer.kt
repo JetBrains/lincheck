@@ -10,6 +10,7 @@
 
 package org.jetbrains.lincheck.jvm.agent.transformers
 
+import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.trace.TRACE_CONTEXT
 import org.objectweb.asm.MethodVisitor
@@ -55,7 +56,7 @@ internal class MethodCallMinimalTransformer(
             (opcode != INVOKESTATIC) -> newLocal(receiverType).also { storeLocal(it) }
             else -> null
         }
-        val methodId = TRACE_CONTEXT.getOrCreateMethodId(owner.toCanonicalClassName(), name, desc)
+        val methodId = TRACE_CONTEXT.getOrCreateMethodId(owner.toCanonicalClassName(), name, Types.convertAsmMethodType(desc))
         // STACK: <empty>
         processMethodCallEnter(methodId, receiverLocal, argumentsArrayLocal, ownerName, argumentNames)
         // STACK: deterministicCallDescriptor

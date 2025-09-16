@@ -10,6 +10,7 @@
 
 package org.jetbrains.lincheck.jvm.agent.transformers
 
+import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.trace.TRACE_CONTEXT
 import org.jetbrains.lincheck.util.isTrackedIntrinsic
 import org.jetbrains.lincheck.jvm.agent.ASM_API
@@ -32,7 +33,7 @@ internal class IntrinsicCandidateMethodFilter(
         // Also, some methods are intrinsified even though they do not have mentioned annotations
         // (such as Arrays.copyOf(...) methods).
         val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(
-            TRACE_CONTEXT.getOrCreateMethodId(className.toCanonicalClassName(), methodName, methodDesc)
+            TRACE_CONTEXT.getOrCreateMethodId(className.toCanonicalClassName(), methodName, Types.convertAsmMethodType(methodDesc))
         )
         if (methodDescriptor.isTrackedIntrinsic()) {
             methodDescriptor.isIntrinsic = true
@@ -43,7 +44,7 @@ internal class IntrinsicCandidateMethodFilter(
 
     override fun visitAnnotation(desc: String, visible: Boolean): AnnotationVisitor? {
         val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(
-            TRACE_CONTEXT.getOrCreateMethodId(className.toCanonicalClassName(), methodName, methodDesc)
+            TRACE_CONTEXT.getOrCreateMethodId(className.toCanonicalClassName(), methodName, Types.convertAsmMethodType(methodDesc))
         )
         if (isIntrinsicCandidateAnnotation(desc)) {
             methodDescriptor.isIntrinsic = true

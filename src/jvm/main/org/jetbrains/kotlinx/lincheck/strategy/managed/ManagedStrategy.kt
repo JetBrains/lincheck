@@ -679,7 +679,6 @@ internal abstract class ManagedStrategy(
 
         onThreadStart(currentThreadId)
 
-        val methodDescriptor = getAsmMethod("void run()").descriptor
         val tracePoint = addBeforeMethodCallTracePoint(
             eventId = getNextEventId(),
             threadId = currentThreadId,
@@ -690,7 +689,7 @@ internal abstract class ManagedStrategy(
             methodId = TRACE_CONTEXT.getOrCreateMethodId(
                 className = "java.lang.Thread",
                 methodName = "run",
-                desc = methodDescriptor
+                methodType = Types.MethodType(Types.VOID_TYPE)
             ),
             methodParams = emptyArray(),
             atomicMethodDescriptor = null,
@@ -935,7 +934,7 @@ internal abstract class ManagedStrategy(
             methodId = TRACE_CONTEXT.getOrCreateMethodId(
                 className = actor.method.declaringClass.name.toCanonicalClassName(),
                 methodName = actor.method.name,
-                desc = methodDescriptor
+                methodType = Types.convertAsmMethodType(methodDescriptor)
             ),
             methodParams = actor.arguments.toTypedArray(),
             atomicMethodDescriptor = null,

@@ -53,21 +53,21 @@ class TraceContext {
 
     val methodDescriptors: List<MethodDescriptor?> get() = methods.content
 
-    fun getOrCreateMethodId(className: String, methodName: String, desc: String): Int {
+    fun getOrCreateMethodId(className: String, methodName: String, methodType: Types.MethodType): Int {
         return methods.getOrCreateId(
             MethodDescriptor(
                 context = this,
                 classId = getOrCreateClassId(className),
                 methodSignature = MethodSignature(
                     name = methodName,
-                    methodType = Types.convertAsmMethodType(desc)
+                    methodType = methodType
                 )
             )
         )
     }
 
-    fun getMethodDescriptor(className: String, methodName: String, desc: String): MethodDescriptor =
-        getMethodDescriptor(getOrCreateMethodId(className, methodName, desc))
+    fun getMethodDescriptor(className: String, methodName: String, methodType: Types.MethodType): MethodDescriptor =
+        getMethodDescriptor(getOrCreateMethodId(className, methodName, methodType))
 
     fun getMethodDescriptor(methodId: Int): MethodDescriptor = methods[methodId]
 
