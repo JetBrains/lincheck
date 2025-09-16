@@ -146,6 +146,7 @@ abstract class AbstractTraceIntegrationTest {
                 .newBuild()
                 .setStandardError(System.err)
                 .addArguments(
+                    "-Dorg.gradle.daemon=false",
                     "--init-script",
                     createInitScriptAsTempFile(buildGradleInitScriptToDumpTrace(gradleCommands, testClassName, testMethodName, tmpFile, extraJvmArgs, extraAgentArgs)).absolutePath,
                 ).forTasks(
@@ -240,7 +241,11 @@ abstract class AbstractTraceIntegrationTest {
             connection.newBuild()
                 .setStandardError(System.err)
                 .forTasks(*gradleBuildCommands.toTypedArray())
-                .withArguments("--no-configuration-cache", "--init-script", initScriptFile.absolutePath)
+                .withArguments(
+                    "--no-configuration-cache",
+                    "-Dorg.gradle.daemon=false",
+                    "--init-script", initScriptFile.absolutePath
+                )
                 .run()
 
             // Read the classpath from the file
