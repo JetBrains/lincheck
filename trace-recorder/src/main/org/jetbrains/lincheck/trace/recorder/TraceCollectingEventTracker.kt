@@ -679,13 +679,9 @@ class TraceCollectingEventTracker(
         startTime = System.currentTimeMillis()
     }
 
-    fun completeRunningThread(thread: Thread) {
-        val threadDescriptor = ThreadDescriptor.getThreadDescriptor(thread) ?: return
+    fun completeRunningThread(thread: Thread, threadDescriptor: ThreadDescriptor) {
+        require(!threadDescriptor.isAnalysisEnabled) { "When completing a Thread ${thread.name} (${thread.id}), its analysis is expected to be disabled" }
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
-        if (!threadDescriptor.isAnalysisEnabled) return // we skip already finished threads
-
-        // tell that thread not to track any tracepoints anymore
-        threadDescriptor.disableAnalysis()
         // wait until that thread finishes whatever injected code it is executing right now
         spinner.spinWaitUntil { !threadDescriptor.isInsideInjectedCode }
         // now, we are sure that another thread has finished its injected code
@@ -702,11 +698,22 @@ class TraceCollectingEventTracker(
     fun finishAndDumpTrace() {
         // Finish existing threads, except for Main
         val mainThread = Thread.currentThread()
-        threads.forEach { (thread, _) ->
-            if (thread != mainThread) {
-                completeRunningThread(thread)
+        threads
+            .mapNotNull { (thread, _) ->
+                if (thread == mainThread) null
+                else {
+                    val threadDescriptor = ThreadDescriptor.getThreadDescriptor(thread)
+                    if (threadDescriptor == null || !threadDescriptor.isAnalysisEnabled) null
+                    else {
+                        // tell `thread` not to track its tracepoints anymore
+                        threadDescriptor.disableAnalysis()
+                        thread to threadDescriptor
+                    }
+                }
             }
-        }
+            .forEach { (thread, threadDescriptor) ->
+                completeRunningThread(thread, threadDescriptor)
+            }
 
         // Close this thread callstack
         val threadData = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTrackerData as? ThreadData? ?: return
