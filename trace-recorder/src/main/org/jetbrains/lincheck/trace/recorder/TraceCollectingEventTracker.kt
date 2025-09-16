@@ -16,6 +16,7 @@ import org.jetbrains.lincheck.trace.TRACE_CONTEXT
 import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.trace.*
+import org.jetbrains.lincheck.trace.TRMethodCallTracePoint.Companion.INCOMPLETE_METHOD_FLAG
 import org.jetbrains.lincheck.util.*
 import sun.nio.ch.lincheck.*
 import java.lang.invoke.CallSite
@@ -190,12 +191,13 @@ class TraceCollectingEventTracker(
         descriptor.enableAnalysis()
 
         fun appendMethodCall(obj: TRObject?, className: String, methodName: String, methodType: Types.MethodType, codeLocationId: Int, params: List<TRObject> = emptyList()) {
-            val methodCall = TRIncompleteMethodCallTracePoint(
+            val methodCall = TRMethodCallTracePoint(
                 threadId = threadData.threadId,
                 codeLocationId = codeLocationId,
                 methodId = TRACE_CONTEXT.getOrCreateMethodId(className, methodName, methodType),
                 obj = obj,
-                parameters = params
+                parameters = params,
+                flags = INCOMPLETE_METHOD_FLAG.toShort()
             )
             val parentTracePoint = if (threadData.getStack().isEmpty()) null
                                    else threadData.currentMethodCallTracePoint()
