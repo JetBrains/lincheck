@@ -43,11 +43,8 @@ internal class MethodCallMinimalTransformer(
     override fun processMethodCall(desc: String, opcode: Int, owner: String, name: String, itf: Boolean) = adapter.run {
         val receiverType = getType("L$owner;")
         val returnType = getReturnType(desc)
-        val ownerName = ownerNameAnalyzer?.stack?.let { stack ->
-            if (opcode == INVOKESTATIC) return@let null
-            val position = getArgumentTypes(desc).sumOf { it.size }
-            stack.getStackElementAt(position)
-        }
+        val ownerName = getOwnerName(desc, opcode)
+        val argumentNames = getArgumentNames(desc, opcode)
         // STACK: receiver?, arguments
         val argumentLocals = storeArguments(desc)
         val argumentsArrayLocal = newLocal(OBJECT_ARRAY_TYPE).also {
@@ -60,7 +57,7 @@ internal class MethodCallMinimalTransformer(
         }
         val methodId = TRACE_CONTEXT.getOrCreateMethodId(owner.toCanonicalClassName(), name, desc)
         // STACK: <empty>
-        processMethodCallEnter(methodId, receiverLocal, argumentsArrayLocal, ownerName)
+        processMethodCallEnter(methodId, receiverLocal, argumentsArrayLocal, ownerName, argumentNames)
         // STACK: deterministicCallDescriptor
         pop()
         // STACK: <empty>

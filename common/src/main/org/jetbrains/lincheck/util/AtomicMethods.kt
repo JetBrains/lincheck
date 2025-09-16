@@ -101,6 +101,23 @@ internal fun getAtomicMethodDescriptor(obj: Any?, methodName: String): AtomicMet
     }
 }
 
+/**
+ * Determines the index of the accessed object among method parameters based on the type of API being used.
+ *
+ * @param obj the receiver object of the method; can be null.
+ * @param params the array of parameters passed to the method.
+ * @return the index of the accessed object among parameters (starting from 0),
+ *   or -1 if the accessed object is the receiver object itself.
+ */
+internal fun AtomicMethodDescriptor.getAccessedObjectIndex(obj: Any?, params: Array<Any?>): Int = when {
+    apiKind == ATOMIC_FIELD_UPDATER ||
+    apiKind == VAR_HANDLE ||
+    apiKind == UNSAFE ->
+        0
+    else ->
+        -1
+}
+
 internal fun AtomicMethodDescriptor.getAccessedObject(obj: Any?, params: Array<Any?>): Any? = when {
     apiKind == ATOMIC_FIELD_UPDATER ||
     apiKind == VAR_HANDLE ||

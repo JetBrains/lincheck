@@ -11,9 +11,11 @@
 package org.jetbrains.lincheck.jvm.agent.transformers
 
 import org.jetbrains.lincheck.jvm.agent.*
+import org.jetbrains.lincheck.descriptors.AccessPath
 import org.jetbrains.lincheck.descriptors.OwnerName
 import org.jetbrains.lincheck.util.isInLincheckPackage
 import org.objectweb.asm.MethodVisitor
+import org.objectweb.asm.Opcodes.INVOKESTATIC
 import org.objectweb.asm.Type
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
@@ -88,9 +90,10 @@ internal abstract class MethodCallTransformerBase(
         receiverLocal: Int?,
         argumentsArrayLocal: Int,
         ownerName: OwnerName? = null,
+        argumentNames: List<AccessPath?>? = null,
     ) {
         // STACK: <empty>
-        loadNewCodeLocationId(accessPath = ownerName)
+        loadNewCodeLocationId(accessPath = ownerName, argumentNames = argumentNames)
         // STACK: codeLocation
         push(methodId)
         pushReceiver(receiverLocal)
@@ -173,6 +176,24 @@ internal abstract class MethodCallTransformerBase(
         invokeStatic(Injections::onMethodCallException)
         // STACK: Throwable
         throwException()
+    }
+
+    protected fun getOwnerName(desc: String, opcode: Int): AccessPath? {
+        val stack = ownerNameAnalyzer?.stack ?: return null
+        if (opcode == INVOKESTATIC) return null
+        val position = getArgumentTypes(desc).sumOf { it.size }
+        return stack.getStackElementAt(position)
+    }
+
+    protected fun getArgumentNames(desc: String, opcode: Int): List<AccessPath?>? {
+        val stack = ownerNameAnalyzer?.stack ?: return null
+        var position = 0
+        val argumentTypes = getArgumentTypes(desc)
+        return argumentTypes.reversed().map { argType ->
+            val argPath = stack.getStackElementAt(position)
+            position += argType.size
+            argPath
+        }.reversed()
     }
 
     protected fun isIgnoredMethod(className: String) =
