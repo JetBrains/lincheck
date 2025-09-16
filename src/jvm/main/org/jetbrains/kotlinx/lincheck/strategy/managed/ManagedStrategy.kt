@@ -657,7 +657,7 @@ internal abstract class ManagedStrategy(
 
     // == LISTENING METHODS ==
 
-    override fun beforeExistingThreadTracking(thread: Thread, descriptor: ThreadDescriptor) {
+    override fun registerRunningThread(thread: Thread, descriptor: ThreadDescriptor) {
         error("Lincheck managed strategy does not support tracking of threads, started before agent attach.")
     }
 

@@ -170,7 +170,26 @@ inline fun <R> runInsideIgnoredSection(block: () -> R): R {
 inline fun <R> runInsideInjectedCode(block: () -> R): R? {
     val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: return block()
 
+    // General synchronization schema here is as follows:
+    //   * This thread sets the flag, that it will now run some code from instrumentation (e.g. method from `EventTracker`)
+    //   * Then, check that the analysis in this thread was not disabled by the Main thread:
+    //     * In case it was, we do not execute `block` and just unset the `isInsideInjectedCode` flag
+    //     * In case it wasn't, Main thread could afterwards still disable analysis in this thread,
+    //       but we still execute the injected code here, because Main thread is obligated to wait
+    //       until this thread leaves the injected code. Then we unset the flag and notify Main
+    //       we are no longer updating any sensitive data structures and Main could treat this thread
+    //       as "completed".
     desc.enterInjectedCode()
+    // `isAnalysisEnabled` flag is read twice:
+    //   * first time in code inserted by the transformation method 'invokeIfInAnalyzedCode',
+    //     which checks for `isAnalysisEnabled == true` and then invokes method of `Injections` which then will delegate to `EventTracker`
+    //   * second time right now, when thread decides to execute some code frame EventTracker.
+    //     The second read is required so that this thread proceeds only when it sees
+    //     `isAnalysisEnabled == true && isInsideInjectedCode == true`, because that means that
+    //     Main will also see `isInsideInjectedCode == true`.
+    // So the general rule here is:
+    //   * In current thread: first write `isInsideInjectedCode` then read `isAnalysisEnabled`
+    //   * In Main thread: first write `isAnalysisEnabled` then read `isInsideInjectedCode`
     if (!desc.isAnalysisEnabled) {
         desc.leaveInjectedCode()
         return null

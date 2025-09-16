@@ -19,8 +19,6 @@ import org.jetbrains.lincheck.util.*
 import sun.nio.ch.lincheck.*
 import java.lang.invoke.CallSite
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.withLock
 
 private class ThreadData(
     val threadId: Int
@@ -179,13 +177,15 @@ class TraceCollectingEventTracker(
         }
     }
 
-    override fun beforeExistingThreadTracking(thread: Thread, descriptor: ThreadDescriptor): Unit = runInsideIgnoredSection {
+    override fun registerRunningThread(thread: Thread, descriptor: ThreadDescriptor): Unit = runInsideIgnoredSection {
         val threadData = threads.computeIfAbsent(thread) {
             val threadData = ThreadData(threads.size)
             ThreadDescriptor.getThreadDescriptor(thread).eventTrackerData = threadData
             threadData
         }
         val thread = Thread.currentThread()
+        // We need to enable analysis first, before calling `runInsideInjectedCode`, because
+        // that method internally checks that the analysis is enabled before calling the provided lambda
         descriptor.enableAnalysis()
 
         fun appendMethodCall(obj: TRObject?, className: String, methodName: String, methodDesc: String, codeLocationId: Int = -1, params: List<TRObject> = emptyList()) {
@@ -202,6 +202,8 @@ class TraceCollectingEventTracker(
             threadData.pushStackFrame(methodCall, thread, isInline = false)
         }
 
+        // This method does not wrap this whole method, because the analysis in this thread must
+        // be enabled first in order for this method to even invoke its lambda
         runInsideInjectedCode {
             strategy.registerCurrentThread(threadData.threadId)
             for (frame in thread.stackTrace.reversed()) {
@@ -232,8 +234,10 @@ class TraceCollectingEventTracker(
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
         val thread = Thread.currentThread()
+        // just like in `registerRunningThread` we first need to enable analysis
+        // so that `runInsideInjectedCode` does not exit on short-path without
+        // even invoking its lambda
         threadDescriptor.enableAnalysis()
-
         runInsideInjectedCode {
             strategy.registerCurrentThread(threadData.threadId)
             val tracePoint = TRMethodCallTracePoint(
@@ -675,7 +679,7 @@ class TraceCollectingEventTracker(
         startTime = System.currentTimeMillis()
     }
 
-    fun finishRunningThread(thread: Thread) {
+    fun completeRunningThread(thread: Thread) {
         val threadDescriptor = ThreadDescriptor.getThreadDescriptor(thread) ?: return
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
         if (!threadDescriptor.isAnalysisEnabled) return // we skip already finished threads
@@ -696,19 +700,11 @@ class TraceCollectingEventTracker(
     }
 
     fun finishAndDumpTrace() {
-        // TODO:
-        //  1. disable analysis in all still-running threads
-        //     a. finish threads via CAS, so `afterThreadFinish` and `finishRunningThread` are not called simultaneously
-        //  2. we should write the ends of footers of each still-open MethodCallTracePoint's
-        //  3. - mark them some-how that their body wasn't finished when main finished
-        //  4. collect the prefix of the existing trace and create trace points for that
-        //  5. - mark existing threads that their prefixes are missing
-
         // Finish existing threads, except for Main
         val mainThread = Thread.currentThread()
         threads.forEach { (thread, _) ->
             if (thread != mainThread) {
-                finishRunningThread(thread)
+                completeRunningThread(thread)
             }
         }
 
