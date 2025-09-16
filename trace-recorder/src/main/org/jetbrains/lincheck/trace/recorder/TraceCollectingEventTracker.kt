@@ -189,7 +189,7 @@ class TraceCollectingEventTracker(
         // that method internally checks that the analysis is enabled before calling the provided lambda
         descriptor.enableAnalysis()
 
-        fun appendMethodCall(obj: TRObject?, className: String, methodName: String, methodType: Types.MethodType, codeLocationId: Int = -1, params: List<TRObject> = emptyList()) {
+        fun appendMethodCall(obj: TRObject?, className: String, methodName: String, methodType: Types.MethodType, codeLocationId: Int, params: List<TRObject> = emptyList()) {
             val methodCall = TRIncompleteMethodCallTracePoint(
                 threadId = threadData.threadId,
                 codeLocationId = codeLocationId,
@@ -214,8 +214,7 @@ class TraceCollectingEventTracker(
                     !frame.isNativeMethod &&
                     !analysisProfile.shouldBeHidden(frame.className, frame.methodName)
                 ) {
-                    // TODO: should code locations be computed from the frame?
-                    appendMethodCall(null, frame.className, frame.methodName,  Types.MethodType(Types.VOID_TYPE))
+                    appendMethodCall(null, frame.className, frame.methodName,  UNKNOWN_METHOD_TYPE, UNKNOWN_CODE_LOCATION_ID)
                 }
             }
         }
