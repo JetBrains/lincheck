@@ -12,58 +12,57 @@ package org.jetbrains.trace.recorder.test
 
 import org.junit.Test
 import org.junit.experimental.categories.Category
+import org.junit.experimental.runners.Enclosed
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
 import java.nio.file.Paths
 
-@Category(ExtendedTraceRecorderTest::class)
-class KtorTraceRecorderIntegrationTest : AbstractTraceRecorderIntegrationTest() {
-    override val projectPath: String = Paths.get("build", "integrationTestProjects", "ktor").toString()
-    override val formatArgs: Map<String, String> = mapOf("format" to "binary", "formatOption" to "stream")
-    
-    private fun runKtorTests(vararg submodules: String, checkRepresentation: Boolean = false) {
-        require(submodules.isNotEmpty()) { "At least one submodule should be specified" }
-        val submodulePath = submodules.joinToString("-")
-        val rootPath = (1..submodules.size).joinToString("/", prefix = "$projectPath/", postfix = "/build") {
-            "ktor-${submodules.take(it).joinToString("-")}"
-        }
-        runKtorTestsImpl(submodulePath, rootPath, checkRepresentation)
-    }
+@RunWith(Enclosed::class)
+class KtorTraceRecorderIntegrationTest {
+    @Category(ExtendedTraceRecorderTest::class)
+    @RunWith(Parameterized::class)
+    class Parametrized(
+        private val testClassName: String,
+        private val testMethodName: String,
+        private val gradleCommand: String,
+        private val perEntryJvmArgs: List<String>,
+        private val perEntryCheckRepresentation: Boolean,
+    ) : AbstractTraceRecorderIntegrationTest() {
+        override val projectPath: String = Paths.get("build", "integrationTestProjects", "ktor").toString()
+        override val formatArgs: Map<String, String> = mapOf("format" to "binary", "formatOption" to "stream")
 
-    private fun runKtorTestsImpl(submodulePath: String, rootPath: String, checkRepresentation: Boolean = false) {
-        runGradleTests(
-            gradleBuildCommands = listOf(":ktor-$submodulePath:compileTestKotlinJvm"),
-            gradleTestCommands = listOf(":ktor-$submodulePath:cleanJvmTest", ":ktor-$submodulePath:jvmTest"),
-            rootPath = rootPath,
-            checkRepresentation = checkRepresentation,
+        @Test
+        fun runKtorTest() = runKtorTestImpl(
+            testClassName, testMethodName, gradleCommand, perEntryJvmArgs, perEntryCheckRepresentation
         )
+
+        companion object {
+            @JvmStatic
+            @Parameterized.Parameters(name = "{index}: {0}::{1}")
+            fun data(): Collection<Array<Any>> {
+                val json = loadResourceText(
+                    "/integrationTestData/ktorTests.json",
+                    KtorTraceRecorderIntegrationTest::class.java
+                )
+                val entries = parseJsonEntries(json)
+                return entries.transformEntriesToArray()
+            }
+        }
     }
+}
 
-    @Test
-    fun `ktor-http`() = runKtorTests("http")
-
-    @Test
-    fun `ktor-http-cio`() = runKtorTests("http", "cio") 
-
-    @Test
-    fun `ktor-io`() = runKtorTests("io")
-
-    @Test
-    fun `ktor-network`() = runKtorTests("network")
-
-    @Test
-    fun `ktor-network-tls`() = runKtorTests("network", "tls")
-
-    @Test
-    fun `ktor-network-tls-certificates`() = runKtorTests("network", "tls", "certificates")
-
-    @Test
-    fun `ktor-htmx-html`() = runKtorTestsImpl(
-        submodulePath = "htmx-html",
-        rootPath = "${projectPath}/ktor-shared/ktor-htmx/ktor-htmx-html/build",
+private fun AbstractTraceRecorderIntegrationTest.runKtorTestImpl(
+    testClassName: String,
+    testMethodName: String,
+    gradleCommand: String,
+    jvmArgs: List<String>,
+    checkRepresentation: Boolean,
+) {
+    runGradleTest(
+        testClassName = testClassName,
+        testMethodName = testMethodName,
+        gradleCommands = listOf(gradleCommand),
+        extraJvmArgs = jvmArgs,
+        checkRepresentation = checkRepresentation,
     )
-
-    @Test
-    fun `ktor-utils`() = runKtorTests("utils")
-
-    @Test
-    fun `ktor-server-cio`() = runKtorTests("server", "cio")
 }

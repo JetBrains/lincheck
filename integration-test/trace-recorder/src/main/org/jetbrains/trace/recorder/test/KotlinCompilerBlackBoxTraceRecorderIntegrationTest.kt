@@ -12,83 +12,78 @@ package org.jetbrains.trace.recorder.test
 
 import org.junit.Test
 import org.junit.experimental.categories.Category
+import org.junit.experimental.runners.Enclosed
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
 import java.io.File
 import java.nio.file.Paths
 import kotlin.io.path.createTempFile
 
-@Category(ExtendedTraceRecorderTest::class)
-class KotlinCompilerBlackBoxTraceRecorderIntegrationTest : AbstractTraceRecorderIntegrationTest() {
-    override val projectPath: String = Paths.get("build", "integrationTestProjects", "kotlin").toString()
-    override val formatArgs: Map<String, String> = mapOf("format" to "binary", "formatOption" to "stream")
-    
-    private fun <T> withPermissions(block: (File) -> T) : T {
-        val permissions = createTempFile("permissions", "txt").toFile()
-        return try {
-            // grant all permissions to all code bases located (recursively as well) in directory '/'
-            permissions.writeText(
-                """
-                grant codeBase "file:/-" {
-                    permission java.security.AllPermission;
-                };
-            """.trimIndent()
-            )
-            block(permissions)
-        } finally {
-            permissions.delete()
+@RunWith(Enclosed::class)
+class KotlinCompilerBlackBoxTraceRecorderIntegrationTest {
+    @Category(ExtendedTraceRecorderTest::class)
+    @RunWith(Parameterized::class)
+    class Parametrized(
+        private val testClassName: String,
+        private val testMethodName: String,
+        private val gradleCommand: String,
+        private val perEntryJvmArgs: List<String>,
+        private val perEntryCheckRepresentation: Boolean,
+    ) : AbstractTraceRecorderIntegrationTest() {
+        override val projectPath: String = Paths.get("build", "integrationTestProjects", "kotlin").toString()
+        override val formatArgs: Map<String, String> = mapOf("format" to "binary", "formatOption" to "stream")
+
+        @Test
+        fun runKotlinCompilerTest() = runKotlinCompilerTestImpl(
+            testClassName, testMethodName, gradleCommand, perEntryJvmArgs, perEntryCheckRepresentation
+        )
+
+        companion object {
+            @JvmStatic
+            @Parameterized.Parameters(name = "{index}: {0}::{1}")
+            fun data(): Collection<Array<Any>> {
+                val json = loadResourceText(
+                    "/integrationTestData/kotlinCompilerTests.json",
+                    KotlinCompilerBlackBoxTraceRecorderIntegrationTest::class.java
+                )
+                val entries = parseJsonEntries(json)
+                return entries.transformEntriesToArray()
+            }
         }
     }
-    
-    private fun runKotlinCompilerTestSuite(task: String, className: String, methodName: String, checkRepresentation: Boolean = false) =
-        withPermissions { permissions ->
-            runGradleTest(
-                testClassName = className,
-                testMethodName = methodName,
-                extraJvmArgs = listOf("-Djava.security.policy==${permissions.absolutePath}"),
-                // kotlin compiler complains about permissions of the attached agent,
-                // so we specify our own permissions file
-                gradleCommands = listOf(task),
-                checkRepresentation = checkRepresentation,
-            )
-        }
+}
 
-    private val jvmBoxSuite = "org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated"
-    private val jsBoxSuite = "org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated"
-    private val wasmBoxSuite = "org.jetbrains.kotlin.wasm.test.FirWasmJsCodegenBoxTestGenerated"
-    private val frontendSuite = "org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated"
-    private val jvmBoxTask = ":compiler:fir:fir2ir:test"
-    private val jsBoxTask = ":js:js.tests:test"
-    private val wasmBoxTask = ":wasm:wasm.tests:test"
-    private val frontendTask = ":compiler:fir:analysis-tests:test"
+private fun AbstractTraceRecorderIntegrationTest.runKotlinCompilerTestImpl(
+    testClassName: String,
+    testMethodName: String,
+    gradleCommand: String,
+    jvmArgs: List<String>,
+    checkRepresentation: Boolean,
+) {
+    withPermissions { permissions ->
+        val allJvmArgs = listOf("-Djava.security.policy==${permissions.absolutePath}") + jvmArgs
+        runGradleTest(
+            testClassName = testClassName,
+            testMethodName = testMethodName,
+            extraJvmArgs = allJvmArgs,
+            gradleCommands = listOf(gradleCommand),
+            checkRepresentation = checkRepresentation,
+        )
+    }
+}
 
-    @Test
-    fun `jvmBoxSuite testAllFilesPresentInBox`() = runKotlinCompilerTestSuite(
-        task = jvmBoxTask, className = jvmBoxSuite, methodName = "testAllFilesPresentInBox",
-    )
-
-    @Test
-    fun `jvmBoxSuite-Annotations testAllowedTargets`() = runKotlinCompilerTestSuite(
-        task = jvmBoxTask, className = $$"$$jvmBoxSuite$Annotations", methodName = "testAllowedTargets",
-    )
-
-    @Test
-    fun `jsBoxSuite testAllFilesPresentInBox`() = runKotlinCompilerTestSuite(
-        task = jsBoxTask, className = jsBoxSuite, methodName = "testAllFilesPresentInBox",
-    )
-
-    @Test
-    fun `jsBoxSuite-Annotations testAnnotations0`() = runKotlinCompilerTestSuite(
-        task = jsBoxTask, className = $$"$$jsBoxSuite$Annotations", methodName = "testAnnotations0",
-    )
-
-    @Test
-    fun `wasmBoxSuite-Annotations testAnnotations0`() = runKotlinCompilerTestSuite(
-        task = wasmBoxTask, className = $$"$$wasmBoxSuite$Annotations", methodName = "testAnnotations0",
-    )
-    
-    @Test
-    fun `frontendSuite testAnnotationConstructorDefaultParameter`() = runKotlinCompilerTestSuite(
-        task = frontendTask,
-        className = $$"$$frontendSuite$Tests$Annotations$AnnotationParameterMustBeConstant",
-        methodName = "testAnnotationConstructorDefaultParameter",
-    )
+private fun <T> withPermissions(block: (File) -> T): T {
+    val permissions = createTempFile("permissions", "txt").toFile()
+    return try {
+        permissions.writeText(
+            """
+                    grant codeBase "file:/-" {
+                        permission java.security.AllPermission;
+                    };
+                """.trimIndent()
+        )
+        block(permissions)
+    } finally {
+        permissions.delete()
+    }
 }

@@ -20,7 +20,7 @@ abstract class AbstractTraceRecorderIntegrationTest : AbstractTraceIntegrationTe
         "formatOption" to "verbose",
     )
 
-    final override fun runGradleTest(
+    public final override fun runGradleTest(
         testClassName: String,
         testMethodName: String,
         extraJvmArgs: List<String>,

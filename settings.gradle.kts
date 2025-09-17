@@ -6,6 +6,7 @@ pluginManagement {
     plugins {
         java
         kotlin("jvm") version kotlinVersion
+        kotlin("plugin.serialization") version kotlinVersion
         id("org.jetbrains.dokka") version dokkaVersion
         id("org.jetbrains.kotlinx.atomicfu") version atomicfuVersion
     }

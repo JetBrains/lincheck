@@ -1,0 +1,140 @@
+[
+  {
+    "class": "org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated",
+    "gradleCommand": ":compiler:fir:fir2ir:test",
+    "methods": [
+      "testAllFilesPresentInBox"
+    ]
+  },
+  {
+    "class": "org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$CallableReference$Bound$Equals",
+    "gradleCommand": ":compiler:fir:fir2ir:test",
+    "methods": [
+      "testReflectionReference",
+      "testReceiverInEquals"
+    ]
+  },
+  {
+    "class": "org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$CallableReference$Equality",
+    "gradleCommand": ":compiler:fir:fir2ir:test",
+    "methods": [
+      "testCapturedDefaults",
+      "testExtensionReceiverVsDefault"
+    ]
+  },
+  {
+    "class": "org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$Initializers$Files",
+    "gradleCommand": ":compiler:fir:fir2ir:test",
+    "methods": [
+      "testSimple",
+      "testSimpleMultiModule"
+    ]
+  },
+  {
+    "class": "org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$Inline",
+    "gradleCommand": ":compiler:fir:fir2ir:test",
+    "methods": [
+      "testDefaultArgs",
+      "testCrossModuleTypeOf"
+    ]
+  },
+  {
+    "class": "org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$Coroutines",
+    "gradleCommand": ":compiler:fir:fir2ir:test",
+    "methods": [
+      "testAsync"
+    ]
+  },
+  {
+    "class": "org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated",
+    "gradleCommand": ":js:js.tests:test",
+    "methods": [
+      "testAllFilesPresentInBox"
+    ]
+  },
+  {
+    "class": "org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Multiplatform$K2$Basic",
+    "gradleCommand": ":js:js.tests:test",
+    "methods": [
+      "testAnyMethodInExpect",
+      "testContextOnExpect"
+    ]
+  },
+  {
+    "class": "org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Controlflow",
+    "gradleCommand": ":js:js.tests:test",
+    "methods": [
+      "testBreak",
+      "testFor_loops"
+    ]
+  },
+  {
+    "class": "org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Multiplatform$K2$Annotations",
+    "gradleCommand": ":js:js.tests:test",
+    "methods": [
+      "testOptionalExpectation",
+      "testExpectAnnotationCallInLibrary"
+    ]
+  },
+  {
+    "class": "org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Coroutines",
+    "gradleCommand": ":js:js.tests:test",
+    "methods": [
+      "testAsync",
+      "testAwait"
+    ]
+  },
+  {
+    "class": "org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$ControlStructures$TryCatchInExpressions",
+    "gradleCommand": ":js:js.tests:test",
+    "methods": [
+      "testTryInsideTry"
+    ]
+  },
+  {
+    "class": "org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations",
+    "gradleCommand": ":compiler:fir:analysis-tests:test",
+    "methods": [
+      "testWrongAnnotationTarget",
+      "testWrongAnnotationTargetAnnotationOrder"
+    ]
+  },
+  {
+    "class": "org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations$FunctionalTypes",
+    "gradleCommand": ":compiler:fir:analysis-tests:test",
+    "methods": [
+      "testParameterName",
+      "testParenthesizedAnnotations"
+    ]
+  },
+  {
+    "class": "org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations$Options",
+    "gradleCommand": ":compiler:fir:analysis-tests:test",
+    "methods": [
+      "testAnnotationAsArg",
+      "testAnnotationAsArgComplex"
+    ]
+  },
+  {
+    "class": "org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations$AnnotationParameterMustBeConstant",
+    "gradleCommand": ":compiler:fir:analysis-tests:test",
+    "methods": [
+      "testCompareAndEquals",
+      "testStrings"
+    ]
+  },
+  {
+    "class": "org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$ControlFlowAnalysis",
+    "gradleCommand": ":compiler:fir:analysis-tests:test",
+    "methods": [
+      "testAssignedInFinally"
+    ]
+  },
+  {
+    "class": "org.jetbrains.kotlin.wasm.test.FirWasmJsCodegenBoxTestGenerated$Annotations",
+    "gradleCommand": ":wasm:wasm.tests:test",
+    "methods": [
+      "testAnnotations0"
+    ]
+  }
+]
