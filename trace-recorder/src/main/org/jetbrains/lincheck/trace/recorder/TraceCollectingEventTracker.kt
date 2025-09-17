@@ -57,26 +57,31 @@ private class ThreadData(
     fun getStack(): List<StackFrame> = stack
 
     fun enterAnalysisSection(section: AnalysisSectionType) {
+        if (section == AnalysisSectionType.IGNORED) {
+            enterIgnoredSection()
+            return
+        }
         val currentSection = analysisSectionStack.lastOrNull()
         if (currentSection != null && currentSection.isCallStackPropagating() && section < currentSection) {
             analysisSectionStack.add(currentSection)
         } else {
             analysisSectionStack.add(section)
         }
-        if (section == AnalysisSectionType.IGNORED || section == AnalysisSectionType.ATOMIC) {
+        if (section == AnalysisSectionType.ATOMIC) {
             enterIgnoredSection()
         }
     }
 
     fun leaveAnalysisSection(section: AnalysisSectionType) {
-        if (section == AnalysisSectionType.IGNORED ||
-            // TODO: atomic should have different semantics compared to ignored
-            section == AnalysisSectionType.ATOMIC
-        ) {
+        if (section == AnalysisSectionType.IGNORED) {
             leaveIgnoredSection()
+            return
         }
         analysisSectionStack.removeLast().ensure { currentSection ->
             currentSection == section || (currentSection.isCallStackPropagating() && section < currentSection)
+        }
+        if (section == AnalysisSectionType.ATOMIC) {
+            leaveIgnoredSection()
         }
     }
 }
@@ -497,6 +502,13 @@ class TraceCollectingEventTracker(
         val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
 
         val methodSection = methodAnalysisSectionType(receiver, methodDescriptor.className, methodDescriptor.methodName)
+
+        // Should this method call be ignored?
+        if (methodSection == AnalysisSectionType.IGNORED) {
+            threadData.enterAnalysisSection(methodSection)
+            return null
+        }
+
         if (receiver == null && methodSection < AnalysisSectionType.ATOMIC) {
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(methodDescriptor.className)
         }
@@ -527,6 +539,12 @@ class TraceCollectingEventTracker(
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return result
         val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
 
+        val methodSection = methodAnalysisSectionType(receiver, methodDescriptor.className, methodDescriptor.methodName)
+        if (methodSection == AnalysisSectionType.IGNORED) {
+            threadData.leaveAnalysisSection(methodSection)
+            return result
+        }
+
         while (threadData.isCurrentMethodCallInline()) {
             val inlineTracePoint = threadData.currentMethodCallTracePoint()
             Logger.error { "Forced exit from inline method ${inlineTracePoint.methodId} (${inlineTracePoint.className}.${inlineTracePoint.methodName}) due to return from method $methodId (${methodDescriptor.className}.${methodDescriptor.methodName})" }
@@ -541,7 +559,6 @@ class TraceCollectingEventTracker(
         tracePoint.result = TRObjectOrVoid(result)
         strategy.callEnded(Thread.currentThread(), tracePoint)
 
-        val methodSection = methodAnalysisSectionType(receiver, tracePoint.className, tracePoint.methodName)
         threadData.leaveAnalysisSection(methodSection)
 
         return result
@@ -559,6 +576,12 @@ class TraceCollectingEventTracker(
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return t
         val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
 
+        val methodSection = methodAnalysisSectionType(receiver, methodDescriptor.className, methodDescriptor.methodName)
+        if (methodSection == AnalysisSectionType.IGNORED) {
+            threadData.leaveAnalysisSection(methodSection)
+            return t
+        }
+
         while (threadData.isCurrentMethodCallInline()) {
             val inlineTracePoint = threadData.currentMethodCallTracePoint()
             Logger.error { "Forced exit from inline method ${inlineTracePoint.methodId} (${inlineTracePoint.className}.${inlineTracePoint.methodName}) due to exception in method $methodId (${methodDescriptor.className}.${methodDescriptor.methodName})" }
@@ -573,7 +596,6 @@ class TraceCollectingEventTracker(
         tracePoint.exceptionClassName = t.javaClass.name
         strategy.callEnded(Thread.currentThread(), tracePoint)
 
-        val methodSection = methodAnalysisSectionType(receiver, tracePoint.className, tracePoint.methodName)
         threadData.leaveAnalysisSection(methodSection)
 
         return t
@@ -789,6 +811,10 @@ class TraceCollectingEventTracker(
         val ownerName = owner?.javaClass?.canonicalName ?: className
         // Ignore methods called on standard I/O streams
         if (owner === System.`in` || owner === System.out || owner === System.err) {
+            return AnalysisSectionType.IGNORED
+        }
+        // Do not track Collection.size() calls
+        if (owner is Collection<*> && methodName == "size") {
             return AnalysisSectionType.IGNORED
         }
         return analysisProfile.getAnalysisSectionFor(ownerName, methodName)
