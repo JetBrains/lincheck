@@ -36,14 +36,14 @@ abstract class AbstractTraceIntegrationTest {
         extraJvmArgs: List<String>,
         extraAgentArgs: Map<String, String>,
     ): String {
-        fun String.replaceDollar() = replace("$", "\\$")
+        fun String.escapeDollar() = replace("$", "\\$")
 
         val pathToFatJar = File(Paths.get("build", "libs", fatJarName).toString()).absolutePath.escape()
         // We need to escape it twice, as our argument parser will de-escape it when split into array
         val pathToOutput = fileToDump.absolutePath.escape().escape()
-        val agentArgs = "class=${testClassName.replaceDollar()},method=${testMethodName.replaceDollar()},output=${pathToOutput.replaceDollar()}" +
+        val agentArgs = "class=${testClassName.escapeDollar()},method=${testMethodName.escapeDollar()},output=${pathToOutput.escapeDollar()}" +
                         extraAgentArgs.entries
-                            .joinToString(",") { "${it.key}=${it.value.replaceDollar()}" }
+                            .joinToString(",") { "${it.key}=${it.value.escapeDollar()}" }
                             .let { if (it.isNotEmpty()) ",$it" else it }
         return """
             gradle.taskGraph.whenReady {
@@ -142,7 +142,6 @@ abstract class AbstractTraceIntegrationTest {
     ) {
         val tmpFile = File.createTempFile(testClassName + "_" + testMethodName, "")
         val packedTraceFile = File("${tmpFile.absolutePath}.packedtrace")
-        val indexFile = File("${tmpFile.absolutePath}.idx")
 
         try {
             createGradleConnection().use { connection ->
@@ -201,7 +200,6 @@ abstract class AbstractTraceIntegrationTest {
         } finally {
             tmpFile.delete()
             packedTraceFile.delete()
-            indexFile.delete()
         }
     }
 
