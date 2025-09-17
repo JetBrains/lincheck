@@ -39,6 +39,11 @@ private val projectsToTest = listOf(
         repositoryName = "ktor",
         commitHash = "40eb608b9b561c9e6d7d2d998f2a7c39bd63869d"
     ),
+    GithubProjectSnapshot(
+        organization = "Kotlin",
+        repositoryName = "kotlinx.coroutines",
+        commitHash = "8062e9f6c21bc2672528c5e63dcff7e9057a0989"
+    )
 )
 
 lateinit var traceAgentIntegrationTestsPrerequisites: TaskProvider<Task>

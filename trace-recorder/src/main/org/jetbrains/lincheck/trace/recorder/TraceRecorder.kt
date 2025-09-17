@@ -61,6 +61,7 @@ object TraceRecorder {
 
         eventTracker!!.enableTrace()
         desc.enableAnalysis()
+        Injections.enableGlobalThreadsTracking(eventTracker)
     }
 
     fun finishTraceAndDumpResults() {

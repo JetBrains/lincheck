@@ -657,6 +657,10 @@ internal abstract class ManagedStrategy(
 
     // == LISTENING METHODS ==
 
+    override fun registerRunningThread(thread: Thread, descriptor: ThreadDescriptor) {
+        error("Lincheck managed strategy does not support tracking of threads, started before agent attach.")
+    }
+
     override fun beforeThreadFork(thread: Thread, descriptor: ThreadDescriptor): Unit = runInsideIgnoredSection {
         val currentThreadId = threadScheduler.getCurrentThreadId()
         // do not track threads forked from unregistered threads
@@ -675,7 +679,6 @@ internal abstract class ManagedStrategy(
 
         onThreadStart(currentThreadId)
 
-        val methodDescriptor = getAsmMethod("void run()").descriptor
         val tracePoint = addBeforeMethodCallTracePoint(
             eventId = getNextEventId(),
             threadId = currentThreadId,
@@ -686,7 +689,7 @@ internal abstract class ManagedStrategy(
             methodId = TRACE_CONTEXT.getOrCreateMethodId(
                 className = "java.lang.Thread",
                 methodName = "run",
-                desc = methodDescriptor
+                methodType = Types.MethodType(Types.VOID_TYPE)
             ),
             methodParams = emptyArray(),
             atomicMethodDescriptor = null,
@@ -931,7 +934,7 @@ internal abstract class ManagedStrategy(
             methodId = TRACE_CONTEXT.getOrCreateMethodId(
                 className = actor.method.declaringClass.name.toCanonicalClassName(),
                 methodName = actor.method.name,
-                desc = methodDescriptor
+                methodType = Types.convertAsmMethodType(methodDescriptor)
             ),
             methodParams = actor.arguments.toTypedArray(),
             atomicMethodDescriptor = null,

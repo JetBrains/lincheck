@@ -157,6 +157,61 @@ inline fun <R> runInsideIgnoredSection(block: () -> R): R {
 }
 
 /**
+ * Executes a given block of code within an injected code under condition that analysis is enabled.
+ * This method is used to account for the situation when the Main thread is finished and it wants
+ * to logically "finish" all other threads which still record some events.
+ *
+ * NOTE: there are other overloads that have different return values. They are useful for some
+ * [sun.nio.ch.lincheck.EventTracker] methods, which do not have return values or require a non-null result.
+ *
+ * @param block the code to execute within the injected code.
+ * @return result of the [block] invocation.
+ */
+inline fun <R> runInsideInjectedCode(block: () -> R): R? {
+    val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: return block()
+
+    // General synchronization schema here is as follows:
+    //   * This thread sets the flag, that it will now run some code from instrumentation (e.g. method from `EventTracker`)
+    //   * Then, check that the analysis in this thread was not disabled by the Main thread:
+    //     * In case it was, we do not execute `block` and just unset the `isInsideInjectedCode` flag
+    //     * In case it wasn't, Main thread could afterwards still disable analysis in this thread,
+    //       but we still execute the injected code here, because Main thread is obligated to wait
+    //       until this thread leaves the injected code. Then we unset the flag and notify Main
+    //       we are no longer updating any sensitive data structures and Main could treat this thread
+    //       as "completed".
+    desc.enterInjectedCode()
+    // `isAnalysisEnabled` flag is read twice:
+    //   * first time in code inserted by the transformation method 'invokeIfInAnalyzedCode',
+    //     which checks for `isAnalysisEnabled == true` and then invokes method of `Injections` which then will delegate to `EventTracker`
+    //   * second time right now, when thread decides to execute some code frame EventTracker.
+    //     The second read is required so that this thread proceeds only when it sees
+    //     `isAnalysisEnabled == true && isInsideInjectedCode == true`, because that means that
+    //     Main will also see `isInsideInjectedCode == true`.
+    // So the general rule here is:
+    //   * In current thread: first write `isInsideInjectedCode` then read `isAnalysisEnabled`
+    //   * In Main thread: first write `isAnalysisEnabled` then read `isInsideInjectedCode`
+    if (!desc.isAnalysisEnabled) {
+        desc.leaveInjectedCode()
+        return null
+    }
+    desc.enterIgnoredSection()
+    try {
+        return block()
+    } finally {
+        desc.leaveIgnoredSection()
+        desc.leaveInjectedCode()
+    }
+}
+
+inline fun runInsideInjectedCode(block: () -> Unit) {
+    runInsideInjectedCode<Unit>(block)
+}
+
+inline fun <R> runInsideInjectedCode(default: R, block: () -> R): R {
+    return runInsideInjectedCode(block) ?: default
+}
+
+/**
  * Exits the ignored section and invokes the provided [block] outside an ignored section,
  * restoring the ignored section back after the [block] is executed.
  *
@@ -272,8 +327,8 @@ class AnalysisProfile(val analyzeStdLib: Boolean) {
         if (className.startsWith("org.junit.")) return false
         if (className.startsWith("junit.framework.")) return false
         // Finally, we should never instrument the Lincheck classes.
-        if (className.startsWith("org.jetbrains.lincheck.")) return false
-        if (className.startsWith("org.jetbrains.kotlinx.lincheck.")) return false
+        if (className.startsWith(LINCHECK_PACKAGE_NAME)) return false
+        if (className.startsWith(LINCHECK_KOTLINX_PACKAGE_NAME)) return false
         // All the classes that were not filtered out are eligible for transformation.
         return true
     }

@@ -23,6 +23,10 @@ import java.util.concurrent.ConcurrentHashMap
 val TRACE_CONTEXT: TraceContext = TraceContext()
 
 const val UNKNOWN_CODE_LOCATION_ID = -1
+// This method type corresponds to the following method descriptor '(V)V'
+// which is invalid jvm method descriptor, but it is only used to mark some method type as unknown
+// or impossible to properly track.
+val UNKNOWN_METHOD_TYPE = Types.MethodType(Types.VOID_TYPE, Types.VOID_TYPE)
 
 private val EMPTY_STACK_TRACE = StackTraceElement("", "", "", 0)
 
@@ -53,21 +57,21 @@ class TraceContext {
 
     val methodDescriptors: List<MethodDescriptor?> get() = methods.content
 
-    fun getOrCreateMethodId(className: String, methodName: String, desc: String): Int {
+    fun getOrCreateMethodId(className: String, methodName: String, methodType: Types.MethodType): Int {
         return methods.getOrCreateId(
             MethodDescriptor(
                 context = this,
                 classId = getOrCreateClassId(className),
                 methodSignature = MethodSignature(
                     name = methodName,
-                    methodType = Types.convertAsmMethodType(desc)
+                    methodType = methodType
                 )
             )
         )
     }
 
-    fun getMethodDescriptor(className: String, methodName: String, desc: String): MethodDescriptor =
-        getMethodDescriptor(getOrCreateMethodId(className, methodName, desc))
+    fun getMethodDescriptor(className: String, methodName: String, methodType: Types.MethodType): MethodDescriptor =
+        getMethodDescriptor(getOrCreateMethodId(className, methodName, methodType))
 
     fun getMethodDescriptor(methodId: Int): MethodDescriptor = methods[methodId]
 

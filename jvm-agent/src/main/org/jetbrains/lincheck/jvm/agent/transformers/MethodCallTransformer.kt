@@ -10,6 +10,7 @@
 
 package org.jetbrains.lincheck.jvm.agent.transformers
 
+import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent.instrumentationMode
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.TRACE_DEBUGGING
@@ -53,7 +54,7 @@ internal class MethodCallTransformer(
             (opcode != INVOKESTATIC) -> newLocal(receiverType).also { storeLocal(it) }
             else -> null
         }
-        val methodId = TRACE_CONTEXT.getOrCreateMethodId(owner.toCanonicalClassName(), name, desc)
+        val methodId = TRACE_CONTEXT.getOrCreateMethodId(owner.toCanonicalClassName(), name, Types.convertAsmMethodType(desc))
         // STACK: <empty>
         processMethodCallEnter(methodId, receiverLocal, argumentsArrayLocal, ownerName, argumentNames)
         // STACK: deterministicCallDescriptor

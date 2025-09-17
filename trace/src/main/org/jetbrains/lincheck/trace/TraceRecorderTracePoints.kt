@@ -20,7 +20,6 @@ import org.jetbrains.lincheck.trace.DefaultTRArrayTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRFieldTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRLocalVariableTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRMethodCallTracePointPrinter.append
-import org.jetbrains.lincheck.trace.append
 import java.io.DataInput
 import java.io.DataOutput
 import java.math.BigDecimal
@@ -68,6 +67,7 @@ class TRMethodCallTracePoint(
     val methodId: Int,
     val obj: TRObject?,
     val parameters: List<TRObject?>,
+    val flags: Short = 0,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
 ) : TRTracePoint(codeLocationId, threadId, eventId) {
     var result: TRObject? = null
@@ -123,6 +123,18 @@ class TRMethodCallTracePoint(
         children.forgetAll()
     }
 
+    /**
+     * @return `true` if tracing of the thread was ended before this method returned its value, `false` otherwise.
+     */
+    fun isMethodUnfinished(): Boolean =
+        result == TR_OBJECT_UNFINISHED_METHOD_RESULT
+
+    /**
+     * @return `true` if tracing of the thread was started after this method call and there some missing tracepoints, `false` otherwise.
+     */
+    fun isMethodIncomplete(): Boolean =
+        (flags.toInt() and INCOMPLETE_METHOD_FLAG) != 0
+
     override fun save(out: TraceWriter) {
         super.save(out)
         out.writeInt(methodId)
@@ -131,6 +143,7 @@ class TRMethodCallTracePoint(
         parameters.forEach {
             out.writeTRObject(it)
         }
+        out.writeShort(flags.toInt())
         // Mark this as container tracepoint which could have children and will have footer
         out.endWriteContainerTracepointHeader(eventId)
     }
@@ -168,8 +181,11 @@ class TRMethodCallTracePoint(
         appendable.append(tracePoint = this)
     }
 
-    internal companion object {
-        fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRMethodCallTracePoint {
+    companion object {
+        // Flag which tells that method was not tracked from its start and has some missing tracepoints
+        const val INCOMPLETE_METHOD_FLAG: Int = 1
+
+        internal fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRMethodCallTracePoint {
             val methodId = inp.readInt()
             val obj = inp.readTRObject()
             val pcount = inp.readInt()
@@ -177,6 +193,7 @@ class TRMethodCallTracePoint(
             repeat(pcount) {
                 parameters.add(inp.readTRObject())
             }
+            val flags = inp.readShort()
 
             val tracePoint = TRMethodCallTracePoint(
                 threadId = threadId,
@@ -184,6 +201,7 @@ class TRMethodCallTracePoint(
                 methodId = methodId,
                 obj = obj,
                 parameters = parameters,
+                flags = flags,
                 eventId = eventId,
             )
 
@@ -441,8 +459,8 @@ class TRWriteArrayTracePoint(
     }
 }
 
-private const val READ_ACCESS_SYMBOL  = "➜"
-private const val WRITE_ACCESS_SYMBOL = "="
+const val READ_ACCESS_SYMBOL  = "➜"
+const val WRITE_ACCESS_SYMBOL = "="
 
 fun loadTRTracePoint(inp: DataInput): TRTracePoint {
     val loader = getLoaderByClassId(inp.readByte())
@@ -497,6 +515,9 @@ val TR_OBJECT_NULL = TRObject(TR_OBJECT_NULL_CLASSNAME, 0, null)
 
 const val TR_OBJECT_VOID_CLASSNAME = -2
 val TR_OBJECT_VOID = TRObject(TR_OBJECT_VOID_CLASSNAME, 0, null)
+
+const val UNFINISHED_METHOD_RESULT_SYMBOL = "<unfinished method>"
+val TR_OBJECT_UNFINISHED_METHOD_RESULT = TRObject(TR_OBJECT_P_STRING, 0, UNFINISHED_METHOD_RESULT_SYMBOL)
 
 const val TR_OBJECT_P_BYTE = TR_OBJECT_VOID_CLASSNAME - 1
 const val TR_OBJECT_P_SHORT = TR_OBJECT_P_BYTE - 1

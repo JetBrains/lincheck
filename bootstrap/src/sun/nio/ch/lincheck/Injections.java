@@ -22,8 +22,40 @@ public class Injections {
     // Special object to represent void method call result.
     public static final Object VOID_RESULT = new Object();
 
+    // Agent passes the event tracker if it decides to start recording trace points
+    // in already running threads. Field is non-null in case if all-threads tracking is enabled.
+    public static volatile EventTracker globalEventTracker = null;
+
     // Used in the verification phase to store a suspended continuation.
     public static Object lastSuspendedCancellableContinuationDuringVerification = null;
+
+    /**
+     * In case if {@code globalEventTracker == null}, returns the current thread descriptor or {@code null}.
+     * </br></br>
+     * Otherwise, creates a new thread descriptor for the current thread. This thread is considered
+     * as the one not tracked from the start, so it is registered in the {@code globalEventTracker}
+     * by invoking {@code EventTracker.registerRunningThread}.
+     * Afterwards, the method returns the created thread descriptor.
+     */
+    private static ThreadDescriptor getOrCreateCurrentThreadDescriptor() {
+        ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
+        if (descriptor != null || globalEventTracker == null) {
+            return descriptor;
+        }
+        // handle the case when all threads tracking was requested,
+        // and we need to self-register current running thread and create new descriptor for it,
+        // basically, here we have `globalEventTracker != null`
+        Thread t = Thread.currentThread();
+        descriptor = ThreadDescriptor.getThreadDescriptor(t);
+        if (descriptor == null) {
+            descriptor = new ThreadDescriptor(t);
+            ThreadDescriptor.setThreadDescriptor(t, descriptor);
+        }
+        descriptor.setEventTracker(globalEventTracker);
+        ThreadDescriptor.setCurrentThreadDescriptor(descriptor);
+        globalEventTracker.registerRunningThread(t, descriptor);
+        return descriptor;
+    }
 
     public static EventTracker getEventTracker() {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
@@ -41,6 +73,14 @@ public class Injections {
             // We are in the verification phase.
             lastSuspendedCancellableContinuationDuringVerification = cont;
         }
+    }
+
+    /**
+     * Enables tracking of all threads. Expects {@code eventTracker} to be the tracker
+     * which will be responsible for registering existing threads when they generate some trace point.
+     */
+    public static void enableGlobalThreadsTracking(EventTracker eventTracker) {
+        globalEventTracker = eventTracker;
     }
 
     /**
@@ -94,7 +134,11 @@ public class Injections {
      * @return true if the current thread is inside an ignored section, false otherwise.
      */
     public static boolean inAnalyzedCode() {
-        ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
+        // The tracking points for every existing thread are, basically, any of the events:
+        // field read/write, method call, etc. So to avoid inserting the call to each of the
+        // corresponding injection methods, `getOrCreateCurrentThreadDescriptor` is only called here:
+        // in the check which is invoked before each of the injection methods.
+        ThreadDescriptor descriptor = getOrCreateCurrentThreadDescriptor();
         if (descriptor == null) return false;
         return descriptor.inAnalyzedCode();
     }

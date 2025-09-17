@@ -10,6 +10,7 @@
 
 package org.jetbrains.lincheck.jvm.agent.transformers
 
+import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.jvm.agent.invokeIfInAnalyzedCode
 import org.jetbrains.lincheck.jvm.agent.invokeStatic
@@ -328,7 +329,7 @@ internal class InlineMethodCallTransformer(
         TRACE_CONTEXT.getOrCreateMethodId(
             possibleClassName,
             inlineMethodName,
-            "()V"
+            Types.MethodType(Types.VOID_TYPE)
         )
 
     private fun topOfStackEndsBeforeLabel(label: Label): Boolean =

@@ -164,10 +164,8 @@ internal class ThreadTransformer(
     private fun isThreadJoinCall(className: String, methodName: String, desc: String) =
         // no need to check for thread subclasses here, since join methods are marked as final
         methodName == "join" && isThreadClass(className.toCanonicalClassName()) && (
-            desc == "()V" || desc == "(J)V" || desc == "(JI)V"
+            desc == VOID_METHOD_DESCRIPTOR || desc == "(J)V" || desc == "(JI)V"
         )
 }
 
-private val EMPTY_TYPE_ARRAY = emptyArray<Type>()
-
-private val VOID_METHOD_DESCRIPTOR: String = Type.getMethodDescriptor(Type.VOID_TYPE, *EMPTY_TYPE_ARRAY)
+private val VOID_METHOD_DESCRIPTOR: String = Type.getMethodDescriptor(Type.VOID_TYPE)
