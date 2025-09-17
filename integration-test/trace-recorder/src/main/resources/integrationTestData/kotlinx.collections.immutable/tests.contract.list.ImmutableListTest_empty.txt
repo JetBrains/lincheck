@@ -54,9 +54,7 @@ ImmutableListTest.empty() at :0
             "size".toString(): "size" at CollectionBehaviors.kt:106
             collectionBehavior.propertyEquals("size", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:106
               getter.invoke(EmptyList@1): 0 at ComparisonDSL.kt:21
-                propertyEquals.size(): 0 at CollectionBehaviors.kt:106
               getter.invoke(SmallPersistentVector@1): 0 at ComparisonDSL.kt:21
-                propertyEquals.size(): 0 at CollectionBehaviors.kt:106
               AssertionsKt.assertEquals(0, 0, "size") at ComparisonDSL.kt:21
             "".append(""): "" at CollectionBehaviors.kt:107
             "".append("isEmpty"): "isEmpty" at CollectionBehaviors.kt:107
@@ -269,10 +267,8 @@ ImmutableListTest.empty() at :0
                         AssertionsKt.assertEquals$default(Class@1, Class@1, null, 4, null) at testUtilsJvm.kt:11
           listBehavior.compareProperty(CollectionBehaviorsKt$$Lambda@1, CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:13
             getter.invoke(EmptyList@1): EmptyIterator@1 at ComparisonDSL.kt:27
-              compareProperty.size(): 0 at CollectionBehaviors.kt:13
               compareProperty.listIterator(0): EmptyIterator@1 at CollectionBehaviors.kt:13
             getter.invoke(SmallPersistentVector@1): BufferIterator@1 at ComparisonDSL.kt:27
-              compareProperty.size(): 0 at CollectionBehaviors.kt:13
               compareProperty.listIterator(0): BufferIterator@1 at CollectionBehaviors.kt:13
             ComparisonDSLKt.compare(EmptyIterator@1, BufferIterator@1, CollectionBehaviorsKt$$Lambda@1) at ComparisonDSL.kt:27
               block.invoke(CompareContext@1): Unit at ComparisonDSL.kt:12
@@ -364,14 +360,12 @@ ImmutableListTest.empty() at :0
             CompareContext@1.assertFailEquals(CompareContext$$Lambda@1, CompareContext$$Lambda@1, null) at ComparisonDSL.kt:23
               expected.invoke(): threw java.lang.IndexOutOfBoundsException at ComparisonDSL.kt:31
                 getter.invoke(EmptyList@1): threw java.lang.IndexOutOfBoundsException at ComparisonDSL.kt:23
-                  propertyFails.size(): 0 at CollectionBehaviors.kt:16
                   propertyFails.listIterator(1): threw java.lang.IndexOutOfBoundsException at CollectionBehaviors.kt:16
               ResultKt.createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:31
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
               AssertionsKt.checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:31
               actual.invoke(): threw java.lang.IndexOutOfBoundsException at ComparisonDSL.kt:32
                 getter.invoke(SmallPersistentVector@1): threw java.lang.IndexOutOfBoundsException at ComparisonDSL.kt:23
-                  propertyFails.size(): 0 at CollectionBehaviors.kt:16
                   propertyFails.listIterator(1): threw java.lang.IndexOutOfBoundsException at CollectionBehaviors.kt:16
               ResultKt.createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:32
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
@@ -381,20 +375,17 @@ ImmutableListTest.empty() at :0
                 actual.getClass(): Class@1 at testUtilsJvm.kt:11
                 AssertionsKt.assertEquals$default(Class@1, Class@1, null, 4, null) at testUtilsJvm.kt:11
           listBehavior.getExpected(): EmptyList@1 at CollectionBehaviors.kt:18
-          EmptyList@1.size(): 0 at CollectionBehaviors.kt:18
           CompareContext@1.propertyFailsWith() at CollectionBehaviors.kt:21
             propertyFailsWith(CollectionBehaviorsKt$listBehavior$$inlined$propertyFailsWith$1@1, CollectionBehaviorsKt$$Lambda@1) at ComparisonDSL.kt:24
               assertFailEquals(CompareContext$$Lambda@1, CompareContext$$Lambda@1, CollectionBehaviorsKt$listBehavior$$inlined$propertyFailsWith$1@1) at ComparisonDSL.kt:25
                 expected.invoke(): threw java.lang.IndexOutOfBoundsException at ComparisonDSL.kt:31
                   getter.invoke(EmptyList@1): threw java.lang.IndexOutOfBoundsException at ComparisonDSL.kt:25
-                    propertyFailsWith.size(): 0 at CollectionBehaviors.kt:21
                     propertyFailsWith.get(0): threw java.lang.IndexOutOfBoundsException at CollectionBehaviors.kt:21
                 ResultKt.createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:31
                 Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
                 AssertionsKt.checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:31
                 actual.invoke(): threw java.lang.IndexOutOfBoundsException at ComparisonDSL.kt:32
                   getter.invoke(SmallPersistentVector@1): threw java.lang.IndexOutOfBoundsException at ComparisonDSL.kt:25
-                    propertyFailsWith.size(): 0 at CollectionBehaviors.kt:21
                     propertyFailsWith.get(0): threw java.lang.IndexOutOfBoundsException at CollectionBehaviors.kt:21
                 ResultKt.createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:32
                 Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
@@ -423,14 +414,12 @@ ImmutableListTest.empty() at :0
             CompareContext@1.assertFailEquals(CompareContext$$Lambda@1, CompareContext$$Lambda@1, null) at ComparisonDSL.kt:23
               expected.invoke(): threw java.lang.IndexOutOfBoundsException at ComparisonDSL.kt:31
                 getter.invoke(EmptyList@1): threw java.lang.IndexOutOfBoundsException at ComparisonDSL.kt:23
-                  propertyFails.size(): 0 at CollectionBehaviors.kt:26
                   propertyFails.subList(0, 1): threw java.lang.IndexOutOfBoundsException at CollectionBehaviors.kt:26
               ResultKt.createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:31
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
               AssertionsKt.checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:31
               actual.invoke(): threw java.lang.IndexOutOfBoundsException at ComparisonDSL.kt:32
                 getter.invoke(SmallPersistentVector@1): threw java.lang.IndexOutOfBoundsException at ComparisonDSL.kt:23
-                  propertyFails.size(): 0 at CollectionBehaviors.kt:26
                   propertyFails.subList(0, 1): threw java.lang.IndexOutOfBoundsException at CollectionBehaviors.kt:26
               ResultKt.createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:32
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
@@ -459,9 +448,7 @@ ImmutableListTest.empty() at :0
                 AssertionsKt.assertEquals$default(Class@1, Class@1, null, 4, null) at testUtilsJvm.kt:11
           CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:28
             getter.invoke(EmptyList@1): EmptyList@1 at ComparisonDSL.kt:21
-              propertyEquals.size(): 0 at CollectionBehaviors.kt:28
               propertyEquals.subList(0, 0): EmptyList@1 at CollectionBehaviors.kt:28
             getter.invoke(SmallPersistentVector@1): ImmutableList.SubList@1 at ComparisonDSL.kt:21
-              propertyEquals.size(): 0 at CollectionBehaviors.kt:28
               propertyEquals.subList(0, 0): ImmutableList.SubList@1 at CollectionBehaviors.kt:28
             AssertionsKt.assertEquals(EmptyList@1, ImmutableList.SubList@1, "") at ComparisonDSL.kt:21
