@@ -31,7 +31,7 @@ class KtorTraceRecorderIntegrationTest {
         override val projectPath: String = Paths.get("build", "integrationTestProjects", "ktor").toString()
         override val formatArgs: Map<String, String> = mapOf("format" to "binary", "formatOption" to "stream")
 
-        @Test
+        @Test(timeout = 10 * 60 * 1000L)
         fun runKtorTest() = runKtorTestImpl(
             testClassName, testMethodName, gradleCommand, perEntryJvmArgs, perEntryCheckRepresentation
         )
