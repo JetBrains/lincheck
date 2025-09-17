@@ -202,6 +202,7 @@ internal abstract class MethodCallTransformerBase(
         className == "java/util/Objects" ||
         className == "java/lang/String" ||
         className == "java/lang/Boolean" ||
+        className == "java/lang/Number" ||
         className == "java/lang/Long" ||
         className == "java/lang/Integer" ||
         className == "java/lang/Short" ||
