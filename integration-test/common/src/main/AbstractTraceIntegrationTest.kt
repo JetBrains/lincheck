@@ -70,6 +70,7 @@ abstract class AbstractTraceIntegrationTest {
 
     private fun createInitScriptAsTempFile(content: String): File {
         val tempFile = File.createTempFile("initScript", ".gradle.kts")
+        tempFile.deleteOnExit()
         tempFile.writeText(content)
         return tempFile
     }
@@ -140,56 +141,67 @@ abstract class AbstractTraceIntegrationTest {
         testNameSuffix: String? = null,
     ) {
         val tmpFile = File.createTempFile(testClassName + "_" + testMethodName, "")
+        val packedTraceFile = File("${tmpFile.absolutePath}.packedtrace")
+        val indexFile = File("${tmpFile.absolutePath}.idx")
 
-        createGradleConnection().use { connection ->
-            connection
-                .newBuild()
-                .setStandardError(System.err)
-                .addArguments(
-                    "-Dorg.gradle.daemon=false",
-                    "--init-script",
-                    createInitScriptAsTempFile(buildGradleInitScriptToDumpTrace(gradleCommands, testClassName, testMethodName, tmpFile, extraJvmArgs, extraAgentArgs)).absolutePath,
-                ).forTasks(
-                    *gradleCommands.toTypedArray(),
-                    "--tests",
-                    "$testClassName.$testMethodName",
-                ).run()
-        }
+        try {
+            createGradleConnection().use { connection ->
+                connection
+                    .newBuild()
+                    .setStandardError(System.err)
+                    .addArguments(
+                        "-Dorg.gradle.daemon=false",
+                        "--init-script",
+                        createInitScriptAsTempFile(
+                            buildGradleInitScriptToDumpTrace(
+                                gradleCommands, testClassName, testMethodName, tmpFile, extraJvmArgs, extraAgentArgs
+                            )
+                        ).absolutePath,
+                    ).forTasks(
+                        *gradleCommands.toTypedArray(),
+                        "--tests",
+                        "$testClassName.$testMethodName",
+                    ).run()
+            }
 
-        // TODO decide how to test: with gold data or run twice?
-        if (checkRepresentation) { // otherwise we just want to make sure that tests do not fail
-            val expectedOutput = getGoldenDataFileFor(testClassName, testMethodName, testNameSuffix)
-            if (expectedOutput.exists()) {
-                Assert.assertEquals(expectedOutput.readText(), tmpFile.readText())
-            } else {
-                if (OVERWRITE_REPRESENTATION_TESTS_OUTPUT) {
-                    expectedOutput.parentFile.mkdirs()
-                    copy(tmpFile, expectedOutput)
-                    Assert.fail("The gold data file was created. Please rerun the test.")
+            // TODO decide how to test: with gold data or run twice?
+            if (checkRepresentation) { // otherwise we just want to make sure that tests do not fail
+                val expectedOutput = getGoldenDataFileFor(testClassName, testMethodName, testNameSuffix)
+                if (expectedOutput.exists()) {
+                    Assert.assertEquals(expectedOutput.readText(), tmpFile.readText())
                 } else {
-                    Assert.fail(
-                        "The gold data file was not found at '${expectedOutput.absolutePath}'. " +
-                        "Please rerun the test with \"overwriteRepresentationTestsOutput\" option enabled."
-                    )
+                    if (OVERWRITE_REPRESENTATION_TESTS_OUTPUT) {
+                        expectedOutput.parentFile.mkdirs()
+                        copy(tmpFile, expectedOutput)
+                        Assert.fail("The gold data file was created. Please rerun the test.")
+                    } else {
+                        Assert.fail(
+                            "The gold data file was not found at '${expectedOutput.absolutePath}'. " +
+                                    "Please rerun the test with \"overwriteRepresentationTestsOutput\" option enabled."
+                        )
+                    }
                 }
-            }
-        } else {
-            fun checkNonEmptyNess(file: File, filePurpose: String = "output") {
-                if (file.readText().isEmpty()) {
-                    Assert.fail("Empty $filePurpose file was produced by the test: $file.")
-                }
-            }
-            
-            if (tmpFile.exists()) {
-                checkNonEmptyNess(tmpFile)
             } else {
-                val packedTraceFile = File("${tmpFile.absolutePath}.packedtrace")
-                if (packedTraceFile.exists()) {
-                    checkNonEmptyNess(packedTraceFile)
+                fun checkNonEmptyNess(file: File, filePurpose: String = "output") {
+                    if (file.readText().isEmpty()) {
+                        Assert.fail("Empty $filePurpose file was produced by the test: $file.")
+                    }
+                }
+
+                if (tmpFile.exists()) {
+                    checkNonEmptyNess(tmpFile)
                 } else {
-                    Assert.fail("No output was produced by the test.")
+                    if (packedTraceFile.exists()) {
+                        checkNonEmptyNess(packedTraceFile)
+                    } else {
+                        Assert.fail("No output was produced by the test.")
+                    }
                 }
             }
+        } finally {
+            tmpFile.delete()
+            packedTraceFile.delete()
+            indexFile.delete()
         }
     }
 
