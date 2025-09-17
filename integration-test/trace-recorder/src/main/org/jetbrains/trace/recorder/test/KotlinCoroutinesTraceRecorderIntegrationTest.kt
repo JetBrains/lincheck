@@ -22,7 +22,7 @@ class KotlinCoroutinesTraceRecorderIntegrationTest : AbstractTraceRecorderIntegr
             testClassName = "kotlinx.coroutines.DelayJvmTest",
             testMethodName = "testDelayInArbitraryContext",
             gradleCommands = listOf(
-                "kotlinx-coroutines-core:jvmTest",
+                ":kotlinx-coroutines-core:jvmTest",
             )
         )
     }
@@ -33,7 +33,7 @@ class KotlinCoroutinesTraceRecorderIntegrationTest : AbstractTraceRecorderIntegr
             testClassName = "kotlinx.coroutines.EventLoopsTest",
             testMethodName = "testEventLoopInDefaultExecutor",
             gradleCommands = listOf(
-                "kotlinx-coroutines-core:jvmTest",
+                ":kotlinx-coroutines-core:jvmTest",
             )
         )
     }
@@ -44,7 +44,7 @@ class KotlinCoroutinesTraceRecorderIntegrationTest : AbstractTraceRecorderIntegr
             testClassName = "kotlinx.coroutines.ExecutorsTest",
             testMethodName = "testDefaultDispatcherToExecutor",
             gradleCommands = listOf(
-                "kotlinx-coroutines-core:jvmTest",
+                ":kotlinx-coroutines-core:jvmTest",
             )
         )
     }

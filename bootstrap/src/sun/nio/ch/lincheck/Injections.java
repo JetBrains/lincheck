@@ -30,7 +30,7 @@ public class Injections {
     public static Object lastSuspendedCancellableContinuationDuringVerification = null;
 
     /**
-     * In case if {@code globalEventTracker != null} is {@code false}, returns the current thread descriptor or {@code null}.
+     * In case if {@code globalEventTracker == null}, returns the current thread descriptor or {@code null}.
      * </br></br>
      * Otherwise, creates a new thread descriptor for the current thread. This thread is considered
      * as the one not tracked from the start, so it is registered in the {@code globalEventTracker}
