@@ -324,8 +324,7 @@ class LazyTraceReader private constructor(
             tracePoint = readTracePointWithChildAddresses()
         )
 
-    // TODO: Create new
-    val context: TraceContext = TRACE_CONTEXT
+    val context: TraceContext = TraceContext()
 
     val metaInfo: TraceMetaInfo? get() = input.metaInfo
 
@@ -353,81 +352,125 @@ class LazyTraceReader private constructor(
         input.close()
     }
 
+    /**
+     * Run block with trace context belonging to this reader and restore global context afterward.
+     *
+     * @See withTraceContext
+     */
+    inline fun <R> inContext(block: () -> R): R = withTraceContext(context, block)
+
+    /**
+     * Switch global context to one belonging to this reader.
+     *
+     * This function is inherently unsafe: it doesn't prevent future switches of global context
+     * by other code or threads.
+     *
+     * Please, use [inContext] instead if possible.
+     */
+    @Deprecated("Use inContext if possible.")
+    fun switchGlobalContext() = setGlobalTraceContext(context)
+
+    /**
+     * Read top-level call tracepoints for each thread.
+     *
+     * This method runs in context of this reader's context and doesn't require [inContext].
+     */
     fun readRoots(): List<TRTracePoint> {
-        var start = System.currentTimeMillis()
-        loadContext()
-        Logger.debug { "Context loaded in ${System.currentTimeMillis() - start} ms" }
-        start = System.currentTimeMillis()
+        return withTraceContext(context) {
+            var start = System.currentTimeMillis()
+            loadContext()
+            Logger.debug { "Context loaded in ${System.currentTimeMillis() - start} ms" }
+            start = System.currentTimeMillis()
 
-        val roots = mutableMapOf<Int, TRTracePoint>()
+            val roots = mutableMapOf<Int, TRTracePoint>()
 
-        dataBlocks.forEach {
-            val (threadId, blocks) = it
-            data.seek(blocks.first().physicalStart)
-            val kind = data.readKind()
-            check(kind == ObjectKind.BLOCK_START) { "Thread $threadId block 0 has wrong start: $kind" }
-            val blockId = data.readInt()
-            check(blockId == threadId) { "Thread $threadId block 0 has wrong idt: $blockId" }
+            dataBlocks.forEach {
+                val (threadId, blocks) = it
+                data.seek(blocks.first().physicalStart)
+                val kind = data.readKind()
+                check(kind == ObjectKind.BLOCK_START) { "Thread $threadId block 0 has wrong start: $kind" }
+                val blockId = data.readInt()
+                check(blockId == threadId) { "Thread $threadId block 0 has wrong idt: $blockId" }
 
-            val tracepoints = mutableListOf<TRTracePoint>()
+                val tracepoints = mutableListOf<TRTracePoint>()
+                loadTracePoints(
+                    threadId = threadId,
+                    maxRead = Integer.MAX_VALUE,
+                    reader = this::readTracePointWithPostprocessor,
+                    registrator = { _, tracePoint, _ ->
+                        tracepoints.add(tracePoint)
+                    }
+                )
+                if (tracepoints.isEmpty()) {
+                    System.err.println("Thread $threadId doesn't write any tracepoints")
+                } else {
+                    if (tracepoints.size > 1) {
+                        System.err.println("Thread $threadId wrote too many root tracepoints: ${tracepoints.size}")
+                    }
+                    roots[threadId] = tracepoints.first()
+                }
+            }
+            Logger.debug { "Roots loaded in ${System.currentTimeMillis() - start} ms" }
+
+            roots.entries.sortedBy { it.key }.map { (_, tracePoint) -> tracePoint }
+        }
+    }
+
+    /**
+     * Load one level of children of giver call tracepoint.
+     *
+     * This method runs in context of this reader's context and doesn't require [inContext].
+     */
+    fun loadAllChildren(parent: TRMethodCallTracePoint) {
+        withTraceContext(context) {
+            val (start, end) = callTracepointChildren[parent.eventId]
+                ?: error("TRMethodCallTracePoint ${parent.eventId} is not found in index")
+
+            data.seek(calculatePhysicalOffset(parent.threadId, start))
+
             loadTracePoints(
-                threadId = threadId,
+                threadId = parent.threadId,
                 maxRead = Integer.MAX_VALUE,
                 reader = this::readTracePointWithPostprocessor,
-                registrator = { _, tracePoint, _ ->
-                    tracepoints.add(tracePoint)
+                registrator = { idx, tracePoint, _ ->
+                    parent.loadChild(idx, tracePoint)
                 }
             )
-            if (tracepoints.isEmpty()) {
-                System.err.println("Thread $threadId doesn't write any tracepoints")
-            } else {
-                if (tracepoints.size > 1) {
-                    System.err.println("Thread $threadId wrote too many root tracepoints: ${tracepoints.size}")
-                }
-                roots[threadId] = tracepoints.first()
+
+            val actualFooterPos = data.position() - 1 // 1 is size of object kind
+            check(actualFooterPos == calculatePhysicalOffset(parent.threadId, end)) {
+                "Input contains broken data: expected Tracepoint Footer for event ${parent.eventId} at position $end, got $actualFooterPos"
             }
-        }
-        Logger.debug { "Roots loaded in ${System.currentTimeMillis() - start} ms" }
-
-        return roots.entries.sortedBy { it.key }.map { (_, tracePoint) -> tracePoint }
-    }
-
-    fun loadAllChildren(parent: TRMethodCallTracePoint) {
-        val (start, end) = callTracepointChildren[parent.eventId]
-            ?: error("TRMethodCallTracePoint ${parent.eventId} is not found in index")
-
-        data.seek(calculatePhysicalOffset(parent.threadId, start))
-
-        loadTracePoints(
-            threadId = parent.threadId,
-            maxRead = Integer.MAX_VALUE,
-            reader = this::readTracePointWithPostprocessor,
-            registrator = { idx, tracePoint, _ ->
-                parent.loadChild(idx, tracePoint)
-            }
-        )
-
-        val actualFooterPos = data.position() - 1 // 1 is size of object kind
-        check(actualFooterPos == calculatePhysicalOffset(parent.threadId, end)) {
-            "Input contains broken data: expected Tracepoint Footer for event ${parent.eventId} at position $end, got $actualFooterPos"
         }
     }
 
+    /**
+     * Load child of giver call tracepoint at given index.
+     *
+     * This method runs in context of this reader's context and doesn't require [inContext].
+     */
     fun loadChild(parent: TRMethodCallTracePoint, childIdx: Int): Unit = loadChildrenRange(parent, childIdx, 1)
 
+    /**
+     * Load range of children of giver call tracepoint at given span.
+     *
+     * This method runs in context of this reader's context and doesn't require [inContext].
+     */
     fun loadChildrenRange(parent: TRMethodCallTracePoint, from: Int, count: Int) {
-        require(from in 0 ..< parent.events.size) { "From index $from must be in range 0..<${parent.events.size}" }
-        require(count in 1 .. parent.events.size - from) { "Count $count must be in range 1..${parent.events.size - from}" }
+        withTraceContext(context) {
+            require(from in 0..<parent.events.size) { "From index $from must be in range 0..<${parent.events.size}" }
+            require(count in 1..parent.events.size - from) { "Count $count must be in range 1..${parent.events.size - from}" }
 
-        data.seek(calculatePhysicalOffset(parent.threadId, parent.getChildAddress(from)))
-        loadTracePoints(
-            threadId = parent.threadId,
-            maxRead = count,
-            reader = this::readTracePointWithPostprocessor,
-            registrator = { idx, tracePoint, _ ->
-                parent.loadChild(idx + from, tracePoint)
-            }
-        )
+            data.seek(calculatePhysicalOffset(parent.threadId, parent.getChildAddress(from)))
+            loadTracePoints(
+                threadId = parent.threadId,
+                maxRead = count,
+                reader = this::readTracePointWithPostprocessor,
+                registrator = { idx, tracePoint, _ ->
+                    parent.loadChild(idx + from, tracePoint)
+                }
+            )
+        }
     }
 
     fun getChildAndRestorePosition(parent: TRMethodCallTracePoint, childIdx: Int): TRTracePoint? {
@@ -573,7 +616,6 @@ class LazyTraceReader private constructor(
     }
 
     private fun loadContextWithoutIndex() {
-        val context = TRACE_CONTEXT
         // Two Longs is header
         data.seek((Long.SIZE_BYTES * 2).toLong())
         loadAllObjectsDeep(
@@ -720,7 +762,25 @@ data class TraceWithContext(
      * List of all root calls for all traced threads.
      */
     val roots: List<TRTracePoint>
-)
+) {
+    /**
+     * Run block with trace context belonging to this trace and restore global context afterward.
+     *
+     * @See withTraceContext
+     */
+    inline fun <R> inContext(block: () -> R): R = withTraceContext(context, block)
+
+    /**
+     * Switch global context to one belonging to this trace.
+     *
+     * This function is inherently unsafe: it doesn't prevent future switches of global context
+     * by other code or threads.
+     *
+     * Please, use [inContext] instead if possible.
+     */
+    @Deprecated("Use inContext if possible.")
+    fun switchGlobalContext() = setGlobalTraceContext(context)
+}
 
 /**
  * Load trace from file. File can contain unpacked binary trace (without index)
@@ -777,8 +837,7 @@ private fun loadRecordedTrace(inp: InputStream, meta: TraceMetaInfo?): TraceWith
     DataInputStream(inp.buffered(INPUT_BUFFER_SIZE)).use { input ->
         checkDataHeader(input)
 
-        // TODO: Create empty fresh context
-        val context = TRACE_CONTEXT
+        val context = TraceContext()
         val roots = mutableMapOf<Int, MutableList<TRTracePoint>>()
 
         loadAllObjectsDeep(
