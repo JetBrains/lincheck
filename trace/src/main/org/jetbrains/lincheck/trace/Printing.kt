@@ -31,7 +31,7 @@ fun printPostProcessedTrace(outputFileName: String?, inputFileName: String, verb
 
     PrintStream(output.buffered(OUTPUT_BUFFER_SIZE)).use { output ->
         roots.forEachIndexed { i, root ->
-            output.println("# Thread ${i+1}")
+            output.println(getThreadName(i, roots.size, reader.context))
             lazyPrintTRPoint(output, reader, root, 0, verbose)
         }
     }
@@ -64,7 +64,7 @@ fun printRecorderTrace(output: OutputStream, context: TraceContext, rootCallsPer
     PrintStream(output.buffered(OUTPUT_BUFFER_SIZE)).use { output ->
         val appendable = DefaultTRTextAppendable(output, verbose)
         rootCallsPerThread.forEachIndexed { i, root ->
-            output.println("# Thread ${i+1}")
+            output.println(getThreadName(i, rootCallsPerThread.size, context))
             printTRPoint(appendable, root, 0)
         }
     }
@@ -97,4 +97,10 @@ private fun reportUnloaded(appendable: TRAppendable, unloaded: Int, depth: Int) 
         appendable.append(" ".repeat(depth * 2))
         appendable.append("... <${unloaded} unloaded children>\n")
     }
+}
+
+private fun getThreadName(idx: Int, totalThreads: Int, context: TraceContext): String {
+    val name = "# Thread ${idx + 1}"
+    if (totalThreads == 1) return name
+    return name + " (${context.getThreadName(idx)})"
 }

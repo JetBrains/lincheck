@@ -171,10 +171,10 @@ class TraceCollectingEventTracker(
             }
             TraceCollectorMode.BINARY_DUMP -> {
                 check(traceDumpPath != null) { "Binary output type needs non-empty output file name" }
-                strategy = MemoryTraceCollecting()
+                strategy = MemoryTraceCollecting(TRACE_CONTEXT)
             }
             else -> {
-                strategy = MemoryTraceCollecting()
+                strategy = MemoryTraceCollecting(TRACE_CONTEXT)
             }
         }
     }

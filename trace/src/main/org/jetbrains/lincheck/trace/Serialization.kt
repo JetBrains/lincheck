@@ -659,7 +659,7 @@ private class SimpleContextSavingState: ContextSavingState {
     }
 }
 
-private class DirectTraceWriter (
+private class DirectTraceWriter(
     dataStream: OutputStream,
     indexStream: OutputStream,
     context: TraceContext,
@@ -715,8 +715,11 @@ private class DirectTraceWriter (
     }
 }
 
-class MemoryTraceCollecting: TraceCollectingStrategy {
-    override fun registerCurrentThread(threadId: Int) {}
+class MemoryTraceCollecting(private val context: TraceContext): TraceCollectingStrategy {
+    override fun registerCurrentThread(threadId: Int) {
+        context.setThreadName(threadId, Thread.currentThread().name)
+    }
+
     override fun completeThread(thread: Thread) {}
 
     override fun tracePointCreated(
