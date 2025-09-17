@@ -17,6 +17,15 @@ class TraceDebuggerExamplesTraceRecorderIntegrationTest : AbstractTraceRecorderI
     override val projectPath: String = Paths.get("build", "integrationTestProjects", "TraceDebuggerExamples").toString()
 
     @Test
+    fun simpleProgramNonFailingTest() {
+        runGradleTest(
+            testClassName = "org.examples.hackathon.SimpleProgramNonFailingTest",
+            testMethodName = "test",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
     fun `org_examples_integration_bugs_LinkedHashSetTest putAnObjectWithoutDefinedHashCode`() {
         runGradleTest(
             testClassName = "org.examples.integration.bugs.LinkedHashSetTest",
