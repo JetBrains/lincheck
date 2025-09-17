@@ -32,11 +32,15 @@ typealias MethodVisitorProvider = (
 class TraceAgentTransformer(val methodTransformer: MethodVisitorProvider) : ClassFileTransformer {
     override fun transform(
         loader: ClassLoader?,
-        internalClassName: String,
+        internalClassName: String?,
         classBeingRedefined: Class<*>?,
         protectionDomain: ProtectionDomain?,
         classBytes: ByteArray
     ): ByteArray? {
+        // Internal class name could be `null` in some cases (can be witnessed on JDK-8),
+        // this can be related to the Kotlin compiler bug:
+        // - https://youtrack.jetbrains.com/issue/KT-16727/
+        if (internalClassName == null) return null
         // If the class should not be transformed, return immediately.
         if (TraceAgentParameters.classUnderTraceDebugging != internalClassName.toCanonicalClassName()) {
             return null

@@ -1,0 +1,606 @@
+[
+  {
+    "class": "io.ktor.tests.http.cio.CharArrayBuilderTest",
+    "gradleCommand": ":ktor-http-cio:jvmTest",
+    "methods": [
+      "testAppendFewChars",
+      "testAppendManyChars",
+      "testAppendSingleChar",
+      "testAppendSubStrings",
+      "testSubString"
+    ]
+  },
+  {
+    "class": "io.ktor.tests.http.cio.ChunkedTest",
+    "gradleCommand": ":ktor-http-cio:jvmTest",
+    "methods": [
+      "exceptionDuringWrite",
+      "longLoop",
+      "testChunkedWithContentLength",
+      "testContent",
+      "testContentMixedLineEndings",
+      "testContentMultipleChunks",
+      "testContentWithRcLineEnding",
+      "testEmpty",
+      "testEmptyNoCRLF",
+      "testEmptyWithTrailing",
+      "testEmptyWithoutCrLf",
+      "testEncodeChunks",
+      "testEncodeEmpty"
+    ]
+  },
+  {
+    "class": "io.ktor.tests.http.cio.HeaderParserTest",
+    "gradleCommand": ":ktor-http-cio:jvmTest",
+    "methods": [
+      "parseHeadersDelimitersInHeaderNameShouldBeProhibited",
+      "parseHeadersEmptyHeaderNameShouldBeProhibited",
+      "parseHeadersFoldingShouldBeProhibited",
+      "parseHeadersNoLeadingSpace",
+      "parseHeadersNoLeadingSpaceWithTrailingSpaces",
+      "parseHeadersSmokeTest",
+      "parseHeadersSpaceAfterHeaderNameShouldBeProhibited",
+      "parseHeadersSpacesInHeaderNameShouldBeProhibited",
+      "parseHeadersSpacesInHeaderNameShouldBeProhibitedFixed",
+      "parseHeadersWithEmptyValue",
+      "parseHeadersWithMultipleEmptyValues",
+      "parseHeadersWithMultipleValuesSeparatedWithComma",
+      "testParseCookieHeader"
+    ]
+  },
+  {
+    "class": "io.ktor.tests.http.cio.HeadersJvmTest",
+    "gradleCommand": ":ktor-http-cio:jvmTest",
+    "methods": [
+      "Host header with invalid '#' character",
+      "Host header with invalid '@' character",
+      "Host header with invalid character (question mark)",
+      "Host header with invalid character (slash)",
+      "alternativeLineSeparatorsBoth",
+      "alternativeLineSeparatorsFirst",
+      "alternativeLineSeparatorsSecond",
+      "extraSpacesLeading",
+      "extraSpacesMiddle",
+      "extraSpacesMiddleBeforeColon",
+      "extraSpacesMiddleBeforeColonNoAfter",
+      "extraSpacesTrailing",
+      "smokeTest",
+      "smokeTestUnicode",
+      "testBlankHeaderValue",
+      "testEmptyHeaderValue",
+      "testExpectHttpBodyGet"
+    ]
+  },
+  {
+    "class": "io.ktor.network.tls.certificates.CertificatesTest",
+    "gradleCommand": ":ktor-network-tls-certificates:jvmTest",
+    "methods": [
+      "generateCertificateWithCA_default",
+      "generateCertificateWithCA_keyTypeCA",
+      "generateCertificateWithCA_keyTypeClient",
+      "generateCertificate_alsoStoresTheCertificateWithCertSuffix",
+      "generateCertificate_customValues",
+      "generateCertificate_default",
+      "generateCertificate_keyTypeCA",
+      "generateCertificate_keyTypeClient",
+      "generateCertificate_onlyGeneratesOneAlias",
+      "generateCertificate_writeToFile",
+      "generateCertificate_writeToFile_customKeyAndJksPassword",
+      "generateCertificate_writeToFile_customKeyPassword"
+    ]
+  },
+  {
+    "class": "io.ktor.network.tls.certificates.KeyStoreBuilderTest",
+    "gradleCommand": ":ktor-network-tls-certificates:jvmTest",
+    "methods": [
+      "buildKeyStore_customAlgorithmAndKeySize",
+      "buildKeyStore_customIpsAndDomains",
+      "buildKeyStore_customValidity",
+      "buildKeyStore_keyTypeCA",
+      "buildKeyStore_keyTypeClient",
+      "buildKeyStore_minimal"
+    ]
+  },
+  {
+    "class": "io.ktor.htmx.html.HxAttributesTest",
+    "gradleCommand": ":ktor-htmx-html:jvmTest",
+    "methods": [
+      "htmxAttributes"
+    ]
+  },
+  {
+    "class": "io.ktor.tests.http.AuthHeaderParseTest",
+    "gradleCommand": ":ktor-http:jvmTest",
+    "methods": [
+      "testBasicSchema",
+      "testMultipleParameters",
+      "testParameter",
+      "testParametersWithoutSpace",
+      "testQuotedParameter",
+      "testSingleParameterWithComma"
+    ]
+  },
+  {
+    "class": "io.ktor.tests.http.CodecTest",
+    "gradleCommand": ":ktor-http:jvmTest",
+    "methods": [
+      "testAllReserved",
+      "testBasicEncodeDecode",
+      "testBasicEncodeDecodeURLPart",
+      "testBrokenOrIncompleteHEX",
+      "testDecodeRandom"
+    ]
+  },
+  {
+    "class": "ByteChannelConcurrentTest",
+    "gradleCommand": ":ktor-io:jvmTest",
+    "methods": [
+      "cannotSubscribeTwiceForContent"
+    ]
+  },
+  {
+    "class": "io.ktor.network.tls.ClientCertificateRequestTest",
+    "gradleCommand": ":ktor-network-tls:jvmTest",
+    "methods": [
+      "request with specific authorities"
+    ]
+  },
+  {
+    "class": "io.ktor.network.tls.ConnectionTest",
+    "gradleCommand": ":ktor-network-tls:jvmTest",
+    "methods": [
+      "clientCertificatesAuthTest"
+    ]
+  },
+  {
+    "class": "io.ktor.tests.utils.CacheTest",
+    "gradleCommand": ":ktor-utils:jvmTest",
+    "methods": [
+      "testClose",
+      "testCloseMultithreaded",
+      "testGet",
+      "testWithoutCaching"
+    ]
+  },
+  {
+    "class": "io.ktor.tests.utils.DeflaterReadChannelTest",
+    "gradleCommand": ":ktor-utils:jvmTest",
+    "methods": [
+      "testBiggerThan8k",
+      "testFaultyGzippedBiggerThan8k"
+    ]
+  },
+  {
+    "class": "io.ktor.network.selector.ActorSelectorManagerTest",
+    "gradleCommand": ":ktor-network:jvmTest",
+    "methods": [
+      "testSelectOnWrongInterest",
+      "testSelectableIsClosed"
+    ]
+  },
+  {
+    "class": "io.ktor.network.sockets.tests.ClientSocketTest",
+    "gradleCommand": ":ktor-network:jvmTest",
+    "methods": [
+      "testConnect",
+      "testRead",
+      "testReadParts",
+      "testSelfConnect",
+      "testWrite"
+    ]
+  },
+  {
+    "class": "io.ktor.network.sockets.tests.InetSocketAddressTest",
+    "gradleCommand": ":ktor-network:jvmTest",
+    "methods": [
+      "testResolveAddress"
+    ]
+  },
+  {
+    "class": "io.ktor.network.sockets.tests.ServerSocketTest",
+    "gradleCommand": ":ktor-network:jvmTest",
+    "methods": [
+      "testBindAndAccept",
+      "testRead",
+      "testWrite"
+    ]
+  },
+  {
+    "class": "io.ktor.network.sockets.tests.TCPSocketTest",
+    "gradleCommand": ":ktor-network:jvmTest",
+    "methods": [
+      "testAcceptErrorOnImmediateSocketClose",
+      "testAcceptErrorOnSocketClose",
+      "testAutoFlush",
+      "testAwaitClosedDoesNotDeadLock",
+      "testBindMultipleTimes",
+      "testConnectToNonExistingSocket",
+      "testDisconnect",
+      "testEcho",
+      "testEchoByteArray",
+      "testReadFromCancelledSocket"
+    ]
+  },
+  {
+    "class": "io.ktor.network.sockets.tests.UDPSocketTest",
+    "gradleCommand": ":ktor-network:jvmTest",
+    "methods": [
+      "testBroadcastFails",
+      "testBroadcastSuccessful",
+      "testClose",
+      "testInvokeOnClose",
+      "testOutgoingInvokeOnClose",
+      "testOutgoingInvokeOnCloseWithSocketClose",
+      "testOutgoingInvokeOnClosed",
+      "testSendReceive",
+      "testSendReceiveLarge",
+      "testUdpConnect"
+    ]
+  },
+  {
+    "class": "io.ktor.network.sockets.tests.UnixSocketTest",
+    "gradleCommand": ":ktor-network:jvmTest",
+    "methods": [
+      "testEchoOverUnixSockets"
+    ]
+  },
+  {
+    "class": "io.ktor.network.util.StartTimeoutTest",
+    "gradleCommand": ":ktor-network:jvmTest",
+    "methods": [
+      "testTimeoutCancellation",
+      "testTimeoutCancelsWhenParentScopeCancels",
+      "testTimeoutDoesNotTriggerWhenStopped",
+      "testTimeoutInvocation",
+      "testTimeoutUpdateActivityTime"
+    ]
+  },
+  {
+    "class": "io.ktor.tests.server.cio.CIOClientCertTest",
+    "gradleCommand": ":ktor-server-cio:jvmTest",
+    "methods": [
+      "Server requesting Client Certificate from CIO Client"
+    ]
+  },
+  {
+    "class": "io.ktor.tests.server.cio.CIOConnectionPointTest",
+    "gradleCommand": ":ktor-server-cio:jvmTest",
+    "methods": [
+      "testLocalHostAndPort",
+      "testServerHostAndPort",
+      "testServerHostAndPortNoHeader"
+    ]
+  },
+  {
+    "class": "io.ktor.tests.server.cio.CIOConnectionTest",
+    "gradleCommand": ":ktor-server-cio:jvmTest",
+    "methods": [
+      "testShutdownGracePeriodWithConnector"
+    ]
+  },
+  {
+    "class": "io.ktor.tests.server.cio.CIOHttpClientTest",
+    "gradleCommand": ":ktor-server-cio:jvmTest",
+    "methods": [
+      "testHttpConnection",
+      "testHttpConnectionChunked"
+    ]
+  },
+  {
+    "class": "io.ktor.tests.server.cio.CIOHttpServerTest",
+    "gradleCommand": ":ktor-server-cio:jvmTest",
+    "methods": [
+      "testChunkedResponse",
+      "testExpectedContinue",
+      "testExpectedContinueConnection",
+      "testExpectedContinueExpectationFailed",
+      "testExpectedContinueRespondBeforeReadingBody",
+      "testExpectedIgnoreHTTP1_0",
+      "testGracefulShutdown",
+      "testLotsOfHeaders"
+    ]
+  },
+  {
+    "class": "io.ktor.tests.server.cio.CIOUnixSocketServerTest",
+    "gradleCommand": ":ktor-server-cio:jvmTest",
+    "methods": [
+      "testUnixSocketEcho"
+    ]
+  },
+  {
+    "class": "io.ktor.tests.server.cio.CIOWebSocketTestJvm",
+    "gradleCommand": ":ktor-server-cio:jvmTest",
+    "methods": [
+      "testNonWebsocketRouteDoNotLeakOnWsRequest"
+    ]
+  },
+  {
+    "class": "io.ktor.client.engine.okhttp.OkHttpEngineTests",
+    "gradleCommand": ":ktor-client-okhttp:jvmTest",
+    "methods": [
+      "testClose",
+      "testThreadLeak",
+      "testPreconfigured",
+      "testRequestAfterRecreate"
+    ]
+  },
+  {
+    "class": "io.ktor.client.engine.okhttp.RequestTests",
+    "gradleCommand": ":ktor-client-okhttp:jvmTest",
+    "methods": [
+      "testOneShotBodyStream",
+      "testOneShotBodyArray",
+      "testReusingRequestBuilderOnMultipleClients",
+      "testFormContentType"
+    ]
+  },
+  {
+    "class": "io.ktor.client.engine.okhttp.OkHttpHttpClientTest",
+    "gradleCommand": ":ktor-client-okhttp:jvmTest",
+    "methods": [
+      "testCancelSseRequestIncomingCollect",
+      "testCancelSseRequestWithDelay",
+      "testSSESessionTimeout",
+      "testClientSSE",
+      "testWithNoParentJob",
+      "configCopiesOldPluginsAndInterceptors",
+      "testOptionsRequest"
+    ]
+  },
+  {
+    "class": "io.ktor.server.engine.EmbeddedServerTest",
+    "gradleCommand": ":ktor-server-core:jvmTest",
+    "methods": [
+      "checkUrlMatches returns true when pattern matches part of URL path",
+      "checkUrlMatches returns false when pattern does not match URL path",
+      "checkUrlMatches returns true when pattern matches URL path case insensitively",
+      "checkUrlMatches returns false when URL path is null",
+      "checkUrlMatches returns true when pattern matches root URL path"
+    ]
+  },
+  {
+    "class": "io.ktor.tests.server.engine.MultiPartDataTest",
+    "gradleCommand": ":ktor-server-core:jvmTest",
+    "methods": [
+      "givenRequest_whenNoContentTypeHeaderPresent_thenUnsupportedMediaTypeException",
+      "givenWrongContentType_whenProcessMultiPart_thenUnsupportedMediaTypeException",
+      "testUnsupportedMediaTypeStatusCode"
+    ]
+  },
+  {
+    "class": "io.ktor.client.engine.okhttp.OkHttpWebsocketSessionTest",
+    "gradleCommand": ":ktor-client-okhttp:jvmTest",
+    "methods": [
+      "testOnFailure",
+      "testWebSocketFactory"
+    ]
+  },
+  {
+    "class": "io.ktor.client.engine.okhttp.OkHttpHttpsTest",
+    "gradleCommand": ":ktor-client-okhttp:jvmTest",
+    "methods": [
+      "testHttpsOverProxy",
+      "test hostname is verified"
+    ]
+  },
+  {
+    "class": "io.ktor.client.engine.apache.RequestProducerTest",
+    "gradleCommand": ":ktor-client-apache:jvmTest",
+    "methods": [
+      "testHeadersMerge",
+      "testProducingByteArrayContent",
+      "testProducingNoContent",
+      "testProducingReadChannelContent",
+      "testProducingWriteChannelContent",
+      "testProducingWriteChannelContentOnScale",
+      "expectToThrowIllegalStateExceptionIfHostCannotBeExtractedFromRequestURL"
+    ]
+  },
+  {
+    "class": "io.ktor.client.engine.apache.ApacheHttpClientTest",
+    "gradleCommand": ":ktor-client-apache:jvmTest",
+    "methods": [
+      "testClientSSE",
+      "testWithNoParentJob",
+      "configCopiesOldPluginsAndInterceptors",
+      "testOptionsRequest"
+    ]
+  },
+  {
+    "class": "io.ktor.client.engine.apache.ApacheHttpsTest",
+    "gradleCommand": ":ktor-client-apache:jvmTest",
+    "methods": [
+      "testHttpsOverProxy",
+      "test hostname is verified"
+    ]
+  },
+  {
+    "class": "io.ktor.client.engine.apache5.Apache5HttpClientTest",
+    "gradleCommand": ":ktor-client-apache5:jvmTest",
+    "methods": [
+      "testClientSSE",
+      "testWithNoParentJob",
+      "configCopiesOldPluginsAndInterceptors",
+      "testOptionsRequest"
+    ]
+  },
+  {
+    "class": "io.ktor.client.engine.apache5.Apache5HttpsTest",
+    "gradleCommand": ":ktor-client-apache5:jvmTest",
+    "methods": [
+      "testHttpsOverProxy",
+      "test hostname is verified"
+    ]
+  },
+  {
+    "class": "io.ktor.client.engine.java.JavaEngineTests",
+    "gradleCommand": ":ktor-client-java:jvmTest",
+    "methods": [
+      "testProxy",
+      "testRequestAfterRecreate",
+      "testSubsequentRequests",
+      "testProtocolVersion",
+      "infiniteConnectTimeout",
+      "infiniteRequestTimeout",
+      "usualConnectTimeout",
+      "usualRequestTimeout",
+      "isTimeoutInfiniteFunction"
+    ]
+  },
+  {
+    "class": "io.ktor.client.engine.java.JavaClientTest",
+    "gradleCommand": ":ktor-client-java:jvmTest",
+    "methods": [
+      "testClientSSE",
+      "testWithNoParentJob",
+      "configCopiesOldPluginsAndInterceptors",
+      "testOptionsRequest"
+    ]
+  },
+  {
+    "class": "io.ktor.client.engine.java.JavaHttpsTest",
+    "gradleCommand": ":ktor-client-java:jvmTest",
+    "methods": [
+      "testHttpsOverProxy",
+      "test hostname is verified"
+    ]
+  },
+  {
+    "class": "io.ktor.client.engine.java.RequestTests",
+    "gradleCommand": ":ktor-client-java:jvmTest",
+    "methods": [
+      "testReusingRequestBuilderOnMultipleClients",
+      "testRequestBodyPosting"
+    ]
+  },
+  {
+    "class": "io.ktor.client.engine.java.ResponseConsumerTest",
+    "gradleCommand": ":ktor-client-java:jvmTest",
+    "methods": [
+      "testConsumeContent"
+    ]
+  },
+  {
+    "class": "io.ktor.client.engine.java.RequestProducerTest",
+    "gradleCommand": ":ktor-client-java:jvmTest",
+    "methods": [
+      "testHeadersMerge",
+      "testByteReadChannelWriter"
+    ]
+  },
+  {
+    "class": "io.ktor.client.engine.cio.UnixSocketTest",
+    "gradleCommand": ":ktor-client-cio:jvmTest",
+    "methods": [
+      "testUnixSocketClient",
+      "testUnixSocketClientWithDefaultRequest"
+    ]
+  },
+  {
+    "class": "io.ktor.client.engine.cio.BuildersTest",
+    "gradleCommand": ":ktor-client-cio:jvmTest",
+    "methods": [
+      "testResolvingWsFunction"
+    ]
+  },
+  {
+    "class": "io.ktor.client.engine.cio.CIORequestTest",
+    "gradleCommand": ":ktor-client-cio:jvmTest",
+    "methods": [
+      "engineUsesRequestTimeoutFromItsConfiguration",
+      "testTimeoutPriority",
+      "longHeadersTest",
+      "testParameterWithoutPath",
+      "testHangingTimeoutWithWrongUrl",
+      "testInetAddressRetrievedOnce"
+    ]
+  },
+  {
+    "class": "io.ktor.client.engine.cio.ConnectErrorsTest",
+    "gradleCommand": ":ktor-client-cio:jvmTest",
+    "methods": [
+      "testConnectAfterConnectionErrors",
+      "testResponseWithNoLengthChunkedAndConnectionClosedWithHttp10",
+      "testResponseErrorWithNoLengthChunkedAndConnectionClosedWithHttp11",
+      "testResponseErrorWithInvalidChunkException",
+      "testConnectionClosedBeforeReadingResponseStatusLine",
+      "testLateServerStart"
+    ]
+  },
+  {
+    "class": "io.ktor.client.engine.cio.CIOHttpsTest",
+    "gradleCommand": ":ktor-client-cio:jvmTest",
+    "methods": [
+      "testHttpsOverProxy",
+      "test hostname is verified"
+    ]
+  },
+  {
+    "class": "io.ktor.client.engine.cio.CIOSpecificHttpsTest",
+    "gradleCommand": ":ktor-client-cio:jvmTest",
+    "methods": [
+      "hello",
+      "testGetServerTrusted"
+    ]
+  },
+  {
+    "class": "io.ktor.client.engine.cio.CIOHttpClientTest",
+    "gradleCommand": ":ktor-client-cio:jvmTest",
+    "methods": [
+      "testClientSSE",
+      "testWithNoParentJob",
+      "configCopiesOldPluginsAndInterceptors",
+      "testOptionsRequest"
+    ]
+  },
+  {
+    "class": "io.ktor.tests.config.HoconConfigTest",
+    "gradleCommand": ":ktor-server-core:jvmTest",
+    "methods": [
+      "testKeysTopLevelHoconConfig",
+      "testKeysNestedHoconConfig",
+      "testToMap",
+      "readSerializableClass"
+    ]
+  },
+  {
+    "class": "io.ktor.tests.config.ConfigJvmTest",
+    "gradleCommand": ":ktor-server-core:jvmTest",
+    "methods": [
+      "testLoadFromResources",
+      "testLoadYamlFromResources",
+      "testLoadFromFile"
+    ]
+  },
+  {
+    "class": "io.ktor.tests.config.HoconDecoderTest",
+    "gradleCommand": ":ktor-server-core:jvmTest",
+    "methods": [
+      "primitive types",
+      "nullable values",
+      "maps and type parameters",
+      "collection types",
+      "nested structures",
+      "enum values",
+      "testDecodeMissingValues",
+      "invalid types",
+      "default values"
+    ]
+  },
+  {
+    "class": "io.ktor.server.engine.OverridingClassLoaderTest",
+    "gradleCommand": ":ktor-server-core:jvmTest",
+    "methods": [
+      "childClassloaderDelegatesToParentForResources"
+    ]
+  },
+  {
+    "class": "io.ktor.server.engine.ShutDownUrlTest",
+    "gradleCommand": ":ktor-server-core:jvmTest",
+    "methods": [
+      "testShutdownUrlRespondsWithGone",
+      "testShutdownUnderLoad",
+      "testExceptionHandlingDuringShutdown"
+    ]
+  }
+]
