@@ -10,10 +10,12 @@
 
 package org.jetbrains.lincheck.trace
 
+import com.sun.org.apache.xpath.internal.operations.Bool
 import org.jetbrains.lincheck.descriptors.AccessLocation
 import org.jetbrains.lincheck.descriptors.AccessPath
 import org.jetbrains.lincheck.descriptors.FieldAccessLocation
 import org.jetbrains.lincheck.descriptors.LocalVariableAccessLocation
+import org.jetbrains.lincheck.descriptors.StaticFieldAccessLocation
 import org.jetbrains.lincheck.util.isJavaLambdaClass
 
 fun String.adornedClassNameRepresentation(): String = this
@@ -54,6 +56,19 @@ private val inlineThisRegex = Regex("^\\\$this\\$.+?(\\\$iv)+$")
 fun AccessPath.filterThisAccesses(): AccessPath =
     AccessPath(locations.filter { !it.isThisAccess() })
 
+fun AccessPath.isCompanionAccess(): Boolean =
+    locations.size == 1 && locations[0].let {
+        it is StaticFieldAccessLocation &&
+        it.fieldName == "Companion" &&
+        it.fieldDescriptor.isFinal
+    }
+
+fun AccessPath.isObjectInstanceAccess(): Boolean =
+    locations.size == 1 && locations[0].let {
+        it is StaticFieldAccessLocation &&
+        it.fieldName == "INSTANCE" &&
+        it.fieldDescriptor.isFinal
+    }
 /**
  * Replaces nested class dollars (if present) from string with dots.
  */

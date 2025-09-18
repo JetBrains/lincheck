@@ -130,6 +130,8 @@ class TRMethodCallTracePoint(
     fun isInitialTestMethod(): Boolean =
         (flags.toInt() and IS_INITIAL_TEST_METHOD) != 0
 
+    fun isCalledFromDefiningClass(): Boolean =
+        (flags.toInt() and IS_CALLED_FROM_DEFINING_CLASS) != 0
     /**
      * @return `true` if tracing of the thread was ended before this method returned its value, `false` otherwise.
      */
@@ -193,6 +195,9 @@ class TRMethodCallTracePoint(
         const val INCOMPLETE_METHOD_FLAG: Int = 1
         // Flag which tells that method is the test method from which trace recording started
         const val IS_INITIAL_TEST_METHOD: Int = 1 shl 1
+        // Flag which tells that method is defined in the same class as the method which called this one
+        // or in its Companion
+        const val IS_CALLED_FROM_DEFINING_CLASS: Int = 1 shl 2
 
         internal fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRMethodCallTracePoint {
             val methodId = inp.readInt()
