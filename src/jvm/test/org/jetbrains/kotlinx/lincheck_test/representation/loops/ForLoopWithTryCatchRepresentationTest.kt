@@ -9,6 +9,8 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.representation.loops
 
+import org.jetbrains.kotlinx.lincheck.test_utils.loopEnd
+import org.jetbrains.kotlinx.lincheck.test_utils.loopIterationStart
 import org.jetbrains.kotlinx.lincheck_test.representation.*
 
 class ForLoopWithTryCatchRepresentationTest : BaseTraceRepresentationTest(
@@ -18,6 +20,7 @@ class ForLoopWithTryCatchRepresentationTest : BaseTraceRepresentationTest(
     override fun operation() {
         escape = "START"
         for (i in 1..3) {
+            loopIterationStart(1)
             val a: Any = i
             try {
                 if (i == 2) {
@@ -28,6 +31,7 @@ class ForLoopWithTryCatchRepresentationTest : BaseTraceRepresentationTest(
                 escape = "catch-$a"
             }
         }
+        loopEnd(1)
         escape = "END"
     }
 }
