@@ -22,8 +22,13 @@ class TransformationConfiguration(
     var trackObjectCreations: Boolean = false,
 
     var trackLocalVariableAccesses: Boolean = false,
-    var trackSharedMemoryReads: Boolean = false,
-    var trackSharedMemoryWrites: Boolean = false,
+
+    var trackRegularFieldReads: Boolean = false,
+    var trackRegularFieldWrites: Boolean = false,
+    var trackStaticFieldReads: Boolean = false,
+    var trackStaticFieldWrites: Boolean = false,
+    var trackArrayElementReads: Boolean = false,
+    var trackArrayElementWrites: Boolean = false,
 
     var trackMethodCalls: Boolean = false,
     var trackInlineMethodCalls: Boolean = false,
@@ -64,14 +69,38 @@ class TransformationConfiguration(
             trackParkingOperations = value
         }
 
+    var trackAllFieldsReads: Boolean
+        get() =
+            trackRegularFieldReads &&
+            trackStaticFieldReads
+        set(value) {
+            trackRegularFieldReads = value
+            trackStaticFieldReads = value
+        }
+
+    var trackAllFieldsWrites: Boolean
+        get() =
+            trackRegularFieldWrites &&
+            trackStaticFieldWrites
+        set(value) {
+            trackRegularFieldWrites = value
+            trackStaticFieldWrites = value
+        }
+
     val trackSharedMemoryAccesses: Boolean
-        get() = trackSharedMemoryReads || trackSharedMemoryWrites
+        get() = trackRegularFieldReads  || trackStaticFieldReads  || trackArrayElementReads ||
+                trackRegularFieldWrites || trackStaticFieldWrites || trackArrayElementWrites
 
     var trackAllSharedMemoryAccesses: Boolean
-        get() = trackSharedMemoryReads && trackSharedMemoryWrites
+        get() =
+            trackAllFieldsReads && trackArrayElementReads &&
+            trackAllFieldsWrites && trackArrayElementWrites
+
         set(value) {
-            trackSharedMemoryReads = value
-            trackSharedMemoryWrites = value
+            trackAllFieldsReads = value
+            trackArrayElementReads = value
+            trackAllFieldsWrites = value
+            trackArrayElementWrites = value
         }
 
     companion object {
@@ -205,10 +234,13 @@ object TraceRecorderDefaultTransformationProfile : TransformationProfile {
         return config.apply {
             trackObjectCreations = true
             trackLocalVariableAccesses = true
-            trackSharedMemoryWrites = true
+
+            trackStaticFieldReads = true
+            trackAllFieldsWrites = true
+            trackArrayElementWrites = true
 
             trackMethodCalls = true
-            trackInlineMethodCalls = true
+            trackInlineMethodCalls = false
 
             trackThreadsOperations = true
         }

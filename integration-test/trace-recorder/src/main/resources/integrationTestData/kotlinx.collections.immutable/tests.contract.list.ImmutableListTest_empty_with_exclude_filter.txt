@@ -371,27 +371,26 @@ ImmutableListTest.empty() at :0
                 actual.getClass(): Class@1 at testUtilsJvm.kt:11
                 AssertionsKt.assertEquals$default(Class@1, Class@1, null, 4, null) at testUtilsJvm.kt:11
           listBehavior.getExpected(): EmptyList@1 at CollectionBehaviors.kt:18
-          CompareContext@1.propertyFailsWith() at CollectionBehaviors.kt:21
-            propertyFailsWith(CollectionBehaviorsKt$listBehavior$$inlined$propertyFailsWith$1@1, CollectionBehaviorsKt$$Lambda@1) at ComparisonDSL.kt:24
-              assertFailEquals(CompareContext$$Lambda@1, CompareContext$$Lambda@1, CollectionBehaviorsKt$listBehavior$$inlined$propertyFailsWith$1@1) at ComparisonDSL.kt:25
-                expected.invoke(): threw java.lang.IndexOutOfBoundsException at ComparisonDSL.kt:31
-                  getter.invoke(EmptyList@1): threw java.lang.IndexOutOfBoundsException at ComparisonDSL.kt:25
-                    propertyFailsWith.get(0): threw java.lang.IndexOutOfBoundsException at CollectionBehaviors.kt:21
-                ResultKt.createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:31
-                Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
-                AssertionsKt.checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:31
-                actual.invoke(): threw java.lang.IndexOutOfBoundsException at ComparisonDSL.kt:32
-                  getter.invoke(SmallPersistentVector@1): threw java.lang.IndexOutOfBoundsException at ComparisonDSL.kt:25
-                    propertyFailsWith.get(0): threw java.lang.IndexOutOfBoundsException at CollectionBehaviors.kt:21
-                ResultKt.createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:32
-                Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
-                AssertionsKt.checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
-                exceptionPredicate.invoke(IndexOutOfBoundsException@1): true at ComparisonDSL.kt:35
-                  invoke(IndexOutOfBoundsException@1): true at ComparisonDSL.kt:24
-                AssertionsKt.assertTrue(true, "expected fail") at ComparisonDSL.kt:35
-                exceptionPredicate.invoke(IndexOutOfBoundsException@1): true at ComparisonDSL.kt:36
-                  invoke(IndexOutOfBoundsException@1): true at ComparisonDSL.kt:24
-                AssertionsKt.assertTrue(true, "actual fail") at ComparisonDSL.kt:36
+          propertyFailsWith(CollectionBehaviorsKt$listBehavior$$inlined$propertyFailsWith$1@1, CollectionBehaviorsKt$$Lambda@1) at ComparisonDSL.kt:24
+            assertFailEquals(CompareContext$$Lambda@1, CompareContext$$Lambda@1, CollectionBehaviorsKt$listBehavior$$inlined$propertyFailsWith$1@1) at ComparisonDSL.kt:25
+              expected.invoke(): threw java.lang.IndexOutOfBoundsException at ComparisonDSL.kt:31
+                getter.invoke(EmptyList@1): threw java.lang.IndexOutOfBoundsException at ComparisonDSL.kt:25
+                  propertyFailsWith.get(0): threw java.lang.IndexOutOfBoundsException at CollectionBehaviors.kt:21
+              ResultKt.createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:31
+              Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
+              AssertionsKt.checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:31
+              actual.invoke(): threw java.lang.IndexOutOfBoundsException at ComparisonDSL.kt:32
+                getter.invoke(SmallPersistentVector@1): threw java.lang.IndexOutOfBoundsException at ComparisonDSL.kt:25
+                  propertyFailsWith.get(0): threw java.lang.IndexOutOfBoundsException at CollectionBehaviors.kt:21
+              ResultKt.createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:32
+              Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
+              AssertionsKt.checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
+              exceptionPredicate.invoke(IndexOutOfBoundsException@1): true at ComparisonDSL.kt:35
+                invoke(IndexOutOfBoundsException@1): true at ComparisonDSL.kt:24
+              AssertionsKt.assertTrue(true, "expected fail") at ComparisonDSL.kt:35
+              exceptionPredicate.invoke(IndexOutOfBoundsException@1): true at ComparisonDSL.kt:36
+                invoke(IndexOutOfBoundsException@1): true at ComparisonDSL.kt:24
+              AssertionsKt.assertTrue(true, "actual fail") at ComparisonDSL.kt:36
           CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:23
             getter.invoke(EmptyList@1): -1 at ComparisonDSL.kt:21
               CollectionsKt.getOrNull(EmptyList@1, 0): null at CollectionBehaviors.kt:23

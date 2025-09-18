@@ -51,35 +51,17 @@ internal class SharedMemoryAccessTransformer(
             return
         }
         when (opcode) {
-            GETSTATIC -> {
+            GETSTATIC if configuration.trackStaticFieldReads -> {
                 invokeIfInAnalyzedCode(
                     original = {
                         super.visitFieldInsn(opcode, owner, fieldName, desc)
                     },
                     instrumented = {
-                        if (configuration.trackSharedMemoryReads) {
-                            processStaticFieldGet(owner, fieldName, opcode, desc)
-                        }
-                        else {
-                            // Note: we need to ensure that the class of the static field is transformed,
-                            //       even though field reads are not tracked
-                            val valueType = getType(desc)
-                            val valueLocal = newLocal(valueType)
-                            super.visitFieldInsn(opcode, owner, fieldName, desc)
-                            // STACK: value
-                            copyLocal(valueLocal)
-                            // STACK: value
-                            loadLocal(valueLocal)
-                            // STACK: value, value
-                            box(valueType)
-                            // STACK: value, boxed value
-                            invokeStatic(Injections::ensureClassHierarchyIsTransformed)
-                            // STACK: value
-                        }
+                        processStaticFieldGet(owner, fieldName, opcode, desc)
                     }
                 )
             }
-            GETFIELD if configuration.trackSharedMemoryReads -> {
+            GETFIELD if configuration.trackRegularFieldReads -> {
                 invokeIfInAnalyzedCode(
                     original = {
                         super.visitFieldInsn(opcode, owner, fieldName, desc)
@@ -89,7 +71,7 @@ internal class SharedMemoryAccessTransformer(
                     }
                 )
             }
-            PUTSTATIC if configuration.trackSharedMemoryWrites -> {
+            PUTSTATIC if configuration.trackStaticFieldWrites -> {
                 invokeIfInAnalyzedCode(
                     original = {
                         super.visitFieldInsn(opcode, owner, fieldName, desc)
@@ -99,7 +81,7 @@ internal class SharedMemoryAccessTransformer(
                     }
                 )
             }
-            PUTFIELD if configuration.trackSharedMemoryWrites -> {
+            PUTFIELD if configuration.trackRegularFieldWrites -> {
                 invokeIfInAnalyzedCode(
                     original = {
                         super.visitFieldInsn(opcode, owner, fieldName, desc)
@@ -220,7 +202,7 @@ internal class SharedMemoryAccessTransformer(
     override fun visitInsn(opcode: Int) = adapter.run {
         when (opcode) {
             AALOAD, LALOAD, FALOAD, DALOAD, IALOAD, BALOAD, CALOAD, SALOAD -> {
-                if (configuration.trackSharedMemoryReads) {
+                if (configuration.trackArrayElementReads) {
                     invokeIfInAnalyzedCode(
                         original = {
                             super.visitInsn(opcode)
@@ -235,7 +217,7 @@ internal class SharedMemoryAccessTransformer(
             }
 
             AASTORE, IASTORE, FASTORE, BASTORE, CASTORE, SASTORE, LASTORE, DASTORE -> {
-                if (configuration.trackSharedMemoryWrites) {
+                if (configuration.trackArrayElementWrites) {
                     invokeIfInAnalyzedCode(
                         original = {
                             super.visitInsn(opcode)

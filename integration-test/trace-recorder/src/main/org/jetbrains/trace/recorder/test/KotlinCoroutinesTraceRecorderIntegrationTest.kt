@@ -42,7 +42,7 @@ class KotlinCoroutinesTraceRecorderIntegrationTest : AbstractTraceRecorderIntegr
     }
 
     @Test
-    fun `kotlinx_coroutines_ExecutorsTest testExampleCancel02`() {
+    fun `kotlinx_coroutines_ExecutorsTest testDefaultDispatcherToExecutor`() {
         runGradleTest(
             testClassName = "kotlinx.coroutines.ExecutorsTest",
             testMethodName = "testDefaultDispatcherToExecutor",

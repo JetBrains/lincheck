@@ -657,10 +657,6 @@ internal abstract class ManagedStrategy(
 
     // == LISTENING METHODS ==
 
-    override fun ensureClassHierarchyIsTransformed(clazz: Class<*>) {
-        LincheckJavaAgent.ensureClassHierarchyIsTransformed(clazz)
-    }
-
     override fun registerRunningThread(thread: Thread, descriptor: ThreadDescriptor) {
         error("Lincheck managed strategy does not support tracking of threads, started before agent attach.")
     }
