@@ -157,7 +157,7 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
             appendSpecialSymbol(".")
         }
         // TODO: some refactoring is required here, because users can define classes, which end with 'Kt' as well
-        else if (!tracePoint.className.endsWith("Kt")) {
+        else if (!(tracePoint.isStatic() && tracePoint.className.endsWith("Kt"))) {
             appendClassName(tracePoint.classDescriptor)
             appendSpecialSymbol(".")
         }
