@@ -9,7 +9,6 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.representation.loops;
 
-import org.jetbrains.kotlinx.lincheck.test_utils.LoopTestUtilsKt;
 import org.jetbrains.kotlinx.lincheck_test.representation.BaseTraceRepresentationTest;
 
 public class JavaDoLoopRepresentationTest extends BaseTraceRepresentationTest {
@@ -24,12 +23,10 @@ public class JavaDoLoopRepresentationTest extends BaseTraceRepresentationTest {
         int i = 1;
         escape = "START";
         do {
-            LoopTestUtilsKt.loopIterationStart(1);
             Object a = i;
             escape = a.toString();
             i++;
         } while (i < 3);
-        LoopTestUtilsKt.loopEnd(1);
         escape = "END";
     }
 }

@@ -9,8 +9,6 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.representation.loops
 
-import org.jetbrains.kotlinx.lincheck.test_utils.loopEnd
-import org.jetbrains.kotlinx.lincheck.test_utils.loopIterationStart
 import org.jetbrains.kotlinx.lincheck_test.representation.*
 
 class LoopWithNestedLoopMethodCallRepresentationTest : BaseTraceRepresentationTest(
@@ -20,23 +18,19 @@ class LoopWithNestedLoopMethodCallRepresentationTest : BaseTraceRepresentationTe
     override fun operation() {
         escape = "START"
         for (i in 1..2) {
-            loopIterationStart(1)
             val a: Any = i
             escape = "outer-$a"
             methodWithLoop(a)
         }
-        loopEnd(1)
         escape = "END"
     }
 
     private fun methodWithLoop(a: Any) {
         escape = "method-start-$a"
         for (j in 1..2) {
-            loopIterationStart(2)
             val b: Any = j
             escape = "method-inner-$a-$b"
         }
-        loopEnd(2)
         escape = "method-end-$a"
     }
 }

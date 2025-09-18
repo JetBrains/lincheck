@@ -9,8 +9,6 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.representation.loops
 
-import org.jetbrains.kotlinx.lincheck.test_utils.loopEnd
-import org.jetbrains.kotlinx.lincheck.test_utils.loopIterationStart
 import org.jetbrains.kotlinx.lincheck_test.representation.*
 
 class ContinuedForLoopRepresentationTest : BaseTraceRepresentationTest(
@@ -20,7 +18,6 @@ class ContinuedForLoopRepresentationTest : BaseTraceRepresentationTest(
     override fun operation() {
         escape = "START"
         for (i in 1..5) {
-            loopIterationStart(1)
             val a: Any = i
             escape = a.toString()
             if (i % 2 == 0) {
@@ -28,7 +25,6 @@ class ContinuedForLoopRepresentationTest : BaseTraceRepresentationTest(
             }
             escape = "${a} is odd"
         }
-        loopEnd(1)
         escape = "END"
     }
 }

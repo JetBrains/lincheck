@@ -9,8 +9,6 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.representation.loops
 
-import org.jetbrains.kotlinx.lincheck.test_utils.loopEnd
-import org.jetbrains.kotlinx.lincheck.test_utils.loopIterationStart
 import org.jetbrains.kotlinx.lincheck_test.representation.*
 
 class NestedForLoopRepresentationTest : BaseTraceRepresentationTest(
@@ -20,15 +18,11 @@ class NestedForLoopRepresentationTest : BaseTraceRepresentationTest(
     override fun operation() {
         escape = "START"
         for (i in 1..2) {
-            loopIterationStart(1)
             val a: Any = i
             for (j in 1..3) {
-                loopIterationStart(2)
                 escape = "$a.$j"
             }
-            loopEnd(2)
         }
-        loopEnd(1)
         escape = "END"
     }
 }

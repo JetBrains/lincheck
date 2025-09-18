@@ -9,8 +9,6 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.representation.loops
 
-import org.jetbrains.kotlinx.lincheck.test_utils.loopEnd
-import org.jetbrains.kotlinx.lincheck.test_utils.loopIterationStart
 import org.jetbrains.kotlinx.lincheck_test.representation.*
 
 class ZeroIterForLoopRepresentationTest : BaseTraceRepresentationTest(
@@ -22,11 +20,9 @@ class ZeroIterForLoopRepresentationTest : BaseTraceRepresentationTest(
         val start = 2
         val end = 1
         for (i in start..end) {
-            loopIterationStart(1)
             val a: Any = i
             escape = a.toString()
         }
-        loopEnd(1)
         escape = "END"
     }
 }

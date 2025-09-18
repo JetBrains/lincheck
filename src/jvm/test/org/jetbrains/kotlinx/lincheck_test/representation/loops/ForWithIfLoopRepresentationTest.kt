@@ -9,8 +9,6 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.representation.loops
 
-import org.jetbrains.kotlinx.lincheck.test_utils.loopEnd
-import org.jetbrains.kotlinx.lincheck.test_utils.loopIterationStart
 import org.jetbrains.kotlinx.lincheck_test.representation.*
 
 class ForWithIfLoopRepresentationTest : BaseTraceRepresentationTest(
@@ -22,11 +20,8 @@ class ForWithIfLoopRepresentationTest : BaseTraceRepresentationTest(
         var i = 0
         var total = 0
         while (true) {
-            loopIterationStart(1)
             total++
             if (total > 10) {
-                // do not call here to avoid multiple calls
-                // loopEnd(1)
                 break
             }
             val a: Any = i
@@ -36,7 +31,6 @@ class ForWithIfLoopRepresentationTest : BaseTraceRepresentationTest(
                 escape = "%3-" + escape
             }
         }
-        loopEnd(1)
         escape = "END"
     }
 }
