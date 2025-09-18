@@ -72,7 +72,7 @@ internal class TraceReporter(
 
         // if empty trace show only the first
         if (flattenedVerbose.sumOf { it.size } != 1) {
-            appendTraceTable(DETAILED_TRACE_TITLE, trace, failure, flattenedVerbose)
+            appendTraceTable(DETAILED_TRACE_TITLE, trace, failure, flattenedVerbose, showStackTraceElements = false)
         }
     }
 
@@ -125,7 +125,7 @@ internal class TraceReporter(
             // find the next section of the thread we are switching from
             // to move the remaining method call trace points there
             val currentThreadNextTracePointPosition = newTrace.indexOf(from = currentPosition + 1) {
-                it.iThread == tracePoint.iThread
+                it.threadId == tracePoint.threadId
             }
 
             // move switch point before method calls
@@ -135,7 +135,7 @@ internal class TraceReporter(
             val movedTracePoints = newTrace.subList(movedTracePointsRange)
             val methodCallTracePoints = movedTracePoints.filter { it is MethodCallTracePoint }
             val remainingTracePoints = newTrace.subList(currentThreadNextTracePointPosition, newTrace.size)
-                .filter { it.iThread == tracePoint.iThread }
+                .filter { it.threadId == tracePoint.threadId }
             val shouldRemoveRemainingTracePoints = remainingTracePoints.all {
                 (it is MethodCallTracePoint && it.isActor) ||
                 (it is MethodReturnTracePoint) ||
@@ -219,7 +219,7 @@ internal class TraceReporter(
 
             // find a beginning of the current thread section
             var currentThreadSectionStartPosition = newTrace.indexOfLast(from = currentPosition - 1) {
-                it.iThread != tracePoint.iThread
+                it.threadId != tracePoint.threadId
             }
             ++currentThreadSectionStartPosition
 
@@ -309,7 +309,7 @@ private fun Trace.numberExceptionResults(): Trace = this.deepCopy().also { copy 
     copy.trace
         .filterIsInstance<MethodCallTracePoint>()
         .filter { it.isActor }
-        .sortedWith (compareBy({ it.actorId }, { it.iThread }))
+        .sortedWith (compareBy({ it.actorId }, { it.threadId }))
         .map { it.returnedValue }
         .filterIsInstance<ReturnedValueResult.ExceptionResult>() 
         .forEachIndexed { index, exceptionResult -> exceptionResult.exceptionNumber = index + 1 }

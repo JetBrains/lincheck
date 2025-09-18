@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.trace
 
+import com.sun.org.apache.xpath.internal.functions.FuncFloor
 import kotlin.collections.plus
 
 /**
@@ -25,7 +26,7 @@ import kotlin.collections.plus
  * @property isLast Indicates whether this node is the last node of the actor.
  */
 internal abstract class TraceNode(var callDepth: Int, val eventNumber: Int, open val tracePoint: TracePoint) {
-    val iThread = tracePoint.iThread
+    val iThread = tracePoint.threadId
     val actorId = tracePoint.actorId
     
     private val _children = mutableListOf<TraceNode>()
@@ -104,6 +105,26 @@ internal class EventNode(
     override fun copy(): TraceNode = EventNode(callDepth, tracePoint, eventNumber)
 }
 
+internal class LoopNode(
+    callDepth: Int,
+    tracePoint: LoopStartTracePoint,
+    eventNumber: Int,
+) : TraceNode(callDepth, eventNumber, tracePoint) {
+    override val tracePoint: LoopStartTracePoint get() = super.tracePoint as LoopStartTracePoint
+    override fun toStringImpl(withLocation: Boolean): String = tracePoint.toStringImpl(withLocation)
+    override fun copy() = LoopNode(callDepth, tracePoint, eventNumber)
+}
+
+internal class LoopIterationNode(
+    callDepth: Int,
+    tracePoint: LoopIterationStartTracePoint,
+    eventNumber: Int,
+) : TraceNode(callDepth, eventNumber, tracePoint) {
+    override val tracePoint: LoopIterationStartTracePoint get() = super.tracePoint as LoopIterationStartTracePoint
+    override fun toStringImpl(withLocation: Boolean): String = tracePoint.toStringImpl(withLocation)
+    override fun copy() = LoopIterationNode(callDepth, tracePoint, eventNumber)
+}
+
 internal class CallNode(
     callDepth: Int,
     tracePoint: MethodCallTracePoint,
@@ -144,35 +165,68 @@ internal fun traceToGraph(trace: Trace): SingleThreadedTable<CallNode> {
     val sections = mutableListOf<List<CallNode>>()
     var currentSection = mutableListOf<CallNode>()
 
-    val currentNodePerThread = mutableMapOf<Int, CallNode?>()
+    val currentNodePerThread = mutableMapOf<Int, TraceNode?>()
 
     // loop over events
     trace.trace.forEachIndexed { eventNumber, event ->
-        val currentThreadId = event.iThread
-        val currentCallNode = currentNodePerThread[currentThreadId]
+        val currentThreadId = event.threadId
+        val currentCallOrLoopNode = currentNodePerThread[currentThreadId]
 
         when {
             event is SectionDelimiterTracePoint -> {
                 currentSection = mutableListOf()
                 sections.add(currentSection)
             }
-            event is MethodReturnTracePoint -> {
-                currentCallNode?.returnEventNumber = eventNumber
-                currentNodePerThread[currentThreadId] = currentCallNode?.parent as? CallNode
-                if (currentNodePerThread[currentThreadId] == null && currentCallNode?.isRootCall != true) {
-                    // TODO re-enable later on when the problem with actors will be resolved
-//                    error("Return is not allowed here")
+            event is LoopStartTracePoint -> {
+                val newNode = LoopNode(
+                    callDepth = (currentCallOrLoopNode?.callDepth ?: -1) + 1,
+                    tracePoint = event,
+                    eventNumber = eventNumber
+                )
+                currentCallOrLoopNode?.addChild(newNode)
+                currentNodePerThread[currentThreadId] = newNode
+            }
+            event is LoopFinishTracePoint -> {
+                currentNodePerThread[currentThreadId] = currentCallOrLoopNode?.parent
+            }
+            event is LoopIterationStartTracePoint -> {
+                val loopNode = currentCallOrLoopNode as LoopNode
+                if (loopNode.tracePoint.iterations > 1) {
+                    val newNode = LoopIterationNode(
+                        callDepth = (currentCallOrLoopNode?.callDepth ?: -1),
+                        tracePoint = event,
+                        eventNumber = eventNumber
+                    )
+                    currentCallOrLoopNode?.addChild(newNode)
+                    currentNodePerThread[currentThreadId] = newNode
+                }
+            }
+            event is LoopIterationFinishTracePoint -> {
+                if (currentCallOrLoopNode is LoopIterationNode && event.loopIterationStart.loopId == currentCallOrLoopNode.tracePoint.loopId) {
+                    currentNodePerThread[currentThreadId] = currentCallOrLoopNode.parent
                 }
             }
             event is MethodCallTracePoint -> {
-                val newNode = CallNode((currentCallNode?.callDepth ?: -1) + 1, event, eventNumber)
+                val newNode = CallNode(
+                    callDepth = (currentCallOrLoopNode?.callDepth ?: -1) + 1,
+                    tracePoint = event,
+                    eventNumber = eventNumber
+                )
                 if (event.isRootCall) currentSection.add(newNode)
-                currentCallNode?.addChild(newNode)
+                currentCallOrLoopNode?.addChild(newNode)
                 currentNodePerThread[currentThreadId] = newNode
             }
-            currentCallNode != null -> {
-                val eventNode = EventNode(currentCallNode.callDepth + 1, event, eventNumber)
-                currentCallNode.addChild(eventNode)
+            event is MethodReturnTracePoint -> {
+                (currentCallOrLoopNode as CallNode).returnEventNumber = eventNumber
+                currentNodePerThread[currentThreadId] = currentCallOrLoopNode.parent
+                if (currentNodePerThread[currentThreadId] == null && !currentCallOrLoopNode.isRootCall) {
+                    // TODO re-enable later on when the problem with actors will be resolved
+                    // error("Return is not allowed here")
+                }
+            }
+            currentCallOrLoopNode != null -> {
+                val eventNode = EventNode(currentCallOrLoopNode.callDepth + 1, event, eventNumber)
+                currentCallOrLoopNode.addChild(eventNode)
             }
             else -> check(false) {
                 "Event has no trace that leads to it"
@@ -182,7 +236,7 @@ internal fun traceToGraph(trace: Trace): SingleThreadedTable<CallNode> {
 
     // if an actor was finished unexpectedly, the `MethodReturnTracePoint` could be missing
     for (callNode in currentNodePerThread.values) {
-        callNode?.returnEventNumber = Int.MAX_VALUE
+        (callNode as? CallNode)?.returnEventNumber = Int.MAX_VALUE
     }
 
     return sections

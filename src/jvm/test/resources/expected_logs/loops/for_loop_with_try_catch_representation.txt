@@ -1,0 +1,26 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| -------------------------------------------------------------------------------------------------------------------- |
+|                                                       Thread 1                                                       |
+| -------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                          |
+|   escape = "START" at ForLoopWithTryCatchRepresentationTest.operation(ForLoopWithTryCatchRepresentationTest.kt:19)   |
+|   escape = "try-1" at ForLoopWithTryCatchRepresentationTest.operation(ForLoopWithTryCatchRepresentationTest.kt:26)   |
+|   escape = "catch-2" at ForLoopWithTryCatchRepresentationTest.operation(ForLoopWithTryCatchRepresentationTest.kt:28) |
+|   escape = "try-3" at ForLoopWithTryCatchRepresentationTest.operation(ForLoopWithTryCatchRepresentationTest.kt:26)   |
+|   escape = "END" at ForLoopWithTryCatchRepresentationTest.operation(ForLoopWithTryCatchRepresentationTest.kt:31)     |
+|   result: void                                                                                                       |
+| -------------------------------------------------------------------------------------------------------------------- |

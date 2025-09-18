@@ -9,27 +9,27 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.representation.loops
 
-import org.jetbrains.kotlinx.lincheck.test_utils.*
 import org.jetbrains.kotlinx.lincheck_test.representation.*
 
-class BreakedForLoopRepresentationTest : BaseTraceRepresentationTest(
-    outputFileName = "loops/breaked_for_representation"
+class ForLoopWithTryCatchFinallyRepresentationTest : BaseTraceRepresentationTest(
+    outputFileName = "loops/for_loop_with_try_catch_finally_representation"
 ) {
     var escape: Any? = null
     override fun operation() {
         escape = "START"
-        for (i in 1..5) {
-            loopIterationStart(1)
+        for (i in 1..3) {
             val a: Any = i
-            escape = a.toString()
-            if (i > 3) {
-                // do not call here to avoid multiple calls
-                // loopEnd(1)
-                break
+            try {
+                if (i == 2) {
+                    throw RuntimeException("Exception in loop")
+                }
+                escape = "try-$a"
+            } catch (e: RuntimeException) {
+                escape = "catch-$a"
+            } finally {
+                escape = "finally-$a"
             }
-            escape = "${a} is saved"
         }
-        loopEnd(1)
         escape = "END"
     }
 }

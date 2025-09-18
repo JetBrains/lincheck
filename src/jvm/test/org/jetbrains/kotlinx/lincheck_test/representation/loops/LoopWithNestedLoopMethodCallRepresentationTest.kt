@@ -9,27 +9,28 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.representation.loops
 
-import org.jetbrains.kotlinx.lincheck.test_utils.*
 import org.jetbrains.kotlinx.lincheck_test.representation.*
 
-class BreakedForLoopRepresentationTest : BaseTraceRepresentationTest(
-    outputFileName = "loops/breaked_for_representation"
+class LoopWithNestedLoopMethodCallRepresentationTest : BaseTraceRepresentationTest(
+    outputFileName = "loops/loop_with_nested_loop_method_call_representation"
 ) {
     var escape: Any? = null
     override fun operation() {
         escape = "START"
-        for (i in 1..5) {
-            loopIterationStart(1)
+        for (i in 1..2) {
             val a: Any = i
-            escape = a.toString()
-            if (i > 3) {
-                // do not call here to avoid multiple calls
-                // loopEnd(1)
-                break
-            }
-            escape = "${a} is saved"
+            escape = "outer-$a"
+            methodWithLoop(a)
         }
-        loopEnd(1)
         escape = "END"
+    }
+    
+    private fun methodWithLoop(a: Any) {
+        escape = "method-start-$a"
+        for (j in 1..2) {
+            val b: Any = j
+            escape = "method-inner-$a-$b"
+        }
+        escape = "method-end-$a"
     }
 }

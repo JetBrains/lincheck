@@ -947,7 +947,7 @@ internal abstract class ManagedStrategy(
     override fun onActorFinish(iThread: Int) = runInsideIgnoredSection {
         val actorStartTracePoint = traceCollector?.trace
                 ?.filterIsInstance<MethodCallTracePoint>()
-                ?.firstOrNull { it.isActor && it.actorId == currentActorId[iThread] && it.iThread == iThread }
+                ?.firstOrNull { it.isActor && it.actorId == currentActorId[iThread] && it.threadId == iThread }
         if (actorStartTracePoint != null) {
             val result = runner.getActorResult(iThread, currentActorId[iThread]!!)
             actorStartTracePoint.initializeActorResult(result)
@@ -2273,6 +2273,78 @@ internal abstract class ManagedStrategy(
                 callStackTrace = callStackTrace[threadId]!!
             )
         )
+    }
+
+    // Stack of currently running loops:
+    // LoopStart -> LoopIteration -> LoopStart -> LoopIteration
+    val loopTracePoints = ArrayDeque<TracePoint>()
+
+    override fun beforeLoopIterationStarts(loopId: Int) {
+        if (!collectTrace) return
+        var iteration = 1
+        val shouldStartNewLoop = loopTracePoints.isEmpty() || loopTracePoints.last.let {
+            it is LoopIterationStartTracePoint && it.loopId != loopId
+        }
+        if (shouldStartNewLoop) {
+            // create a trace point
+            val threadId = threadScheduler.getCurrentThreadId()
+            val eventId = getNextEventId()
+            val tracePoint = LoopStartTracePoint(
+                eventId = eventId,
+                threadId = threadId,
+                actorId = currentActorId[threadId]!!,
+                loopId = loopId,
+                codeLocation = UNKNOWN_CODE_LOCATION,
+            )
+            // add trace point to the trace
+            loopTracePoints.add(tracePoint)
+            traceCollector?.addTracePointInternal(tracePoint)
+        } else {
+            // This is our loop, but we will create a new iteration.
+            // Let's finish the current one.
+            val lastIteration = loopTracePoints.removeLast() as LoopIterationStartTracePoint
+            val eventId = getNextEventId()
+            val tracePoint = LoopIterationFinishTracePoint(
+                eventId = eventId,
+                loopIterationStart = lastIteration
+            )
+            traceCollector?.addTracePointInternal(tracePoint)
+            iteration = lastIteration.loopIterationNumber + 1
+        }
+        // Create a loop iteration trace point
+        val threadId = threadScheduler.getCurrentThreadId()
+        val eventId = getNextEventId()
+        val loopIterationTracePoint = LoopIterationStartTracePoint(
+            eventId = eventId,
+            threadId = threadId,
+            actorId = currentActorId[threadId]!!,
+            loopId = loopId,
+            loopIterationNumber = iteration
+        )
+        // add trace point to the trace
+        (loopTracePoints.last as LoopStartTracePoint).incrementIterations()
+        loopTracePoints.add(loopIterationTracePoint)
+        traceCollector?.addTracePointInternal(loopIterationTracePoint)
+    }
+
+    override fun afterLoopFinished(loopId: Int) {
+        if (!collectTrace) return
+
+        val lastIteration = loopTracePoints.removeLast() as LoopIterationStartTracePoint
+        val iterationFinishTracePoint = LoopIterationFinishTracePoint(
+            eventId = getNextEventId(),
+            loopIterationStart = lastIteration
+        )
+        traceCollector?.addTracePointInternal(iterationFinishTracePoint)
+
+        val lastLoop = loopTracePoints.removeLast() as LoopStartTracePoint
+        val loopFinishTracePoint = LoopFinishTracePoint(
+            eventId = getNextEventId(),
+            loopStart = lastLoop
+        )
+        traceCollector?.addTracePointInternal(loopFinishTracePoint)
+
+        if (lastLoop.loopId != loopId) afterLoopFinished(loopId)
     }
 
     // == IDEA PLUGIN INTEGRATION METHODS ==

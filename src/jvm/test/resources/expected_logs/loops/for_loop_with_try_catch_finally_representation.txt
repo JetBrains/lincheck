@@ -1,0 +1,29 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| ------------------------------------------------------------------------------------------------------------------------------------ |
+|                                                               Thread 1                                                               |
+| ------------------------------------------------------------------------------------------------------------------------------------ |
+| operation()                                                                                                                          |
+|   escape = "START" at ForLoopWithTryCatchFinallyRepresentationTest.operation(ForLoopWithTryCatchFinallyRepresentationTest.kt:19)     |
+|   escape = "try-1" at ForLoopWithTryCatchFinallyRepresentationTest.operation(ForLoopWithTryCatchFinallyRepresentationTest.kt:26)     |
+|   escape = "finally-1" at ForLoopWithTryCatchFinallyRepresentationTest.operation(ForLoopWithTryCatchFinallyRepresentationTest.kt:30) |
+|   escape = "catch-2" at ForLoopWithTryCatchFinallyRepresentationTest.operation(ForLoopWithTryCatchFinallyRepresentationTest.kt:28)   |
+|   escape = "finally-2" at ForLoopWithTryCatchFinallyRepresentationTest.operation(ForLoopWithTryCatchFinallyRepresentationTest.kt:30) |
+|   escape = "try-3" at ForLoopWithTryCatchFinallyRepresentationTest.operation(ForLoopWithTryCatchFinallyRepresentationTest.kt:26)     |
+|   escape = "finally-3" at ForLoopWithTryCatchFinallyRepresentationTest.operation(ForLoopWithTryCatchFinallyRepresentationTest.kt:30) |
+|   escape = "END" at ForLoopWithTryCatchFinallyRepresentationTest.operation(ForLoopWithTryCatchFinallyRepresentationTest.kt:33)       |
+|   result: void                                                                                                                       |
+| ------------------------------------------------------------------------------------------------------------------------------------ |
