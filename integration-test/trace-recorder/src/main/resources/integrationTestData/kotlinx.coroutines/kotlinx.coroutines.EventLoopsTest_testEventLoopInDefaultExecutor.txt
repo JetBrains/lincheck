@@ -428,7 +428,6 @@ EventLoopsTest.testEventLoopInDefaultExecutor() at :0
               JobSupport.get_state$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at JobSupport.kt:0
               AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.get(BlockingCoroutine@1): Unit at JobSupport.kt:163
             JobSupportKt.unboxState(Unit): Unit at Builders.kt:107
-      unhandled.size(): 0 at TestBase.kt:146
 # Thread 2 (kotlinx.coroutines.DefaultExecutor)
 Thread@1.run(): <unfinished method> at :0
   CancellableContinuationImpl@1.resumeImpl(Unit, 1, null) at CancellableContinuationImpl.kt:596

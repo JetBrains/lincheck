@@ -76,8 +76,9 @@ tasks {
     
     val traceRecorderIntegrationTestAll = register<Test>("traceRecorderIntegrationTestAll") {
         group = "verification"
-        
-        dependsOn(traceRecorderIntegrationTest)
-        dependsOn(traceRecorderIntegrationTestExtended)
+
+        finalizedBy(traceRecorderIntegrationTest)
+        finalizedBy(traceRecorderIntegrationTestExtended)
+        traceRecorderIntegrationTestExtended.get().mustRunAfter(traceRecorderIntegrationTest)
     }
 }
