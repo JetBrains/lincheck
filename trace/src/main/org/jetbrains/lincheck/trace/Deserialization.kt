@@ -28,6 +28,7 @@ import org.jetbrains.lincheck.descriptors.LocalVariableAccessLocation
 import org.jetbrains.lincheck.descriptors.ObjectFieldAccessLocation
 import org.jetbrains.lincheck.descriptors.StaticFieldAccessLocation
 import java.io.File
+import java.nio.ByteBuffer
 import java.util.zip.ZipInputStream
 
 private const val INPUT_BUFFER_SIZE: Int = 16 * 1024 * 1024
@@ -272,7 +273,7 @@ class LazyTraceReader private constructor(
 
                     val dataEntry = zip?.nextEntry ?: throwZipError(baseFileName)
                     if (dataEntry.name != PACKED_DATA_ITEM_NAME) throwZipError(baseFileName)
-                    val tmpDataFile = File.createTempFile("unpacked-trace-data", ".bin")
+                    val tmpDataFile = File.createTempFile("unpacked-trace-data", DATA_FILENAME_SUFFIX)
                     tmpDataFile.deleteOnExit()
 
                     try {
@@ -283,13 +284,18 @@ class LazyTraceReader private constructor(
                         this.tmpDataFile = tmpDataFile
                     } catch (e: IOException) {
                         tmpDataFile.delete()
-                        return@run
+                        throwZipError(baseFileName)
                     }
 
-                    val indexEntry = zip?.nextEntry ?: throwZipError(baseFileName)
-                    if (indexEntry.name != PACKED_INDEX_ITEM_NAME) throwZipError(baseFileName)
-                    // zip as stream is positioned at index start now!
-                    indexStream = wrapStream(zip)
+                    try {
+                        val indexEntry = zip?.nextEntry ?: throwZipError(baseFileName)
+                        if (indexEntry.name != PACKED_INDEX_ITEM_NAME) throwZipError(baseFileName)
+                        // zip as stream is positioned at index start now!
+                        indexStream = wrapStream(zip)
+                    } catch (e: Throwable) {
+                        tmpDataFile.delete()
+                        throw e
+                    }
                 }
             } catch (e: Throwable) {
                 zip?.close()
@@ -766,6 +772,48 @@ fun loadRecordedTrace(traceFileName: String): TraceWithContext {
         }
     }
 }
+
+private fun readMagic(input: InputStream): Long {
+    val buf = ByteBuffer.allocate(8)
+    if (input.read(buf.array()) != 8) return 0 // 0 is not magic for sure
+    return buf.getLong(0)
+}
+
+fun isPackedTrace(traceFileName: String): Boolean {
+    val input = openExistingFile(traceFileName) ?: return false
+    return try {
+        ZipInputStream(input).use { zip ->
+            val metaInfoEntry = zip.nextEntry ?: return@use false
+            if (metaInfoEntry.name != PACKED_META_ITEM_NAME) return@use false
+
+            val dataEntry = zip.nextEntry ?: return@use false
+            if (dataEntry.name != PACKED_DATA_ITEM_NAME) return@use false
+            if (readMagic(zip) != TRACE_MAGIC) return@use false
+
+            val indexEntry = zip.nextEntry ?: return@use false
+            if (indexEntry.name != PACKED_INDEX_ITEM_NAME) return@use false
+            if (readMagic(zip) != INDEX_MAGIC) return@use false
+
+            return@use true
+        }
+    } catch (_: Throwable) {
+        false
+    }
+}
+
+fun isTraceData(traceFileName: String): Boolean {
+    return try {
+        val input = openExistingFile(traceFileName) ?: return false
+        input.use { input ->
+            return@use readMagic(input) == TRACE_MAGIC
+        }
+    } catch (_: Throwable) {
+        false
+    }
+}
+
+fun isTraceData(firstBytes: ByteBuffer): Boolean =
+    firstBytes.capacity() >= 8 && firstBytes.getLong(0) == TRACE_MAGIC
 
 /**
  * Load unpacked trace. [inp] must be stream pointing to binary trace format, not
