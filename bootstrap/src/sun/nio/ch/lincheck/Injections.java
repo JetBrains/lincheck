@@ -143,12 +143,6 @@ public class Injections {
         return descriptor.inAnalyzedCode();
     }
 
-    public static void ensureClassHierarchyIsTransformed(Object obj) {
-        if (obj != null) {
-            getEventTracker().ensureClassHierarchyIsTransformed(obj.getClass());
-        }
-    }
-
     /**
      * Current thread reports that it is going to start a new child thread {@code forkedThread}.
      */

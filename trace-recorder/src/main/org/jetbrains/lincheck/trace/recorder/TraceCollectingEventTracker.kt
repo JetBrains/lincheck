@@ -184,10 +184,6 @@ class TraceCollectingEventTracker(
         }
     }
 
-    override fun ensureClassHierarchyIsTransformed(clazz: Class<*>) = runInsideIgnoredSection {
-        LincheckJavaAgent.ensureClassHierarchyIsTransformed(clazz)
-    }
-
     override fun registerRunningThread(thread: Thread, descriptor: ThreadDescriptor): Unit = runInsideIgnoredSection {
         val threadData = threads.computeIfAbsent(thread) {
             val threadData = ThreadData(threads.size)
