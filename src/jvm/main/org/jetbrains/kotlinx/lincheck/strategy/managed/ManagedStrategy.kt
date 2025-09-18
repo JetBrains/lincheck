@@ -2277,6 +2277,9 @@ internal abstract class ManagedStrategy(
 
     // Stack of currently running loops:
     // LoopStart -> LoopIteration -> LoopStart -> LoopIteration
+    // TODO: should be stored in the stack frame to
+    //  (1) support multiple threads
+    //  (2) when exiting the function (dropping the current stack frame), we must close all active loops in it.
     val loopTracePoints = ArrayDeque<TracePoint>()
 
     override fun beforeLoopIterationStarts(loopId: Int) {
