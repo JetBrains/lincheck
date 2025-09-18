@@ -129,6 +129,9 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
     }
 
     protected fun TRAppendable.appendOwner(tracePoint: TRMethodCallTracePoint): TRAppendable {
+        if (!tracePoint.isInitialTestMethod() && tracePoint.isStatic()) {
+            return this
+        }
         val ownerName = CodeLocations.accessPath(tracePoint.codeLocationId)
         if (ownerName != null) {
             ownerName.filterThisAccesses().takeIf { !it.isEmpty() }?.let {

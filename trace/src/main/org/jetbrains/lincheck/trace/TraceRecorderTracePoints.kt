@@ -125,6 +125,11 @@ class TRMethodCallTracePoint(
         children.forgetAll()
     }
 
+    fun isStatic(): Boolean = obj == null
+
+    fun isInitialTestMethod(): Boolean =
+        (flags.toInt() and IS_INITIAL_TEST_METHOD) != 0
+
     /**
      * @return `true` if tracing of the thread was ended before this method returned its value, `false` otherwise.
      */
@@ -186,6 +191,8 @@ class TRMethodCallTracePoint(
     companion object {
         // Flag which tells that method was not tracked from its start and has some missing tracepoints
         const val INCOMPLETE_METHOD_FLAG: Int = 1
+        // Flag which tells that method is the test method from which trace recording started
+        const val IS_INITIAL_TEST_METHOD: Int = 1 shl 1
 
         internal fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRMethodCallTracePoint {
             val methodId = inp.readInt()

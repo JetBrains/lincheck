@@ -16,6 +16,7 @@ import org.jetbrains.lincheck.trace.TRACE_CONTEXT
 import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.trace.*
+import org.jetbrains.lincheck.trace.TRMethodCallTracePoint.Companion.IS_INITIAL_TEST_METHOD
 import org.jetbrains.lincheck.trace.TRMethodCallTracePoint.Companion.INCOMPLETE_METHOD_FLAG
 import org.jetbrains.lincheck.util.*
 import sun.nio.ch.lincheck.*
@@ -695,7 +696,8 @@ class TraceCollectingEventTracker(
             codeLocationId = UNKNOWN_CODE_LOCATION_ID,
             methodId = TRACE_CONTEXT.getOrCreateMethodId(className, methodName, Types.MethodType(Types.VOID_TYPE)),
             obj = null,
-            parameters = emptyList()
+            parameters = emptyList(),
+            flags = IS_INITIAL_TEST_METHOD.toShort()
         )
         strategy.registerCurrentThread(threadData.threadId)
         strategy.tracePointCreated(null,tracePoint)
