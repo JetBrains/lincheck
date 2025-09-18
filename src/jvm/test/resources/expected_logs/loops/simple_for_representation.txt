@@ -13,13 +13,16 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| ------------------------------------------------------------------------------------------------------ |
-|                                                Thread 1                                                |
-| ------------------------------------------------------------------------------------------------------ |
-| operation()                                                                                            |
-|   escape = "START" at SimpleForLoopRepresentationTest.operation(SimpleForLoopRepresentationTest.kt:19) |
-|   escape = "1" at SimpleForLoopRepresentationTest.operation(SimpleForLoopRepresentationTest.kt:22)     |
-|   escape = "2" at SimpleForLoopRepresentationTest.operation(SimpleForLoopRepresentationTest.kt:22)     |
-|   escape = "END" at SimpleForLoopRepresentationTest.operation(SimpleForLoopRepresentationTest.kt:24)   |
-|   result: void                                                                                         |
-| ------------------------------------------------------------------------------------------------------ |
+| -------------------- |
+|       Thread 1       |
+| -------------------- |
+| operation()          |
+|   escape = "START"   |
+|   loop(2 iterations) |
+|     <iteration 1>    |
+|       escape = "1"   |
+|     <iteration 2>    |
+|       escape = "2"   |
+|   escape = "END"     |
+|   result: void       |
+| -------------------- |

@@ -13,24 +13,30 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                        Thread 1                                                                         |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                                                             |
-|   escape = "START" at PartiallyEmptyForLoopRepresentationTest.operation(PartiallyEmptyForLoopRepresentationTest.kt:19)                                  |
-|   builder.append(1): StringBuilder#1 at PartiallyEmptyForLoopRepresentationTest.operation(PartiallyEmptyForLoopRepresentationTest.kt:22)                |
-|   builder.append(2): StringBuilder#1 at PartiallyEmptyForLoopRepresentationTest.operation(PartiallyEmptyForLoopRepresentationTest.kt:22)                |
-|   builder.toString(): "12" at PartiallyEmptyForLoopRepresentationTest.operation(PartiallyEmptyForLoopRepresentationTest.kt:24)                          |
-|   escape = "12" at PartiallyEmptyForLoopRepresentationTest.operation(PartiallyEmptyForLoopRepresentationTest.kt:24)                                     |
-|   StringsKt.clear(StringBuilder#1): StringBuilder#1 at PartiallyEmptyForLoopRepresentationTest.operation(PartiallyEmptyForLoopRepresentationTest.kt:25) |
-|   builder.append(3): StringBuilder#1 at PartiallyEmptyForLoopRepresentationTest.operation(PartiallyEmptyForLoopRepresentationTest.kt:22)                |
-|   builder.append(4): StringBuilder#1 at PartiallyEmptyForLoopRepresentationTest.operation(PartiallyEmptyForLoopRepresentationTest.kt:22)                |
-|   builder.toString(): "34" at PartiallyEmptyForLoopRepresentationTest.operation(PartiallyEmptyForLoopRepresentationTest.kt:24)                          |
-|   escape = "34" at PartiallyEmptyForLoopRepresentationTest.operation(PartiallyEmptyForLoopRepresentationTest.kt:24)                                     |
-|   StringsKt.clear(StringBuilder#1): StringBuilder#1 at PartiallyEmptyForLoopRepresentationTest.operation(PartiallyEmptyForLoopRepresentationTest.kt:25) |
-|   builder.append(5): StringBuilder#1 at PartiallyEmptyForLoopRepresentationTest.operation(PartiallyEmptyForLoopRepresentationTest.kt:22)                |
-|   builder.toString(): "5" at PartiallyEmptyForLoopRepresentationTest.operation(PartiallyEmptyForLoopRepresentationTest.kt:28)                           |
-|   escape = "5" at PartiallyEmptyForLoopRepresentationTest.operation(PartiallyEmptyForLoopRepresentationTest.kt:28)                                      |
-|   escape = "END" at PartiallyEmptyForLoopRepresentationTest.operation(PartiallyEmptyForLoopRepresentationTest.kt:29)                                    |
-|   result: void                                                                                                                                          |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------------------------------- |
+|                        Thread 1                         |
+| ------------------------------------------------------- |
+| operation()                                             |
+|   escape = "START"                                      |
+|   loop(5 iterations)                                    |
+|     <iteration 1>                                       |
+|       builder.append(1): StringBuilder#1                |
+|     <iteration 2>                                       |
+|       builder.append(2): StringBuilder#1                |
+|       builder.toString(): "12"                          |
+|       escape = "12"                                     |
+|       StringsKt.clear(StringBuilder#1): StringBuilder#1 |
+|     <iteration 3>                                       |
+|       builder.append(3): StringBuilder#1                |
+|     <iteration 4>                                       |
+|       builder.append(4): StringBuilder#1                |
+|       builder.toString(): "34"                          |
+|       escape = "34"                                     |
+|       StringsKt.clear(StringBuilder#1): StringBuilder#1 |
+|     <iteration 5>                                       |
+|       builder.append(5): StringBuilder#1                |
+|   builder.toString(): "5"                               |
+|   escape = "5"                                          |
+|   escape = "END"                                        |
+|   result: void                                          |
+| ------------------------------------------------------- |

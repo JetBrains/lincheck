@@ -13,22 +13,28 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| -------------------------------------------------------------------------------------------------------------- |
-|                                                    Thread 1                                                    |
-| -------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                    |
-|   escape = "START" at RepeatedForLoopRepresentationTest.operation(RepeatedForLoopRepresentationTest.kt:19)     |
-|   loop("Loop-A") at RepeatedForLoopRepresentationTest.operation(RepeatedForLoopRepresentationTest.kt:20)       |
-|     escape = "Loop-A-START" at RepeatedForLoopRepresentationTest.loop(RepeatedForLoopRepresentationTest.kt:27) |
-|     escape = "Loop-A-1" at RepeatedForLoopRepresentationTest.loop(RepeatedForLoopRepresentationTest.kt:30)     |
-|     escape = "Loop-A-2" at RepeatedForLoopRepresentationTest.loop(RepeatedForLoopRepresentationTest.kt:30)     |
-|     escape = "Loop-A-END" at RepeatedForLoopRepresentationTest.loop(RepeatedForLoopRepresentationTest.kt:32)   |
-|   escape = "MID" at RepeatedForLoopRepresentationTest.operation(RepeatedForLoopRepresentationTest.kt:21)       |
-|   loop("Loop-B") at RepeatedForLoopRepresentationTest.operation(RepeatedForLoopRepresentationTest.kt:22)       |
-|     escape = "Loop-B-START" at RepeatedForLoopRepresentationTest.loop(RepeatedForLoopRepresentationTest.kt:27) |
-|     escape = "Loop-B-1" at RepeatedForLoopRepresentationTest.loop(RepeatedForLoopRepresentationTest.kt:30)     |
-|     escape = "Loop-B-2" at RepeatedForLoopRepresentationTest.loop(RepeatedForLoopRepresentationTest.kt:30)     |
-|     escape = "Loop-B-END" at RepeatedForLoopRepresentationTest.loop(RepeatedForLoopRepresentationTest.kt:32)   |
-|   escape = "END" at RepeatedForLoopRepresentationTest.operation(RepeatedForLoopRepresentationTest.kt:23)       |
-|   result: void                                                                                                 |
-| -------------------------------------------------------------------------------------------------------------- |
+| --------------------------- |
+|          Thread 1           |
+| --------------------------- |
+| operation()                 |
+|   escape = "START"          |
+|   loop("Loop-A")            |
+|     escape = "Loop-A-START" |
+|     loop(2 iterations)      |
+|       <iteration 1>         |
+|         escape = "Loop-A-1" |
+|       <iteration 2>         |
+|         escape = "Loop-A-2" |
+|     escape = "Loop-A-END"   |
+|   escape = "MID"            |
+|   loop("Loop-B")            |
+|     escape = "Loop-B-START" |
+|     loop(2 iterations)      |
+|       <iteration 1>         |
+|         escape = "Loop-B-1" |
+|       <iteration 2>         |
+|         escape = "Loop-B-2" |
+|     escape = "Loop-B-END"   |
+|   escape = "END"            |
+|   result: void              |
+| --------------------------- |

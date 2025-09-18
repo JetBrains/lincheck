@@ -13,17 +13,21 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| ------------------------------------------------------------------------------------------------------------------------------------ |
-|                                                               Thread 1                                                               |
-| ------------------------------------------------------------------------------------------------------------------------------------ |
-| operation()                                                                                                                          |
-|   escape = "START" at ForLoopWithTryCatchFinallyRepresentationTest.operation(ForLoopWithTryCatchFinallyRepresentationTest.kt:19)     |
-|   escape = "try-1" at ForLoopWithTryCatchFinallyRepresentationTest.operation(ForLoopWithTryCatchFinallyRepresentationTest.kt:26)     |
-|   escape = "finally-1" at ForLoopWithTryCatchFinallyRepresentationTest.operation(ForLoopWithTryCatchFinallyRepresentationTest.kt:30) |
-|   escape = "catch-2" at ForLoopWithTryCatchFinallyRepresentationTest.operation(ForLoopWithTryCatchFinallyRepresentationTest.kt:28)   |
-|   escape = "finally-2" at ForLoopWithTryCatchFinallyRepresentationTest.operation(ForLoopWithTryCatchFinallyRepresentationTest.kt:30) |
-|   escape = "try-3" at ForLoopWithTryCatchFinallyRepresentationTest.operation(ForLoopWithTryCatchFinallyRepresentationTest.kt:26)     |
-|   escape = "finally-3" at ForLoopWithTryCatchFinallyRepresentationTest.operation(ForLoopWithTryCatchFinallyRepresentationTest.kt:30) |
-|   escape = "END" at ForLoopWithTryCatchFinallyRepresentationTest.operation(ForLoopWithTryCatchFinallyRepresentationTest.kt:33)       |
-|   result: void                                                                                                                       |
-| ------------------------------------------------------------------------------------------------------------------------------------ |
+| -------------------------- |
+|          Thread 1          |
+| -------------------------- |
+| operation()                |
+|   escape = "START"         |
+|   loop(3 iterations)       |
+|     <iteration 1>          |
+|       escape = "try-1"     |
+|       escape = "finally-1" |
+|     <iteration 2>          |
+|       escape = "catch-2"   |
+|       escape = "finally-2" |
+|     <iteration 3>          |
+|       escape = "try-3"     |
+|       escape = "finally-3" |
+|   escape = "END"           |
+|   result: void             |
+| -------------------------- |

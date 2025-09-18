@@ -13,15 +13,21 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| ------------------------------------------------------------------------------------------------ |
-|                                             Thread 1                                             |
-| ------------------------------------------------------------------------------------------------ |
-| operation()                                                                                      |
-|   escape = "START" at TwoForLoopRepresentationTest.operation(TwoForLoopRepresentationTest.kt:19) |
-|   escape = "A.1" at TwoForLoopRepresentationTest.operation(TwoForLoopRepresentationTest.kt:22)   |
-|   escape = "A.2" at TwoForLoopRepresentationTest.operation(TwoForLoopRepresentationTest.kt:22)   |
-|   escape = "B.1" at TwoForLoopRepresentationTest.operation(TwoForLoopRepresentationTest.kt:26)   |
-|   escape = "B.2" at TwoForLoopRepresentationTest.operation(TwoForLoopRepresentationTest.kt:26)   |
-|   escape = "END" at TwoForLoopRepresentationTest.operation(TwoForLoopRepresentationTest.kt:28)   |
-|   result: void                                                                                   |
-| ------------------------------------------------------------------------------------------------ |
+| -------------------- |
+|       Thread 1       |
+| -------------------- |
+| operation()          |
+|   escape = "START"   |
+|   loop(2 iterations) |
+|     <iteration 1>    |
+|       escape = "A.1" |
+|     <iteration 2>    |
+|       escape = "A.2" |
+|   loop(2 iterations) |
+|     <iteration 1>    |
+|       escape = "B.1" |
+|     <iteration 2>    |
+|       escape = "B.2" |
+|   escape = "END"     |
+|   result: void       |
+| -------------------- |

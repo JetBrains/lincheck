@@ -2344,6 +2344,11 @@ internal abstract class ManagedStrategy(
         val currentThread = threadScheduler.getCurrentThreadId()
         val loopTracePoints = loopTracePointsStack[currentThread]!!.last
 
+        // No loop iterations
+        if (loopTracePoints.isEmpty() || (loopTracePoints.last as LoopIterationStartTracePoint).loopId != loopId) {
+            return
+        }
+
         val lastIteration = loopTracePoints.removeLast() as LoopIterationStartTracePoint
         val iterationFinishTracePoint = LoopIterationFinishTracePoint(
             eventId = getNextEventId(),

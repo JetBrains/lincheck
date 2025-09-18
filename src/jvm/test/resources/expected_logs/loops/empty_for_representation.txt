@@ -13,15 +13,18 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| ---------------------------------------------------------------------------------------------------------------------- |
-|                                                        Thread 1                                                        |
-| ---------------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                            |
-|   escape = "START" at EmptyForLoopRepresentationTest.operation(EmptyForLoopRepresentationTest.kt:19)                   |
-|   builder.append(1): StringBuilder#1 at EmptyForLoopRepresentationTest.operation(EmptyForLoopRepresentationTest.kt:22) |
-|   builder.append(2): StringBuilder#1 at EmptyForLoopRepresentationTest.operation(EmptyForLoopRepresentationTest.kt:22) |
-|   builder.toString(): "12" at EmptyForLoopRepresentationTest.operation(EmptyForLoopRepresentationTest.kt:24)           |
-|   escape = "12" at EmptyForLoopRepresentationTest.operation(EmptyForLoopRepresentationTest.kt:24)                      |
-|   escape = "END" at EmptyForLoopRepresentationTest.operation(EmptyForLoopRepresentationTest.kt:25)                     |
-|   result: void                                                                                                         |
-| ---------------------------------------------------------------------------------------------------------------------- |
+| ---------------------------------------- |
+|                 Thread 1                 |
+| ---------------------------------------- |
+| operation()                              |
+|   escape = "START"                       |
+|   loop(2 iterations)                     |
+|     <iteration 1>                        |
+|       builder.append(1): StringBuilder#1 |
+|     <iteration 2>                        |
+|       builder.append(2): StringBuilder#1 |
+|   builder.toString(): "12"               |
+|   escape = "12"                          |
+|   escape = "END"                         |
+|   result: void                           |
+| ---------------------------------------- |

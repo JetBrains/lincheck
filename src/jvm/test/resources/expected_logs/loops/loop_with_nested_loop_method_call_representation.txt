@@ -13,23 +13,32 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-|                                                                        Thread 1                                                                        |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| operation()                                                                                                                                            |
-|   escape = "START" at LoopWithNestedLoopMethodCallRepresentationTest.operation(LoopWithNestedLoopMethodCallRepresentationTest.kt:19)                   |
-|   escape = "outer-1" at LoopWithNestedLoopMethodCallRepresentationTest.operation(LoopWithNestedLoopMethodCallRepresentationTest.kt:22)                 |
-|   methodWithLoop(1) at LoopWithNestedLoopMethodCallRepresentationTest.operation(LoopWithNestedLoopMethodCallRepresentationTest.kt:23)                  |
-|     escape = "method-start-1" at LoopWithNestedLoopMethodCallRepresentationTest.methodWithLoop(LoopWithNestedLoopMethodCallRepresentationTest.kt:29)   |
-|     escape = "method-inner-1-1" at LoopWithNestedLoopMethodCallRepresentationTest.methodWithLoop(LoopWithNestedLoopMethodCallRepresentationTest.kt:32) |
-|     escape = "method-inner-1-2" at LoopWithNestedLoopMethodCallRepresentationTest.methodWithLoop(LoopWithNestedLoopMethodCallRepresentationTest.kt:32) |
-|     escape = "method-end-1" at LoopWithNestedLoopMethodCallRepresentationTest.methodWithLoop(LoopWithNestedLoopMethodCallRepresentationTest.kt:34)     |
-|   escape = "outer-2" at LoopWithNestedLoopMethodCallRepresentationTest.operation(LoopWithNestedLoopMethodCallRepresentationTest.kt:22)                 |
-|   methodWithLoop(2) at LoopWithNestedLoopMethodCallRepresentationTest.operation(LoopWithNestedLoopMethodCallRepresentationTest.kt:23)                  |
-|     escape = "method-start-2" at LoopWithNestedLoopMethodCallRepresentationTest.methodWithLoop(LoopWithNestedLoopMethodCallRepresentationTest.kt:29)   |
-|     escape = "method-inner-2-1" at LoopWithNestedLoopMethodCallRepresentationTest.methodWithLoop(LoopWithNestedLoopMethodCallRepresentationTest.kt:32) |
-|     escape = "method-inner-2-2" at LoopWithNestedLoopMethodCallRepresentationTest.methodWithLoop(LoopWithNestedLoopMethodCallRepresentationTest.kt:32) |
-|     escape = "method-end-2" at LoopWithNestedLoopMethodCallRepresentationTest.methodWithLoop(LoopWithNestedLoopMethodCallRepresentationTest.kt:34)     |
-|   escape = "END" at LoopWithNestedLoopMethodCallRepresentationTest.operation(LoopWithNestedLoopMethodCallRepresentationTest.kt:25)                     |
-|   result: void                                                                                                                                         |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| --------------------------------------- |
+|                Thread 1                 |
+| --------------------------------------- |
+| operation()                             |
+|   escape = "START"                      |
+|   loop(2 iterations)                    |
+|     <iteration 1>                       |
+|       escape = "outer-1"                |
+|       methodWithLoop(1)                 |
+|         escape = "method-start-1"       |
+|         loop(2 iterations)              |
+|           <iteration 1>                 |
+|             escape = "method-inner-1-1" |
+|           <iteration 2>                 |
+|             escape = "method-inner-1-2" |
+|         escape = "method-end-1"         |
+|     <iteration 2>                       |
+|       escape = "outer-2"                |
+|       methodWithLoop(2)                 |
+|         escape = "method-start-2"       |
+|         loop(2 iterations)              |
+|           <iteration 1>                 |
+|             escape = "method-inner-2-1" |
+|           <iteration 2>                 |
+|             escape = "method-inner-2-2" |
+|         escape = "method-end-2"         |
+|   escape = "END"                        |
+|   result: void                          |
+| --------------------------------------- |

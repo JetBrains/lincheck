@@ -13,13 +13,16 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| -------------------------------------------------------------------------------------------------- |
-|                                              Thread 1                                              |
-| -------------------------------------------------------------------------------------------------- |
-| operation()                                                                                        |
-|   escape = "START" at JavaDoLoopRepresentationTest.operation(JavaDoLoopRepresentationTest.java:24) |
-|   escape = "1" at JavaDoLoopRepresentationTest.operation(JavaDoLoopRepresentationTest.java:27)     |
-|   escape = "2" at JavaDoLoopRepresentationTest.operation(JavaDoLoopRepresentationTest.java:27)     |
-|   escape = "END" at JavaDoLoopRepresentationTest.operation(JavaDoLoopRepresentationTest.java:30)   |
-|   result: void                                                                                     |
-| -------------------------------------------------------------------------------------------------- |
+| -------------------- |
+|       Thread 1       |
+| -------------------- |
+| operation()          |
+|   escape = "START"   |
+|   loop(2 iterations) |
+|     <iteration 1>    |
+|       escape = "1"   |
+|     <iteration 2>    |
+|       escape = "2"   |
+|   escape = "END"     |
+|   result: void       |
+| -------------------- |
