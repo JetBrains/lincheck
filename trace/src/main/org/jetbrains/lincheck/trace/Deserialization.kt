@@ -136,7 +136,8 @@ internal data class ShallowCodeLocation(
     val methodName: Int,
     val fileName: Int,
     val lineNumber: Int,
-    val accessPath: Int
+    val accessPath: Int,
+    val argumentNames: List<Int>?,
 )
 
 internal class ShallowAccessPath(val locations: MutableList<ShallowAccessLocation>)
@@ -181,7 +182,8 @@ internal class CodeLocationsContext {
                     /* lineNumber = */ value.lineNumber
                 )
                 val accessPath = if (value.accessPath == -1) null else context.getAccessPath(value.accessPath)
-                val location = CodeLocation(stackTraceElement, accessPath)
+                val argumentNames = value.argumentNames?.map { if (it == -1) null else context.getAccessPath(it) }
+                val location = CodeLocation(stackTraceElement, accessPath, argumentNames)
                 context.restoreCodeLocation(id, location)
             }
         }
@@ -1039,6 +1041,12 @@ private fun loadCodeLocation(
     val methodNameId = input.readInt()
     val lineNumber = input.readInt()
     val accessPathId = input.readInt()
+    
+    val nArgumentNames = input.readInt()
+    val argumentNameIds = when {
+        nArgumentNames == 0 -> null
+        else -> List(nArgumentNames) { input.readInt() }
+    }
 
     if (restore) {
         val scl = ShallowCodeLocation(
@@ -1046,7 +1054,8 @@ private fun loadCodeLocation(
             methodName = methodNameId,
             fileName = fileNameId,
             lineNumber = lineNumber,
-            accessPath = accessPathId
+            accessPath = accessPathId,
+            argumentNames = argumentNameIds
         )
         codeLocs.loadCodeLocation(id, scl)
     }

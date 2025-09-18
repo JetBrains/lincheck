@@ -34,7 +34,7 @@ import kotlin.math.exp
 
 internal const val TRACE_MAGIC : Long = 0x706e547124ee5f70L
 internal const val INDEX_MAGIC : Long = TRACE_MAGIC.inv()
-internal const val TRACE_VERSION : Long = 11
+internal const val TRACE_VERSION : Long = 12
 
 internal const val INDEX_FILENAME_SUFFIX = ".idx"
 internal const val PACK_FILENAME_SUFFIX = ".packedtrace"
