@@ -141,7 +141,7 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
                 }
                 else if (it.isCompanionAccess()) {
                     if (!tracePoint.isCalledFromDefiningClass()) {
-                        appendClassName(ClassDescriptor (
+                        appendClassName(ClassDescriptor(
                             tracePoint.classDescriptor.name.substringBeforeLast("\$Companion"),
                         ))
                         appendSpecialSymbol(".")
