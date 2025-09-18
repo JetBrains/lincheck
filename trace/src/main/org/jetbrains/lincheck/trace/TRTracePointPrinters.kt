@@ -160,15 +160,15 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
                 appendSpecialSymbol(",")
                 append(" ")
             }
-            val name = argumentNames[i]
+            val name = argumentNames[i]?.toString()
             when {
-                name == null -> appendObject(parameter)
+                name.isNullOrEmpty() -> appendObject(parameter)
                 parameter?.isPrimitive == true -> {
-                    append(name.toString())
+                    append(name)
                     append(" -> ")
                     appendObject(parameter)
                 }
-                else -> append(name.toString())
+                else -> append(name)
             }
         }
         return this
