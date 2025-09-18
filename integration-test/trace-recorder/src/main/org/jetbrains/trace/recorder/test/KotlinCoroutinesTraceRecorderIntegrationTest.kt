@@ -10,7 +10,6 @@
 
 package org.jetbrains.trace.recorder.test
 
-import org.junit.Ignore
 import org.junit.Test
 import java.nio.file.Paths
 
