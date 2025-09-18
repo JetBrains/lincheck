@@ -2135,6 +2135,7 @@ internal abstract class ManagedStrategy(
         val shadowStack = shadowStack[currentThreadId]!!
         val stackFrame = ShadowStackFrame(owner)
         shadowStack.add(stackFrame)
+        loopTracePointsStack.getOrPut(currentThreadId) { ArrayDeque() }.add(ArrayDeque())
     }
 
     private fun popShadowStackFrame() {
@@ -2144,6 +2145,11 @@ internal abstract class ManagedStrategy(
         check(shadowStack.isNotEmpty()) {
             "Shadow stack cannot be empty"
         }
+        if (loopTracePointsStack[currentThreadId]!!.last.isNotEmpty()) {
+            val firstLoop = loopTracePointsStack[currentThreadId]!!.last.first as LoopStartTracePoint
+            afterLoopFinished(firstLoop.loopId)
+        }
+        loopTracePointsStack[currentThreadId]!!.removeLast()
     }
 
     /**
@@ -2280,10 +2286,13 @@ internal abstract class ManagedStrategy(
     // TODO: should be stored in the stack frame to
     //  (1) support multiple threads
     //  (2) when exiting the function (dropping the current stack frame), we must close all active loops in it.
-    val loopTracePoints = ArrayDeque<TracePoint>()
+    val loopTracePointsStack = mutableThreadMapOf<ArrayDeque<ArrayDeque<TracePoint>>>()
 
     override fun beforeLoopIterationStarts(loopId: Int) {
         if (!collectTrace) return
+        val currentThread = threadScheduler.getCurrentThreadId()
+        val loopTracePoints = loopTracePointsStack[currentThread]!!.last
+
         var iteration = 1
         val shouldStartNewLoop = loopTracePoints.isEmpty() || loopTracePoints.last.let {
             it is LoopIterationStartTracePoint && it.loopId != loopId
@@ -2332,6 +2341,8 @@ internal abstract class ManagedStrategy(
 
     override fun afterLoopFinished(loopId: Int) {
         if (!collectTrace) return
+        val currentThread = threadScheduler.getCurrentThreadId()
+        val loopTracePoints = loopTracePointsStack[currentThread]!!.last
 
         val lastIteration = loopTracePoints.removeLast() as LoopIterationStartTracePoint
         val iterationFinishTracePoint = LoopIterationFinishTracePoint(
