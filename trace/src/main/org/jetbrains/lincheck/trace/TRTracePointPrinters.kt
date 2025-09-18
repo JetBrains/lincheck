@@ -146,12 +146,22 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
     }
 
     protected fun TRAppendable.appendParameters(tracePoint: TRMethodCallTracePoint): TRAppendable {
+        check (tracePoint.parameters.size == tracePoint.argumentNames.size) { "Argument names size mismatch" }
         tracePoint.parameters.forEachIndexed { i, parameter ->
             if (i != 0) {
                 appendSpecialSymbol(",")
                 append(" ")
             }
-            appendObject(parameter)
+            val name = tracePoint.argumentNames[i]
+            when {
+                name == null -> appendObject(parameter)
+                parameter?.isPrimitive == true -> {
+                    append(name.toString())
+                    append(" -> ")
+                    appendObject(parameter)
+                }
+                else -> append(name.toString())
+            }
         }
         return this
     }

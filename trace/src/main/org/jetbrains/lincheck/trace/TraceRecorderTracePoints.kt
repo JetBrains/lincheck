@@ -10,6 +10,7 @@
 
 package org.jetbrains.lincheck.trace
 
+import org.jetbrains.lincheck.descriptors.AccessPath
 import org.jetbrains.lincheck.descriptors.ClassDescriptor
 import org.jetbrains.lincheck.descriptors.CodeLocations
 import org.jetbrains.lincheck.descriptors.FieldDescriptor
@@ -83,6 +84,7 @@ class TRMethodCallTracePoint(
     // Shortcuts
     val className: String get() = methodDescriptor.className
     val methodName: String get() = methodDescriptor.methodName
+    val argumentNames: List<AccessPath?> get() = TRACE_CONTEXT.arguments(codeLocationId) ?: emptyList()
     val argumentTypes: List<Types.Type> get() = methodDescriptor.argumentTypes
     val returnType: Types.Type get() = methodDescriptor.returnType
 
