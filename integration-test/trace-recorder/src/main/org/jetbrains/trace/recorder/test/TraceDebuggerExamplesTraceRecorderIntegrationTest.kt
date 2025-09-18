@@ -52,4 +52,211 @@ class TraceDebuggerExamplesTraceRecorderIntegrationTest : AbstractTraceRecorderI
             gradleCommands = listOf(":test"),
         )
     }
+
+    @Test
+    fun `org_examples_integration_loops_JavaForLoopRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.JavaForLoopRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_loops_JavaWhileLoopRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.JavaWhileLoopRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_loops_JavaDoLoopRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.JavaDoLoopRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_loops_BreakedForLoopRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.BreakedForLoopRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_loops_ComplexNestedLoopsRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.ComplexNestedLoopsRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_loops_ContinuedForLoopRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.ContinuedForLoopRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_loops_EmptyForLoopRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.EmptyForLoopRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_loops_ForLoopWithMethodCallRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.ForLoopWithMethodCallRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_loops_ForLoopWithTryCatchFinallyRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.ForLoopWithTryCatchFinallyRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_loops_ForLoopWithTryCatchRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.ForLoopWithTryCatchRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_loops_ForWithIfLoopRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.ForWithIfLoopRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_loops_LoopWithNestedLoopMethodCallRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.LoopWithNestedLoopMethodCallRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_loops_NestedForLoopRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.NestedForLoopRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_loops_NestedLoopWithExceptionRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.NestedLoopWithExceptionRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_loops_OneIterForLoopRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.OneIterForLoopRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_loops_PartiallyEmptyForLoopRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.PartiallyEmptyForLoopRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_loops_RepeatedForLoopRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.RepeatedForLoopRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_loops_SimpleDoWhileLoopRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.SimpleDoWhileLoopRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_loops_SimpleForLoopRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.SimpleForLoopRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_loops_SimpleWhileLoopRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.SimpleWhileLoopRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_loops_TwoForLoopRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.TwoForLoopRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_loops_WhileWithIfLoopRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.WhileWithIfLoopRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_loops_ZeroIterForLoopRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.ZeroIterForLoopRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
 }

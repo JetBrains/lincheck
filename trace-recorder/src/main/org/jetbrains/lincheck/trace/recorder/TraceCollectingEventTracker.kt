@@ -161,6 +161,13 @@ class TraceCollectingEventTracker(
     private val threads = ConcurrentHashMap<Thread, ThreadData>()
 
     private val strategy: TraceCollectingStrategy
+    override fun beforeLoopIterationStarts(loopId: Int) {
+        // TODO
+    }
+
+    override fun afterLoopFinished(loopId: Int) {
+        // TODO
+    }
 
     // For proper completion of threads which are not tracked from the start of the agent,
     // of those threads which are not joined by the Main thread,

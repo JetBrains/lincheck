@@ -1,0 +1,37 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| ------------------------- |
+|         Thread 1          |
+| ------------------------- |
+| operation()               |
+|   escape = "START"        |
+|   loop(5 iterations)      |
+|     <iteration 1>         |
+|       escape = "1"        |
+|       escape = "1 is odd" |
+|     <iteration 2>         |
+|       escape = "2"        |
+|     <iteration 3>         |
+|       escape = "3"        |
+|       escape = "3 is odd" |
+|     <iteration 4>         |
+|       escape = "4"        |
+|     <iteration 5>         |
+|       escape = "5"        |
+|       escape = "5 is odd" |
+|   escape = "END"          |
+|   result: void            |
+| ------------------------- |

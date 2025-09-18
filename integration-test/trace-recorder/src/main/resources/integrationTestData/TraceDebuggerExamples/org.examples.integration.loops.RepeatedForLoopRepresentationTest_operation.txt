@@ -1,0 +1,40 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| --------------------------- |
+|          Thread 1           |
+| --------------------------- |
+| operation()                 |
+|   escape = "START"          |
+|   loop("Loop-A")            |
+|     escape = "Loop-A-START" |
+|     loop(2 iterations)      |
+|       <iteration 1>         |
+|         escape = "Loop-A-1" |
+|       <iteration 2>         |
+|         escape = "Loop-A-2" |
+|     escape = "Loop-A-END"   |
+|   escape = "MID"            |
+|   loop("Loop-B")            |
+|     escape = "Loop-B-START" |
+|     loop(2 iterations)      |
+|       <iteration 1>         |
+|         escape = "Loop-B-1" |
+|       <iteration 2>         |
+|         escape = "Loop-B-2" |
+|     escape = "Loop-B-END"   |
+|   escape = "END"            |
+|   result: void              |
+| --------------------------- |

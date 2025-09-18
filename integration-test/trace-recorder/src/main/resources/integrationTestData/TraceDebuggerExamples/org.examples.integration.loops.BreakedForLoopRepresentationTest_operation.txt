@@ -1,0 +1,35 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| --------------------------- |
+|          Thread 1           |
+| --------------------------- |
+| operation()                 |
+|   escape = "START"          |
+|   loop(4 iterations)        |
+|     <iteration 1>           |
+|       escape = "1"          |
+|       escape = "1 is saved" |
+|     <iteration 2>           |
+|       escape = "2"          |
+|       escape = "2 is saved" |
+|     <iteration 3>           |
+|       escape = "3"          |
+|       escape = "3 is saved" |
+|     <iteration 4>           |
+|       escape = "4"          |
+|   escape = "END"            |
+|   result: void              |
+| --------------------------- |

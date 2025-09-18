@@ -1,0 +1,51 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| --------------------- |
+|       Thread 1        |
+| --------------------- |
+| operation()           |
+|   escape = "START"    |
+|   loop(11 iterations) |
+|     <iteration 1>     |
+|       escape = "0"    |
+|     <iteration 2>     |
+|       escape = "1"    |
+|     <iteration 3>     |
+|       escape = "2"    |
+|       escape ➜ "2"    |
+|       escape = "%3-2" |
+|     <iteration 4>     |
+|       escape = "0"    |
+|     <iteration 5>     |
+|       escape = "1"    |
+|     <iteration 6>     |
+|       escape = "2"    |
+|       escape ➜ "2"    |
+|       escape = "%3-2" |
+|     <iteration 7>     |
+|       escape = "0"    |
+|     <iteration 8>     |
+|       escape = "1"    |
+|     <iteration 9>     |
+|       escape = "2"    |
+|       escape ➜ "2"    |
+|       escape = "%3-2" |
+|     <iteration 10>    |
+|       escape = "0"    |
+|     <iteration 11>    |
+|   escape = "END"      |
+|   result: void        |
+| --------------------- |

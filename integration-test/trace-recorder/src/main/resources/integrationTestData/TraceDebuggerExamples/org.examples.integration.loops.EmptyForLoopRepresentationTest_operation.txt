@@ -1,0 +1,30 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| ---------------------------------------- |
+|                 Thread 1                 |
+| ---------------------------------------- |
+| operation()                              |
+|   escape = "START"                       |
+|   loop(2 iterations)                     |
+|     <iteration 1>                        |
+|       builder.append(1): StringBuilder#1 |
+|     <iteration 2>                        |
+|       builder.append(2): StringBuilder#1 |
+|   builder.toString(): "12"               |
+|   escape = "12"                          |
+|   escape = "END"                         |
+|   result: void                           |
+| ---------------------------------------- |
