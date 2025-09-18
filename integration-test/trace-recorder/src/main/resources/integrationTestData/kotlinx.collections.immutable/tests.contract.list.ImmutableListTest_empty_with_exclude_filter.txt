@@ -387,8 +387,10 @@ ImmutableListTest.empty() at :0
                 Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
                 AssertionsKt.checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
                 exceptionPredicate.invoke(IndexOutOfBoundsException@1): true at ComparisonDSL.kt:35
+                  invoke(IndexOutOfBoundsException@1): true at ComparisonDSL.kt:24
                 AssertionsKt.assertTrue(true, "expected fail") at ComparisonDSL.kt:35
                 exceptionPredicate.invoke(IndexOutOfBoundsException@1): true at ComparisonDSL.kt:36
+                  invoke(IndexOutOfBoundsException@1): true at ComparisonDSL.kt:24
                 AssertionsKt.assertTrue(true, "actual fail") at ComparisonDSL.kt:36
           CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:23
             getter.invoke(EmptyList@1): -1 at ComparisonDSL.kt:21

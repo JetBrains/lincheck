@@ -18,6 +18,8 @@ import java.lang.invoke.CallSite;
  */
 public interface EventTracker {
 
+    void ensureClassHierarchyIsTransformed(Class<?> clazz);
+
     void registerRunningThread(Thread thread, ThreadDescriptor descriptor);
     void beforeThreadFork(Thread thread, ThreadDescriptor descriptor);
     void beforeThreadStart();

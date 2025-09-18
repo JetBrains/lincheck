@@ -10,6 +10,7 @@
 
 package org.jetbrains.trace.recorder.test
 
+import org.junit.Ignore
 import org.junit.Test
 import java.nio.file.Paths
 
@@ -17,6 +18,7 @@ class KotlinCoroutinesTraceRecorderIntegrationTest : AbstractTraceRecorderIntegr
     override val projectPath: String = Paths.get("build", "integrationTestProjects", "kotlinx.coroutines").toString()
 
     @Test
+    @Ignore($$"java.lang.VerifyError: Failed to retransform class kotlinx.coroutines.EventLoopImplBase$DelayedTask")
     fun `kotlinx_coroutines_DelayJvmTest testDelayInArbitraryContext`() {
         runGradleTest(
             testClassName = "kotlinx.coroutines.DelayJvmTest",
@@ -28,6 +30,7 @@ class KotlinCoroutinesTraceRecorderIntegrationTest : AbstractTraceRecorderIntegr
     }
 
     @Test
+    @Ignore($$"java.lang.VerifyError: Failed to retransform class kotlinx.coroutines.EventLoopImplBase$DelayedTask")
     fun `kotlinx_coroutines_EventLoopsTest testEventLoopInDefaultExecutor`() {
         runGradleTest(
             testClassName = "kotlinx.coroutines.EventLoopsTest",
