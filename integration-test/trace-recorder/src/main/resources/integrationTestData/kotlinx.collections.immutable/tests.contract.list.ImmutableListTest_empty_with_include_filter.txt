@@ -15,4 +15,4 @@ ImmutableListTest.empty() at :0
   CollectionsKt.emptyList(): EmptyList@1 at ImmutableListTest.kt:28
   compareLists(EmptyList@1, empty1) at ImmutableListTest.kt:28
     ComparisonDSLKt.compare(expected, actual, ImmutableListTest$$Lambda@1) at ImmutableListTest.kt:16
-      CollectionBehaviorsKt.listBehavior($this$compare) at ImmutableListTest.kt:16
+      CollectionBehaviorsKt.listBehavior(compare) at ImmutableListTest.kt:16
