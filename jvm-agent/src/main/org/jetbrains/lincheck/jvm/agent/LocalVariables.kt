@@ -10,7 +10,6 @@
 
 package org.jetbrains.lincheck.jvm.agent
 
-import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.Label
 import org.objectweb.asm.Type
 
@@ -23,12 +22,6 @@ fun LocalVariablesMutableMap(): LocalVariablesMutableMap = mutableMapOf()
 private const val INLINE_FUNC_PREFIX = "\$i\$f\$"
 private const val INLINE_LAMBDA_PREFIX = "\$i\$a\$"
 private val INLINE_LAMBDA_PATTERN = Regex("^[$]i[$]a[$]-(?<inlineName>[^-]+)-(?<lambdaReferenceName>[^-]+)$")
-
-internal fun List<LocalVariableInfo>.isUniqueVariable(): Boolean {
-    val name = first().name
-    val type = first().type
-    return all { it.name == name && it.type == type }
-}
 
 data class LocalVariableInfo(
     val name: String,
@@ -99,7 +92,9 @@ data class MethodVariables(val variables: LocalVariablesMap = emptyMap()) {
     fun inlinesEndAt(label: Label): List<LocalVariableInfo> =
         varsByEndLabel[label].orEmpty().filter { it.isInlineCallMarker || it.isInlineLambdaMarker }
 
-    fun getVarByName(name: String): Set<LocalVariableInfo> = varsByName.getOrElse(name, ::emptyList).toSet()
+    fun getVariablesByName(name: String): List<LocalVariableInfo> = varsByName.getOrElse(name, ::emptyList)
+    fun getVariablesByStackSlot(index: Int): List<LocalVariableInfo> = variables.getOrElse(index, ::emptyList)
+
     fun hasVarByName(name: String): Boolean = varsByName.containsKey(name)
 
     companion object {
