@@ -9,6 +9,8 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.representation.loops
 
+import org.jetbrains.kotlinx.lincheck.test_utils.loopEnd
+import org.jetbrains.kotlinx.lincheck.test_utils.loopIterationStart
 import org.jetbrains.kotlinx.lincheck_test.representation.*
 
 class SimpleDoWhileLoopRepresentationTest : BaseTraceRepresentationTest(
@@ -19,10 +21,12 @@ class SimpleDoWhileLoopRepresentationTest : BaseTraceRepresentationTest(
         escape = "START"
         var i = 2
         do {
+            loopIterationStart(1)
             val a: Any = i
             escape = a.toString()
             i++
         } while (i < 4)
+        loopEnd(1)
         escape = "END"
     }
 }

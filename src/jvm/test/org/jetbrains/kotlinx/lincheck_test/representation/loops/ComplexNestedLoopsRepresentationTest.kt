@@ -9,6 +9,8 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.representation.loops
 
+import org.jetbrains.kotlinx.lincheck.test_utils.loopEnd
+import org.jetbrains.kotlinx.lincheck.test_utils.loopIterationStart
 import org.jetbrains.kotlinx.lincheck_test.representation.*
 
 class ComplexNestedLoopsRepresentationTest : BaseTraceRepresentationTest(
@@ -19,26 +21,32 @@ class ComplexNestedLoopsRepresentationTest : BaseTraceRepresentationTest(
         escape = "START"
         // Outer for loop
         for (i in 1..2) {
+            loopIterationStart(1)
             val a: Any = i
             escape = "for-$a"
-
+            
             // Middle while loop
             var j = 1
             while (j <= 2) {
+                loopIterationStart(2)
                 val b: Any = j
                 escape = "for-$a-while-$b"
-
+                
                 // Inner do-while loop
                 var k = 1
                 do {
+                    loopIterationStart(3)
                     val c: Any = k
                     escape = "for-$a-while-$b-dowhile-$c"
                     k++
                 } while (k <= 1)
+                loopEnd(3)
 
                 j++
             }
+            loopEnd(2)
         }
+        loopEnd(1)
         escape = "END"
     }
 }
