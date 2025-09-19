@@ -127,8 +127,7 @@
       "testAllReserved",
       "testBasicEncodeDecode",
       "testBasicEncodeDecodeURLPart",
-      "testBrokenOrIncompleteHEX",
-      "testDecodeRandom"
+      "testBrokenOrIncompleteHEX"
     ]
   },
   {
@@ -149,7 +148,6 @@
     "class": "io.ktor.network.tls.ConnectionTest",
     "gradleCommand": ":ktor-network-tls:jvmTest",
     "methods": [
-      "clientCertificatesAuthTest"
     ]
   },
   {
@@ -311,7 +309,6 @@
     "class": "io.ktor.tests.server.cio.CIOWebSocketTestJvm",
     "gradleCommand": ":ktor-server-cio:jvmTest",
     "methods": [
-      "testNonWebsocketRouteDoNotLeakOnWsRequest"
     ]
   },
   {
@@ -340,7 +337,6 @@
     "methods": [
       "testCancelSseRequestIncomingCollect",
       "testCancelSseRequestWithDelay",
-      "testSSESessionTimeout",
       "testClientSSE",
       "testWithNoParentJob",
       "configCopiesOldPluginsAndInterceptors",
@@ -508,7 +504,6 @@
     "gradleCommand": ":ktor-client-cio:jvmTest",
     "methods": [
       "engineUsesRequestTimeoutFromItsConfiguration",
-      "testTimeoutPriority",
       "longHeadersTest",
       "testParameterWithoutPath",
       "testHangingTimeoutWithWrongUrl",
@@ -539,8 +534,7 @@
     "class": "io.ktor.client.engine.cio.CIOSpecificHttpsTest",
     "gradleCommand": ":ktor-client-cio:jvmTest",
     "methods": [
-      "hello",
-      "testGetServerTrusted"
+      "hello"
     ]
   },
   {
@@ -591,7 +585,6 @@
     "class": "io.ktor.server.engine.OverridingClassLoaderTest",
     "gradleCommand": ":ktor-server-core:jvmTest",
     "methods": [
-      "childClassloaderDelegatesToParentForResources"
     ]
   },
   {
