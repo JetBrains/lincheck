@@ -165,7 +165,9 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
                 accessPath == null -> appendObject(parameter)
                 parameter?.isPrimitive == true -> {
                     appendAccessPath(accessPath)
+                    append(" ")
                     appendSpecialSymbol(READ_ACCESS_SYMBOL)
+                    append(" ")
                     appendObject(parameter)
                 }
                 else -> appendAccessPath(accessPath)
