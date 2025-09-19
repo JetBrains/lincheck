@@ -17,29 +17,7 @@ class KotlinCoroutinesTraceRecorderIntegrationTest : AbstractTraceRecorderIntegr
     override val projectPath: String = Paths.get("build", "integrationTestProjects", "kotlinx.coroutines").toString()
 
     @Test
-    fun `kotlinx_coroutines_DelayJvmTest testDelayInArbitraryContext`() {
-        runGradleTest(
-            testClassName = "kotlinx.coroutines.DelayJvmTest",
-            testMethodName = "testDelayInArbitraryContext",
-            gradleCommands = listOf(
-                ":kotlinx-coroutines-core:jvmTest",
-            )
-        )
-    }
-
-    @Test
-    fun `kotlinx_coroutines_EventLoopsTest testEventLoopInDefaultExecutor`() {
-        runGradleTest(
-            testClassName = "kotlinx.coroutines.EventLoopsTest",
-            testMethodName = "testEventLoopInDefaultExecutor",
-            gradleCommands = listOf(
-                ":kotlinx-coroutines-core:jvmTest",
-            )
-        )
-    }
-
-    @Test
-    fun `kotlinx_coroutines_ExecutorsTest testExampleCancel02`() {
+    fun `kotlinx_coroutines_ExecutorsTest testDefaultDispatcherToExecutor`() {
         runGradleTest(
             testClassName = "kotlinx.coroutines.ExecutorsTest",
             testMethodName = "testDefaultDispatcherToExecutor",

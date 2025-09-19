@@ -16,5 +16,4 @@ CoroutineScheduler.Worker.run(): <unfinished method> at :0
               Thread.currentThread(): CoroutineScheduler.Worker@1 at ExecutorsTest.kt:11
               CoroutineScheduler.Worker@1.getName(): "DefaultDispatcher-worker-1" at ExecutorsTest.kt:11
               StringsKt.startsWith$default("DefaultDispatcher-worker-1", "DefaultDispatcher", false, 2, null): true at ExecutorsTest.kt:12
-              ExecutorsTest@1.check() at ExecutorsTest.kt:12
             latch.countDown() at ExecutorsTest.kt:59

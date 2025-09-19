@@ -51,7 +51,7 @@ internal class SharedMemoryAccessTransformer(
             return
         }
         when (opcode) {
-            GETSTATIC if configuration.trackSharedMemoryReads -> {
+            GETSTATIC if configuration.trackStaticFieldReads -> {
                 invokeIfInAnalyzedCode(
                     original = {
                         super.visitFieldInsn(opcode, owner, fieldName, desc)
@@ -61,7 +61,7 @@ internal class SharedMemoryAccessTransformer(
                     }
                 )
             }
-            GETFIELD if configuration.trackSharedMemoryReads -> {
+            GETFIELD if configuration.trackRegularFieldReads -> {
                 invokeIfInAnalyzedCode(
                     original = {
                         super.visitFieldInsn(opcode, owner, fieldName, desc)
@@ -71,7 +71,7 @@ internal class SharedMemoryAccessTransformer(
                     }
                 )
             }
-            PUTSTATIC if configuration.trackSharedMemoryWrites -> {
+            PUTSTATIC if configuration.trackStaticFieldWrites -> {
                 invokeIfInAnalyzedCode(
                     original = {
                         super.visitFieldInsn(opcode, owner, fieldName, desc)
@@ -81,7 +81,7 @@ internal class SharedMemoryAccessTransformer(
                     }
                 )
             }
-            PUTFIELD if configuration.trackSharedMemoryWrites -> {
+            PUTFIELD if configuration.trackRegularFieldWrites -> {
                 invokeIfInAnalyzedCode(
                     original = {
                         super.visitFieldInsn(opcode, owner, fieldName, desc)
@@ -202,7 +202,7 @@ internal class SharedMemoryAccessTransformer(
     override fun visitInsn(opcode: Int) = adapter.run {
         when (opcode) {
             AALOAD, LALOAD, FALOAD, DALOAD, IALOAD, BALOAD, CALOAD, SALOAD -> {
-                if (configuration.trackSharedMemoryReads) {
+                if (configuration.trackArrayElementReads) {
                     invokeIfInAnalyzedCode(
                         original = {
                             super.visitInsn(opcode)
@@ -217,7 +217,7 @@ internal class SharedMemoryAccessTransformer(
             }
 
             AASTORE, IASTORE, FASTORE, BASTORE, CASTORE, SASTORE, LASTORE, DASTORE -> {
-                if (configuration.trackSharedMemoryWrites) {
+                if (configuration.trackArrayElementWrites) {
                     invokeIfInAnalyzedCode(
                         original = {
                             super.visitInsn(opcode)
