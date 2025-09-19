@@ -188,7 +188,7 @@ abstract class AbstractTRFieldTracePointPrinter {
     protected fun TRAppendable.appendTracePoint(tracePoint: TRFieldTracePoint): TRAppendable {
         val isLambdaCaptureSyntheticField = isLambdaCaptureSyntheticField(tracePoint)
 
-        appendOwner(tracePoint)
+        appendOwner(tracePoint, isLambdaCaptureSyntheticField)
         appendFieldName(tracePoint, isLambdaCaptureSyntheticField)
         append(" ")
         appendSpecialSymbol(tracePoint.accessSymbol())
@@ -197,18 +197,18 @@ abstract class AbstractTRFieldTracePointPrinter {
         return this
     }
 
-    protected fun TRAppendable.appendOwner(tracePoint: TRFieldTracePoint): TRAppendable {
+    protected fun TRAppendable.appendOwner(tracePoint: TRFieldTracePoint, isLambdaCaptureSyntheticField: Boolean): TRAppendable {
         val ownerName = CodeLocations.accessPath(tracePoint.codeLocationId)
         if (ownerName != null) {
             ownerName.filterThisAccesses().takeIf { !it.isEmpty() }?.let {
                 appendAccessPath(it)
-                appendSpecialSymbol(".")
             }
         } else if (tracePoint.obj != null) {
             appendObject(tracePoint.obj)
-            appendSpecialSymbol(".")
         } else {
             appendClassName(tracePoint.classDescriptor)
+        }
+        if (!isLambdaCaptureSyntheticField) {
             appendSpecialSymbol(".")
         }
         return this
