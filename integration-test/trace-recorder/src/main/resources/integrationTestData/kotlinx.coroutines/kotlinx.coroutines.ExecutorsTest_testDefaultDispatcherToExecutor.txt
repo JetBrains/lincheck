@@ -1,5 +1,6 @@
 # Thread 1 (Test worker)
 ExecutorsTest.testDefaultDispatcherToExecutor() at :0
+  latch = CountDownLatch@1 at ExecutorsTest.kt:56
   Dispatchers.getDefault(): DefaultScheduler@1 at ExecutorsTest.kt:57
   ExecutorsKt.asExecutor(DefaultScheduler@1): CoroutineScheduler@1 at ExecutorsTest.kt:57
     DefaultScheduler@1.getExecutor(): CoroutineScheduler@1 at Executors.kt:104
@@ -15,6 +16,10 @@ CoroutineScheduler.Worker.run(): <unfinished method> at :0
             checkThreadName("DefaultDispatcher") at ExecutorsTest.kt:58
               Thread.currentThread(): CoroutineScheduler.Worker@1 at ExecutorsTest.kt:11
               CoroutineScheduler.Worker@1.getName(): "DefaultDispatcher-worker-1" at ExecutorsTest.kt:11
+              name = "DefaultDispatcher-worker-1" at ExecutorsTest.kt:11
+              check = ExecutorsTest@1 at ExecutorsTest.kt:12
               StringsKt.startsWith$default("DefaultDispatcher-worker-1", "DefaultDispatcher", false, 2, null): true at ExecutorsTest.kt:12
+              value = 1 at ExecutorsTest.kt:12
+              i$f$check = 0 at ExecutorsTest.kt:12
               ExecutorsTest@1.check() at ExecutorsTest.kt:12
             latch.countDown() at ExecutorsTest.kt:59

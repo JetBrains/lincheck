@@ -1,12 +1,17 @@
 # Thread 1
 SimpleProgramNonFailingTest.test() at :0
+  sum = Integer;@1 at SimpleProgramNonFailingTest.kt:9
   Integer;@1[0] = 1 at SimpleProgramNonFailingTest.kt:9
   Integer;@1[1] = 2 at SimpleProgramNonFailingTest.kt:9
   Integer;@1[2] = 3 at SimpleProgramNonFailingTest.kt:9
   CollectionsKt.listOf(Integer;@1): Arrays.ArrayList@1 at SimpleProgramNonFailingTest.kt:9
+  numbers = Arrays.ArrayList@1 at SimpleProgramNonFailingTest.kt:9
   SimpleProgramNonFailingTestKt.sum(Arrays.ArrayList@1): 3 at SimpleProgramNonFailingTest.kt:10
+    sum = 0 at SimpleProgramNonFailingTest.kt:20
+    i = 0 at SimpleProgramNonFailingTest.kt:21
     numbers.get(0): 1 at SimpleProgramNonFailingTest.kt:22
     sum = 1 at SimpleProgramNonFailingTest.kt:22
     numbers.get(1): 2 at SimpleProgramNonFailingTest.kt:22
     sum = 3 at SimpleProgramNonFailingTest.kt:22
+  sum = 3 at SimpleProgramNonFailingTest.kt:10
   Assertions.assertEquals(6, 3): threw org.opentest4j.AssertionFailedError at SimpleProgramNonFailingTest.kt:12

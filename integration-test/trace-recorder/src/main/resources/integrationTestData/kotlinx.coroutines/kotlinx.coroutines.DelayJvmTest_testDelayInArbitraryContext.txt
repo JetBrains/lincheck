@@ -5,7 +5,11 @@ DelayJvmTest.testDelayInArbitraryContext() at :0
       BuildersKt.runBlocking(EmptyCoroutineContext@1, DelayJvmTest$testDelayInArbitraryContext$1@1): Unit at Builders.kt:48
         BuildersKt__BuildersKt.runBlocking(EmptyCoroutineContext@1, DelayJvmTest$testDelayInArbitraryContext$1@1): Unit at :1
           Thread.currentThread(): Thread@1 at Builders.kt:53
+          currentThread = Thread@1 at Builders.kt:53
           context.get(ContinuationInterceptor.Key@1): null at Builders.kt:54
+          contextInterceptor = null at Builders.kt:54
+          eventLoop = null at Builders.kt:55
+          newContext = null at Builders.kt:56
           ThreadLocalEventLoop.INSTANCE.getEventLoop(): BlockingEventLoop@1 at Builders.kt:59
           eventLoop = BlockingEventLoop@1 at Builders.kt:59
           context.plus(BlockingEventLoop@1): BlockingEventLoop@1 at Builders.kt:60
@@ -14,17 +18,22 @@ DelayJvmTest.testDelayInArbitraryContext() at :0
             CoroutineContextKt.foldCopies(EmptyCoroutineContext@1, BlockingEventLoop@1, true): BlockingEventLoop@1 at CoroutineContext.kt:15
               CoroutineContextKt.hasCopyableElements(EmptyCoroutineContext@1): false at CoroutineContext.kt:50
                 hasCopyableElements.fold(false, CoroutineContextKt$$Lambda@1): false at CoroutineContext.kt:36
+              hasElementsLeft = 0 at CoroutineContext.kt:50
               CoroutineContextKt.hasCopyableElements(BlockingEventLoop@1): false at CoroutineContext.kt:51
                 hasCopyableElements.fold(false, CoroutineContextKt$$Lambda@1): false at CoroutineContext.kt:36
+              hasElementsRight = 0 at CoroutineContext.kt:51
               originalContext.plus(BlockingEventLoop@1): BlockingEventLoop@1 at CoroutineContext.kt:55
+            combined = BlockingEventLoop@1 at CoroutineContext.kt:15
             DebugKt.getDEBUG(): true at CoroutineContext.kt:16
             DebugKt.getCOROUTINE_ID(): AtomicLong@1 at CoroutineContext.kt:16
             AtomicLong@1.incrementAndGet(): 1 at CoroutineContext.kt:16
             combined.plus(CoroutineId@1): CombinedContext@1 at CoroutineContext.kt:16
+            debug = CombinedContext@1 at CoroutineContext.kt:16
             Dispatchers.getDefault(): DefaultScheduler@1 at CoroutineContext.kt:17
             combined.get(ContinuationInterceptor.Key@1): BlockingEventLoop@1 at CoroutineContext.kt:17
           newContext = CombinedContext@1 at Builders.kt:60
           DebugKt.getASSERTIONS_ENABLED(): true at JobSupport.kt:142
+          i$a$-assert-JobSupport$initParentJob$1 = 0 at fake.kt:1
           getParentHandle(): null at JobSupport.kt:142
             JobSupport.get_parentHandle$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at JobSupport.kt:0
             AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.get(BlockingCoroutine@1): null at JobSupport.kt:129
@@ -33,13 +42,17 @@ DelayJvmTest.testDelayInArbitraryContext() at :0
             AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.set(BlockingCoroutine@1, NonDisposableHandle@1) at JobSupport.kt:130
           Job.DefaultImpls.fold(BlockingCoroutine@1, CombinedContext@1, CoroutineContext.DefaultImpls$$Lambda@1): CombinedContext@1 at JobSupport.kt:22
             CoroutineContext.Element.DefaultImpls.fold(BlockingCoroutine@1, CombinedContext@1, CoroutineContext.DefaultImpls$$Lambda@1): CombinedContext@1 at Job.kt:118
+          coroutine = BlockingCoroutine@1 at Builders.kt:68
           coroutine.start(CoroutineStart.DEFAULT, BlockingCoroutine@1, DelayJvmTest$testDelayInArbitraryContext$1@1) at Builders.kt:69
             start.invoke(DelayJvmTest$testDelayInArbitraryContext$1@1, BlockingCoroutine@1, BlockingCoroutine@1) at AbstractCoroutine.kt:134
               DelayJvmTest$testDelayInArbitraryContext$1@1.L$0 = BlockingCoroutine@1 at DelayJvmTest.kt:0
               continuation.getContext(): CombinedContext@1 at DispatchedContinuation.kt:0
+              this_ = DispatchedContinuation@1 at DispatchedContinuation.kt:278
+              i$f$resumeCancellableWith$kotlinx_coroutines_core = 0 at DispatchedContinuation.kt:278
               DispatchedContinuation@1.resumeCancellableWith() at DispatchedContinuation.kt:278
                 CompletionStateKt.toState(Unit): Unit at DispatchedContinuation.kt:207
                   Result.exceptionOrNull-impl(Unit): null at CompletionState.kt:8
+                state = Unit at DispatchedContinuation.kt:207
                 getContext(): CombinedContext@1 at DispatchedContinuation.kt:208
                   continuation.getContext(): CombinedContext@1 at DispatchedContinuation.kt:0
                 DispatchedContinuationKt.safeIsDispatchNeeded(BlockingEventLoop@1, CombinedContext@1): true at DispatchedContinuation.kt:208
@@ -62,11 +75,17 @@ DelayJvmTest.testDelayInArbitraryContext() at :0
                   ContinuationInterceptor.DefaultImpls.get(BlockingEventLoop@1, CoroutineName.Key@1): null at CoroutineDispatcher.kt:60
                   Job.DefaultImpls.get(BlockingCoroutine@1, CoroutineName.Key@1): null at JobSupport.kt:22
                     CoroutineContext.Element.DefaultImpls.get(BlockingCoroutine@1, CoroutineName.Key@1): null at Job.kt:118
+                coroutineName = "coroutine" at CoroutineContext.kt:300
                 Thread.currentThread(): Thread@1 at CoroutineContext.kt:301
+                currentThread = Thread@1 at CoroutineContext.kt:301
                 currentThread.getName(): "Test worker" at CoroutineContext.kt:302
+                oldName = "Test worker" at CoroutineContext.kt:302
+                lastIndex = 0 at CoroutineContext.kt:303
                 StringsKt.lastIndexOf$default("Test worker", " @", 0, false, 6, null): -1 at CoroutineContext.kt:303
                 lastIndex = -1 at CoroutineContext.kt:303
                 lastIndex = 11 at CoroutineContext.kt:304
+                updateThreadContext_u24lambda_u240 = "" at CoroutineContext.kt:305
+                i$a$-buildString-CoroutineId$updateThreadContext$1 = 0 at CoroutineContext.kt:305
                 updateThreadContext_u24lambda_u240.append("Test worker"): "Test worker" at CoroutineContext.kt:306
                 updateThreadContext_u24lambda_u240.append(" @"): "Test worker @" at CoroutineContext.kt:307
                 updateThreadContext_u24lambda_u240.append("coroutine"): "Test worker @coroutine" at CoroutineContext.kt:308
@@ -78,7 +97,10 @@ DelayJvmTest.testDelayInArbitraryContext() at :0
                 ContinuationInterceptor.DefaultImpls.get(BlockingEventLoop@1, UndispatchedMarker@1): null at CoroutineDispatcher.kt:60
                 Job.DefaultImpls.get(BlockingCoroutine@1, UndispatchedMarker@1): null at JobSupport.kt:22
                   CoroutineContext.Element.DefaultImpls.get(BlockingCoroutine@1, UndispatchedMarker@1): null at Job.kt:118
+              potentiallyHasUndispatchedCoroutine = 0 at CoroutineContext.kt:134
+              state = Unit at DispatchedContinuation.kt:179
               DebugKt.getASSERTIONS_ENABLED(): true at DispatchedContinuation.kt:180
+              i$a$-assert-DispatchedContinuation$takeState$1 = 0 at fake.kt:1
               DispatchedContinuationKt.access$getUNDEFINED$p(): Symbol@1 at DispatchedContinuation.kt:180
               DispatchedContinuationKt.access$getUNDEFINED$p(): Symbol@1 at DispatchedContinuation.kt:181
               _state = Symbol@1 at DispatchedContinuation.kt:181
@@ -89,9 +111,14 @@ DelayJvmTest.testDelayInArbitraryContext() at :0
                 getState(): Empty@1 at JobSupport.kt:175
                   JobSupport.get_state$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at JobSupport.kt:0
                   AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.get(BlockingCoroutine@1): Empty@1 at JobSupport.kt:163
+                state = Empty@1 at JobSupport.kt:175
                 state.isActive(): true at JobSupport.kt:176
               ResultKt.throwOnFailure(Unit) at DelayJvmTest.kt:14
+              runBlocking = BlockingCoroutine@1 at DelayJvmTest.kt:14
+              thread = ObjectRef@1 at DelayJvmTest.kt:15
               Executors.newFixedThreadPool(1, DelayJvmTest$testDelayInArbitraryContext$1$$Lambda@1): ThreadPoolExecutor@1 at DelayJvmTest.kt:16
+              pool = ThreadPoolExecutor@1 at DelayJvmTest.kt:16
+              context = DelayJvmTest.CustomInterceptor@1 at DelayJvmTest.kt:19
               BuildersKt.async$default(BlockingCoroutine@1, DelayJvmTest.CustomInterceptor@1, null, DelayJvmTest$testDelayInArbitraryContext$1$c$1@1, 2, null): DeferredCoroutine@1 at DelayJvmTest.kt:20
                 BuildersKt__Builders_commonKt.async$default(BlockingCoroutine@1, DelayJvmTest.CustomInterceptor@1, null, DelayJvmTest$testDelayInArbitraryContext$1$c$1@1, 2, null): DeferredCoroutine@1 at :1
                   BuildersKt.async(BlockingCoroutine@1, DelayJvmTest.CustomInterceptor@1, CoroutineStart.DEFAULT, DelayJvmTest$testDelayInArbitraryContext$1$c$1@1): DeferredCoroutine@1 at Builders.common.kt:79
@@ -101,12 +128,15 @@ DelayJvmTest.testDelayInArbitraryContext() at :0
                         CoroutineContextKt.foldCopies(CombinedContext@1, DelayJvmTest.CustomInterceptor@1, true): CombinedContext@1 at CoroutineContext.kt:15
                           CoroutineContextKt.hasCopyableElements(CombinedContext@1): false at CoroutineContext.kt:50
                             hasCopyableElements.fold(false, CoroutineContextKt$$Lambda@1): false at CoroutineContext.kt:36
+                          hasElementsLeft = 0 at CoroutineContext.kt:50
                           CoroutineContextKt.hasCopyableElements(DelayJvmTest.CustomInterceptor@1): false at CoroutineContext.kt:51
                             hasCopyableElements.fold(false, CoroutineContextKt$$Lambda@1): false at CoroutineContext.kt:36
+                          hasElementsRight = 0 at CoroutineContext.kt:51
                           originalContext.plus(DelayJvmTest.CustomInterceptor@1): CombinedContext@1 at CoroutineContext.kt:55
                             ContinuationInterceptor.DefaultImpls.get(BlockingEventLoop@1, ContinuationInterceptor.Key@1): BlockingEventLoop@1 at CoroutineDispatcher.kt:60
                             Job.DefaultImpls.get(BlockingCoroutine@1, ContinuationInterceptor.Key@1): null at JobSupport.kt:22
                               CoroutineContext.Element.DefaultImpls.get(BlockingCoroutine@1, ContinuationInterceptor.Key@1): null at Job.kt:118
+                        combined = CombinedContext@1 at CoroutineContext.kt:15
                         DebugKt.getDEBUG(): true at CoroutineContext.kt:16
                         DebugKt.getCOROUTINE_ID(): AtomicLong@1 at CoroutineContext.kt:16
                         AtomicLong@1.incrementAndGet(): 2 at CoroutineContext.kt:16
@@ -116,32 +146,48 @@ DelayJvmTest.testDelayInArbitraryContext() at :0
                             CoroutineContext.Element.DefaultImpls.get(BlockingCoroutine@1, CoroutineId.Key@1): null at Job.kt:118
                           ContinuationInterceptor.DefaultImpls.get(DelayJvmTest.CustomInterceptor@1, ContinuationInterceptor.Key@1): DelayJvmTest.CustomInterceptor@1 at DelayJvmTest.kt:55
                           ContinuationInterceptor.DefaultImpls.get(DelayJvmTest.CustomInterceptor@1, ContinuationInterceptor.Key@1): DelayJvmTest.CustomInterceptor@1 at DelayJvmTest.kt:55
+                        debug = CombinedContext@1 at CoroutineContext.kt:16
                         Dispatchers.getDefault(): DefaultScheduler@1 at CoroutineContext.kt:17
                         combined.get(ContinuationInterceptor.Key@1): DelayJvmTest.CustomInterceptor@1 at CoroutineContext.kt:17
                           ContinuationInterceptor.DefaultImpls.get(DelayJvmTest.CustomInterceptor@1, ContinuationInterceptor.Key@1): DelayJvmTest.CustomInterceptor@1 at DelayJvmTest.kt:55
+                      newContext = CombinedContext@1 at Builders.common.kt:84
                       start.isLazy(): false at Builders.common.kt:85
                       ContinuationInterceptor.DefaultImpls.get(DelayJvmTest.CustomInterceptor@1, Job.Key@1): null at DelayJvmTest.kt:55
                       Job.DefaultImpls.get(BlockingCoroutine@1, Job.Key@1): BlockingCoroutine@1 at JobSupport.kt:22
                         CoroutineContext.Element.DefaultImpls.get(BlockingCoroutine@1, Job.Key@1): BlockingCoroutine@1 at Job.kt:118
                       DebugKt.getASSERTIONS_ENABLED(): true at JobSupport.kt:142
+                      i$a$-assert-JobSupport$initParentJob$1 = 0 at fake.kt:1
                       getParentHandle(): null at JobSupport.kt:142
                         JobSupport.get_parentHandle$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at JobSupport.kt:0
                         AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.get(DeferredCoroutine@1): null at JobSupport.kt:129
                       parent.start(): false at JobSupport.kt:147
+                        this_ = BlockingCoroutine@1 at JobSupport.kt:377
+                        i$f$loopOnState = 0 at JobSupport.kt:377
                         getState(): Empty@1 at JobSupport.kt:170
                           JobSupport.get_state$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at JobSupport.kt:0
                           AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.get(BlockingCoroutine@1): Empty@1 at JobSupport.kt:163
+                        state = Empty@1 at JobSupport.kt:170
+                        i$a$-loopOnState-JobSupport$start$1 = 0 at JobSupport.kt:170
                         startInternal(Empty@1): 0 at JobSupport.kt:378
                           state.isActive(): true at JobSupport.kt:392
                       parent.attachChild(DeferredCoroutine@1): ChildHandleNode@1 at JobSupport.kt:148
+                        added = ChildHandleNode@1 at JobSupport.kt:1022
+                        it = ChildHandleNode@1 at JobSupport.kt:1022
+                        i$a$-also-JobSupport$attachChild$node$1 = 0 at fake.kt:1
                         it.setJob(BlockingCoroutine@1) at JobSupport.kt:1022
                           job = BlockingCoroutine@1 at JobSupport.kt:1464
+                        node = ChildHandleNode@1 at JobSupport.kt:1022
+                        this_$iv = BlockingCoroutine@1 at JobSupport.kt:536
+                        i$f$loopOnState = 0 at JobSupport.kt:536
                         getState(): Empty@1 at JobSupport.kt:170
                           JobSupport.get_state$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at JobSupport.kt:0
                           AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.get(BlockingCoroutine@1): Empty@1 at JobSupport.kt:163
+                        state = Empty@1 at JobSupport.kt:170
+                        i$a$-loopOnState-JobSupport$tryPutNodeIntoList$1 = 0 at JobSupport.kt:170
                         state.isActive(): true at JobSupport.kt:539
                         JobSupport.get_state$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at JobSupport.kt:541
                         AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.compareAndSet(BlockingCoroutine@1, Empty@1, ChildHandleNode@1): true at JobSupport.kt:541
+                        added = 1 at JobSupport.kt:1023
                       setParentHandle(ChildHandleNode@1) at JobSupport.kt:149
                         JobSupport.get_parentHandle$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at JobSupport.kt:0
                         AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.set(DeferredCoroutine@1, ChildHandleNode@1) at JobSupport.kt:130
@@ -156,12 +202,16 @@ DelayJvmTest.testDelayInArbitraryContext() at :0
                             CoroutineContext.Element.DefaultImpls.minusKey(BlockingCoroutine@1, Job.Key@1): EmptyCoroutineContext@1 at Job.kt:118
                           ContinuationInterceptor.DefaultImpls.get(DelayJvmTest.CustomInterceptor@1, ContinuationInterceptor.Key@1): DelayJvmTest.CustomInterceptor@1 at DelayJvmTest.kt:55
                           ContinuationInterceptor.DefaultImpls.get(DelayJvmTest.CustomInterceptor@1, ContinuationInterceptor.Key@1): DelayJvmTest.CustomInterceptor@1 at DelayJvmTest.kt:55
+                      coroutine = DeferredCoroutine@1 at Builders.common.kt:85
                       coroutine.start(CoroutineStart.DEFAULT, DeferredCoroutine@1, DelayJvmTest$testDelayInArbitraryContext$1$c$1@1) at Builders.common.kt:88
                         start.invoke(DelayJvmTest$testDelayInArbitraryContext$1$c$1@1, DeferredCoroutine@1, DeferredCoroutine@1) at AbstractCoroutine.kt:134
                           ContinuationInterceptor.DefaultImpls.get(DelayJvmTest.CustomInterceptor@1, ContinuationInterceptor.Key@1): DelayJvmTest.CustomInterceptor@1 at DelayJvmTest.kt:55
                           resumeCancellableWith.resumeWith(Unit) at DispatchedContinuation.kt:279
                             pool.execute(DelayJvmTest.Wrapper$$Lambda@1) at DelayJvmTest.kt:65
+                              it = Thread@1 at DelayJvmTest.kt:17
+                              i$a$-also-DelayJvmTest$testDelayInArbitraryContext$1$pool$1$1 = 0 at fake.kt:1
                               thread. = Thread@1 at DelayJvmTest.kt:17
+              c = DeferredCoroutine@1 at DelayJvmTest.kt:20
               Boxing.boxInt(42): 42 at DelayJvmTest.kt:26
               L$0 = ThreadPoolExecutor@1 at DelayJvmTest.kt:26
               L$1 = 42 at DelayJvmTest.kt:26
@@ -172,10 +222,14 @@ DelayJvmTest.testDelayInArbitraryContext() at :0
                     getState(): Empty@1 at JobSupport.kt:1323
                       JobSupport.get_state$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at JobSupport.kt:0
                       AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.get(DeferredCoroutine@1): Empty@1 at JobSupport.kt:163
+                    state = Empty@1 at JobSupport.kt:1323
                     startInternal(Empty@1): 0 at JobSupport.kt:1332
                       state.isActive(): true at JobSupport.kt:392
                     awaitSuspend(DelayJvmTest$testDelayInArbitraryContext$1@1): 42 at JobSupport.kt:1334
+                      uCont = DelayJvmTest$testDelayInArbitraryContext$1@1 at JobSupport.kt:1337
+                      i$a$-suspendCoroutineUninterceptedOrReturn-JobSupport$awaitSuspend$2 = 0 at JobSupport.kt:1337
                       continuation.getContext(): CombinedContext@1 at DispatchedContinuation.kt:0
+                      cont = JobSupport.AwaitContinuation@1 at JobSupport.kt:1343
                       cont.initCancellability() at JobSupport.kt:1345
                         installParentHandle(): ChildContinuation@1 at CancellableContinuationImpl.kt:126
                           getContext(): CombinedContext@1 at CancellableContinuationImpl.kt:340
@@ -183,6 +237,7 @@ DelayJvmTest.testDelayInArbitraryContext() at :0
                             ContinuationInterceptor.DefaultImpls.get(BlockingEventLoop@1, Job.Key@1): null at CoroutineDispatcher.kt:60
                             Job.DefaultImpls.get(BlockingCoroutine@1, Job.Key@1): BlockingCoroutine@1 at JobSupport.kt:22
                               CoroutineContext.Element.DefaultImpls.get(BlockingCoroutine@1, Job.Key@1): BlockingCoroutine@1 at Job.kt:118
+                          parent = BlockingCoroutine@1 at CancellableContinuationImpl.kt:340
                           JobKt.invokeOnCompletion$default(BlockingCoroutine@1, false, ChildContinuation@1, 1, null): ChildContinuation@1 at CancellableContinuationImpl.kt:342
                             JobKt__JobKt.invokeOnCompletion$default(BlockingCoroutine@1, false, ChildContinuation@1, 1, null): ChildContinuation@1 at :1
                               JobKt.invokeOnCompletion(BlockingCoroutine@1, true, ChildContinuation@1): ChildContinuation@1 at Job.kt:366
@@ -190,14 +245,64 @@ DelayJvmTest.testDelayInArbitraryContext() at :0
                                   invokeOnCompletion.invokeOnCompletionInternal(true, ChildContinuation@1): ChildContinuation@1 at Job.kt:370
                                     node.setJob(BlockingCoroutine@1) at JobSupport.kt:465
                                       job = BlockingCoroutine@1 at JobSupport.kt:1464
+                                    this_ = BlockingCoroutine@1 at JobSupport.kt:468
+                                    i$f$tryPutNodeIntoList = 0 at JobSupport.kt:468
+                                    this_$iv = BlockingCoroutine@1 at JobSupport.kt:536
+                                    i$f$loopOnState = 0 at JobSupport.kt:536
+                                    getState(): ChildHandleNode@1 at JobSupport.kt:170
+                                      JobSupport.get_state$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at JobSupport.kt:0
+                                      AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.get(BlockingCoroutine@1): ChildHandleNode@1 at JobSupport.kt:163
+                                    state = ChildHandleNode@1 at JobSupport.kt:170
+                                    i$a$-loopOnState-JobSupport$tryPutNodeIntoList$1 = 0 at JobSupport.kt:170
+                                    state.getList(): null at JobSupport.kt:545
+                                    list = null at JobSupport.kt:545
+                                    promoteSingleToNodeList(ChildHandleNode@1) at JobSupport.kt:546
+                                      state.addOneIfEmpty(NodeList@1): true at JobSupport.kt:563
+                                        LockFreeLinkedListNode.get_prev$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at LockFreeLinkedList.kt:0
+                                        AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.set(NodeList@1, ChildHandleNode@1) at LockFreeLinkedList.kt:63
+                                        LockFreeLinkedListNode.get_next$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at LockFreeLinkedList.kt:63
+                                        AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.set(NodeList@1, ChildHandleNode@1) at LockFreeLinkedList.kt:64
+                                        getNext(): ChildHandleNode@1 at LockFreeLinkedList.kt:66
+                                          LockFreeLinkedListNode.get_next$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at LockFreeLinkedList.kt:0
+                                          AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.get(ChildHandleNode@1): ChildHandleNode@1 at LockFreeLinkedList.kt:41
+                                        next = ChildHandleNode@1 at LockFreeLinkedList.kt:66
+                                        LockFreeLinkedListNode.get_next$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at LockFreeLinkedList.kt:68
+                                        AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.compareAndSet(ChildHandleNode@1, ChildHandleNode@1, NodeList@1): true at LockFreeLinkedList.kt:68
+                                        node.finishAdd(ChildHandleNode@1) at LockFreeLinkedList.kt:70
+                                          this_ = NodeList@1 at LockFreeLinkedList.kt:190
+                                          LockFreeLinkedListNode.get_prev$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at LockFreeLinkedList.kt:190
+                                          handler$atomicfu = AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at LockFreeLinkedList.kt:190
+                                          handler$atomicfu.get(ChildHandleNode@1): ChildHandleNode@1 at LockFreeLinkedList.kt:190
+                                          nextPrev = ChildHandleNode@1 at LockFreeLinkedList.kt:190
+                                          i$a$-loop$atomicfu$ATOMIC_FIELD_UPDATER$Any-LockFreeLinkedListNode$finishAdd$1 = 0 at LockFreeLinkedList.kt:190
+                                          getNext(): ChildHandleNode@1 at LockFreeLinkedList.kt:192
+                                            LockFreeLinkedListNode.get_next$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at LockFreeLinkedList.kt:0
+                                            AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.get(NodeList@1): ChildHandleNode@1 at LockFreeLinkedList.kt:41
+                                          LockFreeLinkedListNode.get_prev$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at LockFreeLinkedList.kt:193
+                                          AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.compareAndSet(ChildHandleNode@1, ChildHandleNode@1, NodeList@1): true at LockFreeLinkedList.kt:193
+                                          isRemoved(): false at LockFreeLinkedList.kt:196
+                                      state.getNextNode(): NodeList@1 at JobSupport.kt:565
+                                        getNext(): NodeList@1 at LockFreeLinkedList.kt:45
+                                          LockFreeLinkedListNode.get_next$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at LockFreeLinkedList.kt:0
+                                          AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.get(ChildHandleNode@1): NodeList@1 at LockFreeLinkedList.kt:41
+                                        it = NodeList@1 at LockFreeLinkedList.kt:45
+                                        i$a$-let-LockFreeLinkedListNode$nextNode$1 = 0 at fake.kt:1
+                                      list = NodeList@1 at JobSupport.kt:565
+                                      JobSupport.get_state$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at JobSupport.kt:565
+                                      AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.compareAndSet(BlockingCoroutine@1, ChildHandleNode@1, NodeList@1): false at JobSupport.kt:567
                                     getState(): Empty@1 at JobSupport.kt:170
                                       JobSupport.get_state$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at JobSupport.kt:0
                                       AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.get(BlockingCoroutine@1): Empty@1 at JobSupport.kt:163
+                                    state = Empty@1 at JobSupport.kt:170
+                                    i$a$-loopOnState-JobSupport$tryPutNodeIntoList$1 = 0 at JobSupport.kt:170
                                     state.isActive(): true at JobSupport.kt:539
                                     JobSupport.get_state$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at JobSupport.kt:541
                                     AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.compareAndSet(BlockingCoroutine@1, Empty@1, ChildContinuation@1): true at JobSupport.kt:541
+                                    added = 1 at JobSupport.kt:468
+                          handle = ChildContinuation@1 at CancellableContinuationImpl.kt:342
                           CancellableContinuationImpl.get_parentHandle$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at CancellableContinuationImpl.kt:342
                           AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.compareAndSet(JobSupport.AwaitContinuation@1, null, ChildContinuation@1): true at CancellableContinuationImpl.kt:343
+                        handle = ChildContinuation@1 at CancellableContinuationImpl.kt:126
                         isCompleted(): false at CancellableContinuationImpl.kt:131
                           getState(): Active@1 at CancellableContinuationImpl.kt:109
                             CancellableContinuationImpl.get_state$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at CancellableContinuationImpl.kt:0
@@ -209,28 +314,43 @@ DelayJvmTest.testDelayInArbitraryContext() at :0
                               invokeOnCompletion.invokeOnCompletionInternal(true, ResumeAwaitOnCompletion@1): NonDisposableHandle@1 at Job.kt:370
                                 node.setJob(DeferredCoroutine@1) at JobSupport.kt:465
                                   job = DeferredCoroutine@1 at JobSupport.kt:1464
+                                this_ = DeferredCoroutine@1 at JobSupport.kt:468
+                                i$f$tryPutNodeIntoList = 0 at JobSupport.kt:468
+                                this_$iv = DeferredCoroutine@1 at JobSupport.kt:536
+                                i$f$loopOnState = 0 at JobSupport.kt:536
                                 getState(): 42 at JobSupport.kt:170
                                   JobSupport.get_state$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at JobSupport.kt:0
                                   AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.get(DeferredCoroutine@1): 42 at JobSupport.kt:163
+                                state = 42 at JobSupport.kt:170
+                                i$a$-loopOnState-JobSupport$tryPutNodeIntoList$1 = 0 at JobSupport.kt:170
+                                added = 0 at JobSupport.kt:468
                                 getState(): 42 at JobSupport.kt:516
                                   JobSupport.get_state$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at JobSupport.kt:0
                                   AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.get(DeferredCoroutine@1): 42 at JobSupport.kt:163
+                                i$f$tryPutNodeIntoList = 42 at JobSupport.kt:516
                                 ResumeAwaitOnCompletion@1.invoke(null) at JobSupport.kt:516
                                   getJob(): DeferredCoroutine@1 at JobSupport.kt:1549
                                   DeferredCoroutine@1.getState(): 42 at JobSupport.kt:1549
                                     JobSupport.get_state$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at JobSupport.kt:0
                                     AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.get(DeferredCoroutine@1): 42 at JobSupport.kt:163
+                                  state = 42 at JobSupport.kt:1549
                                   DebugKt.getASSERTIONS_ENABLED(): true at JobSupport.kt:1550
+                                  i$a$-assert-ResumeAwaitOnCompletion$invoke$1 = 0 at fake.kt:1
                                   JobSupportKt.unboxState(42): 42 at JobSupport.kt:1557
                                   Result.constructor-impl(42): 42 at JobSupport.kt:1557
                                   continuation.resumeWith(42) at JobSupport.kt:1557
                                     CompletionStateKt.toState(42, JobSupport.AwaitContinuation@1): 42 at CancellableContinuationImpl.kt:359
                                       Result.exceptionOrNull-impl(42): null at CompletionState.kt:11
                                     JobSupport.AwaitContinuation@1.resumeImpl(42, 1, null) at CancellableContinuationImpl.kt:359
+                                      this_ = JobSupport.AwaitContinuation@1 at CancellableContinuationImpl.kt:493
                                       CancellableContinuationImpl.get_state$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at CancellableContinuationImpl.kt:493
+                                      handler$atomicfu = AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at CancellableContinuationImpl.kt:493
                                       handler$atomicfu.get(JobSupport.AwaitContinuation@1): Active@1 at CancellableContinuationImpl.kt:493
+                                      state = Active@1 at CancellableContinuationImpl.kt:493
+                                      i$a$-loop$atomicfu$ATOMIC_FIELD_UPDATER$Any-CancellableContinuationImpl$resumeImpl$1 = 0 at CancellableContinuationImpl.kt:493
                                       resumedState(Active@1, 42, 1, null, null): 42 at CancellableContinuationImpl.kt:501
                                         DispatchedTaskKt.isCancellableMode(1): true at CancellableContinuationImpl.kt:485
+                                      update = 42 at CancellableContinuationImpl.kt:501
                                       CancellableContinuationImpl.get_state$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at CancellableContinuationImpl.kt:502
                                       AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.compareAndSet(JobSupport.AwaitContinuation@1, Active@1, 42): true at CancellableContinuationImpl.kt:502
                                       detachChildIfNonReusable() at CancellableContinuationImpl.kt:503
@@ -240,12 +360,17 @@ DelayJvmTest.testDelayInArbitraryContext() at :0
                                           getParentHandle(): ChildContinuation@1 at CancellableContinuationImpl.kt:569
                                             CancellableContinuationImpl.get_parentHandle$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at CancellableContinuationImpl.kt:0
                                             AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.get(JobSupport.AwaitContinuation@1): ChildContinuation@1 at CancellableContinuationImpl.kt:103
+                                          handle = ChildContinuation@1 at CancellableContinuationImpl.kt:569
                                           handle.dispose() at CancellableContinuationImpl.kt:570
                                             getJob(): BlockingCoroutine@1 at JobSupport.kt:1475
                                             BlockingCoroutine@1.removeNode(ChildContinuation@1) at JobSupport.kt:1475
+                                              this_ = BlockingCoroutine@1 at JobSupport.kt:621
+                                              i$f$loopOnState = 0 at JobSupport.kt:621
                                               getState(): ChildContinuation@1 at JobSupport.kt:170
                                                 JobSupport.get_state$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at JobSupport.kt:0
                                                 AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.get(BlockingCoroutine@1): ChildContinuation@1 at JobSupport.kt:163
+                                              state = ChildContinuation@1 at JobSupport.kt:170
+                                              i$a$-loopOnState-JobSupport$removeNode$1 = 0 at JobSupport.kt:170
                                               JobSupport.get_state$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at JobSupport.kt:626
                                               JobSupportKt.access$getEMPTY_ACTIVE$p(): Empty@1 at JobSupport.kt:626
                                               AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.compareAndSet(BlockingCoroutine@1, ChildContinuation@1, Empty@1): true at JobSupport.kt:626
@@ -253,10 +378,17 @@ DelayJvmTest.testDelayInArbitraryContext() at :0
                                           AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.set(JobSupport.AwaitContinuation@1, NonDisposableHandle@1) at CancellableContinuationImpl.kt:571
                                       dispatchResume(1) at CancellableContinuationImpl.kt:504
                                         tryResume(): true at CancellableContinuationImpl.kt:468
+                                          this_ = JobSupport.AwaitContinuation@1 at CancellableContinuationImpl.kt:279
                                           CancellableContinuationImpl.get_decisionAndIndex$volatile$FU(): AtomicIntegerFieldUpdater.AtomicIntegerFieldUpdaterImpl@1 at CancellableContinuationImpl.kt:279
+                                          handler$atomicfu = AtomicIntegerFieldUpdater.AtomicIntegerFieldUpdaterImpl@1 at CancellableContinuationImpl.kt:279
                                           handler$atomicfu.get(JobSupport.AwaitContinuation@1): 536870911 at CancellableContinuationImpl.kt:279
+                                          cur = 536870911 at CancellableContinuationImpl.kt:279
+                                          i$a$-loop$atomicfu$ATOMIC_FIELD_UPDATER$Int-CancellableContinuationImpl$tryResume$1 = 0 at CancellableContinuationImpl.kt:279
+                                          decision = 536870911 at CancellableContinuationImpl.kt:281
+                                          i$f$getDecision = 0 at CancellableContinuationImpl.kt:281
                                           JobSupport.AwaitContinuation@1.getDecision() at CancellableContinuationImpl.kt:281
                                           CancellableContinuationImpl.get_decisionAndIndex$volatile$FU(): AtomicIntegerFieldUpdater.AtomicIntegerFieldUpdaterImpl@1 at CancellableContinuationImpl.kt:282
+                                          i$f$getIndex = 0 at CancellableContinuationImpl.kt:282
                                           JobSupport.AwaitContinuation@1.getIndex() at CancellableContinuationImpl.kt:282
                                           JobSupport.AwaitContinuation@1.decisionAndIndex() at CancellableContinuationImpl.kt:282
                                           AtomicIntegerFieldUpdater.AtomicIntegerFieldUpdaterImpl@1.compareAndSet(JobSupport.AwaitContinuation@1, 536870911, 1610612735): true at CancellableContinuationImpl.kt:282
@@ -265,20 +397,32 @@ DelayJvmTest.testDelayInArbitraryContext() at :0
                           invokeOnCancellation.invokeOnCancellationInternal(DisposeOnCancel@1) at CancellableContinuation.kt:314
                             invokeOnCancellationImpl(DisposeOnCancel@1) at CancellableContinuationImpl.kt:398
                               DebugKt.getASSERTIONS_ENABLED(): true at CancellableContinuationImpl.kt:401
+                              i$a$-assert-CancellableContinuationImpl$invokeOnCancellationImpl$1 = 0 at fake.kt:1
                               CancellableContinuationImpl.get_state$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at CancellableContinuationImpl.kt:400
+                              handler$atomicfu = AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at CancellableContinuationImpl.kt:400
                               handler$atomicfu.get(JobSupport.AwaitContinuation@1): 42 at CancellableContinuationImpl.kt:400
+                              state = 42 at CancellableContinuationImpl.kt:400
+                              i$a$-loop$atomicfu$ATOMIC_FIELD_UPDATER$Any-CancellableContinuationImpl$invokeOnCancellationImpl$2 = 0 at CancellableContinuationImpl.kt:400
                               CancellableContinuationImpl.get_state$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at CancellableContinuationImpl.kt:457
                               AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.compareAndSet(JobSupport.AwaitContinuation@1, 42, CompletedContinuation@1): true at CancellableContinuationImpl.kt:457
                       cont.getResult(): 42 at JobSupport.kt:1347
                         isReusable(): false at CancellableContinuationImpl.kt:291
                           DispatchedTaskKt.isReusableMode(1): false at CancellableContinuationImpl.kt:138
+                        isReusable = 0 at CancellableContinuationImpl.kt:291
                         trySuspend(): false at CancellableContinuationImpl.kt:294
+                          this_ = JobSupport.AwaitContinuation@1 at CancellableContinuationImpl.kt:269
                           CancellableContinuationImpl.get_decisionAndIndex$volatile$FU(): AtomicIntegerFieldUpdater.AtomicIntegerFieldUpdaterImpl@1 at CancellableContinuationImpl.kt:269
+                          handler$atomicfu = AtomicIntegerFieldUpdater.AtomicIntegerFieldUpdaterImpl@1 at CancellableContinuationImpl.kt:269
                           handler$atomicfu.get(JobSupport.AwaitContinuation@1): 1610612735 at CancellableContinuationImpl.kt:269
+                          cur = 1610612735 at CancellableContinuationImpl.kt:269
+                          i$a$-loop$atomicfu$ATOMIC_FIELD_UPDATER$Int-CancellableContinuationImpl$trySuspend$1 = 0 at CancellableContinuationImpl.kt:269
+                          decision = 1610612735 at CancellableContinuationImpl.kt:271
+                          i$f$getDecision = 0 at CancellableContinuationImpl.kt:271
                           JobSupport.AwaitContinuation@1.getDecision() at CancellableContinuationImpl.kt:271
                         getState(): CompletedContinuation@1 at CancellableContinuationImpl.kt:322
                           CancellableContinuationImpl.get_state$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at CancellableContinuationImpl.kt:0
                           AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.get(JobSupport.AwaitContinuation@1): CompletedContinuation@1 at CancellableContinuationImpl.kt:105
+                        state = CompletedContinuation@1 at CancellableContinuationImpl.kt:322
                         DispatchedTaskKt.isCancellableMode(1): true at CancellableContinuationImpl.kt:328
                         getContext(): CombinedContext@1 at CancellableContinuationImpl.kt:329
                         CombinedContext@1.get(Job.Key@1): BlockingCoroutine@1 at CancellableContinuationImpl.kt:329
@@ -290,27 +434,38 @@ DelayJvmTest.testDelayInArbitraryContext() at :0
                             getState(): Empty@1 at JobSupport.kt:175
                               JobSupport.get_state$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at JobSupport.kt:0
                               AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.get(BlockingCoroutine@1): Empty@1 at JobSupport.kt:163
+                            state = Empty@1 at JobSupport.kt:175
                             state.isActive(): true at JobSupport.kt:176
                         getSuccessfulResult(CompletedContinuation@1): 42 at CancellableContinuationImpl.kt:336
               AssertionsKt.assertEquals$default(42, 42, null, 4, null) at DelayJvmTest.kt:26
               pool.shutdown() at DelayJvmTest.kt:27
               ContinuationInterceptor.DefaultImpls.get(BlockingEventLoop@1, ContinuationInterceptor.Key@1): BlockingEventLoop@1 at CoroutineDispatcher.kt:60
+              dispatched = DispatchedContinuation@1 at CoroutineDispatcher.kt:248
               dispatched.release() at CoroutineDispatcher.kt:249
                 awaitReusability() at DispatchedContinuation.kt:83
+                  this_ = DispatchedContinuation@1 at DispatchedContinuation.kt:71
                   DispatchedContinuation.get_reusableCancellableContinuation$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at DispatchedContinuation.kt:71
+                  handler$atomicfu = AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at DispatchedContinuation.kt:71
                   handler$atomicfu.get(DispatchedContinuation@1): null at DispatchedContinuation.kt:71
+                  it = null at DispatchedContinuation.kt:71
+                  i$a$-loop$atomicfu$ATOMIC_FIELD_UPDATER$Any-DispatchedContinuation$awaitReusability$1 = 0 at DispatchedContinuation.kt:71
                 getReusableCancellableContinuation(): null at DispatchedContinuation.kt:84
                   DispatchedContinuation.get_reusableCancellableContinuation$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at DispatchedContinuation.kt:0
                   AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.get(DispatchedContinuation@1): null at DispatchedContinuation.kt:55
               CompletionStateKt.toState(Unit): Unit at AbstractCoroutine.kt:99
                 Result.exceptionOrNull-impl(Unit): null at CompletionState.kt:8
               makeCompletingOnce(Unit): Unit at AbstractCoroutine.kt:99
+                this_ = BlockingCoroutine@1 at JobSupport.kt:858
+                i$f$loopOnState = 0 at JobSupport.kt:858
                 getState(): Empty@1 at JobSupport.kt:170
                   JobSupport.get_state$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at JobSupport.kt:0
                   AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.get(BlockingCoroutine@1): Empty@1 at JobSupport.kt:163
+                state = Empty@1 at JobSupport.kt:170
+                i$a$-loopOnState-JobSupport$makeCompletingOnce$1 = 0 at JobSupport.kt:170
                 tryMakeCompleting(Empty@1, Unit): Unit at JobSupport.kt:859
                   tryFinalizeSimpleState(Empty@1, Unit): true at JobSupport.kt:887
                     DebugKt.getASSERTIONS_ENABLED(): true at JobSupport.kt:283
+                    i$a$-assert-JobSupport$tryFinalizeSimpleState$1 = 0 at fake.kt:1
                     DebugKt.getASSERTIONS_ENABLED(): true at JobSupport.kt:284
                     JobSupport.get_state$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at JobSupport.kt:285
                     JobSupportKt.boxIncomplete(Unit): Unit at JobSupport.kt:285
@@ -322,19 +477,25 @@ DelayJvmTest.testDelayInArbitraryContext() at :0
                       getParentHandle(): NonDisposableHandle@1 at JobSupport.kt:300
                         JobSupport.get_parentHandle$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at JobSupport.kt:0
                         AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.get(BlockingCoroutine@1): NonDisposableHandle@1 at JobSupport.kt:129
+                      it = NonDisposableHandle@1 at JobSupport.kt:300
+                      i$a$-let-JobSupport$completeStateFinalization$1 = 0 at JobSupport.kt:300
                       it.dispose() at JobSupport.kt:301
                       setParentHandle(NonDisposableHandle@1) at JobSupport.kt:302
                         JobSupport.get_parentHandle$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at JobSupport.kt:0
                         AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.set(BlockingCoroutine@1, NonDisposableHandle@1) at JobSupport.kt:130
+                      cause = null at JobSupport.kt:304
                       state.getList(): null at JobSupport.kt:316
+                finalState = Unit at JobSupport.kt:859
                 JobSupportKt.access$getCOMPLETING_ALREADY$p(): Symbol@1 at JobSupport.kt:861
                 JobSupportKt.access$getCOMPLETING_RETRY$p(): Symbol@1 at JobSupport.kt:866
+              state = Unit at AbstractCoroutine.kt:99
               afterResume(Unit) at AbstractCoroutine.kt:101
                 afterCompletion(Unit) at AbstractCoroutine.kt:113
                   Thread.currentThread(): Thread@1 at Builders.kt:83
               restoreThreadContext(CombinedContext@1, "Test worker") at CoroutineContext.kt:289
                 Thread.currentThread(): Thread@1 at CoroutineContext.kt:316
                 Thread@1.setName("Test worker") at CoroutineContext.kt:316
+            parkNanos = 0 at Builders.kt:94
             isCompleted(): true at Builders.kt:96
               getState(): Unit at JobSupport.kt:179
                 JobSupport.get_state$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at JobSupport.kt:0
@@ -343,6 +504,7 @@ DelayJvmTest.testDelayInArbitraryContext() at :0
               delta(false): 1 at EventLoop.common.kt:105
               useCount = 0 at EventLoop.common.kt:105
               DebugKt.getASSERTIONS_ENABLED(): true at EventLoop.common.kt:107
+              i$a$-assert-EventLoop$decrementUseCount$1 = 0 at fake.kt:1
               shutdown() at EventLoop.common.kt:110
             AbstractTimeSourceKt.access$getTimeSource$p(): null at Builders.kt:104
             getState(): Unit at Builders.kt:107
@@ -357,19 +519,32 @@ Thread@1.run() at :0
     AssertionsKt.assertEquals$default(Thread@1, Thread@1, null, 4, null) at DelayJvmTest.kt:21
     label = 1 at DelayJvmTest.kt:22
     DelayKt.delay(100, DelayJvmTest$testDelayInArbitraryContext$1$c$1@1): CoroutineSingletons.COROUTINE_SUSPENDED at DelayJvmTest.kt:22
+      i$f$suspendCancellableCoroutine = 0 at Delay.kt:123
+      uCont = DelayJvmTest$testDelayInArbitraryContext$1$c$1@1 at CancellableContinuation.kt:426
+      i$a$-suspendCoroutineUninterceptedOrReturn-CancellableContinuationKt$suspendCancellableCoroutine$2 = 0 at CancellableContinuation.kt:426
       cont.getContext(): CombinedContext@1 at DelayJvmTest.kt:62
+      cancellable = CancellableContinuationImpl@1 at CancellableContinuation.kt:427
       cancellable.initCancellability() at CancellableContinuation.kt:433
         ContinuationInterceptor.DefaultImpls.get(DelayJvmTest.CustomInterceptor@1, Job.Key@1): null at DelayJvmTest.kt:55
         Job.DefaultImpls.get(DeferredCoroutine@1, Job.Key@1): DeferredCoroutine@1 at JobSupport.kt:22
           CoroutineContext.Element.DefaultImpls.get(DeferredCoroutine@1, Job.Key@1): DeferredCoroutine@1 at Job.kt:118
         node.setJob(DeferredCoroutine@1) at JobSupport.kt:465
           job = DeferredCoroutine@1 at JobSupport.kt:1464
+        this_ = DeferredCoroutine@1 at JobSupport.kt:468
+        i$f$tryPutNodeIntoList = 0 at JobSupport.kt:468
+        this_$iv = DeferredCoroutine@1 at JobSupport.kt:536
+        i$f$loopOnState = 0 at JobSupport.kt:536
         getState(): Empty@1 at JobSupport.kt:170
           JobSupport.get_state$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at JobSupport.kt:0
           AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.get(DeferredCoroutine@1): Empty@1 at JobSupport.kt:163
+        state = Empty@1 at JobSupport.kt:170
+        i$a$-loopOnState-JobSupport$tryPutNodeIntoList$1 = 0 at JobSupport.kt:170
         state.isActive(): true at JobSupport.kt:539
         JobSupport.get_state$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at JobSupport.kt:541
         AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.compareAndSet(DeferredCoroutine@1, Empty@1, ChildContinuation@1): true at JobSupport.kt:541
+        added = 1 at JobSupport.kt:468
+      cont = CancellableContinuationImpl@1 at CancellableContinuation.kt:434
+      i$a$-suspendCancellableCoroutine-DelayKt$delay$2 = 0 at CancellableContinuation.kt:434
       cont.getContext(): CombinedContext@1 at Delay.kt:126
       DelayKt.getDelay(CombinedContext@1): DefaultExecutor@1 at Delay.kt:126
         delay.get(ContinuationInterceptor.Key@1): DelayJvmTest.CustomInterceptor@1 at Delay.kt:149
@@ -388,12 +563,17 @@ Thread@1.run() at :0
     CompletionStateKt.toState(42): 42 at AbstractCoroutine.kt:99
       Result.exceptionOrNull-impl(42): null at CompletionState.kt:8
     makeCompletingOnce(42): 42 at AbstractCoroutine.kt:99
+      this_ = DeferredCoroutine@1 at JobSupport.kt:858
+      i$f$loopOnState = 0 at JobSupport.kt:858
       getState(): Empty@1 at JobSupport.kt:170
         JobSupport.get_state$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at JobSupport.kt:0
         AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.get(DeferredCoroutine@1): Empty@1 at JobSupport.kt:163
+      state = Empty@1 at JobSupport.kt:170
+      i$a$-loopOnState-JobSupport$makeCompletingOnce$1 = 0 at JobSupport.kt:170
       tryMakeCompleting(Empty@1, 42): 42 at JobSupport.kt:859
         tryFinalizeSimpleState(Empty@1, 42): true at JobSupport.kt:887
           DebugKt.getASSERTIONS_ENABLED(): true at JobSupport.kt:283
+          i$a$-assert-JobSupport$tryFinalizeSimpleState$1 = 0 at fake.kt:1
           DebugKt.getASSERTIONS_ENABLED(): true at JobSupport.kt:284
           JobSupport.get_state$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at JobSupport.kt:285
           JobSupportKt.boxIncomplete(42): 42 at JobSupport.kt:285
@@ -405,30 +585,45 @@ Thread@1.run() at :0
             getParentHandle(): ChildHandleNode@1 at JobSupport.kt:300
               JobSupport.get_parentHandle$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at JobSupport.kt:0
               AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.get(DeferredCoroutine@1): ChildHandleNode@1 at JobSupport.kt:129
+            it = ChildHandleNode@1 at JobSupport.kt:300
+            i$a$-let-JobSupport$completeStateFinalization$1 = 0 at JobSupport.kt:300
             it.dispose() at JobSupport.kt:301
               getJob(): BlockingCoroutine@1 at JobSupport.kt:1475
               BlockingCoroutine@1.removeNode(ChildHandleNode@1) at JobSupport.kt:1475
+                this_ = BlockingCoroutine@1 at JobSupport.kt:621
+                i$f$loopOnState = 0 at JobSupport.kt:621
                 getState(): ChildHandleNode@1 at JobSupport.kt:170
                   JobSupport.get_state$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at JobSupport.kt:0
                   AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.get(BlockingCoroutine@1): ChildHandleNode@1 at JobSupport.kt:163
+                state = ChildHandleNode@1 at JobSupport.kt:170
+                i$a$-loopOnState-JobSupport$removeNode$1 = 0 at JobSupport.kt:170
                 JobSupport.get_state$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at JobSupport.kt:626
                 JobSupportKt.access$getEMPTY_ACTIVE$p(): Empty@1 at JobSupport.kt:626
                 AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.compareAndSet(BlockingCoroutine@1, ChildHandleNode@1, Empty@1): true at JobSupport.kt:626
             setParentHandle(NonDisposableHandle@1) at JobSupport.kt:302
               JobSupport.get_parentHandle$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at JobSupport.kt:0
               AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.set(DeferredCoroutine@1, NonDisposableHandle@1) at JobSupport.kt:130
+            cause = null at JobSupport.kt:304
             state.getList(): null at JobSupport.kt:316
+      finalState = 42 at JobSupport.kt:859
       JobSupportKt.access$getCOMPLETING_ALREADY$p(): Symbol@1 at JobSupport.kt:861
       JobSupportKt.access$getCOMPLETING_RETRY$p(): Symbol@1 at JobSupport.kt:866
+    state = 42 at AbstractCoroutine.kt:99
     afterResume(42) at AbstractCoroutine.kt:101
       afterCompletion(42) at AbstractCoroutine.kt:113
 # Thread 3 (kotlinx.coroutines.DefaultExecutor)
 Thread@1.run(): <unfinished method> at :0
+  dc = null at CancellableContinuationImpl.kt:595
   CancellableContinuationImpl@1.resumeImpl(Unit, 1, null) at CancellableContinuationImpl.kt:596
+    this_ = CancellableContinuationImpl@1 at CancellableContinuationImpl.kt:493
     CancellableContinuationImpl.get_state$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at CancellableContinuationImpl.kt:493
+    handler$atomicfu = AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at CancellableContinuationImpl.kt:493
     handler$atomicfu.get(CancellableContinuationImpl@1): DisposeOnCancel@1 at CancellableContinuationImpl.kt:493
+    state = DisposeOnCancel@1 at CancellableContinuationImpl.kt:493
+    i$a$-loop$atomicfu$ATOMIC_FIELD_UPDATER$Any-CancellableContinuationImpl$resumeImpl$1 = 0 at CancellableContinuationImpl.kt:493
     resumedState(DisposeOnCancel@1, Unit, 1, null, null): CompletedContinuation@1 at CancellableContinuationImpl.kt:501
       DispatchedTaskKt.isCancellableMode(1): true at CancellableContinuationImpl.kt:485
+    update = CompletedContinuation@1 at CancellableContinuationImpl.kt:501
     CancellableContinuationImpl.get_state$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at CancellableContinuationImpl.kt:502
     AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.compareAndSet(CancellableContinuationImpl@1, DisposeOnCancel@1, CompletedContinuation@1): true at CancellableContinuationImpl.kt:502
     detachChildIfNonReusable() at CancellableContinuationImpl.kt:503
@@ -438,12 +633,17 @@ Thread@1.run(): <unfinished method> at :0
         getParentHandle(): ChildContinuation@1 at CancellableContinuationImpl.kt:569
           CancellableContinuationImpl.get_parentHandle$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at CancellableContinuationImpl.kt:0
           AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.get(CancellableContinuationImpl@1): ChildContinuation@1 at CancellableContinuationImpl.kt:103
+        handle = ChildContinuation@1 at CancellableContinuationImpl.kt:569
         handle.dispose() at CancellableContinuationImpl.kt:570
           getJob(): DeferredCoroutine@1 at JobSupport.kt:1475
           DeferredCoroutine@1.removeNode(ChildContinuation@1) at JobSupport.kt:1475
+            this_ = DeferredCoroutine@1 at JobSupport.kt:621
+            i$f$loopOnState = 0 at JobSupport.kt:621
             getState(): ChildContinuation@1 at JobSupport.kt:170
               JobSupport.get_state$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at JobSupport.kt:0
               AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.get(DeferredCoroutine@1): ChildContinuation@1 at JobSupport.kt:163
+            state = ChildContinuation@1 at JobSupport.kt:170
+            i$a$-loopOnState-JobSupport$removeNode$1 = 0 at JobSupport.kt:170
             JobSupport.get_state$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at JobSupport.kt:626
             JobSupportKt.access$getEMPTY_ACTIVE$p(): Empty@1 at JobSupport.kt:626
             AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.compareAndSet(DeferredCoroutine@1, ChildContinuation@1, Empty@1): true at JobSupport.kt:626
@@ -451,20 +651,31 @@ Thread@1.run(): <unfinished method> at :0
         AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.set(CancellableContinuationImpl@1, NonDisposableHandle@1) at CancellableContinuationImpl.kt:571
     dispatchResume(1) at CancellableContinuationImpl.kt:504
       tryResume(): false at CancellableContinuationImpl.kt:468
+        this_ = CancellableContinuationImpl@1 at CancellableContinuationImpl.kt:279
         CancellableContinuationImpl.get_decisionAndIndex$volatile$FU(): AtomicIntegerFieldUpdater.AtomicIntegerFieldUpdaterImpl@1 at CancellableContinuationImpl.kt:279
+        handler$atomicfu = AtomicIntegerFieldUpdater.AtomicIntegerFieldUpdaterImpl@1 at CancellableContinuationImpl.kt:279
         handler$atomicfu.get(CancellableContinuationImpl@1): 1073741823 at CancellableContinuationImpl.kt:279
+        cur = 1073741823 at CancellableContinuationImpl.kt:279
+        i$a$-loop$atomicfu$ATOMIC_FIELD_UPDATER$Int-CancellableContinuationImpl$tryResume$1 = 0 at CancellableContinuationImpl.kt:279
+        decision = 1073741823 at CancellableContinuationImpl.kt:281
+        i$f$getDecision = 0 at CancellableContinuationImpl.kt:281
         CancellableContinuationImpl@1.getDecision() at CancellableContinuationImpl.kt:281
       DispatchedTaskKt.dispatch(CancellableContinuationImpl@1, 1) at CancellableContinuationImpl.kt:470
         DebugKt.getASSERTIONS_ENABLED(): true at DispatchedTask.kt:137
+        i$a$-assert-DispatchedTaskKt$dispatch$1 = 0 at fake.kt:1
         dispatch.getDelegate(): DelayJvmTest.Wrapper@1 at DispatchedTask.kt:138
+        undispatched = 0 at DispatchedTask.kt:139
         DispatchedTaskKt.resume(CancellableContinuationImpl@1, DelayJvmTest.Wrapper@1, false) at DispatchedTask.kt:152
           resume.takeState(): CompletedContinuation@1 at DispatchedTask.kt:158
             getState(): CompletedContinuation@1 at CancellableContinuationImpl.kt:165
               CancellableContinuationImpl.get_state$volatile$FU(): AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1 at CancellableContinuationImpl.kt:0
               AtomicReferenceFieldUpdater.AtomicReferenceFieldUpdaterImpl@1.get(CancellableContinuationImpl@1): CompletedContinuation@1 at CancellableContinuationImpl.kt:105
+          state = CompletedContinuation@1 at DispatchedTask.kt:158
           resume.getExceptionalResult(CompletedContinuation@1): null at DispatchedTask.kt:159
             getExceptionalResult(CompletedContinuation@1): null at CancellableContinuationImpl.kt:614
+          exception = null at DispatchedTask.kt:159
           resume.getSuccessfulResult(CompletedContinuation@1): Unit at DispatchedTask.kt:160
           Result.constructor-impl(Unit): Unit at DispatchedTask.kt:160
+          result = Unit at DispatchedTask.kt:160
           delegate.resumeWith(Unit) at DispatchedTask.kt:163
             pool.execute(DelayJvmTest.Wrapper$$Lambda@1) at DelayJvmTest.kt:65
