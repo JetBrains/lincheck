@@ -165,7 +165,7 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
                 name.isNullOrEmpty() -> appendObject(parameter)
                 parameter?.isPrimitive == true -> {
                     append(name)
-                    append(" -> ")
+                    append(" ➜ ")
                     appendObject(parameter)
                 }
                 else -> append(name)
