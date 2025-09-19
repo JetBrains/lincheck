@@ -12,7 +12,9 @@ package org.jetbrains.lincheck.jvm.agent
 
 import org.jetbrains.annotations.TestOnly
 import org.jetbrains.lincheck.util.Logger
+import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import java.lang.reflect.Method
+import java.lang.reflect.Modifier
 
 /**
  * Parses and stores arguments passed to Lincheck JVM javaagents (trace-recorder and trace-debugger).
@@ -83,6 +85,9 @@ object TraceAgentParameters {
 
     @JvmStatic
     lateinit var classUnderTraceDebugging: String
+    
+    @JvmStatic
+    lateinit var classUnderTraceDebuggingMethodOwner: String
 
     @JvmStatic
     lateinit var methodUnderTraceDebugging: String
@@ -111,6 +116,7 @@ object TraceAgentParameters {
             namedArgs[ARGUMENT_CLASS] = classUnderTraceDebugging
             methodUnderTraceDebugging = actualArguments.getOrNull(1) ?: error("Method name was not provided")
             namedArgs[ARGUMENT_METHOD] = methodUnderTraceDebugging
+            setClassUnderTraceDebuggingMethodOwner()
             traceDumpFilePath = actualArguments.getOrNull(2)
             namedArgs[ARGUMENT_OUTPUT] = traceDumpFilePath
 
@@ -126,6 +132,7 @@ object TraceAgentParameters {
                 ?: error("Class name argument \"$ARGUMENT_CLASS\" was not provided")
             methodUnderTraceDebugging = kvArguments[ARGUMENT_METHOD]
                 ?: error("Method name argument \"$ARGUMENT_METHOD\" was not provided")
+            setClassUnderTraceDebuggingMethodOwner()
             traceDumpFilePath = kvArguments[ARGUMENT_OUTPUT]
 
             val allowedKeys = mutableSetOf(ARGUMENT_CLASS, ARGUMENT_METHOD, ARGUMENT_OUTPUT)
@@ -138,6 +145,30 @@ object TraceAgentParameters {
 
             namedArgs.putAll(kvArguments)
         }
+    }
+    
+    private fun setClassUnderTraceDebuggingMethodOwner(startClass: String = classUnderTraceDebugging, method: String = methodUnderTraceDebugging) {
+        classUnderTraceDebuggingMethodOwner = if (isInTraceDebuggerMode) {
+            startClass
+        } else when (val clazz = runCatching { Class.forName(startClass) }.getOrNull()) {
+            null -> startClass
+            else -> findDeclaringClassOrInterface(clazz, method) ?: startClass
+        }
+    }
+    
+    private fun findDeclaringClassOrInterface(startClass: Class<*>, methodName: String, set: MutableSet<String> = mutableSetOf()): String? {
+        if (!set.add(startClass.name)) return null
+        for (declaredMethod in startClass.declaredMethods) {
+            when {
+                declaredMethod.name != methodName -> continue
+                !Modifier.isPublic(declaredMethod.modifiers) -> continue
+                Modifier.isAbstract(declaredMethod.modifiers) -> continue
+                Modifier.isStatic(declaredMethod.modifiers) -> continue
+                else -> return startClass.name
+            }
+        }
+        startClass.superclass?.let { findDeclaringClassOrInterface(it, methodName, set) }?.let { return it }
+        return startClass.interfaces.firstNotNullOfOrNull { findDeclaringClassOrInterface(it, methodName, set) }
     }
 
     @JvmStatic
@@ -168,6 +199,7 @@ object TraceAgentParameters {
     @TestOnly
     fun reset() {
         classUnderTraceDebugging = ""
+        classUnderTraceDebuggingMethodOwner = ""
         methodUnderTraceDebugging = ""
         traceDumpFilePath = null
         namedArgs.clear()
