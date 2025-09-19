@@ -166,6 +166,15 @@ class TraceContext {
         }
         return loc.accessPath
     }
+    
+    fun methodCallArgumentNames(codeLocationId: Int): List<AccessPath?>? {
+        if (codeLocationId == UNKNOWN_CODE_LOCATION_ID) return null
+        val loc = locations[codeLocationId]
+        if (loc == null) {
+            error("Invalid code location id $codeLocationId")
+        }
+        return loc.argumentNames
+    }
 
     fun getAccessPath(id: Int): AccessPath = accessPaths[id] ?: error("Referenced access path $id not loaded")
 

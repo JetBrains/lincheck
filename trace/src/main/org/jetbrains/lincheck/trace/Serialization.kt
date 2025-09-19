@@ -341,12 +341,14 @@ private sealed class TraceWriterBase(
 
         val codeLocation = context.stackTrace(id)
         val accessPath = context.accessPath(id)
+        val argumentNames = context.methodCallArgumentNames(id)
         // All strings only once. It will have duplications with class and method descriptors,
         // but size loss is negligible and this way is simpler
         val fileNameId = writeString(codeLocation.fileName)
         val classNameId = writeString(codeLocation.className)
         val methodNameId = writeString(codeLocation.methodName)
         val accessPathId = writeAccessPath(accessPath)
+        val argumentNamesIds = argumentNames?.map { writeAccessPath(it) }
 
         // Code location into data and position into index
         val position = currentDataPosition
@@ -357,6 +359,8 @@ private sealed class TraceWriterBase(
         data.writeInt(methodNameId)
         data.writeInt(codeLocation.lineNumber)
         data.writeInt(accessPathId)
+        data.writeInt(argumentNamesIds?.size ?: 0)
+        argumentNamesIds?.forEach { data.writeInt(it) }
         contextState.markCodeLocationSaved(id)
 
         writeIndexCell(ObjectKind.CODE_LOCATION, id, position, -1)

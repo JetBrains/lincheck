@@ -146,12 +146,32 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
     }
 
     protected fun TRAppendable.appendParameters(tracePoint: TRMethodCallTracePoint): TRAppendable {
+        // Due to trace compression codelocation can be shifted and therefore argument names do not match
+        // Without having paramter names it is impossible to match up
+        // In practise I have only seen `null` names for those kind of pais so probably doesn't really matter.
+        val argumentNames = if (tracePoint.parameters.size == tracePoint.argumentNames.size) {
+            tracePoint.argumentNames
+        } else {
+            List(tracePoint.parameters.size) { null }
+        }
+        
         tracePoint.parameters.forEachIndexed { i, parameter ->
             if (i != 0) {
                 appendSpecialSymbol(",")
                 append(" ")
             }
-            appendObject(parameter)
+            val accessPath = argumentNames[i]
+            when {
+                accessPath == null -> appendObject(parameter)
+                parameter?.isPrimitive == true -> {
+                    appendAccessPath(accessPath)
+                    append(" ")
+                    appendSpecialSymbol(READ_ACCESS_SYMBOL)
+                    append(" ")
+                    appendObject(parameter)
+                }
+                else -> appendAccessPath(accessPath)
+            }
         }
         return this
     }
