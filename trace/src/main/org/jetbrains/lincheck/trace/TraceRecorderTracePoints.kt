@@ -205,8 +205,6 @@ class TRMethodCallTracePoint(
     companion object {
         // Flag which tells that method was not tracked from its start and has some missing tracepoints
         const val INCOMPLETE_METHOD_FLAG: Int = 1
-        // Flag which tells that method is defined in the same class as the method which called this one
-        // or in its Companion
 
         internal fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRMethodCallTracePoint {
             val methodId = inp.readInt()
