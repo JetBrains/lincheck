@@ -50,5 +50,6 @@ object TraceDebuggerAgent {
         // We are in Trace debugger mode
         LincheckJavaAgent.instrumentation.addTransformer(TraceAgentTransformer(::TraceDebuggerMethodTransformer), true)
         LincheckJavaAgent.install(InstrumentationMode.TRACE_DEBUGGING)
+        LincheckJavaAgent.ensureClassHierarchyIsTransformed(TraceAgentParameters.classUnderTraceDebugging)
     }
 }

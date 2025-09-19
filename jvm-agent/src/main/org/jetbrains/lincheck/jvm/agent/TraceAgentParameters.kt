@@ -147,13 +147,13 @@ object TraceAgentParameters {
         }
     }
     
-    private fun setClassUnderTraceDebuggingMethodOwner(startClass: String = classUnderTraceDebugging, method: String = methodUnderTraceDebugging) {
-        classUnderTraceDebuggingMethodOwner = if (isInTraceDebuggerMode) {
-            startClass
-        } else when (val clazz = runCatching { Class.forName(startClass) }.getOrNull()) {
-            null -> startClass
-            else -> findDeclaringClassOrInterface(clazz, method) ?: startClass
-        }
+    private fun setClassUnderTraceDebuggingMethodOwner(
+        startClass: String = classUnderTraceDebugging, method: String = methodUnderTraceDebugging
+    ) {
+        classUnderTraceDebuggingMethodOwner =
+            runCatching { Class.forName(startClass) }.getOrNull()
+                ?.let { findDeclaringClassOrInterface(it, method) }
+                ?: startClass
     }
     
     private fun findDeclaringClassOrInterface(startClass: Class<*>, methodName: String, set: MutableSet<String> = mutableSetOf()): String? {
