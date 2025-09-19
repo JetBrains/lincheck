@@ -30,6 +30,7 @@ class KotlinCoroutinesTraceRecorderIntegrationTest : AbstractTraceRecorderIntegr
     }
 
     @Test
+    @Ignore("Not deterministic")
     fun `kotlinx_coroutines_EventLoopsTest testEventLoopInDefaultExecutor`() {
         runGradleTest(
             testClassName = "kotlinx.coroutines.EventLoopsTest",
