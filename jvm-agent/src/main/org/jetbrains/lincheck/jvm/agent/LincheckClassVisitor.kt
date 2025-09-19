@@ -160,7 +160,7 @@ internal class LincheckClassVisitor(
             applySharedMemoryAccessTransformer(methodName, desc, access, methodInfo, config, adapter, mv)
         }
         chain.addTransformer { adapter, mv ->
-            LocalVariablesAccessTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv, methodInfo.locals)
+            LocalVariablesAccessTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
         }
 
         // ======== Inline Method Calls ========

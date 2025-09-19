@@ -28,7 +28,6 @@ internal class LocalVariablesAccessTransformer(
     methodInfo: MethodInformation,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
-    private val locals: MethodVariables,
 ) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
 
     private val isStatic: Boolean = (access and ACC_STATIC != 0)
