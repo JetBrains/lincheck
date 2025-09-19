@@ -84,7 +84,7 @@ class TRMethodCallTracePoint(
     // Shortcuts
     val className: String get() = methodDescriptor.className
     val methodName: String get() = methodDescriptor.methodName
-    val argumentNames: List<AccessPath?> get() = TRACE_CONTEXT.arguments(codeLocationId) ?: emptyList()
+    val argumentNames: List<AccessPath?> get() = TRACE_CONTEXT.methodCallArgumentNames(codeLocationId) ?: emptyList()
     val argumentTypes: List<Types.Type> get() = methodDescriptor.argumentTypes
     val returnType: Types.Type get() = methodDescriptor.returnType
 

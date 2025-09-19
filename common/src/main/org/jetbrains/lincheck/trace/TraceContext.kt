@@ -167,7 +167,7 @@ class TraceContext {
         return loc.accessPath
     }
     
-    fun arguments(codeLocationId: Int): List<AccessPath?>? {
+    fun methodCallArgumentNames(codeLocationId: Int): List<AccessPath?>? {
         if (codeLocationId == UNKNOWN_CODE_LOCATION_ID) return null
         val loc = locations[codeLocationId]
         if (loc == null) {

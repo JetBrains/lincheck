@@ -341,7 +341,7 @@ private sealed class TraceWriterBase(
 
         val codeLocation = context.stackTrace(id)
         val accessPath = context.accessPath(id)
-        val argumentNames = context.arguments(id)
+        val argumentNames = context.methodCallArgumentNames(id)
         // All strings only once. It will have duplications with class and method descriptors,
         // but size loss is negligible and this way is simpler
         val fileNameId = writeString(codeLocation.fileName)
