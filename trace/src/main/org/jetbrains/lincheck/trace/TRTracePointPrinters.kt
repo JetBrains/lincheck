@@ -129,7 +129,7 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
     }
 
     protected fun TRAppendable.appendOwner(tracePoint: TRMethodCallTracePoint): TRAppendable {
-        if (!tracePoint.isInitialTestMethod() && tracePoint.isStatic() && tracePoint.isCalledFromDefiningClass()) {
+        if (tracePoint.isStatic() && tracePoint.isCalledFromDefiningClass()) {
             return this
         }
         val ownerName = CodeLocations.accessPath(tracePoint.codeLocationId)
@@ -138,16 +138,14 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
                 if (it.isObjectInstanceAccess()) {
                     appendClassName(tracePoint.classDescriptor)
                     appendSpecialSymbol(".")
-                }
-                else if (it.isCompanionAccess()) {
+                } else if (it.isCompanionAccess()) {
                     if (!tracePoint.isCalledFromDefiningClass()) {
                         appendClassName(ClassDescriptor(
                             tracePoint.classDescriptor.name.substringBeforeLast("\$Companion"),
                         ))
                         appendSpecialSymbol(".")
                     }
-                }
-                else {
+                } else {
                     appendAccessPath(ownerName)
                     appendSpecialSymbol(".")
                 }
@@ -155,9 +153,8 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
         } else if (tracePoint.obj != null) {
             appendObject(tracePoint.obj)
             appendSpecialSymbol(".")
-        }
-        // TODO: some refactoring is required here, because users can define classes, which end with 'Kt' as well
-        else if (!(tracePoint.isStatic() && tracePoint.className.endsWith("Kt"))) {
+        } else if (!(tracePoint.isStatic() && tracePoint.className.isKtClass())) {
+            // TODO: some refactoring is required here, because users can define classes, which end with 'Kt' as well
             appendClassName(tracePoint.classDescriptor)
             appendSpecialSymbol(".")
         }

@@ -10,7 +10,6 @@
 
 package org.jetbrains.lincheck.trace
 
-import com.sun.org.apache.xpath.internal.operations.Bool
 import org.jetbrains.lincheck.descriptors.AccessLocation
 import org.jetbrains.lincheck.descriptors.AccessPath
 import org.jetbrains.lincheck.descriptors.FieldAccessLocation
@@ -43,6 +42,9 @@ fun isThisName(name: String): Boolean =
 fun isInlineThisIVName(name: String): Boolean =
     name.startsWith("this_\$iv")                        ||
     name.contains(inlineThisRegex)
+
+// Class name which ends with "Kt"
+fun String.isKtClass(): Boolean = endsWith("Kt")
 
 fun AccessLocation.isThisAccess(): Boolean = when (this) {
     is LocalVariableAccessLocation  -> isThisName(variableName)
