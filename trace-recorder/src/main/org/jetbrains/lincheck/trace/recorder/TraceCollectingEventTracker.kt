@@ -17,7 +17,6 @@ import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.trace.TRMethodCallTracePoint.Companion.INCOMPLETE_METHOD_FLAG
-import org.jetbrains.lincheck.trace.TRMethodCallTracePoint.Companion.IS_CALLED_FROM_DEFINING_CLASS
 import org.jetbrains.lincheck.util.*
 import sun.nio.ch.lincheck.*
 import java.lang.invoke.CallSite
@@ -40,6 +39,8 @@ private class ThreadData(
     fun isCurrentMethodCallInline(): Boolean = stack.last().isInline
 
     fun firstMethodCallTracePoint(): TRMethodCallTracePoint = stack.first().call
+
+    fun firstMethodCallTracePointOrNull(): TRMethodCallTracePoint? = stack.firstOrNull()?.call
 
     fun pushStackFrame(tracePoint: TRMethodCallTracePoint, instance: Any?, isInline: Boolean) {
         val stackFrame = ShadowStackFrame(instance)
@@ -197,17 +198,15 @@ class TraceCollectingEventTracker(
         descriptor.enableAnalysis()
 
         fun appendMethodCall(obj: TRObject?, className: String, methodName: String, methodType: Types.MethodType, codeLocationId: Int, params: List<TRObject> = emptyList()) {
-            val parentTracePoint = if (threadData.getStack().isEmpty()) null
-                                   else threadData.currentMethodCallTracePoint()
-            val isMethodInSameClass = isMethodCallDefinedInClass(className, parentTracePoint)
-            val additionalFlags = if (isMethodInSameClass) IS_CALLED_FROM_DEFINING_CLASS else 0
+            val parentTracePoint = threadData.firstMethodCallTracePointOrNull()
             val methodCall = TRMethodCallTracePoint(
                 threadId = threadData.threadId,
                 codeLocationId = codeLocationId,
                 methodId = TRACE_CONTEXT.getOrCreateMethodId(className, methodName, methodType),
                 obj = obj,
                 parameters = params,
-                flags = (INCOMPLETE_METHOD_FLAG or additionalFlags).toShort()
+                flags = INCOMPLETE_METHOD_FLAG.toShort(),
+                parentTracePoint = parentTracePoint
             )
             strategy.tracePointCreated(parentTracePoint, methodCall)
             threadData.pushStackFrame(methodCall, thread, isInline = false)
@@ -517,14 +516,13 @@ class TraceCollectingEventTracker(
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(methodDescriptor.className)
         }
 
-        val isMethodInSameClass = isMethodCallDefinedInClass(methodDescriptor.className, threadData.currentMethodCallTracePoint())
         val tracePoint = TRMethodCallTracePoint(
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
             methodId = methodId,
             obj = TRObjectOrNull(receiver),
             parameters = params.map { TRObjectOrNull(it) },
-            flags = (if (isMethodInSameClass) IS_CALLED_FROM_DEFINING_CLASS else 0).toShort()
+            parentTracePoint = threadData.firstMethodCallTracePointOrNull()
         )
         strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
         threadData.pushStackFrame(tracePoint, receiver, isInline = false)
@@ -620,7 +618,8 @@ class TraceCollectingEventTracker(
             codeLocationId = codeLocation,
             methodId = methodId,
             obj = TRObjectOrNull(owner),
-            parameters = emptyList()
+            parameters = emptyList(),
+            parentTracePoint = threadData.firstMethodCallTracePointOrNull()
         )
         strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
         threadData.pushStackFrame(tracePoint, owner, isInline = true)
@@ -824,13 +823,5 @@ class TraceCollectingEventTracker(
             return AnalysisSectionType.IGNORED
         }
         return analysisProfile.getAnalysisSectionFor(ownerName, methodName)
-    }
-
-    private fun isMethodCallDefinedInClass(className: String, tracePoint: TRMethodCallTracePoint?): Boolean {
-        if (tracePoint == null) return false
-        return className.let {
-            it == tracePoint.className ||
-            it.substringBeforeLast("\$Companion") == tracePoint.className
-        }
     }
 }

@@ -43,9 +43,6 @@ fun isInlineThisIVName(name: String): Boolean =
     name.startsWith("this_\$iv")                        ||
     name.contains(inlineThisRegex)
 
-// Class name which ends with "Kt"
-fun String.isKtClass(): Boolean = endsWith("Kt")
-
 fun AccessLocation.isThisAccess(): Boolean = when (this) {
     is LocalVariableAccessLocation  -> isThisName(variableName)
     is FieldAccessLocation          -> isThisName(fieldName)
@@ -71,6 +68,12 @@ fun AccessPath.isObjectInstanceAccess(): Boolean =
         it.fieldName == "INSTANCE" &&
         it.fieldDescriptor.isFinal
     }
+
+// Class name which ends with "Kt"
+fun String.isKtClass(): Boolean = endsWith("Kt")
+
+fun String.removeCompanionSuffix(): String = removeSuffix("\$Companion")
+
 /**
  * Replaces nested class dollars (if present) from string with dots.
  */

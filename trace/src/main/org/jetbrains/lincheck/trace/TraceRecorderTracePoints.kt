@@ -69,6 +69,7 @@ class TRMethodCallTracePoint(
     val obj: TRObject?,
     val parameters: List<TRObject?>,
     val flags: Short = 0,
+    var parentTracePoint: TRMethodCallTracePoint? = null,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
 ) : TRTracePoint(codeLocationId, threadId, eventId) {
     var result: TRObject? = null
@@ -90,6 +91,11 @@ class TRMethodCallTracePoint(
 
     val events: List<TRTracePoint?> get() = children
 
+    private fun TRTracePoint.setParentIfMethodCall(parent: TRMethodCallTracePoint) {
+        if (this !is TRMethodCallTracePoint) return
+        parentTracePoint = parent
+    }
+
     internal fun addChildAddress(address: Long) {
         childrenAddresses.add(address)
         children.add(null)
@@ -98,6 +104,7 @@ class TRMethodCallTracePoint(
     internal fun addChild(child: TRTracePoint, address: Long = -1) {
         childrenAddresses.add(address)
         children.add(child)
+        child.setParentIfMethodCall(this)
     }
 
     internal fun getChildAddress(index: Int): Long {
@@ -108,12 +115,14 @@ class TRMethodCallTracePoint(
     internal fun replaceChildren(from: TRMethodCallTracePoint) {
         children = from.children
         childrenAddresses = from.childrenAddresses
+        from.children.forEach { it?.setParentIfMethodCall(this) }
     }
 
     internal fun loadChild(index: Int, child: TRTracePoint) {
         require(index in 0 ..< children.size) { "Index $index out of range 0..<${children.size}" }
         // Should we check for override? Lets skip for now
         children[index] = child
+        child.setParentIfMethodCall(this)
     }
 
     fun unloadChild(index: Int) {
@@ -127,8 +136,14 @@ class TRMethodCallTracePoint(
 
     fun isStatic(): Boolean = obj == null
 
-    fun isCalledFromDefiningClass(): Boolean =
-        (flags.toInt() and IS_CALLED_FROM_DEFINING_CLASS) != 0
+    fun isCalledFromDefiningClass(): Boolean {
+        if (parentTracePoint == null) return false
+        return className.let {
+            it == parentTracePoint!!.className ||
+            it.removeCompanionSuffix() == parentTracePoint!!.className
+        }
+    }
+
     /**
      * @return `true` if tracing of the thread was ended before this method returned its value, `false` otherwise.
      */
@@ -192,7 +207,6 @@ class TRMethodCallTracePoint(
         const val INCOMPLETE_METHOD_FLAG: Int = 1
         // Flag which tells that method is defined in the same class as the method which called this one
         // or in its Companion
-        const val IS_CALLED_FROM_DEFINING_CLASS: Int = 1 shl 1
 
         internal fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRMethodCallTracePoint {
             val methodId = inp.readInt()
