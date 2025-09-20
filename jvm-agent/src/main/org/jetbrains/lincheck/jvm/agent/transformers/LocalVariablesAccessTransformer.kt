@@ -85,22 +85,9 @@ internal class LocalVariablesAccessTransformer(
             },
             instrumented = {
                 // STACK: value
-                val type = getVarInsOpcodeType(opcode)
-                val local = newLocal(type)
-                dup(type)
-                storeLocal(local)
-                // STACK: value
                 super.visitVarInsn(opcode, varIndex)
                 // STACK: <empty>
-                loadNewCodeLocationId()
-                val variableId = TRACE_CONTEXT.getOrCreateVariableId(localVariableInfo.name)
-                push(variableId)
-                loadLocal(local)
-                box(type)
-                // STACK: codeLocation, variableId, boxedValue
-                invokeStatic(Injections::afterLocalWrite)
-                // invokeBeforeEventIfPluginEnabled("write local")
-                // STACK: <empty>
+                registerLocalVariableWrite(localVariableInfo)
             }
         )
     }
