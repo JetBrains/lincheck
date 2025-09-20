@@ -107,7 +107,7 @@ internal class LocalVariablesAccessTransformer(
                 val variableId = TRACE_CONTEXT.getOrCreateVariableId(localVariableInfo.name)
                 push(variableId)
                 // VerifyError with `loadLocal(..)`, here is a workaround
-                visitVarInsn(localVariableInfo.type.getOpcode(ILOAD), localVariableInfo.index)
+                visitVarInsn(localVariableInfo.type.getVarInsnOpcode(), localVariableInfo.index)
                 box(localVariableInfo.type)
                 // STACK: codeLocation, variableId, boxedValue
                 invokeStatic(Injections::afterLocalWrite)
@@ -159,6 +159,9 @@ internal class LocalVariablesAccessTransformer(
 
     private fun isStoreOpcode(opcode: Int) =
         opcode == ISTORE || opcode == LSTORE || opcode == FSTORE || opcode == DSTORE || opcode == ASTORE
+
+    private fun Type.getVarInsnOpcode() =
+        getOpcode(ILOAD)
 
     private fun getVarInsOpcodeType(opcode: Int) = when (opcode) {
         ILOAD -> Type.INT_TYPE
