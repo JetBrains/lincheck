@@ -245,8 +245,8 @@ object TraceRecorderDefaultTransformationProfile : TransformationProfile {
 
         return config.apply {
             trackObjectCreations = true
-            trackLocalVariableWrites = true
 
+            trackLocalVariableWrites = true
             trackStaticFieldReads = true
             trackAllFieldsWrites = true
             trackArrayElementWrites = true
@@ -300,6 +300,7 @@ object TraceDebuggerDefaultTransformationProfile : TransformationProfile {
 
         return config.apply {
             trackObjectCreations = true
+
             trackLocalVariableWrites = true
             trackAllSharedMemoryAccesses = true
 
@@ -360,6 +361,7 @@ object ModelCheckingDefaultTransformationProfile : TransformationProfile {
 
         return config.apply {
             trackObjectCreations = true
+
             trackAllSharedMemoryAccesses = true
 
             trackMethodCalls = true
