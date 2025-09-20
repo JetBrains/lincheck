@@ -16,6 +16,7 @@ import org.jetbrains.lincheck.trace.*
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.commons.*
+import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import sun.nio.ch.lincheck.*
 
 internal class LocalVariablesAccessTransformer(
@@ -29,6 +30,11 @@ internal class LocalVariablesAccessTransformer(
     methodVisitor: MethodVisitor,
     private val locals: MethodVariables,
 ) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
+
+    private val isStatic: Boolean = (access and ACC_STATIC != 0)
+
+    private val numberOfLocals = convertAsmMethodType(descriptor).argumentTypes.size + if (isStatic) 0 else 1
+
     private var firstLabelVisited = false
 
     override fun visitLabel(label: Label) = adapter.run {
@@ -46,11 +52,91 @@ internal class LocalVariablesAccessTransformer(
         super.visitLabel(label)
     }
 
+    override fun visitVarInsn(opcode: Int, varIndex: Int) = adapter.run {
+        val localVariableInfo = getVariableInfo(varIndex)?.takeIf { it.name != "this" }
+        if (localVariableInfo == null) {
+            super.visitVarInsn(opcode, varIndex)
+            return
+        }
+        when (opcode) {
+            ILOAD, LLOAD, FLOAD, DLOAD, ALOAD -> {
+                visitReadVarInsn(localVariableInfo, opcode, varIndex)
+            }
+            ISTORE, LSTORE, FSTORE, DSTORE, ASTORE -> {
+                visitWriteVarInsn(localVariableInfo, opcode, varIndex)
+            }
+            else -> {
+                super.visitVarInsn(opcode, varIndex)
+            }
+        }
+    }
+
     override fun visitIincInsn(varIndex: Int, increment: Int) {
         super.visitIincInsn(varIndex, increment)
         getVariableInfo(varIndex)?.let {
             adapter.registerLocalVariableWrite(it)
         }
+    }
+
+    @Suppress("UNUSED_PARAMETER")
+    private fun visitWriteVarInsn(localVariableInfo: LocalVariableInfo, opcode: Int, varIndex: Int) = adapter.run {
+        invokeIfInAnalyzedCode(
+            original = {
+                super.visitVarInsn(opcode, varIndex)
+            },
+            instrumented = {
+                // STACK: value
+                val type = getVarInsOpcodeType(opcode)
+                val local = newLocal(type)
+                dup(type)
+                storeLocal(local)
+                // STACK: value
+                super.visitVarInsn(opcode, varIndex)
+                // STACK: <empty>
+                loadNewCodeLocationId()
+                val variableId = TRACE_CONTEXT.getOrCreateVariableId(localVariableInfo.name)
+                push(variableId)
+                loadLocal(local)
+                box(type)
+                // STACK: codeLocation, variableId, boxedValue
+                invokeStatic(Injections::afterLocalWrite)
+                // invokeBeforeEventIfPluginEnabled("write local")
+                // STACK: <empty>
+            }
+        )
+    }
+
+    private fun visitReadVarInsn(localVariableInfo: LocalVariableInfo, opcode: Int, varIndex: Int) = adapter.run {
+        // Skip variable read if it is in an unknown line of code and variable is argument
+        // It can be code inserted by compiler to check Null invariant
+        if (!isKnownLineNumber() && varIndex < numberOfLocals) {
+            super.visitVarInsn(opcode, varIndex)
+            return
+        }
+        invokeIfInAnalyzedCode(
+            original = {
+                super.visitVarInsn(opcode, varIndex)
+            },
+            instrumented = {
+                // STACK: <empty>
+                super.visitVarInsn(opcode, varIndex)
+                // STACK: value
+                val type = getVarInsOpcodeType(opcode)
+                val local = newLocal(type)
+                dup(type)
+                storeLocal(local)
+                // STACK: <empty>
+                loadNewCodeLocationId()
+                val variableId = TRACE_CONTEXT.getOrCreateVariableId(localVariableInfo.name)
+                push(variableId)
+                loadLocal(local)
+                box(type)
+                // STACK: codeLocation, variableId, boxedValue
+                invokeStatic(Injections::afterLocalRead)
+                // invokeBeforeEventIfPluginEnabled("read local")
+                // STACK: <empty>
+            }
+        )
     }
 
     private fun GeneratorAdapter.registerLocalVariableWrite(localVariableInfo: LocalVariableInfo) {
@@ -72,17 +158,23 @@ internal class LocalVariablesAccessTransformer(
         )
     }
 
-    override fun visitVarInsn(opcode: Int, varIndex: Int): Unit = adapter.run {
-        visitVarInsn(opcode, varIndex)
-
-        getVariableInfo(varIndex)?.let { localVariableInfo ->
-            if (opcode == localVariableInfo.type.getOpcode(ISTORE)) {
-                registerLocalVariableWrite(localVariableInfo)
-            }
-        }
-    }
-
     private fun getVariableInfo(varIndex: Int): LocalVariableInfo? {
         return methodInfo.locals.activeVariables.find { it.index == varIndex }
+    }
+
+    private fun getVarInsOpcodeType(opcode: Int) = when (opcode) {
+        ILOAD -> Type.INT_TYPE
+        LLOAD -> Type.LONG_TYPE
+        FLOAD -> Type.FLOAT_TYPE
+        DLOAD -> Type.DOUBLE_TYPE
+        ALOAD -> OBJECT_TYPE
+
+        ISTORE -> Type.INT_TYPE
+        LSTORE -> Type.LONG_TYPE
+        FSTORE -> Type.FLOAT_TYPE
+        DSTORE -> Type.DOUBLE_TYPE
+        ASTORE -> OBJECT_TYPE
+
+        else -> throw IllegalArgumentException("Invalid opcode: $opcode")
     }
 }
