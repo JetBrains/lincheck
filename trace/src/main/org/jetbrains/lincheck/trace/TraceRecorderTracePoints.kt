@@ -91,6 +91,10 @@ class TRMethodCallTracePoint(
 
     val events: List<TRTracePoint?> get() = children
 
+    fun setExceptionResult(exception: Throwable) {
+        exceptionClassName = exception::class.java.name
+    }
+
     private fun TRTracePoint.setParentIfMethodCall(parent: TRMethodCallTracePoint) {
         if (this !is TRMethodCallTracePoint) return
         parentTracePoint = parent
