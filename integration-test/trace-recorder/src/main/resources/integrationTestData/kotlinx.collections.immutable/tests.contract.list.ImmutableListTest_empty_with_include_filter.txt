@@ -1,12 +1,15 @@
 # Thread 1
 ImmutableListTest.empty() at :0
   ExtensionsKt.persistentListOf(): SmallPersistentVector@1 at ImmutableListTest.kt:20
+  empty1 = SmallPersistentVector@1 at ImmutableListTest.kt:20
   ExtensionsKt.persistentListOf(): SmallPersistentVector@1 at ImmutableListTest.kt:21
+  empty2 = SmallPersistentVector@1 at ImmutableListTest.kt:21
   AssertionsKt.assertEquals$default(empty1, empty2, null, 4, null) at ImmutableListTest.kt:22
   CollectionsKt.emptyList(): EmptyList@1 at ImmutableListTest.kt:23
   AssertionsKt.assertEquals$default(EmptyList@1, empty1, null, 4, null) at ImmutableListTest.kt:23
   AssertionsKt.assertTrue$default(true, null, 2, null) at ImmutableListTest.kt:24
   Reflection.getOrCreateKotlinClass(Class@1): KClassImpl@1 at ImmutableListTest.kt:26
+  i$a$-assertFailsWith$default-ImmutableListTest$empty$1 = 0 at fake.kt:1
   empty1.iterator(): BufferIterator@1 at ImmutableListTest.kt:26
   BufferIterator@1.next(): threw java.util.NoSuchElementException at ImmutableListTest.kt:26
   ResultKt.createFailure(NoSuchElementException@1): Result.Failure@1 at ImmutableListTest.kt:26

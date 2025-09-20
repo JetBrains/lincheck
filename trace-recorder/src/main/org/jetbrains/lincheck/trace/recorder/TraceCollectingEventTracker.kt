@@ -470,8 +470,6 @@ class TraceCollectingEventTracker(
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
-        // TODO: make in optional
-/*
         val tracePoint = TRReadLocalVariableTracePoint(
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
@@ -479,7 +477,6 @@ class TraceCollectingEventTracker(
             value = TRObjectOrNull(value)
         )
         strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
-*/
     }
 
     override fun afterLocalWrite(codeLocation: Int, variableId: Int, value: Any?) = runInsideInjectedCode {

@@ -21,8 +21,8 @@ interface TransformationProfile {
 class TransformationConfiguration(
     var trackObjectCreations: Boolean = false,
 
-    var trackLocalVariableAccesses: Boolean = false,
-
+    var trackLocalVariableReads: Boolean = false,
+    var trackLocalVariableWrites: Boolean = false,
     var trackRegularFieldReads: Boolean = false,
     var trackRegularFieldWrites: Boolean = false,
     var trackStaticFieldReads: Boolean = false,
@@ -67,6 +67,18 @@ class TransformationConfiguration(
             trackWaitNotifyOperations = value
             trackSynchronizedBlocks = value
             trackParkingOperations = value
+        }
+
+    val trackLocalVariableAccesses: Boolean
+        get() = trackLocalVariableReads || trackLocalVariableWrites
+
+    var trackAllLocalVariableAccesses: Boolean
+        get() =
+            trackLocalVariableReads &&
+            trackLocalVariableWrites
+        set(value) {
+            trackLocalVariableReads = value
+            trackLocalVariableWrites = value
         }
 
     var trackAllFieldsReads: Boolean
@@ -233,8 +245,8 @@ object TraceRecorderDefaultTransformationProfile : TransformationProfile {
 
         return config.apply {
             trackObjectCreations = true
-            trackLocalVariableAccesses = true
 
+            trackLocalVariableWrites = true
             trackStaticFieldReads = true
             trackAllFieldsWrites = true
             trackArrayElementWrites = true
@@ -288,7 +300,8 @@ object TraceDebuggerDefaultTransformationProfile : TransformationProfile {
 
         return config.apply {
             trackObjectCreations = true
-            trackLocalVariableAccesses = true
+
+            trackLocalVariableWrites = true
             trackAllSharedMemoryAccesses = true
 
             trackMethodCalls = true
@@ -348,6 +361,7 @@ object ModelCheckingDefaultTransformationProfile : TransformationProfile {
 
         return config.apply {
             trackObjectCreations = true
+
             trackAllSharedMemoryAccesses = true
 
             trackMethodCalls = true
