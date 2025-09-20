@@ -79,7 +79,7 @@ internal class LocalVariablesAccessTransformer(
     }
 
     @Suppress("UNUSED_PARAMETER")
-    private fun visitWriteVarInsn(localVariableInfo: LocalVariableInfo, opcode: Int, varIndex: Int) = adapter.run {
+    private fun GeneratorAdapter.visitWriteVarInsn(localVariableInfo: LocalVariableInfo, opcode: Int, varIndex: Int) {
         invokeIfInAnalyzedCode(
             original = {
                 super.visitVarInsn(opcode, varIndex)
@@ -106,7 +106,7 @@ internal class LocalVariablesAccessTransformer(
         )
     }
 
-    private fun visitReadVarInsn(localVariableInfo: LocalVariableInfo, opcode: Int, varIndex: Int) = adapter.run {
+    private fun GeneratorAdapter.visitReadVarInsn(localVariableInfo: LocalVariableInfo, opcode: Int, varIndex: Int) {
         // Skip variable read if it is in an unknown line of code and variable is argument
         // It can be code inserted by compiler to check Null invariant
         if (!isKnownLineNumber() && varIndex < numberOfLocals) {
