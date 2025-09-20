@@ -84,13 +84,10 @@ internal class LocalVariablesAccessTransformer(
 
     @Suppress("UNUSED_PARAMETER")
     private fun GeneratorAdapter.visitWriteVarInsn(localVariableInfo: LocalVariableInfo, opcode: Int, varIndex: Int) {
+        super.visitVarInsn(opcode, varIndex)
         invokeIfInAnalyzedCode(
-            original = {
-                super.visitVarInsn(opcode, varIndex)
-            },
+            original = {},
             instrumented = {
-                // STACK: value
-                super.visitVarInsn(opcode, varIndex)
                 // STACK: <empty>
                 registerLocalVariableAccess(localVariableInfo, AccessType.WRITE)
                 // STACK: <empty>
@@ -105,13 +102,11 @@ internal class LocalVariablesAccessTransformer(
             super.visitVarInsn(opcode, varIndex)
             return
         }
+
+        super.visitVarInsn(opcode, varIndex)
         invokeIfInAnalyzedCode(
-            original = {
-                super.visitVarInsn(opcode, varIndex)
-            },
+            original = {},
             instrumented = {
-                // STACK: <empty>
-                super.visitVarInsn(opcode, varIndex)
                 // STACK: value
                 registerLocalVariableAccess(localVariableInfo, AccessType.READ)
                 // STACK: value
