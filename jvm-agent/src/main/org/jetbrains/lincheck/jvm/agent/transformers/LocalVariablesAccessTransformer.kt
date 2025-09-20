@@ -43,7 +43,7 @@ internal class LocalVariablesAccessTransformer(
             return
         }
 
-        // For each variable that starts at this label, read its value and inject an afterLocalWrite call
+        // For each variable that starts at this label, read its value and inject an `afterLocalWrite` call
         methodInfo.locals.variablesStartAt(label).forEach {
             registerLocalVariableWrite(it)
         }
@@ -70,10 +70,10 @@ internal class LocalVariablesAccessTransformer(
         }
     }
 
-    override fun visitIincInsn(varIndex: Int, increment: Int) {
+    override fun visitIincInsn(varIndex: Int, increment: Int): Unit = adapter.run {
         super.visitIincInsn(varIndex, increment)
         getVariableInfo(varIndex)?.let {
-            adapter.registerLocalVariableWrite(it)
+            registerLocalVariableWrite(it)
         }
     }
 
@@ -97,6 +97,26 @@ internal class LocalVariablesAccessTransformer(
                 push(variableId)
                 loadLocal(local)
                 box(type)
+                // STACK: codeLocation, variableId, boxedValue
+                invokeStatic(Injections::afterLocalWrite)
+                // invokeBeforeEventIfPluginEnabled("write local")
+                // STACK: <empty>
+            }
+        )
+    }
+
+    private fun GeneratorAdapter.registerLocalVariableWrite(localVariableInfo: LocalVariableInfo) {
+        invokeIfInAnalyzedCode(
+            original = {},
+            // load the current value of stored in the local variable and call `afterLocalWrite` with it
+            instrumented = {
+                // STACK: <empty>
+                loadNewCodeLocationId()
+                val variableId = TRACE_CONTEXT.getOrCreateVariableId(localVariableInfo.name)
+                push(variableId)
+                // VerifyError with `loadLocal(..)`, here is a workaround
+                visitVarInsn(localVariableInfo.type.getOpcode(ILOAD), localVariableInfo.index)
+                box(localVariableInfo.type)
                 // STACK: codeLocation, variableId, boxedValue
                 invokeStatic(Injections::afterLocalWrite)
                 // invokeBeforeEventIfPluginEnabled("write local")
@@ -133,25 +153,6 @@ internal class LocalVariablesAccessTransformer(
                 // STACK: codeLocation, variableId, boxedValue
                 invokeStatic(Injections::afterLocalRead)
                 // invokeBeforeEventIfPluginEnabled("read local")
-                // STACK: <empty>
-            }
-        )
-    }
-
-    private fun GeneratorAdapter.registerLocalVariableWrite(localVariableInfo: LocalVariableInfo) {
-        invokeIfInAnalyzedCode(
-            original = {},
-            instrumented = {
-                // STACK: <empty>
-                loadNewCodeLocationId()
-                val variableId = TRACE_CONTEXT.getOrCreateVariableId(localVariableInfo.name)
-                push(variableId)
-                // VerifyError with `loadLocal(..)`, here is a workaround
-                visitVarInsn(localVariableInfo.type.getOpcode(ILOAD), localVariableInfo.index)
-                box(localVariableInfo.type)
-                // STACK: codeLocation, variableId, boxedValue
-                invokeStatic(Injections::afterLocalWrite)
-                // invokeBeforeEventIfPluginEnabled("write local")
                 // STACK: <empty>
             }
         )
