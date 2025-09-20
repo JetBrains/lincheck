@@ -11,7 +11,7 @@ ImmutableListTest.empty() at :0
   Reflection.getOrCreateKotlinClass(Class@1): KClassImpl@1 at ImmutableListTest.kt:26
   i$a$-assertFailsWith$default-ImmutableListTest$empty$1 = 0 at fake.kt:1
   empty1.iterator(): BufferIterator@1 at ImmutableListTest.kt:26
-  BufferIterator@1.next(): threw java.util.NoSuchElementException at ImmutableListTest.kt:26
+  BufferIterator@1.next(): threw NoSuchElementException at ImmutableListTest.kt:26
   createFailure(NoSuchElementException@1): Result.Failure@1 at ImmutableListTest.kt:26
   Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ImmutableListTest.kt:26
   checkResultIsFailure(KClassImpl@1, null, Result.Failure@1): NoSuchElementException@1 at ImmutableListTest.kt:26
