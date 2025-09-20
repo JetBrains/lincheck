@@ -28,6 +28,7 @@ internal class LocalVariablesAccessTransformer(
     methodInfo: MethodInformation,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
+    val configuration: TransformationConfiguration,
 ) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
 
     private val isStatic: Boolean = (access and ACC_STATIC != 0)
@@ -43,9 +44,11 @@ internal class LocalVariablesAccessTransformer(
             return
         }
 
-        // For each variable that starts at this label, read its value and inject an `afterLocalWrite` call
-        methodInfo.locals.variablesStartAt(label).forEach {
-            registerLocalVariableWrite(it)
+        if (configuration.trackLocalVariableWrites) {
+            // For each variable that starts at this label, read its value and inject an `afterLocalWrite` call
+            methodInfo.locals.variablesStartAt(label).forEach {
+                registerLocalVariableWrite(it)
+            }
         }
 
         super.visitLabel(label)
@@ -57,11 +60,11 @@ internal class LocalVariablesAccessTransformer(
             super.visitVarInsn(opcode, varIndex)
             return
         }
-        when (opcode) {
-            ILOAD, LLOAD, FLOAD, DLOAD, ALOAD -> {
+        when {
+            isLoadOpcode(opcode) && configuration.trackLocalVariableReads -> {
                 visitReadVarInsn(localVariableInfo, opcode, varIndex)
             }
-            ISTORE, LSTORE, FSTORE, DSTORE, ASTORE -> {
+            isStoreOpcode(opcode) && configuration.trackLocalVariableWrites -> {
                 visitWriteVarInsn(localVariableInfo, opcode, varIndex)
             }
             else -> {
@@ -72,8 +75,10 @@ internal class LocalVariablesAccessTransformer(
 
     override fun visitIincInsn(varIndex: Int, increment: Int): Unit = adapter.run {
         super.visitIincInsn(varIndex, increment)
-        getVariableInfo(varIndex)?.let {
-            registerLocalVariableWrite(it)
+        if (configuration.trackLocalVariableWrites) {
+            getVariableInfo(varIndex)?.let {
+                registerLocalVariableWrite(it)
+            }
         }
     }
 
@@ -148,6 +153,12 @@ internal class LocalVariablesAccessTransformer(
     private fun getVariableInfo(varIndex: Int): LocalVariableInfo? {
         return methodInfo.locals.activeVariables.find { it.index == varIndex }
     }
+
+    private fun isLoadOpcode(opcode: Int) =
+        opcode == ILOAD || opcode == LLOAD || opcode == FLOAD || opcode == DLOAD || opcode == ALOAD
+
+    private fun isStoreOpcode(opcode: Int) =
+        opcode == ISTORE || opcode == LSTORE || opcode == FSTORE || opcode == DSTORE || opcode == ASTORE
 
     private fun getVarInsOpcodeType(opcode: Int) = when (opcode) {
         ILOAD -> Type.INT_TYPE

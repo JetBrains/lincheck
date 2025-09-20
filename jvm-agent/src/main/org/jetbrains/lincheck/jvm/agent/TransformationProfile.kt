@@ -21,8 +21,8 @@ interface TransformationProfile {
 class TransformationConfiguration(
     var trackObjectCreations: Boolean = false,
 
+    var trackLocalVariableReads: Boolean = false,
     var trackLocalVariableWrites: Boolean = false,
-
     var trackRegularFieldReads: Boolean = false,
     var trackRegularFieldWrites: Boolean = false,
     var trackStaticFieldReads: Boolean = false,
@@ -69,6 +69,18 @@ class TransformationConfiguration(
             trackParkingOperations = value
         }
 
+    val trackLocalVariableAccesses: Boolean
+        get() = trackLocalVariableReads || trackLocalVariableWrites
+
+    var trackAllLocalVariableAccesses: Boolean
+        get() =
+            trackLocalVariableReads &&
+            trackLocalVariableWrites
+        set(value) {
+            trackLocalVariableReads = value
+            trackLocalVariableWrites = value
+        }
+
     var trackAllFieldsReads: Boolean
         get() =
             trackRegularFieldReads &&
@@ -112,7 +124,7 @@ internal fun TransformationConfiguration.shouldApplyVisitor(visitorClass: Class<
     return when (visitorClass) {
         ObjectCreationTransformerBase::class.java -> trackObjectCreations
 
-        LocalVariablesAccessTransformer::class.java -> trackLocalVariableWrites
+        LocalVariablesAccessTransformer::class.java -> trackLocalVariableAccesses
         SharedMemoryAccessTransformer::class.java -> trackSharedMemoryAccesses
 
         MethodCallTransformerBase::class.java -> trackMethodCalls
