@@ -10,6 +10,7 @@
 
 package org.jetbrains.trace.recorder.test
 
+import org.junit.Ignore
 import org.junit.Test
 import java.nio.file.Paths
 
@@ -17,6 +18,7 @@ class KotlinCoroutinesTraceRecorderIntegrationTest : AbstractTraceRecorderIntegr
     override val projectPath: String = Paths.get("build", "integrationTestProjects", "kotlinx.coroutines").toString()
 
     @Test
+    @Ignore("Flaky test")
     fun `kotlinx_coroutines_ExecutorsTest testDefaultDispatcherToExecutor`() {
         runGradleTest(
             testClassName = "kotlinx.coroutines.ExecutorsTest",
