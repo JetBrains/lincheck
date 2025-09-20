@@ -2,4 +2,5 @@
 LinkedHashSetTest.putAnObjectWithoutDefinedHashCode() at :0
   LinkedHashSetTest.A;@1[0] = LinkedHashSetTest.A@1 at LinkedHashSetTest.kt:10
   SetsKt.linkedSetOf(LinkedHashSetTest.A;@1): LinkedHashSet@1 at LinkedHashSetTest.kt:10
+  linkedHashSet = LinkedHashSet@1 at LinkedHashSetTest.kt:10
   linkedHashSet.add(LinkedHashSetTest.A@1): true at LinkedHashSetTest.kt:11

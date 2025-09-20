@@ -21,7 +21,7 @@ interface TransformationProfile {
 class TransformationConfiguration(
     var trackObjectCreations: Boolean = false,
 
-    var trackLocalVariableAccesses: Boolean = false,
+    var trackLocalVariableWrites: Boolean = false,
 
     var trackRegularFieldReads: Boolean = false,
     var trackRegularFieldWrites: Boolean = false,
@@ -112,7 +112,7 @@ internal fun TransformationConfiguration.shouldApplyVisitor(visitorClass: Class<
     return when (visitorClass) {
         ObjectCreationTransformerBase::class.java -> trackObjectCreations
 
-        LocalVariablesAccessTransformer::class.java -> trackLocalVariableAccesses
+        LocalVariablesAccessTransformer::class.java -> trackLocalVariableWrites
         SharedMemoryAccessTransformer::class.java -> trackSharedMemoryAccesses
 
         MethodCallTransformerBase::class.java -> trackMethodCalls
@@ -233,7 +233,7 @@ object TraceRecorderDefaultTransformationProfile : TransformationProfile {
 
         return config.apply {
             trackObjectCreations = true
-            trackLocalVariableAccesses = true
+            trackLocalVariableWrites = true
 
             trackStaticFieldReads = true
             trackAllFieldsWrites = true
@@ -288,7 +288,7 @@ object TraceDebuggerDefaultTransformationProfile : TransformationProfile {
 
         return config.apply {
             trackObjectCreations = true
-            trackLocalVariableAccesses = true
+            trackLocalVariableWrites = true
             trackAllSharedMemoryAccesses = true
 
             trackMethodCalls = true
