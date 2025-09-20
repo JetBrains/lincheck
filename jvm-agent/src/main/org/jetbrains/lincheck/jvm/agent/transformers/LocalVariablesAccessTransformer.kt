@@ -47,7 +47,7 @@ internal class LocalVariablesAccessTransformer(
         if (configuration.trackLocalVariableWrites) {
             // For each variable that starts at this label, read its value and inject an `afterLocalWrite` call
             methodInfo.locals.variablesStartAt(label).forEach {
-                registerLocalVariableWrite(it)
+                registerLocalVariableAccess(it, AccessType.WRITE)
             }
         }
 
@@ -77,7 +77,7 @@ internal class LocalVariablesAccessTransformer(
         super.visitIincInsn(varIndex, increment)
         if (configuration.trackLocalVariableWrites) {
             getVariableInfo(varIndex)?.let {
-                registerLocalVariableWrite(it)
+                registerLocalVariableAccess(it, AccessType.WRITE)
             }
         }
     }
@@ -92,7 +92,8 @@ internal class LocalVariablesAccessTransformer(
                 // STACK: value
                 super.visitVarInsn(opcode, varIndex)
                 // STACK: <empty>
-                registerLocalVariableWrite(localVariableInfo)
+                registerLocalVariableAccess(localVariableInfo, AccessType.WRITE)
+                // STACK: <empty>
             }
         )
     }
@@ -112,43 +113,42 @@ internal class LocalVariablesAccessTransformer(
                 // STACK: <empty>
                 super.visitVarInsn(opcode, varIndex)
                 // STACK: value
-                val type = getVarInsOpcodeType(opcode)
-                val local = newLocal(type)
-                dup(type)
-                storeLocal(local)
-                // STACK: <empty>
-                loadNewCodeLocationId()
-                val variableId = TRACE_CONTEXT.getOrCreateVariableId(localVariableInfo.name)
-                push(variableId)
-                loadLocal(local)
-                box(type)
-                // STACK: codeLocation, variableId, boxedValue
-                invokeStatic(Injections::afterLocalRead)
-                // invokeBeforeEventIfPluginEnabled("read local")
-                // STACK: <empty>
+                registerLocalVariableAccess(localVariableInfo, AccessType.READ)
+                // STACK: value
             }
         )
     }
 
-    private fun GeneratorAdapter.registerLocalVariableWrite(localVariableInfo: LocalVariableInfo) {
+    private fun GeneratorAdapter.registerLocalVariableAccess(variableInfo: LocalVariableInfo, accessType: AccessType) {
         invokeIfInAnalyzedCode(
             original = {},
             // load the current value of stored in the local variable and call `afterLocalWrite` with it
             instrumented = {
                 // STACK: <empty>
                 loadNewCodeLocationId()
-                val variableId = TRACE_CONTEXT.getOrCreateVariableId(localVariableInfo.name)
+                val variableId = TRACE_CONTEXT.getOrCreateVariableId(variableInfo.name)
                 push(variableId)
                 // VerifyError with `loadLocal(..)`, here is a workaround
-                visitVarInsn(localVariableInfo.type.getVarInsnOpcode(), localVariableInfo.index)
-                box(localVariableInfo.type)
+                visitVarInsn(variableInfo.type.getVarInsnOpcode(), variableInfo.index)
+                box(variableInfo.type)
                 // STACK: codeLocation, variableId, boxedValue
-                invokeStatic(Injections::afterLocalWrite)
-                // invokeBeforeEventIfPluginEnabled("write local")
+                when (accessType) {
+                    AccessType.READ -> {
+                        invokeStatic(Injections::afterLocalRead)
+                        // invokeBeforeEventIfPluginEnabled("read local")
+                        // STACK: <empty>
+                    }
+                    AccessType.WRITE -> {
+                        invokeStatic(Injections::afterLocalWrite)
+                        // invokeBeforeEventIfPluginEnabled("write local")
+                    }
+                }
                 // STACK: <empty>
             }
         )
     }
+
+    private enum class AccessType { READ, WRITE }
 
     private fun getVariableInfo(varIndex: Int): LocalVariableInfo? {
         return methodInfo.locals.activeVariables.find { it.index == varIndex }
