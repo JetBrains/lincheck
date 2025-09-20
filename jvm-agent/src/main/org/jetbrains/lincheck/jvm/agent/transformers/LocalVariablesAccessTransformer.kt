@@ -28,7 +28,6 @@ internal class LocalVariablesAccessTransformer(
     methodInfo: MethodInformation,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
-    private val locals: MethodVariables,
 ) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
 
     private val isStatic: Boolean = (access and ACC_STATIC != 0)
@@ -45,7 +44,7 @@ internal class LocalVariablesAccessTransformer(
         }
 
         // For each variable that starts at this label, read its value and inject an afterLocalWrite call
-        locals.variablesStartAt(label).forEach {
+        methodInfo.locals.variablesStartAt(label).forEach {
             registerLocalVariableWrite(it)
         }
 
