@@ -15,4 +15,4 @@ SimpleProgramNonFailingTest.test() at :0
     sum = 3 at SimpleProgramNonFailingTest.kt:22
     i = 2 at SimpleProgramNonFailingTest.kt:21
   sum = 3 at SimpleProgramNonFailingTest.kt:10
-  Assertions.assertEquals(6, sum ➜ 3): threw org.opentest4j.AssertionFailedError at SimpleProgramNonFailingTest.kt:12
+  Assertions.assertEquals(6, sum ➜ 3): threw AssertionFailedError at SimpleProgramNonFailingTest.kt:12

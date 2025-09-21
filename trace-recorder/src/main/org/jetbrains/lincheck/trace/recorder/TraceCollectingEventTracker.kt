@@ -281,7 +281,7 @@ class TraceCollectingEventTracker(
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: throw exception
         // Don't pop, we need it
         val tracePoint = threadData.firstMethodCallTracePoint()
-        tracePoint.exceptionClassName = exception::class.java.name
+        tracePoint.setExceptionResult(exception)
         strategy.callEnded(Thread.currentThread(), tracePoint)
         threadDescriptor.disableAnalysis()
         throw exception
@@ -597,7 +597,7 @@ class TraceCollectingEventTracker(
             Logger.error { "Exception in method $methodId (${methodDescriptor.className}.${methodDescriptor.methodName}) but on stack ${tracePoint.methodId} (${tracePoint.className}.${tracePoint.methodName})" }
         }
 
-        tracePoint.exceptionClassName = t.javaClass.name
+        tracePoint.setExceptionResult(t)
         strategy.callEnded(Thread.currentThread(), tracePoint)
 
         threadData.leaveAnalysisSection(methodSection)
@@ -648,7 +648,7 @@ class TraceCollectingEventTracker(
             Logger.error { "Exception in inline method $methodId (${methodDescriptor.className}.${methodDescriptor.methodName}) but on stack ${tracePoint.methodId} (${tracePoint.className}.${tracePoint.methodName})" }
         }
 
-        tracePoint.exceptionClassName = t.javaClass.name
+        tracePoint.setExceptionResult(t)
         strategy.callEnded(Thread.currentThread(), tracePoint)
     }
 
