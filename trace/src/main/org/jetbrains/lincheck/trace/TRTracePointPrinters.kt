@@ -129,16 +129,32 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
     }
 
     protected fun TRAppendable.appendOwner(tracePoint: TRMethodCallTracePoint): TRAppendable {
+        if (tracePoint.isStatic() && tracePoint.isCalledFromDefiningClass()) {
+            return this
+        }
         val ownerName = CodeLocations.accessPath(tracePoint.codeLocationId)
         if (ownerName != null) {
             ownerName.filterThisAccesses().takeIf { !it.isEmpty() }?.let {
-                appendAccessPath(it)
-                appendSpecialSymbol(".")
+                if (it.isObjectInstanceAccess()) {
+                    appendClassName(tracePoint.classDescriptor)
+                    appendSpecialSymbol(".")
+                } else if (it.isCompanionAccess()) {
+                    if (!tracePoint.isCalledFromDefiningClass()) {
+                        appendClassName(ClassDescriptor(
+                            tracePoint.classDescriptor.name.substringBeforeLast("\$Companion"),
+                        ))
+                        appendSpecialSymbol(".")
+                    }
+                } else {
+                    appendAccessPath(ownerName)
+                    appendSpecialSymbol(".")
+                }
             }
         } else if (tracePoint.obj != null) {
             appendObject(tracePoint.obj)
             appendSpecialSymbol(".")
-        } else {
+        } else if (!(tracePoint.isStatic() && tracePoint.className.isKtClass())) {
+            // TODO: some refactoring is required here, because users can define classes, which end with 'Kt' as well
             appendClassName(tracePoint.classDescriptor)
             appendSpecialSymbol(".")
         }

@@ -251,6 +251,7 @@ object CompressingPostprocessor : TracePostprocessor {
             child.obj,
             child.parameters,
             child.flags,
+            parent.parentTracePoint,
             child.eventId
         )
         newNode.result = child.result

@@ -69,6 +69,7 @@ class TRMethodCallTracePoint(
     val obj: TRObject?,
     val parameters: List<TRObject?>,
     val flags: Short = 0,
+    var parentTracePoint: TRMethodCallTracePoint? = null,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
 ) : TRTracePoint(codeLocationId, threadId, eventId) {
     var result: TRObject? = null
@@ -90,6 +91,11 @@ class TRMethodCallTracePoint(
 
     val events: List<TRTracePoint?> get() = children
 
+    private fun TRTracePoint.setParentIfMethodCall(parent: TRMethodCallTracePoint) {
+        if (this !is TRMethodCallTracePoint) return
+        parentTracePoint = parent
+    }
+
     internal fun addChildAddress(address: Long) {
         childrenAddresses.add(address)
         children.add(null)
@@ -98,6 +104,7 @@ class TRMethodCallTracePoint(
     internal fun addChild(child: TRTracePoint, address: Long = -1) {
         childrenAddresses.add(address)
         children.add(child)
+        child.setParentIfMethodCall(this)
     }
 
     internal fun getChildAddress(index: Int): Long {
@@ -108,12 +115,14 @@ class TRMethodCallTracePoint(
     internal fun replaceChildren(from: TRMethodCallTracePoint) {
         children = from.children
         childrenAddresses = from.childrenAddresses
+        from.children.forEach { it?.setParentIfMethodCall(this) }
     }
 
     internal fun loadChild(index: Int, child: TRTracePoint) {
         require(index in 0 ..< children.size) { "Index $index out of range 0..<${children.size}" }
         // Should we check for override? Lets skip for now
         children[index] = child
+        child.setParentIfMethodCall(this)
     }
 
     fun unloadChild(index: Int) {
@@ -123,6 +132,16 @@ class TRMethodCallTracePoint(
 
     fun unloadAllChildren() {
         children.forgetAll()
+    }
+
+    fun isStatic(): Boolean = obj == null
+
+    fun isCalledFromDefiningClass(): Boolean {
+        if (parentTracePoint == null) return false
+        return className.let {
+            it == parentTracePoint!!.className ||
+            it.removeCompanionSuffix() == parentTracePoint!!.className
+        }
     }
 
     /**

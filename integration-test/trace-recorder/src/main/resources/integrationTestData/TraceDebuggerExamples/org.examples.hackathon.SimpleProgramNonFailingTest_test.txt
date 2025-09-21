@@ -3,9 +3,9 @@ SimpleProgramNonFailingTest.test() at :0
   Integer;@1[0] = 1 at SimpleProgramNonFailingTest.kt:9
   Integer;@1[1] = 2 at SimpleProgramNonFailingTest.kt:9
   Integer;@1[2] = 3 at SimpleProgramNonFailingTest.kt:9
-  CollectionsKt.listOf(Integer;@1): Arrays.ArrayList@1 at SimpleProgramNonFailingTest.kt:9
+  listOf(Integer;@1): Arrays.ArrayList@1 at SimpleProgramNonFailingTest.kt:9
   numbers = Arrays.ArrayList@1 at SimpleProgramNonFailingTest.kt:9
-  SimpleProgramNonFailingTestKt.sum(numbers): 3 at SimpleProgramNonFailingTest.kt:10
+  sum(numbers): 3 at SimpleProgramNonFailingTest.kt:10
     sum = 0 at SimpleProgramNonFailingTest.kt:20
     i = 0 at SimpleProgramNonFailingTest.kt:21
     numbers.get(i ➜ 0): 1 at SimpleProgramNonFailingTest.kt:22

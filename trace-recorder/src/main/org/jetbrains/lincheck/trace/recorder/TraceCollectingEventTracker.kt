@@ -40,6 +40,8 @@ private class ThreadData(
 
     fun firstMethodCallTracePoint(): TRMethodCallTracePoint = stack.first().call
 
+    fun firstMethodCallTracePointOrNull(): TRMethodCallTracePoint? = stack.firstOrNull()?.call
+
     fun pushStackFrame(tracePoint: TRMethodCallTracePoint, instance: Any?, isInline: Boolean) {
         val stackFrame = ShadowStackFrame(instance)
         stack.add(StackFrame(
@@ -196,16 +198,16 @@ class TraceCollectingEventTracker(
         descriptor.enableAnalysis()
 
         fun appendMethodCall(obj: TRObject?, className: String, methodName: String, methodType: Types.MethodType, codeLocationId: Int, params: List<TRObject> = emptyList()) {
+            val parentTracePoint = threadData.firstMethodCallTracePointOrNull()
             val methodCall = TRMethodCallTracePoint(
                 threadId = threadData.threadId,
                 codeLocationId = codeLocationId,
                 methodId = TRACE_CONTEXT.getOrCreateMethodId(className, methodName, methodType),
                 obj = obj,
                 parameters = params,
-                flags = INCOMPLETE_METHOD_FLAG.toShort()
+                flags = INCOMPLETE_METHOD_FLAG.toShort(),
+                parentTracePoint = parentTracePoint
             )
-            val parentTracePoint = if (threadData.getStack().isEmpty()) null
-                                   else threadData.currentMethodCallTracePoint()
             strategy.tracePointCreated(parentTracePoint, methodCall)
             threadData.pushStackFrame(methodCall, thread, isInline = false)
         }
@@ -519,7 +521,8 @@ class TraceCollectingEventTracker(
             codeLocationId = codeLocation,
             methodId = methodId,
             obj = TRObjectOrNull(receiver),
-            parameters = params.map { TRObjectOrNull(it) }
+            parameters = params.map { TRObjectOrNull(it) },
+            parentTracePoint = threadData.firstMethodCallTracePointOrNull()
         )
         strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
         threadData.pushStackFrame(tracePoint, receiver, isInline = false)
@@ -615,7 +618,8 @@ class TraceCollectingEventTracker(
             codeLocationId = codeLocation,
             methodId = methodId,
             obj = TRObjectOrNull(owner),
-            parameters = emptyList()
+            parameters = emptyList(),
+            parentTracePoint = threadData.firstMethodCallTracePointOrNull()
         )
         strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
         threadData.pushStackFrame(tracePoint, owner, isInline = true)
