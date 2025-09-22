@@ -42,7 +42,7 @@ class TraceAgentTransformer(val methodTransformer: MethodVisitorProvider) : Clas
         // - https://youtrack.jetbrains.com/issue/KT-16727/
         if (internalClassName == null) return null
         // If the class should not be transformed, return immediately.
-        if (TraceAgentParameters.classUnderTraceDebuggingMethodOwner != internalClassName.toCanonicalClassName()) {
+        if (TraceAgentParameters.classUnderTraceDebugging != internalClassName.toCanonicalClassName()) {
             return null
         }
         return transformImpl(loader, internalClassName, classBytes)
@@ -103,7 +103,7 @@ private class TraceAgentClassVisitor(
 
         var mv = super.visitMethod(access, methodName, desc, signature, exceptions)
         // Don't transform synthetic methods, as they cannot be asked for by the user
-        if (className == TraceAgentParameters.classUnderTraceDebuggingMethodOwner &&
+        if (className == TraceAgentParameters.classUnderTraceDebugging &&
             methodName == TraceAgentParameters.methodUnderTraceDebugging &&
             isNotSynthetic) {
             mv = methodTransformer(mv.newAdapter(), access, methodName, desc)

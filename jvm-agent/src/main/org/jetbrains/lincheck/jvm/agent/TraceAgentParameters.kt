@@ -12,7 +12,6 @@ package org.jetbrains.lincheck.jvm.agent
 
 import org.jetbrains.annotations.TestOnly
 import org.jetbrains.lincheck.util.Logger
-import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 
@@ -85,9 +84,6 @@ object TraceAgentParameters {
 
     @JvmStatic
     lateinit var classUnderTraceDebugging: String
-    
-    @JvmStatic
-    lateinit var classUnderTraceDebuggingMethodOwner: String
 
     @JvmStatic
     lateinit var methodUnderTraceDebugging: String
@@ -116,7 +112,7 @@ object TraceAgentParameters {
             namedArgs[ARGUMENT_CLASS] = classUnderTraceDebugging
             methodUnderTraceDebugging = actualArguments.getOrNull(1) ?: error("Method name was not provided")
             namedArgs[ARGUMENT_METHOD] = methodUnderTraceDebugging
-            setClassUnderTraceDebuggingMethodOwner()
+            setClassUnderTraceDebuggingToMethodOwner()
             traceDumpFilePath = actualArguments.getOrNull(2)
             namedArgs[ARGUMENT_OUTPUT] = traceDumpFilePath
 
@@ -132,7 +128,7 @@ object TraceAgentParameters {
                 ?: error("Class name argument \"$ARGUMENT_CLASS\" was not provided")
             methodUnderTraceDebugging = kvArguments[ARGUMENT_METHOD]
                 ?: error("Method name argument \"$ARGUMENT_METHOD\" was not provided")
-            setClassUnderTraceDebuggingMethodOwner()
+            setClassUnderTraceDebuggingToMethodOwner()
             traceDumpFilePath = kvArguments[ARGUMENT_OUTPUT]
 
             val allowedKeys = mutableSetOf(ARGUMENT_CLASS, ARGUMENT_METHOD, ARGUMENT_OUTPUT)
@@ -147,10 +143,10 @@ object TraceAgentParameters {
         }
     }
     
-    private fun setClassUnderTraceDebuggingMethodOwner(
+    private fun setClassUnderTraceDebuggingToMethodOwner(
         startClass: String = classUnderTraceDebugging, method: String = methodUnderTraceDebugging
     ) {
-        classUnderTraceDebuggingMethodOwner =
+        classUnderTraceDebugging =
             runCatching { Class.forName(startClass) }.getOrNull()
                 ?.let { findDeclaringClassOrInterface(it, method) }
                 ?: startClass
@@ -199,7 +195,6 @@ object TraceAgentParameters {
     @TestOnly
     fun reset() {
         classUnderTraceDebugging = ""
-        classUnderTraceDebuggingMethodOwner = ""
         methodUnderTraceDebugging = ""
         traceDumpFilePath = null
         namedArgs.clear()
