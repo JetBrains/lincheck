@@ -43,4 +43,13 @@ class TraceDebuggerExamplesTraceRecorderIntegrationTest : AbstractTraceRecorderI
             checkRepresentation = false,
         )
     }
+
+    @Test
+    fun `org_examples_integration_bugs_ElementRefTest accessLocalVariableFromLambda`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.bugs.ElementRefTest",
+            testMethodName = "accessLocalVariableFromLambda",
+            gradleCommands = listOf(":test"),
+        )
+    }
 }

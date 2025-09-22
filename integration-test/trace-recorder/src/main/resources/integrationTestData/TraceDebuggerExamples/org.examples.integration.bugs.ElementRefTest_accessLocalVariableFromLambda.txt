@@ -1,0 +1,7 @@
+# Thread 1
+ElementRefTest.accessLocalVariableFromLambda() at :0
+  localVariable = 1 at ElementRefTest.kt:9
+  modify.invoke(): 1 at ElementRefTest.kt:14
+    localVariable = 2 at ElementRefTest.kt:11
+  modify.invoke(): 2 at ElementRefTest.kt:15
+    localVariable = 3 at ElementRefTest.kt:11
