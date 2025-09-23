@@ -750,7 +750,7 @@ class FileStreamingTraceCollecting(
     constructor(baseFileName: String, context: TraceContext) :
             this(
                 dataStream = openNewFile(baseFileName),
-                indexStream = openNewFile(baseFileName + INDEX_FILENAME_SUFFIX),
+                indexStream = openNewFile("$baseFileName.$INDEX_FILENAME_EXT"),
                 context = context
             )
 
@@ -918,7 +918,7 @@ class FileStreamingTraceCollecting(
 fun saveRecorderTrace(baseFileName: String, context: TraceContext, rootCallsPerThread: List<TRTracePoint>) =
     saveRecorderTrace(
         data = openNewFile(baseFileName).buffered(OUTPUT_BUFFER_SIZE),
-        index = openNewFile(baseFileName + INDEX_FILENAME_SUFFIX).buffered(OUTPUT_BUFFER_SIZE),
+        index = openNewFile("$baseFileName.$INDEX_FILENAME_EXT").buffered(OUTPUT_BUFFER_SIZE),
         context = context,
         rootCallsPerThread = rootCallsPerThread
     )
@@ -938,8 +938,8 @@ fun saveRecorderTrace(data: OutputStream, index: OutputStream, context: TraceCon
 
 fun packRecordedTrace(baseFileName: String, metaInfo: TraceMetaInfo, deleteSources: Boolean = true) {
     val dataName = baseFileName
-    val indexName = baseFileName + INDEX_FILENAME_SUFFIX
-    val outputName = baseFileName + PACK_FILENAME_SUFFIX
+    val indexName = "$baseFileName.$INDEX_FILENAME_EXT"
+    val outputName = "$baseFileName.$PACK_FILENAME_EXT"
 
     try {
         ZipOutputStream(openNewFile(outputName).buffered(OUTPUT_BUFFER_SIZE)).use { zip ->

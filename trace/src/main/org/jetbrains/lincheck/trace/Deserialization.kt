@@ -273,7 +273,7 @@ class LazyTraceReader private constructor(
 
                     val dataEntry = zip?.nextEntry ?: throwZipError(baseFileName)
                     if (dataEntry.name != PACKED_DATA_ITEM_NAME) throwZipError(baseFileName)
-                    val tmpDataFile = File.createTempFile("unpacked-trace-data", DATA_FILENAME_SUFFIX)
+                    val tmpDataFile = File.createTempFile("unpacked-trace-data", ".$DATA_FILENAME_EXT")
                     tmpDataFile.deleteOnExit()
 
                     try {
@@ -302,7 +302,7 @@ class LazyTraceReader private constructor(
                 throw e
             }
             if (indexStream == null) {
-                indexStream = wrapStream(openExistingFile(baseFileName + INDEX_FILENAME_SUFFIX))
+                indexStream = wrapStream(openExistingFile("$baseFileName.$INDEX_FILENAME_EXT"))
             }
         }
 

@@ -21,7 +21,6 @@ import java.io.InputStream
 import java.io.InputStreamReader
 import java.io.OutputStream
 import java.lang.management.ManagementFactory
-import kotlin.math.exp
 
 /**
  * This file contains data structures and extensions for DataInput and DataOutput to save "primitive" trace data.
@@ -37,13 +36,13 @@ internal const val INDEX_MAGIC : Long = TRACE_MAGIC.inv()
 internal const val TRACE_VERSION : Long = 12
 
 // This suffix is not enforced, but IDEA plugin rely on it
-const val DATA_FILENAME_SUFFIX = ".trace"
-const val INDEX_FILENAME_SUFFIX = ".idx"
+const val DATA_FILENAME_EXT = "trace"
+// These two are enforced
+const val INDEX_FILENAME_EXT = "idx"
+const val PACK_FILENAME_EXT = "packedtrace"
 
-const val PACK_FILENAME_SUFFIX = ".packedtrace"
-
-internal const val PACKED_DATA_ITEM_NAME = "trace$DATA_FILENAME_SUFFIX"
-internal const val PACKED_INDEX_ITEM_NAME = "trace$INDEX_FILENAME_SUFFIX"
+internal const val PACKED_DATA_ITEM_NAME = "trace.$DATA_FILENAME_EXT"
+internal const val PACKED_INDEX_ITEM_NAME = "trace.$INDEX_FILENAME_EXT"
 internal const val PACKED_META_ITEM_NAME = "info.txt"
 
 internal const val BLOCK_HEADER_SIZE: Int = Byte.SIZE_BYTES + Int.SIZE_BYTES
