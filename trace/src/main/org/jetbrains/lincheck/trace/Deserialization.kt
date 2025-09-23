@@ -783,18 +783,18 @@ fun isPackedTrace(traceFileName: String): Boolean {
     val input = openExistingFile(traceFileName) ?: return false
     return try {
         ZipInputStream(input).use { zip ->
-            val metaInfoEntry = zip.nextEntry ?: return@use false
-            if (metaInfoEntry.name != PACKED_META_ITEM_NAME) return@use false
+            val metaInfoEntry = zip.nextEntry ?: return false
+            if (metaInfoEntry.name != PACKED_META_ITEM_NAME) return false
 
-            val dataEntry = zip.nextEntry ?: return@use false
-            if (dataEntry.name != PACKED_DATA_ITEM_NAME) return@use false
-            if (readMagic(zip) != TRACE_MAGIC) return@use false
+            val dataEntry = zip.nextEntry ?: return false
+            if (dataEntry.name != PACKED_DATA_ITEM_NAME) return false
+            if (readMagic(zip) != TRACE_MAGIC) return false
 
-            val indexEntry = zip.nextEntry ?: return@use false
-            if (indexEntry.name != PACKED_INDEX_ITEM_NAME) return@use false
-            if (readMagic(zip) != INDEX_MAGIC) return@use false
+            val indexEntry = zip.nextEntry ?: return false
+            if (indexEntry.name != PACKED_INDEX_ITEM_NAME) return false
+            if (readMagic(zip) != INDEX_MAGIC) return false
 
-            return@use true
+            return true
         }
     } catch (_: Throwable) {
         false
@@ -805,7 +805,7 @@ fun isTraceData(traceFileName: String): Boolean {
     return try {
         val input = openExistingFile(traceFileName) ?: return false
         input.use { input ->
-            return@use readMagic(input) == TRACE_MAGIC
+            return readMagic(input) == TRACE_MAGIC
         }
     } catch (_: Throwable) {
         false
