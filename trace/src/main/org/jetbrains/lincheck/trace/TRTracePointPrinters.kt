@@ -222,10 +222,8 @@ object DefaultTRMethodCallTracePointPrinter: AbstractTRMethodCallTracePointPrint
 abstract class AbstractTRFieldTracePointPrinter {
 
     protected fun TRAppendable.appendTracePoint(tracePoint: TRFieldTracePoint): TRAppendable {
-        val isLambdaCaptureSyntheticField = isLambdaCaptureSyntheticField(tracePoint)
-
         appendOwner(tracePoint)
-        appendFieldName(tracePoint, isLambdaCaptureSyntheticField)
+        appendFieldName(tracePoint)
         append(" ")
         appendSpecialSymbol(tracePoint.accessSymbol())
         append(" ")
@@ -235,23 +233,31 @@ abstract class AbstractTRFieldTracePointPrinter {
 
     protected fun TRAppendable.appendOwner(tracePoint: TRFieldTracePoint): TRAppendable {
         val ownerName = CodeLocations.accessPath(tracePoint.codeLocationId)
+        val appendDot = {
+            // When lambda captures a local variable, it is wrapped into the `*Ref` class,
+            // which stored primitive value in the ` element ` field. We hide such field accesses:
+            // see the implementation of the `appendFieldName` (it does not print the field name in such cases).
+            // So to avoid a dot symbol after which there will be no actual field name, we
+            // need to ensure that a dot is appended only when it is not the described case.
+            if (!isLambdaCaptureSyntheticField(tracePoint)) appendSpecialSymbol(".")
+        }
         if (ownerName != null) {
             ownerName.filterThisAccesses().takeIf { !it.isEmpty() }?.let {
                 appendAccessPath(it)
-                appendSpecialSymbol(".")
+                appendDot()
             }
         } else if (tracePoint.obj != null) {
             appendObject(tracePoint.obj)
-            appendSpecialSymbol(".")
+            appendDot()
         } else {
             appendClassName(tracePoint.classDescriptor)
-            appendSpecialSymbol(".")
+            appendDot()
         }
         return this
     }
 
-    protected fun TRAppendable.appendFieldName(tracePoint: TRFieldTracePoint, isLambdaCaptureSyntheticField: Boolean): TRAppendable {
-        if (!isLambdaCaptureSyntheticField) {
+    protected fun TRAppendable.appendFieldName(tracePoint: TRFieldTracePoint): TRAppendable {
+        if (!isLambdaCaptureSyntheticField(tracePoint)) {
             appendFieldName(tracePoint.fieldDescriptor)
         }
         return this
