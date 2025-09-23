@@ -284,7 +284,7 @@ class LazyTraceReader private constructor(
                         this.tmpDataFile = tmpDataFile
                     } catch (e: IOException) {
                         tmpDataFile.delete()
-                        throwZipError(baseFileName)
+                        throwZipError(baseFileName, e)
                     }
 
                     try {
@@ -1123,6 +1123,6 @@ private fun checkDataHeader(input: DataInput) {
 }
 
 @Suppress("NOTHING_TO_INLINE")
-private inline fun throwZipError(fileName: String): Nothing {
-    throw IllegalArgumentException("File \"$fileName\" is a ZIP archive but is not a packed trace")
+private inline fun throwZipError(fileName: String, cause: Throwable? = null): Nothing {
+    throw IllegalArgumentException("File \"$fileName\" is a ZIP archive but is not a packed trace", cause)
 }
