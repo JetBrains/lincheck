@@ -13,6 +13,7 @@ package org.jetbrains.lincheck.jvm.agent.analysis.controlflow
 import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.AbstractInsnNode
+import org.objectweb.asm.tree.TryCatchBlockNode
 
 /**
  * A type alias representing an index used for identifying nodes in a control flow graph.
@@ -34,20 +35,18 @@ sealed class EdgeLabel {
      * A jump transition produced by one of the JVM branch instructions (if/switch/goto).
      *
      * @property instruction the ASM instruction node which produced this edge.
+     * @property opcode the opcode of the jump instruction.
+     * @property isConditional true if this jump is conditional.
      */
     data class Jump(val instruction: AbstractInsnNode) : EdgeLabel() {
-
-        val opcode: Int get() = instruction.opcode
-
         init {
             require(isRecognizedJumpOpcode(opcode)) {
                 "Unrecognized jump opcode: $opcode"
             }
         }
 
-        /**
-         * True if this jump is conditional.
-         */
+        val opcode: Int get() = instruction.opcode
+
         val isConditional: Boolean get() = when (opcode) {
             Opcodes.GOTO, Opcodes.JSR -> false
             else -> true
@@ -56,8 +55,19 @@ sealed class EdgeLabel {
 
     /**
      * An exception transition into a handler block.
+     *
+     * @property tryCatchBlock optional ASM try/catch block node which defined this handler edge.
+     * @property caughtTypeName the internal name of the caught exception type (e.g., "java/lang/Exception"),
+     *   or null for a catch-all (finally-like) handler.
+     * @property isCatchAll true if this handler is a catch-all (finally-like) handler.
      */
-    data object Exception : EdgeLabel()
+    data class Exception(
+        val tryCatchBlock: TryCatchBlockNode? = null,
+    ) : EdgeLabel() {
+        val caughtTypeName: String? get() = tryCatchBlock?.type
+
+        val isCatchAll: Boolean get() = caughtTypeName == null
+    }
 }
 
 typealias EdgeMap = Map<NodeIndex, Set<NodeIndex>>
