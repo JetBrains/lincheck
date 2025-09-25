@@ -70,8 +70,30 @@ sealed class EdgeLabel {
     }
 }
 
-typealias EdgeMap = Map<NodeIndex, Set<NodeIndex>>
-typealias MutableEdgeMap = MutableMap<NodeIndex, MutableSet<NodeIndex>>
+class Edge(
+    val source: NodeIndex,
+    val target: NodeIndex,
+    val label: EdgeLabel,
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is Edge) return false
+        return source == other.source &&
+               target == other.target &&
+               label === other.label
+    }
+
+    override fun hashCode(): Int {
+        var result = 0
+        result = 31 * result + source.hashCode()
+        result = 31 * result + target.hashCode()
+        result = 31 * result + label.hashCode()
+        return result
+    }
+}
+
+typealias EdgeMap = Map<NodeIndex, Set<Edge>>
+typealias MutableEdgeMap = MutableMap<NodeIndex, MutableSet<Edge>>
 
 /**
  * Base class for representing control-flow graph.
@@ -100,16 +122,20 @@ sealed class ControlFlowGraph {
     val exceptionEdges: EdgeMap get() = _exceptionEdges
     private val _exceptionEdges: MutableEdgeMap = mutableMapOf()
 
-    fun addEdge(src: NodeIndex, dst: NodeIndex) {
+    fun addEdge(src: NodeIndex, dst: NodeIndex, label: EdgeLabel) {
         _nodes.add(src)
         _nodes.add(dst)
-        _edges.updateInplace(src, default = mutableSetOf()) { add(dst) }
+        _edges.updateInplace(src, default = mutableSetOf()) {
+            add(Edge(src, dst, label))
+        }
     }
 
-    fun addExceptionEdge(src: NodeIndex, dst: NodeIndex) {
+    fun addExceptionEdge(src: NodeIndex, dst: NodeIndex, label: EdgeLabel.Exception) {
         _nodes.add(src)
         _nodes.add(dst)
-        _exceptionEdges.updateInplace(src, default = mutableSetOf()) { add(dst) }
+        _exceptionEdges.updateInplace(src, default = mutableSetOf()) {
+            add(Edge(src, dst, label))
+        }
     }
 }
 
