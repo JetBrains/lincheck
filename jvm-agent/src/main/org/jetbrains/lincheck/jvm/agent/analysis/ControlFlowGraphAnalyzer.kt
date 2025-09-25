@@ -12,6 +12,7 @@ package org.jetbrains.lincheck.jvm.agent.analysis
 
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.*
 import org.objectweb.asm.tree.MethodNode
+import org.objectweb.asm.tree.TryCatchBlockNode
 import org.objectweb.asm.tree.analysis.*
 
 /**
@@ -29,18 +30,22 @@ class ControlFlowGraphAnalyzer : Analyzer<BasicValue> {
        private set
 
     override fun init(owner: String, method: MethodNode) {
+        super.init(owner, method)
         graph = InstructionControlFlowGraph(method.instructions)
-        // no need to call `super` since it is no-op in ASM's Analyzer.
     }
 
     override fun newControlFlowEdge(src: Int, dst: Int) {
-        graph.addEdge(src, dst)
-        // no need to call `super` since it is no-op in ASM's Analyzer.
+        super.newControlFlowEdge(src, dst)
+        val insn = graph.instructions.get(src)
+        val label = if (dst == src + 1) EdgeLabel.FallThrough else EdgeLabel.Jump(insn)
+        graph.addEdge(src, dst, label)
     }
 
-    override fun newControlFlowExceptionEdge(src: Int, dst: Int): Boolean {
-        graph.addExceptionEdge(src, dst)
-        // no need to call `super` since it just returns `true` in ASM's Analyzer.
-        return true
+    override fun newControlFlowExceptionEdge(src: Int, tryCatchBlock: TryCatchBlockNode): Boolean {
+        return super.newControlFlowExceptionEdge(src, tryCatchBlock).also {
+            val label = EdgeLabel.Exception(tryCatchBlock)
+            val dst = graph.instructions.indexOf(tryCatchBlock.handler)
+            graph.addExceptionEdge(src, dst, label)
+        }
     }
 }
