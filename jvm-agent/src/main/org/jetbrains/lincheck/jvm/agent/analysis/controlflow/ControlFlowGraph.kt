@@ -29,7 +29,7 @@ sealed class EdgeLabel {
     /**
      * A normal fall-through from instruction i to i + 1.
      */
-    data object FallThrough : EdgeLabel()
+    object FallThrough : EdgeLabel()
 
     /**
      * A jump transition produced by one of the JVM branch instructions (if/switch/goto).
@@ -38,7 +38,7 @@ sealed class EdgeLabel {
      * @property opcode the opcode of the jump instruction.
      * @property isConditional true if this jump is conditional.
      */
-    data class Jump(val instruction: AbstractInsnNode) : EdgeLabel() {
+    class Jump(val instruction: AbstractInsnNode) : EdgeLabel() {
         init {
             require(isRecognizedJumpOpcode(opcode)) {
                 "Unrecognized jump opcode: $opcode"
@@ -61,7 +61,7 @@ sealed class EdgeLabel {
      *   or null for a catch-all (finally-like) handler.
      * @property isCatchAll true if this handler is a catch-all (finally-like) handler.
      */
-    data class Exception(
+    class Exception(
         val tryCatchBlock: TryCatchBlockNode? = null,
     ) : EdgeLabel() {
         val caughtTypeName: String? get() = tryCatchBlock?.type
