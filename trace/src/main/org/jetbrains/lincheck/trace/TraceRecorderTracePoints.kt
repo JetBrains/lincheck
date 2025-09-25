@@ -569,6 +569,8 @@ const val MAX_TROBJECT_STRING_LENGTH = 50
 private fun trimString(s: CharSequence): String = s.take(MAX_TROBJECT_STRING_LENGTH).toString()
 
 fun TRObject(obj: Any): TRObject {
+    val defaultTRObject = { TRObject(TRACE_CONTEXT.getOrCreateClassId(obj.javaClass.name), System.identityHashCode(obj), null) }
+
     return when (obj) {
         is Byte -> TRObject(TR_OBJECT_P_BYTE, 0, obj)
         is Short -> TRObject(TR_OBJECT_P_SHORT, 0, obj)
@@ -578,7 +580,12 @@ fun TRObject(obj: Any): TRObject {
         is Double -> TRObject(TR_OBJECT_P_DOUBLE, 0, obj)
         is Char -> TRObject(TR_OBJECT_P_CHAR, 0, obj)
         is String -> TRObject(TR_OBJECT_P_STRING, 0, trimString(obj))
-        is CharSequence -> TRObject(TR_OBJECT_P_STRING, 0, trimString(obj))
+        is CharSequence -> runCatching { trimString(obj) }.let {
+            // Some implementations of CharSequence might throw when `subSequence` is invoked at some unexpected moment,
+            // like when this sequence is considered "destroyed" at this point
+            if (it.isSuccess) TRObject(TR_OBJECT_P_STRING, 0, it.getOrThrow())
+            else defaultTRObject()
+        }
         is Unit -> TRObject(TR_OBJECT_P_UNIT, 0, obj)
         is Boolean -> TRObject(TR_OBJECT_P_BOOLEAN, 0, obj)
         // Render these types to strings for simplicity
@@ -587,7 +594,7 @@ fun TRObject(obj: Any): TRObject {
         is BigDecimal -> TRObject(TR_OBJECT_P_RAW_STRING, 0, obj.toString())
         // Generic case
         // TODO Make parametrized
-        else -> TRObject(TRACE_CONTEXT.getOrCreateClassId(obj.javaClass.name), System.identityHashCode(obj), null)
+        else -> defaultTRObject()
     }
 }
 

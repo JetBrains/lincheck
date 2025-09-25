@@ -97,8 +97,12 @@ fun String.replaceNestedClassDollar(): String {
         val before = nestedClassRepresentation.substring(currentIndex, dollarIndex)
         result.append(before)
         // Check if this dollar separates nested class names
-        val afterDollarChar = nestedClassRepresentation[dollarIndex + 1]
-        val isNestedClassNameSeparator = before.isNotEmpty() && before[0].isUpperCase() && afterDollarChar.isUpperCase()
+        val isNestedClassNameSeparator = (
+            before.isNotEmpty() &&
+            before[0].isUpperCase() &&
+            dollarIndex + 1 < nestedClassRepresentation.length &&
+            nestedClassRepresentation[dollarIndex + 1].isUpperCase()
+        )
         if (isNestedClassNameSeparator) {
             result.append('.')
         } else {
