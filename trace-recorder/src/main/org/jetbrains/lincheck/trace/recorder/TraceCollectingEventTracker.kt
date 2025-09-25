@@ -499,7 +499,7 @@ class TraceCollectingEventTracker(
         methodId: Int,
         receiver: Any?,
         params: Array<Any?>
-    ): Any? = runInsideInjectedCode {
+    ): Any? = runInsideInjectedCode<Any?> {
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return null
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return null
         val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
@@ -538,7 +538,7 @@ class TraceCollectingEventTracker(
         receiver: Any?,
         params: Array<Any?>,
         result: Any?
-    ): Any? = runInsideInjectedCode {
+    ): Any? = runInsideInjectedCode(result) {
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return result
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return result
         val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
