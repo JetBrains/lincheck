@@ -97,7 +97,7 @@ class BasicBlockControlFlowGraph(
         val node = instructions.get(idx)
         return (node as? LabelNode)?.label
     }
-    
+
     /**
      * Computes loop-related information for this method.
      */
