@@ -10,49 +10,15 @@
 
 package org.jetbrains.lincheck.jvm.agent.analysis.controlflow
 
-import org.jetbrains.lincheck.util.updateInplace
-
+/**
+ * A type alias representing the index of a basic block within a control flow graph.
+ */
 typealias BasicBlockIndex = Int
-
-typealias BasicBlockEdgeMap = Map<InstructionIndex, Set<InstructionIndex>>
-typealias BasicBlockMutableEdgeMap = MutableMap<InstructionIndex, MutableSet<InstructionIndex>>
-
 
 /**
  * A control-flow graph on the level of basic blocks.
  */
-class BasicBlockControlFlowGraph(val basicBlocks: List<BasicBlock>) {
-
-    /**
-     * Nodes (basic block indices) of the control flow graph.
-     */
-    val nodes: Set<BasicBlockIndex> get() = _nodes
-    private val _nodes: MutableSet<BasicBlockIndex> = mutableSetOf()
-
-    /**
-     * Regular (non-exceptional) control flow edges.
-     */
-    val edges: BasicBlockEdgeMap get() = _edges
-    private val _edges: BasicBlockMutableEdgeMap = mutableMapOf()
-
-    /**
-     * Exceptional control flow edges.
-     */
-    val exceptionEdges: BasicBlockEdgeMap get() = _exceptionEdges
-    private val _exceptionEdges: BasicBlockMutableEdgeMap = mutableMapOf()
-
-    fun addEdge(src: BasicBlockIndex, dst: BasicBlockIndex) {
-        _nodes.add(src)
-        _nodes.add(dst)
-        _edges.updateInplace(src, default = mutableSetOf()) { add(dst) }
-    }
-
-    fun addExceptionEdge(src: BasicBlockIndex, dst: BasicBlockIndex) {
-        _nodes.add(src)
-        _nodes.add(dst)
-        _exceptionEdges.updateInplace(src, default = mutableSetOf()) { add(dst) }
-    }
-}
+class BasicBlockControlFlowGraph(val basicBlocks: List<BasicBlock>) : ControlFlowGraph() {}
 
 /**
  * Builds a basic-block level CFG from the given instruction-level CFG.
