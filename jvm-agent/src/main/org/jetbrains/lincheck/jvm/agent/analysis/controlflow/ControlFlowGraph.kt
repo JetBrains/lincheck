@@ -113,17 +113,17 @@ sealed class ControlFlowGraph {
     /**
      * A mapping from a node to adjacent control-flow edges.
      */
-    val edges: EdgeMap get() = _edges
-    private val _edges: MutableEdgeMap = mutableMapOf()
+    val edgeMap: EdgeMap get() = _edgeMap
+    private val _edgeMap: MutableEdgeMap = mutableMapOf()
 
     fun hasEdge(src: NodeIndex, dst: NodeIndex): Boolean {
-        return _edges[src]?.any { it.target == dst } ?: false
+        return _edgeMap[src]?.any { it.target == dst } ?: false
     }
 
     fun addEdge(src: NodeIndex, dst: NodeIndex, label: EdgeLabel) {
         _nodes.add(src)
         _nodes.add(dst)
-        _edges.updateInplace(src, default = mutableSetOf()) {
+        _edgeMap.updateInplace(src, default = mutableSetOf()) {
             add(Edge(src, dst, label))
         }
     }

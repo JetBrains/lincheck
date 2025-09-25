@@ -34,7 +34,7 @@ fun InstructionControlFlowGraph.toBasicBlockGraph(): BasicBlockControlFlowGraph 
     val leaders =
         buildSet {
             add(0)
-            edges.values.forEach { edges ->
+            edgeMap.values.forEach { edges ->
                 edges.forEach { edge ->
                     if (edge.label is EdgeLabel.Jump) {
                         add(edge.target)
@@ -59,7 +59,7 @@ fun InstructionControlFlowGraph.toBasicBlockGraph(): BasicBlockControlFlowGraph 
     leaders.forEachIndexed { i, leader ->
         val endExclusive = leaders.getOrElse(i + 1) { maxInstructionIndex + 1 }
         val instructions = (leader until endExclusive).toList()
-        basicBlocks += BasicBlock(index = i, instructions = instructions)
+        basicBlocks += BasicBlock(i, instructions)
     }
 
     // Map: instruction index -> basic block index
@@ -72,7 +72,7 @@ fun InstructionControlFlowGraph.toBasicBlockGraph(): BasicBlockControlFlowGraph 
     
     // Project instruction edges onto basic blocks.
     val basicBlockGraph = BasicBlockControlFlowGraph(basicBlocks)
-    for ((u, edges) in edges) {
+    for ((u, edges) in edgeMap) {
         val bu = instructionToBlock[u] ?: continue
         for (edge in edges) {
             val v = edge.target
