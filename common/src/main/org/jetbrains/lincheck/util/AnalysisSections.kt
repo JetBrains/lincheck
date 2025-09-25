@@ -165,7 +165,7 @@ inline fun <R> runInsideIgnoredSection(block: () -> R): R {
  * [sun.nio.ch.lincheck.EventTracker] methods, which do not have return values or require a non-null result.
  *
  * @param block the code to execute within the injected code.
- * @return result of the [block] invocation.
+ * @return result of the [block] invocation or `null` if the analysis is disabled for the current thread.
  */
 inline fun <R> runInsideInjectedCode(block: () -> R): R? {
     val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: return block()
