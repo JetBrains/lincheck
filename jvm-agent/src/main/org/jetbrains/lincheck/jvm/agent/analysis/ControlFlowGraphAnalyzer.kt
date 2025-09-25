@@ -44,7 +44,7 @@ class ControlFlowGraphAnalyzer : Analyzer<BasicValue> {
     override fun newControlFlowExceptionEdge(src: Int, tryCatchBlock: TryCatchBlockNode): Boolean {
         val label = EdgeLabel.Exception(tryCatchBlock)
         val dst = graph.instructions.indexOf(tryCatchBlock.handler)
-        graph.addExceptionEdge(src, dst, label)
+        graph.addEdge(src, dst, label)
         return super.newControlFlowExceptionEdge(src, dst)
     }
 }

@@ -24,20 +24,32 @@ class BasicBlockControlFlowGraph(val basicBlocks: List<BasicBlock>) : ControlFlo
  * Builds a basic-block level CFG from the given instruction-level CFG.
  */
 fun InstructionControlFlowGraph.toBasicBlockGraph(): BasicBlockControlFlowGraph {
-    // TODO: this algorithm assumes out instruction-level CFG does not have trivial (i, i+1) edges;
-    //   we need to adjust instruction-level CFG builder to satisfy this assumption.
-
     // Identify leaders (first instructions of basic blocks).
     //
     // An instruction is a leader if it is:
     //   1. the first instruction of the program;
     //   2. any instruction that is the target of a conditional or unconditional jump;
-    //   3. instruction immediately following a conditional jump.
-    val leaders = buildSet {
-        add(0)
-        edges.values.forEach { addAll(it) }
-        exceptionEdges.values.forEach { addAll(it) }
-    }.toMutableList().sorted()
+    //   3. instruction immediately following a conditional jump (since control may fall through);
+    //   4. any instruction that is the target of exception handler jump.
+    val leaders =
+        buildSet {
+            add(0)
+            edges.values.forEach { edges ->
+                edges.forEach { edge ->
+                    if (edge.label is EdgeLabel.Jump) {
+                        add(edge.target)
+                        if (edge.label.isConditional && hasEdge(edge.source, edge.source + 1)) {
+                            add(edge.source + 1)
+                        }
+                    }
+                    if (edge.label is EdgeLabel.Exception) {
+                        add(edge.target)
+                    }
+                }
+            }
+        }
+        .toMutableList()
+        .sorted()
 
     val maxInstructionIndex = nodes.maxOrNull() ?: 0
 
@@ -60,18 +72,12 @@ fun InstructionControlFlowGraph.toBasicBlockGraph(): BasicBlockControlFlowGraph 
     
     // Project instruction edges onto basic blocks.
     val basicBlockGraph = BasicBlockControlFlowGraph(basicBlocks)
-    for ((u, destinations) in edges) {
+    for ((u, edges) in edges) {
         val bu = instructionToBlock[u] ?: continue
-        for (v in destinations) {
+        for (edge in edges) {
+            val v = edge.target
             val bv = instructionToBlock[v] ?: continue
-            basicBlockGraph.addEdge(bu, bv)
-        }
-    }
-    for ((u, destinations) in exceptionEdges) {
-        val bu = instructionToBlock[u] ?: continue
-        for (v in destinations) {
-            val bv = instructionToBlock[v] ?: continue
-            basicBlockGraph.addExceptionEdge(bu, bv)
+            basicBlockGraph.addEdge(bu, bv, edge.label)
         }
     }
     return basicBlockGraph

@@ -111,29 +111,19 @@ sealed class ControlFlowGraph {
     private val _nodes: MutableSet<NodeIndex> = mutableSetOf()
 
     /**
-     * Regular (non-exceptional) control flow edges.
+     * A mapping from a node to adjacent control-flow edges.
      */
     val edges: EdgeMap get() = _edges
     private val _edges: MutableEdgeMap = mutableMapOf()
 
-    /**
-     * Exceptional control flow edges.
-     */
-    val exceptionEdges: EdgeMap get() = _exceptionEdges
-    private val _exceptionEdges: MutableEdgeMap = mutableMapOf()
+    fun hasEdge(src: NodeIndex, dst: NodeIndex): Boolean {
+        return _edges[src]?.any { it.target == dst } ?: false
+    }
 
     fun addEdge(src: NodeIndex, dst: NodeIndex, label: EdgeLabel) {
         _nodes.add(src)
         _nodes.add(dst)
         _edges.updateInplace(src, default = mutableSetOf()) {
-            add(Edge(src, dst, label))
-        }
-    }
-
-    fun addExceptionEdge(src: NodeIndex, dst: NodeIndex, label: EdgeLabel.Exception) {
-        _nodes.add(src)
-        _nodes.add(dst)
-        _exceptionEdges.updateInplace(src, default = mutableSetOf()) {
             add(Edge(src, dst, label))
         }
     }
