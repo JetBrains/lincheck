@@ -11,12 +11,54 @@
 package org.jetbrains.lincheck.jvm.agent.analysis.controlflow
 
 import org.jetbrains.lincheck.util.updateInplace
+import org.objectweb.asm.Opcodes
+import org.objectweb.asm.tree.AbstractInsnNode
 
 /**
  * A type alias representing an index used for identifying nodes in a control flow graph.
  * Effectively, either an instruction index or a basic-block index.
  */
 typealias NodeIndex = Int
+
+/**
+ * A type representing the label of a control-flow edge,
+ * containing information about the type of the transition.
+ */
+sealed class EdgeLabel {
+    /**
+     * A normal fall-through from instruction i to i + 1.
+     */
+    data object FallThrough : EdgeLabel()
+
+    /**
+     * A jump transition produced by one of the JVM branch instructions (if/switch/goto).
+     *
+     * @property instruction the ASM instruction node which produced this edge.
+     */
+    data class Jump(val instruction: AbstractInsnNode) : EdgeLabel() {
+
+        val opcode: Int get() = instruction.opcode
+
+        init {
+            require(isRecognizedJumpOpcode(opcode)) {
+                "Unrecognized jump opcode: $opcode"
+            }
+        }
+
+        /**
+         * True if this jump is conditional.
+         */
+        val isConditional: Boolean get() = when (opcode) {
+            Opcodes.GOTO, Opcodes.JSR -> false
+            else -> true
+        }
+    }
+
+    /**
+     * An exception transition into a handler block.
+     */
+    data object Exception : EdgeLabel()
+}
 
 typealias EdgeMap = Map<NodeIndex, Set<NodeIndex>>
 typealias MutableEdgeMap = MutableMap<NodeIndex, MutableSet<NodeIndex>>
@@ -59,4 +101,25 @@ sealed class ControlFlowGraph {
         _nodes.add(dst)
         _exceptionEdges.updateInplace(src, default = mutableSetOf()) { add(dst) }
     }
+}
+
+/**
+ * Helper: checks if the given opcode corresponds to a recognized JVM jump/switch instruction.
+ */
+private fun isRecognizedJumpOpcode(opcode: Int): Boolean = when (opcode) {
+    // Unconditional
+    Opcodes.GOTO, Opcodes.JSR,
+    // Single-operand zero comparisons
+    Opcodes.IFEQ, Opcodes.IFNE, Opcodes.IFLT, Opcodes.IFGE, Opcodes.IFGT, Opcodes.IFLE,
+    // Single-operand null comparisons
+    Opcodes.IFNULL, Opcodes.IFNONNULL,
+    // Two-operand numeric comparisons
+    Opcodes.IF_ICMPEQ, Opcodes.IF_ICMPNE, Opcodes.IF_ICMPLT, Opcodes.IF_ICMPGE, Opcodes.IF_ICMPGT, Opcodes.IF_ICMPLE,
+    // Two-operand object reference comparisons
+    Opcodes.IF_ACMPEQ, Opcodes.IF_ACMPNE,
+    // Switches
+    Opcodes.TABLESWITCH, Opcodes.LOOKUPSWITCH,
+         -> true
+
+    else -> false
 }
