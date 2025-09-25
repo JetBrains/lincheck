@@ -11,8 +11,12 @@
 package org.jetbrains.lincheck.jvm.agent.analysis.controlflow
 
 import org.jetbrains.lincheck.util.updateInplace
+import org.objectweb.asm.tree.InsnList
 
 typealias InstructionIndex = Int
+
+typealias InstructionEdgeMap = Map<InstructionIndex, Set<InstructionIndex>>
+typealias InstructionMutableEdgeMap = MutableMap<InstructionIndex, MutableSet<InstructionIndex>>
 
 /**
  * Represents an instruction-level control flow graph for a method.
@@ -22,24 +26,35 @@ typealias InstructionIndex = Int
  *
  * This graph distinguishes regular and exceptional control flow edges.
  */
-class InstructionControlFlowGraph {
+class InstructionControlFlowGraph() {
+
+    /**
+     * Nodes (instruction indices) of the control flow graph.
+     */
+    val nodes: Set<InstructionIndex> get() = _nodes
+    private val _nodes: MutableSet<InstructionIndex> = mutableSetOf()
+
     /**
      * Regular (non-exceptional) control flow edges.
      */
-    private val edges: EdgeMap = mutableMapOf()
+    val edges: InstructionEdgeMap get() = _edges
+    private val _edges: InstructionMutableEdgeMap = mutableMapOf()
 
     /**
      * Exceptional control flow edges.
      */
-    private val exceptionEdges: EdgeMap = mutableMapOf()
+    val exceptionEdges: InstructionEdgeMap get() = _exceptionEdges
+    private val _exceptionEdges: InstructionMutableEdgeMap = mutableMapOf()
 
     fun addEdge(src: InstructionIndex, dst: InstructionIndex) {
-        edges.updateInplace(src, default = mutableSetOf()) { add(dst) }
+        _nodes.add(src)
+        _nodes.add(dst)
+        _edges.updateInplace(src, default = mutableSetOf()) { add(dst) }
     }
 
     fun addExceptionEdge(src: InstructionIndex, dst: InstructionIndex) {
-        exceptionEdges.updateInplace(src, default = mutableSetOf()) { add(dst) }
+        _nodes.add(src)
+        _nodes.add(dst)
+        _exceptionEdges.updateInplace(src, default = mutableSetOf()) { add(dst) }
     }
 }
-
-private typealias EdgeMap = MutableMap<InstructionIndex, MutableSet<InstructionIndex>>
