@@ -10,7 +10,7 @@
 
 package org.jetbrains.lincheck.jvm.agent.analysis.controlflow
 
-import org.jetbrains.lincheck.util.updateInplace
+import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.AbstractInsnNode
 
@@ -107,8 +107,8 @@ sealed class ControlFlowGraph {
  * Helper: checks if the given opcode corresponds to a recognized JVM jump/switch instruction.
  */
 private fun isRecognizedJumpOpcode(opcode: Int): Boolean = when (opcode) {
-    // Unconditional
-    Opcodes.GOTO, Opcodes.JSR,
+    // Goto
+    Opcodes.GOTO,
     // Single-operand zero comparisons
     Opcodes.IFEQ, Opcodes.IFNE, Opcodes.IFLT, Opcodes.IFGE, Opcodes.IFGT, Opcodes.IFLE,
     // Single-operand null comparisons
@@ -120,6 +120,13 @@ private fun isRecognizedJumpOpcode(opcode: Int): Boolean = when (opcode) {
     // Switches
     Opcodes.TABLESWITCH, Opcodes.LOOKUPSWITCH,
          -> true
+
+    Opcodes.JSR, Opcodes.RET -> {
+        Logger.warn {
+            "Deprecated JSR/RET instructions are encountered during control-flow graph construction."
+        }
+        true
+    }
 
     else -> false
 }
