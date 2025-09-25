@@ -25,4 +25,6 @@ typealias InstructionIndex = Int
  *
  * This graph distinguishes regular and exceptional control flow edges.
  */
-class InstructionControlFlowGraph() : ControlFlowGraph() {}
+class InstructionControlFlowGraph(val instructions: InsnList) : ControlFlowGraph() {
+    constructor() : this(InsnList())
+}

@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.jvm.agent.analysis
 
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.*
+import org.objectweb.asm.tree.MethodNode
 import org.objectweb.asm.tree.analysis.*
 
 /**
@@ -20,11 +21,17 @@ import org.objectweb.asm.tree.analysis.*
  */
 class ControlFlowGraphAnalyzer : Analyzer<BasicValue> {
 
-    val graph = InstructionControlFlowGraph()
-
     constructor() :
         // use the default interpreter as we do not really care about values
         super(BasicInterpreter())
+
+    var graph = InstructionControlFlowGraph()
+       private set
+
+    override fun init(owner: String, method: MethodNode) {
+        graph = InstructionControlFlowGraph(method.instructions)
+        // no need to call `super` since it is no-op in ASM's Analyzer.
+    }
 
     override fun newControlFlowEdge(src: Int, dst: Int) {
         graph.addEdge(src, dst)
