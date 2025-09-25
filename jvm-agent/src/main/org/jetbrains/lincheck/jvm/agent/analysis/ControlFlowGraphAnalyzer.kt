@@ -22,7 +22,9 @@ class ControlFlowGraphAnalyzer : Analyzer<BasicValue> {
 
     val graph = InstructionControlFlowGraph()
 
-    constructor() : super(BasicInterpreter()) // use the default interpreter as we do not really care about values
+    constructor() :
+        // use the default interpreter as we do not really care about values
+        super(BasicInterpreter())
 
     override fun newControlFlowEdge(src: Int, dst: Int) {
         graph.addEdge(src, dst)
