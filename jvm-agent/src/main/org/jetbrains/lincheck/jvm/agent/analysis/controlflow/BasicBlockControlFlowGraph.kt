@@ -21,6 +21,22 @@ import kotlin.collections.component2
 typealias BasicBlockIndex = Int
 
 /**
+ * Class representing a basic block within a control-flow graph.
+ *
+ * A basic block is a contiguous, non-branching sequence of instructions
+ * with a single entry point and a single exit point (branch).
+ *
+ * @property index Unique index of the basic block within its control-flow graph.
+ * @property range Range of instruction indices which make up the basic block.
+ */
+data class BasicBlock(
+    val index: Int,
+    val range: InstructionsRange,
+)
+
+typealias InstructionsRange = IntRange
+
+/**
  * A control-flow graph on the level of basic blocks.
  */
 class BasicBlockControlFlowGraph(
