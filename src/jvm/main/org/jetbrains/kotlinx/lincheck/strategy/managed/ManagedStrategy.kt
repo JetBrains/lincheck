@@ -234,6 +234,20 @@ internal abstract class ManagedStrategy(
         parkingTracker.reset()
         currentEventId = -1
         resetThreads()
+
+        // In the case of general-purpose mode, we want to assign
+        //   - thread number 0 to the first (main) thread,
+        //   - thread numbers 1..N to other threads create by the user.
+        // In the case of data structures mode, we want to assign:
+        //   - numbers 1..N to all threads, including threads created by the user.
+        //
+        // To achieve this, in the case of data structures testing mode,
+        // we register the first placeholder main thread in the object tracker,
+        // so it would take the thread number 0.
+        val isFirstThreadMain = (runner is LambdaRunner)
+        if (!isFirstThreadMain) {
+            objectTracker.registerExternalObject(PLACEHOLDER_MAIN_THREAD)
+        }
     }
 
     /**
@@ -342,11 +356,10 @@ internal abstract class ManagedStrategy(
         // Therefore, if the runner detects deadlock, we don't even try to collect trace.
         if (loggedResults is RunnerTimeoutInvocationResult) return null to result
 
-        val threadNames = MutableList<String>(threadScheduler.nThreads) { "" }
+        val threadNames = MutableList(threadScheduler.nThreads) { "" }
         getRegisteredThreads().forEach { (threadId, thread) ->
-            val threadNumber = objectTracker.getObjectDisplayNumber(thread)
-            when (threadNumber) {
-                0 -> threadNames[threadId] = "Main Thread"
+            when (val threadNumber = objectTracker.getObjectDisplayNumber(thread)) {
+                0    -> threadNames[threadId] = "Main Thread"
                 else -> threadNames[threadId] = "Thread $threadNumber"
             }
         }
@@ -524,7 +537,9 @@ internal abstract class ManagedStrategy(
         iThread: Int,
         blockingReason: BlockingReason? = null,
     ): Boolean {
-        val switchReason = blockingReason.toSwitchReason(::getThreadDisplayNumber)
+        val switchReason = blockingReason.toSwitchReason {
+            objectTracker.getObjectDisplayNumber(threadScheduler.getThread(it)!!)
+        }
         // we create switch point on detected live-locks,
         // but that switch is not mandatory in case if there are no available threads
         val mustSwitch = (blockingReason != null) && (blockingReason !is BlockingReason.LiveLocked)
@@ -653,12 +668,6 @@ internal abstract class ManagedStrategy(
         return if (threads.isEmpty()) resumableThreads(iThread)
                else threads
     }
-
-    /**
-     * Converts lincheck threadId to a displayable thread number for the trace.
-     */
-    private fun getThreadDisplayNumber(iThread: Int): Int =
-        threadScheduler.getThread(iThread)?.let { objectTracker.getObjectDisplayNumber(it) } ?: -1
 
     // == LISTENING METHODS ==
 
@@ -2346,6 +2355,8 @@ private fun TracePoint.isActorMethodCallTracePoint() =
 
 // represents an unknown code location
 internal const val UNKNOWN_CODE_LOCATION = -1
+
+private val PLACEHOLDER_MAIN_THREAD = Thread()
 
 private val BlockingReason.obstructionFreedomViolationMessage: String get() = when (this) {
     is BlockingReason.Locked       -> OBSTRUCTION_FREEDOM_LOCK_VIOLATION_MESSAGE
