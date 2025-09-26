@@ -21,6 +21,7 @@ import java.io.InputStreamReader
 import java.net.URI
 import javax.tools.*
 import org.junit.Assert.assertEquals
+import org.junit.Test
 
 /**
  * JavaCfgTester provides a set of test utilities to:
@@ -28,7 +29,7 @@ import org.junit.Assert.assertEquals
  *   - build a basic-block control-flow graph for a selected method,
  *   - compare a textual representation of control-flow graph with a golden file from resources.
  */
-class JavaCfgTester {
+class JavaControlFlowGraphTester {
 
     private val compiler: JavaCompiler = ToolProvider.getSystemJavaCompiler()
         ?: error("No system Java compiler available. Ensure tests run on a JDK, not a JRE.")
@@ -121,8 +122,8 @@ class JavaCfgTester {
         val bytes = classes[internalClassName]
             ?: error("Class not found: $internalClassName")
         val cfg = buildCfg(bytes, internalClassName, methodName, descriptor)
-        val cfgText = prettyPrint(cfg).trimEnd()
-        val golden = loadResourceText(goldenResourcePath).trimEnd()
+        val cfgText = cfg.prettyPrint()
+        val golden = loadResourceText(goldenResourcePath)
 
         assertEquals(golden, cfgText)
     }
@@ -199,3 +200,51 @@ private class InMemoryJavaClassFileManager(
     }
 }
 
+
+class JavaControlFlowGraphTest {
+    private val tester = JavaControlFlowGraphTester()
+    
+    private val javaPath = "analysis.controlflow/JavaControlFlowGraphCases.java"
+    private val className = "JavaControlFlowGraphCases"
+    
+    private fun golden(name: String) = "analysis.controlflow/golder/$name.txt"
+    
+    private fun test(name: String, desc: String) = 
+        tester.testMethodCfg(javaPath, golden(name), className, name, desc)
+
+    @Test
+    fun straightLine() = test("straightLine", "()I")
+
+    @Test
+    fun ifStmt() = test("ifStmt", "(I)I")
+
+    @Test
+    fun ifElseNum() = test("ifElseNum", "(I)I")
+
+    @Test 
+    fun ifNull() = test("ifNull", "(Ljava/lang/Object;)I")
+
+    @Test
+    fun ifRefCompare() = test("ifRefCompare", "(Ljava/lang/Object;Ljava/lang/Object;)I")
+
+    @Test
+    fun nestedConditionals() = test("ifElseNested", "(II)I")
+
+    @Test
+    fun whileLoop() = test("whileLoop", "(I)I")
+
+    @Test
+    fun whileLoopContinue() = test("whileLoopContinue", "(I)I")
+
+    @Test
+    fun whileLoopBreak() = test("whileLoopBreak", "(I)I")
+
+    @Test
+    fun doWhileLoop() = test("doWhileLoop", "(I)I")
+
+    @Test
+    fun forLoop() = test("forLoop", "(I)I")
+
+    @Test
+    fun forLoopCtrl() = test("forLoopContinueBreak", "(I)I")
+}
