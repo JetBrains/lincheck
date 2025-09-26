@@ -1,0 +1,44 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| --------------------------------------- |
+|                Thread 1                 |
+| --------------------------------------- |
+| operation()                             |
+|   escape = "START"                      |
+|   loop(2 iterations)                    |
+|     <iteration 1>                       |
+|       escape = "outer-1"                |
+|       methodWithLoop(1)                 |
+|         escape = "method-start-1"       |
+|         loop(2 iterations)              |
+|           <iteration 1>                 |
+|             escape = "method-inner-1-1" |
+|           <iteration 2>                 |
+|             escape = "method-inner-1-2" |
+|         escape = "method-end-1"         |
+|     <iteration 2>                       |
+|       escape = "outer-2"                |
+|       methodWithLoop(2)                 |
+|         escape = "method-start-2"       |
+|         loop(2 iterations)              |
+|           <iteration 1>                 |
+|             escape = "method-inner-2-1" |
+|           <iteration 2>                 |
+|             escape = "method-inner-2-2" |
+|         escape = "method-end-2"         |
+|   escape = "END"                        |
+|   result: void                          |
+| --------------------------------------- |

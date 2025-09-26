@@ -13,27 +13,39 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| ------------------------------------------------------------------------------------------------------ |
-|                                                Thread 1                                                |
-| ------------------------------------------------------------------------------------------------------ |
-| operation()                                                                                            |
-|   escape = "START" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:19) |
-|   escape = "0" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:28)     |
-|   escape = "1" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:28)     |
-|   escape = "2" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:28)     |
-|   escape ➜ "2" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:31)     |
-|   escape = "%3-2" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:31)  |
-|   escape = "0" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:28)     |
-|   escape = "1" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:28)     |
-|   escape = "2" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:28)     |
-|   escape ➜ "2" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:31)     |
-|   escape = "%3-2" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:31)  |
-|   escape = "0" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:28)     |
-|   escape = "1" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:28)     |
-|   escape = "2" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:28)     |
-|   escape ➜ "2" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:31)     |
-|   escape = "%3-2" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:31)  |
-|   escape = "0" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:28)     |
-|   escape = "END" at ForWithIfLoopRepresentationTest.operation(ForWithIfLoopRepresentationTest.kt:34)   |
-|   result: void                                                                                         |
-| ------------------------------------------------------------------------------------------------------ |
+| --------------------- |
+|       Thread 1        |
+| --------------------- |
+| operation()           |
+|   escape = "START"    |
+|   loop(11 iterations) |
+|     <iteration 1>     |
+|       escape = "0"    |
+|     <iteration 2>     |
+|       escape = "1"    |
+|     <iteration 3>     |
+|       escape = "2"    |
+|       escape ➜ "2"    |
+|       escape = "%3-2" |
+|     <iteration 4>     |
+|       escape = "0"    |
+|     <iteration 5>     |
+|       escape = "1"    |
+|     <iteration 6>     |
+|       escape = "2"    |
+|       escape ➜ "2"    |
+|       escape = "%3-2" |
+|     <iteration 7>     |
+|       escape = "0"    |
+|     <iteration 8>     |
+|       escape = "1"    |
+|     <iteration 9>     |
+|       escape = "2"    |
+|       escape ➜ "2"    |
+|       escape = "%3-2" |
+|     <iteration 10>    |
+|       escape = "0"    |
+|     <iteration 11>    |
+|   escape = "END"      |
+|   result: void        |
+| --------------------- |

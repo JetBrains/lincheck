@@ -13,30 +13,30 @@ import org.jetbrains.kotlinx.lincheck.test_utils.loopEnd
 import org.jetbrains.kotlinx.lincheck.test_utils.loopIterationStart
 import org.jetbrains.kotlinx.lincheck_test.representation.*
 
-class ForWithIfLoopRepresentationTest : BaseTraceRepresentationTest(
-    outputFileName = "loops/for_with_if_representation"
+class LoopWithNestedLoopMethodCallRepresentationTest : BaseTraceRepresentationTest(
+    outputFileName = "loops/loop_with_nested_loop_method_call_representation"
 ) {
     var escape: Any? = null
     override fun operation() {
         escape = "START"
-        var i = 0
-        var total = 0
-        while (true) {
+        for (i in 1..2) {
             loopIterationStart(1)
-            total++
-            if (total > 10) {
-                // do not call here to avoid multiple calls
-                // loopEnd(1)
-                break
-            }
             val a: Any = i
-            escape = a.toString()
-            i = (i + 1) % 3
-            if (i == 0) {
-                escape = "%3-" + escape
-            }
+            escape = "outer-$a"
+            methodWithLoop(a)
         }
         loopEnd(1)
         escape = "END"
+    }
+
+    private fun methodWithLoop(a: Any) {
+        escape = "method-start-$a"
+        for (j in 1..2) {
+            loopIterationStart(2)
+            val b: Any = j
+            escape = "method-inner-$a-$b"
+        }
+        loopEnd(2)
+        escape = "method-end-$a"
     }
 }

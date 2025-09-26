@@ -13,19 +13,25 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| --------------------------------------------------------------------------------------------------------------- |
-|                                                    Thread 1                                                     |
-| --------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                     |
-|   escape = "START" at ContinuedForLoopRepresentationTest.operation(ContinuedForLoopRepresentationTest.kt:19)    |
-|   escape = "1" at ContinuedForLoopRepresentationTest.operation(ContinuedForLoopRepresentationTest.kt:22)        |
-|   escape = "1 is odd" at ContinuedForLoopRepresentationTest.operation(ContinuedForLoopRepresentationTest.kt:26) |
-|   escape = "2" at ContinuedForLoopRepresentationTest.operation(ContinuedForLoopRepresentationTest.kt:22)        |
-|   escape = "3" at ContinuedForLoopRepresentationTest.operation(ContinuedForLoopRepresentationTest.kt:22)        |
-|   escape = "3 is odd" at ContinuedForLoopRepresentationTest.operation(ContinuedForLoopRepresentationTest.kt:26) |
-|   escape = "4" at ContinuedForLoopRepresentationTest.operation(ContinuedForLoopRepresentationTest.kt:22)        |
-|   escape = "5" at ContinuedForLoopRepresentationTest.operation(ContinuedForLoopRepresentationTest.kt:22)        |
-|   escape = "5 is odd" at ContinuedForLoopRepresentationTest.operation(ContinuedForLoopRepresentationTest.kt:26) |
-|   escape = "END" at ContinuedForLoopRepresentationTest.operation(ContinuedForLoopRepresentationTest.kt:28)      |
-|   result: void                                                                                                  |
-| --------------------------------------------------------------------------------------------------------------- |
+| ------------------------- |
+|         Thread 1          |
+| ------------------------- |
+| operation()               |
+|   escape = "START"        |
+|   loop(5 iterations)      |
+|     <iteration 1>         |
+|       escape = "1"        |
+|       escape = "1 is odd" |
+|     <iteration 2>         |
+|       escape = "2"        |
+|     <iteration 3>         |
+|       escape = "3"        |
+|       escape = "3 is odd" |
+|     <iteration 4>         |
+|       escape = "4"        |
+|     <iteration 5>         |
+|       escape = "5"        |
+|       escape = "5 is odd" |
+|   escape = "END"          |
+|   result: void            |
+| ------------------------- |

@@ -17,6 +17,8 @@ import java.lang.invoke.CallSite;
  * See {@link Injections} for the documentation.
  */
 public interface EventTracker {
+    void beforeLoopIterationStarts(int loopId);
+    void afterLoopFinished(int loopId);
 
     void registerRunningThread(Thread thread, ThreadDescriptor descriptor);
     void beforeThreadFork(Thread thread, ThreadDescriptor descriptor);

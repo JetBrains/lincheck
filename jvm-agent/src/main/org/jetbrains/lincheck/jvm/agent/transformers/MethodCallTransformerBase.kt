@@ -212,7 +212,7 @@ internal abstract class MethodCallTransformerBase(
         className == "java/util/Locale" ||
         className == "org/slf4j/helpers/Util" ||
         className == "java/util/Properties" ||
-        className == "java/lang/invoke/MethodHandles"
+        className.startsWith("java/lang/invoke/")
 
     @Suppress("UNUSED_PARAMETER")
     protected fun isCoroutineResumptionSyntheticAccessor(className: String, methodName: String): Boolean =

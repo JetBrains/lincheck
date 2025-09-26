@@ -13,13 +13,16 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| -------------------------------------------------------------------------------------------------------------- |
-|                                                    Thread 1                                                    |
-| -------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                    |
-|   escape = "START" at SimpleDoWhileLoopRepresentationTest.operation(SimpleDoWhileLoopRepresentationTest.kt:19) |
-|   escape = "2" at SimpleDoWhileLoopRepresentationTest.operation(SimpleDoWhileLoopRepresentationTest.kt:23)     |
-|   escape = "3" at SimpleDoWhileLoopRepresentationTest.operation(SimpleDoWhileLoopRepresentationTest.kt:23)     |
-|   escape = "END" at SimpleDoWhileLoopRepresentationTest.operation(SimpleDoWhileLoopRepresentationTest.kt:26)   |
-|   result: void                                                                                                 |
-| -------------------------------------------------------------------------------------------------------------- |
+| -------------------- |
+|       Thread 1       |
+| -------------------- |
+| operation()          |
+|   escape = "START"   |
+|   loop(2 iterations) |
+|     <iteration 1>    |
+|       escape = "2"   |
+|     <iteration 2>    |
+|       escape = "3"   |
+|   escape = "END"     |
+|   result: void       |
+| -------------------- |
