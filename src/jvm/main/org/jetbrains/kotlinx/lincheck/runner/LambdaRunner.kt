@@ -11,9 +11,9 @@
 package org.jetbrains.kotlinx.lincheck.runner
 
 import org.jetbrains.kotlinx.lincheck.NoResult
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ResultWithClock
 import org.jetbrains.kotlinx.lincheck.execution.emptyClock
+import org.jetbrains.kotlinx.lincheck.execution.emptyExecutionResult
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.kotlinx.lincheck.toLinCheckResult
@@ -80,16 +80,12 @@ internal class LambdaRunner(
 
     // TODO: currently we have to use `ExecutionResult`,
     //   even though in case of `LambdaRunner` the result can be simplified
-    private fun collectExecutionResults(wrapper: LambdaWrapper) = ExecutionResult(
-        parallelResultsWithClock = listOf(listOf(
-            ResultWithClock(wrapper.result?.toLinCheckResult() ?: NoResult, emptyClock(1))
-        )),
-        initResults = listOf(),
-        postResults = listOf(),
-        afterInitStateRepresentation = null,
-        afterParallelStateRepresentation = null,
-        afterPostStateRepresentation = null,
-    )
+    private fun collectExecutionResults(wrapper: LambdaWrapper) =
+        emptyExecutionResult().copy(
+            parallelResultsWithClock = listOf(listOf(
+                ResultWithClock(wrapper.result?.toLinCheckResult() ?: NoResult, emptyClock(1))
+            ))
+        )
 
     private fun RunnerTimeoutInvocationResult(wrapper: LambdaWrapper): RunnerTimeoutInvocationResult {
         val threadDump = collectThreadDump()
