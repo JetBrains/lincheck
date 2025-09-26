@@ -2274,7 +2274,7 @@ internal abstract class ManagedStrategy(
 
     private fun TraceCollector.addStateRepresentation() {
         val scenarioRunner = (runner as? ExecutionScenarioRunner) ?: return
-            val stateRepresentation = scenarioRunner.constructStateRepresentation() ?: return
+        val stateRepresentation = scenarioRunner.constructStateRepresentation() ?: return
         val eventId = getNextEventId()
         val threadId = threadScheduler.getCurrentThreadId()
         // use call stack trace of the previous trace point
