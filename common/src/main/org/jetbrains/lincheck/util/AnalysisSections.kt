@@ -266,9 +266,14 @@ class AnalysisProfile(val analyzeStdLib: Boolean) {
         // It is fine to inject the Lincheck analysis only into the
         // `java.util.*` ones, ignored the known atomic constructs.
         if (className.startsWith("java.")) {
+            // Instrument `Thread` to intercept thread events.
             if (className == "java.lang.Thread") return true
+            // Instrument `Throwable` as it has `synchronized` methods,
+            // and corresponding monitor events should be intercepted.
             if (className == "java.lang.Throwable") return true
+            // Instrument `java.util.concurrent` classes, except atomics.
             if (className.startsWith("java.util.concurrent.") && className.contains("Atomic")) return false
+            // Instrument `java.util` classes.
             if (className.startsWith("java.util.")) return true
             if (isInTraceDebuggerMode) {
                 if (className.startsWith("java.io.")) return true
