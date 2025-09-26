@@ -48,3 +48,12 @@ class ControlFlowGraphAnalyzer : Analyzer<BasicValue> {
         return super.newControlFlowExceptionEdge(src, dst)
     }
 }
+
+fun ControlFlowGraphAnalyzer.buildControlFlowGraph(owner: String, method: MethodNode): BasicBlockControlFlowGraph {
+    analyze(owner, method)
+    return graph.toBasicBlockGraph()
+}
+
+fun buildControlFlowGraph(owner: String, method: MethodNode): BasicBlockControlFlowGraph {
+    return ControlFlowGraphAnalyzer().buildControlFlowGraph(owner, method)
+}
