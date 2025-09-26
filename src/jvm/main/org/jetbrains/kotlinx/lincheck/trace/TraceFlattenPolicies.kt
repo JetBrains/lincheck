@@ -87,12 +87,12 @@ internal class VerboseTraceFlattenPolicy : TraceFlattenPolicy {
 internal class ShortTraceFlattenPolicy : TraceFlattenPolicy {
     override fun shouldIncludeThisNode(currentNode: TraceNode): Boolean = when (currentNode) {
         is EventNode -> with(currentNode) {
-            (!tracePoint.isVirtual && (
-                    isLast && tracePoint.isBlocking
-                            || tracePoint is SwitchEventTracePoint
-                            || tracePoint is ObstructionFreedomViolationExecutionAbortTracePoint
-                    )
-            ) || callDepth == 0
+            !tracePoint.isVirtual && (callDepth == 0 || (
+                    tracePoint.isBlocking && isLast ||
+                    tracePoint is SwitchEventTracePoint ||
+                    tracePoint is ObstructionFreedomViolationExecutionAbortTracePoint
+                )
+            )
         }
         is CallNode -> currentNode.tracePoint.wasSuspended || currentNode.isRootCall
         is ResultNode -> true
@@ -104,7 +104,9 @@ internal class ShortTraceFlattenPolicy : TraceFlattenPolicy {
         // if not verbose and atleast one child has no descendants and one other child has
         if (childDescendants.any { it.isNotEmpty() } && childDescendants.any { it.isEmpty() }) {
             // add all siblings
-            return childDescendants.mapIndexed { i, descendantList -> if (descendantList.isEmpty()) listOf(currentNode.children[i]) else descendantList }
+            return childDescendants.mapIndexed { i, descendantList ->
+                if (descendantList.isEmpty()) listOf(currentNode.children[i]) else descendantList
+            }
         }
         return childDescendants
     }
