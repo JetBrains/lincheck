@@ -16,13 +16,13 @@ import org.junit.Test
 
 class JavaControlFlowGraphTest {
     private val tester = JavaControlFlowGraphTester()
-    
+
     private val javaPath = "analysis/controlflow/JavaControlFlowGraphCases.java.txt"
     private val className = "JavaControlFlowGraphCases"
-    
+
     private fun golden(name: String) = "analysis/controlflow/golden/cfg/$name.txt"
-    
-    private fun test(name: String, desc: String) = 
+
+    private fun test(name: String, desc: String) =
         tester.testMethodCfg(javaPath, golden(name), className, name, desc) { cfg ->
             cfg.toFormattedString()
         }
@@ -36,7 +36,7 @@ class JavaControlFlowGraphTest {
     @Test
     fun ifElseStmt() = test("ifElseStmt", "(I)I")
 
-    @Test 
+    @Test
     fun ifNull() = test("ifNull", "(Ljava/lang/Object;)I")
 
     @Test
