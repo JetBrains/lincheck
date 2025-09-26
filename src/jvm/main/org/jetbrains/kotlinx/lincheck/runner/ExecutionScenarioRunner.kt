@@ -11,6 +11,7 @@ package org.jetbrains.kotlinx.lincheck.runner
 
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
@@ -18,10 +19,7 @@ import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent
-import org.jetbrains.lincheck.util.SpinnerGroup
-import org.jetbrains.lincheck.util.ensure
-import org.jetbrains.lincheck.util.runInsideIgnoredSection
-import org.jetbrains.lincheck.util.runOutsideIgnoredSection
+import org.jetbrains.lincheck.util.*
 import sun.nio.ch.lincheck.*
 import java.lang.reflect.*
 import java.util.concurrent.*
