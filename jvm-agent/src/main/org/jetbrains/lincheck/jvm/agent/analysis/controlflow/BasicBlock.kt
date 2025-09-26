@@ -10,6 +10,8 @@
 
 package org.jetbrains.lincheck.jvm.agent.analysis.controlflow
 
+typealias InstructionsRange = IntRange
+
 /**
  * Class representing a basic block within a control-flow graph.
  *
@@ -17,9 +19,9 @@ package org.jetbrains.lincheck.jvm.agent.analysis.controlflow
  * with a single entry point and a single exit point (branch).
  *
  * @property index Unique index of the basic block within its control-flow graph.
- * @param instructions List of instruction indices contained in this block.
+ * @property range Range of instruction indices which make up the basic block.
  */
 data class BasicBlock(
     val index: Int,
-    val instructions: List<InstructionIndex>,
+    val range: InstructionsRange,
 )

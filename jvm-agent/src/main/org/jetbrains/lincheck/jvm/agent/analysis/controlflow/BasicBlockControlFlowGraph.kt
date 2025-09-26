@@ -10,6 +10,11 @@
 
 package org.jetbrains.lincheck.jvm.agent.analysis.controlflow
 
+import org.objectweb.asm.tree.*
+import org.objectweb.asm.util.Printer
+import kotlin.collections.component1
+import kotlin.collections.component2
+
 /**
  * A type alias representing the index of a basic block within a control flow graph.
  */
@@ -18,7 +23,10 @@ typealias BasicBlockIndex = Int
 /**
  * A control-flow graph on the level of basic blocks.
  */
-class BasicBlockControlFlowGraph(val basicBlocks: List<BasicBlock>) : ControlFlowGraph() {}
+class BasicBlockControlFlowGraph(
+    val instructions: InsnList,
+    val basicBlocks: List<BasicBlock>,
+) : ControlFlowGraph()
 
 /**
  * Builds a basic-block level CFG from the given instruction-level CFG.
@@ -58,20 +66,20 @@ fun InstructionControlFlowGraph.toBasicBlockGraph(): BasicBlockControlFlowGraph 
     val basicBlocks = mutableListOf<BasicBlock>()
     leaders.forEachIndexed { i, leader ->
         val endExclusive = leaders.getOrElse(i + 1) { maxInstructionIndex + 1 }
-        val instructions = (leader until endExclusive).toList()
+        val instructions = (leader until endExclusive)
         basicBlocks += BasicBlock(i, instructions)
     }
 
     // Map: instruction index -> basic block index
     val instructionToBlock = mutableMapOf<InstructionIndex, BasicBlockIndex>()
     basicBlocks.forEach { block ->
-        block.instructions.forEach { instructionIndex ->
+        block.range.forEach { instructionIndex ->
             instructionToBlock[instructionIndex] = block.index
         }
     }
     
     // Project instruction edges onto basic blocks.
-    val basicBlockGraph = BasicBlockControlFlowGraph(basicBlocks)
+    val basicBlockGraph = BasicBlockControlFlowGraph(instructions, basicBlocks)
     for ((u, edges) in edgeMap) {
         val bu = instructionToBlock[u] ?: continue
         for (edge in edges) {
@@ -81,4 +89,67 @@ fun InstructionControlFlowGraph.toBasicBlockGraph(): BasicBlockControlFlowGraph 
         }
     }
     return basicBlockGraph
+}
+
+fun BasicBlockControlFlowGraph.prettyPrint(): String {
+    val sb = StringBuilder()
+
+    // Blocks section
+    sb.appendLine("BLOCKS")
+    for (block in basicBlocks.sortedBy { it.index }) {
+        val first = block.range.firstOrNull()
+        val last = block.range.lastOrNull()
+        val range = when {
+            first == null -> "[]"
+            first == last -> "[$first]"
+            else          -> "[$first..$last]"
+        }
+        sb.appendLine("B${block.index}: $range")
+
+        // Instructions section
+        for (insnIndex in block.range) {
+            val insn = instructions.get(insnIndex)
+            val text = insn.prettyPrint()
+            sb.appendLine("  $insnIndex: $text")
+        }
+    }
+
+    // Edges section
+    sb.appendLine("EDGES")
+    val edges: List<Edge> = edges.toMutableList().apply {
+        sortWith(compareBy({ it.source }, { it.target }, { labelSortKey(it.label) }))
+    }
+    for (e in edges) {
+        val label = e.label.prettyPrint().takeIf { it.isNotEmpty() }
+        sb.append("  B${e.source} -> B${e.target}")
+        sb.append(label?.let { " : $it" }.orEmpty())
+        sb.appendLine()
+    }
+
+    return sb.toString()
+}
+
+private fun labelSortKey(label: EdgeLabel): String = when (label) {
+    is EdgeLabel.FallThrough    -> "0"
+    is EdgeLabel.Jump           -> "1:${Printer.OPCODES[label.opcode]}"
+    is EdgeLabel.Exception      -> "2:${label.caughtTypeName ?: "*"}"
+}
+
+private fun EdgeLabel.prettyPrint(): String = when (this) {
+    is EdgeLabel.FallThrough    -> ""
+    is EdgeLabel.Jump           -> "JUMP(opcode=${Printer.OPCODES[opcode]})"
+    is EdgeLabel.Exception      -> "CATCH(type=${caughtTypeName ?: "*"})"
+}
+
+private fun AbstractInsnNode.prettyPrint(): String {
+    val opcode = opcode
+    if (opcode >= 0) {
+        return Printer.OPCODES[opcode]
+    }
+    return when (this) {
+        is LabelNode        -> "LABEL"
+        is LineNumberNode   -> "LINE $line"
+        is FrameNode        -> "FRAME"
+        else                -> this.javaClass.simpleName
+    }
 }

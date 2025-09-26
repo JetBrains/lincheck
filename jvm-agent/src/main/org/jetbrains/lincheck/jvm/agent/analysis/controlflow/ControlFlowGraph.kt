@@ -116,6 +116,9 @@ sealed class ControlFlowGraph {
     val edgeMap: EdgeMap get() = _edgeMap
     private val _edgeMap: MutableEdgeMap = mutableMapOf()
 
+    val edges: Set<Edge> get() =
+        edgeMap.flatMap { it.value }.toSet()
+
     fun hasEdge(src: NodeIndex, dst: NodeIndex): Boolean {
         return _edgeMap[src]?.any { it.target == dst } ?: false
     }
