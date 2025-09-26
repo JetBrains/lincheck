@@ -9,7 +9,6 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.execution.*
@@ -20,7 +19,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.nativecalls.*
 import org.jetbrains.kotlinx.lincheck.trace.*
 import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.kotlinx.lincheck.util.*
-import org.jetbrains.lincheck.*
 import org.jetbrains.lincheck.analysis.*
 import org.jetbrains.lincheck.datastructures.*
 import org.jetbrains.lincheck.descriptors.*
@@ -29,7 +27,6 @@ import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.*
 import sun.nio.ch.lincheck.*
 import java.lang.invoke.*
-import java.lang.reflect.*
 import java.util.*
 import java.util.concurrent.*
 import kotlin.coroutines.*
@@ -64,11 +61,13 @@ internal abstract class ManagedStrategy(
     private val scenario: ExecutionScenario?
         get() = (runner as? ExecutionScenarioRunner)?.scenario
 
-    // The number of parallel threads.
+    // The number of parallel threads in the scenario (for data structures testing mode).
     protected val nScenarioThreads: Int =
         scenario?.nThreads ?: 0
 
-    // The number of runner threads
+    // The number of threads managed by the runner
+    //   * `=1` in case of general-purpose mc
+    //   * `=nScenarioThreads` in case of data structures testing.
     protected val nRunnerThreads: Int =
         if (runner is ExecutionScenarioRunner) runner.scenarioThreads.size else 1
 
@@ -503,7 +502,7 @@ internal abstract class ManagedStrategy(
      */
     private fun isTestThreadCoroutineSuspended(iThread: Int): Boolean =
         (
-            isTestThread(iThread) &&
+            isScenarioThread(iThread) &&
             // TODO: coroutine suspensions are currently handled separately from `ThreadScheduler`
             isSuspended[iThread]!! &&
             !((runner as? ExecutionScenarioRunner)?.isCoroutineResumed(iThread, currentActorId[iThread]!!) ?: false)
@@ -766,7 +765,7 @@ internal abstract class ManagedStrategy(
     fun registerThread(thread: Thread, descriptor: ThreadDescriptor): ThreadId {
         val threadId = threadScheduler.registerThread(thread, descriptor)
         isSuspended[threadId] = false
-        currentActorId[threadId] = if (isTestThread(threadId)) -1 else 0
+        currentActorId[threadId] = if (isScenarioThread(threadId)) -1 else 0
         callStackTrace[threadId] = mutableListOf()
         suspendedFunctionsStack[threadId] = mutableListOf()
         shadowStack[threadId] = arrayListOf(ShadowStackFrame(testInstance))
@@ -792,7 +791,7 @@ internal abstract class ManagedStrategy(
     override fun awaitUserThreads(timeoutNano: Long): Long {
         var remainingTime = timeoutNano
         for ((threadId, _) in getRegisteredThreads()) {
-            if (isTestThread(threadId)) continue // do not wait for Lincheck threads
+            if (isRunnerThread(threadId)) continue // do not wait for Lincheck threads
             val elapsedTime = threadScheduler.awaitThreadFinish(threadId, remainingTime)
             if (elapsedTime < 0) {
                 remainingTime = -1
@@ -809,7 +808,7 @@ internal abstract class ManagedStrategy(
         threadScheduler.getRegisteredThreads()
 
     fun getUserThreadIds() = getRegisteredThreads().mapNotNull {
-        if (isTestThread(it.key)) null
+        if (isRunnerThread(it.key)) null
         else it.key
     }
 
@@ -819,10 +818,14 @@ internal abstract class ManagedStrategy(
         return (threadDescriptor.eventTracker === this)
     }
 
+    private fun isScenarioThread(threadId: Int): Boolean {
+        return threadId in (0 ..< nScenarioThreads)
+    }
+
     /**
      * Checks if [threadId] is a `TestThread` instance (threads created and managed by lincheck itself).
      */
-    private fun isTestThread(threadId: Int): Boolean {
+    private fun isRunnerThread(threadId: Int): Boolean {
         return threadId in (0 ..< nRunnerThreads)
     }
 
@@ -1938,8 +1941,8 @@ internal abstract class ManagedStrategy(
         methodParams: Array<Any?>,
         atomicMethodDescriptor: AtomicMethodDescriptor?,
     ): Boolean {
-        // special coroutines handling methods can only be called from test threads
-        if (!isTestThread(threadId)) return false
+        // special coroutines handling methods can only be called from scenario threads
+        if (!isScenarioThread(threadId)) return false
         // optimization - first quickly check if the method is atomics API method,
         // in which case it cannot be suspended/resumed method
         if (atomicMethodDescriptor != null) return false
@@ -1955,8 +1958,8 @@ internal abstract class ManagedStrategy(
     internal fun afterCoroutineSuspended(iThread: Int) = runInsideIgnoredSection {
         check(threadScheduler.getCurrentThreadId() == iThread)
         check(runner is ExecutionScenarioRunner)
-        check(isTestThread(iThread)) {
-            "Special coroutines handling methods should only be called from test threads"
+        check(isScenarioThread(iThread)) {
+            "Special coroutines handling methods should only be called from scenario threads"
         }
         isSuspended[iThread] = true
         if (runner.isCoroutineResumed(iThread, currentActorId[iThread]!!)) {
@@ -1971,24 +1974,24 @@ internal abstract class ManagedStrategy(
 
     internal fun afterCoroutineResumed(iThread: Int) = runInsideIgnoredSection {
         check(threadScheduler.getCurrentThreadId() == iThread)
-        check(isTestThread(iThread)) {
-            "Special coroutines handling methods should only be called from test threads"
+        check(isScenarioThread(iThread)) {
+            "Special coroutines handling methods should only be called from scenario threads"
         }
         isSuspended[iThread] = false
     }
 
     internal fun beforeCoroutineCancellation(iThread: Int) {
         check(threadScheduler.getCurrentThreadId() == iThread)
-        check(isTestThread(iThread)) {
-            "Special coroutines handling methods should only be called from test threads"
+        check(isScenarioThread(iThread)) {
+            "Special coroutines handling methods should only be called from scenario threads"
         }
         lastCoroutineCancellationTracePoint[iThread] = createAndLogCancellationTracePoint()
     }
 
     internal fun afterCoroutineCancellation(iThread: Int, cancellationResult: CancellationResult) = runInsideIgnoredSection {
         check(threadScheduler.getCurrentThreadId() == iThread)
-        check(isTestThread(iThread)) {
-            "Special coroutines handling methods should only be called from test threads"
+        check(isScenarioThread(iThread)) {
+            "Special coroutines handling methods should only be called from scenario threads"
         }
         lastCoroutineCancellationTracePoint[iThread]?.initializeCancellationResult(cancellationResult)
         if (cancellationResult != CANCELLATION_FAILED) {
@@ -2000,8 +2003,8 @@ internal abstract class ManagedStrategy(
 
     fun afterCoroutineCancellation(iThread: Int, cancellationException: Throwable) = runInsideIgnoredSection {
         check(threadScheduler.getCurrentThreadId() == iThread)
-        check(isTestThread(iThread)) {
-            "Special coroutines handling methods should only be called from test threads"
+        check(isScenarioThread(iThread)) {
+            "Special coroutines handling methods should only be called from scenario threads"
         }
         lastCoroutineCancellationTracePoint[iThread]?.initializeException(cancellationException)
     }
@@ -2020,7 +2023,7 @@ internal abstract class ManagedStrategy(
     ): MethodCallTracePoint? {
         if (!collectTrace) return null
         val callStackTrace = callStackTrace[threadId]!!
-        if (isTestThread(threadId) && isResumptionMethodCall(threadId, className, methodName, methodParams, atomicMethodDescriptor)) {
+        if (isScenarioThread(threadId) && isResumptionMethodCall(threadId, className, methodName, methodParams, atomicMethodDescriptor)) {
             val suspendedMethodStack = suspendedFunctionsStack[threadId]!!
             // In case of resumption, we need to find a call stack frame corresponding to the resumed function
             var elementIndex = suspendedMethodStack.indexOfFirst {
