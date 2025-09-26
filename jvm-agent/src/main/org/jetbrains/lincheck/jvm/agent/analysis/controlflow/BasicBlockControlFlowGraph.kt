@@ -12,8 +12,10 @@ package org.jetbrains.lincheck.jvm.agent.analysis.controlflow
 
 import org.objectweb.asm.tree.*
 import org.objectweb.asm.util.Printer
-import kotlin.collections.component1
-import kotlin.collections.component2
+import org.objectweb.asm.util.Textifier
+import org.objectweb.asm.util.TraceMethodVisitor
+import java.io.PrintWriter
+import java.io.StringWriter
 
 /**
  * A type alias representing the index of a basic block within a control flow graph.
@@ -112,6 +114,9 @@ fun BasicBlockControlFlowGraph.prettyPrint(): String =
 
 private class BasicBlockControlFlowGraphPrinter(val graph: BasicBlockControlFlowGraph) {
 
+    // use a single `Textifier` per printing session to ensure stable label names
+    private val textifier = Textifier()
+
     fun prettyPrint(): String {
         val sb = StringBuilder()
 
@@ -163,15 +168,17 @@ private class BasicBlockControlFlowGraphPrinter(val graph: BasicBlockControlFlow
     }
 
     private fun AbstractInsnNode.prettyPrint(): String {
-        val opcode = opcode
-        if (opcode >= 0) {
-            return Printer.OPCODES[opcode]
-        }
-        return when (this) {
-            is LabelNode       -> "LABEL"
-            is LineNumberNode  -> "LINE $line"
-            is FrameNode       -> "FRAME"
-            else               -> this.javaClass.simpleName
-        }
+        // clears only the output buffer; label mappings inside `textifier` remain intact
+        textifier.text.clear()
+
+        val visitor = TraceMethodVisitor(textifier)
+        this.accept(visitor)
+
+        val writer = StringWriter()
+        val printer = PrintWriter(writer)
+        textifier.print(printer)
+        printer.flush()
+
+        return writer.toString().trimEnd()
     }
 }
