@@ -204,11 +204,10 @@ internal class FixedActiveThreadsExecutor(private val testName: String, private 
     override fun close() {
         shutdown()
         // Thread.stop() throws UnsupportedOperationException
-        // starting from Java 20.
+        // starting from Java 20 and is removed in Java 26.
         if (hangDetected && majorJavaVersion < 20) {
-            @Suppress("DEPRECATION", "removal")
             threads.forEach {
-                it.stop()
+                it::class.java.getMethod("stop").invoke(it)
             }
         }
     }
