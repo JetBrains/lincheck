@@ -55,7 +55,7 @@ abstract class BaseRunConcurrentRepresentationTest<R>(
     }
 
     open val analyzeStdLib = true
-    
+
     companion object {
         fun checkResult(result: Result<*>, outputFileName: String, handleOnlyDefaultJdkOutput: Boolean, isFlakyTest: Boolean = false) {
             check(result.isFailure) {

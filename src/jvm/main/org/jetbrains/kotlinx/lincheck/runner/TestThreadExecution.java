@@ -22,7 +22,7 @@ import org.jetbrains.kotlinx.lincheck.Result;
 @SuppressWarnings("unused")
 public abstract class TestThreadExecution implements Runnable {
     // The following fields are assigned in TestThreadExecutionGenerator
-    protected Runner runner;
+    protected ExecutionScenarioRunner runner;
     public Object testInstance;
     protected Object[] objArgs;
     public TestThreadExecution[] allThreadExecutions;

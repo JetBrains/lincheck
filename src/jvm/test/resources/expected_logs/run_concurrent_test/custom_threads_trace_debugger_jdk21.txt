@@ -4,7 +4,7 @@ java.lang.IllegalStateException: Check failed.
 	at org.jetbrains.kotlinx.lincheck_test.representation.CustomThreadsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:290)
 	at org.jetbrains.kotlinx.lincheck_test.representation.CustomThreadsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:273)
 	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:51)
-	at java.base/java.lang.Thread.run(Unknown Source)
+	at java.base/java.lang.Thread.run(Thread.java:840)
 
 The following interleaving leads to the error:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

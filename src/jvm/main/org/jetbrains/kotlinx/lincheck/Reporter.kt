@@ -16,10 +16,8 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.trace.appendTrace
 import org.jetbrains.lincheck.util.*
 import org.jetbrains.lincheck.util.LoggingLevel.*
-import org.jetbrains.lincheck.GeneralPurposeModelCheckingWrapper
 import java.io.*
 import kotlin.math.max
-import kotlin.reflect.jvm.javaMethod
 
 class Reporter(private val logLevel: LoggingLevel) {
     private val out: PrintStream = System.out
@@ -346,6 +344,7 @@ internal fun Appendable.appendExecutionScenarioWithResults(
 
 internal fun Appendable.appendFailure(failure: LincheckFailure): Appendable {
     val results: ExecutionResult = failure.results
+
     // If a result is present - collect exceptions stack traces to print them
     val exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace> = results.let {
         when (val exceptionsProcessingResult = collectExceptionStackTraces(results)) {
@@ -397,8 +396,7 @@ internal fun Appendable.appendFailure(failure: LincheckFailure): Appendable {
 }
 
 internal fun isGeneralPurposeModelCheckingScenario(scenario: ExecutionScenario): Boolean {
-    val actor = scenario.parallelExecution.getOrNull(0)?.getOrNull(0)
-    return (actor?.method == GeneralPurposeModelCheckingWrapper::runGPMCTest.javaMethod)
+    return scenario.isEmpty()
 }
 
 private data class ExecutionResultsRepresentationData(
@@ -598,12 +596,15 @@ internal data class ExceptionStackTracesResult(val exceptionStackTraces: Map<Thr
  */
 internal fun collectExceptionStackTraces(executionResult: ExecutionResult): ExceptionsProcessingResult {
     val exceptionStackTraces = mutableMapOf<Throwable, ExceptionNumberAndStacktrace>()
-    listOf(
-        executionResult.initResults + executionResult.parallelResults[0] + executionResult.postResults, 
-        *executionResult.parallelResults.drop(1).toTypedArray())
-        .flatMap { it.mapIndexed { index, result -> Pair(index, result) } }
+    val allResults = listOf(
+        executionResult.initResults + executionResult.parallelResults.getOrNull(0).orEmpty() + executionResult.postResults,
+        *executionResult.parallelResults.drop(1).toTypedArray()
+    ).flatten()
+
+    allResults
+        .mapIndexed { index, result -> Pair(index, result) }
         .sortedBy { (index, _) -> index }
-        .map { (_, exception) -> exception }
+        .map { (_, result) -> result }
         .filterIsInstance<ExceptionResult>()
         .forEachIndexed { index, exceptionResult ->
             val exception = exceptionResult.throwable

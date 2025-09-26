@@ -19,7 +19,7 @@ Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:51) |
 |   block(): threw IllegalStateException at ThreadSafeCollectionUnmutedLambdaRepresentationTest.block(StdLibRepresentationTests.kt:64)                                            |
-|     concurrentMap.computeIfAbsent(1, Lambda#2): 7 at ThreadSafeCollectionUnmutedLambdaRepresentationTest.block(StdLibRepresentationTests.kt:70)                                 |
+|     concurrentMap.computeIfAbsent(1, Lambda#1): 7 at ThreadSafeCollectionUnmutedLambdaRepresentationTest.block(StdLibRepresentationTests.kt:70)                                 |
 |       key.hashCode(): 1 at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1694)                                                                                       |
 |       spread(1): 1 at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1694)                                                                                            |
 |       table ➜ null at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1697)                                                                                            |
@@ -38,7 +38,7 @@ Detailed trace:
 |       mappingFunction.apply(1): 7 at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1708)                                                                             |
 |         $tmp0.invoke(1): 7 at ThreadSafeCollectionUnmutedLambdaRepresentationTest.block$lambda$3(StdLibRepresentationTests.kt:70)                                               |
 |           a = 5 at ThreadSafeCollectionUnmutedLambdaRepresentationTest.block$lambda$2(StdLibRepresentationTests.kt:71)                                                          |
-|           innerConcurrentMap.computeIfAbsent(1, Lambda#3): 6 at ThreadSafeCollectionUnmutedLambdaRepresentationTest.block$lambda$2(StdLibRepresentationTests.kt:72)             |
+|           innerConcurrentMap.computeIfAbsent(1, Lambda#2): 6 at ThreadSafeCollectionUnmutedLambdaRepresentationTest.block$lambda$2(StdLibRepresentationTests.kt:72)             |
 |             key.hashCode(): 1 at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1694)                                                                                 |
 |             spread(1): 1 at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1694)                                                                                      |
 |             table ➜ null at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1697)                                                                                      |

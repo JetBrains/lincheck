@@ -343,14 +343,20 @@ private fun objectClassNameRepresentation(obj: Any): String = when (obj) {
 private data class ClassNameRepresentation(
     val name: String,
     val classKey: Class<*>,
+    val displayNumerationOffset: Int = 0,
 )
 
 private fun Any.getSpecialClassNameRepresentation(): ClassNameRepresentation? = when {
-    this is Thread                                -> ClassNameRepresentation("Thread", Thread::class.java)
-    this is Continuation<*>                       -> ClassNameRepresentation("Continuation", Continuation::class.java)
-    isJavaLambdaClass(javaClass.name) -> ClassNameRepresentation("Lambda", Lambda::class.java)
+    this is Thread                                -> ThreadClassNameRepresentation
+    isJavaLambdaClass(javaClass.name)             -> LambdaClassNameRepresentation
+    this is Continuation<*>                       -> ContinuationClassNameRepresentation
     else                                          -> null
 }
+
+private val ThreadClassNameRepresentation       = ClassNameRepresentation("Thread", Thread::class.java, displayNumerationOffset = -1)
+private val LambdaClassNameRepresentation       = ClassNameRepresentation("Lambda", Lambda::class.java)
+private val ContinuationClassNameRepresentation = ClassNameRepresentation("Continuation", Continuation::class.java)
+
 
 private fun Any.hasSpecialClassNameRepresentation(): Boolean =
     getSpecialClassNameRepresentation() != null
@@ -366,9 +372,7 @@ private class Lambda
  * It provides an implementation for registering, retrieving, updating,
  * and managing objects and their entries in the registry.
  */
-open class BaseObjectTracker(
-    val executionMode: ExecutionMode
-) : ObjectTracker {
+open class BaseObjectTracker : ObjectTracker {
 
     // counter of all registered objects
     private var objectCounter = 0
@@ -407,9 +411,9 @@ open class BaseObjectTracker(
     }
 
     protected fun computeObjectDisplayNumber(obj: Any): Int {
-        // In the case of general-purpose model checking mode, the thread numeration starts from 0.
-        val offset = if (obj is Thread && executionMode == ExecutionMode.GENERAL_PURPOSE_MODEL_CHECKER) -1 else 0
-        val objClassKey = obj.getSpecialClassNameRepresentation()?.classKey ?: obj.javaClass
+        val classRepr = obj.getSpecialClassNameRepresentation()
+        val objClassKey = classRepr?.classKey ?: obj.javaClass
+        val offset = classRepr?.displayNumerationOffset ?: 0
         return perClassObjectNumeration.update(objClassKey, default = offset) { it + 1 }
     }
 

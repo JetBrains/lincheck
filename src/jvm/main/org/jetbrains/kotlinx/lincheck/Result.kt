@@ -49,7 +49,7 @@ object Cancelled : Result {
 /**
  * Type of result used if the actor invocation fails with the specified in {@link Operation#handleExceptionsAsResult()} exception [tClazzFullName].
  */
-class ExceptionResult private constructor(
+class ExceptionResult(
     /**
      * Exception is stored to print it's stackTrace in case of incorrect results
      */
