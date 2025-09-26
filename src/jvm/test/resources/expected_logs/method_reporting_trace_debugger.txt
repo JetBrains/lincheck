@@ -2,35 +2,34 @@
 | ------------------------------- |
 |    Thread 1    |    Thread 2    |
 | ------------------------------- |
-| operation(): 2 | operation(): 1 |
+| operation(): 2 | operation(): 3 |
 | ------------------------------- |
 
 The following interleaving leads to the error:
 | --------------------------------------------------------- |
 |    Thread 1    |                 Thread 2                 |
 | --------------------------------------------------------- |
-|                | operation(): 1                           |
+|                | operation(): 3                           |
 |                |   badMethod(): threw NotImplementedError |
 |                |   counter ➜ 0                            |
 |                |   counter = 1                            |
-|                |   counter ➜ 1                            |
 |                |   switch                                 |
 | operation(): 2 |                                          |
-|                |   counter = 2                            |
-|                |   result: 1                              |
+|                |   counter ➜ 3                            |
+|                |   counter = 4                            |
+|                |   result: 3                              |
 | --------------------------------------------------------- |
 
 Detailed trace:
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                      Thread 1                                                       |                                                      Thread 2                                                       |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                                                     | operation(): 1                                                                                                      |
+|                                                                                                                     | operation(): 3                                                                                                      |
 |                                                                                                                     |   badMethod(): threw NotImplementedError at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:95) |
 |                                                                                                                     |     useless ➜ 0 at CaughtExceptionMethodReportingTest.badMethod(MethodReportingTest.kt:103)                         |
 |                                                                                                                     |     useless = 1 at CaughtExceptionMethodReportingTest.badMethod(MethodReportingTest.kt:103)                         |
 |                                                                                                                     |   counter ➜ 0 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:97)                            |
 |                                                                                                                     |   counter = 1 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:97)                            |
-|                                                                                                                     |   counter ➜ 1 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:98)                            |
 |                                                                                                                     |   switch                                                                                                            |
 | operation(): 2                                                                                                      |                                                                                                                     |
 |   badMethod(): threw NotImplementedError at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:95) |                                                                                                                     |
@@ -41,6 +40,7 @@ Detailed trace:
 |   counter ➜ 2 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:98)                            |                                                                                                                     |
 |   counter = 3 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:98)                            |                                                                                                                     |
 |   result: 2                                                                                                         |                                                                                                                     |
-|                                                                                                                     |   counter = 2 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:98)                            |
-|                                                                                                                     |   result: 1                                                                                                         |
+|                                                                                                                     |   counter ➜ 3 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:98)                            |
+|                                                                                                                     |   counter = 4 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:98)                            |
+|                                                                                                                     |   result: 3                                                                                                         |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
