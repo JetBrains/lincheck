@@ -138,7 +138,7 @@ class JavaCfgTester {
     }
 
     private fun prettyPrint(cfg: BasicBlockControlFlowGraph): String {
-        TODO("CFG pretty-printer is not implemented yet")
+        return cfg.prettyPrint()
     }
 }
 
