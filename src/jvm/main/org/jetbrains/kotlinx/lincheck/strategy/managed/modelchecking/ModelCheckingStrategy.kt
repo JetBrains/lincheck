@@ -62,8 +62,7 @@ internal class ModelCheckingStrategy(
 
     // Tracker of objects' allocations and object graph topology.
     override val objectTracker: ObjectTracker = run {
-        val isFirstThreadMain = (runner is LambdaRunner)
-        if (isInTraceDebuggerMode) BaseObjectTracker(isFirstThreadMain) else LocalObjectManager(isFirstThreadMain)
+        if (isInTraceDebuggerMode) BaseObjectTracker() else LocalObjectManager()
     }
 
     // Tracker of the monitors' operations.
@@ -439,9 +438,7 @@ internal class ModelCheckingStrategy(
  * This tracking helps to avoid exploring unnecessary interleavings, which can occur if access to such local
  * objects triggers switch points in the model checking strategy.
  */
-internal class LocalObjectManager(
-    isFirstThreadMain: Boolean,
-) : BaseObjectTracker(isFirstThreadMain) {
+internal class LocalObjectManager : BaseObjectTracker() {
 
     override fun registerThread(threadId: Int, thread: Thread) {
         super.registerThread(threadId, thread)

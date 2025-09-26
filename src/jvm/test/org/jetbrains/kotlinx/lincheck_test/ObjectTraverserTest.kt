@@ -28,7 +28,7 @@ import org.junit.Test
  */
 class ObjectTraverserTest {
 
-    private val objectTracker = LocalObjectManager(isFirstThreadMain = true)
+    private val objectTracker = LocalObjectManager()
 
     @Before
     fun setUp() {
