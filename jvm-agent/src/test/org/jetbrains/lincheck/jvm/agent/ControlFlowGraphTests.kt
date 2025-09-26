@@ -12,6 +12,7 @@ package org.jetbrains.lincheck.jvm.agent
 
 import org.jetbrains.lincheck.jvm.agent.analysis.buildControlFlowGraph
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.BasicBlockControlFlowGraph
+import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.prettyPrint
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.MethodNode
