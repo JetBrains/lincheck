@@ -107,65 +107,71 @@ fun InstructionControlFlowGraph.toBasicBlockGraph(): BasicBlockControlFlowGraph 
     return basicBlockGraph
 }
 
-fun BasicBlockControlFlowGraph.prettyPrint(): String {
-    val sb = StringBuilder()
+fun BasicBlockControlFlowGraph.prettyPrint(): String =
+    BasicBlockControlFlowGraphPrinter(this).prettyPrint()
 
-    // Blocks section
-    sb.appendLine("BLOCKS")
-    for (block in basicBlocks.sortedBy { it.index }) {
-        val first = block.range.firstOrNull()
-        val last = block.range.lastOrNull()
-        val range = when {
-            first == null -> "[]"
-            first == last -> "[$first]"
-            else          -> "[$first..$last]"
+private class BasicBlockControlFlowGraphPrinter(val graph: BasicBlockControlFlowGraph) {
+
+    fun prettyPrint(): String {
+        val sb = StringBuilder()
+
+        // Blocks section
+        sb.appendLine("BLOCKS")
+        for (block in graph.basicBlocks.sortedBy { it.index }) {
+            val first = block.range.firstOrNull()
+            val last = block.range.lastOrNull()
+            val range = when {
+                first == null -> "[]"
+                first == last -> "[$first]"
+                else          -> "[$first..$last]"
+            }
+            sb.appendLine("B${block.index}: $range")
+
+            // Instructions section
+            for (insnIndex in block.range) {
+                val insn = graph.instructions.get(insnIndex)
+                val text = insn.prettyPrint()
+                sb.appendLine("  $insnIndex: $text")
+            }
         }
-        sb.appendLine("B${block.index}: $range")
 
-        // Instructions section
-        for (insnIndex in block.range) {
-            val insn = instructions.get(insnIndex)
-            val text = insn.prettyPrint()
-            sb.appendLine("  $insnIndex: $text")
+        // Edges section
+        sb.appendLine("EDGES")
+        val edges: List<Edge> = graph.edges.toMutableList().apply {
+            sortWith(compareBy({ it.source }, { it.target }, { labelSortKey(it.label) }))
         }
+        for (e in edges) {
+            val label = e.label.prettyPrint().takeIf { it.isNotEmpty() }
+            sb.append("  B${e.source} -> B${e.target}")
+            sb.append(label?.let { " : $it" }.orEmpty())
+            sb.appendLine()
+        }
+
+        return sb.toString()
     }
 
-    // Edges section
-    sb.appendLine("EDGES")
-    val edges: List<Edge> = edges.toMutableList().apply {
-        sortWith(compareBy({ it.source }, { it.target }, { labelSortKey(it.label) }))
-    }
-    for (e in edges) {
-        val label = e.label.prettyPrint().takeIf { it.isNotEmpty() }
-        sb.append("  B${e.source} -> B${e.target}")
-        sb.append(label?.let { " : $it" }.orEmpty())
-        sb.appendLine()
+    private fun labelSortKey(label: EdgeLabel): String = when (label) {
+        is EdgeLabel.FallThrough -> "0"
+        is EdgeLabel.Jump        -> "1:${Printer.OPCODES[label.opcode]}"
+        is EdgeLabel.Exception   -> "2:${label.caughtTypeName ?: "*"}"
     }
 
-    return sb.toString()
-}
-
-private fun labelSortKey(label: EdgeLabel): String = when (label) {
-    is EdgeLabel.FallThrough    -> "0"
-    is EdgeLabel.Jump           -> "1:${Printer.OPCODES[label.opcode]}"
-    is EdgeLabel.Exception      -> "2:${label.caughtTypeName ?: "*"}"
-}
-
-private fun EdgeLabel.prettyPrint(): String = when (this) {
-    is EdgeLabel.FallThrough    -> ""
-    is EdgeLabel.Jump           -> "JUMP(opcode=${Printer.OPCODES[opcode]})"
-    is EdgeLabel.Exception      -> "CATCH(type=${caughtTypeName ?: "*"})"
-}
-
-private fun AbstractInsnNode.prettyPrint(): String {
-    val opcode = opcode
-    if (opcode >= 0) {
-        return Printer.OPCODES[opcode]
+    private fun EdgeLabel.prettyPrint(): String = when (this) {
+        is EdgeLabel.FallThrough -> ""
+        is EdgeLabel.Jump        -> "JUMP(opcode=${Printer.OPCODES[opcode]})"
+        is EdgeLabel.Exception   -> "CATCH(type=${caughtTypeName ?: "*"})"
     }
-    return when (this) {
-        is LabelNode        -> "LABEL"
-        is LineNumberNode   -> "LINE $line"
-        is FrameNode        -> "FRAME"
-        else                -> this.javaClass.simpleName
+
+    private fun AbstractInsnNode.prettyPrint(): String {
+        val opcode = opcode
+        if (opcode >= 0) {
+            return Printer.OPCODES[opcode]
+        }
+        return when (this) {
+            is LabelNode       -> "LABEL"
+            is LineNumberNode  -> "LINE $line"
+            is FrameNode       -> "FRAME"
+            else               -> this.javaClass.simpleName
+        }
     }
 }
