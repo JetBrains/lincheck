@@ -103,6 +103,7 @@ fun InstructionControlFlowGraph.toBasicBlockGraph(): BasicBlockControlFlowGraph 
         for (edge in edges) {
             val v = edge.target
             val bv = instructionToBlock[v] ?: continue
+            if (bu == bv) continue
             basicBlockGraph.addEdge(bu, bv, edge.label)
         }
     }
