@@ -8,7 +8,7 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-// Test cases for Control-Flow Graph construction from Java bytecode.
+// Test cases for control-flow graph construction from Java bytecode.
 // One public class with multiple static methods, each representing a CFG scenario.
 
 public class JavaControlFlowGraphCases {
