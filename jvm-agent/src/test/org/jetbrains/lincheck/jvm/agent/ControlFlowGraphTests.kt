@@ -39,7 +39,11 @@ class JavaControlFlowGraphTester {
      */
     private fun compileJavaFromResource(sourceFilePath: String): Map<String, ByteArray> {
         val sourceText = loadResourceText(sourceFilePath)
-        val fileObject = InMemoryJavaSource.fromResourcePath(sourceFilePath, sourceText)
+
+        // Test source files are stored with `.java.txt` extension,
+        // because otherwise, with `.java` extension only, gradle tries to compile them to `.class` files.
+        // Here we remove the `.txt` suffix to make the java compiler happy.
+        val fileObject = InMemoryJavaSource.fromResourcePath(sourceFilePath.removeSuffix(".txt"), sourceText)
 
         val diagnostics = DiagnosticCollector<JavaFileObject>()
         val fileManager = InMemoryJavaClassFileManager(compiler.getStandardFileManager(diagnostics, null, null))
@@ -132,15 +136,11 @@ class JavaControlFlowGraphTester {
      * Loads the content of a text resource file located at the specified path.
      */
     private fun loadResourceText(path: String): String {
-        val url = javaClass.classLoader.getResource(path)
+        val url = ClassLoader.getSystemResource(path)
             ?: error("Resource not found: $path")
         url.openStream().use { input ->
             return InputStreamReader(input, Charsets.UTF_8).readText()
         }
-    }
-
-    private fun prettyPrint(cfg: BasicBlockControlFlowGraph): String {
-        return cfg.prettyPrint()
     }
 }
 
@@ -204,10 +204,10 @@ private class InMemoryJavaClassFileManager(
 class JavaControlFlowGraphTest {
     private val tester = JavaControlFlowGraphTester()
     
-    private val javaPath = "analysis.controlflow/JavaControlFlowGraphCases.java"
+    private val javaPath = "analysis/controlflow/JavaControlFlowGraphCases.java.txt"
     private val className = "JavaControlFlowGraphCases"
     
-    private fun golden(name: String) = "analysis.controlflow/golder/$name.txt"
+    private fun golden(name: String) = "analysis/controlflow/golden/$name.txt"
     
     private fun test(name: String, desc: String) = 
         tester.testMethodCfg(javaPath, golden(name), className, name, desc)
