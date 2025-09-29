@@ -18,6 +18,8 @@ import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.MethodNode
 import java.io.ByteArrayOutputStream
 import java.io.InputStreamReader
+import java.io.IOException
+import java.io.File
 import java.net.URI
 import javax.tools.*
 import org.junit.Assert.assertEquals
@@ -129,7 +131,15 @@ class JavaControlFlowGraphTester {
         val cfgText = cfg.prettyPrint()
         val golden = loadResourceText(goldenResourcePath)
 
-        assertEquals(golden, cfgText)
+        try {
+            assertEquals(golden, cfgText)
+        } catch (e: AssertionError) {
+            if (OVERWRITE_REPRESENTATION_TESTS_OUTPUT) {
+                overwriteGolden(goldenResourcePath, cfgText)
+            } else {
+                throw e
+            }
+        }
     }
 
     /**
@@ -140,6 +150,20 @@ class JavaControlFlowGraphTester {
             ?: error("Resource not found: $path")
         url.openStream().use { input ->
             return InputStreamReader(input, Charsets.UTF_8).readText()
+        }
+    }
+
+    /**
+     * Overwrites the content of a golden file at the specified resource path with the provided content.
+     */
+    private fun overwriteGolden(resourcePath: String, content: String) {
+        try {
+            val file = File("src/test/resources/$resourcePath")
+            file.parentFile?.mkdirs()
+            file.writeText(content)
+            println("Golden file updated: $resourcePath")
+        } catch (e: Exception) {
+            throw IOException("Failed to overwrite golden file $resourcePath", e)
         }
     }
 }
