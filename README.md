@@ -80,16 +80,6 @@ The following interleaving leads to the error:
 | ------------------------------------------------------------------------------- |
 ```
 
-## Documentation and Presentations
-
-Please see the [official tutorial](https://kotlinlang.org/docs/lincheck-guide.html) that showcases Lincheck features through examples.
-
-You may also be interested in the following resources:
-
-* ["Lincheck: A Practical Framework for Testing Concurrent Data Structures on JVM"](https://link.springer.com/content/pdf/10.1007/978-3-031-37706-8_8.pdf?pdf=inline%20link) paper by N. Koval, A. Fedorov, M. Sokolova, D. Tsitelov, and D. Alistarh published at CAV '23.
-* ["How we test concurrent algorithms in Kotlin Coroutines"](https://youtu.be/jZqkWfa11Js) talk by Nikita Koval at KotlinConf '23.
-* "Lincheck: Testing concurrency on the JVM" workshop ([Part 1](https://www.youtube.com/watch?v=YNtUK9GK4pA), [Part 2](https://www.youtube.com/watch?v=EW7mkAOErWw)) by Maria Sokolova at Hydra '21.
-
 ## Data Structures Testing
 
 Lincheck provides a special API to simplify testing concurrent data structures. 
@@ -175,6 +165,17 @@ The following interleaving leads to the error:
 |   result: 1                             |               |
 | ------------------------------------------------------- |
 ```
+
+## Documentation and Presentations
+
+Please see the [official tutorial](https://kotlinlang.org/docs/lincheck-guide.html) that showcases Lincheck features through examples.
+
+You may also be interested in the following resources:
+
+* ["Lincheck: A Practical Framework for Testing Concurrent Data Structures on JVM"](https://link.springer.com/content/pdf/10.1007/978-3-031-37706-8_8.pdf?pdf=inline%20link) paper by N. Koval, A. Fedorov, M. Sokolova, D. Tsitelov, and D. Alistarh published at CAV '23.
+* ["How we test concurrent algorithms in Kotlin Coroutines"](https://youtu.be/jZqkWfa11Js) talk by Nikita Koval at KotlinConf '23.
+* "Lincheck: Testing concurrency on the JVM" workshop ([Part 1](https://www.youtube.com/watch?v=YNtUK9GK4pA), [Part 2](https://www.youtube.com/watch?v=EW7mkAOErWw)) by Maria Sokolova at Hydra '21.
+
 
 ## Contributing 
 
