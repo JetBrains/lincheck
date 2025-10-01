@@ -9,6 +9,10 @@
  */
 
 package org.jetbrains.kotlinx.lincheck.trace
+
+import org.jetbrains.lincheck.descriptors.CodeLocations
+import org.jetbrains.lincheck.jvm.agent.toCanonicalClassName
+
 /**
  * A flatten policy, determines how a [TraceNode] graph should be flattened to an ordered list of [TraceNode] elements.
  * A node is flattened by:
@@ -43,7 +47,8 @@ internal interface TraceFlattenPolicy {
 internal class VerboseTraceFlattenPolicy : TraceFlattenPolicy {
 
     override fun shouldIncludeThisNode(currentNode: TraceNode): Boolean = when (currentNode) {
-        is EventNode -> !currentNode.tracePoint.isVirtual
+        is EventNode -> !currentNode.tracePoint.isVirtual && !currentNode.tracePoint.isThrowableTracePoint
+        is CallNode -> !currentNode.tracePoint.isThrowableTracePoint
         else -> true
     }
 
@@ -85,26 +90,33 @@ internal class VerboseTraceFlattenPolicy : TraceFlattenPolicy {
 }
 
 internal class ShortTraceFlattenPolicy : TraceFlattenPolicy {
-    override fun shouldIncludeThisNode(currentNode: TraceNode): Boolean = when (currentNode) {
-        is EventNode -> with(currentNode) {
-            (!tracePoint.isVirtual && (
-                    isLast && tracePoint.isBlocking
-                            || tracePoint is SwitchEventTracePoint
-                            || tracePoint is ObstructionFreedomViolationExecutionAbortTracePoint
+    override fun shouldIncludeThisNode(currentNode: TraceNode): Boolean {
+        if (currentNode.tracePoint.isFiltered()) return false
+        return when (currentNode) {
+            is EventNode -> with(currentNode) {
+                !tracePoint.isVirtual && (callDepth == 0 || (
+                        tracePoint.isBlocking && isLast ||
+                        tracePoint is SwitchEventTracePoint ||
+                        tracePoint is ObstructionFreedomViolationExecutionAbortTracePoint
                     )
-            ) || callDepth == 0
+                )
+            }
+            is CallNode -> currentNode.tracePoint.wasSuspended || currentNode.isRootCall
+            is ResultNode -> true
+            else -> false
         }
-        is CallNode -> currentNode.tracePoint.wasSuspended || currentNode.isRootCall
-        is ResultNode -> true
-        else -> false
     }
 
     override fun beforeFlattenChildren(currentNode: TraceNode, childDescendants: List<List<TraceNode>>): List<List<TraceNode>> {
         // Insert siblings if necessary (for short trace)
-        // if not verbose and atleast one child has no descendants and one other child has
+        // if not verbose and at least one child has no descendants, and one other child has
         if (childDescendants.any { it.isNotEmpty() } && childDescendants.any { it.isEmpty() }) {
             // add all siblings
-            return childDescendants.mapIndexed { i, descendantList -> if (descendantList.isEmpty()) listOf(currentNode.children[i]) else descendantList }
+            return childDescendants.mapIndexed { i, descendantList ->
+                descendantList.ifEmpty {
+                    listOfNotNull(currentNode.children[i].takeIf { !it.tracePoint.isFiltered() })
+                }
+            }
         }
         return childDescendants
     }
@@ -144,6 +156,9 @@ internal class ShortTraceFlattenPolicy : TraceFlattenPolicy {
             else -> return descendants
         }
     }
+
+    private fun TracePoint.isFiltered(): Boolean =
+        this.isThrowableTracePoint
 }
 
 internal fun TraceNode.flattenNodes(policy: TraceFlattenPolicy): List<TraceNode> {
@@ -171,7 +186,15 @@ internal fun SingleThreadedTable<TraceNode>.extractPreExpandedNodes(flattenPolic
     flatMap { section -> section.flatMap { it.extractPreExpanded(flattenPolicy).first }}
 
 // virtual trace points are not displayed in the trace
-private val TracePoint.isVirtual: Boolean get() = this.isThreadStart() || this.isThreadJoin()
+private val TracePoint.isVirtual: Boolean get() =
+    this.isThreadStart() || this.isThreadJoin()
+
+// trace points from `Throwable` methods are filter-out from the trace
+private val TracePoint.isThrowableTracePoint: Boolean get() {
+    val codeLocation = (this as? CodeLocationTracePoint)?.codeLocation ?: return false
+    val stackTraceElement = CodeLocations.stackTrace(codeLocation)
+    return stackTraceElement.className.toCanonicalClassName() == "java.lang.Throwable"
+}
 
 private val TracePoint.isBlocking: Boolean get() = when (this) {
     is MonitorEnterTracePoint, is WaitTracePoint, is ParkTracePoint -> true
