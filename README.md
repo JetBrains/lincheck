@@ -25,7 +25,7 @@ repositories {
 
 dependencies {
    // Lincheck dependency
-   testImplementation("org.jetbrains.lincheck:lincheck:3.2")
+   testImplementation("org.jetbrains.lincheck:lincheck:3.3")
 }
 ```
 
