@@ -1,0 +1,37 @@
+BLOCKS
+B0: [0..14]
+   0:    L0
+   1:     LINENUMBER 221 L0
+   2:     ICONST_0
+   3:     ISTORE 1
+   4:    L1
+   5:     LINENUMBER 223 L1
+   6:     ILOAD 0
+   7:     INVOKESTATIC JavaControlFlowGraphCases.mayThrow (I)I
+   8:     ISTORE 1
+   9:    L2
+  10:     LINENUMBER 225 L2
+  11:     IINC 1 1
+  12:    L3
+  13:     LINENUMBER 226 L3
+  14:     GOTO L4
+B1: [15..23]
+  15:    L5
+  16:     LINENUMBER 225 L5
+  17:    FRAME FULL [I I] [java/lang/Throwable]
+  18:     ASTORE 2
+  19:     IINC 1 1
+  20:    L6
+  21:     LINENUMBER 226 L6
+  22:     ALOAD 2
+  23:     ATHROW
+B2: [24..28]
+  24:    L4
+  25:     LINENUMBER 227 L4
+  26:    FRAME SAME
+  27:     ILOAD 1
+  28:     IRETURN
+
+EDGES
+  B0 -> B1 : CATCH(type=*)
+  B0 -> B2 : JUMP(opcode=GOTO)
