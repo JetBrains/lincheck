@@ -123,6 +123,8 @@ private class BasicBlockControlFlowGraphPrinter(val graph: BasicBlockControlFlow
 
         // Blocks section
         sb.appendLine("BLOCKS")
+        val lastInsnIndex = (graph.instructions.size() - 1).takeIf { it >= 0 } ?: 0
+        val insnIndexWidth = lastInsnIndex.toString().length
         for (block in graph.basicBlocks.sortedBy { it.index }) {
             val first = block.range.firstOrNull()
             val last = block.range.lastOrNull()
@@ -137,7 +139,8 @@ private class BasicBlockControlFlowGraphPrinter(val graph: BasicBlockControlFlow
             for (insnIndex in block.range) {
                 val insn = graph.instructions.get(insnIndex)
                 val text = insn.prettyPrint()
-                sb.appendLine("  $insnIndex: $text")
+                val idx = insnIndex.toString().padStart(insnIndexWidth, ' ')
+                sb.appendLine("  $idx: $text")
             }
         }
 
