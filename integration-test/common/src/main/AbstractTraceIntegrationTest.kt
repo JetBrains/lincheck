@@ -142,6 +142,7 @@ abstract class AbstractTraceIntegrationTest {
     ) {
         val tmpFile = File.createTempFile(testClassName + "_" + testMethodName, "")
         val packedTraceFile = File("${tmpFile.absolutePath}.packedtrace")
+        val indexFile = File("${tmpFile.absolutePath}.idx")
 
         try {
             createGradleConnection().use { connection ->
@@ -200,6 +201,7 @@ abstract class AbstractTraceIntegrationTest {
         } finally {
             tmpFile.delete()
             packedTraceFile.delete()
+            indexFile.delete()
         }
     }
 
