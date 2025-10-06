@@ -55,7 +55,7 @@ fun InstructionControlFlowGraph.toBasicBlockGraph(): BasicBlockControlFlowGraph 
     // An instruction is a leader if it is:
     //   1. the first instruction of the program;
     //   2. any instruction that is the target of a conditional or unconditional jump;
-    //   3. instruction immediately following a conditional jump (since control may fall through);
+    //   3. instruction immediately following a conditional if jump (since control may fall through);
     //   4. any instruction that is the target of exception handler jump.
     val leaders =
         buildSet {
@@ -64,7 +64,7 @@ fun InstructionControlFlowGraph.toBasicBlockGraph(): BasicBlockControlFlowGraph 
                 edges.forEach { edge ->
                     if (edge.label is EdgeLabel.Jump) {
                         add(edge.target)
-                        if (edge.label.isConditional && hasEdge(edge.source, edge.source + 1)) {
+                        if (edge.label.isIfConditional && hasEdge(edge.source, edge.source + 1)) {
                             add(edge.source + 1)
                         }
                     }
