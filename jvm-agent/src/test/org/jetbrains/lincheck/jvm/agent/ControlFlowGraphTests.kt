@@ -266,6 +266,9 @@ class JavaControlFlowGraphTest {
     fun ifElseNested() = test("ifElseNested", "(II)I")
 
     @Test
+    fun ifReturn() = test("ifReturn", "(I)I")
+
+    @Test
     fun whileLoop() = test("whileLoop", "(I)I")
 
     @Test
