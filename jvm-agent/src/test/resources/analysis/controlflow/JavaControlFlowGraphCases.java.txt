@@ -69,7 +69,7 @@ public class JavaControlFlowGraphCases {
         }
     }
 
-    // 5. If statement with early returns (multiple return sites)
+    // 5. If statement with early returns (multiple return sites).
     public static int ifReturn(int x) {
         if (x == 0) return 0;
         if (x == 1) return 1;
@@ -105,6 +105,33 @@ public class JavaControlFlowGraphCases {
         return s;
     }
 
+    // 6a. While-true loop.
+    public static void whileTrueLoop() {
+        int i = 0;
+        while (true) {
+            i++;
+        }
+    }
+
+    // 6b. While-true loop with return.
+    public static int whileTrueLoopReturn(int n) {
+        int i = 0;
+        while (true) {
+            i++;
+            if (i + n > 32) return 0;
+        }
+    }
+
+    // 6c. While-true loop with break.
+    public static int whileTrueLoopBreak(int n) {
+        int i = 0;
+        while (true) {
+            i++;
+            if (i + n > 32) break;
+        }
+        return i;
+    }
+
     // 6a. Do while.
     public static int doWhileLoop(int n) {
         int i = 0;
@@ -127,6 +154,16 @@ public class JavaControlFlowGraphCases {
             c += i;
         } while (i < n);
         return c;
+    }
+
+    // 6c. Do while-true.
+    public static void doWhileTrueLoop() {
+        int i = 0;
+        int c = 0;
+        do {
+            i++;
+            c += i;
+        } while (true);
     }
 
     // 7a. For-loop.
