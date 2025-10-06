@@ -247,7 +247,7 @@ object TraceRecorderDefaultTransformationProfile : TransformationProfile {
             trackObjectCreations = true
 
             trackLocalVariableWrites = true
-            trackStaticFieldReads = true
+//            trackStaticFieldReads = true
             trackAllFieldsWrites = true
             trackArrayElementWrites = true
 
