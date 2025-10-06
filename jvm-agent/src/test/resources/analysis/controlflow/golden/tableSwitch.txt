@@ -1,0 +1,48 @@
+BLOCKS
+B0: [0..3]
+   0:    L0
+   1:     LINENUMBER 171 L0
+   2:     ILOAD 0
+   3:     TABLESWITCH
+      0: L1
+      1: L2
+      2: L3
+      3: L4
+      default: L5
+B1: [4..8]
+   4:    L1
+   5:     LINENUMBER 172 L1
+   6:    FRAME SAME
+   7:     ICONST_0
+   8:     IRETURN
+B2: [9..13]
+   9:    L2
+  10:     LINENUMBER 173 L2
+  11:    FRAME SAME
+  12:     BIPUSH 10
+  13:     IRETURN
+B3: [14..18]
+  14:    L3
+  15:     LINENUMBER 174 L3
+  16:    FRAME SAME
+  17:     BIPUSH 20
+  18:     IRETURN
+B4: [19..23]
+  19:    L4
+  20:     LINENUMBER 175 L4
+  21:    FRAME SAME
+  22:     BIPUSH 30
+  23:     IRETURN
+B5: [24..28]
+  24:    L5
+  25:     LINENUMBER 176 L5
+  26:    FRAME SAME
+  27:     ICONST_M1
+  28:     IRETURN
+
+EDGES
+  B0 -> B1 : JUMP(opcode=TABLESWITCH)
+  B0 -> B2 : JUMP(opcode=TABLESWITCH)
+  B0 -> B3 : JUMP(opcode=TABLESWITCH)
+  B0 -> B4 : JUMP(opcode=TABLESWITCH)
+  B0 -> B5 : JUMP(opcode=TABLESWITCH)

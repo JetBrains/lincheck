@@ -141,4 +141,49 @@ public class JavaControlFlowGraphCases {
         }
         return s;
     }
+
+    // 8a. Nested for-loops
+    public static int forLoopNested(int n, int m) {
+        int sum = 0;
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < m; j++) {
+                sum += i * j;
+            }
+        }
+        return sum;
+    }
+
+    // 8b. Nested for-loops with labeled break and inner continue
+    public static int forLoopContinueBreakNested(int n, int m) {
+        int c = 0;
+        outer: for (int i = 0; i < n; i++) {
+            for (int j = 0; j < m; j++) {
+                if (i * j > 10) break outer; // exits outer loop
+                if (j == 2) continue; // continue inner loop
+                c++;
+            }
+        }
+        return c;
+    }
+
+    // 9. Switch: likely TABLESWITCH for dense keys
+    public static int tableSwitch(int x) {
+        switch (x) {
+            case 0: return 0;
+            case 1: return 10;
+            case 2: return 20;
+            case 3: return 30;
+            default: return -1;
+        }
+    }
+
+    // 10. Switch: likely LOOKUPSWITCH for sparse keys
+    public static int lookupSwitch(int x) {
+        switch (x) {
+            case -100: return 1;
+            case 0: return 2;
+            case 1000: return 3;
+            default: return 4;
+        }
+    }
 }
