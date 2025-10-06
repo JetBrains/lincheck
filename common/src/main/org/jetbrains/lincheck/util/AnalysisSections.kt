@@ -168,7 +168,7 @@ inline fun <R> runInsideIgnoredSection(block: () -> R): R {
  * @return result of the [block] invocation or `null` if the analysis is disabled for the current thread.
  */
 inline fun <R> runInsideInjectedCode(block: () -> R): R? {
-    val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: return block()
+    val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: return null
 
     // General synchronization schema here is as follows:
     //   * This thread sets the flag, that it will now run some code from instrumentation (e.g. method from `EventTracker`)

@@ -69,6 +69,7 @@ object TraceRecorder {
         // and 'eventTracker.finishAndDumpTrace()' is called after analysis is disabled
         val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         desc.removeAsRootDescriptor()
+        Injections.disableGlobalThreadsTracking()
         val currentTracker = desc.eventTracker
         if (currentTracker == eventTracker) {
             desc.disableAnalysis()
