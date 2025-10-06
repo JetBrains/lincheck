@@ -274,4 +274,16 @@ class JavaControlFlowGraphTest {
 
     @Test
     fun forLoopContinueBreak() = test("forLoopContinueBreak", "(I)I")
+
+    @Test
+    fun forLoopNested() = test("forLoopNested", "(II)I")
+
+    @Test
+    fun forLoopContinueBreakNested() = test("forLoopContinueBreakNested", "(II)I")
+
+    @Test
+    fun tableSwitch() = test("tableSwitch", "(I)I")
+
+    @Test
+    fun lookupSwitch() = test("lookupSwitch", "(I)I")
 }
