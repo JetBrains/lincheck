@@ -183,7 +183,8 @@ abstract class AbstractTraceIntegrationTest {
                 }
             } else {
                 fun checkNonEmptyNess(file: File, filePurpose: String = "output") {
-                    if (file.readText().isEmpty()) {
+                    val fileContainsContent = file.bufferedReader().lineSequence().any { it.isNotEmpty() }
+                    if (!fileContainsContent) {
                         Assert.fail("Empty $filePurpose file was produced by the test: $file.")
                     }
                 }
