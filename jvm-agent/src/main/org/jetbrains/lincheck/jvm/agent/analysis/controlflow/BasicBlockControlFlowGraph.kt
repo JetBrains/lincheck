@@ -103,7 +103,9 @@ fun InstructionControlFlowGraph.toBasicBlockGraph(): BasicBlockControlFlowGraph 
         for (edge in edges) {
             val v = edge.target
             val bv = instructionToBlock[v] ?: continue
-            if (bu == bv) continue
+            // Suppress only intra-block fall-through edges (they don't create inter-block flow),
+            // but keep intra-block self-loops for jumps (e.g., do-while back edges) and exceptions.
+            if (bu == bv && edge.label is EdgeLabel.FallThrough) continue
             basicBlockGraph.addEdge(bu, bv, edge.label)
         }
     }
