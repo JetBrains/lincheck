@@ -186,4 +186,70 @@ public class JavaControlFlowGraphCases {
             default: return 4;
         }
     }
+
+    // 11a. Try/catch: single catch type
+    public static int tryCatch(int x) {
+        try {
+            return mayThrow(x);
+        } catch (IllegalArgumentException e) {
+            return -1;
+        }
+    }
+
+    // 11b. Try/catch: single multi-catch
+    public static int tryMultiCatch(int x) {
+        try {
+            return mayThrowMulti(x);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return -1;
+        }
+    }
+
+    // 11c. Try/catch: two catch blocks
+    public static int tryCatchBlocks(int x) {
+        try {
+            return mayThrowMulti(x);
+        } catch (IllegalArgumentException e) {
+            return -1;
+        } catch (IllegalStateException e) {
+            return -2;
+        }
+    }
+
+    // 12. Try/finally
+    public static int tryFinally(int x) {
+        int y = 0;
+        try {
+            y = mayThrow(x);
+        } finally {
+            y++;
+        }
+        return y;
+    }
+
+    // 13. Try/catch/finally
+    public static int tryCatchFinally(int x) {
+        int y = 0;
+        try {
+            y = mayThrow(x);
+        } catch (IllegalArgumentException e) {
+            y = -1;
+        } finally {
+            y++;
+        }
+        return y;
+    }
+
+    // Helpers
+
+    private static int mayThrow(int x) {
+        if (x < 0) throw new IllegalArgumentException("Negative value");
+        return x;
+    }
+
+    private static int mayThrowMulti(int x) {
+        if (x < 0) throw new IllegalArgumentException("Negative value");
+        if (x == 0) throw new IllegalStateException("Zero value");
+        return x;
+    }
 }

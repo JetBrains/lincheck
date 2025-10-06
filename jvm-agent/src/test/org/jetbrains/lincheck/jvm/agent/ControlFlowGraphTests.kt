@@ -129,13 +129,15 @@ class JavaControlFlowGraphTester {
             ?: error("Class not found: $internalClassName")
         val cfg = buildCfg(bytes, internalClassName, methodName, descriptor)
         val cfgText = cfg.prettyPrint()
-        val golden = loadResourceText(goldenResourcePath)
+        val golden = loadResourceTextOrNull(goldenResourcePath)
 
         try {
             assertEquals(golden, cfgText)
         } catch (e: AssertionError) {
             if (OVERWRITE_REPRESENTATION_TESTS_OUTPUT) {
                 overwriteGolden(goldenResourcePath, cfgText)
+            } else if (golden == null) {
+                error("No golden file found: $goldenResourcePath.")
             } else {
                 throw e
             }
@@ -143,14 +145,23 @@ class JavaControlFlowGraphTester {
     }
 
     /**
-     * Loads the content of a text resource file located at the specified path.
+     * Loads the content of a text resource file located at the specified path,
+     * returns null if the resource does not exist.
      */
-    private fun loadResourceText(path: String): String {
+    private fun loadResourceTextOrNull(path: String): String? {
         val url = ClassLoader.getSystemResource(path)
-            ?: error("Resource not found: $path")
+            ?: return null
         url.openStream().use { input ->
             return InputStreamReader(input, Charsets.UTF_8).readText()
         }
+    }
+
+    /**
+     * Loads the content of a text resource file located at the specified path,
+     * throws an exception if the resource does not exist.
+     */
+    private fun loadResourceText(path: String): String {
+        return loadResourceTextOrNull(path) ?: error("Resource not found: $path")
     }
 
     /**
@@ -286,4 +297,19 @@ class JavaControlFlowGraphTest {
 
     @Test
     fun lookupSwitch() = test("lookupSwitch", "(I)I")
+
+    @Test
+    fun tryCatch() = test("tryCatch", "(I)I")
+
+    @Test
+    fun tryMultiCatch() = test("tryMultiCatch", "(I)I")
+
+    @Test
+    fun tryCatchBlocks() = test("tryCatchBlocks", "(I)I")
+
+    @Test
+    fun tryFinally() = test("tryFinally", "(I)I")
+
+    @Test
+    fun tryCatchFinally() = test("tryCatchFinally", "(I)I")
 }
