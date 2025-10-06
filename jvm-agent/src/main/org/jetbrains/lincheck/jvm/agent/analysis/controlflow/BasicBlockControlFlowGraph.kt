@@ -143,6 +143,7 @@ private class BasicBlockControlFlowGraphPrinter(val graph: BasicBlockControlFlow
                 sb.appendLine("  $idx: $text")
             }
         }
+        sb.appendLine()
 
         // Edges section
         sb.appendLine("EDGES")
