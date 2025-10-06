@@ -1,0 +1,35 @@
+BLOCKS
+B0: [0..7]
+   0:    L0
+   1:     LINENUMBER 103 L0
+   2:     ICONST_0
+   3:     ISTORE 1
+   4:    L1
+   5:     LINENUMBER 104 L1
+   6:     ICONST_0
+   7:     ISTORE 2
+B1: [8..22]
+   8:    L2
+   9:     LINENUMBER 106 L2
+  10:    FRAME APPEND [I I]
+  11:     IINC 1 1
+  12:    L3
+  13:     LINENUMBER 107 L3
+  14:     ILOAD 2
+  15:     ILOAD 1
+  16:     IADD
+  17:     ISTORE 2
+  18:    L4
+  19:     LINENUMBER 108 L4
+  20:     ILOAD 1
+  21:     ILOAD 0
+  22:     IF_ICMPLT L2
+B2: [23..26]
+  23:    L5
+  24:     LINENUMBER 109 L5
+  25:     ILOAD 2
+  26:     IRETURN
+
+EDGES
+  B0 -> B1
+  B1 -> B2
