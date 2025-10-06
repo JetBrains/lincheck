@@ -32,4 +32,5 @@ B2: [23..26]
 
 EDGES
   B0 -> B1
+  B1 -> B1 : JUMP(opcode=IF_ICMPLT)
   B1 -> B2
