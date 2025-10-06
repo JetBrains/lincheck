@@ -13,14 +13,14 @@
 
 public class JavaControlFlowGraphCases {
 
-    // 1. Straight-line code (no branches).
+    // Straight-line code (no branches).
     public static int straightLine() {
         int x = 0;
         x++;
         return x;
     }
 
-    // 2. If statement.
+    // If statement.
     public static int ifStmt(int x) {
         if (x > 0) {
             return 1;
@@ -29,7 +29,7 @@ public class JavaControlFlowGraphCases {
         return -x;
     }
 
-    // 3a. If/else statement: numeric comparison.
+    // If/else statement: numeric comparison.
     public static int ifElseStmt(int x) {
         if (x > 0) {
             return 1;
@@ -38,7 +38,7 @@ public class JavaControlFlowGraphCases {
         }
     }
 
-    // 3b. If/else statement: null checks.
+    // If/else statement: null checks.
     public static int ifNull(Object o) {
         if (o == null) {
             return 0;
@@ -47,7 +47,7 @@ public class JavaControlFlowGraphCases {
         }
     }
 
-    // 3c. If/else statement: object reference comparisons.
+    // If/else statement: object reference comparisons.
     public static int ifRefCompare(Object a, Object b) {
         if (a == b) {
             return 1;
@@ -56,7 +56,7 @@ public class JavaControlFlowGraphCases {
         }
     }
 
-    // 4. Nested if/else statements.
+    // Nested if/else statements.
     public static int ifElseNested(int a, int b) {
         if (a > 0) {
             if (b < 0) {
@@ -69,14 +69,14 @@ public class JavaControlFlowGraphCases {
         }
     }
 
-    // 5. If statement with early returns (multiple return sites).
+    // If statement with early returns (multiple return sites).
     public static int ifReturn(int x) {
         if (x == 0) return 0;
         if (x == 1) return 1;
         return x * 13;
     }
 
-    // 5a. While loop.
+    // While loop.
     public static int whileLoop(int n) {
         int s = 0;
         while (n-- > 0) {
@@ -85,7 +85,7 @@ public class JavaControlFlowGraphCases {
         return s;
     }
 
-    // 5b. While loop with continue.
+    // While loop with continue.
     public static int whileLoopContinue(int n) {
         int s = 0;
         while (n-- > 0) {
@@ -95,7 +95,7 @@ public class JavaControlFlowGraphCases {
         return s;
     }
 
-    // 5c. While loop with break.
+    // While loop with break.
     public static int whileLoopBreak(int n) {
         int s = 0;
         while (n-- > 0) {
@@ -105,7 +105,7 @@ public class JavaControlFlowGraphCases {
         return s;
     }
 
-    // 6a. While-true loop.
+    // While-true loop.
     public static void whileTrueLoop() {
         int i = 0;
         while (true) {
@@ -113,7 +113,7 @@ public class JavaControlFlowGraphCases {
         }
     }
 
-    // 6b. While-true loop with return.
+    // While-true loop with return.
     public static int whileTrueLoopReturn(int n) {
         int i = 0;
         while (true) {
@@ -122,7 +122,7 @@ public class JavaControlFlowGraphCases {
         }
     }
 
-    // 6c. While-true loop with break.
+    // While-true loop with break.
     public static int whileTrueLoopBreak(int n) {
         int i = 0;
         while (true) {
@@ -132,7 +132,7 @@ public class JavaControlFlowGraphCases {
         return i;
     }
 
-    // 6a. Do while.
+    // Do while.
     public static int doWhileLoop(int n) {
         int i = 0;
         int c = 0;
@@ -143,7 +143,7 @@ public class JavaControlFlowGraphCases {
         return c;
     }
 
-    // 6b. Do while with continue/break.
+    // Do while with continue/break.
     public static int doWhileLoopContinueBreak(int n) {
         int i = 0;
         int c = 0;
@@ -156,7 +156,7 @@ public class JavaControlFlowGraphCases {
         return c;
     }
 
-    // 6c. Do while-true.
+    // Do while-true.
     public static void doWhileTrueLoop() {
         int i = 0;
         int c = 0;
@@ -166,7 +166,7 @@ public class JavaControlFlowGraphCases {
         } while (true);
     }
 
-    // 7a. For-loop.
+    // For-loop.
     public static int forLoop(int n) {
         int s = 0;
         for (int i = 0; i < n; i++) {
@@ -175,7 +175,7 @@ public class JavaControlFlowGraphCases {
         return s;
     }
 
-    // 7b. For-loop with continue/break.
+    // For-loop with continue/break.
     public static int forLoopContinueBreak(int n) {
         int s = 0;
         for (int i = 0; i < n; i++) {
@@ -186,7 +186,7 @@ public class JavaControlFlowGraphCases {
         return s;
     }
 
-    // 8a. Nested for-loops
+    // Nested for-loops
     public static int forLoopNested(int n, int m) {
         int sum = 0;
         for (int i = 0; i < n; i++) {
@@ -197,7 +197,7 @@ public class JavaControlFlowGraphCases {
         return sum;
     }
 
-    // 8b. Nested for-loops with labeled break and inner continue
+    // Nested for-loops with labeled break and inner continue
     public static int forLoopContinueBreakNested(int n, int m) {
         int c = 0;
         outer: for (int i = 0; i < n; i++) {
@@ -210,7 +210,7 @@ public class JavaControlFlowGraphCases {
         return c;
     }
 
-    // 9. Switch: likely TABLESWITCH for dense keys
+    // Switch: likely TABLESWITCH for dense keys
     public static int tableSwitch(int x) {
         switch (x) {
             case 0: return 0;
@@ -221,7 +221,7 @@ public class JavaControlFlowGraphCases {
         }
     }
 
-    // 10. Switch: likely LOOKUPSWITCH for sparse keys
+    // Switch: likely LOOKUPSWITCH for sparse keys
     public static int lookupSwitch(int x) {
         switch (x) {
             case -100: return 1;
@@ -231,7 +231,7 @@ public class JavaControlFlowGraphCases {
         }
     }
 
-    // 11a. Try/catch: single catch type
+    // Try/catch: single catch type
     public static int tryCatch(int x) {
         try {
             return mayThrow(x);
@@ -240,7 +240,7 @@ public class JavaControlFlowGraphCases {
         }
     }
 
-    // 11b. Try/catch: single multi-catch
+    // Try/catch: single multi-catch
     public static int tryMultiCatch(int x) {
         try {
             return mayThrowMulti(x);
@@ -249,7 +249,7 @@ public class JavaControlFlowGraphCases {
         }
     }
 
-    // 11c. Try/catch: two catch blocks
+    // Try/catch: two catch blocks
     public static int tryCatchBlocks(int x) {
         try {
             return mayThrowMulti(x);
@@ -260,7 +260,7 @@ public class JavaControlFlowGraphCases {
         }
     }
 
-    // 12. Try/finally
+    // Try/finally
     public static int tryFinally(int x) {
         int y = 0;
         try {
@@ -271,7 +271,7 @@ public class JavaControlFlowGraphCases {
         return y;
     }
 
-    // 13. Try/catch/finally
+    // Try/catch/finally
     public static int tryCatchFinally(int x) {
         int y = 0;
         try {
@@ -284,13 +284,13 @@ public class JavaControlFlowGraphCases {
         return y;
     }
 
-    // 14. Throw
+    // Throw
     public static int throwStmt(int x) {
         if (x < 0) throw new IllegalArgumentException("Negative value");
         return x;
     }
 
-    // 15a. Throw + try/catch
+    // Throw + try/catch
     public static int throwCatch(int x) {
         try {
             if (x < 0) throw new IllegalArgumentException("Negative value");
@@ -300,7 +300,7 @@ public class JavaControlFlowGraphCases {
         }
     }
 
-    // 15b. Implicit throw (division by zero) + try/catch
+    // Implicit throw (division by zero) + try/catch
     public static int implicitThrowCatch(int x) {
         try {
             return 10 / x; // may throw ArithmeticException
