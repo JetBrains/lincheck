@@ -37,7 +37,17 @@ class ControlFlowGraphAnalyzer : Analyzer<BasicValue> {
     override fun newControlFlowEdge(src: Int, dst: Int) {
         super.newControlFlowEdge(src, dst)
         val insn = graph.instructions.get(src)
-        val label = if (dst == src + 1) EdgeLabel.FallThrough else EdgeLabel.Jump(insn)
+        val opcode = insn.opcode
+        val isUnconditionalJump = (
+            opcode == GOTO          ||
+            opcode == JSR           ||
+            opcode == TABLESWITCH   ||
+            opcode == LOOKUPSWITCH
+        )
+        val label = when {
+            dst == src + 1 && !isUnconditionalJump -> EdgeLabel.FallThrough
+            else -> EdgeLabel.Jump(insn)
+        }
         graph.addEdge(src, dst, label)
     }
 

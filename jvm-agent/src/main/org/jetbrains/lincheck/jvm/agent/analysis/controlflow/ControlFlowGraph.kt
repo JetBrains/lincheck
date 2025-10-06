@@ -51,6 +51,11 @@ sealed class EdgeLabel {
             Opcodes.GOTO, Opcodes.JSR -> false
             else -> true
         }
+
+        val isIfConditional: Boolean get() = when (opcode) {
+            Opcodes.GOTO, Opcodes.JSR, Opcodes.TABLESWITCH, Opcodes.LOOKUPSWITCH -> false
+            else -> true
+        }
     }
 
     /**
