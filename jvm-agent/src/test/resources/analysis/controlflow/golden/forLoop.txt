@@ -1,11 +1,11 @@
 BLOCKS
 B0: [0..7]
    0:    L0
-   1:     LINENUMBER 127 L0
+   1:     LINENUMBER 171 L0
    2:     ICONST_0
    3:     ISTORE 1
    4:    L1
-   5:     LINENUMBER 128 L1
+   5:     LINENUMBER 172 L1
    6:     ICONST_0
    7:     ISTORE 2
 B1: [8..12]
@@ -16,18 +16,18 @@ B1: [8..12]
   12:     IF_ICMPGE L3
 B2: [13..22]
   13:    L4
-  14:     LINENUMBER 129 L4
+  14:     LINENUMBER 173 L4
   15:     ILOAD 1
   16:     ILOAD 2
   17:     IADD
   18:     ISTORE 1
   19:    L5
-  20:     LINENUMBER 128 L5
+  20:     LINENUMBER 172 L5
   21:     IINC 2 1
   22:     GOTO L2
 B3: [23..27]
   23:    L3
-  24:     LINENUMBER 131 L3
+  24:     LINENUMBER 175 L3
   25:    FRAME CHOP 1
   26:     ILOAD 1
   27:     IRETURN

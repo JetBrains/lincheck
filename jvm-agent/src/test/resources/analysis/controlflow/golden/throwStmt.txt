@@ -1,7 +1,7 @@
 BLOCKS
 B0: [0..3]
    0:    L0
-   1:     LINENUMBER 245 L0
+   1:     LINENUMBER 289 L0
    2:     ILOAD 0
    3:     IFGE L1
 B1: [4..8]
@@ -12,7 +12,7 @@ B1: [4..8]
    8:     ATHROW
 B2: [9..13]
    9:    L1
-  10:     LINENUMBER 246 L1
+  10:     LINENUMBER 290 L1
   11:    FRAME SAME
   12:     ILOAD 0
   13:     IRETURN

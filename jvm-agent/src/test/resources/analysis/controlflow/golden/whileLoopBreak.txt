@@ -1,19 +1,19 @@
 BLOCKS
 B0: [0..3]
    0:    L0
-   1:     LINENUMBER 93 L0
+   1:     LINENUMBER 100 L0
    2:     ICONST_0
    3:     ISTORE 1
 B1: [4..9]
    4:    L1
-   5:     LINENUMBER 94 L1
+   5:     LINENUMBER 101 L1
    6:    FRAME APPEND [I]
    7:     ILOAD 0
    8:     IINC 0 -1
    9:     IFLE L2
 B2: [10..15]
   10:    L3
-  11:     LINENUMBER 95 L3
+  11:     LINENUMBER 102 L3
   12:     ILOAD 0
   13:     BIPUSH 7
   14:     IREM
@@ -22,7 +22,7 @@ B3: [16]
   16:     GOTO L2
 B4: [17..24]
   17:    L4
-  18:     LINENUMBER 96 L4
+  18:     LINENUMBER 103 L4
   19:    FRAME SAME
   20:     ILOAD 1
   21:     ILOAD 0
@@ -31,7 +31,7 @@ B4: [17..24]
   24:     GOTO L1
 B5: [25..29]
   25:    L2
-  26:     LINENUMBER 98 L2
+  26:     LINENUMBER 105 L2
   27:    FRAME SAME
   28:     ILOAD 1
   29:     IRETURN
