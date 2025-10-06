@@ -1,0 +1,35 @@
+BLOCKS
+B0: [0..3]
+   0:    L0
+   1:     LINENUMBER 252 L0
+   2:     ILOAD 0
+   3:     IFGE L1
+B1: [4..8]
+   4:     NEW java/lang/IllegalArgumentException
+   5:     DUP
+   6:     LDC "Negative value"
+   7:     INVOKESPECIAL java/lang/IllegalArgumentException.<init> (Ljava/lang/String;)V
+   8:     ATHROW
+B2: [9..14]
+   9:    L1
+  10:     LINENUMBER 253 L1
+  11:    FRAME SAME
+  12:     ILOAD 0
+  13:    L2
+  14:     IRETURN
+B3: [15..22]
+  15:    L3
+  16:     LINENUMBER 254 L3
+  17:    FRAME SAME1 java/lang/IllegalArgumentException
+  18:     ASTORE 1
+  19:    L4
+  20:     LINENUMBER 255 L4
+  21:     ICONST_M1
+  22:     IRETURN
+
+EDGES
+  B0 -> B1
+  B0 -> B2 : JUMP(opcode=IFGE)
+  B0 -> B3 : CATCH(type=java/lang/IllegalArgumentException)
+  B1 -> B3 : CATCH(type=java/lang/IllegalArgumentException)
+  B2 -> B3 : CATCH(type=java/lang/IllegalArgumentException)
