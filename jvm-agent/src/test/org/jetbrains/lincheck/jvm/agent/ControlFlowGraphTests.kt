@@ -278,10 +278,22 @@ class JavaControlFlowGraphTest {
     fun whileLoopBreak() = test("whileLoopBreak", "(I)I")
 
     @Test
+    fun whileTrueLoop() = test("whileTrueLoop", "()V")
+
+    @Test
+    fun whileTrueLoopReturn() = test("whileTrueLoopReturn", "(I)I")
+
+    @Test
+    fun whileTrueLoopBreak() = test("whileTrueLoopBreak", "(I)I")
+
+    @Test
     fun doWhileLoop() = test("doWhileLoop", "(I)I")
 
     @Test
     fun doWhileLoopContinueBreak() = test("doWhileLoopContinueBreak", "(I)I")
+
+    @Test
+    fun doWhileTrueLoop() = test("doWhileTrueLoop", "()V")
 
     @Test
     fun forLoop() = test("forLoop", "(I)I")

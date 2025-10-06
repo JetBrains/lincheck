@@ -1,0 +1,26 @@
+BLOCKS
+B0: [0..3]
+   0:    L0
+   1:     LINENUMBER 118 L0
+   2:     ICONST_0
+   3:     ISTORE 1
+B1: [4..14]
+   4:    L1
+   5:     LINENUMBER 120 L1
+   6:    FRAME APPEND [I]
+   7:     IINC 1 1
+   8:    L2
+   9:     LINENUMBER 121 L2
+  10:     ILOAD 1
+  11:     ILOAD 0
+  12:     IADD
+  13:     BIPUSH 32
+  14:     IF_ICMPLE L1
+B2: [15..16]
+  15:     ICONST_0
+  16:     IRETURN
+
+EDGES
+  B0 -> B1
+  B1 -> B1 : JUMP(opcode=IF_ICMPLE)
+  B1 -> B2
