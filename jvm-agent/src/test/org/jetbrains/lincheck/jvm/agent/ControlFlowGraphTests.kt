@@ -243,7 +243,7 @@ class JavaControlFlowGraphTest {
     fun ifStmt() = test("ifStmt", "(I)I")
 
     @Test
-    fun ifElseNum() = test("ifElseNum", "(I)I")
+    fun ifElseStmt() = test("ifElseStmt", "(I)I")
 
     @Test 
     fun ifNull() = test("ifNull", "(Ljava/lang/Object;)I")
@@ -252,7 +252,7 @@ class JavaControlFlowGraphTest {
     fun ifRefCompare() = test("ifRefCompare", "(Ljava/lang/Object;Ljava/lang/Object;)I")
 
     @Test
-    fun nestedConditionals() = test("ifElseNested", "(II)I")
+    fun ifElseNested() = test("ifElseNested", "(II)I")
 
     @Test
     fun whileLoop() = test("whileLoop", "(I)I")
@@ -270,5 +270,5 @@ class JavaControlFlowGraphTest {
     fun forLoop() = test("forLoop", "(I)I")
 
     @Test
-    fun forLoopCtrl() = test("forLoopContinueBreak", "(I)I")
+    fun forLoopContinueBreak() = test("forLoopContinueBreak", "(I)I")
 }
