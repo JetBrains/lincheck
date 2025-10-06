@@ -1,0 +1,21 @@
+BLOCKS
+B0: [0..3]
+   0:    L0
+   1:     LINENUMBER 43 L0
+   2:     ALOAD 0
+   3:     IFNONNULL L1
+B1: [4..7]
+   4:    L2
+   5:     LINENUMBER 44 L2
+   6:     ICONST_0
+   7:     IRETURN
+B2: [8..12]
+   8:    L1
+   9:     LINENUMBER 46 L1
+  10:    FRAME SAME
+  11:     ICONST_1
+  12:     IRETURN
+
+EDGES
+  B0 -> B1
+  B0 -> B2 : JUMP(opcode=IFNONNULL)
