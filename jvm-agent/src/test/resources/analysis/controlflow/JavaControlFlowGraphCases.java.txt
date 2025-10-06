@@ -98,11 +98,24 @@ public class JavaControlFlowGraphCases {
         return s;
     }
 
-    // 6. Do while.
+    // 6a. Do while.
     public static int doWhileLoop(int n) {
         int i = 0;
         int c = 0;
         do {
+            i++;
+            c += i;
+        } while (i < n);
+        return c;
+    }
+
+    // 6b. Do while with continue/break.
+    public static int doWhileLoopContinueBreak(int n) {
+        int i = 0;
+        int c = 0;
+        do {
+            if (i == 1) continue;
+            if (i == 7) break;
             i++;
             c += i;
         } while (i < n);
