@@ -1,0 +1,30 @@
+BLOCKS
+B0: [0..5]
+   0:    L0
+   1:     LINENUMBER 211 L0
+   2:     ILOAD 0
+   3:     INVOKESTATIC JavaControlFlowGraphCases.mayThrowMulti (I)I
+   4:    L1
+   5:     IRETURN
+B1: [6..13]
+   6:    L2
+   7:     LINENUMBER 212 L2
+   8:    FRAME SAME1 java/lang/IllegalArgumentException
+   9:     ASTORE 1
+  10:    L3
+  11:     LINENUMBER 213 L3
+  12:     ICONST_M1
+  13:     IRETURN
+B2: [14..21]
+  14:    L4
+  15:     LINENUMBER 214 L4
+  16:    FRAME SAME1 java/lang/IllegalStateException
+  17:     ASTORE 1
+  18:    L5
+  19:     LINENUMBER 215 L5
+  20:     BIPUSH -2
+  21:     IRETURN
+
+EDGES
+  B0 -> B1 : CATCH(type=java/lang/IllegalArgumentException)
+  B0 -> B2 : CATCH(type=java/lang/IllegalStateException)
