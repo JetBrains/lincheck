@@ -56,6 +56,15 @@ sealed class EdgeLabel {
             Opcodes.GOTO, Opcodes.JSR, Opcodes.TABLESWITCH, Opcodes.LOOKUPSWITCH -> false
             else -> true
         }
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is Jump) return false
+            // only opcode matters for label semantics
+            return this.opcode == other.opcode
+        }
+
+        override fun hashCode(): Int = opcode
     }
 
     /**
@@ -72,6 +81,15 @@ sealed class EdgeLabel {
         val caughtTypeName: String? get() = tryCatchBlock?.type
 
         val isCatchAll: Boolean get() = caughtTypeName == null
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is Exception) return false
+            // only the caught exception type matters (null means catch-all)
+            return this.caughtTypeName == other.caughtTypeName
+        }
+
+        override fun hashCode(): Int = caughtTypeName?.hashCode() ?: 0
     }
 }
 
@@ -85,7 +103,7 @@ class Edge(
         if (other !is Edge) return false
         return source == other.source &&
                target == other.target &&
-               label === other.label
+                label == other.label
     }
 
     override fun hashCode(): Int {
