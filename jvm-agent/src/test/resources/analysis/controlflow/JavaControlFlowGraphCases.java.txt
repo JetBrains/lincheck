@@ -240,6 +240,31 @@ public class JavaControlFlowGraphCases {
         return y;
     }
 
+    // 14. Throw
+    public static int throwStmt(int x) {
+        if (x < 0) throw new IllegalArgumentException("Negative value");
+        return x;
+    }
+
+    // 15a. Throw + try/catch
+    public static int throwCatch(int x) {
+        try {
+            if (x < 0) throw new IllegalArgumentException("Negative value");
+            return x;
+        } catch (IllegalArgumentException e) {
+            return -1;
+        }
+    }
+
+    // 15b. Implicit throw (division by zero) + try/catch
+    public static int implicitThrowCatch(int x) {
+        try {
+            return 10 / x; // may throw ArithmeticException
+        } catch (ArithmeticException e) {
+            return -1;
+        }
+    }
+
     // Helpers
 
     private static int mayThrow(int x) {

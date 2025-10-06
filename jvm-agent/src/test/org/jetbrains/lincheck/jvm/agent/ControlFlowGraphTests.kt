@@ -312,4 +312,13 @@ class JavaControlFlowGraphTest {
 
     @Test
     fun tryCatchFinally() = test("tryCatchFinally", "(I)I")
+
+    @Test
+    fun throwStmt() = test("throwStmt", "(I)I")
+
+    @Test
+    fun throwCatch() = test("throwCatch", "(I)I")
+
+    @Test
+    fun implicitThrowCatch() = test("implicitThrowCatch", "(I)I")
 }
