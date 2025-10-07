@@ -197,6 +197,12 @@ inline fun <R> runInsideInjectedCode(block: () -> R): R? {
     desc.enterIgnoredSection()
     try {
         return block()
+    } catch (e: Throwable) {
+        // print the exception to see it in logs and hide it, so that methods like
+        // `EventTracker::onThreadRunException` only accept exceptions thrown from the
+        // user code and not our injections
+        Logger.error(e)
+        return null
     } finally {
         desc.leaveIgnoredSection()
         desc.leaveInjectedCode()
