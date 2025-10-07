@@ -84,6 +84,13 @@ public class Injections {
     }
 
     /**
+     * Disables tracking of all threads.
+     */
+    public static void disableGlobalThreadsTracking() {
+        globalEventTracker = null;
+    }
+
+    /**
      * Enables analysis for the current thread.
     */
     public static void enableAnalysis() {
