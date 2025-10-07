@@ -10,10 +10,13 @@
 
 package org.jetbrains.lincheck.jvm.agent.transformers
 
+import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.ControlFlowGraph
 import org.jetbrains.lincheck.jvm.agent.LincheckMethodVisitor
 import org.jetbrains.lincheck.jvm.agent.MethodInformation
-import org.objectweb.asm.*
 import org.objectweb.asm.commons.GeneratorAdapter
+import org.objectweb.asm.tree.InsnList
+import org.objectweb.asm.*
+
 
 /**
  * A utility [MethodVisitor] that centralizes handling of bytecode instructions
@@ -43,6 +46,10 @@ internal abstract class InstructionMethodVisitor(
 
     /**
      * Tracks the current instruction index being processed.
+     *
+     * Note that we align with ASM's [InsnList] indexing and the [ControlFlowGraph] indexing
+     * (labels, line numbers, and frames are counted as instructions).
+     * We increment the index after these "phony" instructions but do not invoke the hooks for them.
      */
     protected var currentInsnIndex: Int = -1
         private set
@@ -111,15 +118,20 @@ internal abstract class InstructionMethodVisitor(
     override fun visitMultiANewArrayInsn(descriptor: String, numDimensions: Int) =
         processInstruction(Opcodes.MULTIANEWARRAY) { super.visitMultiANewArrayInsn(descriptor, numDimensions) }
 
+    //
+
     override fun visitLabel(label: Label) {
+        currentInsnIndex++
         super.visitLabel(label)
     }
 
     override fun visitLineNumber(line: Int, start: Label) {
+        currentInsnIndex++
         super.visitLineNumber(line, start)
     }
 
     override fun visitFrame(type: Int, nLocal: Int, local: Array<Any>?, nStack: Int, stack: Array<Any>?) {
+        currentInsnIndex++
         super.visitFrame(type, nLocal, local, nStack, stack)
     }
 }
