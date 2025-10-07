@@ -9,6 +9,8 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.representation.loops
 
+import org.jetbrains.kotlinx.lincheck.test_utils.loopEnd
+import org.jetbrains.kotlinx.lincheck.test_utils.loopIterationStart
 import org.jetbrains.kotlinx.lincheck_test.representation.*
 
 class PartiallyEmptyForLoopRepresentationTest : BaseTraceRepresentationTest(
@@ -19,12 +21,14 @@ class PartiallyEmptyForLoopRepresentationTest : BaseTraceRepresentationTest(
         escape = "START"
         val builder = StringBuilder()
         for (i in 1..5) {
+            loopIterationStart(1)
             builder.append(i)
             if (i % 2 == 0) {
                 escape = builder.toString()
                 builder.clear()
             }
         }
+        loopEnd(1)
         escape = builder.toString()
         escape = "END"
     }

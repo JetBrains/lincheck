@@ -9,6 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.representation.loops
 
+import org.jetbrains.kotlinx.lincheck.test_utils.*
 import org.jetbrains.kotlinx.lincheck_test.representation.*
 
 class BreakedForLoopRepresentationTest : BaseTraceRepresentationTest(
@@ -18,13 +19,17 @@ class BreakedForLoopRepresentationTest : BaseTraceRepresentationTest(
     override fun operation() {
         escape = "START"
         for (i in 1..5) {
+            loopIterationStart(1)
             val a: Any = i
             escape = a.toString()
             if (i > 3) {
+                // do not call here to avoid multiple calls
+                // loopEnd(1)
                 break
             }
             escape = "${a} is saved"
         }
+        loopEnd(1)
         escape = "END"
     }
 }

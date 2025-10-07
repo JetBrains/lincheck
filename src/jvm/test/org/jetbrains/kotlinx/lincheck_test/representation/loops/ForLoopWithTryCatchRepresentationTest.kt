@@ -13,27 +13,22 @@ import org.jetbrains.kotlinx.lincheck.test_utils.loopEnd
 import org.jetbrains.kotlinx.lincheck.test_utils.loopIterationStart
 import org.jetbrains.kotlinx.lincheck_test.representation.*
 
-class ForWithIfLoopRepresentationTest : BaseTraceRepresentationTest(
-    outputFileName = "loops/for_with_if_representation"
+class ForLoopWithTryCatchRepresentationTest : BaseTraceRepresentationTest(
+    outputFileName = "loops/for_loop_with_try_catch_representation"
 ) {
     var escape: Any? = null
     override fun operation() {
         escape = "START"
-        var i = 0
-        var total = 0
-        while (true) {
+        for (i in 1..3) {
             loopIterationStart(1)
-            total++
-            if (total > 10) {
-                // do not call here to avoid multiple calls
-                // loopEnd(1)
-                break
-            }
             val a: Any = i
-            escape = a.toString()
-            i = (i + 1) % 3
-            if (i == 0) {
-                escape = "%3-" + escape
+            try {
+                if (i == 2) {
+                    throw RuntimeException("Exception in loop")
+                }
+                escape = "try-$a"
+            } catch (e: RuntimeException) {
+                escape = "catch-$a"
             }
         }
         loopEnd(1)

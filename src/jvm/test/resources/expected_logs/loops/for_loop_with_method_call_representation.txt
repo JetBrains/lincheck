@@ -13,15 +13,18 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| ---------------------------------------------------------------------------------------------------------------------- |
-|                                                        Thread 1                                                        |
-| ---------------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                            |
-|   escape = "START" at ForLoopWithMethodCallRepresentationTest.operation(ForLoopWithMethodCallRepresentationTest.kt:19) |
-|   method(1) at ForLoopWithMethodCallRepresentationTest.operation(ForLoopWithMethodCallRepresentationTest.kt:22)        |
-|     escape = "1" at ForLoopWithMethodCallRepresentationTest.method(ForLoopWithMethodCallRepresentationTest.kt:28)      |
-|   method(2) at ForLoopWithMethodCallRepresentationTest.operation(ForLoopWithMethodCallRepresentationTest.kt:22)        |
-|     escape = "2" at ForLoopWithMethodCallRepresentationTest.method(ForLoopWithMethodCallRepresentationTest.kt:28)      |
-|   escape = "END" at ForLoopWithMethodCallRepresentationTest.operation(ForLoopWithMethodCallRepresentationTest.kt:24)   |
-|   result: void                                                                                                         |
-| ---------------------------------------------------------------------------------------------------------------------- |
+| -------------------- |
+|       Thread 1       |
+| -------------------- |
+| operation()          |
+|   escape = "START"   |
+|   loop(2 iterations) |
+|     <iteration 1>    |
+|       method(1)      |
+|         escape = "1" |
+|     <iteration 2>    |
+|       method(2)      |
+|         escape = "2" |
+|   escape = "END"     |
+|   result: void       |
+| -------------------- |
