@@ -22,12 +22,15 @@ package org.jetbrains.lincheck.jvm.agent
  *   - [lineRange] - Approximate Range of lines in source file covered by this method.
  *   - [linesToMethodNames] - Sorted list of all known line numbers ranges and method names (without `desc`) for these ranges.
  */
+import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.BasicBlockControlFlowGraph
+
 internal data class MethodInformation(
     val smap: SMAPInfo,
     val locals: MethodVariables,
     val labels: MethodLabels,
     val lineRange: Pair<Int, Int>,
-    private val linesToMethodNames: List<Triple<Int, Int, Set<String>>>
+    private val linesToMethodNames: List<Triple<Int, Int, Set<String>>>,
+    val basicControlFlowGraph: BasicBlockControlFlowGraph,
 ) {
     // TODO: This method should be used by [LincheckBaseMethodVisitor],
     //  but now it leads to flaky tests on TeamCity.

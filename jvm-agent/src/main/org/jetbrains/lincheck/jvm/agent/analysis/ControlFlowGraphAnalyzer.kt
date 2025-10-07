@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.jvm.agent.analysis
 
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.*
+import org.objectweb.asm.tree.InsnList
 import org.objectweb.asm.tree.MethodNode
 import org.objectweb.asm.tree.TryCatchBlockNode
 import org.objectweb.asm.tree.analysis.*
@@ -58,6 +59,9 @@ class ControlFlowGraphAnalyzer : Analyzer<BasicValue> {
         return super.newControlFlowExceptionEdge(src, dst)
     }
 }
+
+fun emptyControlFlowGraph(): BasicBlockControlFlowGraph =
+    BasicBlockControlFlowGraph(InsnList(), emptyList())
 
 fun ControlFlowGraphAnalyzer.buildControlFlowGraph(owner: String, method: MethodNode): BasicBlockControlFlowGraph {
     analyze(owner, method)
