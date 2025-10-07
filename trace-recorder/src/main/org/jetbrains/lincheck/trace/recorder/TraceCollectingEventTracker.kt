@@ -819,7 +819,7 @@ class TraceCollectingEventTracker(
             return AnalysisSectionType.IGNORED
         }
         // Do not track Collection.size() calls
-        if (owner is Collection<*> && methodName == "size") {
+        if (methodName == "size" && owner is Collection<*>) {
             return AnalysisSectionType.IGNORED
         }
         return analysisProfile.getAnalysisSectionFor(ownerName, methodName)
