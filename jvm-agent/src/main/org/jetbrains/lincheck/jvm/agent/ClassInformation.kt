@@ -23,12 +23,15 @@ package org.jetbrains.lincheck.jvm.agent
  *     to other place.
  *   - [linesToMethodNames] - Sorted list of all known line numbers ranges and method names (without `desc`) for these ranges.
  */
+import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.BasicBlockControlFlowGraph
+
 internal data class ClassInformation(
     private val smap: SMAPInfo,
     private val locals: Map<String, MethodVariables>,
     private val labels: Map<String, MethodLabels>,
     private val methodsToLineRanges: Map<String, Pair<Int, Int>>,
-    private val linesToMethodNames: List<Triple<Int, Int, Set<String>>>
+    private val linesToMethodNames: List<Triple<Int, Int, Set<String>>>,
+    private val basicCfgs: Map<String, BasicBlockControlFlowGraph>,
 ) {
     /**
      * Returns [MethodInformation] for given method.
@@ -39,7 +42,9 @@ internal data class ClassInformation(
             locals = locals[methodName + methodDesc] ?: MethodVariables.EMPTY,
             labels = labels[methodName + methodDesc] ?: MethodLabels.EMPTY,
             lineRange = methodsToLineRanges[methodName + methodDesc] ?: (0 to 0),
-            linesToMethodNames = linesToMethodNames
+            linesToMethodNames = linesToMethodNames,
+            basicControlFlowGraph = basicCfgs[methodName + methodDesc]
+                ?: error("No CFG computed for method $methodName$methodDesc")
         )
 }
 
