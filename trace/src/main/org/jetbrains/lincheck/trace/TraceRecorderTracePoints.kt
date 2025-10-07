@@ -155,6 +155,12 @@ class TRMethodCallTracePoint(
         result == TR_OBJECT_UNFINISHED_METHOD_RESULT
 
     /**
+     * Returns `true` if method completion was not tracked and its return value is unknown, `false` otherwise.
+     */
+    fun isMethodResultUntracked(): Boolean =
+        result == TR_OBJECT_UNTRACKED_METHOD_RESULT
+
+    /**
      * @return `true` if tracing of the thread was started after this method call and there some missing tracepoints, `false` otherwise.
      */
     fun isMethodIncomplete(): Boolean =
@@ -542,7 +548,9 @@ const val TR_OBJECT_VOID_CLASSNAME = -2
 val TR_OBJECT_VOID = TRObject(TR_OBJECT_VOID_CLASSNAME, 0, null)
 
 const val UNFINISHED_METHOD_RESULT_SYMBOL = "<unfinished method>"
+const val UNTRACKED_METHOD_RESULT_SYMBOL = "<untracked result>"
 val TR_OBJECT_UNFINISHED_METHOD_RESULT = TRObject(TR_OBJECT_P_STRING, 0, UNFINISHED_METHOD_RESULT_SYMBOL)
+val TR_OBJECT_UNTRACKED_METHOD_RESULT = TRObject(TR_OBJECT_P_STRING, 0, UNTRACKED_METHOD_RESULT_SYMBOL)
 
 const val TR_OBJECT_P_BYTE = TR_OBJECT_VOID_CLASSNAME - 1
 const val TR_OBJECT_P_SHORT = TR_OBJECT_P_BYTE - 1

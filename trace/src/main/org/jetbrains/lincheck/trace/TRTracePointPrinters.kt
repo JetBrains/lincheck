@@ -201,6 +201,9 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
         } else if (tracePoint.isMethodUnfinished()) {
             append(": ")
             appendSpecialSymbol(UNFINISHED_METHOD_RESULT_SYMBOL)
+        } else if (tracePoint.isMethodResultUntracked()) {
+            append(": ")
+            appendSpecialSymbol(UNTRACKED_METHOD_RESULT_SYMBOL)
         } else if (tracePoint.result != TR_OBJECT_VOID) {
             append(": ")
             appendObject(tracePoint.result)
