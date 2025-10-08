@@ -10,6 +10,7 @@
 
 package org.jetbrains.lincheck.jvm.agent.analysis.controlflow
 
+import org.objectweb.asm.Label
 import org.objectweb.asm.tree.*
 import org.objectweb.asm.util.Printer
 import org.objectweb.asm.util.Textifier
@@ -29,11 +30,20 @@ typealias BasicBlockIndex = Int
  * with a single entry point and a single exit point (branch).
  *
  * @property index Unique index of the basic block within its control-flow graph.
+ *
  * @property range Range of instruction indices which make up the basic block.
+ *
+ * @property executableRange Range of real opcode instruction indices within this block,
+ *   excluding labels/frames/lines instructions.
+ *   Null if the block is empty (e.g., only labels/frames/lines).
+ *
+ * @property entryLabel The first label that appears in this block's range, if any.
  */
 data class BasicBlock(
     val index: Int,
     val range: InstructionsRange,
+    val executableRange: InstructionsRange?,
+    val entryLabel: Label?,
 )
 
 typealias InstructionsRange = IntRange
@@ -90,8 +100,26 @@ fun InstructionControlFlowGraph.toBasicBlockGraph(): BasicBlockControlFlowGraph 
     val basicBlocks = mutableListOf<BasicBlock>()
     leaders.forEachIndexed { i, leader ->
         val endExclusive = leaders.getOrElse(i + 1) { maxInstructionIndex + 1 }
-        val instructions = (leader until endExclusive)
-        basicBlocks += BasicBlock(i, instructions)
+        val range = (leader until endExclusive)
+        // Compute range of real opcodes inside the block (skip labels/frames/lines)
+        var firstOpcode: Int? = null
+        var lastOpcode: Int? = null
+        for (idx in range) {
+            val n = instructions.get(idx)
+            if (n.opcode >= 0) { firstOpcode = idx; break }
+        }
+        for (idx in range.last downTo range.first) {
+            val n = instructions.get(idx)
+            if (n.opcode >= 0) { lastOpcode = idx; break }
+        }
+        val executableRange = if (firstOpcode != null && lastOpcode != null) (firstOpcode..lastOpcode) else null
+        // Compute the first label inside the block, if any
+        var firstLabel: Label? = null
+        for (idx in range) {
+            val n = instructions.get(idx)
+            if (n is LabelNode) { firstLabel = n.label; break }
+        }
+        basicBlocks += BasicBlock(i, range, executableRange, firstLabel)
     }
 
     // Map: instruction index -> basic block index
