@@ -86,7 +86,7 @@ internal class LoopTransformer(
         val cfg = methodInfo.basicControlFlowGraph
         val result = mutableMapOf<InstructionIndex, Int>()
         for (loop in info.loops) {
-            val idx = firstOpcodeIndexOf(cfg, loop.header) ?: continue
+            val idx = cfg.firstOpcodeIndexOf(loop.header) ?: continue
             // If multiple loops share the same header opcode index (rare),
             // prefer the inner loop by letting the later put override only if absent.
             result.putIfAbsent(idx, loop.id)
@@ -102,7 +102,7 @@ internal class LoopTransformer(
             for (e in loop.normalExits) {
                 val insnIndex: InstructionIndex? = when (val label = e.label) {
                     is EdgeLabel.Jump -> cfg.instructions.indexOf(label.instruction)
-                    is EdgeLabel.FallThrough -> lastOpcodeIndexOf(cfg, e.source)
+                    is EdgeLabel.FallThrough -> cfg.lastOpcodeIndexOf(e.source)
                     is EdgeLabel.Exception -> null // shouldn't happen for normal exits, but be defensive
                 }
                 if (insnIndex != null && insnIndex >= 0) {
@@ -119,32 +119,10 @@ internal class LoopTransformer(
         val acc = mutableMapOf<Label, MutableSet<Int>>()
         for (loop in info.loops) {
             for (handlerBlock in loop.exceptionalExitHandlers) {
-                val label = firstLabelOf(cfg, handlerBlock) ?: continue
+                val label = cfg.firstLabelOf(handlerBlock) ?: continue
                 acc.getOrPut(label) { mutableSetOf() }.add(loop.id)
             }
         }
         return acc.mapValues { it.value.toSet() }
-    }
-
-    // --- Helpers to resolve block-level sites to concrete ASM primitives ---
-
-    private fun firstOpcodeIndexOf(cfg: BasicBlockControlFlowGraph, block: BasicBlockIndex): InstructionIndex? {
-        val bb = cfg.basicBlocks.getOrNull(block) ?: return null
-        return bb.executableRange?.first
-    }
-
-    private fun lastOpcodeIndexOf(cfg: BasicBlockControlFlowGraph, block: BasicBlockIndex): InstructionIndex? {
-        val bb = cfg.basicBlocks.getOrNull(block) ?: return null
-        return bb.executableRange?.last
-    }
-
-    private fun firstLabelOf(cfg: BasicBlockControlFlowGraph, block: BasicBlockIndex): Label? {
-        val range = cfg.basicBlocks.getOrNull(block)?.range ?: return null
-        val insns = cfg.instructions
-        for (i in range) {
-            val n: AbstractInsnNode = insns.get(i)
-            if (n is LabelNode) return n.label
-        }
-        return null
     }
 }
