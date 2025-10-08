@@ -11,12 +11,12 @@
 package org.jetbrains.lincheck.jvm.agent.transformers
 
 import org.jetbrains.lincheck.jvm.agent.MethodInformation
-import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.InstructionIndex
-import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.MethodLoopsInformation
+import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.*
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
-import org.objectweb.asm.Opcodes
 import org.objectweb.asm.commons.GeneratorAdapter
+import org.objectweb.asm.tree.AbstractInsnNode
+import org.objectweb.asm.tree.LabelNode
 
 /**
  * [LoopTransformer] tracks loops enter/exit points and new loop iterations starting points.
@@ -80,19 +80,70 @@ internal class LoopTransformer(
 
     override fun afterInsn(index: Int, opcode: Int) {}
 
-    // ===== Planning helpers (stubbed) =====
     private fun computeHeaderEnterSites(info: MethodLoopsInformation): Map<InstructionIndex, Int> {
-        // TODO: implement using loop headers: map header block's first opcode index -> loopId
-        return emptyMap()
+        if (!info.hasLoops()) return emptyMap()
+        val cfg = methodInfo.basicControlFlowGraph
+        val result = mutableMapOf<InstructionIndex, Int>()
+        for (loop in info.loops) {
+            val idx = firstOpcodeIndexOf(cfg, loop.header) ?: continue
+            // If multiple loops share the same header opcode index (rare),
+            // prefer the inner loop by letting the later put override only if absent.
+            result.putIfAbsent(idx, loop.id)
+        }
+        return result
     }
 
     private fun computeNormalExitSites(info: MethodLoopsInformation): Map<InstructionIndex, Set<Int>> {
-        // TODO: implement using loop normal exit edges: map branch instruction index -> set of loopIds
-        return emptyMap()
+        if (!info.hasLoops()) return emptyMap()
+        val cfg = methodInfo.basicControlFlowGraph
+        val acc = mutableMapOf<InstructionIndex, MutableSet<Int>>()
+        for (loop in info.loops) {
+            for (e in loop.normalExits) {
+                val insnIndex: InstructionIndex? = when (val label = e.label) {
+                    is EdgeLabel.Jump -> cfg.instructions.indexOf(label.instruction)
+                    is EdgeLabel.FallThrough -> lastOpcodeIndexOf(cfg, e.source)
+                    is EdgeLabel.Exception -> null // shouldn't happen for normal exits, but be defensive
+                }
+                if (insnIndex != null && insnIndex >= 0) {
+                    acc.getOrPut(insnIndex) { mutableSetOf() }.add(loop.id)
+                }
+            }
+        }
+        return acc.mapValues { it.value.toSet() }
     }
 
     private fun computeHandlerEntrySites(info: MethodLoopsInformation): Map<Label, Set<Int>> {
-        // TODO: implement using loop exceptional exit handlers: map handler entry label -> set of loopIds
-        return emptyMap()
+        if (!info.hasLoops()) return emptyMap()
+        val cfg = methodInfo.basicControlFlowGraph
+        val acc = mutableMapOf<Label, MutableSet<Int>>()
+        for (loop in info.loops) {
+            for (handlerBlock in loop.exceptionalExitHandlers) {
+                val label = firstLabelOf(cfg, handlerBlock) ?: continue
+                acc.getOrPut(label) { mutableSetOf() }.add(loop.id)
+            }
+        }
+        return acc.mapValues { it.value.toSet() }
+    }
+
+    // --- Helpers to resolve block-level sites to concrete ASM primitives ---
+
+    private fun firstOpcodeIndexOf(cfg: BasicBlockControlFlowGraph, block: BasicBlockIndex): InstructionIndex? {
+        val bb = cfg.basicBlocks.getOrNull(block) ?: return null
+        return bb.executableRange?.first
+    }
+
+    private fun lastOpcodeIndexOf(cfg: BasicBlockControlFlowGraph, block: BasicBlockIndex): InstructionIndex? {
+        val bb = cfg.basicBlocks.getOrNull(block) ?: return null
+        return bb.executableRange?.last
+    }
+
+    private fun firstLabelOf(cfg: BasicBlockControlFlowGraph, block: BasicBlockIndex): Label? {
+        val range = cfg.basicBlocks.getOrNull(block)?.range ?: return null
+        val insns = cfg.instructions
+        for (i in range) {
+            val n: AbstractInsnNode = insns.get(i)
+            if (n is LabelNode) return n.label
+        }
+        return null
     }
 }
