@@ -38,13 +38,13 @@ typealias BasicBlockIndex = Int
  *   excluding labels/frames/lines instructions.
  *   Null if the block is empty (e.g., only labels/frames/lines).
  *
- * @property entryLabel The first label that appears in this block's range, if any.
+ * @property entryLabelIndex Index of the first Label within this block's range (if any).
  */
 data class BasicBlock(
     val index: Int,
     val range: InstructionsRange,
     val executableRange: InstructionsRange?,
-    val entryLabel: Label?,
+    val entryLabelIndex: InstructionIndex?,
 )
 
 typealias InstructionsRange = IntRange
@@ -56,7 +56,7 @@ class BasicBlockControlFlowGraph(
     val instructions: InsnList,
     val basicBlocks: List<BasicBlock>,
 ) : ControlFlowGraph() {
-    
+
     init {
         require(basicBlocks.allIndexed { index, block -> block.index == index }) {
             "Basic blocks indices should match their positions in the list"
@@ -74,6 +74,21 @@ class BasicBlockControlFlowGraph(
      */
     var loopInfo: MethodLoopsInformation? = null
         private set
+
+    /** Returns the first executable opcode index of the given block, or null if none. */
+    fun firstOpcodeIndexOf(block: BasicBlockIndex): InstructionIndex? =
+        basicBlocks.getOrNull(block)?.executableRange?.first
+
+    /** Returns the last executable opcode index of the given block, or null if none. */
+    fun lastOpcodeIndexOf(block: BasicBlockIndex): InstructionIndex? =
+        basicBlocks.getOrNull(block)?.executableRange?.last
+
+    /** Returns the first Label object of the given block, or null if none. */
+    fun firstLabelOf(block: BasicBlockIndex): Label? {
+        val idx = basicBlocks.getOrNull(block)?.entryLabelIndex ?: return null
+        val node = instructions.get(idx)
+        return (node as? LabelNode)?.label
+    }
     
     /**
      * Computes loop-related information for this method.
@@ -138,13 +153,13 @@ fun InstructionControlFlowGraph.toBasicBlockGraph(): BasicBlockControlFlowGraph 
             if (n.opcode >= 0) { lastOpcode = idx; break }
         }
         val executableRange = if (firstOpcode != null && lastOpcode != null) (firstOpcode..lastOpcode) else null
-        // Compute the first label inside the block, if any
-        var firstLabel: Label? = null
+        // Compute the first label inside the block, if any (store its InsnList index)
+        var firstLabelIndex: Int? = null
         for (idx in range) {
             val n = instructions.get(idx)
-            if (n is LabelNode) { firstLabel = n.label; break }
+            if (n is LabelNode) { firstLabelIndex = idx; break }
         }
-        basicBlocks += BasicBlock(i, range, executableRange, firstLabel)
+        basicBlocks += BasicBlock(i, range, executableRange, firstLabelIndex)
     }
 
     // Map: instruction index -> basic block index
