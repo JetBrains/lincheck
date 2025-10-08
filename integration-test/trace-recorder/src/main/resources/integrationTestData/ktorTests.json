@@ -388,7 +388,6 @@
       "testProducingNoContent",
       "testProducingReadChannelContent",
       "testProducingWriteChannelContent",
-      "testProducingWriteChannelContentOnScale",
       "expectToThrowIllegalStateExceptionIfHostCannotBeExtractedFromRequestURL"
     ]
   },
