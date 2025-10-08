@@ -10,6 +10,8 @@
 
 package org.jetbrains.lincheck.jvm.agent.analysis.controlflow
 
+import org.jetbrains.lincheck.util.*
+
 
 /** Per-method, stable id for a detected loop. */
 typealias LoopId = Int
@@ -90,9 +92,20 @@ class MethodLoopsInformation(
     val loops: List<LoopInformation> = emptyList(),
     val loopsByBlock: Map<BasicBlockIndex, List<LoopId>> = emptyMap(),
 ) {
-    /** Returns true if at least one loop was detected. */
+    init {
+        require(loops.allIndexed { index, loop -> loop.id == index }) {
+            "Basic blocks ids should match their positions in the list"
+        }
+    }
+
+    /**
+     * Returns true if at least one loop was detected.
+     */
     fun hasLoops(): Boolean = loops.isNotEmpty()
 
-    /** Returns the loop with the given [id], or throws if not found. */
-    fun loop(id: LoopId): LoopInformation = loops.first { it.id == id }
+    /**
+     * Returns the loop with the given [id], or null if not found.
+     */
+    fun getLoopInfo(id: LoopId): LoopInformation? =
+        loops.getOrNull(id)
 }
