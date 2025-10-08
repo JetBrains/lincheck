@@ -12,6 +12,7 @@ package org.jetbrains.lincheck.jvm.agent.transformers
 
 import org.jetbrains.lincheck.jvm.agent.MethodInformation
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.InstructionIndex
+import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.MethodLoopsInformation
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
@@ -33,14 +34,17 @@ internal class LoopTransformer(
 
     // TODO: use LoopId typealias instead of Int
 
+    // Retrieve loop sites planned from the precomputed basic-block CFG.
+    private val loopInfo = methodInfo.basicControlFlowGraph.computeLoopInformation()
+
     // Map from a loop header entry instruction index to loopId
-    private val headerEnterSites: Map<InstructionIndex, Int> = mutableMapOf()
+    private val headerEnterSites: Map<InstructionIndex, Int> = computeHeaderEnterSites(loopInfo)
 
     // Map from a normal exit instruction index to the set of exited loopIds
-    private val normalExitSites: Map<InstructionIndex, Set<Int>> = mutableMapOf()
+    private val normalExitSites: Map<InstructionIndex, Set<Int>> = computeNormalExitSites(loopInfo)
 
     // Map from an exception handler label block to the set of exited loopIds
-    private val handlerEntrySites: Map<Label, Set<Int>> = mutableMapOf()
+    private val handlerEntrySites: Map<Label, Set<Int>> = computeHandlerEntrySites(loopInfo)
 
     // Used to defer handler-entry injection until the first real opcode after the label.
     private var pendingHandlerLoopIds: MutableSet<Int>? = null
@@ -75,4 +79,20 @@ internal class LoopTransformer(
     }
 
     override fun afterInsn(index: Int, opcode: Int) {}
+
+    // ===== Planning helpers (stubbed) =====
+    private fun computeHeaderEnterSites(info: MethodLoopsInformation): Map<InstructionIndex, Int> {
+        // TODO: implement using loop headers: map header block's first opcode index -> loopId
+        return emptyMap()
+    }
+
+    private fun computeNormalExitSites(info: MethodLoopsInformation): Map<InstructionIndex, Set<Int>> {
+        // TODO: implement using loop normal exit edges: map branch instruction index -> set of loopIds
+        return emptyMap()
+    }
+
+    private fun computeHandlerEntrySites(info: MethodLoopsInformation): Map<Label, Set<Int>> {
+        // TODO: implement using loop exceptional exit handlers: map handler entry label -> set of loopIds
+        return emptyMap()
+    }
 }
