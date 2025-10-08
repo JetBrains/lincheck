@@ -45,7 +45,23 @@ data class BasicBlock(
     val range: InstructionsRange,
     val executableRange: InstructionsRange?,
     val entryLabelIndex: InstructionIndex?,
-)
+) {
+    init {
+        if (executableRange != null) {
+            require(!executableRange.isEmpty()) {
+                "Executable range of a basic block should not be empty"
+            }
+            require(range.first <= executableRange.first && executableRange.last <= range.last) {
+                "Executable range should be a subrange of the basic block's range"
+            }
+        }
+        if (entryLabelIndex != null) {
+            require(range.first <= entryLabelIndex && entryLabelIndex <= range.last) {
+                "Entry label index should be within the basic block's range"
+            }
+        }
+    }
+}
 
 typealias InstructionsRange = IntRange
 
