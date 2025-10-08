@@ -44,7 +44,13 @@ typealias InstructionsRange = IntRange
 class BasicBlockControlFlowGraph(
     val instructions: InsnList,
     val basicBlocks: List<BasicBlock>,
-) : ControlFlowGraph()
+) : ControlFlowGraph() {
+    /**
+     * Computes loop-related information for this method.
+     * This is a stub: loop detection is not implemented yet; the method returns empty sites.
+     */
+    fun computeLoopInformation(): MethodLoopsInformation = MethodLoopsInformation()
+}
 
 /**
  * Builds a basic-block level CFG from the given instruction-level CFG.
