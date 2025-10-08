@@ -156,9 +156,21 @@ sealed class ControlFlowGraph {
 }
 
 /**
- * Helper: checks if the given opcode corresponds to a recognized JVM jump/switch instruction.
+ * Checks if the given opcode corresponds to a recognized JVM conditional jump instruction.
  */
-private fun isRecognizedJumpOpcode(opcode: Int): Boolean = when (opcode) {
+internal fun isRecognizedIfJumpOpcode(opcode: Int): Boolean = when (opcode) {
+    Opcodes.IFEQ, Opcodes.IFNE, Opcodes.IFLT, Opcodes.IFGE, Opcodes.IFGT, Opcodes.IFLE,
+    Opcodes.IF_ICMPEQ, Opcodes.IF_ICMPNE, Opcodes.IF_ICMPLT, Opcodes.IF_ICMPGE, Opcodes.IF_ICMPGT, Opcodes.IF_ICMPLE,
+    Opcodes.IFNULL, Opcodes.IFNONNULL,
+    Opcodes.IF_ACMPEQ, Opcodes.IF_ACMPNE
+         -> true
+    else -> false
+}
+
+/**
+ * Checks if the given opcode corresponds to a recognized JVM jump/switch instruction.
+ */
+internal fun isRecognizedJumpOpcode(opcode: Int): Boolean = when (opcode) {
     // Goto
     Opcodes.GOTO,
     // Single-operand zero comparisons

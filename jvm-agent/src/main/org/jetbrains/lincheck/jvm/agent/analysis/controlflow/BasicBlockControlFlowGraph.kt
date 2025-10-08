@@ -74,15 +74,8 @@ class BasicBlockControlFlowGraph(
 ) : ControlFlowGraph() {
 
     init {
-        require(basicBlocks.allIndexed { index, block -> block.index == index }) {
-            "Basic blocks indices should match their positions in the list"
-        }
-        require(basicBlocks.isSortedBy { it.range.first }) {
-            "Basic blocks should be sorted by their ranges in ascending order"
-        }
-        require(basicBlocks.isSortedWith { b1, b2 -> Integer.compare(b1.range.last, b2.range.first) }) {
-            "Basic blocks should be sorted by their ranges in ascending order"
-        }
+        validateStructure()
+        validateEdgeInvariants()
     }
 
     /**
@@ -111,10 +104,71 @@ class BasicBlockControlFlowGraph(
      */
     fun computeLoopInformation(): MethodLoopsInformation {
         if (loopInfo == null) {
-            // TODO: this is a stub: loop detection is not implemented yet; the method returns empty sites. 
-            loopInfo = MethodLoopsInformation()    
+            // TODO: this is a stub: loop detection is not implemented yet; the method returns empty sites.
+            loopInfo = MethodLoopsInformation().apply {
+                loops.forEach { it.validateLoopEdgesInvariants() }
+            }
         }
         return loopInfo!!
+    }
+
+    /**
+     * Validates the structure of this basic-block graph.
+     */
+    fun validateStructure() {
+        require(basicBlocks.allIndexed { index, block -> block.index == index }) {
+            "Basic blocks indices should match their positions in the list"
+        }
+        require(basicBlocks.isSortedBy { it.range.first }) {
+            "Basic blocks should be sorted by their ranges in ascending order"
+        }
+        require(basicBlocks.isSortedWith { b1, b2 -> Integer.compare(b1.range.last, b2.range.first) }) {
+            "Basic blocks should be sorted by their ranges in ascending order"
+        }
+    }
+
+    /**
+     * Validates edge invariants for this basic-block graph.
+     * - For Jump edges: the recorded instruction must be the last real opcode of the source block.
+     * - For FallThrough edges: if the source block has a last opcode, it must be an IF* opcode.
+     */
+    fun validateEdgeInvariants() {
+        for (e in edges) {
+            when (val label = e.label) {
+                is EdgeLabel.Jump -> {
+                    val last = lastOpcodeIndexOf(e.source)
+                    val jumpIdx = instructions.indexOf(label.instruction)
+                    require(last != null && last == jumpIdx) {
+                        """
+                            Jump edge must be produced by the last opcode of the source block: 
+                            source=B${e.source}, target=B${e.target}, last=${last}, jumpIdx=${jumpIdx}
+                        """.trimIndent()
+                    }
+                }
+                is EdgeLabel.FallThrough -> {
+                    // no invariants here at BB layer
+                }
+                is EdgeLabel.Exception -> {
+                    // no invariants here at BB layer
+                }
+            }
+        }
+    }
+
+    /**
+     * Validates loop's edges invariants for the current loop.
+     */
+    private fun LoopInformation.validateLoopEdgesInvariants() {
+        for (e in normalExits) {
+            val last = lastOpcodeIndexOf(e.source) ?: continue
+            val lastInstruction = instructions.get(last)
+            require(isRecognizedIfJumpOpcode(lastInstruction.opcode)) {
+                """
+                    Normal loop exit fall-through edge must be produced by an IF* opcode at the end of the source block: 
+                    source=B${e.source}, target=B${e.target}, opcode=${lastInstruction.opcode}
+                """.trimIndent()
+            }
+         }
     }
 }
 
@@ -199,6 +253,9 @@ fun InstructionControlFlowGraph.toBasicBlockGraph(): BasicBlockControlFlowGraph 
             basicBlockGraph.addEdge(bu, bv, edge.label)
         }
     }
+    // Validate edge invariants after projection
+    basicBlockGraph.validateEdgeInvariants()
+
     return basicBlockGraph
 }
 

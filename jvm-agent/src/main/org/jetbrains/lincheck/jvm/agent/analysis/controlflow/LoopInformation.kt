@@ -78,8 +78,40 @@ typealias LoopId = Int
      val normalExits: Set<Edge>,
      val exceptionalExitHandlers: Set<BasicBlockIndex>,
  ) {
+     init {
+         validate()
+     }
+
      val isReducible: Boolean
          get() = headers.size == 1
+
+     private fun validate() {
+         require(headers.isNotEmpty()) {
+             "Loop headers set must not be empty"
+         }
+         require(header in headers) {
+             "Canonical header must be one of headers"
+         }
+         require(body.isNotEmpty()) {
+             "Loop body must not be empty"
+         }
+
+         require(headers.all { it in body }) {
+             "All headers must be inside body"
+         }
+
+         require(backEdges.all { it.source in body && it.target in headers }) {
+             "Back edges must originate in body and target a header"
+         }
+
+         require(normalExits.all { it.source in body && it.target !in body && it.label !is EdgeLabel.Exception }) {
+             "Normal exits must go from body to outside and must not be exception edges"
+         }
+
+         require(exceptionalExitHandlers.all { it !in body }) {
+             "Exceptional exit handlers must be outside of loop body"
+         }
+     }
  }
 
 /**
@@ -94,7 +126,7 @@ class MethodLoopsInformation(
 ) {
     init {
         require(loops.allIndexed { index, loop -> loop.id == index }) {
-            "Basic blocks ids should match their positions in the list"
+            "Loop ids should match their positions in the list"
         }
     }
 
