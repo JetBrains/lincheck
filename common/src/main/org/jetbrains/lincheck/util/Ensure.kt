@@ -45,3 +45,15 @@ fun<T> T?.ensureNull(lazyMessage: (T?) -> Any): T? {
     check(this == null) { lazyMessage(this) }
     return this
 }
+
+fun<T> T?.ensureNotNull(): T {
+    // TODO: add contracts?
+    check(this != null)
+    return this
+}
+
+fun<T> T?.ensureNotNull(lazyMessage: (T?) -> Any): T {
+    // TODO: add contracts?
+    check(this != null) { lazyMessage(this) }
+    return this
+}

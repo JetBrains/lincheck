@@ -10,6 +10,7 @@
 
 package org.jetbrains.lincheck.jvm.agent.analysis.controlflow
 
+import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.Label
 import org.objectweb.asm.tree.*
 import org.objectweb.asm.util.Printer
@@ -55,11 +56,35 @@ class BasicBlockControlFlowGraph(
     val instructions: InsnList,
     val basicBlocks: List<BasicBlock>,
 ) : ControlFlowGraph() {
+    
+    init {
+        require(basicBlocks.allIndexed { index, block -> block.index == index }) {
+            "Basic blocks indices should match their positions in the list"
+        }
+        require(basicBlocks.isSortedBy { it.range.first }) {
+            "Basic blocks should be sorted by their ranges in ascending order"
+        }
+        require(basicBlocks.isSortedWith { b1, b2 -> Integer.compare(b1.range.last, b2.range.first) }) {
+            "Basic blocks should be sorted by their ranges in ascending order"
+        }
+    }
+
+    /**
+     * Information about loops in this method.
+     */
+    var loopInfo: MethodLoopsInformation? = null
+        private set
+    
     /**
      * Computes loop-related information for this method.
-     * This is a stub: loop detection is not implemented yet; the method returns empty sites.
      */
-    fun computeLoopInformation(): MethodLoopsInformation = MethodLoopsInformation()
+    fun computeLoopInformation(): MethodLoopsInformation {
+        if (loopInfo == null) {
+            // TODO: this is a stub: loop detection is not implemented yet; the method returns empty sites. 
+            loopInfo = MethodLoopsInformation()    
+        }
+        return loopInfo!!
+    }
 }
 
 /**
@@ -161,7 +186,7 @@ private class BasicBlockControlFlowGraphPrinter(val graph: BasicBlockControlFlow
         sb.appendLine("BLOCKS")
         val lastInsnIndex = (graph.instructions.size() - 1).takeIf { it >= 0 } ?: 0
         val insnIndexWidth = lastInsnIndex.toString().length
-        for (block in graph.basicBlocks.sortedBy { it.index }) {
+        for (block in graph.basicBlocks) {
             val first = block.range.firstOrNull()
             val last = block.range.lastOrNull()
             val range = when {
