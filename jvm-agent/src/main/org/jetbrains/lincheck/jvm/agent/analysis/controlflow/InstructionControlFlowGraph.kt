@@ -22,8 +22,6 @@ typealias InstructionIndex = Int
  *
  * Each node in the graph represents an instruction of the method, stored as an instruction index.
  * Each edge in the graph represents a control flow transition between two instructions.
- *
- * This graph distinguishes regular and exceptional control flow edges.
  */
 class InstructionControlFlowGraph(val instructions: InsnList) : ControlFlowGraph() {
     constructor() : this(InsnList())

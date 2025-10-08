@@ -181,7 +181,8 @@ private class BasicBlockControlFlowGraphPrinter(val graph: BasicBlockControlFlow
     }
 
     private fun AbstractInsnNode.prettyPrint(): String {
-        // clears only the output buffer; label mappings inside `textifier` remain intact
+        // clears only the output buffer;
+        // label mappings inside `textifier` remain intact
         textifier.text.clear()
 
         val visitor = TraceMethodVisitor(textifier)
