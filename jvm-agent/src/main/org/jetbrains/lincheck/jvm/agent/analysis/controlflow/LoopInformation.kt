@@ -65,7 +65,7 @@ typealias LoopId = Int
  *   Thus, injections placed in the exception handlers may need to perform additional checks at runtime
  *   to see whether the injection was reached from loop or not.
  *
- * @property reducible True if this loop is reducible (i.e., single-header), false otherwise.
+ * @property isReducible True if this loop is reducible (i.e., single-header), false otherwise.
  */
  data class LoopInformation(
      val id: LoopId,
@@ -75,8 +75,10 @@ typealias LoopId = Int
      val backEdges: Set<Edge>,
      val normalExits: Set<Edge>,
      val exceptionalExitHandlers: Set<BasicBlockIndex>,
-     val reducible: Boolean,
- )
+ ) {
+     val isReducible: Boolean
+         get() = headers.size == 1
+ }
 
 /**
  * Aggregates loop information for a single method.
