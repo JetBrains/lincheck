@@ -12,6 +12,7 @@ package org.jetbrains.lincheck.jvm.agent.transformers
 
 import org.jetbrains.lincheck.jvm.agent.MethodInformation
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.*
+import org.jetbrains.lincheck.util.ensureNotNull
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.commons.GeneratorAdapter
@@ -32,10 +33,10 @@ internal class LoopTransformer(
     methodVisitor: MethodVisitor,
 ) : InstructionMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
 
-    // TODO: use LoopId typealias instead of Int
-
     // Retrieve loop sites planned from the precomputed basic-block CFG.
-    private val loopInfo = methodInfo.basicControlFlowGraph.computeLoopInformation()
+    private val loopInfo = methodInfo.basicControlFlowGraph.loopInfo.ensureNotNull {
+        "Loops information is not available for method $className.$methodName$descriptor"
+    }
 
     // Map from a loop header entry instruction index to loopId
     private val headerEnterSites: Map<InstructionIndex, Int> = computeHeaderEnterSites(loopInfo)

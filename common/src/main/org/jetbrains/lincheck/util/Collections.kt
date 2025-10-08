@@ -149,6 +149,59 @@ fun <T> MutableList<T>.move(from: IntRange, to: Int) {
 }
 
 /**
+ * Checks if the elements in the list are sorted in ascending order.
+ *
+ * @return `true` if the list is sorted in ascending order, `false` otherwise.
+ */
+fun <T : Comparable<T>> List<T>.isSorted(): Boolean {
+    for (i in 1 until size) {
+        if (this[i - 1] > this[i]) return false
+    }
+    return true
+}
+
+/**
+ * Checks if the list is sorted in ascending order of the values returned by the given selector function.
+ *
+ * @param selector A function that maps each element in the list to a comparable value.
+ * @return `true` if the list is sorted in ascending order, `false` otherwise.
+ */
+fun <T, R : Comparable<R>> List<T>.isSortedBy(selector: (T) -> R): Boolean {
+    for (i in 1 until size) {
+        if (selector(this[i - 1]) > selector(this[i])) return false
+    }
+    return true
+}
+
+/**
+ * Checks if the elements in the list are sorted in ascending order according to the given comparator.
+ *
+ * @param comparator the comparator used to define the sorting order of the elements.
+ * @return `true` if the list is sorted according to the comparator, `false` otherwise.
+ */
+fun <T> List<T>.isSortedWith(comparator: Comparator<in T>): Boolean {
+    for (i in 1 until size) {
+        if (comparator.compare(this[i - 1], this[i]) > 0) return false
+    }
+    return true
+}
+
+/**
+ * Checks if all elements in the iterable satisfy the given predicate when invoked with their index and value.
+ *
+ * @param predicate A predicate that accepts the index and element as parameters.
+ * @return `true` if all elements satisfy the predicate, `false` otherwise.
+ */
+fun <T> Iterable<T>.allIndexed(predicate: (Int, T) -> Boolean): Boolean {
+    if (this is Collection && isEmpty()) return true
+    var index = 0
+    for (element in this) {
+        if (!predicate(index++, element)) return false
+    }
+    return true
+}
+
+/**
  * Creates a mutable set backed by an [IdentityHashMap].
  * This set uses identity comparisons `===` to determine equality of elements, rather than the `equals` method.
  *
@@ -167,9 +220,32 @@ fun <T> identityHashSetOf(): MutableSet<T> =
 fun <T> identityHashSetOf(vararg elements: T): MutableSet<T> =
     elements.toCollection(identityHashSetOf())
 
+/**
+ * Updates a key-value pair in the map.
+ *
+ * If the [key] exists, its value is transformed using the provided transformation function.
+ * If the key does not exist, it is mapped to the result of
+ * applying the provided transformation function to the given [default] value.
+ *
+ * @param key the key whose associated value is to be updated or inserted.
+ * @param default the default value to use if the key is not currently in the map.
+ * @param transform a function that takes the current value and returns the transformed value.
+ * @return the updated or inserted value associated with the key.
+ */
 fun <K, V> MutableMap<K, V>.update(key: K, default: V, transform: (V) -> V): V =
     compute(key) { _, current -> transform(current ?: default) }!!
 
+/**
+ * Performs inplace update of the value associated with the specified [key] in the map
+ * by applying the given transformation.
+ *
+ * If the [key] is not already present in the map, the [default] value is used as the initial value,
+ * and the transformation function is immediately applied to it.
+ *
+ * @param key the key whose associated value is to be updated.
+ * @param default the default value to use if the key is not already present in the map.
+ * @param apply a transformation function that modifies the value associated with the key.
+ */
 fun <K, V> MutableMap<K, V>.updateInplace(key: K, default: V, apply: V.() -> Unit) {
     computeIfAbsent(key) { default }.also(apply)
 }
