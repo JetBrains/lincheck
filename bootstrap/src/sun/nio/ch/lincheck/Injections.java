@@ -345,6 +345,37 @@ public class Injections {
     }
 
     /**
+     * Called before a loop body is entered.
+     */
+    public static void beforeLoopEnter(int codeLocation, int loopId) {
+        getEventTracker().beforeLoopEnter(codeLocation, loopId);
+    }
+
+    /**
+     * Called at the beginning of every loop iteration (including the first one).
+     */
+    public static void onLoopIteration(int codeLocation, int loopId) {
+        getEventTracker().onLoopIteration(codeLocation, loopId);
+    }
+
+    /**
+     * Called on a normal (non-exceptional) exit from a loop body.
+     */
+    public static void afterLoopExit(int codeLocation, int loopId) {
+        getEventTracker().afterLoopExit(codeLocation, loopId);
+    }
+
+    /**
+     * Called at an exception handler entry that is reachable from within a loop body and lies outside it.
+     *
+     * @param canEnterFromOutsideLoop true if the handler can also be reached from outside the loop body;
+     *   false if it is exclusive to the loop body.
+     */
+    public static void afterLoopExceptionExit(int codeLocation, int loopId, Throwable exception, boolean canEnterFromOutsideLoop) {
+        getEventTracker().afterLoopExceptionExit(codeLocation, loopId, exception, canEnterFromOutsideLoop);
+    }
+
+    /**
      * Called from the instrumented code before each field read.
      *
      * @return whether the trace point was created
