@@ -368,11 +368,11 @@ public class Injections {
     /**
      * Called at an exception handler entry that is reachable from within a loop body and lies outside it.
      *
-     * @param canEnterFromOutsideLoop true if the handler can also be reached from outside the loop body;
+     * @param isReachableFromOutsideLoop true if the handler can also be reached from outside the loop body;
      *   false if it is exclusive to the loop body.
      */
-    public static void afterLoopExceptionExit(int codeLocation, int loopId, Throwable exception, boolean canEnterFromOutsideLoop) {
-        getEventTracker().afterLoopExceptionExit(codeLocation, loopId, exception, canEnterFromOutsideLoop);
+    public static void afterLoopExceptionExit(int codeLocation, int loopId, Throwable exception, boolean isReachableFromOutsideLoop) {
+        getEventTracker().afterLoopExceptionExit(codeLocation, loopId, exception, isReachableFromOutsideLoop);
     }
 
     /**
