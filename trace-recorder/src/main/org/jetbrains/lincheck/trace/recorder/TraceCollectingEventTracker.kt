@@ -266,6 +266,13 @@ class TraceCollectingEventTracker(
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
         val thread = Thread.currentThread()
 
+        // End all method calls, for which we did not track the method return,
+        // except for the very first one (`java.lang.Thread::run` method)
+        while (threadData.getStack().size > 1) {
+            val tracePoint = threadData.popStackFrame()
+            tracePoint.result = TR_OBJECT_UNTRACKED_METHOD_RESULT
+            strategy.callEnded(thread, tracePoint)
+        }
         // Don't pop, we need it
         val tracePoint = threadData.firstMethodCallTracePoint()
         tracePoint.result = TR_OBJECT_VOID
