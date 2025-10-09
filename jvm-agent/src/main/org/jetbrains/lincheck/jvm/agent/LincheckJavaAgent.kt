@@ -149,6 +149,15 @@ object LincheckJavaAgent {
      * Also, retransforms already loaded classes.
      */
     fun install(instrumentationMode: InstrumentationMode) {
+        if (TraceAgentParameters.getLazyTransformationEnabled() && TraceAgentParameters.getIncludePatterns().isNotEmpty()) {
+            Logger.error { """
+                An `include` filter is provided but lazy transformation is enabled. 
+                This can lead to unexpected behaviour.
+                To disable lazy transformation provide `lazy=false` to the Jvm agent.
+            """.trimIndent() }
+        }
+        
+        
         this.instrumentationMode = instrumentationMode
         // The bytecode injections must be loaded with the bootstrap class loader,
         // as the `java.base` module is loaded with it. To achieve that, we pack the
@@ -409,16 +418,17 @@ object LincheckJavaAgent {
         className.startsWith("java.lang.")
 
     /**
-     * FOR TEST PURPOSE ONLY!
      * To test the byte-code transformation correctness, we can transform all classes.
+     * Or when include filter is applied eager transformation is required.
      *
      * Both stress and model checking modes implement some optimizations
      * to avoid re-transforming all loaded into VM classes on each run of a Lincheck test.
      * When this flag is set, these optimizations are disabled, and so
      * the Lincheck agent re-transforms all the loaded classes on each run.
      */
-    internal val INSTRUMENT_ALL_CLASSES =
-        System.getProperty("lincheck.instrumentAllClasses")?.toBoolean() ?: false
+    internal val INSTRUMENT_ALL_CLASSES = 
+        System.getProperty("lincheck.instrumentAllClasses")?.toBoolean() 
+            ?: !TraceAgentParameters.getLazyTransformationEnabled()
 }
 
 var isTraceJavaAgentAttached: Boolean = false
