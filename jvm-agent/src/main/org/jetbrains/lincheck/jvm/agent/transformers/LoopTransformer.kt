@@ -10,12 +10,13 @@
 
 package org.jetbrains.lincheck.jvm.agent.transformers
 
-import org.jetbrains.lincheck.jvm.agent.MethodInformation
+import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.*
 import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.commons.GeneratorAdapter
+import sun.nio.ch.lincheck.Injections
 
 /**
  * [LoopTransformer] tracks loops enter/exit points and new loop iterations starting points.
@@ -60,23 +61,74 @@ internal class LoopTransformer(
         super.visitLabel(label)
     }
 
-    override fun beforeInsn(index: Int, opcode: Int) {
+    override fun beforeInsn(index: Int, opcode: Int): Unit = adapter.run {
         // First real opcode after a handler label — if any pending,
-        // this is where "afterLoopEnd" for exceptional exits would be injected.
-        pendingHandlerLoopIds?.let {
-            // TODO: inject afterLoopEnd for each id in [it] at this site
+        // this is where we inject exceptional loop exit notifications.
+        pendingHandlerLoopIds?.let { loopIds ->
+            invokeIfInAnalyzedCode(
+                original = { },
+                instrumented = {
+                    // At handler entry, the thrown exception object is on the stack.
+                    // Store it to a temp local, emit injections, then restore it for original bytecode.
+                    val exceptionLocal = newLocal(THROWABLE_TYPE)
+                    storeLocal(exceptionLocal)
+                    // conservative default without exclusivity analysis
+                    // TODO: implement exclusivity analysis and use it here
+                    val canEnterFromOutsideLoop = true
+                    for (loopId in loopIds) {
+                        // STACK: <empty>
+                        loadNewCodeLocationId()
+                        push(loopId)
+                        loadLocal(exceptionLocal)
+                        push(canEnterFromOutsideLoop)
+                        // STACK: codeLocation, loopId, exception, canEnterFromOutsideLoop
+                        invokeStatic(Injections::afterLoopExceptionExit)
+                        // STACK: <empty>
+                    }
+                    // Restore the exception object back to the stack for the handler body (e.g., ASTORE)
+                    loadLocal(exceptionLocal)
+                }
+            )
             pendingHandlerLoopIds = null
         }
 
-        // Perform loop header enter check.
+        // Perform loop header enter check: emit beforeLoopEnter and onLoopIteration.
         headerEnterSites[index]?.let { loopId ->
-            // TODO: inject beforeLoopStart for [loopId] at this site
-            // TODO: inject beforeLoopIterationStart for [loopId] at this site
+            invokeIfInAnalyzedCode(
+                original = {},
+                instrumented = {
+                    // STACK: <empty>
+                    loadNewCodeLocationId()
+                    adapter.push(loopId)
+                    // STACK: codeLocation, loopId
+                    adapter.invokeStatic(Injections::beforeLoopEnter)
+                    // STACK: <empty>
+
+                    // STACK: <empty>
+                    loadNewCodeLocationId()
+                    adapter.push(loopId)
+                    // STACK: codeLocation, loopId
+                    adapter.invokeStatic(Injections::onLoopIteration)
+                    // STACK: <empty>
+                }
+            )
         }
 
-        // Perform loop exit check.
+        // Perform loop normal exit check.
         normalExitSites[index]?.let { loopIds ->
-            // TODO: inject afterLoopIterationEnd for all [loopIds] at this site
+            invokeIfInAnalyzedCode(
+                original = {},
+                instrumented = {
+                    for (loopId in loopIds) {
+                        // STACK: <empty>
+                        loadNewCodeLocationId()
+                        adapter.push(loopId)
+                        // STACK: codeLocation, loopId
+                        adapter.invokeStatic(Injections::afterLoopExit)
+                        // STACK: <empty>
+                    }
+                }
+            )
         }
     }
 
