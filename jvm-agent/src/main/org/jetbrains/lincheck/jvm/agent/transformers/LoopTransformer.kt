@@ -16,8 +16,6 @@ import org.jetbrains.lincheck.util.ensureNotNull
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.commons.GeneratorAdapter
-import org.objectweb.asm.tree.AbstractInsnNode
-import org.objectweb.asm.tree.LabelNode
 
 /**
  * [LoopTransformer] tracks loops enter/exit points and new loop iterations starting points.
@@ -97,32 +95,28 @@ internal class LoopTransformer(
     private fun computeNormalExitSites(info: MethodLoopsInformation): Map<InstructionIndex, Set<Int>> {
         if (!info.hasLoops()) return emptyMap()
         val cfg = methodInfo.basicControlFlowGraph
-        val acc = mutableMapOf<InstructionIndex, MutableSet<Int>>()
+        val result = mutableMapOf<InstructionIndex, MutableSet<Int>>()
         for (loop in info.loops) {
             for (e in loop.normalExits) {
-                val insnIndex: InstructionIndex? = when (val label = e.label) {
-                    is EdgeLabel.Jump -> cfg.instructions.indexOf(label.instruction)
-                    is EdgeLabel.FallThrough -> cfg.lastOpcodeIndexOf(e.source)
-                    is EdgeLabel.Exception -> null // shouldn't happen for normal exits, but be defensive
-                }
-                if (insnIndex != null && insnIndex >= 0) {
-                    acc.getOrPut(insnIndex) { mutableSetOf() }.add(loop.id)
-                }
+                // By cfg/loop invariants every normal exit is decided by the last real opcode of the source block
+                // (either an IF* fall-through or an explicit jump/switch).
+                val insnIndex: InstructionIndex = cfg.lastOpcodeIndexOf(e.source) ?: continue
+                result.getOrPut(insnIndex) { mutableSetOf() }.add(loop.id)
             }
         }
-        return acc.mapValues { it.value.toSet() }
+        return result.mapValues { it.value.toSet() }
     }
 
     private fun computeHandlerEntrySites(info: MethodLoopsInformation): Map<Label, Set<Int>> {
         if (!info.hasLoops()) return emptyMap()
         val cfg = methodInfo.basicControlFlowGraph
-        val acc = mutableMapOf<Label, MutableSet<Int>>()
+        val result = mutableMapOf<Label, MutableSet<Int>>()
         for (loop in info.loops) {
             for (handlerBlock in loop.exceptionalExitHandlers) {
                 val label = cfg.firstLabelOf(handlerBlock) ?: continue
-                acc.getOrPut(label) { mutableSetOf() }.add(loop.id)
+                result.getOrPut(label) { mutableSetOf() }.add(loop.id)
             }
         }
-        return acc.mapValues { it.value.toSet() }
+        return result.mapValues { it.value.toSet() }
     }
 }
