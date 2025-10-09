@@ -74,13 +74,13 @@ internal class LoopTransformer(
                     storeLocal(exceptionLocal)
                     // conservative default without exclusivity analysis
                     // TODO: implement exclusivity analysis and use it here
-                    val canEnterFromOutsideLoop = true
+                    val isReachableFromOutsideLoop = true
                     for (loopId in loopIds) {
                         // STACK: <empty>
                         loadNewCodeLocationId()
                         push(loopId)
                         loadLocal(exceptionLocal)
-                        push(canEnterFromOutsideLoop)
+                        push(isReachableFromOutsideLoop)
                         // STACK: codeLocation, loopId, exception, canEnterFromOutsideLoop
                         invokeStatic(Injections::afterLoopExceptionExit)
                         // STACK: <empty>
