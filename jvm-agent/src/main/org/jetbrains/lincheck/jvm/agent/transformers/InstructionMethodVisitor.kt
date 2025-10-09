@@ -19,17 +19,7 @@ import org.objectweb.asm.*
 
 
 /**
- * A utility [MethodVisitor] that centralizes handling of bytecode instructions
- * by invoking [beforeInsn] just before visiting an instruction and [afterInsn]
- * immediately after visiting it. This removes duplication across different
- * visit* methods and gives a single interception point per opcode.
- *
- * Non-opcode pseudo nodes such as labels, line numbers, and frames are passed
- * through without calling hooks.
- */
-
-/**
- * Abstract class that extends `LincheckMethodVisitor` for processing instructions uniformly.
+ * Abstract class that extends [LincheckMethodVisitor] for processing instructions uniformly.
  * Allows injecting visitor-specific logic before and after processing of each instruction.
  * Maintains an index of the current instruction being processed.
  */
@@ -117,8 +107,6 @@ internal abstract class InstructionMethodVisitor(
 
     override fun visitMultiANewArrayInsn(descriptor: String, numDimensions: Int) =
         processInstruction(Opcodes.MULTIANEWARRAY) { super.visitMultiANewArrayInsn(descriptor, numDimensions) }
-
-    //
 
     override fun visitLabel(label: Label) {
         currentInsnIndex++

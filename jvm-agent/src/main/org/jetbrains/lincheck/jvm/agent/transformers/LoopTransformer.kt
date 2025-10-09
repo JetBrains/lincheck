@@ -145,8 +145,6 @@ internal class LoopTransformer(
             )
         }
     }
-
-    override fun afterInsn(index: Int, opcode: Int) {}
 }
 
 private fun BasicBlockControlFlowGraph.computeHeaderEntrySites(
