@@ -353,13 +353,13 @@ class AnalysisProfile(val analyzeStdLib: Boolean) {
      * @return The [AnalysisSectionType] to use for analyzing this class/method
      */
     fun getAnalysisSectionFor(className: String,  methodName: String): AnalysisSectionType = when {
-        isJavaExecutorService(className) && methodName == "submit" -> AnalysisSectionType.SILENT_PROPAGATING
-        isJavaExecutorService(className) -> AnalysisSectionType.SILENT
-        className.startsWith("java.util.concurrent.locks.AbstractQueuedSynchronizer") -> AnalysisSectionType.SILENT
-        className == "java.util.concurrent.FutureTask" -> AnalysisSectionType.SILENT
-        isConcurrentCollectionsLibrary(className) && !analyzeStdLib -> AnalysisSectionType.SILENT
+        !className.startsWith("java.util.concurrent.") -> NORMAL // hot path
+        isJavaExecutorService(className) -> if (methodName == "submit") SILENT_PROPAGATING else SILENT
+        className.startsWith("java.util.concurrent.locks.AbstractQueuedSynchronizer") -> SILENT
+        className == "java.util.concurrent.FutureTask" -> SILENT
+        !analyzeStdLib && isConcurrentCollectionsLibrary(className) -> SILENT
         
-        else -> AnalysisSectionType.NORMAL
+        else -> NORMAL
     }
 
     /**

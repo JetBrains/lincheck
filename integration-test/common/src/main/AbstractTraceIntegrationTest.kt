@@ -11,6 +11,7 @@
 import org.gradle.tooling.GradleConnector
 import org.gradle.tooling.ProjectConnection
 import org.jetbrains.kotlinx.lincheck_test.util.OVERWRITE_REPRESENTATION_TESTS_OUTPUT
+import org.junit.After
 import org.junit.Assert
 import java.io.File
 import java.io.FileInputStream
@@ -20,6 +21,7 @@ import java.lang.reflect.Modifier
 import java.net.URL
 import java.net.URLClassLoader
 import java.nio.file.Paths
+import java.util.concurrent.ConcurrentLinkedQueue
 
 abstract class AbstractTraceIntegrationTest {
     abstract val fatJarName: String
@@ -41,10 +43,11 @@ abstract class AbstractTraceIntegrationTest {
         val pathToFatJar = File(Paths.get("build", "libs", fatJarName).toString()).absolutePath.escape()
         // We need to escape it twice, as our argument parser will de-escape it when split into array
         val pathToOutput = fileToDump.absolutePath.escape().escape()
-        val agentArgs = "class=${testClassName.escapeDollar()},method=${testMethodName.escapeDollar()},output=${pathToOutput.escapeDollar()}" +
-                        extraAgentArgs.entries
-                            .joinToString(",") { "${it.key}=${it.value.escapeDollar()}" }
-                            .let { if (it.isNotEmpty()) ",$it" else it }
+        val agentArgs =
+            "class=${testClassName.escapeDollar()},method=${testMethodName.escapeDollar()},output=${pathToOutput.escapeDollar()}" +
+                    extraAgentArgs.entries
+                        .joinToString(",") { "${it.key}=${it.value.escapeDollar()}" }
+                        .let { if (it.isNotEmpty()) ",$it" else it }
         return """
             gradle.taskGraph.whenReady {
                 val gradleCommands = listOf(${gradleCommands.joinToString(",") { "\"$it\"" }})
@@ -62,9 +65,13 @@ abstract class AbstractTraceIntegrationTest {
         """.trimIndent()
     }
 
-    private fun getGoldenDataFileFor(testClassName: String, testMethodName: String, testNameSuffix: String? = null): File {
+    private fun getGoldenDataFileFor(
+        testClassName: String,
+        testMethodName: String,
+        testNameSuffix: String? = null
+    ): File {
         val projectName = File(projectPath).name
-        val fileName = "${testClassName}_$testMethodName${ testNameSuffix?.let { "_$it" }.orEmpty() }.txt"
+        val fileName = "${testClassName}_$testMethodName${testNameSuffix?.let { "_$it" }.orEmpty()}.txt"
         return File(Paths.get("src", "main", "resources", "integrationTestData", projectName, fileName).toString())
     }
 
@@ -74,7 +81,7 @@ abstract class AbstractTraceIntegrationTest {
         tempFile.writeText(content)
         return tempFile
     }
-    
+
     val failOnErrorInStdErr: (String) -> Unit = {
         if (it.lines().any { line -> line.startsWith("[ERROR] ") }) {
             Assert.fail("Error output in stderr:\n$it")
@@ -126,7 +133,7 @@ abstract class AbstractTraceIntegrationTest {
                     }
                 }
         }
-        
+
         onStdErrOutput(output)
     }
 
@@ -142,64 +149,76 @@ abstract class AbstractTraceIntegrationTest {
     ) {
         val tmpFile = File.createTempFile(testClassName + "_" + testMethodName, "")
         val packedTraceFile = File("${tmpFile.absolutePath}.packedtrace")
+        val indexFile = File("${tmpFile.absolutePath}.idx")
 
-        try {
-            createGradleConnection().use { connection ->
-                connection
-                    .newBuild()
-                    .setStandardError(System.err)
-                    .addArguments(
-                        "-Dorg.gradle.daemon=false",
-                        "--init-script",
-                        createInitScriptAsTempFile(
-                            buildGradleInitScriptToDumpTrace(
-                                gradleCommands, testClassName, testMethodName, tmpFile, extraJvmArgs, extraAgentArgs
-                            )
-                        ).absolutePath,
-                    ).forTasks(
-                        *gradleCommands.toTypedArray(),
-                        "--tests",
-                        "$testClassName.$testMethodName",
-                    ).run()
-            }
-
-            // TODO decide how to test: with gold data or run twice?
-            if (checkRepresentation) { // otherwise we just want to make sure that tests do not fail
-                val expectedOutput = getGoldenDataFileFor(testClassName, testMethodName, testNameSuffix)
-                if (expectedOutput.exists()) {
-                    Assert.assertEquals(expectedOutput.readText(), tmpFile.readText())
-                } else {
-                    if (OVERWRITE_REPRESENTATION_TESTS_OUTPUT) {
-                        expectedOutput.parentFile.mkdirs()
-                        copy(tmpFile, expectedOutput)
-                        Assert.fail("The gold data file was created. Please rerun the test.")
-                    } else {
-                        Assert.fail(
-                            "The gold data file was not found at '${expectedOutput.absolutePath}'. " +
-                                    "Please rerun the test with \"overwriteRepresentationTestsOutput\" option enabled."
-                        )
-                    }
-                }
-            } else {
-                fun checkNonEmptyNess(file: File, filePurpose: String = "output") {
-                    if (file.readText().isEmpty()) {
-                        Assert.fail("Empty $filePurpose file was produced by the test: $file.")
-                    }
-                }
-
-                if (tmpFile.exists()) {
-                    checkNonEmptyNess(tmpFile)
-                } else {
-                    if (packedTraceFile.exists()) {
-                        checkNonEmptyNess(packedTraceFile)
-                    } else {
-                        Assert.fail("No output was produced by the test.")
-                    }
-                }
-            }
-        } finally {
+        taskQueue.add {
             tmpFile.delete()
             packedTraceFile.delete()
+            indexFile.delete()
+        }
+
+        createGradleConnection().use { connection ->
+            connection
+                .newBuild()
+                .setStandardError(System.err)
+                .addArguments(
+                    "-Dorg.gradle.daemon=false",
+                    "--init-script",
+                    createInitScriptAsTempFile(
+                        buildGradleInitScriptToDumpTrace(
+                            gradleCommands, testClassName, testMethodName, tmpFile, extraJvmArgs, extraAgentArgs
+                        )
+                    ).absolutePath,
+                ).forTasks(
+                    *gradleCommands.toTypedArray(),
+                    "--tests",
+                    "$testClassName.$testMethodName",
+                ).run()
+        }
+
+        // TODO decide how to test: with gold data or run twice?
+        if (checkRepresentation) { // otherwise we just want to make sure that tests do not fail
+            val expectedOutput = getGoldenDataFileFor(testClassName, testMethodName, testNameSuffix)
+            if (expectedOutput.exists()) {
+                Assert.assertEquals(expectedOutput.readText(), tmpFile.readText())
+            } else {
+                if (OVERWRITE_REPRESENTATION_TESTS_OUTPUT) {
+                    expectedOutput.parentFile.mkdirs()
+                    copy(tmpFile, expectedOutput)
+                    Assert.fail("The gold data file was created. Please rerun the test.")
+                } else {
+                    Assert.fail(
+                        "The gold data file was not found at '${expectedOutput.absolutePath}'. " +
+                                "Please rerun the test with \"overwriteRepresentationTestsOutput\" option enabled."
+                    )
+                }
+            }
+        } else {
+            fun checkNonEmptyNess(file: File, filePurpose: String = "output") {
+                val fileContainsContent = file.bufferedReader().lineSequence().any { it.isNotEmpty() }
+                if (!fileContainsContent) {
+                    Assert.fail("Empty $filePurpose file was produced by the test: $file.")
+                }
+            }
+
+            if (tmpFile.exists()) {
+                checkNonEmptyNess(tmpFile)
+            } else {
+                if (packedTraceFile.exists()) {
+                    checkNonEmptyNess(packedTraceFile)
+                } else {
+                    Assert.fail("No output was produced by the test.")
+                }
+            }
+        }
+    }
+
+    private val taskQueue = ConcurrentLinkedQueue<() -> Unit>()
+
+    @After
+    fun tearDown() {
+        while (true) {
+            taskQueue.poll()?.invoke() ?: break
         }
     }
 
@@ -210,8 +229,9 @@ abstract class AbstractTraceIntegrationTest {
     }
 
 
-    private fun List<Class<*>>.asTestSuite(): Map<Class<*>, List<Method>> = associate { it to collectTestMethodsOfClass(it) }
-        .filter { (_, methods) -> methods.isNotEmpty() }
+    private fun List<Class<*>>.asTestSuite(): Map<Class<*>, List<Method>> =
+        associate { it to collectTestMethodsOfClass(it) }
+            .filter { (_, methods) -> methods.isNotEmpty() }
 
     /**
      * Finds `@Test` methods of the specified [clazz].
@@ -321,8 +341,8 @@ abstract class AbstractTraceIntegrationTest {
         val testClassesPaths = projectDir.walk()
             .filter {
                 it.isFile &&
-                it.extension == "class" &&
-                !it.path.contains("$") // Skip inner classes, anonymous classes, etc.
+                        it.extension == "class" &&
+                        !it.path.contains("$") // Skip inner classes, anonymous classes, etc.
             }
             .filter {
                 val filePath = it.systemIndependentPath
@@ -366,10 +386,7 @@ abstract class AbstractTraceIntegrationTest {
                 try {
                     val clazz = classLoader.loadClass(testClassName)
                     // Don't process abstract classes and interfaces
-                    if (!Modifier.isAbstract(clazz.modifiers) && !Modifier.isInterface(clazz.modifiers)) {
-                        clazz
-                    }
-                    else null
+                    clazz.takeIf { !Modifier.isAbstract(it.modifiers) && !Modifier.isInterface(it.modifiers) }
                 } catch (e: Exception) {
                     System.err.println("Failed to load class: $testClassName")
                     e.printStackTrace(System.err)
