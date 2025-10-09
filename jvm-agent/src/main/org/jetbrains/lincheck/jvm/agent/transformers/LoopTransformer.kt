@@ -12,7 +12,7 @@ package org.jetbrains.lincheck.jvm.agent.transformers
 
 import org.jetbrains.lincheck.jvm.agent.MethodInformation
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.*
-import org.jetbrains.lincheck.util.ensureNotNull
+import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.commons.GeneratorAdapter
@@ -37,22 +37,22 @@ internal class LoopTransformer(
     }
 
     // Map from a loop header entry instruction index to loopId
-    private val headerEnterSites: Map<InstructionIndex, Int> = computeHeaderEnterSites(loopInfo)
+    private val headerEnterSites: Map<InstructionIndex, LoopId> = computeHeaderEnterSites(loopInfo)
 
     // Map from a normal exit instruction index to the set of exited loopIds
-    private val normalExitSites: Map<InstructionIndex, Set<Int>> = computeNormalExitSites(loopInfo)
+    private val normalExitSites: Map<InstructionIndex, Set<LoopId>> = computeNormalExitSites(loopInfo)
 
     // Map from an exception handler label block to the set of exited loopIds
-    private val handlerEntrySites: Map<Label, Set<Int>> = computeHandlerEntrySites(loopInfo)
+    private val handlerEntrySites: Map<Label, Set<LoopId>> = computeHandlerEntrySites(loopInfo)
 
     // Used to defer handler-entry injection until the first real opcode after the label.
-    private var pendingHandlerLoopIds: MutableSet<Int>? = null
+    private var pendingHandlerLoopIds: Set<LoopId>? = null
 
     override fun visitLabel(label: Label) {
         // If this label is a handler entry for some loop(s), mark as pending;
         // it will trigger injection insertion on the first subsequent real opcode in [beforeInsn].
         handlerEntrySites[label]?.let { ids ->
-            pendingHandlerLoopIds = ids.toMutableSet()
+            pendingHandlerLoopIds = ids
         }
         super.visitLabel(label)
     }
@@ -101,7 +101,7 @@ internal class LoopTransformer(
                 // By cfg/loop invariants every normal exit is decided by the last real opcode of the source block
                 // (either an IF* fall-through or an explicit jump/switch).
                 val insnIndex: InstructionIndex = cfg.lastOpcodeIndexOf(e.source) ?: continue
-                result.getOrPut(insnIndex) { mutableSetOf() }.add(loop.id)
+                result.updateInplace(insnIndex, default = mutableSetOf()) { add(loop.id) }
             }
         }
         return result.mapValues { it.value.toSet() }
@@ -114,7 +114,7 @@ internal class LoopTransformer(
         for (loop in info.loops) {
             for (handlerBlock in loop.exceptionalExitHandlers) {
                 val label = cfg.firstLabelOf(handlerBlock) ?: continue
-                result.getOrPut(label) { mutableSetOf() }.add(loop.id)
+                result.updateInplace(label, default = mutableSetOf()) { add(loop.id) }
             }
         }
         return result.mapValues { it.value.toSet() }
