@@ -36,14 +36,17 @@ internal class LoopTransformer(
         "Loops information is not available for method $className.$methodName$descriptor"
     }
 
-    // Map from a loop header entry instruction index to loopId
-    private val headerEnterSites: Map<InstructionIndex, LoopId> = computeHeaderEnterSites(loopInfo)
+    // Map from a loop header entry instruction index to loopId.
+    private val headerEnterSites: Map<InstructionIndex, LoopId> =
+        methodInfo.basicControlFlowGraph.computeHeaderEnterSites(loopInfo)
 
-    // Map from a normal exit instruction index to the set of exited loopIds
-    private val normalExitSites: Map<InstructionIndex, Set<LoopId>> = computeNormalExitSites(loopInfo)
+    // Map from a normal exit instruction index to the set of exited loopIds.
+    private val normalExitSites: Map<InstructionIndex, Set<LoopId>> =
+        methodInfo.basicControlFlowGraph.computeNormalExitSites(loopInfo)
 
-    // Map from an exception handler label block to the set of exited loopIds
-    private val handlerEntrySites: Map<Label, Set<LoopId>> = computeHandlerEntrySites(loopInfo)
+    // Map from an exception handler label block to the set of exited loopIds.
+    private val handlerEntrySites: Map<Label, Set<LoopId>> =
+        methodInfo.basicControlFlowGraph.computeHandlerEntrySites(loopInfo)
 
     // Used to defer handler-entry injection until the first real opcode after the label.
     private var pendingHandlerLoopIds: Set<LoopId>? = null
@@ -78,45 +81,51 @@ internal class LoopTransformer(
     }
 
     override fun afterInsn(index: Int, opcode: Int) {}
+}
 
-    private fun computeHeaderEnterSites(info: MethodLoopsInformation): Map<InstructionIndex, Int> {
-        if (!info.hasLoops()) return emptyMap()
-        val cfg = methodInfo.basicControlFlowGraph
-        val result = mutableMapOf<InstructionIndex, Int>()
-        for (loop in info.loops) {
-            val idx = cfg.firstOpcodeIndexOf(loop.header) ?: continue
-            // If multiple loops share the same header opcode index (rare),
-            // prefer the inner loop by letting the later put override only if absent.
-            result.putIfAbsent(idx, loop.id)
-        }
-        return result
+private fun BasicBlockControlFlowGraph.computeHeaderEnterSites(
+    loopInfo: MethodLoopsInformation
+): Map<InstructionIndex, Int> {
+    if (!loopInfo.hasLoops()) return emptyMap()
+    val cfg = this
+    val result = mutableMapOf<InstructionIndex, Int>()
+    for (loop in loopInfo.loops) {
+        val idx = cfg.firstOpcodeIndexOf(loop.header) ?: continue
+        // If multiple loops share the same header opcode index (rare),
+        // prefer the inner loop by letting the later put override only if absent.
+        result.putIfAbsent(idx, loop.id)
     }
+    return result
+}
 
-    private fun computeNormalExitSites(info: MethodLoopsInformation): Map<InstructionIndex, Set<Int>> {
-        if (!info.hasLoops()) return emptyMap()
-        val cfg = methodInfo.basicControlFlowGraph
-        val result = mutableMapOf<InstructionIndex, MutableSet<Int>>()
-        for (loop in info.loops) {
-            for (e in loop.normalExits) {
-                // By cfg/loop invariants every normal exit is decided by the last real opcode of the source block
-                // (either an IF* fall-through or an explicit jump/switch).
-                val insnIndex: InstructionIndex = cfg.lastOpcodeIndexOf(e.source) ?: continue
-                result.updateInplace(insnIndex, default = mutableSetOf()) { add(loop.id) }
-            }
+private fun BasicBlockControlFlowGraph.computeNormalExitSites(
+    loopInfo: MethodLoopsInformation
+): Map<InstructionIndex, Set<Int>> {
+    if (!loopInfo.hasLoops()) return emptyMap()
+    val cfg = this
+    val result = mutableMapOf<InstructionIndex, MutableSet<Int>>()
+    for (loop in loopInfo.loops) {
+        for (e in loop.normalExits) {
+            // By cfg/loop invariants every normal exit is decided by the last real opcode of the source block
+            // (either an IF* fall-through or an explicit jump/switch).
+            val insnIndex: InstructionIndex = cfg.lastOpcodeIndexOf(e.source) ?: continue
+            result.updateInplace(insnIndex, default = mutableSetOf()) { add(loop.id) }
         }
-        return result.mapValues { it.value.toSet() }
     }
+    return result.mapValues { it.value.toSet() }
+}
 
-    private fun computeHandlerEntrySites(info: MethodLoopsInformation): Map<Label, Set<Int>> {
-        if (!info.hasLoops()) return emptyMap()
-        val cfg = methodInfo.basicControlFlowGraph
-        val result = mutableMapOf<Label, MutableSet<Int>>()
-        for (loop in info.loops) {
-            for (handlerBlock in loop.exceptionalExitHandlers) {
-                val label = cfg.firstLabelOf(handlerBlock) ?: continue
-                result.updateInplace(label, default = mutableSetOf()) { add(loop.id) }
-            }
+private fun BasicBlockControlFlowGraph.computeHandlerEntrySites(
+    loopInfo: MethodLoopsInformation
+): Map<Label, Set<Int>> {
+    if (!loopInfo.hasLoops()) return emptyMap()
+    val cfg = this
+    val result = mutableMapOf<Label, MutableSet<Int>>()
+    for (loop in loopInfo.loops) {
+        for (handlerBlock in loop.exceptionalExitHandlers) {
+            val label = cfg.firstLabelOf(handlerBlock) ?: continue
+            result.updateInplace(label, default = mutableSetOf()) { add(loop.id) }
         }
-        return result.mapValues { it.value.toSet() }
     }
+    return result.mapValues { it.value.toSet() }
 }
