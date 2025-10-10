@@ -11,7 +11,7 @@
 package org.jetbrains.lincheck.jvm.agent
 
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.*
-import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent.INSTRUMENT_ALL_CLASSES
+import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent.instrumentationStrategy
 import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent.instrumentationMode
 import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent.instrumentedClasses
 import org.jetbrains.lincheck.util.*
@@ -60,7 +60,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         }
         // If lazy mode is used, transform classes lazily,
         // once they are used in the testing code.
-        if (!INSTRUMENT_ALL_CLASSES && instrumentationMode.supportsLazyTransformation &&
+        if (instrumentationStrategy == InstrumentationStrategy.Lazy &&
             // do not re-transform already instrumented classes
             internalClassName.toCanonicalClassName() !in instrumentedClasses &&
             // always transform eagerly instrumented classes
