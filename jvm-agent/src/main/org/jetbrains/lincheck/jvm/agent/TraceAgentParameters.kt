@@ -41,11 +41,15 @@ import java.lang.reflect.Modifier
  * - exclude — semicolon-separated list of exclude patterns (optional).
  *       Example: `exclude="org.example.internal.*;**.generated.*"`
  *
- * - lazy — boolean that can disable lazy transformation, it is true by default.
- *      Example: `lazy=false`
+ * - lazyInstrumentation — boolean that can disable lazy transformation, it is true by default.
+ *      Example: `lazyInstrumentation=false`
  *      
  * - pack — boolean that enables zipping trace artifact files, it is false by default.
  *      Example: `pack=true`
+ *
+ * TraceRecorder agent-specific parameters:
+ * - format — output format for trace recorder dumps (recorder-only). See `trace-recorder/TraceRecorderAgent.kt`.
+ * - formatOption — extra options for the selected format (recorder-only). See `trace-recorder/TraceRecorderAgent.kt`.
  *
  * Quotation rules:
  * - Unquoted values may contain any character; use backslash to escape comma (,) and backslash (\\).
@@ -84,7 +88,7 @@ object TraceAgentParameters {
     const val ARGUMENT_OUTPUT = "output"
     const val ARGUMENT_INCLUDE = "include"
     const val ARGUMENT_EXCLUDE = "exclude"
-    const val ARGUMENT_LAZY = "lazy"
+    const val ARGUMENT_LAZY = "lazyInstrumentation"
 
     @JvmStatic
     lateinit var rawArgs: String
