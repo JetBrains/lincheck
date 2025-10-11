@@ -1,0 +1,28 @@
+BLOCKS
+B0: [0..7]
+   0:    L0
+   1:     LINENUMBER 161 L0
+   2:     ICONST_0
+   3:     ISTORE 0
+   4:    L1
+   5:     LINENUMBER 162 L1
+   6:     ICONST_0
+   7:     ISTORE 1
+B1: [8..20]
+   8:    L2
+   9:     LINENUMBER 164 L2
+  10:    FRAME APPEND [I I]
+  11:     IINC 0 1
+  12:    L3
+  13:     LINENUMBER 165 L3
+  14:     ILOAD 1
+  15:     ILOAD 0
+  16:     IADD
+  17:     ISTORE 1
+  18:    L4
+  19:     LINENUMBER 166 L4
+  20:     GOTO L2
+
+EDGES
+  B0 -> B1
+  B1 -> B1 : JUMP(opcode=GOTO)
