@@ -17,5 +17,12 @@ typealias MutableThreadMap<T> = MutableMap<ThreadId, T>
 fun <T> threadMapOf(): ThreadMap<T> =
     mutableThreadMapOf()
 
+fun <T> threadMapOf(vararg pairs: Pair<ThreadId, T>): ThreadMap<T> =
+    mutableThreadMapOf(*pairs)
+
 fun <T> mutableThreadMapOf(): MutableThreadMap<T> =
     mutableMapOf()
+
+fun <T> mutableThreadMapOf(vararg pairs: Pair<ThreadId, T>): ThreadMap<T> =
+    mutableMapOf(*pairs)
+

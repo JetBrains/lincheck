@@ -17,12 +17,9 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.trace.*
 import org.jetbrains.kotlinx.lincheck.util.ThreadMap
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
-import org.jetbrains.lincheck.GeneralPurposeModelCheckingWrapper
-import java.lang.reflect.Method
 
 const val MINIMAL_PLUGIN_VERSION = "0.19"
 
@@ -125,35 +122,16 @@ fun onThreadSwitchesOrActorFinishes() {}
 // ======================================================================================================== //
 
 internal fun runPluginReplay(
-    settings: ManagedStrategySettings,
-    testClass: Class<*>,
-    scenario: ExecutionScenario,
-    validationFunction: Actor?,
-    stateRepresentationMethod: Method?,
+    failure: LincheckFailure,
+    replayStrategy: ManagedStrategy,
     invocations: Int,
-    verifier: Verifier
+    verifier: Verifier,
 ) {
-    createStrategy(settings, testClass, scenario, validationFunction, stateRepresentationMethod).use { replayStrategy ->
-        replayStrategy.enableReplayModeForIdeaPlugin()
-        val replayedFailure = replayStrategy.runIteration(invocations, verifier)
-        check(replayedFailure != null)
-        replayStrategy.runReplayIfPluginEnabled(replayedFailure)
-    }
+    if (failure is TimeoutFailure) return // cannot replay timeout failure
+    val replayedFailure = replayStrategy.runIteration(invocations, verifier)
+    check(replayedFailure != null)
+    replayStrategy.runReplayIfPluginEnabled(replayedFailure)
 }
-
-private fun createStrategy(
-    settings: ManagedStrategySettings,
-    testClass: Class<*>,
-    scenario: ExecutionScenario,
-    validationFunction: Actor?,
-    stateRepresentationMethod: Method?,
-) = ModelCheckingStrategy(
-        testClass,
-        scenario,
-        validationFunction,
-        stateRepresentationMethod,
-        settings
-    )
 
 /**
  * If the plugin enabled and the failure has a trace, passes information about
@@ -161,7 +139,7 @@ private fun createStrategy(
  */
 internal fun ManagedStrategy.runReplayIfPluginEnabled(failure: LincheckFailure) {
     if (inIdeaPluginReplayMode && failure.trace != null) {
-        //Print the failure to the console
+        // Print the failure to the console
         System.err.println(failure)
         // Extract trace representation in the appropriate view.
         val trace = constructTraceForPlugin(failure, failure.trace)
@@ -401,16 +379,13 @@ private fun visualize(strategy: ManagedStrategy) = runCatching {
     // state visualization is only applied in data structures testing mode
     if (strategy.executionMode != ExecutionMode.DATA_STRUCTURES) return@runCatching
 
-    val runner = strategy.runner as ParallelThreadsRunner
+    val runner = strategy.runner
     val allThreads = strategy.getRegisteredThreads()
-    val lincheckThreads = runner.executor.threads
-    val testObject = runner.testInstance.takeIf {
-        // in general-purpose model checking mode `testObject` is null
-        it !is GeneralPurposeModelCheckingWrapper
-    }
+    val lincheckThreads = (runner as? ExecutionScenarioRunner)?.scenarioThreads.orEmpty()
+    val testObject = (runner as? ExecutionScenarioRunner)?.testInstance
     visualizeInstance(testObject,
         objectToNumberMap = strategy.createObjectToNumberMapAsArray(testObject),
-        continuationToLincheckThreadIdMap = createContinuationToThreadIdMap(lincheckThreads),
+        continuationToLincheckThreadIdMap = createContinuationToThreadIdMap(lincheckThreads.toTypedArray()),
         threadToLincheckThreadIdMap = createThreadToLincheckThreadIdMap(allThreads),
     )
 }
@@ -423,10 +398,8 @@ private fun visualizeTrace(): Array<Any>? = runCatching {
     val strategyObject = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTracker
         ?: return null
     val strategy = strategyObject as ModelCheckingStrategy
-
-    val runner = strategy.runner as ParallelThreadsRunner
-    val testObject = runner.testInstance
-
+    val runner = strategy.runner as? ExecutionScenarioRunner
+    val testObject = runner?.testInstance
     return strategy.createObjectToNumberMapAsArray(testObject)
 }.getOrNull()
 

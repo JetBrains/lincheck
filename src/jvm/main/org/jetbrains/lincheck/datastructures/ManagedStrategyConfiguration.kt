@@ -131,6 +131,14 @@ abstract class ManagedCTestConfiguration(
             guarantees = this.guarantees.ifEmpty { null },
         )
 
+    // The flag to enable IntelliJ IDEA plugin mode
+    internal var inIdeaPluginReplayMode: Boolean = false
+        private set
+
+    internal fun enableReplayModeForIdeaPlugin() {
+        inIdeaPluginReplayMode = true
+    }
+
     companion object {
         const val DEFAULT_CHECK_OBSTRUCTION_FREEDOM = false
 

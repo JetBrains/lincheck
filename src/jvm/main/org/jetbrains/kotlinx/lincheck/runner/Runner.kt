@@ -9,141 +9,107 @@
  */
 package org.jetbrains.kotlinx.lincheck.runner
 
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.strategy.Strategy
+import org.jetbrains.kotlinx.lincheck.strategy.managed.LincheckAnalysisAbortedError
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
+import org.jetbrains.lincheck.util.ensure
+import sun.nio.ch.lincheck.TestThread
+import sun.nio.ch.lincheck.ThreadDescriptor
 import java.io.*
-import java.lang.reflect.*
-import java.util.concurrent.atomic.*
 
-abstract class Runner protected constructor(
-    protected val strategy: Strategy,
-    protected val testClass: Class<*>,
-    protected val validationFunction: Actor?,
-    protected val stateRepresentationFunction: Method?
-) : Closeable {
-    val classLoader = ExecutionClassLoader()
-    protected val scenario: ExecutionScenario = strategy.scenario
-
-    protected val completedOrSuspendedThreads = AtomicInteger(0)
-
-    var currentExecutionPart: ExecutionPart? = null
-        private set
-
-    /**
-     * Returns the current state representation of the test instance constructed via
-     * the function marked with [StateRepresentation] annotation, or `null`
-     * if no such function is provided.
-     *
-     * Please note, that it is unsafe to call this method concurrently with the running scenario.
-     * However, it is fine to call it if the execution is paused somewhere in the middle.
-     */
-    open fun constructStateRepresentation(): String? = null
-
+/**
+ * Interface defining a runner that executes invocations of a given code under analysis.
+ */
+interface Runner : Closeable {
     /**
      * Runs the next invocation.
      */
-    abstract fun run(): InvocationResult
+    fun runInvocation(): InvocationResult
 
     /**
-     * This method is invoked by every test thread as the first operation.
-     * @param iThread number of invoking thread
+     * Releases the resources used by the runner.
      */
-    abstract fun onThreadStart(iThread: Int)
+    override fun close() {}
+}
+
+/**
+ * Abstract class representing a thread-pool-based [Runner].
+ *
+ * This class provides support for:
+ * - Initialization and management of a [Strategy] instance.
+ * - Managing the event trackers of the threads in the pool.
+ * - Collecting thread dumps of the threads in the pool.
+ */
+internal abstract class AbstractActiveThreadPoolRunner : Runner {
 
     /**
-     * This method is invoked by every test thread as the last operation
-     * if no exception has been thrown.
-     * @param iThread number of invoking thread
+     * Represents the strategy used by the runner to analyze given code.
      */
-    abstract fun onThreadFinish(iThread: Int)
+    lateinit var strategy: Strategy
+        private set
 
     /**
-     * This method is invoked by the corresponding test thread
-     * when the current coroutine suspends.
-     * @param iThread number of invoking thread
+     * Thread pool executor utilized for managing concurrent tasks in the runner.
      */
-    abstract fun afterCoroutineSuspended(iThread: Int)
+    protected abstract val executor : ActiveThreadPoolExecutor
 
     /**
-     * This method is invoked by the corresponding test thread
-     * when the current coroutine is resumed.
+     * Initializes the strategy to be used in the runner.
      */
-    abstract fun afterCoroutineResumed(iThread: Int)
-
-    /**
-     * This method is invoked by the corresponding test thread
-     * when the current coroutine is cancelled.
-     */
-    abstract fun afterCoroutineCancelled(iThread: Int)
-
-    /**
-     * Returns `true` if the coroutine corresponding to
-     * the actor `actorId` in the thread `iThread` is resumed.
-     */
-    abstract fun isCoroutineResumed(iThread: Int, actorId: Int): Boolean
-
-    /**
-     * Is invoked before each actor execution from the specified thread.
-     * The invocations are inserted into the generated code.
-     */
-    fun onActorStart(iThread: Int) {
-        strategy.onActorStart(iThread)
+    fun initializeStrategy(strategy: Strategy) {
+        this.strategy = strategy
     }
 
     /**
-     * Is invoked after each actor execution from the specified thread.
-     * The invocations are inserted into the generated code.
+     * Sets up event trackers for threads managed by the runner.
      */
-    fun onActorFinish(iThread: Int) {
-        strategy.onActorFinish(iThread)
-    }
-
-    /**
-     * Is invoked if an actor execution has thrown an exception.
-     *
-     * Default implementation checks if the failure
-     * was caused by an internal exception (see [isInternalException]) and re-throw in this case,
-     * otherwise it treats the exception as a normal actor result.
-     *
-     * @param iThread the number of the invoking thread where the failure occurred.
-     * @param throwable the exception that caused the actor failure.
-     */
-    // used in byte-code generation
-    open fun onActorFailure(iThread: Int, throwable: Throwable) {
-        if (isInternalException(throwable)) {
-            throw throwable
+    protected fun setEventTracker() {
+        val eventTracker = (strategy as? ManagedStrategy) ?: return
+        executor.threads.forEachIndexed { i, thread ->
+            var descriptor = ThreadDescriptor.getThreadDescriptor(thread)
+            if (descriptor == null) {
+                descriptor = ThreadDescriptor(thread)
+                ThreadDescriptor.setThreadDescriptor(thread, descriptor)
+            }
+            descriptor.eventTracker = eventTracker
+            eventTracker.registerThread(thread, descriptor)
+                .ensure { threadId -> threadId == i }
         }
     }
 
-    fun beforePart(part: ExecutionPart) {
-        completedOrSuspendedThreads.set(0)
-        currentExecutionPart = part
-        strategy.beforePart(part)
+    /**
+     * Resets the event tracker for threads managed by the runner.
+     */
+    protected fun resetEventTracker() {
+        if (!::strategy.isInitialized) return
+        if (strategy !is ManagedStrategy) return
+        for (thread in executor.threads) {
+            val descriptor = ThreadDescriptor.getThreadDescriptor(thread)
+                ?: continue
+            descriptor.eventTracker = null
+        }
     }
 
     /**
-     * Closes the resources used in this runner.
+     * Determines if this runner manages the provided thread.
      */
-    override fun close() {}
+    protected fun isCurrentRunnerThread(thread: Thread): Boolean =
+        executor.threads.any { it === thread }
 
     /**
-     * Determines if this runner manages provided thread.
+     * Collects the current thread dump from the threads managed by the runner.
      */
-    abstract fun isCurrentRunnerThread(thread: Thread): Boolean
+    protected fun collectThreadDump() = Thread.getAllStackTraces().filter { (t, _) ->
+        t is TestThread && isCurrentRunnerThread(t)
+    }
 
     /**
-     * @return whether all scenario threads are completed or suspended
-     * Used by generated code.
+     * Releases the resources used by the runner.
      */
-    val isParallelExecutionCompleted: Boolean
-        get() = completedOrSuspendedThreads.get() == scenario.nThreads
-}
-
-enum class ExecutionPart {
-    INIT, PARALLEL, POST, VALIDATION
+    override fun close() {
+        super.close()
+        executor.close()
+    }
 }
 
 /**

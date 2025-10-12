@@ -121,7 +121,7 @@ internal fun createLincheckResult(res: Any?) = when {
     else -> ValueResult(res)
 }
 
-private fun kotlin.Result<Any?>.toLinCheckResult() =
+internal fun kotlin.Result<Any?>.toLinCheckResult() =
     if (isSuccess) {
         when (val value = getOrNull()) {
             is Unit -> VoidResult
@@ -173,14 +173,6 @@ internal enum class CancellationResult { CANCELLED_BEFORE_RESUMPTION, CANCELLED_
 fun <T> kotlin.Result<T>.cancelledByLincheck() = exceptionOrNull() === cancellationByLincheckException
 
 private val cancellationByLincheckException = Exception("Cancelled by lincheck")
-
-/**
- * Collects the current thread dump and keeps only those
- * threads that are related to the specified [runner].
- */
-internal fun collectThreadDump(runner: Runner) = Thread.getAllStackTraces().filter { (t, _) ->
-    t is TestThread && runner.isCurrentRunnerThread(t)
-}
 
 internal val Throwable.text: String get() {
     val writer = StringWriter()

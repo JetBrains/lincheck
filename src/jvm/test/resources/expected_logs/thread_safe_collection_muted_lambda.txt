@@ -19,14 +19,14 @@ Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:51) |
 |   block(): threw IllegalStateException at ThreadSafeCollectionMutedLambdaRepresentationTest.block(StdLibRepresentationTests.kt:46)                                              |
-|     concurrentMap.computeIfAbsent(1, Lambda#2): 7 at ThreadSafeCollectionMutedLambdaRepresentationTest.block(StdLibRepresentationTests.kt:53)                                   |
+|     concurrentMap.computeIfAbsent(1, Lambda#1): 7 at ThreadSafeCollectionMutedLambdaRepresentationTest.block(StdLibRepresentationTests.kt:53)                                   |
 |       sizeCtl.compareAndSetInt(0, -1): true at ConcurrentHashMap.initTable(ConcurrentHashMap.java:2296)                                                                         |
 |       tab[1].getReferenceAcquire(): null at ConcurrentHashMap.tabAt(ConcurrentHashMap.java:760)                                                                                 |
 |       tab[1].compareAndSetReference(null, ReservationNode#1): true at ConcurrentHashMap.casTabAt(ConcurrentHashMap.java:765)                                                    |
 |       mappingFunction.apply(1): 7 at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1708)                                                                             |
 |         $tmp0.invoke(1): 7 at ThreadSafeCollectionMutedLambdaRepresentationTest.block$lambda$3(StdLibRepresentationTests.kt:53)                                                 |
 |           a = 5 at ThreadSafeCollectionMutedLambdaRepresentationTest.block$lambda$2(StdLibRepresentationTests.kt:54)                                                            |
-|           innerConcurrentMap.computeIfAbsent(1, Lambda#3): 6 at ThreadSafeCollectionMutedLambdaRepresentationTest.block$lambda$2(StdLibRepresentationTests.kt:55)               |
+|           innerConcurrentMap.computeIfAbsent(1, Lambda#2): 6 at ThreadSafeCollectionMutedLambdaRepresentationTest.block$lambda$2(StdLibRepresentationTests.kt:55)               |
 |             sizeCtl.compareAndSetInt(0, -1): true at ConcurrentHashMap.initTable(ConcurrentHashMap.java:2296)                                                                   |
 |             tab[1].getReferenceAcquire(): null at ConcurrentHashMap.tabAt(ConcurrentHashMap.java:760)                                                                           |
 |             tab[1].compareAndSetReference(null, ReservationNode#2): true at ConcurrentHashMap.casTabAt(ConcurrentHashMap.java:765)                                              |

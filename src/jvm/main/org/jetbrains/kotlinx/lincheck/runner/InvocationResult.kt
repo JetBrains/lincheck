@@ -13,7 +13,7 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 
 /**
- * Represents results for invocations, see [Runner.run].
+ * Represents results for invocations, see [Runner.runInvocation].
  */
 sealed class InvocationResult
 

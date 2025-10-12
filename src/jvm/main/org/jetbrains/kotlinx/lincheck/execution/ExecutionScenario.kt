@@ -68,9 +68,10 @@ class ExecutionScenario(
     }
 
     override fun toString(): String {
-        val sb = StringBuilder()
-        sb.appendExecutionScenario(this)
-        return sb.toString()
+        if (isEmpty()) return "Empty scenario"
+        return buildString {
+           appendExecutionScenario(this@ExecutionScenario)
+        }
     }
 }
 
@@ -124,6 +125,17 @@ fun ExecutionScenario.validate() {
         }
     }
 }
+
+/**
+ * Creates an empty execution scenario.
+ */
+fun emptyScenario() = ExecutionScenario(emptyList(), emptyList(), emptyList(), null)
+
+/**
+ * Checks whether the current execution scenario is empty.
+ */
+fun ExecutionScenario.isEmpty() =
+    initExecution.isEmpty() && parallelExecution.isEmpty() && postExecution.isEmpty() && validationFunction == null
 
 /**
  * Creates a copy of the scenario.

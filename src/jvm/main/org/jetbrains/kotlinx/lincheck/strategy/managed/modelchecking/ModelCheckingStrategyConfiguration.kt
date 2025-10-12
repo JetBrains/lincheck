@@ -14,6 +14,8 @@ import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.chooseSequentialSpecification
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.runner.ExecutionScenarioRunner
+import org.jetbrains.kotlinx.lincheck.runner.UseClocks
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.lincheck.datastructures.ManagedCTestConfiguration
 import org.jetbrains.lincheck.datastructures.ManagedOptions
@@ -21,6 +23,7 @@ import org.jetbrains.lincheck.datastructures.ManagedStrategyGuarantee
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.TRACE_DEBUGGING
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.MODEL_CHECKING
+import org.jetbrains.lincheck.datastructures.getTimeOutMs
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import java.lang.reflect.Method
@@ -106,11 +109,17 @@ class ModelCheckingCTestConfiguration(
         scenario: ExecutionScenario,
         validationFunction: Actor?,
         stateRepresentationMethod: Method?,
-    ): Strategy = ModelCheckingStrategy(
-        testClass,
-        scenario,
-        validationFunction,
-        stateRepresentationMethod,
-        createSettings()
-    )
+    ): Strategy {
+        val runner = ExecutionScenarioRunner(
+            scenario = scenario,
+            testClass = testClass,
+            validationFunction = validationFunction,
+            stateRepresentationFunction = stateRepresentationMethod,
+            timeoutMs = getTimeOutMs(inIdeaPluginReplayMode, timeoutMs),
+            useClocks = UseClocks.ALWAYS
+        )
+        return ModelCheckingStrategy(runner, createSettings(), inIdeaPluginReplayMode).also {
+            runner.initializeStrategy(it)
+        }
+    }
 }

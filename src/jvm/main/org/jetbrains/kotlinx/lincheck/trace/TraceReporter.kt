@@ -308,7 +308,7 @@ internal fun Appendable.appendTraceTable(title: String, trace: Trace, failure: L
 private fun Trace.numberExceptionResults(): Trace = this.deepCopy().also { copy ->
     copy.trace
         .filterIsInstance<MethodCallTracePoint>()
-        .filter { it.isActor }
+        .filter { it.isRootCall }
         .sortedWith (compareBy({ it.actorId }, { it.iThread }))
         .map { it.returnedValue }
         .filterIsInstance<ReturnedValueResult.ExceptionResult>() 
@@ -347,7 +347,11 @@ private fun removeGPMCLambda(graph: SingleThreadedTable<TraceNode>): SingleThrea
         // TODO can be remove after actor results PR is through
         // if only one child and child is callnode. Treat as actor.
         if (first.children.size == 1 && first.children.first() is CallNode) {
-            (first.children.first() as CallNode).tracePoint.returnedValue = first.tracePoint.returnedValue
+            val result = (first.children.first() as CallNode).tracePoint.returnedValue
+            first.tracePoint.returnedValue = result
+            if (result is ReturnedValueResult.ExceptionResult) {
+                result.exceptionNumber = 1
+            }
         }
 
         first.children + section.drop(1)

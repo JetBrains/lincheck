@@ -131,7 +131,10 @@ internal class ShortTraceFlattenPolicy : TraceFlattenPolicy {
                 if (descendants.size == 1 &&
                     descendants.contains(currentNode) &&
                     returnedValue is ReturnedValueResult.NoValue &&
-                    currentNode.tracePoint.isActor) return emptyList()
+                    currentNode.tracePoint.isActor
+                ) {
+                    return emptyList()
+                }
 
 
                 // Check if result node should be added

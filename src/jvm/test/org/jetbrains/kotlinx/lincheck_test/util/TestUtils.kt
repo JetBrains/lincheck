@@ -213,7 +213,7 @@ private val REPEATING_HYPHENS = Regex(" -+ ")
 
 fun checkTraceHasNoLincheckEvents(trace: String) {
     check(!trace.contains("at org.jetbrains.kotlinx.lincheck.")) {
-        "Internal Lincheck events were found in the trace"
+        "Internal Lincheck events were found in the trace:\n" + trace
     }
 }
 
