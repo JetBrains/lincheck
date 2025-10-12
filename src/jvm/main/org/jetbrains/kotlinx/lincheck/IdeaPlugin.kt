@@ -139,7 +139,7 @@ internal fun runPluginReplay(
  */
 internal fun ManagedStrategy.runReplayIfPluginEnabled(failure: LincheckFailure) {
     if (inIdeaPluginReplayMode && failure.trace != null) {
-        //Print the failure to the console
+        // Print the failure to the console
         System.err.println(failure)
         // Extract trace representation in the appropriate view.
         val trace = constructTraceForPlugin(failure, failure.trace)

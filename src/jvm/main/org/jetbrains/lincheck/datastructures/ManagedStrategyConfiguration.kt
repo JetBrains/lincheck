@@ -132,7 +132,8 @@ abstract class ManagedCTestConfiguration(
         )
 
     // The flag to enable IntelliJ IDEA plugin mode
-    protected var inIdeaPluginReplayMode: Boolean = false
+    internal var inIdeaPluginReplayMode: Boolean = false
+        private set
 
     internal fun enableReplayModeForIdeaPlugin() {
         inIdeaPluginReplayMode = true

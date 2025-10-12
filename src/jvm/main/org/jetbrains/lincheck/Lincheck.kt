@@ -77,6 +77,7 @@ object Lincheck {
                 if (failure != null) {
                     check(strategy is ModelCheckingStrategy)
                     if (ideaPluginEnabled) {
+                        testCfg.enableReplayModeForIdeaPlugin()
                         runPluginReplay(
                             failure = failure,
                             replayStrategy = testCfg.createStrategy(block),
@@ -92,7 +93,7 @@ object Lincheck {
 
     private fun ManagedCTestConfiguration.createStrategy(block: Runnable): ManagedStrategy {
         val runner = LambdaRunner(timeoutMs = timeoutMs, block)
-        return ModelCheckingStrategy(runner, createSettings()).also {
+        return ModelCheckingStrategy(runner, createSettings(), inIdeaPluginReplayMode).also {
             runner.initializeStrategy(it)
         }
     }
