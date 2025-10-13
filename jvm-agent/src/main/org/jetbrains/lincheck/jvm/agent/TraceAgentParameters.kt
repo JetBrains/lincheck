@@ -152,6 +152,13 @@ object TraceAgentParameters {
 
             namedArgs.putAll(kvArguments)
         }
+        if (getLazyTransformationEnabled() && getIncludePatterns().isNotEmpty()) {
+            Logger.error { """
+                An `include` filter is provided but lazy transformation is enabled. 
+                This can lead to unexpected behaviour.
+                To disable lazy instrumentation provide `lazyInstrumentation=false` to the Jvm agent.
+            """.trimIndent() }
+        }
     }
     
     private fun setClassUnderTraceDebuggingToMethodOwner(

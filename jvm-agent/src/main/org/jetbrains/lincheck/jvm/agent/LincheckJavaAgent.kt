@@ -186,15 +186,6 @@ object LincheckJavaAgent {
      * Also, retransforms already loaded classes.
      */
     fun install(instrumentationMode: InstrumentationMode) {
-        if (TraceAgentParameters.getLazyTransformationEnabled() && TraceAgentParameters.getIncludePatterns().isNotEmpty()) {
-            Logger.error { """
-                An `include` filter is provided but lazy transformation is enabled. 
-                This can lead to unexpected behaviour.
-                To disable lazy transformation provide `lazy=false` to the Jvm agent.
-            """.trimIndent() }
-        }
-        
-        
         this.instrumentationMode = instrumentationMode
         setInstrumentationStrategy()
         // The bytecode injections must be loaded with the bootstrap class loader,
