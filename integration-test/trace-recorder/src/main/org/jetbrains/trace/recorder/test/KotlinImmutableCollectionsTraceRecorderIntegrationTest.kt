@@ -50,7 +50,10 @@ class KotlinImmutableCollectionsTraceRecorderIntegrationTest : AbstractTraceReco
                 ":kotlinx-collections-immutable:cleanJvmTest",
                 ":kotlinx-collections-immutable:jvmTest",
             ),
-            extraAgentArgs = mapOf("include" to "tests.contract.list.ImmutableListTest"),
+            extraAgentArgs = mapOf(
+                "include" to "tests.contract.list.ImmutableListTest",
+                "lazyInstrumentation" to "false"
+            ),
             testNameSuffix = "with_include_filter",
         )
     }

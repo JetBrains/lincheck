@@ -32,14 +32,24 @@ import java.lang.reflect.Modifier
  * - method (required) — name of the public method in that class (required).
  *       Example: `method=run`
  *
- * - output — path to a file for trace dump, if supported by the agent (optional)
+ * - output — path to a file for trace dump, if supported by the agent (optional).
  *       Example: `output="/tmp/trace.bin"`
  *
- * - include — semicolon-separated list of include patterns (optional)
+ * - include — semicolon-separated list of include patterns (optional).
  *       Example: `include="org.example.*;com.acme.util.*"`
  *
- * - exclude — semicolon-separated list of exclude patterns (optional)
+ * - exclude — semicolon-separated list of exclude patterns (optional).
  *       Example: `exclude="org.example.internal.*;**.generated.*"`
+ *
+ * - lazyInstrumentation — boolean that can disable lazy transformation, it is true by default.
+ *      Example: `lazyInstrumentation=false`
+ *      
+ * - pack — boolean that enables zipping trace artifact files, it is false by default.
+ *      Example: `pack=true`
+ *
+ * TraceRecorder agent-specific parameters:
+ * - format — output format for trace recorder dumps (recorder-only). See `trace-recorder/TraceRecorderAgent.kt`.
+ * - formatOption — extra options for the selected format (recorder-only). See `trace-recorder/TraceRecorderAgent.kt`.
  *
  * Quotation rules:
  * - Unquoted values may contain any character; use backslash to escape comma (,) and backslash (\\).
@@ -78,6 +88,7 @@ object TraceAgentParameters {
     const val ARGUMENT_OUTPUT = "output"
     const val ARGUMENT_INCLUDE = "include"
     const val ARGUMENT_EXCLUDE = "exclude"
+    const val ARGUMENT_LAZY = "lazyInstrumentation"
 
     @JvmStatic
     lateinit var rawArgs: String
@@ -141,6 +152,13 @@ object TraceAgentParameters {
 
             namedArgs.putAll(kvArguments)
         }
+        if (getLazyTransformationEnabled() && getIncludePatterns().isNotEmpty()) {
+            Logger.error { """
+                An `include` filter is provided but lazy transformation is enabled. 
+                This can lead to unexpected behaviour.
+                To disable lazy instrumentation provide `lazyInstrumentation=false` to the Jvm agent.
+            """.trimIndent() }
+        }
     }
     
     private fun setClassUnderTraceDebuggingToMethodOwner(
@@ -175,6 +193,12 @@ object TraceAgentParameters {
 
     @JvmStatic
     fun getExcludePatterns(): List<String> = splitPatterns(namedArgs[ARGUMENT_EXCLUDE])
+
+    /**
+     * Is true by default
+     */
+    @JvmStatic
+    fun getLazyTransformationEnabled(): Boolean = namedArgs[ARGUMENT_LAZY] != "false"
 
     private fun splitPatterns(value: String?): List<String> {
         if (value.isNullOrBlank()) return emptyList()

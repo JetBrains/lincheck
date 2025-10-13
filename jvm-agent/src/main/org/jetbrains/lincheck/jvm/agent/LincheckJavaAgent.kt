@@ -111,6 +111,22 @@ val InstrumentationMode.supportsLazyTransformation: Boolean get() = when (this) 
     STRESS -> false
 }
 
+enum class InstrumentationStrategy {
+    /**
+     * Lazy transformation: instrument classes only when we actually call them.
+     * Is discouraged to use in combination with inclusion filters.
+     * When an excluded method is reached, tracing and instrumentation stops there.
+     * Even if a few calls deeper an included method is reached (unless it was already instrumented).
+     */
+    Lazy,
+    /**
+     * Eager transformation: instruments classes when they are loaded, 
+     * regardless of whether they are reached by the execution.
+     * Is the recommended strategy when working with inclusion filters.
+     */
+    Eager
+}
+
 /**
  * LincheckJavaAgent represents the Lincheck Java agent responsible for instrumenting bytecode.
  *
@@ -133,11 +149,32 @@ object LincheckJavaAgent {
     lateinit var instrumentationMode: InstrumentationMode
 
     /**
+     * Strategy that controls whether classes are transformed lazily (during call time) or eagerly (during load time).
+     */
+    lateinit var instrumentationStrategy: InstrumentationStrategy
+
+    /**
      * Indicates whether the "bootstrap.jar" (see the "bootstrap" project module)
      * is added to the bootstrap class loader classpath.
      * See [install] for details.
      */
     private var isBootstrapJarAddedToClasspath = false
+
+    /**
+     * Decide transformation strategy for the current installation and store it into [instrumentationStrategy].
+     * Rules:
+     * - If "instrument all classes" was requested (legacy property), use Eager.
+     * - Else if Trace Recorder java-agent provided the `lazy` argument, use Lazy (defaults to true).
+     * - Else use Lazy if [instrumentationMode] supports it, Eager otherwise.
+     */
+    private fun setInstrumentationStrategy() {
+        instrumentationStrategy = when {
+            INSTRUMENT_ALL_CLASSES -> InstrumentationStrategy.Eager
+            TraceAgentParameters.getLazyTransformationEnabled() 
+                    && instrumentationMode.supportsLazyTransformation -> InstrumentationStrategy.Lazy
+            else -> InstrumentationStrategy.Eager
+        }
+    }
 
     /**
      * Names (canonical) of the classes that were instrumented since the last agent installation.
@@ -150,6 +187,7 @@ object LincheckJavaAgent {
      */
     fun install(instrumentationMode: InstrumentationMode) {
         this.instrumentationMode = instrumentationMode
+        setInstrumentationStrategy()
         // The bytecode injections must be loaded with the bootstrap class loader,
         // as the `java.base` module is loaded with it. To achieve that, we pack the
         // classes related to the bytecode injections in a separate JAR (see the
@@ -166,7 +204,7 @@ object LincheckJavaAgent {
             // If an option to enable transformation of all classes is explicitly set,
             // then we re-transform all the classes
             // (this option is used for testing purposes).
-            INSTRUMENT_ALL_CLASSES -> {
+            instrumentationStrategy == InstrumentationStrategy.Eager -> {
                 // Re-transform the already loaded classes.
                 // New classes will be transformed automatically.
                 retransformClasses(getLoadedClassesToInstrument())
@@ -274,7 +312,7 @@ object LincheckJavaAgent {
         // Remove the Lincheck transformer.
         instrumentation.removeTransformer(LincheckClassFileTransformer)
         // Collect the set of instrumented classes.
-        val classes = if (INSTRUMENT_ALL_CLASSES)
+        val classes = if (instrumentationStrategy == InstrumentationStrategy.Eager)
             getLoadedClassesToInstrument()
         else
             getLoadedClassesToInstrument()
@@ -321,7 +359,7 @@ object LincheckJavaAgent {
      * @param className The name of the class to be transformed.
      */
     fun ensureClassHierarchyIsTransformed(className: String) {
-        if (INSTRUMENT_ALL_CLASSES) {
+        if (instrumentationStrategy == InstrumentationStrategy.Eager) {
             ClassCache.forName(className)
             return
         }
@@ -338,7 +376,7 @@ object LincheckJavaAgent {
      * @param clazz The class to be transformed.
      */
     fun ensureClassHierarchyIsTransformed(clazz: Class<*>) {
-        if (INSTRUMENT_ALL_CLASSES) return
+        if (instrumentationStrategy == InstrumentationStrategy.Eager) return
         if (clazz.name in instrumentedClasses) return // already instrumented
 
         if (shouldTransform(clazz, instrumentationMode)) {
@@ -372,7 +410,7 @@ object LincheckJavaAgent {
      * @param obj the object to be transformed.
      */
     fun ensureObjectIsTransformed(obj: Any) {
-        if (INSTRUMENT_ALL_CLASSES) return
+        if (instrumentationStrategy == InstrumentationStrategy.Eager) return
         ensureObjectIsTransformed(obj, identityHashSetOf())
     }
 
@@ -409,16 +447,15 @@ object LincheckJavaAgent {
         className.startsWith("java.lang.")
 
     /**
-     * FOR TEST PURPOSE ONLY!
      * To test the byte-code transformation correctness, we can transform all classes.
+     * Or when include filter is applied eager transformation is required.
      *
      * Both stress and model checking modes implement some optimizations
      * to avoid re-transforming all loaded into VM classes on each run of a Lincheck test.
      * When this flag is set, these optimizations are disabled, and so
      * the Lincheck agent re-transforms all the loaded classes on each run.
      */
-    internal val INSTRUMENT_ALL_CLASSES =
-        System.getProperty("lincheck.instrumentAllClasses")?.toBoolean() ?: false
+    internal val INSTRUMENT_ALL_CLASSES = System.getProperty("lincheck.instrumentAllClasses")?.toBoolean() ?: false
 }
 
 var isTraceJavaAgentAttached: Boolean = false
