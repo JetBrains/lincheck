@@ -340,4 +340,19 @@ class JavaControlFlowGraphTest {
 
     @Test
     fun implicitThrowCatch() = test("implicitThrowCatch", "(I)I")
+
+    @Test
+    fun whileWithThrow() = test("whileWithThrow", "(I)I")
+
+    @Test
+    fun whileWithTryCatchInside() = test("whileWithTryCatchInside", "(I)I")
+
+    @Test
+    fun whileWithTryCatchOutside() = test("whileWithTryCatchOutside", "(I)I")
+
+    @Test
+    fun nestedWhileWithTryCatchBetween() = test("nestedWhileWithTryCatchBetween", "(I)I")
+
+    @Test
+    fun nestedWhileWithTryCatchOutside() = test("nestedWhileWithTryCatchOutside", "(I)I")
 }
