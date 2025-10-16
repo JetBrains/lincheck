@@ -14,6 +14,7 @@ import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.AbstractInsnNode
 import org.objectweb.asm.tree.TryCatchBlockNode
+import org.objectweb.asm.util.Printer
 
 /**
  * A type alias representing an index used for identifying nodes in a control flow graph.
@@ -193,4 +194,32 @@ internal fun isRecognizedJumpOpcode(opcode: Int): Boolean = when (opcode) {
     }
 
     else -> false
+}
+
+internal fun Collection<Edge>.prettyPrint(): String {
+    val sb = StringBuilder("")
+    val edges = sortedEdges()
+    for ((id, e) in edges.withIndex()) {
+        val label = e.label.prettyPrint().takeIf { it.isNotEmpty() }
+        sb.append("  B${e.source} -> B${e.target}")
+        sb.append(label?.let { " : $it" }.orEmpty())
+        if (id != edges.lastIndex) sb.appendLine()
+    }
+    return sb.toString()
+}
+
+private fun EdgeLabel.prettyPrint(): String = when (this) {
+    is EdgeLabel.FallThrough -> ""
+    is EdgeLabel.Jump        -> "JUMP(opcode=${Printer.OPCODES[opcode]})"
+    is EdgeLabel.Exception   -> "CATCH(type=${caughtTypeName ?: "*"})"
+}
+
+private fun Collection<Edge>.sortedEdges(): List<Edge> = toMutableList().apply {
+    fun labelSortKey(label: EdgeLabel): String = when (label) {
+        is EdgeLabel.FallThrough -> "0"
+        is EdgeLabel.Jump        -> "1:${Printer.OPCODES[label.opcode]}"
+        is EdgeLabel.Exception   -> "2:${label.caughtTypeName ?: "*"}"
+    }
+
+    sortWith(compareBy({ it.source }, { it.target }, { labelSortKey(it.label) }))
 }

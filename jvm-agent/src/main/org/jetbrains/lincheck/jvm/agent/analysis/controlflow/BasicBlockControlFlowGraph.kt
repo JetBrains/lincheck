@@ -296,29 +296,10 @@ private class BasicBlockControlFlowGraphPrinter(val graph: BasicBlockControlFlow
 
         // Edges section
         sb.appendLine("EDGES")
-        val edges: List<Edge> = graph.edges.toMutableList().apply {
-            sortWith(compareBy({ it.source }, { it.target }, { labelSortKey(it.label) }))
+        graph.edges.prettyPrint().let {
+            if (it.isNotEmpty()) sb.appendLine(it)
         }
-        for (e in edges) {
-            val label = e.label.prettyPrint().takeIf { it.isNotEmpty() }
-            sb.append("  B${e.source} -> B${e.target}")
-            sb.append(label?.let { " : $it" }.orEmpty())
-            sb.appendLine()
-        }
-
         return sb.toString()
-    }
-
-    private fun labelSortKey(label: EdgeLabel): String = when (label) {
-        is EdgeLabel.FallThrough -> "0"
-        is EdgeLabel.Jump        -> "1:${Printer.OPCODES[label.opcode]}"
-        is EdgeLabel.Exception   -> "2:${label.caughtTypeName ?: "*"}"
-    }
-
-    private fun EdgeLabel.prettyPrint(): String = when (this) {
-        is EdgeLabel.FallThrough -> ""
-        is EdgeLabel.Jump        -> "JUMP(opcode=${Printer.OPCODES[opcode]})"
-        is EdgeLabel.Exception   -> "CATCH(type=${caughtTypeName ?: "*"})"
     }
 
     private fun AbstractInsnNode.prettyPrint(): String {
