@@ -243,7 +243,7 @@ class JavaControlFlowGraphTest {
     private val javaPath = "analysis/controlflow/JavaControlFlowGraphCases.java.txt"
     private val className = "JavaControlFlowGraphCases"
     
-    private fun golden(name: String) = "analysis/controlflow/golden/$name.txt"
+    private fun golden(name: String) = "analysis/controlflow/golden/cfg/$name.txt"
     
     private fun test(name: String, desc: String) = 
         tester.testMethodCfg(

@@ -309,6 +309,81 @@ public class JavaControlFlowGraphCases {
         }
     }
 
+    // While with throw
+    public static int whileWithThrow(int x) {
+        int y = 0;
+        while (x > 0) {
+            y = mayThrow(x);
+            x--;
+        }
+        return y;
+    }
+
+    // While with try/catch inside
+    public static int whileWithTryCatchInside(int x) {
+        int y = 0;
+        while (x > 0) {
+            try {
+                y = mayThrow(x);
+            } catch (IllegalArgumentException e) {
+                y = -1;
+            }
+            x--;
+        }
+        return y;
+    }
+
+    // While with try/catch outside
+    public static int whileWithTryCatchOutside(int x) {
+        int y = 0;
+        try {
+            while (x > 0) {
+                y = mayThrow(x);
+                x--;
+            }
+        }
+        catch (IllegalArgumentException e) {
+            y = -1;
+        }
+        return y;
+    }
+
+    // Nested while with try/catch
+    public static int nestedWhileWithTryCatchBetween(int x) {
+        int y = 0;
+        while (x > 0) {
+            try {
+                int z = 10;
+                while (z-- > 0) {
+                    y = mayThrow(x);
+                }
+                x--;
+            }
+            catch (IllegalArgumentException e) {
+                x++;
+            }
+        }
+        return y;
+    }
+
+    // Nested while with try/catch outside
+    public static int nestedWhileWithTryCatchOutside(int x) {
+        int y = 0;
+        try {
+            while (x > 0) {
+                int z = 10;
+                while (z-- > 0) {
+                    y = mayThrow(x);
+                }
+                x--;
+            }
+        }
+        catch (IllegalArgumentException e) {
+            y = -1;
+        }
+        return y;
+    }
+
     // Helpers
 
     private static int mayThrow(int x) {
