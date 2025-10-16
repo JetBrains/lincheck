@@ -103,9 +103,9 @@ class BasicBlockControlFlowGraph(
      */
     fun computeLoopInformation(): MethodLoopsInformation {
         if (loopInfo == null) {
-            // TODO: this is a stub: loop detection is not implemented yet; the method returns empty sites.
-            loopInfo = MethodLoopsInformation().apply {
-                loops.forEach { it.validateLoopEdgesInvariants() }
+            val dominators = computeDominators()
+            loopInfo = computeLoopsFromDominators(dominators).also { info ->
+                info.loops.forEach { it.validateLoopEdgesInvariants() }
             }
         }
         return loopInfo!!
@@ -167,6 +167,168 @@ class BasicBlockControlFlowGraph(
                 """.trimIndent()
             }
          }
+    }
+
+    /**
+     * Compute dominator sets for each basic block using the classical iterative algorithm.
+     * The entry block is assumed to be block 0 when the graph is non-empty.
+     * Returns an array where index i holds the set of dominators of block i (including i).
+     *
+     * A node d dominates node n if every path from the entry node to n must go through d.
+     * By definition, every node dominates itself. The entry node dominates all nodes in
+     * a reducible control flow graph.
+     */
+    private fun computeDominators(): Array<Set<BasicBlockIndex>> {
+        val n = basicBlocks.size
+        if (n == 0) return emptyArray()
+
+        // Build predecessor lists; include only normal (non-exception) predecessors for loop analysis dominators.
+        // Dominators for loop/back-edge detection are typically based on normal control-flow.
+        val preds: Array<MutableSet<BasicBlockIndex>> = Array(n) { mutableSetOf<BasicBlockIndex>() }
+        for (e in edges) {
+            // Note: we count exception edges as well
+            val u = e.source
+            val v = e.target
+            if (u in 0 until n && v in 0 until n) {
+                preds[v].add(u)
+            }
+        }
+
+        val all: Set<BasicBlockIndex> = (0 until n).toSet()
+        val doms: Array<Set<BasicBlockIndex>> = Array(n) { all.toMutableSet() }
+        // Entry is block 0 when present
+        doms[0] = setOf(0)
+
+        var changed = true
+        while (changed) {
+            changed = false
+            for (b in 1 until n) {
+                val newSet = buildSet {
+                    // Intersection of dominators of predecessors: dom(b) = {b} + intersect(dom(p1), dom(p2), ...)
+                    val it = preds[b].iterator()
+                    addAll(doms[it.next()])
+                    while (it.hasNext()) {
+                        retainAll(doms[it.next()])
+                    }
+                    add(b)
+                }
+                if (newSet != doms[b]) {
+                    doms[b] = newSet
+                    changed = true
+                }
+            }
+        }
+        return Array(n) { doms[it].toSet() }
+    }
+
+    /**
+     * Compute loops using dominators and back-edge detection.
+     * A back edge is an edge u -> h (non-exception) where h dominates u.
+     * For each header h, the loop body is the union of natural loops of its back edges.
+     */
+    private fun computeLoopsFromDominators(dominators: Array<Set<BasicBlockIndex>>): MethodLoopsInformation {
+        val n = basicBlocks.size
+        if (n == 0) return MethodLoopsInformation()
+
+        // Build predecessor maps (normal and all) and collect non-exception edges for exits and back-edges.
+        // TODO: this info is shared between dominators and back-edges calculation, its calculation could united
+        val predsNormal: Array<MutableSet<BasicBlockIndex>> = Array(n) { mutableSetOf() }
+        val predsAll: Array<MutableSet<BasicBlockIndex>> = Array(n) { mutableSetOf() }
+        val normalEdges = mutableSetOf<Edge>()
+        for (e in edges) {
+            val u = e.source
+            val v = e.target
+            if (u !in 0 until n || v !in 0 until n) continue
+            predsAll[v].add(u)
+            if (e.label !is EdgeLabel.Exception) {
+                predsNormal[v].add(u)
+                normalEdges.add(e)
+            }
+        }
+
+        // Identify back edges grouped by header h
+        val backEdgesByHeader = mutableMapOf<BasicBlockIndex, MutableSet<Edge>>()
+        for (e in normalEdges) {
+            val u = e.source
+            val h = e.target
+            val domU = dominators.getOrElse(u) { emptySet() }
+            if (h in domU) {
+                backEdgesByHeader.updateInplace(h, default = mutableSetOf()) { add(e) }
+            }
+        }
+        if (backEdgesByHeader.isEmpty()) return MethodLoopsInformation()
+
+        // For each header, compute loop body as a union of natural loops for each back edge to that header
+        data class LoopDescriptor(
+            val header: BasicBlockIndex,
+            val body: MutableSet<BasicBlockIndex> = mutableSetOf(),
+            val backEdges: MutableSet<Edge> = mutableSetOf(),
+        )
+        val loopsDescriptors = mutableListOf<LoopDescriptor>()
+
+        for ((h, backEdges) in backEdgesByHeader.toSortedMap()) {
+            val body = mutableSetOf<BasicBlockIndex>()
+            body.add(h)
+            // Start from each back edge source; perform reverse DFS over normal predecessors until reaching h
+            for (e in backEdges) {
+                val u = e.source
+                val stack = ArrayDeque<BasicBlockIndex>()
+                // Natural loop includes both u and h initially
+                if (body.add(u)) stack.add(u)
+                while (stack.isNotEmpty()) {
+                    val x = stack.removeLast()
+                    for (p in predsNormal[x]) {
+                        if (p == h) continue
+                        if (body.add(p)) stack.add(p)
+                    }
+                }
+            }
+            loopsDescriptors += LoopDescriptor(h, body, backEdges)
+        }
+
+        // Build final LoopInformation list
+        val loops = mutableListOf<LoopInformation>()
+        loopsDescriptors.sortBy { it.header }
+        for ((id, desc) in loopsDescriptors.withIndex()) {
+            val header = desc.header
+            val headers = setOf(header) // reducible by construction
+            val body = desc.body
+
+            // Normal exits: edges from body to outside, non-exception
+            val normalExits = buildSet {
+                for (e in normalEdges) {
+                    if (e.source in body && e.target !in body) add(e)
+                }
+            }
+            // Exceptional exit handlers: targets of exception edges leaving the body
+            val exceptionalExitHandlers = buildSet {
+                for (e in edges) {
+                    if (e.label is EdgeLabel.Exception && e.source in body && e.target !in body) {
+                        add(e.target)
+                    }
+                }
+            }
+
+            val loop = LoopInformation(
+                id = id,
+                header = header,
+                headers = headers,
+                body = body,
+                backEdges = desc.backEdges,
+                normalExits = normalExits,
+                exceptionalExitHandlers = exceptionalExitHandlers,
+            )
+            loops += loop
+        }
+
+        // Map blocks to loop ids
+        val loopsByBlock = mutableMapOf<BasicBlockIndex, MutableList<LoopId>>()
+        for (loop in loops) {
+            for (b in loop.body) {
+                loopsByBlock.updateInplace(b, default = mutableListOf()) { add(loop.id) }
+            }
+        }
+        return MethodLoopsInformation(loops = loops, loopsByBlock = loopsByBlock)
     }
 }
 
