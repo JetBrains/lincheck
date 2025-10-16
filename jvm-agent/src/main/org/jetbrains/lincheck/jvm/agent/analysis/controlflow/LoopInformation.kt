@@ -141,3 +141,46 @@ class MethodLoopsInformation(
     fun getLoopInfo(id: LoopId): LoopInformation? =
         loops.getOrNull(id)
 }
+
+fun MethodLoopsInformation.prettyPrint(): String =
+    MethodLoopsInformationPrinter(this).prettyPrint()
+
+private class MethodLoopsInformationPrinter(val loopInfo: MethodLoopsInformation) {
+
+    fun prettyPrint(): String {
+        val sb = StringBuilder()
+
+        sb.appendLine("LOOPS")
+        if (loopInfo.loops.isEmpty()) {
+            sb.appendLine("  NONE")
+        }
+        for ((index, loop) in loopInfo.loops.withIndex()) {
+            sb.appendLine("LOOP ${index + 1}")
+            sb.appendLine("  HEADER: B${loop.header}")
+            sb.appendLine("  BODY: ${loop.body.sorted().joinToString(", ") { "B$it" }}")
+            sb.appendLine("  BACK EDGES:")
+            sb.appendLine(loop.backEdges.toFormattedString().prependIndent("    "))
+            sb.appendLine("  NORMAL EXITS:")
+            loop.normalExits.let {
+                if (it.isEmpty()) sb.appendLine().appendLine("    NONE")
+                else sb.appendLine(it.toFormattedString().prependIndent("    "))
+            }
+            sb.append("  EXCEPTION EXIT HANDLERS: ")
+            loop.exceptionalExitHandlers.let {
+                if (it.isEmpty()) sb.appendLine("NONE")
+                else sb.appendLine(it.sorted().joinToString(", ") { block -> "B$block" })
+            }
+        }
+        sb.appendLine()
+
+        sb.appendLine("LOOPS BY BLOCK")
+        if (loopInfo.loopsByBlock.isEmpty()) {
+            sb.appendLine("  NONE")
+        }
+        for ((block, loops) in loopInfo.loopsByBlock.toSortedMap()) {
+            sb.appendLine("  B$block: ${loops.sorted().joinToString(", ") { "LOOP ${it + 1}" }}")
+        }
+
+        return sb.toString()
+    }
+}
