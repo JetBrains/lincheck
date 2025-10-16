@@ -114,7 +114,7 @@ class JavaControlFlowGraphTester {
      *   - compiles [javaResourcePath],
      *   - from class [internalClassName] extracts a single method [methodName] with given [descriptor],
      *   - builds CFG of this method,
-     *   - pretty-prints CFG,
+     *   - calculates text-result from CFG,
      *   - compares the result with golden data loaded from [goldenResourcePath].
      */
     fun testMethodCfg(
@@ -123,12 +123,13 @@ class JavaControlFlowGraphTester {
         internalClassName: String,
         methodName: String,
         descriptor: String,
+        calculateTextResult: (BasicBlockControlFlowGraph) -> String,
     ) {
         val classes = compileJavaFromResource(javaResourcePath)
         val bytes = classes[internalClassName]
             ?: error("Class not found: $internalClassName")
         val cfg = buildCfg(bytes, internalClassName, methodName, descriptor)
-        val cfgText = cfg.prettyPrint()
+        val cfgText = calculateTextResult(cfg)
         val golden = loadResourceTextOrNull(goldenResourcePath)
 
         try {
@@ -245,7 +246,10 @@ class JavaControlFlowGraphTest {
     private fun golden(name: String) = "analysis/controlflow/golden/$name.txt"
     
     private fun test(name: String, desc: String) = 
-        tester.testMethodCfg(javaPath, golden(name), className, name, desc)
+        tester.testMethodCfg(
+            javaPath, golden(name),
+            className, name, desc
+        ) { cfg -> cfg.prettyPrint() }
 
     @Test
     fun straightLine() = test("straightLine", "()I")
