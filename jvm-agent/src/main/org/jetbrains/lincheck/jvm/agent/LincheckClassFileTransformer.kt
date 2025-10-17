@@ -14,6 +14,8 @@ import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.*
 import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent.instrumentationStrategy
 import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent.instrumentationMode
 import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent.instrumentedClasses
+import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.BasicBlockControlFlowGraph
+import org.jetbrains.lincheck.jvm.agent.analysis.*
 import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.*
 import org.objectweb.asm.tree.ClassNode
@@ -89,12 +91,14 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         // Only one visit is possible to have labels stable.
         // Visiting components like `MethodNode.instructions` is safe.
         val (lineRanges, linesToMethodNames) = getMethodsLineRanges(classNode)
+
         val classInfo = ClassInformation(
             smap = readClassSMAP(classNode, reader),
             locals = getMethodsLocalVariables(classNode),
             labels = getMethodsLabels(classNode),
             methodsToLineRanges = lineRanges,
-            linesToMethodNames = linesToMethodNames
+            linesToMethodNames = linesToMethodNames,
+            basicCfgs = computeControlFlowGraphs(classNode),
         )
 
         val (includeClasses, excludeClasses) = if (instrumentationMode == TRACE_RECORDING) {
@@ -173,6 +177,26 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         .mapValues { MethodLabels(it.value) }
     }
 
+
+    /**
+     * Computes basic-block control-flow graphs for each concrete method of the given class.
+     * For abstract/native or empty methods, returns an empty graph.
+     */
+    private fun computeControlFlowGraphs(
+        classNode: ClassNode
+    ): Map<String, BasicBlockControlFlowGraph> {
+        return classNode.methods.mapNotNull { m ->
+            m as org.objectweb.asm.tree.MethodNode
+            val key = m.name + m.desc
+            val isAbstractOrNative = (m.access and (Opcodes.ACC_ABSTRACT or Opcodes.ACC_NATIVE)) != 0
+            val cfg = if (isAbstractOrNative) {
+                emptyControlFlowGraph()
+            } else {
+                buildControlFlowGraph(classNode.name, m)
+            }
+            key to cfg
+        }.toMap()
+    }
 
     private val NESTED_LAMBDA_RE = Regex($$"^([^$]+)\\$lambda\\$")
     /*

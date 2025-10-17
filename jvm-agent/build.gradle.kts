@@ -61,6 +61,12 @@ tasks {
     }
 }
 
+tasks {
+    test {
+        configureJvmTestCommon(project)
+    }
+}
+
 val jar = tasks.jar {
     archiveFileName.set("jvm-agent.jar")
 }

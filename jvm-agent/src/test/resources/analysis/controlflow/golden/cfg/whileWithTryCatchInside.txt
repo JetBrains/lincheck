@@ -1,0 +1,51 @@
+BLOCKS
+B0: [0..3]
+   0:    L0
+   1:     LINENUMBER 324 L0
+   2:     ICONST_0
+   3:     ISTORE 1
+B1: [4..8]
+   4:    L1
+   5:     LINENUMBER 325 L1
+   6:    FRAME APPEND [I]
+   7:     ILOAD 0
+   8:     IFLE L2
+B2: [9..16]
+   9:    L3
+  10:     LINENUMBER 327 L3
+  11:     ILOAD 0
+  12:     INVOKESTATIC JavaControlFlowGraphCases.mayThrow (I)I
+  13:     ISTORE 1
+  14:    L4
+  15:     LINENUMBER 330 L4
+  16:     GOTO L5
+B3: [17..24]
+  17:    L6
+  18:     LINENUMBER 328 L6
+  19:    FRAME SAME1 java/lang/IllegalArgumentException
+  20:     ASTORE 2
+  21:    L7
+  22:     LINENUMBER 329 L7
+  23:     ICONST_M1
+  24:     ISTORE 1
+B4: [25..29]
+  25:    L5
+  26:     LINENUMBER 331 L5
+  27:    FRAME SAME
+  28:     IINC 0 -1
+  29:     GOTO L1
+B5: [30..34]
+  30:    L2
+  31:     LINENUMBER 333 L2
+  32:    FRAME SAME
+  33:     ILOAD 1
+  34:     IRETURN
+
+EDGES
+  B0 -> B1
+  B1 -> B2
+  B1 -> B5 : JUMP(opcode=IFLE)
+  B2 -> B3 : CATCH(type=java/lang/IllegalArgumentException)
+  B2 -> B4 : JUMP(opcode=GOTO)
+  B3 -> B4
+  B4 -> B1 : JUMP(opcode=GOTO)

@@ -1,0 +1,22 @@
+BLOCKS
+B0: [0..4]
+   0:    L0
+   1:     LINENUMBER 52 L0
+   2:     ALOAD 0
+   3:     ALOAD 1
+   4:     IF_ACMPNE L1
+B1: [5..8]
+   5:    L2
+   6:     LINENUMBER 53 L2
+   7:     ICONST_1
+   8:     IRETURN
+B2: [9..13]
+   9:    L1
+  10:     LINENUMBER 55 L1
+  11:    FRAME SAME
+  12:     ICONST_2
+  13:     IRETURN
+
+EDGES
+  B0 -> B1
+  B0 -> B2 : JUMP(opcode=IF_ACMPNE)

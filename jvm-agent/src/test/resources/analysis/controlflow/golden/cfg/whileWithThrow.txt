@@ -1,0 +1,34 @@
+BLOCKS
+B0: [0..3]
+   0:    L0
+   1:     LINENUMBER 314 L0
+   2:     ICONST_0
+   3:     ISTORE 1
+B1: [4..8]
+   4:    L1
+   5:     LINENUMBER 315 L1
+   6:    FRAME APPEND [I]
+   7:     ILOAD 0
+   8:     IFLE L2
+B2: [9..17]
+   9:    L3
+  10:     LINENUMBER 316 L3
+  11:     ILOAD 0
+  12:     INVOKESTATIC JavaControlFlowGraphCases.mayThrow (I)I
+  13:     ISTORE 1
+  14:    L4
+  15:     LINENUMBER 317 L4
+  16:     IINC 0 -1
+  17:     GOTO L1
+B3: [18..22]
+  18:    L2
+  19:     LINENUMBER 319 L2
+  20:    FRAME SAME
+  21:     ILOAD 1
+  22:     IRETURN
+
+EDGES
+  B0 -> B1
+  B1 -> B2
+  B1 -> B3 : JUMP(opcode=IFLE)
+  B2 -> B1 : JUMP(opcode=GOTO)

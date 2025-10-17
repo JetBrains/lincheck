@@ -1,0 +1,77 @@
+BLOCKS
+B0: [0..3]
+   0:    L0
+   1:     LINENUMBER 371 L0
+   2:     ICONST_0
+   3:     ISTORE 1
+B1: [4..8]
+   4:    L1
+   5:     LINENUMBER 373 L1
+   6:    FRAME APPEND [I]
+   7:     ILOAD 0
+   8:     IFLE L2
+B2: [9..12]
+   9:    L3
+  10:     LINENUMBER 374 L3
+  11:     BIPUSH 10
+  12:     ISTORE 2
+B3: [13..18]
+  13:    L4
+  14:     LINENUMBER 375 L4
+  15:    FRAME APPEND [I]
+  16:     ILOAD 2
+  17:     IINC 2 -1
+  18:     IFLE L5
+B4: [19..24]
+  19:    L6
+  20:     LINENUMBER 376 L6
+  21:     ILOAD 0
+  22:     INVOKESTATIC JavaControlFlowGraphCases.mayThrow (I)I
+  23:     ISTORE 1
+  24:     GOTO L4
+B5: [25..31]
+  25:    L5
+  26:     LINENUMBER 378 L5
+  27:    FRAME SAME
+  28:     IINC 0 -1
+  29:    L7
+  30:     LINENUMBER 379 L7
+  31:     GOTO L1
+B6: [32..35]
+  32:    L2
+  33:     LINENUMBER 383 L2
+  34:    FRAME CHOP 1
+  35:     GOTO L8
+B7: [36..43]
+  36:    L9
+  37:     LINENUMBER 381 L9
+  38:    FRAME SAME1 java/lang/IllegalArgumentException
+  39:     ASTORE 2
+  40:    L10
+  41:     LINENUMBER 382 L10
+  42:     ICONST_M1
+  43:     ISTORE 1
+B8: [44..48]
+  44:    L8
+  45:     LINENUMBER 384 L8
+  46:    FRAME SAME
+  47:     ILOAD 1
+  48:     IRETURN
+
+EDGES
+  B0 -> B1
+  B1 -> B2
+  B1 -> B6 : JUMP(opcode=IFLE)
+  B1 -> B7 : CATCH(type=java/lang/IllegalArgumentException)
+  B2 -> B3
+  B2 -> B7 : CATCH(type=java/lang/IllegalArgumentException)
+  B3 -> B4
+  B3 -> B5 : JUMP(opcode=IFLE)
+  B3 -> B7 : CATCH(type=java/lang/IllegalArgumentException)
+  B4 -> B3 : JUMP(opcode=GOTO)
+  B4 -> B7 : CATCH(type=java/lang/IllegalArgumentException)
+  B5 -> B1 : JUMP(opcode=GOTO)
+  B5 -> B7 : CATCH(type=java/lang/IllegalArgumentException)
+  B6 -> B7 : CATCH(type=java/lang/IllegalArgumentException)
+  B6 -> B8 : JUMP(opcode=GOTO)
+  B7 -> B8
