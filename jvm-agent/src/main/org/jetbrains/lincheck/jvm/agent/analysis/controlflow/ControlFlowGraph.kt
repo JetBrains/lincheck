@@ -201,17 +201,11 @@ internal fun Collection<Edge>.prettyPrint(): String {
     val edges = sortedEdges()
     for ((id, e) in edges.withIndex()) {
         val label = e.label.prettyPrint().takeIf { it.isNotEmpty() }
-        sb.append("  B${e.source} -> B${e.target}")
+        sb.append("B${e.source} -> B${e.target}")
         sb.append(label?.let { " : $it" }.orEmpty())
         if (id != edges.lastIndex) sb.appendLine()
     }
     return sb.toString()
-}
-
-private fun EdgeLabel.prettyPrint(): String = when (this) {
-    is EdgeLabel.FallThrough -> ""
-    is EdgeLabel.Jump        -> "JUMP(opcode=${Printer.OPCODES[opcode]})"
-    is EdgeLabel.Exception   -> "CATCH(type=${caughtTypeName ?: "*"})"
 }
 
 private fun Collection<Edge>.sortedEdges(): List<Edge> = toMutableList().apply {
@@ -222,4 +216,10 @@ private fun Collection<Edge>.sortedEdges(): List<Edge> = toMutableList().apply {
     }
 
     sortWith(compareBy({ it.source }, { it.target }, { labelSortKey(it.label) }))
+}
+
+private fun EdgeLabel.prettyPrint(): String = when (this) {
+    is EdgeLabel.FallThrough -> ""
+    is EdgeLabel.Jump        -> "JUMP(opcode=${Printer.OPCODES[opcode]})"
+    is EdgeLabel.Exception   -> "CATCH(type=${caughtTypeName ?: "*"})"
 }

@@ -297,7 +297,7 @@ private class BasicBlockControlFlowGraphPrinter(val graph: BasicBlockControlFlow
         // Edges section
         sb.appendLine("EDGES")
         graph.edges.prettyPrint().let {
-            if (it.isNotEmpty()) sb.appendLine(it)
+            if (it.isNotEmpty()) sb.appendLine(it.prependIndent("  "))
         }
         return sb.toString()
     }
