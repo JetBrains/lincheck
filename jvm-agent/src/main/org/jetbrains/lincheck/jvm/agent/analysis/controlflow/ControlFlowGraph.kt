@@ -58,6 +58,8 @@ sealed class EdgeLabel {
             else -> true
         }
 
+        override fun toString(): String = "JUMP(opcode=${Printer.OPCODES[opcode]})"
+
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (other !is Jump) return false
@@ -82,6 +84,8 @@ sealed class EdgeLabel {
         val caughtTypeName: String? get() = tryCatchBlock?.type
 
         val isCatchAll: Boolean get() = caughtTypeName == null
+
+        override fun toString(): String = "CATCH(type=${caughtTypeName ?: "*"})"
 
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -200,7 +204,7 @@ internal fun Collection<Edge>.prettyPrint(): String {
     val sb = StringBuilder("")
     val edges = sortedEdges()
     for ((id, e) in edges.withIndex()) {
-        val label = e.label.prettyPrint().takeIf { it.isNotEmpty() }
+        val label = e.label.takeIf { it !is EdgeLabel.FallThrough }
         sb.append("B${e.source} -> B${e.target}")
         sb.append(label?.let { " : $it" }.orEmpty())
         if (id != edges.lastIndex) sb.appendLine()
@@ -216,10 +220,4 @@ private fun Collection<Edge>.sortedEdges(): List<Edge> = toMutableList().apply {
     }
 
     sortWith(compareBy({ it.source }, { it.target }, { labelSortKey(it.label) }))
-}
-
-private fun EdgeLabel.prettyPrint(): String = when (this) {
-    is EdgeLabel.FallThrough -> ""
-    is EdgeLabel.Jump        -> "JUMP(opcode=${Printer.OPCODES[opcode]})"
-    is EdgeLabel.Exception   -> "CATCH(type=${caughtTypeName ?: "*"})"
 }
