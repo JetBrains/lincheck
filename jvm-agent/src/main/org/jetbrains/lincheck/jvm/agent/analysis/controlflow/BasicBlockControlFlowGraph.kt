@@ -13,7 +13,6 @@ package org.jetbrains.lincheck.jvm.agent.analysis.controlflow
 import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.Label
 import org.objectweb.asm.tree.*
-import org.objectweb.asm.util.Printer
 import org.objectweb.asm.util.Textifier
 import org.objectweb.asm.util.TraceMethodVisitor
 import java.io.PrintWriter
@@ -296,8 +295,10 @@ private class BasicBlockControlFlowGraphPrinter(val graph: BasicBlockControlFlow
 
         // Edges section
         sb.appendLine("EDGES")
-        graph.edges.prettyPrint().let {
-            if (it.isNotEmpty()) sb.appendLine(it.prependIndent("  "))
+        graph.edges.let {
+            if (it.isNotEmpty()) sb.appendLine(
+                it.asString().prependIndent("  ")
+            )
         }
         return sb.toString()
     }

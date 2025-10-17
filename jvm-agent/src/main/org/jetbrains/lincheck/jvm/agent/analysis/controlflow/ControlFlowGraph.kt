@@ -200,7 +200,7 @@ internal fun isRecognizedJumpOpcode(opcode: Int): Boolean = when (opcode) {
     else -> false
 }
 
-internal fun Collection<Edge>.prettyPrint(): String {
+internal fun Collection<Edge>.asString(): String {
     val sb = StringBuilder("")
     val edges = toMutableList().sortedWith(edgeComparator)
     for ((id, e) in edges.withIndex()) {
