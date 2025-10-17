@@ -152,7 +152,9 @@ class JavaControlFlowGraphTester {
         val url = ClassLoader.getSystemResource(path)
             ?: return null
         url.openStream().use { input ->
-            return InputStreamReader(input, Charsets.UTF_8).readText()
+            return InputStreamReader(input, Charsets.UTF_8)
+                .readText()
+                .replace(System.lineSeparator(), "\n")
         }
     }
 
