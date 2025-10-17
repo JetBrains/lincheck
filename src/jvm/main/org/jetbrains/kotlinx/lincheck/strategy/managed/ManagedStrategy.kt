@@ -1862,11 +1862,6 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    override fun beforeLoopEnter(codeLocation: Int, loopId: Int) {}
-    override fun onLoopIteration(codeLocation: Int, loopId: Int) {}
-    override fun afterLoopExit(codeLocation: Int, loopId: Int) {}
-    override fun afterLoopExceptionExit(codeLocation: Int, loopId: Int, exception: Throwable?, canEnterFromOutsideLoop: Boolean) {}
-
     private fun methodAnalysisSectionType(
         owner: Any?,
         className: String,
