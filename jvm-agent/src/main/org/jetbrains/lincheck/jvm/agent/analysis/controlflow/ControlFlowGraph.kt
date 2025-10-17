@@ -202,7 +202,7 @@ internal fun isRecognizedJumpOpcode(opcode: Int): Boolean = when (opcode) {
 
 internal fun Collection<Edge>.prettyPrint(): String {
     val sb = StringBuilder("")
-    val edges = sortedEdges()
+    val edges = toMutableList().sortedWith(edgeComparator)
     for ((id, e) in edges.withIndex()) {
         val label = e.label.takeIf { it !is EdgeLabel.FallThrough }
         sb.append("B${e.source} -> B${e.target}")
@@ -212,12 +212,11 @@ internal fun Collection<Edge>.prettyPrint(): String {
     return sb.toString()
 }
 
-private fun Collection<Edge>.sortedEdges(): List<Edge> = toMutableList().apply {
+private val edgeComparator = Comparator<Edge> { e1, e2 ->
     fun labelSortKey(label: EdgeLabel): String = when (label) {
         is EdgeLabel.FallThrough -> "0"
-        is EdgeLabel.Jump        -> "1:${Printer.OPCODES[label.opcode]}"
-        is EdgeLabel.Exception   -> "2:${label.caughtTypeName ?: "*"}"
+        is EdgeLabel.Jump -> "1:${Printer.OPCODES[label.opcode]}"
+        is EdgeLabel.Exception -> "2:${label.caughtTypeName ?: "*"}"
     }
-
-    sortWith(compareBy({ it.source }, { it.target }, { labelSortKey(it.label) }))
+    compareValuesBy(e1, e2, { it.source }, { it.target }, { labelSortKey(it.label) })
 }
