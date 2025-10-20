@@ -128,8 +128,9 @@ class BasicBlockControlFlowGraph(
 
     /**
      * Validates edge invariants for this basic-block graph.
+     *
      * - For Jump edges: the recorded instruction must be the last real opcode of the source block.
-     * - For FallThrough edges: if the source block has a last opcode, it must be an IF* opcode.
+     * - For FallThrough and Exception edges: no invariants are checked at the basic block level.
      */
     fun validateEdgeInvariants() {
         for (e in edges) {
