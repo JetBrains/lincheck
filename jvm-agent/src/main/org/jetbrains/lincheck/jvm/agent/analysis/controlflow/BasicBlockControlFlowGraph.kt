@@ -144,12 +144,10 @@ class BasicBlockControlFlowGraph(
                         """.trimIndent()
                     }
                 }
-                is EdgeLabel.FallThrough -> {
-                    // no invariants here at BB layer
-                }
-                is EdgeLabel.Exception -> {
-                    // no invariants here at BB layer
-                }
+                // no invariants here at BB layer
+                is EdgeLabel.FallThrough -> {}
+                // no invariants here at BB layer
+                is EdgeLabel.Exception -> {}
             }
         }
     }
