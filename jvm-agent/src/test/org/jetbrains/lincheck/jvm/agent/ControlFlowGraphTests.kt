@@ -10,7 +10,7 @@
 
 package org.jetbrains.lincheck.jvm.agent
 
-import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.prettyPrint
+import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.toFormattedString
 import org.junit.Test
 
 
@@ -23,10 +23,9 @@ class JavaControlFlowGraphTest {
     private fun golden(name: String) = "analysis/controlflow/golden/cfg/$name.txt"
     
     private fun test(name: String, desc: String) = 
-        tester.testMethodCfg(
-            javaPath, golden(name),
-            className, name, desc
-        ) { cfg -> cfg.prettyPrint() }
+        tester.testMethodCfg(javaPath, golden(name), className, name, desc) { cfg ->
+            cfg.toFormattedString()
+        }
 
     @Test
     fun straightLine() = test("straightLine", "()I")

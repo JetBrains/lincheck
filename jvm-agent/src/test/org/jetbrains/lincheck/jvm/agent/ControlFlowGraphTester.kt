@@ -122,13 +122,13 @@ class JavaControlFlowGraphTester {
         internalClassName: String,
         methodName: String,
         descriptor: String,
-        calculateTextResult: (BasicBlockControlFlowGraph) -> String,
+        printer: (BasicBlockControlFlowGraph) -> String,
     ) {
         val classes = compileJavaFromResource(javaResourcePath)
         val bytes = classes[internalClassName]
             ?: error("Class not found: $internalClassName")
         val cfg = buildCfg(bytes, internalClassName, methodName, descriptor)
-        val cfgText = calculateTextResult(cfg)
+        val cfgText = printer(cfg)
         val golden = loadResourceTextOrNull(goldenResourcePath)
 
         try {

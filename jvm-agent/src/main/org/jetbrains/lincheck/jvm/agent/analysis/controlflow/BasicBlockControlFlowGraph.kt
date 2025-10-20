@@ -256,15 +256,15 @@ fun InstructionControlFlowGraph.toBasicBlockGraph(): BasicBlockControlFlowGraph 
     return basicBlockGraph
 }
 
-fun BasicBlockControlFlowGraph.prettyPrint(): String =
-    BasicBlockControlFlowGraphPrinter(this).prettyPrint()
+fun BasicBlockControlFlowGraph.toFormattedString(): String =
+    BasicBlockControlFlowGraphFormatter(this).toFormattedString()
 
-private class BasicBlockControlFlowGraphPrinter(val graph: BasicBlockControlFlowGraph) {
+private class BasicBlockControlFlowGraphFormatter(val graph: BasicBlockControlFlowGraph) {
 
     // use a single `Textifier` per printing session to ensure stable label names
     private val textifier = Textifier()
 
-    fun prettyPrint(): String {
+    fun toFormattedString(): String {
         val sb = StringBuilder()
 
         // Blocks section
@@ -284,7 +284,7 @@ private class BasicBlockControlFlowGraphPrinter(val graph: BasicBlockControlFlow
             // Instructions section
             for (insnIndex in block.range) {
                 val insn = graph.instructions.get(insnIndex)
-                val text = insn.prettyPrint()
+                val text = insn.toFormattedString()
                 val idx = insnIndex.toString().padStart(insnIndexWidth, ' ')
                 sb.appendLine("  $idx: $text")
             }
@@ -295,13 +295,13 @@ private class BasicBlockControlFlowGraphPrinter(val graph: BasicBlockControlFlow
         sb.appendLine("EDGES")
         graph.edges.let {
             if (it.isNotEmpty()) sb.append(
-                it.asString().prependIndent("  ")
+                it.toFormattedString().prependIndent("  ")
             )
         }
         return sb.toString()
     }
 
-    private fun AbstractInsnNode.prettyPrint(): String {
+    private fun AbstractInsnNode.toFormattedString(): String {
         // clears only the output buffer;
         // label mappings inside `textifier` remain intact
         textifier.text.clear()
