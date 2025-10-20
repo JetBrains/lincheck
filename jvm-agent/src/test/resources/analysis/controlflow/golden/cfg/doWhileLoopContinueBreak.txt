@@ -1,0 +1,64 @@
+BLOCKS
+B0: [0..7]
+   0:    L0
+   1:     LINENUMBER 148 L0
+   2:     ICONST_0
+   3:     ISTORE 1
+   4:    L1
+   5:     LINENUMBER 149 L1
+   6:     ICONST_0
+   7:     ISTORE 2
+B1: [8..13]
+   8:    L2
+   9:     LINENUMBER 151 L2
+  10:    FRAME APPEND [I I]
+  11:     ILOAD 1
+  12:     ICONST_1
+  13:     IF_ICMPNE L3
+B2: [14]
+  14:     GOTO L4
+B3: [15..20]
+  15:    L3
+  16:     LINENUMBER 152 L3
+  17:    FRAME SAME
+  18:     ILOAD 1
+  19:     BIPUSH 7
+  20:     IF_ICMPNE L5
+B4: [21]
+  21:     GOTO L6
+B5: [22..31]
+  22:    L5
+  23:     LINENUMBER 153 L5
+  24:    FRAME SAME
+  25:     IINC 1 1
+  26:    L7
+  27:     LINENUMBER 154 L7
+  28:     ILOAD 2
+  29:     ILOAD 1
+  30:     IADD
+  31:     ISTORE 2
+B6: [32..37]
+  32:    L4
+  33:     LINENUMBER 155 L4
+  34:    FRAME SAME
+  35:     ILOAD 1
+  36:     ILOAD 0
+  37:     IF_ICMPLT L2
+B7: [38..42]
+  38:    L6
+  39:     LINENUMBER 156 L6
+  40:    FRAME SAME
+  41:     ILOAD 2
+  42:     IRETURN
+
+EDGES
+  B0 -> B1
+  B1 -> B2
+  B1 -> B3 : JUMP(opcode=IF_ICMPNE)
+  B2 -> B6 : JUMP(opcode=GOTO)
+  B3 -> B4
+  B3 -> B5 : JUMP(opcode=IF_ICMPNE)
+  B4 -> B7 : JUMP(opcode=GOTO)
+  B5 -> B6
+  B6 -> B1 : JUMP(opcode=IF_ICMPLT)
+  B6 -> B7

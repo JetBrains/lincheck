@@ -1,0 +1,399 @@
+/*
+ * Lincheck
+ *
+ * Copyright (C) 2019 - 2025 JetBrains s.r.o.
+ *
+ * This Source Code Form is subject to the terms of the
+ * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
+ * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+// Test cases for control-flow graph construction from Java bytecode.
+// One public class with multiple static methods, each representing a CFG scenario.
+
+public class JavaControlFlowGraphCases {
+
+    // Straight-line code (no branches).
+    public static int straightLine() {
+        int x = 0;
+        x++;
+        return x;
+    }
+
+    // If statement.
+    public static int ifStmt(int x) {
+        if (x > 0) {
+            return 1;
+        }
+        x--;
+        return -x;
+    }
+
+    // If/else statement: numeric comparison.
+    public static int ifElseStmt(int x) {
+        if (x > 0) {
+            return 1;
+        } else {
+            return 2;
+        }
+    }
+
+    // If/else statement: null checks.
+    public static int ifNull(Object o) {
+        if (o == null) {
+            return 0;
+        } else {
+            return 1;
+        }
+    }
+
+    // If/else statement: object reference comparisons.
+    public static int ifRefCompare(Object a, Object b) {
+        if (a == b) {
+            return 1;
+        } else {
+            return 2;
+        }
+    }
+
+    // Nested if/else statements.
+    public static int ifElseNested(int a, int b) {
+        if (a > 0) {
+            if (b < 0) {
+                return 1;
+            } else {
+                return 2;
+            }
+        } else {
+            return 3;
+        }
+    }
+
+    // If statement with early returns (multiple return sites).
+    public static int ifReturn(int x) {
+        if (x == 0) return 0;
+        if (x == 1) return 1;
+        return x * 13;
+    }
+
+    // While loop.
+    public static int whileLoop(int n) {
+        int s = 0;
+        while (n-- > 0) {
+            s += n;
+        }
+        return s;
+    }
+
+    // While loop with continue.
+    public static int whileLoopContinue(int n) {
+        int s = 0;
+        while (n-- > 0) {
+            if ((n & 1) == 0) continue;
+            s += n;
+        }
+        return s;
+    }
+
+    // While loop with break.
+    public static int whileLoopBreak(int n) {
+        int s = 0;
+        while (n-- > 0) {
+            if ((n % 7) == 0) break;
+            s += n;
+        }
+        return s;
+    }
+
+    // While-true loop.
+    public static void whileTrueLoop() {
+        int i = 0;
+        while (true) {
+            i++;
+        }
+    }
+
+    // While-true loop with return.
+    public static int whileTrueLoopReturn(int n) {
+        int i = 0;
+        while (true) {
+            i++;
+            if (i + n > 32) return 0;
+        }
+    }
+
+    // While-true loop with break.
+    public static int whileTrueLoopBreak(int n) {
+        int i = 0;
+        while (true) {
+            i++;
+            if (i + n > 32) break;
+        }
+        return i;
+    }
+
+    // Do while.
+    public static int doWhileLoop(int n) {
+        int i = 0;
+        int c = 0;
+        do {
+            i++;
+            c += i;
+        } while (i < n);
+        return c;
+    }
+
+    // Do while with continue/break.
+    public static int doWhileLoopContinueBreak(int n) {
+        int i = 0;
+        int c = 0;
+        do {
+            if (i == 1) continue;
+            if (i == 7) break;
+            i++;
+            c += i;
+        } while (i < n);
+        return c;
+    }
+
+    // Do while-true.
+    public static void doWhileTrueLoop() {
+        int i = 0;
+        int c = 0;
+        do {
+            i++;
+            c += i;
+        } while (true);
+    }
+
+    // For-loop.
+    public static int forLoop(int n) {
+        int s = 0;
+        for (int i = 0; i < n; i++) {
+            s += i;
+        }
+        return s;
+    }
+
+    // For-loop with continue/break.
+    public static int forLoopContinueBreak(int n) {
+        int s = 0;
+        for (int i = 0; i < n; i++) {
+            if (i == 1) continue;
+            if (i == 7) break;
+            s += i;
+        }
+        return s;
+    }
+
+    // Nested for-loops
+    public static int forLoopNested(int n, int m) {
+        int sum = 0;
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < m; j++) {
+                sum += i * j;
+            }
+        }
+        return sum;
+    }
+
+    // Nested for-loops with labeled break and inner continue
+    public static int forLoopContinueBreakNested(int n, int m) {
+        int c = 0;
+        outer: for (int i = 0; i < n; i++) {
+            for (int j = 0; j < m; j++) {
+                if (i * j > 10) break outer; // exits outer loop
+                if (j == 2) continue; // continue inner loop
+                c++;
+            }
+        }
+        return c;
+    }
+
+    // Switch: likely TABLESWITCH for dense keys
+    public static int tableSwitch(int x) {
+        switch (x) {
+            case 0: return 0;
+            case 1: return 10;
+            case 2: return 20;
+            case 3: return 30;
+            default: return -1;
+        }
+    }
+
+    // Switch: likely LOOKUPSWITCH for sparse keys
+    public static int lookupSwitch(int x) {
+        switch (x) {
+            case -100: return 1;
+            case 0: return 2;
+            case 1000: return 3;
+            default: return 4;
+        }
+    }
+
+    // Try/catch: single catch type
+    public static int tryCatch(int x) {
+        try {
+            return mayThrow(x);
+        } catch (IllegalArgumentException e) {
+            return -1;
+        }
+    }
+
+    // Try/catch: single multi-catch
+    public static int tryMultiCatch(int x) {
+        try {
+            return mayThrowMulti(x);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return -1;
+        }
+    }
+
+    // Try/catch: two catch blocks
+    public static int tryCatchBlocks(int x) {
+        try {
+            return mayThrowMulti(x);
+        } catch (IllegalArgumentException e) {
+            return -1;
+        } catch (IllegalStateException e) {
+            return -2;
+        }
+    }
+
+    // Try/finally
+    public static int tryFinally(int x) {
+        int y = 0;
+        try {
+            y = mayThrow(x);
+        } finally {
+            y++;
+        }
+        return y;
+    }
+
+    // Try/catch/finally
+    public static int tryCatchFinally(int x) {
+        int y = 0;
+        try {
+            y = mayThrow(x);
+        } catch (IllegalArgumentException e) {
+            y = -1;
+        } finally {
+            y++;
+        }
+        return y;
+    }
+
+    // Throw
+    public static int throwStmt(int x) {
+        if (x < 0) throw new IllegalArgumentException("Negative value");
+        return x;
+    }
+
+    // Throw + try/catch
+    public static int throwCatch(int x) {
+        try {
+            if (x < 0) throw new IllegalArgumentException("Negative value");
+            return x;
+        } catch (IllegalArgumentException e) {
+            return -1;
+        }
+    }
+
+    // Implicit throw (division by zero) + try/catch
+    public static int implicitThrowCatch(int x) {
+        try {
+            return 10 / x; // may throw ArithmeticException
+        } catch (ArithmeticException e) {
+            return -1;
+        }
+    }
+
+    // While with throw
+    public static int whileWithThrow(int x) {
+        int y = 0;
+        while (x > 0) {
+            y = mayThrow(x);
+            x--;
+        }
+        return y;
+    }
+
+    // While with try/catch inside
+    public static int whileWithTryCatchInside(int x) {
+        int y = 0;
+        while (x > 0) {
+            try {
+                y = mayThrow(x);
+            } catch (IllegalArgumentException e) {
+                y = -1;
+            }
+            x--;
+        }
+        return y;
+    }
+
+    // While with try/catch outside
+    public static int whileWithTryCatchOutside(int x) {
+        int y = 0;
+        try {
+            while (x > 0) {
+                y = mayThrow(x);
+                x--;
+            }
+        }
+        catch (IllegalArgumentException e) {
+            y = -1;
+        }
+        return y;
+    }
+
+    // Nested while with try/catch
+    public static int nestedWhileWithTryCatchBetween(int x) {
+        int y = 0;
+        while (x > 0) {
+            try {
+                int z = 10;
+                while (z-- > 0) {
+                    y = mayThrow(x);
+                }
+                x--;
+            }
+            catch (IllegalArgumentException e) {
+                x++;
+            }
+        }
+        return y;
+    }
+
+    // Nested while with try/catch outside
+    public static int nestedWhileWithTryCatchOutside(int x) {
+        int y = 0;
+        try {
+            while (x > 0) {
+                int z = 10;
+                while (z-- > 0) {
+                    y = mayThrow(x);
+                }
+                x--;
+            }
+        }
+        catch (IllegalArgumentException e) {
+            y = -1;
+        }
+        return y;
+    }
+
+    // Helpers
+
+    private static int mayThrow(int x) {
+        if (x < 0) throw new IllegalArgumentException("Negative value");
+        return x;
+    }
+
+    private static int mayThrowMulti(int x) {
+        if (x < 0) throw new IllegalArgumentException("Negative value");
+        if (x == 0) throw new IllegalStateException("Zero value");
+        return x;
+    }
+}
