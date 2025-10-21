@@ -83,6 +83,23 @@ class BasicBlockControlFlowGraph(
     var loopInfo: MethodLoopsInformation? = null
         private set
 
+    /**
+     * Whether this CFG is reducible.
+     */
+    val isReducible: Boolean
+        get() {
+            if (_isReducible == null) {
+                val allPredecessors = Array(basicBlocks.size) { mutableSetOf<BasicBlockIndex>() }
+                for (e in edges) {
+                    allPredecessors[e.target].add(e.source)
+                }
+                _isReducible = isReducible(computeDominators(allPredecessors))
+            }
+            return _isReducible!!
+        }
+
+    private var _isReducible: Boolean? = null
+
     /** Returns the first executable opcode index of the given block, or null if none. */
     fun firstOpcodeIndexOf(block: BasicBlockIndex): InstructionIndex? =
         basicBlocks.getOrNull(block)?.executableRange?.first
@@ -116,14 +133,79 @@ class BasicBlockControlFlowGraph(
             }
             // compute loop information
             val dominators = computeDominators(allPredecessors)
-            loopInfo = computeLoopsFromDominators(dominators, normalPredecessors).also { info ->
-                info.validateBasicBlocksLoopsMapping()
-                info.loops.forEach {
-                    it.validateLoopEdgesInvariants()
+            if (isReducible(dominators)) {
+                _isReducible = true
+                // CFG is reducible, so we can compute actual loops
+                loopInfo = computeLoopsFromDominators(dominators, normalPredecessors).also { info ->
+                    info.validateBasicBlocksLoopsMapping()
+                    info.loops.forEach {
+                        it.validateLoopEdgesInvariants()
+                    }
                 }
+            }
+            else {
+                _isReducible = false
+                // CFG is irreducible, our loop calculation algorithm will not work with it
+                // so we report that fact and don't compute any loop information
+                Logger.warn { "Irreducible CFG detected, loop information will not be computed:\n${toFormattedString()}" }
+                loopInfo = MethodLoopsInformation()
             }
         }
         return loopInfo!!
+    }
+
+    /**
+     * CFG is called *reducible* if removal of its back edges leads to a graph that:
+     * * is acyclic (in terms of graph theory)
+     * * each basic block of CFG can be reached from the initial one
+     *
+     * The initial basic block in our case is basic black at index 0.
+     * And reachability calculation can use both normal (expect for of removed back-edges) and exceptional edges.
+     *
+     * See also https://www.csd.uwo.ca/~mmorenom/CS447/Lectures/CodeOptimization.html/node6.html.
+     */
+    private fun isReducible(dominators: Array<Set<BasicBlockIndex>>): Boolean {
+        val n = basicBlocks.size
+        // Identify back edges
+        val backEdges = mutableSetOf<Edge>()
+        val normalEdges = edges.filter { it.label !is EdgeLabel.Exception }
+        for (e in normalEdges) {
+            val u = e.source
+            val h = e.target
+            val domU = dominators.getOrElse(u) { emptySet() }
+            if (h in domU) {
+                backEdges.add(e)
+            }
+        }
+        // Calculate successors for each basic block (excluding back edges)
+        val successors = Array(n) { mutableSetOf<BasicBlockIndex>() }
+        for (e in edges.filter { it !in backEdges }) {
+            val u = e.source
+            val v = e.target
+            successors[u].add(v)
+        }
+
+        // check for cycles
+        val colors = Array(n) { 0 }
+        fun dfs(v: Int): Boolean {
+            colors[v] = 1 // ENTERED
+            var hasCycle = false
+            for (u in successors[v]) {
+                when (colors[u]) {
+                    0 -> hasCycle = dfs(u) or hasCycle
+                    1 -> hasCycle = true // Found cycle
+                    // 2 (EXITED) - already fully explored, skip
+                }
+            }
+            colors[v] = 2 // EXITED
+            return hasCycle
+        }
+
+        val hasCycle = dfs(0)
+        val allBlocksReachable = colors.all { it == 2 /* we visited all blocks in dfs */ }
+
+        // CFG is reducible if it does not have cycles (in terms of graph theory) and all blocks are reachable from entry
+        return !hasCycle && allBlocksReachable
     }
 
     /**

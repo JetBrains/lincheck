@@ -176,10 +176,13 @@ internal fun BasicBlockControlFlowGraph.computeDominators(allPredecessors: Array
             }
         }
     }
-    return Array(n) { doms[it].toSet() }
+    return doms
 }
 
 /**
+ * **This algorithm cannot detect loops in irreducible graphs. It only produces reducible loops.
+ * Thus, expects reducible CFG.**
+ *
  * Compute loops using dominators and back-edge detection.
  * A back edge is an edge u -> h (non-exception) where h dominates u.
  * For each header h, the loop body is the union of natural loops of its back edges.
@@ -187,8 +190,6 @@ internal fun BasicBlockControlFlowGraph.computeDominators(allPredecessors: Array
  * Note: "natural loops" are loops calculated via the algorithm below.
  * If there is more than one back edge to the same header, the body of the loop is the union of the nodes computed for each back edge.
  * Since loops can nest, a header for one loop can be in the body of (but not the header of) another loop.
- *
- * See also https://pages.cs.wisc.edu/~fischer/cs701.f14/finding.loops.html
  *
  * @param dominators An array of dominator sets for each basic block.
  * @param normalPredecessors An array of predecessor lists for each basic block, excluding exceptional edges.
@@ -200,6 +201,7 @@ internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(
     dominators: Array<Set<BasicBlockIndex>>,
     normalPredecessors: Array<MutableSet<BasicBlockIndex>>
 ): MethodLoopsInformation {
+    require(isReducible) { "Cannot compute loops on irreducible CFG" }
     val n = basicBlocks.size
     require(dominators.size == n) { "Dominator set must be of length $n but got ${dominators.size} instead" }
     require(normalPredecessors.size == n) { "Normal predecessor list must be of length $n but got ${normalPredecessors.size} instead" }
@@ -255,7 +257,7 @@ internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(
         loops += LoopInformation(
             id = nextLoopId++,
             header = h,
-            headers = setOf(h), // TODO: check above that irreducible graphs are not possible
+            headers = setOf(h),
             body = body,
             backEdges = backEdges,
             normalExits = normalExits,
