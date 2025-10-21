@@ -103,8 +103,20 @@ class BasicBlockControlFlowGraph(
      */
     fun computeLoopInformation(): MethodLoopsInformation {
         if (loopInfo == null) {
-            val dominators = computeDominators()
-            loopInfo = computeLoopsFromDominators(dominators).also { info ->
+            // compute predecessors for all basic blocks
+            val allPredecessors: Array<MutableSet<BasicBlockIndex>> = Array(basicBlocks.size) { mutableSetOf() }
+            val normalPredecessors: Array<MutableSet<BasicBlockIndex>> = Array(basicBlocks.size) { mutableSetOf() }
+            for (e in edges) {
+                val u = e.source
+                val v = e.target
+                allPredecessors[v].add(u)
+                if (e.label !is EdgeLabel.Exception) {
+                    normalPredecessors[v].add(u)
+                }
+            }
+            // compute loop information
+            val dominators = computeDominators(allPredecessors)
+            loopInfo = computeLoopsFromDominators(dominators, normalPredecessors).also { info ->
                 info.validateBasicBlocksLoopsMapping()
                 info.loops.forEach {
                     it.validateLoopEdgesInvariants()

@@ -151,23 +151,16 @@ class MethodLoopsInformation(
  * A node d dominates node n if every path from the entry node to n must go through d.
  * By definition, every node dominates itself. The entry node dominates all nodes in
  * a reducible control flow graph.
+ *
+ * @param allPredecessors An array of predecessor lists for each basic block, basically for each edge target - all its sources.
+ * @return An array of dominator sets for each basic block, including the entry block.
  */
-internal fun BasicBlockControlFlowGraph.computeDominators(): Array<Set<BasicBlockIndex>> {
+internal fun BasicBlockControlFlowGraph.computeDominators(allPredecessors: Array<MutableSet<BasicBlockIndex>>): Array<Set<BasicBlockIndex>> {
     val n = basicBlocks.size
+    require(allPredecessors.size == n) { "Predecessor list must be of length $n but got ${allPredecessors.size} instead" }
     if (n == 0) return emptyArray()
 
-    // Build predecessor lists; include both normal and exception predecessors for loop analysis dominators.
-    val preds: Array<MutableSet<BasicBlockIndex>> = Array(n) { mutableSetOf<BasicBlockIndex>() }
-    for (e in edges) {
-        val u = e.source
-        val v = e.target
-        if (u in 0 until n && v in 0 until n) {
-            preds[v].add(u)
-        }
-    }
-
-    val all: Set<BasicBlockIndex> = (0 until n).toSet()
-    val doms: Array<Set<BasicBlockIndex>> = Array(n) { all.toMutableSet() }
+    val doms: Array<Set<BasicBlockIndex>> = Array(n) { (0 until n).toMutableSet() }
     // Entry is block 0 when present
     doms[0] = setOf(0)
 
@@ -176,7 +169,7 @@ internal fun BasicBlockControlFlowGraph.computeDominators(): Array<Set<BasicBloc
         changed = false
         for (b in 1 until n) {
             // Intersection of dominators of predecessors: dom(b) = {b} + intersect(dom(p1), dom(p2), ...)
-            val newSet = preds[b].map { doms[it] }.intersectAll().apply { add(b) }
+            val newSet = allPredecessors[b].map { doms[it] }.intersectAll().apply { add(b) }
             if (newSet != doms[b]) {
                 doms[b] = newSet
                 changed = true
@@ -196,29 +189,25 @@ internal fun BasicBlockControlFlowGraph.computeDominators(): Array<Set<BasicBloc
  * Since loops can nest, a header for one loop can be in the body of (but not the header of) another loop.
  *
  * See also https://pages.cs.wisc.edu/~fischer/cs701.f14/finding.loops.html
+ *
+ * @param dominators An array of dominator sets for each basic block.
+ * @param normalPredecessors An array of predecessor lists for each basic block, excluding exceptional edges.
+ * @return A list of detected loops, each represented by a [LoopInformation] object.
+ *   The list is empty if no loops were detected.
+ *   The loops are sorted by the header block index.
  */
-internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(dominators: Array<Set<BasicBlockIndex>>): MethodLoopsInformation {
+internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(
+    dominators: Array<Set<BasicBlockIndex>>,
+    normalPredecessors: Array<MutableSet<BasicBlockIndex>>
+): MethodLoopsInformation {
     val n = basicBlocks.size
+    require(dominators.size == n) { "Dominator set must be of length $n but got ${dominators.size} instead" }
+    require(normalPredecessors.size == n) { "Normal predecessor list must be of length $n but got ${normalPredecessors.size} instead" }
     if (n == 0) return MethodLoopsInformation()
-
-    // Build predecessor maps (normal and all) and collect non-exception edges for exits and back-edges.
-    // TODO: this info is shared between dominators and back-edges calculation, its calculation could united
-    val predsNormal: Array<MutableSet<BasicBlockIndex>> = Array(n) { mutableSetOf() }
-    val predsAll: Array<MutableSet<BasicBlockIndex>> = Array(n) { mutableSetOf() }
-    val normalEdges = mutableSetOf<Edge>()
-    for (e in edges) {
-        val u = e.source
-        val v = e.target
-        if (u !in 0 until n || v !in 0 until n) continue
-        predsAll[v].add(u)
-        if (e.label !is EdgeLabel.Exception) {
-            predsNormal[v].add(u)
-            normalEdges.add(e)
-        }
-    }
 
     // Identify back edges grouped by header h
     val backEdgesByHeader = mutableMapOf<BasicBlockIndex, MutableSet<Edge>>()
+    val normalEdges = edges.filter { it.label !is EdgeLabel.Exception }
     for (e in normalEdges) {
         val u = e.source
         val h = e.target
@@ -244,7 +233,7 @@ internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(dominators: A
             if (body.add(u)) stack.add(u)
             while (stack.isNotEmpty()) {
                 val x = stack.removeLast()
-                for (p in predsNormal[x]) {
+                for (p in normalPredecessors[x]) {
                     if (body.add(p)) stack.add(p)
                 }
             }
