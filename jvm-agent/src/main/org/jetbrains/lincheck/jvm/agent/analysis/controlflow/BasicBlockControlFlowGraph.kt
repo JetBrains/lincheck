@@ -271,14 +271,10 @@ class BasicBlockControlFlowGraph(
         }
         if (backEdgesByHeader.isEmpty()) return MethodLoopsInformation()
 
-        // For each header, compute loop body as a union of natural loops for each back edge to that header
-        data class LoopDescriptor(
-            val header: BasicBlockIndex,
-            val body: MutableSet<BasicBlockIndex> = mutableSetOf(),
-            val backEdges: MutableSet<Edge> = mutableSetOf(),
-        )
-        val loopsDescriptors = mutableListOf<LoopDescriptor>()
-
+        // For each header, compute loop body as a union of natural loops for each back edge to that header.
+        // Also calculate normal and exceptional exits
+        val loops = mutableListOf<LoopInformation>()
+        var nextLoopId = 0
         for ((h, backEdges) in backEdgesByHeader.toSortedMap()) {
             val body = mutableSetOf<BasicBlockIndex>()
             body.add(h)
@@ -295,17 +291,6 @@ class BasicBlockControlFlowGraph(
                     }
                 }
             }
-            loopsDescriptors += LoopDescriptor(h, body, backEdges)
-        }
-
-        // Build final LoopInformation list
-        val loops = mutableListOf<LoopInformation>()
-        loopsDescriptors.sortBy { it.header }
-        for ((id, desc) in loopsDescriptors.withIndex()) {
-            val header = desc.header
-            val headers = setOf(header) // reducible by construction
-            val body = desc.body
-
             // Normal exits: edges from body to outside, non-exception
             val normalExits = buildSet {
                 for (e in normalEdges) {
@@ -320,17 +305,15 @@ class BasicBlockControlFlowGraph(
                     }
                 }
             }
-
-            val loop = LoopInformation(
-                id = id,
-                header = header,
-                headers = headers,
+            loops += LoopInformation(
+                id = nextLoopId++,
+                header = h,
+                headers = setOf(h), // TODO: check above that irreducible graphs are not possible
                 body = body,
-                backEdges = desc.backEdges,
+                backEdges = backEdges,
                 normalExits = normalExits,
                 exceptionalExitHandlers = exceptionalExitHandlers,
             )
-            loops += loop
         }
 
         // Map blocks to loop ids
