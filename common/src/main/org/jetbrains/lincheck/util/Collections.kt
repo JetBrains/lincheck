@@ -202,6 +202,20 @@ fun <T> Iterable<T>.allIndexed(predicate: (Int, T) -> Boolean): Boolean {
 }
 
 /**
+ * Computes the intersection of all sets in this iterable.
+ *
+ * For an empty receiver, returns an empty mutable set.
+ */
+fun <T> Iterable<Set<T>>.intersectAll(): MutableSet<T> {
+    val intersection = mutableSetOf<T>()
+    forEachIndexed { i, set ->
+        if (i == 0) intersection.addAll(set)
+        else intersection.retainAll(set)
+    }
+    return intersection
+}
+
+/**
  * Creates a mutable set backed by an [IdentityHashMap].
  * This set uses identity comparisons `===` to determine equality of elements, rather than the `equals` method.
  *

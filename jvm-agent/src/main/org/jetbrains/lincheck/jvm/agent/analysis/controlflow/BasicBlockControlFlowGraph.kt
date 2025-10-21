@@ -218,15 +218,8 @@ class BasicBlockControlFlowGraph(
         while (changed) {
             changed = false
             for (b in 1 until n) {
-                val newSet = buildSet {
-                    // Intersection of dominators of predecessors: dom(b) = {b} + intersect(dom(p1), dom(p2), ...)
-                    val it = preds[b].iterator()
-                    addAll(doms[it.next()])
-                    while (it.hasNext()) {
-                        retainAll(doms[it.next()])
-                    }
-                    add(b)
-                }
+                // Intersection of dominators of predecessors: dom(b) = {b} + intersect(dom(p1), dom(p2), ...)
+                val newSet = preds[b].map { doms[it] }.intersectAll().apply { add(b) }
                 if (newSet != doms[b]) {
                     doms[b] = newSet
                     changed = true
