@@ -286,7 +286,6 @@ class BasicBlockControlFlowGraph(
                 while (stack.isNotEmpty()) {
                     val x = stack.removeLast()
                     for (p in predsNormal[x]) {
-                        if (p == h) continue
                         if (body.add(p)) stack.add(p)
                     }
                 }
