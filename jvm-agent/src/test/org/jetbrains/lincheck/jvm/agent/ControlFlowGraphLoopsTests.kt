@@ -10,7 +10,7 @@
 
 package org.jetbrains.lincheck.jvm.agent
 
-import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.prettyPrint
+import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.toFormattedString
 import org.junit.Test
 
 class JavaControlFlowGraphLoopsTests {
@@ -27,7 +27,7 @@ class JavaControlFlowGraphLoopsTests {
             className, name, desc
         ) { cfg ->
             cfg.computeLoopInformation()
-            cfg.loopInfo!!.prettyPrint()
+            cfg.loopInfo!!.toFormattedString()
         }
 
     @Test

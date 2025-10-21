@@ -105,7 +105,10 @@ class BasicBlockControlFlowGraph(
         if (loopInfo == null) {
             val dominators = computeDominators()
             loopInfo = computeLoopsFromDominators(dominators).also { info ->
-                info.loops.forEach { it.validateLoopEdgesInvariants() }
+                info.validateBasicBlocksLoopsMapping()
+                info.loops.forEach {
+                    it.validateLoopEdgesInvariants()
+                }
             }
         }
         return loopInfo!!
@@ -167,6 +170,20 @@ class BasicBlockControlFlowGraph(
                 """.trimIndent()
             }
          }
+    }
+
+    /**
+     * Validates that every basic block is contained inside each loop it is mapped to.
+     */
+    private fun MethodLoopsInformation.validateBasicBlocksLoopsMapping() {
+        if (loopsByBlock.isEmpty()) return
+        for ((block, loops) in loopsByBlock) {
+            for (loopId in loops) {
+                val loop = getLoopInfo(loopId)
+                require(loop != null) { "Loop $loopId is not found" }
+                require(block in loop.body) { "Block B$block is not found in loop $loop, but is mapped to it" }
+            }
+        }
     }
 
     /**

@@ -142,17 +142,15 @@ class MethodLoopsInformation(
         loops.getOrNull(id)
 }
 
-fun MethodLoopsInformation.prettyPrint(): String =
-    MethodLoopsInformationPrinter(this).prettyPrint()
+fun MethodLoopsInformation.toFormattedString(): String =
+    MethodLoopsInformationPrinter(this).toFormattedString()
 
 private class MethodLoopsInformationPrinter(val loopInfo: MethodLoopsInformation) {
 
-    fun prettyPrint(): String {
+    fun toFormattedString(): String {
         val sb = StringBuilder()
-
-        sb.appendLine("LOOPS")
         if (loopInfo.loops.isEmpty()) {
-            sb.appendLine("  NONE")
+            sb.appendLine("NO LOOPS")
         }
         for ((index, loop) in loopInfo.loops.withIndex()) {
             sb.appendLine("LOOP ${index + 1}")
@@ -162,25 +160,15 @@ private class MethodLoopsInformationPrinter(val loopInfo: MethodLoopsInformation
             sb.appendLine(loop.backEdges.toFormattedString().prependIndent("    "))
             sb.appendLine("  NORMAL EXITS:")
             loop.normalExits.let {
-                if (it.isEmpty()) sb.appendLine().appendLine("    NONE")
+                if (it.isEmpty()) sb.appendLine("    NONE")
                 else sb.appendLine(it.toFormattedString().prependIndent("    "))
             }
-            sb.append("  EXCEPTION EXIT HANDLERS: ")
+            sb.appendLine("  EXCEPTION EXIT HANDLERS:")
             loop.exceptionalExitHandlers.let {
-                if (it.isEmpty()) sb.appendLine("NONE")
-                else sb.appendLine(it.sorted().joinToString(", ") { block -> "B$block" })
+                if (it.isEmpty()) sb.appendLine("    NONE")
+                else sb.appendLine(it.sorted().joinToString(", ") { block -> "B$block" }.prependIndent("    "))
             }
         }
-        sb.appendLine()
-
-        sb.appendLine("LOOPS BY BLOCK")
-        if (loopInfo.loopsByBlock.isEmpty()) {
-            sb.appendLine("  NONE")
-        }
-        for ((block, loops) in loopInfo.loopsByBlock.toSortedMap()) {
-            sb.appendLine("  B$block: ${loops.sorted().joinToString(", ") { "LOOP ${it + 1}" }}")
-        }
-
         return sb.toString()
     }
 }
