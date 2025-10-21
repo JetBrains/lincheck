@@ -233,6 +233,11 @@ class BasicBlockControlFlowGraph(
      * Compute loops using dominators and back-edge detection.
      * A back edge is an edge u -> h (non-exception) where h dominates u.
      * For each header h, the loop body is the union of natural loops of its back edges.
+     *
+     * Note: "natural loops" are loops calculated via the algorithm below.
+     * If there is more than one back edge to the same header, the body of the loop is the union of the nodes computed for each back edge.
+     * Since loops can nest, a header for one loop can be in the body of (but not the header of) another loop.
+     * See https://pages.cs.wisc.edu/~fischer/cs701.f14/finding.loops.html
      */
     private fun computeLoopsFromDominators(dominators: Array<Set<BasicBlockIndex>>): MethodLoopsInformation {
         val n = basicBlocks.size
