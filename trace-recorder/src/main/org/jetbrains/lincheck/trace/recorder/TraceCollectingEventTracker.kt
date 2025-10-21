@@ -666,11 +666,6 @@ class TraceCollectingEventTracker(
         params: Array<out Any?>
     ): BootstrapResult<*>? = null
 
-    override fun beforeLoopEnter(codeLocation: Int, loopId: Int) {}
-    override fun onLoopIteration(codeLocation: Int, loopId: Int) {}
-    override fun afterLoopExit(codeLocation: Int, loopId: Int) {}
-    override fun afterLoopExceptionExit(codeLocation: Int, loopId: Int, exception: Throwable?, canEnterFromOutsideLoop: Boolean) {}
-
     override fun getThreadLocalRandom(): InjectedRandom  = runInsideIgnoredSection {
         val msg = "Trace Recorder mode doesn't support Random calls determinism"
         System.err.println(msg)
