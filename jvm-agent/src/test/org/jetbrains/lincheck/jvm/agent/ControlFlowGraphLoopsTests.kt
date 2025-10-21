@@ -73,6 +73,9 @@ class JavaControlFlowGraphLoopsTests {
     fun forLoopContinueBreakNested() = test("forLoopContinueBreakNested", "(II)I")
 
     @Test
+    fun whileWithConditionOutside() = test("whileWithConditionOutside", "(I)I")
+
+    @Test
     fun whileWithThrow() = test("whileWithThrow", "(I)I")
 
     @Test
@@ -80,6 +83,9 @@ class JavaControlFlowGraphLoopsTests {
 
     @Test
     fun whileWithTryCatchOutside() = test("whileWithTryCatchOutside", "(I)I")
+
+    @Test
+    fun whileWithTryCatchOutsideAndExtraThrow() = test("whileWithTryCatchOutsideAndExtraThrow", "(I)I")
 
     @Test
     fun nestedWhileWithTryCatchBetween() = test("nestedWhileWithTryCatchBetween", "(I)I")

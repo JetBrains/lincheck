@@ -309,6 +309,17 @@ public class JavaControlFlowGraphCases {
         }
     }
 
+    // While with condition outside
+    public static int whileWithConditionOutside(int x) {
+        if (x % 2 == 0) {
+            while (x > 0) {
+                x--;
+            }
+        }
+        int y = x / 2;
+        return y;
+    }
+
     // While with throw
     public static int whileWithThrow(int x) {
         int y = 0;
@@ -341,6 +352,22 @@ public class JavaControlFlowGraphCases {
                 y = mayThrow(x);
                 x--;
             }
+        }
+        catch (IllegalArgumentException e) {
+            y = -1;
+        }
+        return y;
+    }
+
+    // While with try/catch outside with additional throw
+    public static int whileWithTryCatchOutsideAndExtraThrow(int x) {
+        int y = 0;
+        try {
+            while (x > 0) {
+                y = mayThrow(x);
+                x--;
+            }
+            mayThrow(x); // another throwing method call
         }
         catch (IllegalArgumentException e) {
             y = -1;
