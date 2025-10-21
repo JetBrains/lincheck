@@ -159,8 +159,8 @@ class BasicBlockControlFlowGraph(
      * * is acyclic (in terms of graph theory)
      * * each basic block of CFG can be reached from the initial one
      *
-     * The initial basic block in our case is basic black at index 0.
-     * And reachability calculation can use both normal (expect for of removed back-edges) and exceptional edges.
+     * The initial basic block in our case is the basic block at index 0.
+     * And reachability calculation can use both normal (except for back-edges) and exceptional edges.
      *
      * See also https://www.csd.uwo.ca/~mmorenom/CS447/Lectures/CodeOptimization.html/node6.html.
      */
