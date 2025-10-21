@@ -199,11 +199,9 @@ class BasicBlockControlFlowGraph(
         val n = basicBlocks.size
         if (n == 0) return emptyArray()
 
-        // Build predecessor lists; include only normal (non-exception) predecessors for loop analysis dominators.
-        // Dominators for loop/back-edge detection are typically based on normal control-flow.
+        // Build predecessor lists; include both normal and exception predecessors for loop analysis dominators.
         val preds: Array<MutableSet<BasicBlockIndex>> = Array(n) { mutableSetOf<BasicBlockIndex>() }
         for (e in edges) {
-            // Note: we count exception edges as well
             val u = e.source
             val v = e.target
             if (u in 0 until n && v in 0 until n) {
