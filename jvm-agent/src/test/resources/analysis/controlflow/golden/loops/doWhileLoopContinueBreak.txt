@@ -1,0 +1,10 @@
+LOOP 1
+  HEADER: B1
+  BODY: B1, B2, B3, B5, B6
+  BACK EDGES:
+    B6 -> B1 : JUMP(opcode=IF_ICMPLT)
+  NORMAL EXITS:
+    B3 -> B4
+    B6 -> B7
+  EXCEPTION EXIT HANDLERS:
+    NONE

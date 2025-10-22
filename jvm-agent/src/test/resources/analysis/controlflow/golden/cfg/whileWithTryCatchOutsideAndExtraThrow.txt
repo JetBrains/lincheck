@@ -1,45 +1,50 @@
 BLOCKS
 B0: [0..3]
    0:    L0
-   1:     LINENUMBER 349 L0
+   1:     LINENUMBER 364 L0
    2:     ICONST_0
    3:     ISTORE 1
 B1: [4..8]
    4:    L1
-   5:     LINENUMBER 351 L1
+   5:     LINENUMBER 366 L1
    6:    FRAME APPEND [I]
    7:     ILOAD 0
    8:     IFLE L2
 B2: [9..17]
    9:    L3
-  10:     LINENUMBER 352 L3
+  10:     LINENUMBER 367 L3
   11:     ILOAD 0
   12:     INVOKESTATIC JavaControlFlowGraphCases.mayThrow (I)I
   13:     ISTORE 1
   14:    L4
-  15:     LINENUMBER 353 L4
+  15:     LINENUMBER 368 L4
   16:     IINC 0 -1
   17:     GOTO L1
-B3: [18..21]
+B3: [18..26]
   18:    L2
-  19:     LINENUMBER 358 L2
+  19:     LINENUMBER 370 L2
   20:    FRAME SAME
-  21:     GOTO L5
-B4: [22..29]
-  22:    L6
-  23:     LINENUMBER 356 L6
-  24:    FRAME SAME1 java/lang/IllegalArgumentException
-  25:     ASTORE 2
-  26:    L7
-  27:     LINENUMBER 357 L7
-  28:     ICONST_M1
-  29:     ISTORE 1
-B5: [30..34]
-  30:    L5
-  31:     LINENUMBER 359 L5
-  32:    FRAME SAME
-  33:     ILOAD 1
-  34:     IRETURN
+  21:     ILOAD 0
+  22:     INVOKESTATIC JavaControlFlowGraphCases.mayThrow (I)I
+  23:     POP
+  24:    L5
+  25:     LINENUMBER 374 L5
+  26:     GOTO L6
+B4: [27..34]
+  27:    L7
+  28:     LINENUMBER 372 L7
+  29:    FRAME SAME1 java/lang/IllegalArgumentException
+  30:     ASTORE 2
+  31:    L8
+  32:     LINENUMBER 373 L8
+  33:     ICONST_M1
+  34:     ISTORE 1
+B5: [35..39]
+  35:    L6
+  36:     LINENUMBER 375 L6
+  37:    FRAME SAME
+  38:     ILOAD 1
+  39:     IRETURN
 
 EDGES
   B0 -> B1

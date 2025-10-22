@@ -1,0 +1,9 @@
+LOOP 1
+  HEADER: B1
+  BODY: B1, B2
+  BACK EDGES:
+    B2 -> B1 : JUMP(opcode=GOTO)
+  NORMAL EXITS:
+    B1 -> B3 : JUMP(opcode=IF_ICMPGE)
+  EXCEPTION EXIT HANDLERS:
+    NONE

@@ -13,40 +13,25 @@ package org.jetbrains.lincheck.jvm.agent
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.toFormattedString
 import org.junit.Test
 
-
-class JavaControlFlowGraphTest {
+class JavaControlFlowGraphLoopsTests {
     private val tester = JavaControlFlowGraphTester()
 
     private val javaPath = "analysis/controlflow/JavaControlFlowGraphCases.java.txt"
     private val className = "JavaControlFlowGraphCases"
 
-    private fun golden(name: String) = "analysis/controlflow/golden/cfg/$name.txt"
+    private fun golden(name: String) = "analysis/controlflow/golden/loops/$name.txt"
 
     private fun test(name: String, desc: String) =
-        tester.testMethodCfg(javaPath, golden(name), className, name, desc) { cfg ->
-            cfg.toFormattedString()
+        tester.testMethodCfg(
+            javaPath, golden(name),
+            className, name, desc
+        ) { cfg ->
+            cfg.computeLoopInformation()
+            cfg.loopInfo!!.toFormattedString()
         }
 
     @Test
-    fun straightLine() = test("straightLine", "()I")
-
-    @Test
-    fun ifStmt() = test("ifStmt", "(I)I")
-
-    @Test
-    fun ifElseStmt() = test("ifElseStmt", "(I)I")
-
-    @Test
-    fun ifNull() = test("ifNull", "(Ljava/lang/Object;)I")
-
-    @Test
-    fun ifRefCompare() = test("ifRefCompare", "(Ljava/lang/Object;Ljava/lang/Object;)I")
-
-    @Test
-    fun ifElseNested() = test("ifElseNested", "(II)I")
-
-    @Test
-    fun ifReturn() = test("ifReturn", "(I)I")
+    fun straightLine() = test("straightLine", "()I") // will contain no loops
 
     @Test
     fun whileLoop() = test("whileLoop", "(I)I")
@@ -86,36 +71,6 @@ class JavaControlFlowGraphTest {
 
     @Test
     fun forLoopContinueBreakNested() = test("forLoopContinueBreakNested", "(II)I")
-
-    @Test
-    fun tableSwitch() = test("tableSwitch", "(I)I")
-
-    @Test
-    fun lookupSwitch() = test("lookupSwitch", "(I)I")
-
-    @Test
-    fun tryCatch() = test("tryCatch", "(I)I")
-
-    @Test
-    fun tryMultiCatch() = test("tryMultiCatch", "(I)I")
-
-    @Test
-    fun tryCatchBlocks() = test("tryCatchBlocks", "(I)I")
-
-    @Test
-    fun tryFinally() = test("tryFinally", "(I)I")
-
-    @Test
-    fun tryCatchFinally() = test("tryCatchFinally", "(I)I")
-
-    @Test
-    fun throwStmt() = test("throwStmt", "(I)I")
-
-    @Test
-    fun throwCatch() = test("throwCatch", "(I)I")
-
-    @Test
-    fun implicitThrowCatch() = test("implicitThrowCatch", "(I)I")
 
     @Test
     fun whileWithConditionOutside() = test("whileWithConditionOutside", "(I)I")

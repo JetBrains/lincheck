@@ -1,0 +1,38 @@
+BLOCKS
+B0: [0..5]
+   0:    L0
+   1:     LINENUMBER 314 L0
+   2:     ILOAD 0
+   3:     ICONST_2
+   4:     IREM
+   5:     IFNE L1
+B1: [6..10]
+   6:    L2
+   7:     LINENUMBER 315 L2
+   8:    FRAME SAME
+   9:     ILOAD 0
+  10:     IFLE L1
+B2: [11..14]
+  11:    L3
+  12:     LINENUMBER 316 L3
+  13:     IINC 0 -1
+  14:     GOTO L2
+B3: [15..25]
+  15:    L1
+  16:     LINENUMBER 319 L1
+  17:    FRAME SAME
+  18:     ILOAD 0
+  19:     ICONST_2
+  20:     IDIV
+  21:     ISTORE 1
+  22:    L4
+  23:     LINENUMBER 320 L4
+  24:     ILOAD 1
+  25:     IRETURN
+
+EDGES
+  B0 -> B1
+  B0 -> B3 : JUMP(opcode=IFNE)
+  B1 -> B2
+  B1 -> B3 : JUMP(opcode=IFLE)
+  B2 -> B1 : JUMP(opcode=GOTO)

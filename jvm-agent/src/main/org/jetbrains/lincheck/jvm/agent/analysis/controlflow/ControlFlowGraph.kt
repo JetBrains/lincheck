@@ -26,7 +26,20 @@ typealias NodeIndex = Int
  * A type representing the label of a control-flow edge,
  * containing information about the type of the transition.
  */
-sealed class EdgeLabel {
+sealed class EdgeLabel : Comparable<EdgeLabel> {
+
+    override fun compareTo(other: EdgeLabel): Int {
+        fun labelSortKey(label: EdgeLabel): String = when (label) {
+            is FallThrough -> "0"
+            is Jump        -> "1:${Printer.OPCODES[label.opcode]}"
+            is Exception   -> "2:${label.caughtTypeName ?: "*"}"
+        }
+
+        val sk1 = labelSortKey(this)
+        val sk2 = labelSortKey(other)
+        return sk1.compareTo(sk2)
+    }
+
     /**
      * A normal fall-through from instruction i to i + 1.
      */
@@ -118,10 +131,16 @@ class Edge(
         result = 31 * result + label.hashCode()
         return result
     }
+
+    operator fun component1() = source
+    operator fun component2() = target
+    operator fun component3() = label
 }
 
-typealias EdgeMap = Map<NodeIndex, Set<Edge>>
+typealias AdjacencyMap = Map<NodeIndex, Set<Edge>>
 typealias MutableEdgeMap = MutableMap<NodeIndex, MutableSet<Edge>>
+
+fun AdjacencyMap.neighbours(idx: NodeIndex): Iterable<NodeIndex> = (this[idx]?.map { it.target } ?: emptySet()).asIterable()
 
 /**
  * Base class for representing control-flow graph.
@@ -141,20 +160,23 @@ sealed class ControlFlowGraph {
     /**
      * A mapping from a node to adjacent control-flow edges.
      */
-    val edgeMap: EdgeMap get() = _edgeMap
-    private val _edgeMap: MutableEdgeMap = mutableMapOf()
+    val allSuccessors: AdjacencyMap get() = _allSuccessors
+    private val _allSuccessors: MutableEdgeMap = mutableMapOf()
 
     val edges: Set<Edge> get() =
-        edgeMap.flatMap { it.value }.toSet()
+        allSuccessors.flatMap { it.value }.toSet()
+
+    val normalEdges: Set<Edge> get() =
+        edges.filter { it.label !is EdgeLabel.Exception }.toSet()
 
     fun hasEdge(src: NodeIndex, dst: NodeIndex): Boolean {
-        return _edgeMap[src]?.any { it.target == dst } ?: false
+        return _allSuccessors[src]?.any { it.target == dst } ?: false
     }
 
-    fun addEdge(src: NodeIndex, dst: NodeIndex, label: EdgeLabel) {
+    open fun addEdge(src: NodeIndex, dst: NodeIndex, label: EdgeLabel) {
         _nodes.add(src)
         _nodes.add(dst)
-        _edgeMap.updateInplace(src, default = mutableSetOf()) {
+        _allSuccessors.updateInplace(src, default = mutableSetOf()) {
             add(Edge(src, dst, label))
         }
     }
@@ -202,7 +224,7 @@ internal fun isRecognizedJumpOpcode(opcode: Int): Boolean = when (opcode) {
 
 internal fun Collection<Edge>.toFormattedString(): String {
     val sb = StringBuilder("")
-    val edges = toMutableList().sortedWith(edgeComparator)
+    val edges = toMutableList().sortedWith(compareBy({ it.source }, { it.target }, { it.label }))
     for ((id, e) in edges.withIndex()) {
         val label = e.label.takeIf { it !is EdgeLabel.FallThrough }
         sb.append("B${e.source} -> B${e.target}")
@@ -210,13 +232,4 @@ internal fun Collection<Edge>.toFormattedString(): String {
         if (id != edges.lastIndex) sb.appendLine()
     }
     return sb.toString()
-}
-
-private val edgeComparator = Comparator<Edge> { e1, e2 ->
-    fun labelSortKey(label: EdgeLabel): String = when (label) {
-        is EdgeLabel.FallThrough -> "0"
-        is EdgeLabel.Jump -> "1:${Printer.OPCODES[label.opcode]}"
-        is EdgeLabel.Exception -> "2:${label.caughtTypeName ?: "*"}"
-    }
-    compareValuesBy(e1, e2, { it.source }, { it.target }, { labelSortKey(it.label) })
 }

@@ -17,6 +17,7 @@ import org.objectweb.asm.util.Textifier
 import org.objectweb.asm.util.TraceMethodVisitor
 import java.io.PrintWriter
 import java.io.StringWriter
+import kotlin.collections.mutableMapOf
 
 /**
  * A type alias representing the index of a basic block within a control flow graph.
@@ -83,6 +84,54 @@ class BasicBlockControlFlowGraph(
     var loopInfo: MethodLoopsInformation? = null
         private set
 
+    /**
+     * Whether this CFG is reducible.
+     *
+     * When the field is `null` it means that [computeLoopInformation] method was not called on this CFG.
+     */
+    var isReducible: Boolean? = null
+        private set
+
+    /**
+     * Dominators of each basic block.
+     *
+     * When this field is `null` it means that [computeLoopInformation] method was not called on this CFG.
+     */
+    var dominators: Array<Set<BasicBlockIndex>>? = null
+        private set
+
+    /**
+     * Set of all back-edges in the CFG.
+     *
+     * When this field is `null` it means that [computeLoopInformation] method was not called on this CFG.
+     */
+    var backEdges: Set<Edge>? = null
+        private set
+
+    /**
+     * A mapping from a node to adjacent reverse control-flow edges.
+     */
+    val allPredecessors: AdjacencyMap get() = _allPredecessors
+    private val _allPredecessors: MutableEdgeMap = mutableMapOf()
+
+    /**
+     * A mapping from a node to adjacent reverse control-flow non-exception edges.
+     */
+    val normalPredecessors: AdjacencyMap get() = _normalPredecessors
+    private val _normalPredecessors: MutableEdgeMap = mutableMapOf()
+
+
+    override fun addEdge(src: NodeIndex, dst: NodeIndex, label: EdgeLabel) {
+        super.addEdge(src, dst, label)
+
+        // update predecessors
+        val inverseEdge = Edge(dst, src, label)
+        _allPredecessors.updateInplace(dst, default = mutableSetOf()) { add(inverseEdge) }
+        if (label !is EdgeLabel.Exception) {
+            _normalPredecessors.updateInplace(dst, default = mutableSetOf()) { add(inverseEdge) }
+        }
+    }
+
     /** Returns the first executable opcode index of the given block, or null if none. */
     fun firstOpcodeIndexOf(block: BasicBlockIndex): InstructionIndex? =
         basicBlocks.getOrNull(block)?.executableRange?.first
@@ -97,15 +146,32 @@ class BasicBlockControlFlowGraph(
         val node = instructions.get(idx)
         return (node as? LabelNode)?.label
     }
-    
+
     /**
      * Computes loop-related information for this method.
      */
     fun computeLoopInformation(): MethodLoopsInformation {
         if (loopInfo == null) {
-            // TODO: this is a stub: loop detection is not implemented yet; the method returns empty sites.
-            loopInfo = MethodLoopsInformation().apply {
-                loops.forEach { it.validateLoopEdgesInvariants() }
+            // compute loop information
+            dominators = computeDominators()
+            backEdges = computeBackEdges()
+
+            if (isReducible()) {
+                isReducible = true
+                // CFG is reducible, so we can compute actual loops
+                loopInfo = computeLoopsFromDominators().also { info ->
+                    info.validateBasicBlocksLoopsMapping()
+                    info.loops.forEach {
+                        it.validateLoopEdgesInvariants()
+                    }
+                }
+            }
+            else {
+                isReducible = false
+                // CFG is irreducible, our loop calculation algorithm will not work with it
+                // so we report that fact and don't compute any loop information
+                Logger.warn { "Irreducible CFG detected, loop information will not be computed:\n${toFormattedString()}" }
+                loopInfo = MethodLoopsInformation()
             }
         }
         return loopInfo!!
@@ -168,6 +234,20 @@ class BasicBlockControlFlowGraph(
             }
          }
     }
+
+    /**
+     * Validates that every basic block is contained inside each loop it is mapped to.
+     */
+    private fun MethodLoopsInformation.validateBasicBlocksLoopsMapping() {
+        if (loopsByBlock.isEmpty()) return
+        for ((block, loops) in loopsByBlock) {
+            for (loopId in loops) {
+                val loop = getLoopInfo(loopId)
+                require(loop != null) { "Loop $loopId is not found" }
+                require(block in loop.body) { "Block B$block is not found in loop $loop, but is mapped to it" }
+            }
+        }
+    }
 }
 
 /**
@@ -184,7 +264,7 @@ fun InstructionControlFlowGraph.toBasicBlockGraph(): BasicBlockControlFlowGraph 
     val leaders =
         buildSet {
             add(0)
-            edgeMap.values.forEach { edges ->
+            allSuccessors.values.forEach { edges ->
                 edges.forEach { edge ->
                     if (edge.label is EdgeLabel.Jump) {
                         add(edge.target)
@@ -240,7 +320,7 @@ fun InstructionControlFlowGraph.toBasicBlockGraph(): BasicBlockControlFlowGraph 
     
     // Project instruction edges onto basic blocks.
     val basicBlockGraph = BasicBlockControlFlowGraph(instructions, basicBlocks)
-    for ((u, edges) in edgeMap) {
+    for ((u, edges) in allSuccessors) {
         val bu = instructionToBlock[u] ?: continue
         for (edge in edges) {
             val v = edge.target

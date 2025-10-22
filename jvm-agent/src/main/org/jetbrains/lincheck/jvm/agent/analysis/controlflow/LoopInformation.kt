@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.jvm.agent.analysis.controlflow
 
 import org.jetbrains.lincheck.util.*
+import kotlin.collections.withIndex
 
 
 /** Per-method, stable id for a detected loop. */
@@ -140,4 +141,221 @@ class MethodLoopsInformation(
      */
     fun getLoopInfo(id: LoopId): LoopInformation? =
         loops.getOrNull(id)
+}
+
+// == LOOPS EXTRACTION FROM CFG ==
+
+/**
+ * Compute dominator sets for each basic block using the classical iterative algorithm.
+ * The entry block is assumed to be block 0 when the graph is non-empty.
+ * Returns an array where index i holds the set of dominators of block i (including i).
+ *
+ * A node d dominates node n if every path from the entry node to n must go through d.
+ * By definition, every node dominates itself. The entry node dominates all nodes in
+ * a reducible control flow graph.
+ *
+ * @return An array of dominator sets for each basic block, including the entry block.
+ */
+internal fun BasicBlockControlFlowGraph.computeDominators(): Array<Set<BasicBlockIndex>> {
+    val n = basicBlocks.size
+    if (n == 0) return emptyArray()
+
+    val doms: Array<Set<BasicBlockIndex>> = Array(n) { (0 until n).toMutableSet() }
+    // Entry is block 0 when present
+    doms[0] = setOf(0)
+
+    var changed = true
+    while (changed) {
+        changed = false
+        for (b in 1 until n) {
+            // Intersection of dominators of predecessors: dom(b) = {b} + intersect(dom(p1), dom(p2), ...)
+            val newSet = allPredecessors.neighbours(b).map { doms[it] }.intersectAll().apply { add(b) }
+            if (newSet != doms[b]) {
+                doms[b] = newSet
+                changed = true
+            }
+        }
+    }
+    return doms
+}
+
+/**
+ * @return set of back edges sorted by their headers (`target` of the edge).
+ */
+internal fun BasicBlockControlFlowGraph.computeBackEdges(): Set<Edge> {
+    require(dominators != null) { "Dominator set must be computed before computing back edges" }
+    val backEdges = mutableSetOf<Edge>()
+    for (e in normalEdges) {
+        val u = e.source
+        val h = e.target
+        val domU = dominators!!.getOrElse(u) { emptySet() }
+        if (h in domU) {
+            backEdges.add(e)
+        }
+    }
+    return backEdges
+        .sortedWith(compareBy({ it.target }, { it.source }, { it.label }))
+        .toSet()
+}
+
+/**
+ * This algorithm cannot detect loops in irreducible graphs. It only produces reducible loops.
+ * Thus, expects reducible CFG.
+ *
+ * Compute loops using dominators and back-edge detection.
+ * A back edge is an edge u -> h (non-exception) where h dominates u.
+ * For each header h, the loop body is the union of natural loops of its back edges.
+ *
+ * Note: "natural loops" are loops calculated via the algorithm below.
+ * If there is more than one back edge to the same header, the body of the loop is the union of the nodes computed for each back edge.
+ * Since loops can nest, a header for one loop can be in the body of (but not the header of) another loop.
+ *
+ * @param dominators An array of dominator sets for each basic block.
+ * @return A list of detected loops, each represented by a [LoopInformation] object.
+ *   The list is empty if no loops were detected.
+ *   The loops are sorted by the header block index.
+ */
+internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(): MethodLoopsInformation {
+    require(isReducible != null) { "CFG reducibility was not checked before computing the loops" }
+    require(isReducible!!) { "Cannot compute loops on irreducible CFG" }
+
+    val dominators = dominators
+    val backEdges = backEdges
+    require(dominators != null) { "Dominator set must be computed before computing loops" }
+    require(backEdges != null) { "Back edges must be computed before computing loops" }
+
+    val n = basicBlocks.size
+    require(dominators.size == n) { "Dominator set must be of length $n but got ${dominators.size} instead" }
+    if (n == 0) return MethodLoopsInformation()
+
+    // Identify back edges grouped by header h
+    if (backEdges.isEmpty()) return MethodLoopsInformation()
+
+    // For each header, compute loop body as a union of natural loops for each back edge to that header.
+    // Also calculate normal and exceptional exits
+    val backEdgesByHeader = backEdges.groupBy { it.target }
+    val loops = mutableListOf<LoopInformation>()
+    var nextLoopId = 0
+    for ((h, adjacentBackEdges) in backEdgesByHeader) {
+        val body = mutableSetOf<BasicBlockIndex>()
+        body.add(h)
+        // Start from each back edge source; perform reverse DFS over normal predecessors until reaching h
+        for (e in adjacentBackEdges) {
+            val u = e.source
+            val stack = ArrayDeque<BasicBlockIndex>()
+            // Natural loop includes both u and h initially
+            if (body.add(u)) stack.add(u)
+            while (stack.isNotEmpty()) {
+                val x = stack.removeLast()
+                for (p in normalPredecessors.neighbours(x)) {
+                    if (body.add(p)) stack.add(p)
+                }
+            }
+        }
+        // Normal exits: edges from body to outside, non-exception
+        val normalExits = buildSet {
+            for (e in normalEdges) {
+                if (e.source in body && e.target !in body) add(e)
+            }
+        }
+        // Exceptional exit handlers: targets of exception edges leaving the body
+        val exceptionalExitHandlers = buildSet {
+            for (e in edges) {
+                if (e.label is EdgeLabel.Exception && e.source in body && e.target !in body) {
+                    add(e.target)
+                }
+            }
+        }
+        loops += LoopInformation(
+            id = nextLoopId++,
+            header = h,
+            headers = setOf(h),
+            body = body,
+            backEdges = adjacentBackEdges.toSet(),
+            normalExits = normalExits,
+            exceptionalExitHandlers = exceptionalExitHandlers,
+        )
+    }
+
+    // Map blocks to loop ids
+    val loopsByBlock = mutableMapOf<BasicBlockIndex, MutableList<LoopId>>()
+    for (loop in loops) {
+        for (b in loop.body) {
+            loopsByBlock.updateInplace(b, default = mutableListOf()) { add(loop.id) }
+        }
+    }
+    return MethodLoopsInformation(loops = loops, loopsByBlock = loopsByBlock)
+}
+
+/**
+ * CFG is called *reducible* if removal of its back edges leads to a graph that:
+ * * is acyclic (in terms of graph theory)
+ * * each basic block of CFG can be reached from the initial one
+ *
+ * The initial basic block in our case is the basic block at index 0.
+ * And reachability calculation can use both normal (except for back-edges) and exceptional edges.
+ *
+ * See also https://www.csd.uwo.ca/~mmorenom/CS447/Lectures/CodeOptimization.html/node6.html.
+ */
+internal fun BasicBlockControlFlowGraph.isReducible(): Boolean {
+    val n = basicBlocks.size
+    val backEdges = backEdges
+    require(backEdges != null) { "Back edges must be computed before checking reducibility" }
+    // Calculate successors for each basic block (excluding back edges)
+    val filteredSuccessors: AdjacencyMap = allSuccessors.mapValues { (_, neighs) -> neighs.filter { it !in backEdges }.toSet() }
+
+    // check for cycles
+    val colors = Array(n) { 0 }
+    fun dfs(v: Int): Boolean {
+        colors[v] = 1 // ENTERED
+        var hasCycle = false
+        for (u in filteredSuccessors.neighbours(v)) {
+            when (colors[u]) {
+                0 -> hasCycle = dfs(u) or hasCycle
+                1 -> hasCycle = true // Found cycle
+                // 2 (EXITED) - already fully explored, skip
+            }
+        }
+        colors[v] = 2 // EXITED
+        return hasCycle
+    }
+
+    val hasCycle = dfs(0)
+    val allBlocksReachable = colors.all { it == 2 /* we visited all blocks in dfs */ }
+
+    // CFG is reducible if it does not have cycles (in terms of graph theory) and all blocks are reachable from entry
+    return !hasCycle && allBlocksReachable
+}
+
+// == LOOPS PRETTY-PRINTING ==
+
+fun MethodLoopsInformation.toFormattedString(): String =
+    MethodLoopsInformationPrinter(this).toFormattedString()
+
+private class MethodLoopsInformationPrinter(val loopInfo: MethodLoopsInformation) {
+
+    fun toFormattedString(): String {
+        val sb = StringBuilder()
+        if (loopInfo.loops.isEmpty()) {
+            sb.appendLine("NO LOOPS")
+        }
+        for ((index, loop) in loopInfo.loops.withIndex()) {
+            sb.appendLine("LOOP ${index + 1}")
+            sb.appendLine("  HEADER: B${loop.header}")
+            sb.appendLine("  BODY: ${loop.body.sorted().joinToString(", ") { "B$it" }}")
+            sb.appendLine("  BACK EDGES:")
+            sb.appendLine(loop.backEdges.toFormattedString().prependIndent("    "))
+            sb.appendLine("  NORMAL EXITS:")
+            loop.normalExits.let {
+                if (it.isEmpty()) sb.appendLine("    NONE")
+                else sb.appendLine(it.toFormattedString().prependIndent("    "))
+            }
+            sb.appendLine("  EXCEPTION EXIT HANDLERS:")
+            loop.exceptionalExitHandlers.let {
+                if (it.isEmpty()) sb.appendLine("    NONE")
+                else sb.appendLine(it.sorted().joinToString(", ") { block -> "B$block" }.prependIndent("    "))
+            }
+        }
+        return sb.toString()
+    }
 }

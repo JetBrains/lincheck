@@ -1,0 +1,18 @@
+LOOP 1
+  HEADER: B1
+  BODY: B1, B2, B3, B4, B5
+  BACK EDGES:
+    B5 -> B1 : JUMP(opcode=GOTO)
+  NORMAL EXITS:
+    B1 -> B6 : JUMP(opcode=IFLE)
+  EXCEPTION EXIT HANDLERS:
+    B7
+LOOP 2
+  HEADER: B3
+  BODY: B3, B4
+  BACK EDGES:
+    B4 -> B3 : JUMP(opcode=GOTO)
+  NORMAL EXITS:
+    B3 -> B5 : JUMP(opcode=IFLE)
+  EXCEPTION EXIT HANDLERS:
+    B7
