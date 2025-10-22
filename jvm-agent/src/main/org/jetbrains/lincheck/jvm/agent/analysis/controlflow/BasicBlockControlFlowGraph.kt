@@ -17,6 +17,7 @@ import org.objectweb.asm.util.Textifier
 import org.objectweb.asm.util.TraceMethodVisitor
 import java.io.PrintWriter
 import java.io.StringWriter
+import kotlin.collections.mutableMapOf
 
 /**
  * A type alias representing the index of a basic block within a control flow graph.
@@ -78,18 +79,6 @@ class BasicBlockControlFlowGraph(
     }
 
     /**
-     * A mapping from a node to adjacent reverse control-flow edges.
-     */
-    val allPredecessors: AdjacencyMap get() = _allPredecessors
-    private val _allPredecessors: MutableEdgeMap = mutableMapOf()
-
-    /**
-     * A mapping from a node to adjacent reverse control-flow non-exception edges.
-     */
-    val normalPredecessors: AdjacencyMap get() = _normalPredecessors
-    private val _normalPredecessors: MutableEdgeMap = mutableMapOf()
-
-    /**
      * Information about loops in this method.
      */
     var loopInfo: MethodLoopsInformation? = null
@@ -102,6 +91,35 @@ class BasicBlockControlFlowGraph(
      */
     var isReducible: Boolean? = null
         private set
+
+    /**
+     * Dominators of each basic block.
+     *
+     * When this field is `null` it means that [computeLoopInformation] method was not called on this CFG.
+     */
+    var dominators: Array<Set<BasicBlockIndex>>? = null
+        private set
+
+    /**
+     * Set of all back-edges in the CFG stored by their target block index.
+     *
+     * When this field is `null` it means that [computeLoopInformation] method was not called on this CFG.
+     */
+    var backEdges: Set<Edge>? = null
+        private set
+
+    /**
+     * A mapping from a node to adjacent reverse control-flow edges.
+     */
+    val allPredecessors: AdjacencyMap get() = _allPredecessors
+    private val _allPredecessors: MutableEdgeMap = mutableMapOf()
+
+    /**
+     * A mapping from a node to adjacent reverse control-flow non-exception edges.
+     */
+    val normalPredecessors: AdjacencyMap get() = _normalPredecessors
+    private val _normalPredecessors: MutableEdgeMap = mutableMapOf()
+
 
     override fun addEdge(src: NodeIndex, dst: NodeIndex, label: EdgeLabel) {
         super.addEdge(src, dst, label)
@@ -135,11 +153,13 @@ class BasicBlockControlFlowGraph(
     fun computeLoopInformation(): MethodLoopsInformation {
         if (loopInfo == null) {
             // compute loop information
-            val dominators = computeDominators()
-            if (isReducible(dominators)) {
+            dominators = computeDominators()
+            backEdges = computeBackEdges()
+
+            if (isReducible()) {
                 isReducible = true
                 // CFG is reducible, so we can compute actual loops
-                loopInfo = computeLoopsFromDominators(dominators).also { info ->
+                loopInfo = computeLoopsFromDominators().also { info ->
                     info.validateBasicBlocksLoopsMapping()
                     info.loops.forEach {
                         it.validateLoopEdgesInvariants()

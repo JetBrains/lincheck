@@ -180,6 +180,25 @@ internal fun BasicBlockControlFlowGraph.computeDominators(): Array<Set<BasicBloc
 }
 
 /**
+ * @return set of back edges sorted by their headers (`target` of the edge).
+ */
+internal fun BasicBlockControlFlowGraph.computeBackEdges(): Set<Edge> {
+    require(dominators != null) { "Dominator set must be computed before computing back edges" }
+    val backEdges = mutableSetOf<Edge>()
+    for (e in normalEdges) {
+        val u = e.source
+        val h = e.target
+        val domU = dominators!!.getOrElse(u) { emptySet() }
+        if (h in domU) {
+            backEdges.add(e)
+        }
+    }
+    return backEdges
+        .sortedWith(compareBy({ it.target }, { it.source }, { it.label }))
+        .toSet()
+}
+
+/**
  * This algorithm cannot detect loops in irreducible graphs. It only produces reducible loops.
  * Thus, expects reducible CFG.
  *
@@ -196,35 +215,32 @@ internal fun BasicBlockControlFlowGraph.computeDominators(): Array<Set<BasicBloc
  *   The list is empty if no loops were detected.
  *   The loops are sorted by the header block index.
  */
-internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(dominators: Array<Set<BasicBlockIndex>>): MethodLoopsInformation {
+internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(): MethodLoopsInformation {
     require(isReducible != null) { "CFG reducibility was not checked before computing the loops" }
     require(isReducible!!) { "Cannot compute loops on irreducible CFG" }
+
+    val dominators = dominators
+    val backEdges = backEdges
+    require(dominators != null) { "Dominator set must be computed before computing loops" }
+    require(backEdges != null) { "Back edges must be computed before computing loops" }
+
     val n = basicBlocks.size
     require(dominators.size == n) { "Dominator set must be of length $n but got ${dominators.size} instead" }
     if (n == 0) return MethodLoopsInformation()
 
     // Identify back edges grouped by header h
-    val backEdgesByHeader = mutableMapOf<BasicBlockIndex, MutableSet<Edge>>()
-    val normalEdges = edges.filter { it.label !is EdgeLabel.Exception }
-    for (e in normalEdges) {
-        val u = e.source
-        val h = e.target
-        val domU = dominators.getOrElse(u) { emptySet() }
-        if (h in domU) {
-            backEdgesByHeader.updateInplace(h, default = mutableSetOf()) { add(e) }
-        }
-    }
-    if (backEdgesByHeader.isEmpty()) return MethodLoopsInformation()
+    if (backEdges.isEmpty()) return MethodLoopsInformation()
 
     // For each header, compute loop body as a union of natural loops for each back edge to that header.
     // Also calculate normal and exceptional exits
+    val backEdgesByHeader = backEdges.groupBy { it.target }
     val loops = mutableListOf<LoopInformation>()
     var nextLoopId = 0
-    for ((h, backEdges) in backEdgesByHeader.toSortedMap()) {
+    for ((h, adjacentBackEdges) in backEdgesByHeader) {
         val body = mutableSetOf<BasicBlockIndex>()
         body.add(h)
         // Start from each back edge source; perform reverse DFS over normal predecessors until reaching h
-        for (e in backEdges) {
+        for (e in adjacentBackEdges) {
             val u = e.source
             val stack = ArrayDeque<BasicBlockIndex>()
             // Natural loop includes both u and h initially
@@ -255,7 +271,7 @@ internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(dominators: A
             header = h,
             headers = setOf(h),
             body = body,
-            backEdges = backEdges,
+            backEdges = adjacentBackEdges.toSet(),
             normalExits = normalExits,
             exceptionalExitHandlers = exceptionalExitHandlers,
         )
@@ -281,19 +297,10 @@ internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(dominators: A
  *
  * See also https://www.csd.uwo.ca/~mmorenom/CS447/Lectures/CodeOptimization.html/node6.html.
  */
-internal fun BasicBlockControlFlowGraph.isReducible(dominators: Array<Set<BasicBlockIndex>>): Boolean {
+internal fun BasicBlockControlFlowGraph.isReducible(): Boolean {
     val n = basicBlocks.size
-    // Identify back edges
-    val backEdges = mutableSetOf<Edge>()
-    val normalEdges = edges.filter { it.label !is EdgeLabel.Exception }
-    for (e in normalEdges) {
-        val u = e.source
-        val h = e.target
-        val domU = dominators.getOrElse(u) { emptySet() }
-        if (h in domU) {
-            backEdges.add(e)
-        }
-    }
+    val backEdges = backEdges
+    require(backEdges != null) { "Back edges must be computed before checking reducibility" }
     // Calculate successors for each basic block (excluding back edges)
     val filteredSuccessors: AdjacencyMap = allSuccessors.mapValues { (_, neighs) -> neighs.filter { it !in backEdges }.toSet() }
 
