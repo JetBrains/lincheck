@@ -164,6 +164,8 @@ private fun BasicBlockControlFlowGraph.computeHeaderEntrySites(
             if (e.target in headerSet && e.source !in bodySet) {
                 val idx: InstructionIndex = cfg.lastOpcodeIndexOf(e.source) ?: continue
                 result.updateInplace(idx, default = mutableSetOf()) { add(loop.id) }
+                // TODO: probably for fall-through edges we need to inject AFTER last instr. of source
+                // TODO: what about conditional jump edges? What if we will not take branch that jumps into cycle?
             }
         }
     }
