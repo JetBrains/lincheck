@@ -297,6 +297,23 @@ class TRLoopTracePoint(
     override fun toText(appendable: TRAppendable) {
         appendable.append(tracePoint = this)
     }
+
+    companion object {
+
+        internal fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRLoopTracePoint {
+            val loopId = inp.readInt()
+
+            val tracePoint = TRLoopTracePoint(
+                threadId = threadId,
+                codeLocationId = codeLocationId,
+                loopId = loopId,
+                // TODO: should also load iterations number?
+                eventId = eventId,
+            )
+
+            return tracePoint
+        }
+    }
 }
 
 class TRLoopIterationTracePoint(
@@ -331,6 +348,25 @@ class TRLoopIterationTracePoint(
 
     override fun toText(appendable: TRAppendable) {
         appendable.append(tracePoint = this)
+    }
+
+    companion object {
+
+        internal fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRLoopIterationTracePoint {
+            val loopId = inp.readInt()
+            val loopIteration = inp.readInt()
+
+            val tracePoint = TRLoopIterationTracePoint(
+                threadId = threadId,
+                codeLocationId = codeLocationId,
+                loopId = loopId,
+                loopIteration = loopIteration,
+                // TODO: should also load iterations number?
+                eventId = eventId,
+            )
+
+            return tracePoint
+        }
     }
 }
 
@@ -779,6 +815,8 @@ private fun getLoaderByClassId(id: Byte): TRLoader {
         4 -> TRWriteArrayTracePoint::load
         5 -> TRWriteLocalVariableTracePoint::load
         6 -> TRWriteTracePoint::load
+        7 -> TRLoopTracePoint::load
+        8 -> TRLoopIterationTracePoint::load
         // TODO: support loop trace points
         else -> error("Unknown TRTracePoint class id $id")
     }
