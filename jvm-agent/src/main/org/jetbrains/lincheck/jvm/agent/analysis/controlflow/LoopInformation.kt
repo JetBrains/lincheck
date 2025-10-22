@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.jvm.agent.analysis.controlflow
 
 import org.jetbrains.lincheck.util.*
+import kotlin.collections.withIndex
 
 
 /** Per-method, stable id for a detected loop. */
@@ -153,12 +154,10 @@ class MethodLoopsInformation(
  * By definition, every node dominates itself. The entry node dominates all nodes in
  * a reducible control flow graph.
  *
- * @param allPredecessors An array of predecessor lists for each basic block, basically for each edge target - all its sources.
  * @return An array of dominator sets for each basic block, including the entry block.
  */
-internal fun BasicBlockControlFlowGraph.computeDominators(allPredecessors: Array<MutableSet<BasicBlockIndex>>): Array<Set<BasicBlockIndex>> {
+internal fun BasicBlockControlFlowGraph.computeDominators(): Array<Set<BasicBlockIndex>> {
     val n = basicBlocks.size
-    require(allPredecessors.size == n) { "Predecessor list must be of length $n but got ${allPredecessors.size} instead" }
     if (n == 0) return emptyArray()
 
     val doms: Array<Set<BasicBlockIndex>> = Array(n) { (0 until n).toMutableSet() }
@@ -170,7 +169,7 @@ internal fun BasicBlockControlFlowGraph.computeDominators(allPredecessors: Array
         changed = false
         for (b in 1 until n) {
             // Intersection of dominators of predecessors: dom(b) = {b} + intersect(dom(p1), dom(p2), ...)
-            val newSet = allPredecessors[b].map { doms[it] }.intersectAll().apply { add(b) }
+            val newSet = allPredecessors.neighbours(b).map { doms[it] }.intersectAll().apply { add(b) }
             if (newSet != doms[b]) {
                 doms[b] = newSet
                 changed = true
@@ -193,19 +192,14 @@ internal fun BasicBlockControlFlowGraph.computeDominators(allPredecessors: Array
  * Since loops can nest, a header for one loop can be in the body of (but not the header of) another loop.
  *
  * @param dominators An array of dominator sets for each basic block.
- * @param normalPredecessors An array of predecessor lists for each basic block, excluding exceptional edges.
  * @return A list of detected loops, each represented by a [LoopInformation] object.
  *   The list is empty if no loops were detected.
  *   The loops are sorted by the header block index.
  */
-internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(
-    dominators: Array<Set<BasicBlockIndex>>,
-    normalPredecessors: Array<MutableSet<BasicBlockIndex>>
-): MethodLoopsInformation {
+internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(dominators: Array<Set<BasicBlockIndex>>): MethodLoopsInformation {
     require(isReducible) { "Cannot compute loops on irreducible CFG" }
     val n = basicBlocks.size
     require(dominators.size == n) { "Dominator set must be of length $n but got ${dominators.size} instead" }
-    require(normalPredecessors.size == n) { "Normal predecessor list must be of length $n but got ${normalPredecessors.size} instead" }
     if (n == 0) return MethodLoopsInformation()
 
     // Identify back edges grouped by header h
@@ -236,7 +230,7 @@ internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(
             if (body.add(u)) stack.add(u)
             while (stack.isNotEmpty()) {
                 val x = stack.removeLast()
-                for (p in normalPredecessors[x]) {
+                for (p in normalPredecessors.neighbours(x)) {
                     if (body.add(p)) stack.add(p)
                 }
             }
@@ -300,19 +294,14 @@ internal fun BasicBlockControlFlowGraph.isReducible(dominators: Array<Set<BasicB
         }
     }
     // Calculate successors for each basic block (excluding back edges)
-    val successors = Array(n) { mutableSetOf<BasicBlockIndex>() }
-    for (e in edges.filter { it !in backEdges }) {
-        val u = e.source
-        val v = e.target
-        successors[u].add(v)
-    }
+    val filteredSuccessors: AdjacencyMap = allSuccessors.mapValues { (_, neighs) -> neighs.filter { it !in backEdges }.toSet() }
 
     // check for cycles
     val colors = Array(n) { 0 }
     fun dfs(v: Int): Boolean {
         colors[v] = 1 // ENTERED
         var hasCycle = false
-        for (u in successors[v]) {
+        for (u in filteredSuccessors.neighbours(v)) {
             when (colors[u]) {
                 0 -> hasCycle = dfs(u) or hasCycle
                 1 -> hasCycle = true // Found cycle

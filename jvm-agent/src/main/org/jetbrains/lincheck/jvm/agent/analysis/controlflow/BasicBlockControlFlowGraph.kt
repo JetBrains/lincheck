@@ -78,6 +78,18 @@ class BasicBlockControlFlowGraph(
     }
 
     /**
+     * A mapping from a node to adjacent reverse control-flow edges.
+     */
+    val allPredecessors: AdjacencyMap get() = _allPredecessors
+    private val _allPredecessors: MutableEdgeMap = mutableMapOf()
+
+    /**
+     * A mapping from a node to adjacent reverse control-flow non-exception edges.
+     */
+    val normalPredecessors: AdjacencyMap get() = _normalPredecessors
+    private val _normalPredecessors: MutableEdgeMap = mutableMapOf()
+
+    /**
      * Information about loops in this method.
      */
     var loopInfo: MethodLoopsInformation? = null
@@ -89,16 +101,23 @@ class BasicBlockControlFlowGraph(
     val isReducible: Boolean
         get() {
             if (_isReducible == null) {
-                val allPredecessors = Array(basicBlocks.size) { mutableSetOf<BasicBlockIndex>() }
-                for (e in edges) {
-                    allPredecessors[e.target].add(e.source)
-                }
-                _isReducible = isReducible(computeDominators(allPredecessors))
+                _isReducible = isReducible(computeDominators())
             }
             return _isReducible!!
         }
 
     private var _isReducible: Boolean? = null
+
+    override fun addEdge(src: NodeIndex, dst: NodeIndex, label: EdgeLabel) {
+        super.addEdge(src, dst, label)
+
+        // update predecessors
+        val inverseEdge = Edge(dst, src, label)
+        _allPredecessors.updateInplace(dst, default = mutableSetOf()) { add(inverseEdge) }
+        if (label !is EdgeLabel.Exception) {
+            _normalPredecessors.updateInplace(dst, default = mutableSetOf()) { add(inverseEdge) }
+        }
+    }
 
     /** Returns the first executable opcode index of the given block, or null if none. */
     fun firstOpcodeIndexOf(block: BasicBlockIndex): InstructionIndex? =
@@ -120,23 +139,12 @@ class BasicBlockControlFlowGraph(
      */
     fun computeLoopInformation(): MethodLoopsInformation {
         if (loopInfo == null) {
-            // compute predecessors for all basic blocks
-            val allPredecessors: Array<MutableSet<BasicBlockIndex>> = Array(basicBlocks.size) { mutableSetOf() }
-            val normalPredecessors: Array<MutableSet<BasicBlockIndex>> = Array(basicBlocks.size) { mutableSetOf() }
-            for (e in edges) {
-                val u = e.source
-                val v = e.target
-                allPredecessors[v].add(u)
-                if (e.label !is EdgeLabel.Exception) {
-                    normalPredecessors[v].add(u)
-                }
-            }
             // compute loop information
-            val dominators = computeDominators(allPredecessors)
+            val dominators = computeDominators()
             if (isReducible(dominators)) {
                 _isReducible = true
                 // CFG is reducible, so we can compute actual loops
-                loopInfo = computeLoopsFromDominators(dominators, normalPredecessors).also { info ->
+                loopInfo = computeLoopsFromDominators(dominators).also { info ->
                     info.validateBasicBlocksLoopsMapping()
                     info.loops.forEach {
                         it.validateLoopEdgesInvariants()
@@ -241,7 +249,7 @@ fun InstructionControlFlowGraph.toBasicBlockGraph(): BasicBlockControlFlowGraph 
     val leaders =
         buildSet {
             add(0)
-            edgeMap.values.forEach { edges ->
+            allSuccessors.values.forEach { edges ->
                 edges.forEach { edge ->
                     if (edge.label is EdgeLabel.Jump) {
                         add(edge.target)
@@ -297,7 +305,7 @@ fun InstructionControlFlowGraph.toBasicBlockGraph(): BasicBlockControlFlowGraph 
     
     // Project instruction edges onto basic blocks.
     val basicBlockGraph = BasicBlockControlFlowGraph(instructions, basicBlocks)
-    for ((u, edges) in edgeMap) {
+    for ((u, edges) in allSuccessors) {
         val bu = instructionToBlock[u] ?: continue
         for (edge in edges) {
             val v = edge.target

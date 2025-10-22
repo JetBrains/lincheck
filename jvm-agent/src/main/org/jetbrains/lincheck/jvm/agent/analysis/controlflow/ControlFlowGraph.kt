@@ -118,10 +118,16 @@ class Edge(
         result = 31 * result + label.hashCode()
         return result
     }
+
+    operator fun component1() = source
+    operator fun component2() = target
+    operator fun component3() = label
 }
 
-typealias EdgeMap = Map<NodeIndex, Set<Edge>>
+typealias AdjacencyMap = Map<NodeIndex, Set<Edge>>
 typealias MutableEdgeMap = MutableMap<NodeIndex, MutableSet<Edge>>
+
+fun AdjacencyMap.neighbours(idx: NodeIndex): Set<NodeIndex> = this[idx]?.map { it.target }?.toSet() ?: emptySet()
 
 /**
  * Base class for representing control-flow graph.
@@ -141,20 +147,20 @@ sealed class ControlFlowGraph {
     /**
      * A mapping from a node to adjacent control-flow edges.
      */
-    val edgeMap: EdgeMap get() = _edgeMap
-    private val _edgeMap: MutableEdgeMap = mutableMapOf()
+    val allSuccessors: AdjacencyMap get() = _allSuccessors
+    private val _allSuccessors: MutableEdgeMap = mutableMapOf()
 
     val edges: Set<Edge> get() =
-        edgeMap.flatMap { it.value }.toSet()
+        allSuccessors.flatMap { it.value }.toSet()
 
     fun hasEdge(src: NodeIndex, dst: NodeIndex): Boolean {
-        return _edgeMap[src]?.any { it.target == dst } ?: false
+        return _allSuccessors[src]?.any { it.target == dst } ?: false
     }
 
-    fun addEdge(src: NodeIndex, dst: NodeIndex, label: EdgeLabel) {
+    open fun addEdge(src: NodeIndex, dst: NodeIndex, label: EdgeLabel) {
         _nodes.add(src)
         _nodes.add(dst)
-        _edgeMap.updateInplace(src, default = mutableSetOf()) {
+        _allSuccessors.updateInplace(src, default = mutableSetOf()) {
             add(Edge(src, dst, label))
         }
     }
