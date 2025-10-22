@@ -58,13 +58,14 @@ internal class TraceRecorderMethodTransformer(
     }
 
     override fun visitMaxs(maxStack: Int, maxLocals: Int) {
-        val endLabel = Label()
-        visitLabel(endLabel)
-        visitTryCatchBlock(startLabel, endLabel, endLabel, null)
-        // Handler
-        // STACK: Exception
-        // This will call onMethodExit() too!
-        visitInsn(ATHROW)
+        // TODO: repair exception handling here
+        // val endLabel = Label()
+        // visitLabel(endLabel)
+        // visitTryCatchBlock(startLabel, endLabel, endLabel, null)
+        // // Handler
+        // // STACK: Exception
+        // // This will call onMethodExit() too!
+        // visitInsn(ATHROW)
 
         super.visitMaxs(maxStack, maxLocals)
     }
