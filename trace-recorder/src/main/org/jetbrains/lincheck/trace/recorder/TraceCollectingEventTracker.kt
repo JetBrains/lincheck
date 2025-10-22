@@ -759,29 +759,48 @@ class TraceCollectingEventTracker(
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
-        val currentLoopTracePoint = threadData.currentLoopTracePoint()!!
+        var currentLoopTracePoint = threadData.currentLoopTracePoint()!!
         if (!canEnterFromOutsideLoop) {
-            // TODO: perhaps better use logging instead of throwing exception
+            // TODO: perhaps better to use logging instead of throwing exception
             check(currentLoopTracePoint.loopId == loopId) {
                 "Unexpected loop exit: expected loopId ${currentLoopTracePoint.loopId}, but was $loopId"
             }
-
             strategy.completeContainerTracePoint(Thread.currentThread(), currentLoopTracePoint)
             threadData.exitLoop()
         } else {
-            // TODO: pop loop elements until `loopId` is found
+            do {
+                currentLoopTracePoint = threadData.currentLoopTracePoint() ?: break
+                strategy.completeContainerTracePoint(Thread.currentThread(), currentLoopTracePoint)
+                threadData.exitLoop()
+            } while (currentLoopTracePoint.loopId != loopId)
         }
     }
 
     override fun afterLoopExceptionExit(
         codeLocation: Int,
         loopId: Int,
-        exception: Throwable?,
+        exception: Throwable,
         canEnterFromOutsideLoop: Boolean
     ) {
-        TODO("Not yet implemented")
+        // TODO: unify with `afterLoopExit` ?
+        val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
+        val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
-        // TODO: should be similar to `afterLoopExit`
+        var currentLoopTracePoint = threadData.currentLoopTracePoint()!!
+        if (!canEnterFromOutsideLoop) {
+            // TODO: perhaps better to use logging instead of throwing exception
+            check(currentLoopTracePoint.loopId == loopId) {
+                "Unexpected loop exit: expected loopId ${currentLoopTracePoint.loopId}, but was $loopId"
+            }
+            strategy.completeContainerTracePoint(Thread.currentThread(), currentLoopTracePoint)
+            threadData.exitLoop()
+        } else {
+            do {
+                currentLoopTracePoint = threadData.currentLoopTracePoint() ?: break
+                strategy.completeContainerTracePoint(Thread.currentThread(), currentLoopTracePoint)
+                threadData.exitLoop()
+            } while (currentLoopTracePoint.loopId != loopId)
+        }
     }
 
     override fun invokeDeterministicallyOrNull(
