@@ -315,12 +315,12 @@ class TraceCollectingEventTracker(
         while (threadData.getStack().size > 1) {
             val tracePoint = threadData.popStackFrame()
             tracePoint.result = TR_OBJECT_UNTRACKED_METHOD_RESULT
-            strategy.callEnded(thread, tracePoint)
+            strategy.completeContainerTracePoint(thread, tracePoint)
         }
         // Don't pop, we need it
         val tracePoint = threadData.firstMethodCallTracePoint()!!
         tracePoint.result = TR_OBJECT_VOID
-        strategy.callEnded(thread, tracePoint)
+        strategy.completeContainerTracePoint(thread, tracePoint)
         strategy.completeThread(thread)
         threadDescriptor.disableAnalysis()
     }
@@ -333,7 +333,7 @@ class TraceCollectingEventTracker(
         // Don't pop, we need it
         val tracePoint = threadData.firstMethodCallTracePoint()!!
         tracePoint.setExceptionResult(exception)
-        strategy.callEnded(Thread.currentThread(), tracePoint)
+        strategy.completeContainerTracePoint(Thread.currentThread(), tracePoint)
         threadDescriptor.disableAnalysis()
         throw exception
     }
@@ -617,7 +617,7 @@ class TraceCollectingEventTracker(
         }
 
         tracePoint.result = TRObjectOrVoid(result)
-        strategy.callEnded(Thread.currentThread(), tracePoint)
+        strategy.completeContainerTracePoint(Thread.currentThread(), tracePoint)
 
         threadData.leaveAnalysisSection(methodSection)
 
@@ -659,7 +659,7 @@ class TraceCollectingEventTracker(
         }
 
         tracePoint.setExceptionResult(t)
-        strategy.callEnded(Thread.currentThread(), tracePoint)
+        strategy.completeContainerTracePoint(Thread.currentThread(), tracePoint)
 
         threadData.leaveAnalysisSection(methodSection)
 
@@ -699,7 +699,7 @@ class TraceCollectingEventTracker(
             }
         }
         tracePoint.result = TR_OBJECT_VOID
-        strategy.callEnded(Thread.currentThread(), tracePoint)
+        strategy.completeContainerTracePoint(Thread.currentThread(), tracePoint)
     }
 
     override fun onInlineMethodCallException(methodId: Int, t: Throwable): Unit = runInsideInjectedCode {
@@ -716,7 +716,7 @@ class TraceCollectingEventTracker(
         }
 
         tracePoint.setExceptionResult(t)
-        strategy.callEnded(Thread.currentThread(), tracePoint)
+        strategy.completeContainerTracePoint(Thread.currentThread(), tracePoint)
     }
 
     override fun beforeLoopEnter(codeLocation: Int, loopId: Int) {
@@ -736,9 +736,15 @@ class TraceCollectingEventTracker(
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
+
         val currentLoopTracePoint = threadData.currentLoopTracePoint().ensureNotNull {
             "Unexpected loop iteration: no loop trace point found"
         }
+        // complete previous iteration, if any
+        threadData.currentLoopIterationTracePoint()?.also { previousIteration ->
+            strategy.completeContainerTracePoint(Thread.currentThread(), previousIteration)
+        }
+
         val tracePoint = TRLoopIterationTracePoint(
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
@@ -760,7 +766,7 @@ class TraceCollectingEventTracker(
                 "Unexpected loop exit: expected loopId ${currentLoopTracePoint.loopId}, but was $loopId"
             }
 
-            // strategy.callEnded(Thread.currentThread(), currentLoopTracePoint) // TODO: refactor `callEnded`
+            strategy.completeContainerTracePoint(Thread.currentThread(), currentLoopTracePoint)
             threadData.exitLoop()
         } else {
             // TODO: pop loop elements until `loopId` is found
@@ -845,7 +851,7 @@ class TraceCollectingEventTracker(
         stackFrames.forEach { frame ->
             val tracePoint = frame.call
             tracePoint.result = TR_OBJECT_UNFINISHED_METHOD_RESULT
-            strategy.callEnded(thread, tracePoint)
+            strategy.completeContainerTracePoint(thread, tracePoint)
         }
         strategy.completeThread(thread)
     }
@@ -874,7 +880,7 @@ class TraceCollectingEventTracker(
         val threadData = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTrackerData as? ThreadData? ?: return
         val tracePoint = threadData.currentMethodCallTracePoint()!!
         tracePoint.result = TR_OBJECT_VOID
-        strategy.callEnded(Thread.currentThread(), tracePoint)
+        strategy.completeContainerTracePoint(Thread.currentThread(), tracePoint)
 
         val allThreads = mutableListOf<ThreadData>()
         allThreads.addAll(threads.values)

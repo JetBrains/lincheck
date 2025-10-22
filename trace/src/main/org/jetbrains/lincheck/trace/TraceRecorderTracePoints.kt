@@ -124,6 +124,8 @@ sealed class TRContainerTracePoint(
     fun unloadAllChildren() {
         children.forgetAll()
     }
+
+    internal abstract fun saveFooter(out: TraceWriter)
 }
 
 class TRMethodCallTracePoint(
@@ -204,7 +206,7 @@ class TRMethodCallTracePoint(
         }
     }
 
-    internal fun saveFooter(out: TraceWriter) {
+    override fun saveFooter(out: TraceWriter) {
         out.preWriteTRObject(result)
 
         // Mark this as a container tracepoint footer
@@ -270,6 +272,15 @@ class TRLoopTracePoint(
         return iterations++
     }
 
+    override fun saveFooter(out: TraceWriter) {
+        // Mark this as a container tracepoint footer
+        out.startWriteContainerTracepointFooter()
+
+        // TODO: what else should go here?
+
+        out.endWriteContainerTracepointFooter(eventId)
+    }
+
     // TODO: (de)serialization methods
 
     override fun toText(appendable: TRAppendable) {
@@ -285,6 +296,15 @@ class TRLoopIterationTracePoint(
     val loopIteration: Int,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
 ) : TRContainerTracePoint(codeLocationId, threadId, eventId) {
+
+    override fun saveFooter(out: TraceWriter) {
+        // Mark this as a container tracepoint footer
+        out.startWriteContainerTracepointFooter()
+
+        // TODO: what else should go here?
+
+        out.endWriteContainerTracepointFooter(eventId)
+    }
 
     // TODO: (de)serialization methods
 
