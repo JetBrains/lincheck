@@ -97,16 +97,11 @@ class BasicBlockControlFlowGraph(
 
     /**
      * Whether this CFG is reducible.
+     *
+     * When the field is `null` it means that [computeLoopInformation] method was not called on this CFG.
      */
-    val isReducible: Boolean
-        get() {
-            if (_isReducible == null) {
-                _isReducible = isReducible(computeDominators())
-            }
-            return _isReducible!!
-        }
-
-    private var _isReducible: Boolean? = null
+    var isReducible: Boolean? = null
+        private set
 
     override fun addEdge(src: NodeIndex, dst: NodeIndex, label: EdgeLabel) {
         super.addEdge(src, dst, label)
@@ -142,7 +137,7 @@ class BasicBlockControlFlowGraph(
             // compute loop information
             val dominators = computeDominators()
             if (isReducible(dominators)) {
-                _isReducible = true
+                isReducible = true
                 // CFG is reducible, so we can compute actual loops
                 loopInfo = computeLoopsFromDominators(dominators).also { info ->
                     info.validateBasicBlocksLoopsMapping()
@@ -152,7 +147,7 @@ class BasicBlockControlFlowGraph(
                 }
             }
             else {
-                _isReducible = false
+                isReducible = false
                 // CFG is irreducible, our loop calculation algorithm will not work with it
                 // so we report that fact and don't compute any loop information
                 Logger.warn { "Irreducible CFG detected, loop information will not be computed:\n${toFormattedString()}" }

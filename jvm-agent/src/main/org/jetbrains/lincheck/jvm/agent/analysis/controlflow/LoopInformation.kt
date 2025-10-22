@@ -197,7 +197,8 @@ internal fun BasicBlockControlFlowGraph.computeDominators(): Array<Set<BasicBloc
  *   The loops are sorted by the header block index.
  */
 internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(dominators: Array<Set<BasicBlockIndex>>): MethodLoopsInformation {
-    require(isReducible) { "Cannot compute loops on irreducible CFG" }
+    require(isReducible != null) { "CFG reducibility was not checked before computing the loops" }
+    require(isReducible!!) { "Cannot compute loops on irreducible CFG" }
     val n = basicBlocks.size
     require(dominators.size == n) { "Dominator set must be of length $n but got ${dominators.size} instead" }
     if (n == 0) return MethodLoopsInformation()
