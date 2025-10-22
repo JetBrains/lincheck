@@ -140,7 +140,7 @@ class Edge(
 typealias AdjacencyMap = Map<NodeIndex, Set<Edge>>
 typealias MutableEdgeMap = MutableMap<NodeIndex, MutableSet<Edge>>
 
-fun AdjacencyMap.neighbours(idx: NodeIndex): Set<NodeIndex> = this[idx]?.map { it.target }?.toSet() ?: emptySet()
+fun AdjacencyMap.neighbours(idx: NodeIndex): Iterable<NodeIndex> = (this[idx]?.map { it.target } ?: emptySet()).asIterable()
 
 /**
  * Base class for representing control-flow graph.
