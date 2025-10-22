@@ -155,6 +155,12 @@ internal class LincheckClassVisitor(
             ParkingTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
         }
 
+        // ======== Loops ========
+        chain.addTransformer { adapter, mv ->
+            methodInfo.basicControlFlowGraph.computeLoopInformation()
+            LoopTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+        }
+
         // ======== Field, Array, and Local Variables accesses ========
         chain.addTransformer { adapter, mv ->
             applySharedMemoryAccessTransformer(methodName, desc, access, methodInfo, config, adapter, mv)
