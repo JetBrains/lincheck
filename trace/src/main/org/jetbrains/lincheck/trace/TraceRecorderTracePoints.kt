@@ -128,6 +128,7 @@ sealed class TRContainerTracePoint(
     }
 
     internal abstract fun saveFooter(out: TraceWriter)
+    internal abstract fun loadFooter(inp: DataInput)
 }
 
 class TRMethodCallTracePoint(
@@ -218,7 +219,7 @@ class TRMethodCallTracePoint(
         out.endWriteContainerTracepointFooter(eventId)
     }
 
-    internal fun loadFooter(inp: DataInput) {
+    override fun loadFooter(inp: DataInput) {
         childrenAddresses.finishWrite()
 
         result = inp.readTRObject()
@@ -292,7 +293,11 @@ class TRLoopTracePoint(
         out.endWriteContainerTracepointFooter(eventId)
     }
 
-    // TODO: (de)serialization methods
+    override fun loadFooter(inp: DataInput) {
+        childrenAddresses.finishWrite()
+
+        // TODO: what else should go here?
+    }
 
     override fun toText(appendable: TRAppendable) {
         appendable.append(tracePoint = this)
@@ -344,7 +349,11 @@ class TRLoopIterationTracePoint(
         out.endWriteContainerTracepointFooter(eventId)
     }
 
-    // TODO: (de)serialization methods
+    override fun loadFooter(inp: DataInput) {
+        childrenAddresses.finishWrite()
+
+        // TODO: what else should go here?
+    }
 
     override fun toText(appendable: TRAppendable) {
         appendable.append(tracePoint = this)

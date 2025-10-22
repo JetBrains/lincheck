@@ -33,12 +33,12 @@ import java.util.zip.ZipInputStream
 
 private const val INPUT_BUFFER_SIZE: Int = 16 * 1024 * 1024
 
-private typealias CallStack = MutableList<TRMethodCallTracePoint>
+private typealias TraceTree = MutableList<TRContainerTracePoint>
 private typealias TracePointReader = (DataInput, TraceContext, CodeLocationsContext) -> Boolean
 
 private interface TracepointConsumer {
-    fun tracePointRead(parent: TRMethodCallTracePoint?, tracePoint: TRTracePoint)
-    fun footerStarted(tracePoint: TRMethodCallTracePoint) {}
+    fun tracePointRead(parent: TRContainerTracePoint?, tracePoint: TRTracePoint)
+    fun footerStarted(tracePoint: TRContainerTracePoint) {}
 }
 
 private interface BlockConsumer {
@@ -400,7 +400,7 @@ class LazyTraceReader private constructor(
         return roots.entries.sortedBy { it.key }.map { (_, tracePoint) -> tracePoint }
     }
 
-    fun loadAllChildren(parent: TRMethodCallTracePoint) {
+    fun loadAllChildren(parent: TRContainerTracePoint) {
         val (start, end) = callTracepointChildren[parent.eventId]
             ?: error("TRMethodCallTracePoint ${parent.eventId} is not found in index")
 
@@ -589,17 +589,17 @@ class LazyTraceReader private constructor(
             context = context,
             tracepointConsumer = object : TracepointConsumer {
                 override fun tracePointRead(
-                    parent: TRMethodCallTracePoint?,
+                    parent: TRContainerTracePoint?,
                     tracePoint: TRTracePoint
                 ) {
-                    if (tracePoint is TRMethodCallTracePoint) {
+                    if (tracePoint is TRContainerTracePoint) {
                         // We are in the last saved block in
                         val childrenStart = calculateLogicalOffset(tracePoint.threadId,data.position())
                         callTracepointChildren.addStart(tracePoint.eventId, childrenStart)
                     }
                 }
 
-                override fun footerStarted(tracePoint: TRMethodCallTracePoint) {
+                override fun footerStarted(tracePoint: TRContainerTracePoint) {
                     // -1 is here because Kind is already read
                     val childrenEnd = calculateLogicalOffset(tracePoint.threadId,data.position() - 1)
                     callTracepointChildren.setEnd(tracePoint.eventId, childrenEnd)
@@ -627,7 +627,7 @@ class LazyTraceReader private constructor(
     private fun readTracePointShallow(): TRTracePoint {
         // Load tracepoint itself
         val tracePoint = loadTRTracePoint(data)
-        if (tracePoint !is TRMethodCallTracePoint) {
+        if (tracePoint !is TRContainerTracePoint) {
             return tracePoint
         }
 
@@ -655,7 +655,7 @@ class LazyTraceReader private constructor(
     private fun readTracePointWithChildAddresses(): TRTracePoint {
         // Load tracepoint itself
         val tracePoint = loadTRTracePoint(data)
-        if (tracePoint !is TRMethodCallTracePoint) {
+        if (tracePoint !is TRContainerTracePoint) {
             return tracePoint
         }
 
@@ -836,7 +836,7 @@ private fun loadRecordedTrace(inp: InputStream, meta: TraceMetaInfo?): TraceWith
             context = context,
             tracepointConsumer = object : TracepointConsumer {
                 override fun tracePointRead(
-                    parent: TRMethodCallTracePoint?,
+                    parent: TRContainerTracePoint?,
                     tracePoint: TRTracePoint
                 ) {
                     if (parent == null) {
@@ -866,7 +866,7 @@ private fun loadAllObjectsDeep(
     blockConsumer: BlockConsumer
 ) {
     val codeLocs = CodeLocationsContext()
-    val stacks = mutableMapOf<Int, MutableList<TRMethodCallTracePoint>>()
+    val trees = mutableMapOf<Int, MutableList<TRContainerTracePoint>>()
     var seenEOF = false
 
     while (input.available() > 0) {
@@ -886,13 +886,13 @@ private fun loadAllObjectsDeep(
         val threadId = input.readInt()
         blockConsumer.blockStarted(threadId)
 
-        val stack = stacks.computeIfAbsent(threadId) { mutableListOf() }
+        val tree = trees.computeIfAbsent(threadId) { mutableListOf() }
 
         // Read objects and tracepoints from this block till it ends.
         // Unwind the stack manually, if needed
         while (true) {
             val kind = loadObjects(input, context, codeLocs, true) { input, context, codeLocs ->
-                loadTracePointDeep(input, context, codeLocs, stack, tracepointConsumer)
+                loadTracePointDeep(input, context, codeLocs, tree, tracepointConsumer)
             }
             if (kind == ObjectKind.BLOCK_END) {
                 blockConsumer.blockEnded(threadId)
@@ -901,9 +901,9 @@ private fun loadAllObjectsDeep(
             check(kind == ObjectKind.TRACEPOINT_FOOTER) {
                 "Unexpected object kind $kind, expected TRACEPOINT_FOOTER, broken file"
             }
-            check (stack.isNotEmpty()) { "Stack underflow" }
+            check (tree.isNotEmpty()) { "Stack underflow" }
 
-            val tracePoint = stack.removeLast()
+            val tracePoint = tree.removeLast()
             tracepointConsumer.footerStarted(tracePoint)
             tracePoint.loadFooter(input)
         }
@@ -914,7 +914,7 @@ private fun loadAllObjectsDeep(
         System.err.println("TraceRecorder: no EOF record at the end of the file")
     }
     // Check that all stacks are empty
-    stacks.forEach {
+    trees.forEach {
         if (!it.value.isEmpty()) {
             System.err.println("TraceRecorder: Thread #${it.key} contains unfinished method calls")
         }
@@ -925,23 +925,23 @@ private fun loadTracePointDeep(
     input: DataInput,
     context: TraceContext,
     codeLocs: CodeLocationsContext,
-    stack: CallStack,
+    tree: TraceTree,
     consumer: TracepointConsumer
 ): Boolean {
     // Load tracepoint itself
     val tracePoint = loadTRTracePoint(input)
-    consumer.tracePointRead(stack.lastOrNull(), tracePoint)
-    if (tracePoint !is TRMethodCallTracePoint) {
+    consumer.tracePointRead(tree.lastOrNull(), tracePoint)
+    if (tracePoint !is TRContainerTracePoint) {
         return true
     }
     // We need to load all children
-    stack.add(tracePoint)
+    tree.add(tracePoint)
     val kind = loadObjects(input, context, codeLocs, true) { input, context, stringCache ->
-        loadTracePointDeep(input, context, stringCache, stack, consumer)
+        loadTracePointDeep(input, context, stringCache, tree, consumer)
     }
     when (kind) {
         ObjectKind.TRACEPOINT_FOOTER -> {
-            check(tracePoint == stack.removeLast()) { "Tracepoint reading stack corruption" }
+            check(tracePoint == tree.removeLast()) { "Tracepoint reading stack corruption" }
             consumer.footerStarted(tracePoint)
             tracePoint.loadFooter(input)
         }
