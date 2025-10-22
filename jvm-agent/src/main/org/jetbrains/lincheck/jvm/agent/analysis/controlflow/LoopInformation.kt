@@ -180,8 +180,8 @@ internal fun BasicBlockControlFlowGraph.computeDominators(allPredecessors: Array
 }
 
 /**
- * **This algorithm cannot detect loops in irreducible graphs. It only produces reducible loops.
- * Thus, expects reducible CFG.**
+ * This algorithm cannot detect loops in irreducible graphs. It only produces reducible loops.
+ * Thus, expects reducible CFG.
  *
  * Compute loops using dominators and back-edge detection.
  * A back edge is an edge u -> h (non-exception) where h dominates u.
