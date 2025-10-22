@@ -275,6 +275,14 @@ class TRLoopTracePoint(
         return iterations++
     }
 
+    override fun save(out: TraceWriter) {
+        super.save(out)
+        out.writeInt(loopId)
+
+        // Mark this as container tracepoint which could have children and will have footer
+        out.endWriteContainerTracepointHeader(eventId)
+    }
+
     override fun saveFooter(out: TraceWriter) {
         // Mark this as a container tracepoint footer
         out.startWriteContainerTracepointFooter()
@@ -299,6 +307,16 @@ class TRLoopIterationTracePoint(
     parentTracePoint: TRContainerTracePoint? = null,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
 ) : TRContainerTracePoint(codeLocationId, threadId, parentTracePoint, eventId) {
+
+    override fun save(out: TraceWriter) {
+        super.save(out)
+
+        out.writeInt(loopId)
+        out.writeInt(loopIteration)
+
+        // Mark this as container tracepoint which could have children and will have footer
+        out.endWriteContainerTracepointHeader(eventId)
+    }
 
     override fun saveFooter(out: TraceWriter) {
         // Mark this as a container tracepoint footer
