@@ -335,7 +335,9 @@ private sealed class TraceWriterBase(
     }
 
     override fun writeCodeLocation(id: Int) {
-        check(!inTracepointBody) { "Cannot save reference data inside tracepoint" }
+        check(!inTracepointBody) {
+            "Cannot save reference data inside tracepoint"
+        }
         if (id == UNKNOWN_CODE_LOCATION_ID) return
         if (contextState.isCodeLocationSaved(id)) return
 
@@ -984,7 +986,7 @@ fun packRecordedTrace(baseFileName: String, metaInfo: TraceMetaInfo, deleteSourc
 
 private fun saveTRTracepoint(writer: TraceWriter, tracepoint: TRTracePoint) {
     tracepoint.save(writer)
-    if (tracepoint is TRMethodCallTracePoint) {
+    if (tracepoint is TRContainerTracePoint) {
         tracepoint.events.forEach {
             if (it != null) {
                 saveTRTracepoint(writer, it)

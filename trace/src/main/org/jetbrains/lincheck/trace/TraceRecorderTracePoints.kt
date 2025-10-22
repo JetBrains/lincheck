@@ -66,6 +66,7 @@ sealed class TRTracePoint(
 sealed class TRContainerTracePoint(
     threadId: Int,
     codeLocationId: Int,
+    var parentTracePoint: TRContainerTracePoint? = null,
     eventId: Int
 ) : TRTracePoint(codeLocationId, threadId, eventId) {
     protected var children: ChunkedList<TRTracePoint> = ChunkedList()
@@ -77,9 +78,8 @@ sealed class TRContainerTracePoint(
     // TODO: do we need this, why not just leave only children/events
     val events: List<TRTracePoint?> get() = children
 
-    private fun TRTracePoint.setParentIfMethodCall(parent: TRContainerTracePoint) {
-        if (this !is TRMethodCallTracePoint) return
-        if (parent !is TRMethodCallTracePoint) return
+    private fun TRTracePoint.setParentIfContainer(parent: TRContainerTracePoint) {
+        if (this !is TRContainerTracePoint) return
         parentTracePoint = parent
     }
 
@@ -91,7 +91,7 @@ sealed class TRContainerTracePoint(
     internal fun addChild(child: TRTracePoint, address: Long = -1) {
         childrenAddresses.add(address)
         children.add(child)
-        child.setParentIfMethodCall(this)
+        child.setParentIfContainer(this)
     }
 
     internal fun getChildAddress(index: Int): Long {
@@ -104,7 +104,7 @@ sealed class TRContainerTracePoint(
     internal fun replaceChildren(from: TRContainerTracePoint) {
         children = from.children
         childrenAddresses = from.childrenAddresses
-        from.children.forEach { it?.setParentIfMethodCall(this) }
+        from.children.forEach { it?.setParentIfContainer(this) }
     }
 
     internal fun loadChild(index: Int, child: TRTracePoint) {
@@ -113,7 +113,7 @@ sealed class TRContainerTracePoint(
         }
         // Should we check for override? Lets skip for now
         children[index] = child
-        child.setParentIfMethodCall(this)
+        child.setParentIfContainer(this)
     }
 
     fun unloadChild(index: Int) {
@@ -137,9 +137,9 @@ class TRMethodCallTracePoint(
     val obj: TRObject?,
     val parameters: List<TRObject?>,
     val flags: Short = 0,
-    var parentTracePoint: TRMethodCallTracePoint? = null,
+    parentTracePoint: TRContainerTracePoint? = null,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRContainerTracePoint(codeLocationId, threadId, eventId) {
+) : TRContainerTracePoint(codeLocationId, threadId, parentTracePoint, eventId) {
     var result: TRObject? = null
     var exceptionClassName: String? = null
 
@@ -157,10 +157,10 @@ class TRMethodCallTracePoint(
     fun isStatic(): Boolean = obj == null
 
     fun isCalledFromDefiningClass(): Boolean {
-        if (parentTracePoint == null) return false
+        val parent = (parentTracePoint as? TRMethodCallTracePoint) ?: return false
         return className.let {
-            it == parentTracePoint!!.className ||
-            it.removeCompanionSuffix() == parentTracePoint!!.className
+            it == parent.className ||
+            it.removeCompanionSuffix() == parent.className
         }
     }
 
@@ -265,8 +265,9 @@ class TRLoopTracePoint(
     threadId: Int,
     codeLocationId: Int,
     val loopId: Int,
+    parentTracePoint: TRContainerTracePoint? = null,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRContainerTracePoint(codeLocationId, threadId, eventId) {
+) : TRContainerTracePoint(codeLocationId, threadId, parentTracePoint, eventId) {
     var iterations: Int = 0
         private set
 
@@ -295,8 +296,9 @@ class TRLoopIterationTracePoint(
     codeLocationId: Int,
     val loopId: Int,
     val loopIteration: Int,
+    parentTracePoint: TRContainerTracePoint? = null,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRContainerTracePoint(codeLocationId, threadId, eventId) {
+) : TRContainerTracePoint(codeLocationId, threadId, parentTracePoint, eventId) {
 
     override fun saveFooter(out: TraceWriter) {
         // Mark this as a container tracepoint footer
