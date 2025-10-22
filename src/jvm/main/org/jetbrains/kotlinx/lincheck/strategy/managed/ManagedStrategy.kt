@@ -1841,6 +1841,27 @@ internal abstract class ManagedStrategy(
         }
     }
 
+    override fun beforeLoopEnter(codeLocation: Int, loopId: Int) {
+        error("Lincheck managed strategy does not support CFG-based loops tracking.")
+    }
+
+    override fun onLoopIteration(codeLocation: Int, loopId: Int) {
+        error("Lincheck managed strategy does not support CFG-based loops tracking.")
+    }
+
+    override fun afterLoopExit(codeLocation: Int, loopId: Int, canEnterFromOutsideLoop: Boolean) {
+        error("Lincheck managed strategy does not support CFG-based loops tracking.")
+    }
+
+    override fun afterLoopExceptionExit(
+        codeLocation: Int,
+        loopId: Int,
+        exception: Throwable?,
+        canEnterFromOutsideLoop: Boolean
+    ) {
+        error("Lincheck managed strategy does not support CFG-based loops tracking.")
+    }
+
     private fun <T> KResult<T>.toBootstrapResult() =
         if (isSuccess) BootstrapResult.fromSuccess(getOrThrow())
         else BootstrapResult.fromFailure(exceptionOrNull()!!)
