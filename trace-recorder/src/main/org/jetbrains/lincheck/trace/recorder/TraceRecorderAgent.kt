@@ -32,6 +32,7 @@ internal object TraceRecorderAgent {
     const val ARGUMENT_FORMAT = "format"
     const val ARGUMENT_FOPTION = "formatOption"
     const val ARGUMENT_PACK = "pack"
+    const val ARGUMENT_TRACE_ALL_THREADS = "traceAllThreads"
 
     // Allowed additional arguments
     private val ADDITIONAL_ARGS = listOf(
@@ -41,6 +42,7 @@ internal object TraceRecorderAgent {
         ARGUMENT_EXCLUDE,
         ARGUMENT_LAZY,
         ARGUMENT_PACK,
+        ARGUMENT_TRACE_ALL_THREADS,
     )
 
     @JvmStatic
