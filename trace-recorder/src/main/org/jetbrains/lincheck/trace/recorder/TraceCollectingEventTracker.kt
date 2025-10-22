@@ -782,25 +782,8 @@ class TraceCollectingEventTracker(
         exception: Throwable,
         canEnterFromOutsideLoop: Boolean
     ) {
-        // TODO: unify with `afterLoopExit` ?
-        val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
-        val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
-
-        var currentLoopTracePoint = threadData.currentLoopTracePoint()!!
-        if (!canEnterFromOutsideLoop) {
-            // TODO: perhaps better to use logging instead of throwing exception
-            check(currentLoopTracePoint.loopId == loopId) {
-                "Unexpected loop exit: expected loopId ${currentLoopTracePoint.loopId}, but was $loopId"
-            }
-            strategy.completeContainerTracePoint(Thread.currentThread(), currentLoopTracePoint)
-            threadData.exitLoop()
-        } else {
-            do {
-                currentLoopTracePoint = threadData.currentLoopTracePoint() ?: break
-                strategy.completeContainerTracePoint(Thread.currentThread(), currentLoopTracePoint)
-                threadData.exitLoop()
-            } while (currentLoopTracePoint.loopId != loopId)
-        }
+        // TODO: should we do something about exception?
+        afterLoopExit(codeLocation, loopId, canEnterFromOutsideLoop)
     }
 
     override fun invokeDeterministicallyOrNull(
