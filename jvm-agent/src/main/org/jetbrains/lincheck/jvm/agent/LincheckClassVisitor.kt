@@ -155,12 +155,6 @@ internal class LincheckClassVisitor(
             ParkingTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
         }
 
-        // ======== Loops ========
-        chain.addTransformer { adapter, mv ->
-            methodInfo.basicControlFlowGraph.computeLoopInformation()
-            LoopTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
-        }
-
         // ======== Field, Array, and Local Variables accesses ========
         chain.addTransformer { adapter, mv ->
             applySharedMemoryAccessTransformer(methodName, desc, access, methodInfo, config, adapter, mv)
@@ -172,6 +166,21 @@ internal class LincheckClassVisitor(
         // ======== Inline Method Calls ========
         chain.addTransformer { adapter, mv ->
             InlineMethodCallTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+        }
+
+        // ======== Loops ========
+        // TODO: we put loop transformer at the beginning of the chain,
+        //   because it relies on original bytecode instruction numeration
+        //   (it should match the instruction numeration in CFG).
+        //   The placement of this transformer in the chain should not actually matter,
+        //   because intermediate transformers should not affect downstream transformers in the chain,
+        //   as they should normally supply original bytecode to them
+        //   (and otherwise use singe `adapter` placed at the end of the chain to inject new bytecode).
+        //   But apparently this assumption is currently violated,
+        //   and most likely we have some bug in one of the transformers.
+        chain.addTransformer { adapter, mv ->
+            methodInfo.basicControlFlowGraph.computeLoopInformation()
+            LoopTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
         }
 
         // ======== Analyzers ========

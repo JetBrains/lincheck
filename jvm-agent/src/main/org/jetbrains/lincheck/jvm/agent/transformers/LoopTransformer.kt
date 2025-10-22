@@ -76,10 +76,10 @@ internal class LoopTransformer(
                     // Store it to a temp local, emit injections, then restore it for original bytecode.
                     val exceptionLocal = newLocal(THROWABLE_TYPE)
                     storeLocal(exceptionLocal)
-                    // conservative default without exclusivity analysis
-                    // TODO: implement exclusivity analysis and use it here
-                    val isReachableFromOutsideLoop = true
                     for (loopId in loopIds) {
+                        // conservative default without exclusivity analysis
+                        // TODO: implement exclusivity analysis and use it here
+                        val isReachableFromOutsideLoop = true
                         // STACK: <empty>
                         loadNewCodeLocationId()
                         push(loopId)
@@ -134,10 +134,14 @@ internal class LoopTransformer(
                 original = {},
                 instrumented = {
                     for (loopId in loopIds) {
+                        // conservative default without exclusivity analysis
+                        // TODO: implement exclusivity analysis and use it here
+                        val isReachableFromOutsideLoop = true
                         // STACK: <empty>
                         loadNewCodeLocationId()
                         adapter.push(loopId)
-                        // STACK: codeLocation, loopId
+                        push(isReachableFromOutsideLoop)
+                        // STACK: codeLocation, loopId, isReachableFromOutsideLoop
                         adapter.invokeStatic(Injections::afterLoopExit)
                         // STACK: <empty>
                     }

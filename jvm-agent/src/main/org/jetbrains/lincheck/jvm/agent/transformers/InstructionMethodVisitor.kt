@@ -110,17 +110,17 @@ internal abstract class InstructionMethodVisitor(
         processInstruction(Opcodes.MULTIANEWARRAY) { super.visitMultiANewArrayInsn(descriptor, numDimensions) }
 
     override fun visitLabel(label: Label) {
-        currentInsnIndex++
+        ++currentInsnIndex
         super.visitLabel(label)
     }
 
     override fun visitLineNumber(line: Int, start: Label) {
-        currentInsnIndex++
+        ++currentInsnIndex
         super.visitLineNumber(line, start)
     }
 
     override fun visitFrame(type: Int, nLocal: Int, local: Array<Any>?, nStack: Int, stack: Array<Any>?) {
-        currentInsnIndex++
+        ++currentInsnIndex
         super.visitFrame(type, nLocal, local, nStack, stack)
     }
 }
