@@ -56,8 +56,7 @@ interface TraceCollectingStrategy {
      * @param parent Current top of the call stack, if exists.
      * @param created New tracepoint
      */
-    // TODO: refactor, change parent to `TRContainerTracePoint`
-    fun tracePointCreated(parent: TRMethodCallTracePoint?, created: TRTracePoint)
+    fun tracePointCreated(parent: TRContainerTracePoint?, created: TRTracePoint)
 
     /**
      * Must be called when the method call is ended and the call stack is popped.
@@ -729,7 +728,7 @@ class MemoryTraceCollecting(private val context: TraceContext): TraceCollectingS
     override fun completeThread(thread: Thread) {}
 
     override fun tracePointCreated(
-        parent: TRMethodCallTracePoint?,
+        parent: TRContainerTracePoint?,
         created: TRTracePoint
     ) {
         parent?.addChild(created)
@@ -815,7 +814,7 @@ class FileStreamingTraceCollecting(
     }
 
     override fun tracePointCreated(
-        parent: TRMethodCallTracePoint?,
+        parent: TRContainerTracePoint?,
         created: TRTracePoint
     ) {
         val writer = writers[Thread.currentThread()] ?: return
