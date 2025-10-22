@@ -31,8 +31,8 @@ sealed class EdgeLabel : Comparable<EdgeLabel> {
     override fun compareTo(other: EdgeLabel): Int {
         fun labelSortKey(label: EdgeLabel): String = when (label) {
             is FallThrough -> "0"
-            is Jump -> "1:${Printer.OPCODES[label.opcode]}"
-            is Exception -> "2:${label.caughtTypeName ?: "*"}"
+            is Jump        -> "1:${Printer.OPCODES[label.opcode]}"
+            is Exception   -> "2:${label.caughtTypeName ?: "*"}"
         }
 
         val sk1 = labelSortKey(this)
