@@ -28,17 +28,36 @@ private class ThreadData(
     data class StackFrame(
         val call: TRMethodCallTracePoint,
         val shadow: ShadowStackFrame,
-        val isInline: Boolean
+        val loopStack: MutableList<LoopStackElement>, // stack of currently running loops
+        val isInline: Boolean,
+    )
+
+    data class LoopStackElement(
+        val header: TRLoopTracePoint,
+        val iterations: MutableList<TRLoopIterationTracePoint>,
     )
 
     private val stack: MutableList<StackFrame> = arrayListOf()
     private val analysisSectionStack: MutableList<AnalysisSectionType> = arrayListOf()
 
-    fun currentMethodCallTracePoint(): TRMethodCallTracePoint = stack.last().call
+    // TODO: refactor
+    //  - introduce another method `currentContainerTracePoint`
+    //  - use it (almost) everywhere where `currentMethodCallTracePoint` is currently used,
+    //    to ensure proper tree structure
+    fun currentMethodCallTracePoint(): TRMethodCallTracePoint =
+        stack.last().call
 
-    fun isCurrentMethodCallInline(): Boolean = stack.last().isInline
+    fun isCurrentMethodCallInline(): Boolean =
+        stack.last().isInline
 
-    fun firstMethodCallTracePoint(): TRMethodCallTracePoint = stack.first().call
+    fun firstMethodCallTracePoint(): TRMethodCallTracePoint =
+        stack.first().call
+
+    fun currentLoopTracePoint(): TRLoopTracePoint? =
+        stack.lastOrNull()?.loopStack?.lastOrNull()?.header
+
+    fun currentLoopIterationTracePoint(): TRLoopIterationTracePoint? =
+        stack.lastOrNull()?.loopStack?.lastOrNull()?.iterations?.lastOrNull()
 
     fun firstMethodCallTracePointOrNull(): TRMethodCallTracePoint? = stack.firstOrNull()?.call
 
@@ -47,7 +66,8 @@ private class ThreadData(
         stack.add(StackFrame(
             call = tracePoint,
             shadow = stackFrame,
-            isInline = isInline
+            loopStack = mutableListOf(),
+            isInline = isInline,
         ))
     }
 
@@ -57,6 +77,17 @@ private class ThreadData(
     }
 
     fun getStack(): List<StackFrame> = stack
+
+    fun enterLoop(loopTracePoint: TRLoopTracePoint) {
+        val frame = stack.last()
+        val loop = LoopStackElement(loopTracePoint, mutableListOf())
+        frame.loopStack.add(loop)
+    }
+
+    fun exitLoop() {
+        val frame = stack.last()
+        frame.loopStack.removeLast()
+    }
 
     fun enterAnalysisSection(section: AnalysisSectionType) {
         if (section == AnalysisSectionType.IGNORED) {
@@ -161,13 +192,6 @@ class TraceCollectingEventTracker(
     private val threads = ConcurrentHashMap<Thread, ThreadData>()
 
     private val strategy: TraceCollectingStrategy
-    override fun beforeLoopIterationStarts(loopId: Int) {
-        // TODO
-    }
-
-    override fun afterLoopFinished(loopId: Int) {
-        // TODO
-    }
 
     // For proper completion of threads which are not tracked from the start of the agent,
     // of those threads which are not joined by the Main thread,
@@ -664,6 +688,63 @@ class TraceCollectingEventTracker(
 
         tracePoint.setExceptionResult(t)
         strategy.callEnded(Thread.currentThread(), tracePoint)
+    }
+
+    override fun beforeLoopEnter(codeLocation: Int, loopId: Int) {
+        val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
+        val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
+
+        val tracePoint = TRLoopTracePoint(
+            threadId = threadData.threadId,
+            codeLocationId = codeLocation,
+            loopId = loopId,
+        )
+        strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
+        threadData.enterLoop(tracePoint)
+    }
+
+    override fun onLoopIteration(codeLocation: Int, loopId: Int) {
+        val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
+        val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
+
+        val currentLoopTracePoint = threadData.currentLoopTracePoint()!!
+        val tracePoint = TRLoopIterationTracePoint(
+            threadId = threadData.threadId,
+            codeLocationId = codeLocation,
+            loopId = loopId,
+            loopIteration = currentLoopTracePoint.iterations,
+        )
+        currentLoopTracePoint.incrementIterations()
+        strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
+    }
+
+    override fun afterLoopExit(codeLocation: Int, loopId: Int, canEnterFromOutsideLoop: Boolean) {
+        val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
+        val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
+
+        val currentLoopTracePoint = threadData.currentLoopTracePoint()!!
+        if (!canEnterFromOutsideLoop) {
+            // TODO: perhaps better use logging instead of throwing exception
+            check(currentLoopTracePoint.loopId == loopId) {
+                "Unexpected loop exit: expected loopId ${currentLoopTracePoint.loopId}, but was $loopId"
+            }
+
+            threadData.exitLoop()
+            // strategy.callEnded(Thread.currentThread(), currentLoopTracePoint) // TODO: refactor `callEnded`
+        } else {
+            // TODO: pop loop elements until `loopId` is found
+        }
+    }
+
+    override fun afterLoopExceptionExit(
+        codeLocation: Int,
+        loopId: Int,
+        exception: Throwable?,
+        canEnterFromOutsideLoop: Boolean
+    ) {
+        TODO("Not yet implemented")
+
+        // TODO: should be similar to `afterLoopExit`
     }
 
     override fun invokeDeterministicallyOrNull(

@@ -17,8 +17,6 @@ import java.lang.invoke.CallSite;
  * See {@link Injections} for the documentation.
  */
 public interface EventTracker {
-    void beforeLoopIterationStarts(int loopId);
-    void afterLoopFinished(int loopId);
 
     void registerRunningThread(Thread thread, ThreadDescriptor descriptor);
     void beforeThreadFork(Thread thread, ThreadDescriptor descriptor);
@@ -82,6 +80,11 @@ public interface EventTracker {
     void onInlineMethodCallException(int methodId, Throwable t);
 
     BootstrapResult<?> invokeDeterministicallyOrNull(long descriptorId, Object descriptor, Object receiver, Object[] params);
+
+    void beforeLoopEnter(int codeLocation, int loopId);
+    void onLoopIteration(int codeLocation, int loopId);
+    void afterLoopExit(int codeLocation, int loopId, boolean canEnterFromOutsideLoop);
+    void afterLoopExceptionExit(int codeLocation, int loopId, Throwable exception, boolean canEnterFromOutsideLoop);
 
     InjectedRandom getThreadLocalRandom();
     int randomNextInt();

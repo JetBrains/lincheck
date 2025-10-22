@@ -56,6 +56,7 @@ interface TraceCollectingStrategy {
      * @param parent Current top of the call stack, if exists.
      * @param created New tracepoint
      */
+    // TODO: refactor, change parent to `TRContainerTracePoint`
     fun tracePointCreated(parent: TRMethodCallTracePoint?, created: TRTracePoint)
 
     /**
@@ -64,6 +65,7 @@ interface TraceCollectingStrategy {
      * @param thread thread to which belongs [callTracepoint].
      * @param callTracepoint tracepoint popped from the call stack.
      */
+    // TODO: refactor --- rename and allow passing TRContainerTracePoint
     fun callEnded(thread: Thread, callTracepoint: TRMethodCallTracePoint)
 
     /**

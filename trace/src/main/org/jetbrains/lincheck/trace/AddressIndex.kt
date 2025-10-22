@@ -13,7 +13,7 @@ package org.jetbrains.lincheck.trace
 import java.nio.file.Files
 import kotlin.math.min
 
-internal sealed class AddressIndex {
+sealed class AddressIndex {
     var size: Int = 0
         protected set
 
