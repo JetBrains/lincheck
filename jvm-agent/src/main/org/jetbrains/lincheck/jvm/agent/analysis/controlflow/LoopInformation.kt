@@ -143,6 +143,7 @@ class MethodLoopsInformation(
 }
 
 // == LOOPS EXTRACTION FROM CFG ==
+
 /**
  * Compute dominator sets for each basic block using the classical iterative algorithm.
  * The entry block is assumed to be block 0 when the graph is non-empty.
@@ -276,6 +277,7 @@ internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(
 }
 
 // == LOOPS PRETTY-PRINTING ==
+
 fun MethodLoopsInformation.toFormattedString(): String =
     MethodLoopsInformationPrinter(this).toFormattedString()
 
