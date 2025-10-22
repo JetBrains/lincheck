@@ -101,7 +101,7 @@ class BasicBlockControlFlowGraph(
         private set
 
     /**
-     * Set of all back-edges in the CFG stored by their target block index.
+     * Set of all back-edges in the CFG.
      *
      * When this field is `null` it means that [computeLoopInformation] method was not called on this CFG.
      */
