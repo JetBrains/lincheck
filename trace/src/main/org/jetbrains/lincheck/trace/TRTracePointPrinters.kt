@@ -221,6 +221,43 @@ object DefaultTRMethodCallTracePointPrinter: AbstractTRMethodCallTracePointPrint
     }
 }
 
+abstract class AbstractTRLoopTracePointPrinter {
+
+    protected fun TRAppendable.appendTracePoint(tracePoint: TRLoopTracePoint): TRAppendable {
+        appendKeyword("loop")
+        appendSpecialSymbol("(")
+        append("${tracePoint.iterations} iterations")
+        appendSpecialSymbol(")")
+        return this
+    }
+}
+
+object DefaultTRLoopTracePointPrinter: AbstractTRLoopTracePointPrinter() {
+    fun TRAppendable.append(tracePoint: TRLoopTracePoint): TRAppendable {
+        appendTracePoint(tracePoint)
+        append(tracePoint.codeLocationId, verbose)
+        return this
+    }
+}
+
+abstract class AbstractTRLoopIterationTracePointPrinter {
+
+    protected fun TRAppendable.appendTracePoint(tracePoint: TRLoopIterationTracePoint): TRAppendable {
+        appendSpecialSymbol("<")
+        appendKeyword("iteration")
+        append("${tracePoint.loopIteration}")
+        appendSpecialSymbol(">")
+        return this
+    }
+}
+
+object DefaultTRLoopIterationTracePointPrinter: AbstractTRLoopIterationTracePointPrinter() {
+    fun TRAppendable.append(tracePoint: TRLoopIterationTracePoint): TRAppendable {
+        appendTracePoint(tracePoint)
+        append(tracePoint.codeLocationId, verbose)
+        return this
+    }
+}
 
 abstract class AbstractTRFieldTracePointPrinter {
 

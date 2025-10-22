@@ -20,6 +20,8 @@ import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.trace.DefaultTRArrayTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRFieldTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRLocalVariableTracePointPrinter.append
+import org.jetbrains.lincheck.trace.DefaultTRLoopIterationTracePointPrinter.append
+import org.jetbrains.lincheck.trace.DefaultTRLoopTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRMethodCallTracePointPrinter.append
 import java.io.DataInput
 import java.io.DataOutput
@@ -284,8 +286,7 @@ class TRLoopTracePoint(
     // TODO: (de)serialization methods
 
     override fun toText(appendable: TRAppendable) {
-        // TODO
-        // appendable.append(tracePoint = this)
+        appendable.append(tracePoint = this)
     }
 }
 
@@ -309,8 +310,7 @@ class TRLoopIterationTracePoint(
     // TODO: (de)serialization methods
 
     override fun toText(appendable: TRAppendable) {
-        // TODO
-        // appendable.append(tracePoint = this)
+        appendable.append(tracePoint = this)
     }
 }
 
