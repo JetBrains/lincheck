@@ -613,7 +613,10 @@ class TraceCollectingEventTracker(
 
         val tracePoint = threadData.popStackFrame()
         if (tracePoint.methodId != methodId) {
-            Logger.error { "Return from method $methodId (${methodDescriptor.className}.${methodDescriptor.methodName}) but on stack ${tracePoint.methodId} (${tracePoint.className}.${tracePoint.methodName})" }
+            Logger.error {
+                "Return from method $methodId ${methodDescriptor.className}.${methodDescriptor.methodName} " +
+                "but on stack ${tracePoint.methodId} ${tracePoint.className}.${tracePoint.methodName}"
+            }
         }
 
         tracePoint.result = TRObjectOrVoid(result)
@@ -655,7 +658,10 @@ class TraceCollectingEventTracker(
 
         val tracePoint = threadData.popStackFrame()
         if (tracePoint.methodId != methodId) {
-            Logger.error { "Exception in method $methodId (${methodDescriptor.className}.${methodDescriptor.methodName}) but on stack ${tracePoint.methodId} (${tracePoint.className}.${tracePoint.methodName})" }
+            Logger.error {
+                "Exception in method $methodId ${methodDescriptor.className}.${methodDescriptor.methodName} " +
+                "but on stack ${tracePoint.methodId} ${tracePoint.className}.${tracePoint.methodName}"
+            }
         }
 
         tracePoint.setExceptionResult(t)
