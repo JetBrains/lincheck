@@ -24,10 +24,16 @@ fun main(args: Array<String>) {
 }
 
 class TRPlayground {
+    var escape: Any? = null
 
     @Test
     fun testing() {
-        // Write your code
+        escape = "START"
+        for (i in 1..3) {
+            val a: Any = i
+            escape = a.toString()
+        }
+        escape = "END"
     }
 }
 
