@@ -600,6 +600,13 @@ class TraceCollectingEventTracker(
             return result
         }
 
+        // TODO: what about inline method calls? Inside them also could be loops.
+        //  The inline methods should be closed after closing the loops inside them.
+        // close all existing loops
+        while (threadData.currentLoopTracePoint() != null) {
+            exitCurrentLoop(threadData)
+        }
+
         while (threadData.isCurrentMethodCallInline()) {
             val inlineTracePoint = threadData.currentMethodCallTracePoint()!!
             Logger.error {
@@ -643,6 +650,13 @@ class TraceCollectingEventTracker(
         if (methodSection == AnalysisSectionType.IGNORED) {
             threadData.leaveAnalysisSection(methodSection)
             return t
+        }
+
+        // TODO: what about inline method calls? Inside them also could be loops.
+        //  The inline methods should be closed after closing the loops inside them.
+        // close all existing loops
+        while (threadData.currentLoopTracePoint() != null) {
+            exitCurrentLoop(threadData)
         }
 
         while (threadData.isCurrentMethodCallInline()) {
@@ -764,28 +778,21 @@ class TraceCollectingEventTracker(
     override fun afterLoopExit(codeLocation: Int, loopId: Int, canEnterFromOutsideLoop: Boolean) {
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
-        val thread = Thread.currentThread()
 
         var currentLoopTracePoint = threadData.currentLoopTracePoint()!!
-        var currentLoopIterationTracePoint = threadData.currentLoopIterationTracePoint()!!
         if (!canEnterFromOutsideLoop) {
             // TODO: perhaps better to use logging instead of throwing exception
             check(currentLoopTracePoint.loopId == loopId) {
                 "Unexpected loop exit: expected loopId ${currentLoopTracePoint.loopId}, but was $loopId"
             }
-            // complete the last loop iteration and then loop itself
-            strategy.completeContainerTracePoint(thread, currentLoopIterationTracePoint)
-            strategy.completeContainerTracePoint(thread, currentLoopTracePoint)
-            threadData.exitLoop()
+            exitCurrentLoop(threadData)
+
         } else {
             do {
                 currentLoopTracePoint = threadData.currentLoopTracePoint() ?: break
-                currentLoopIterationTracePoint = threadData.currentLoopIterationTracePoint()!!
-                // complete the last loop iteration and then loop itself
-                strategy.completeContainerTracePoint(thread, currentLoopIterationTracePoint)
-                strategy.completeContainerTracePoint(thread, currentLoopTracePoint)
-                threadData.exitLoop()
-            } while (currentLoopTracePoint.loopId != loopId)
+                exitCurrentLoop(threadData)
+            }
+            while (currentLoopTracePoint.loopId != loopId)
         }
     }
 
@@ -970,5 +977,24 @@ class TraceCollectingEventTracker(
             return AnalysisSectionType.IGNORED
         }
         return analysisProfile.getAnalysisSectionFor(ownerName, methodName)
+    }
+
+    /**
+     * Method takes the currently open loop trace point and finishes
+     * its last open iteration (if it exists) and then the loop itself.
+     *
+     * Note: assumes there is an open loop trace point.
+     */
+    private fun exitCurrentLoop(threadData: ThreadData) {
+        val thread = Thread.currentThread()
+        val currentLoopTracePoint = threadData.currentLoopTracePoint() ?: error("No loop trace point exists")
+        val currentLoopIterationTracePoint = threadData.currentLoopIterationTracePoint()
+
+        // complete the last loop iteration if it exists and then loop itself
+        if (currentLoopIterationTracePoint != null) {
+            strategy.completeContainerTracePoint(thread, currentLoopIterationTracePoint)
+        }
+        strategy.completeContainerTracePoint(thread, currentLoopTracePoint)
+        threadData.exitLoop()
     }
 }
