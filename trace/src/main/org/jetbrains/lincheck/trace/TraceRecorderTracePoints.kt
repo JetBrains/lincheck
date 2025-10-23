@@ -269,6 +269,9 @@ class TRLoopTracePoint(
     parentTracePoint: TRContainerTracePoint? = null,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
 ) : TRContainerTracePoint(codeLocationId, threadId, parentTracePoint, eventId) {
+    // This field is not serialized to disk, because it is computable from the number of children of the
+    // loop trace point. Basically the number of children is equal to the number of loop iterations.
+    // On trace point footer loading this variable will be restored.
     var iterations: Int = 0
         private set
 
@@ -279,7 +282,6 @@ class TRLoopTracePoint(
     override fun save(out: TraceWriter) {
         super.save(out)
         out.writeInt(loopId)
-        out.writeInt(iterations)
 
         // Mark this as container tracepoint which could have children and will have footer
         out.endWriteContainerTracepointHeader(eventId)
@@ -288,7 +290,6 @@ class TRLoopTracePoint(
     override fun saveFooter(out: TraceWriter) {
         // Mark this as a container tracepoint footer
         out.startWriteContainerTracepointFooter()
-
         // TODO: what else should go here?
 
         out.endWriteContainerTracepointFooter(eventId)
@@ -296,7 +297,7 @@ class TRLoopTracePoint(
 
     override fun loadFooter(inp: DataInput) {
         childrenAddresses.finishWrite()
-
+        iterations = childrenAddresses.size
         // TODO: what else should go here?
     }
 
@@ -308,9 +309,6 @@ class TRLoopTracePoint(
 
         internal fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRLoopTracePoint {
             val loopId = inp.readInt()
-            val iterations = inp.readInt()
-            check(iterations >= 0) { "Negative iterations count: $iterations" }
-
             val tracePoint = TRLoopTracePoint(
                 threadId = threadId,
                 codeLocationId = codeLocationId,
@@ -318,8 +316,6 @@ class TRLoopTracePoint(
                 // TODO: should also load iterations number?
                 eventId = eventId,
             )
-            tracePoint.iterations = iterations
-
             return tracePoint
         }
     }
