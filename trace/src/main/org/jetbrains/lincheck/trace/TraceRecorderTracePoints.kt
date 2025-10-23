@@ -279,6 +279,7 @@ class TRLoopTracePoint(
     override fun save(out: TraceWriter) {
         super.save(out)
         out.writeInt(loopId)
+        out.writeInt(iterations)
 
         // Mark this as container tracepoint which could have children and will have footer
         out.endWriteContainerTracepointHeader(eventId)
@@ -307,6 +308,8 @@ class TRLoopTracePoint(
 
         internal fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRLoopTracePoint {
             val loopId = inp.readInt()
+            val iterations = inp.readInt()
+            check(iterations >= 0) { "Negative iterations count: $iterations" }
 
             val tracePoint = TRLoopTracePoint(
                 threadId = threadId,
@@ -315,6 +318,7 @@ class TRLoopTracePoint(
                 // TODO: should also load iterations number?
                 eventId = eventId,
             )
+            tracePoint.iterations = iterations
 
             return tracePoint
         }

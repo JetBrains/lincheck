@@ -246,7 +246,7 @@ abstract class AbstractTRLoopIterationTracePointPrinter {
         appendSpecialSymbol("<")
         appendKeyword("iteration")
         appendSpecialSymbol("-")
-        append("${tracePoint.loopIteration}")
+        append("${tracePoint.loopIteration + 1}")
         appendSpecialSymbol(">")
         return this
     }
