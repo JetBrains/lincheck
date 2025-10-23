@@ -739,23 +739,20 @@ class TraceCollectingEventTracker(
         strategy.completeContainerTracePoint(Thread.currentThread(), tracePoint)
     }
 
-    override fun beforeLoopEnter(codeLocation: Int, loopId: Int) {
-        val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
-        val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
-
-        val tracePoint = TRLoopTracePoint(
-            threadId = threadData.threadId,
-            codeLocationId = codeLocation,
-            loopId = loopId,
-        )
-        strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
-        threadData.enterLoop(tracePoint)
-    }
-
     override fun onLoopIteration(codeLocation: Int, loopId: Int) {
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
+        // create a new loop if required
+        if (loopId != threadData.currentLoopTracePoint()?.loopId) {
+            val tracePoint = TRLoopTracePoint(
+                threadId = threadData.threadId,
+                codeLocationId = codeLocation,
+                loopId = loopId,
+            )
+            strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
+            threadData.enterLoop(tracePoint)
+        }
 
         val currentLoopTracePoint = threadData.currentLoopTracePoint().ensureNotNull {
             "Unexpected loop iteration: no loop trace point found"

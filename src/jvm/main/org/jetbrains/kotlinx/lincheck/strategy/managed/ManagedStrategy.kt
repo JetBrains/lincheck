@@ -1841,10 +1841,6 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    override fun beforeLoopEnter(codeLocation: Int, loopId: Int) {
-        error("Lincheck managed strategy does not support CFG-based loops tracking.")
-    }
-
     override fun onLoopIteration(codeLocation: Int, loopId: Int) {
         error("Lincheck managed strategy does not support CFG-based loops tracking.")
     }

@@ -37,10 +37,6 @@ internal class LoopTransformer(
         "Loops information is not available for method $className.$methodName$descriptor"
     }
 
-    // Map from a loop header entry (from outside the loop) instruction index to the set of loopIds.
-    private val headerEntrySites: Map<InstructionIndex, Set<LoopId>> =
-        methodInfo.basicControlFlowGraph.computeHeaderEntrySites(loopInfo)
-
     // Map from the first loop header instruction index to loopId.
     private val iterationEntrySites: Map<InstructionIndex, LoopId> =
         methodInfo.basicControlFlowGraph.computeIterationEntrySites(loopInfo)
@@ -96,23 +92,6 @@ internal class LoopTransformer(
             pendingHandlerLoopIds = null
         }
 
-        // Inject `beforeLoopEnter` on transitions entering the loop from outside.
-        headerEntrySites[index]?.let { loopIds ->
-            invokeIfInAnalyzedCode(
-                original = {},
-                instrumented = {
-                    for (loopId in loopIds) {
-                        // STACK: <empty>
-                        loadNewCodeLocationId()
-                        adapter.push(loopId)
-                        // STACK: codeLocation, loopId
-                        adapter.invokeStatic(Injections::beforeLoopEnter)
-                        // STACK: <empty>
-                    }
-                }
-            )
-        }
-
         // Inject `onLoopIteration` at the loop header on every iteration (including the first).
         iterationEntrySites[index]?.let { loopId ->
             invokeIfInAnalyzedCode(
@@ -149,27 +128,6 @@ internal class LoopTransformer(
             )
         }
     }
-}
-
-private fun BasicBlockControlFlowGraph.computeHeaderEntrySites(
-    loopInfo: MethodLoopsInformation
-): Map<InstructionIndex, Set<Int>> {
-    if (!loopInfo.hasLoops()) return emptyMap()
-    val cfg = this
-    val result = mutableMapOf<InstructionIndex, MutableSet<Int>>()
-    for (loop in loopInfo.loops) {
-        val headerSet = loop.headers
-        val bodySet = loop.body
-        for (e in cfg.edges) {
-            if (e.target in headerSet && e.source !in bodySet) {
-                val idx: InstructionIndex = cfg.lastOpcodeIndexOf(e.source) ?: continue
-                result.updateInplace(idx, default = mutableSetOf()) { add(loop.id) }
-                // TODO: probably for fall-through edges we need to inject AFTER last instr. of source
-                // TODO: what about conditional jump edges? What if we will not take branch that jumps into cycle?
-            }
-        }
-    }
-    return result.mapValues { it.value.toSet() }
 }
 
 private fun BasicBlockControlFlowGraph.computeIterationEntrySites(

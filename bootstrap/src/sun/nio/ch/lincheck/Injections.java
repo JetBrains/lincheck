@@ -642,13 +642,6 @@ public class Injections {
     }
 
     /**
-     * Called before a loop body is entered.
-     */
-    public static void beforeLoopEnter(int codeLocation, int loopId) {
-        getEventTracker().beforeLoopEnter(codeLocation, loopId);
-    }
-
-    /**
      * Called at the beginning of every loop iteration (including the first one).
      */
     public static void onLoopIteration(int codeLocation, int loopId) {
