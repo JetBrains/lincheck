@@ -1,28 +1,17 @@
-= Invalid execution results =
-| ----------------- |
-|     Thread 1      |
-| ----------------- |
-| operation(): void |
-| ----------------- |
-
-The following interleaving leads to the error:
-| ----------- |
-|  Thread 1   |
-| ----------- |
-| operation() |
-| ----------- |
-
-Detailed trace:
-| -------------------- |
-|       Thread 1       |
-| -------------------- |
-| operation()          |
-|   escape = "START"   |
-|   loop(2 iterations) |
-|     <iteration 1>    |
-|       escape = "1"   |
-|     <iteration 2>    |
-|       escape = "2"   |
-|   escape = "END"     |
-|   result: void       |
-| -------------------- |
+# Thread 1
+SimpleForLoopRepresentationTest.operation() at :0
+  escape = "START" at SimpleForLoopRepresentationTest.kt:16
+  i = 1 at SimpleForLoopRepresentationTest.kt:17
+  loop(3 iterations) at SimpleForLoopRepresentationTest.kt:17
+    <iteration-1> at SimpleForLoopRepresentationTest.kt:17
+      a = 1 at SimpleForLoopRepresentationTest.kt:18
+      a.toString(): "1" at SimpleForLoopRepresentationTest.kt:19
+      escape = "1" at SimpleForLoopRepresentationTest.kt:19
+      i = 2 at SimpleForLoopRepresentationTest.kt:17
+    <iteration-2> at SimpleForLoopRepresentationTest.kt:17
+      a = 2 at SimpleForLoopRepresentationTest.kt:18
+      a.toString(): "2" at SimpleForLoopRepresentationTest.kt:19
+      escape = "2" at SimpleForLoopRepresentationTest.kt:19
+      i = 3 at SimpleForLoopRepresentationTest.kt:17
+    <iteration-3> at SimpleForLoopRepresentationTest.kt:17
+  escape = "END" at SimpleForLoopRepresentationTest.kt:21

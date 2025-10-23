@@ -1,30 +1,16 @@
-= Invalid execution results =
-| ----------------- |
-|     Thread 1      |
-| ----------------- |
-| operation(): void |
-| ----------------- |
-
-The following interleaving leads to the error:
-| ----------- |
-|  Thread 1   |
-| ----------- |
-| operation() |
-| ----------- |
-
-Detailed trace:
-| ---------------------------------------- |
-|                 Thread 1                 |
-| ---------------------------------------- |
-| operation()                              |
-|   escape = "START"                       |
-|   loop(2 iterations)                     |
-|     <iteration 1>                        |
-|       builder.append(1): StringBuilder#1 |
-|     <iteration 2>                        |
-|       builder.append(2): StringBuilder#1 |
-|   builder.toString(): "12"               |
-|   escape = "12"                          |
-|   escape = "END"                         |
-|   result: void                           |
-| ---------------------------------------- |
+# Thread 1
+EmptyForLoopRepresentationTest.operation() at :0
+  escape = "START" at EmptyForLoopRepresentationTest.kt:19
+  builder = "" at EmptyForLoopRepresentationTest.kt:20
+  i = 1 at EmptyForLoopRepresentationTest.kt:21
+  loop(3 iterations) at EmptyForLoopRepresentationTest.kt:21
+    <iteration-1> at EmptyForLoopRepresentationTest.kt:21
+      builder.append(i ➜ 1): "1" at EmptyForLoopRepresentationTest.kt:22
+      i = 2 at EmptyForLoopRepresentationTest.kt:21
+    <iteration-2> at EmptyForLoopRepresentationTest.kt:21
+      builder.append(i ➜ 2): "12" at EmptyForLoopRepresentationTest.kt:22
+      i = 3 at EmptyForLoopRepresentationTest.kt:21
+    <iteration-3> at EmptyForLoopRepresentationTest.kt:21
+  builder.toString(): "12" at EmptyForLoopRepresentationTest.kt:24
+  escape = "12" at EmptyForLoopRepresentationTest.kt:24
+  escape = "END" at EmptyForLoopRepresentationTest.kt:25

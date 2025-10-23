@@ -1,42 +1,31 @@
-= Invalid execution results =
-| ----------------- |
-|     Thread 1      |
-| ----------------- |
-| operation(): void |
-| ----------------- |
-
-The following interleaving leads to the error:
-| ----------- |
-|  Thread 1   |
-| ----------- |
-| operation() |
-| ----------- |
-
-Detailed trace:
-| ------------------------------------------------------- |
-|                        Thread 1                         |
-| ------------------------------------------------------- |
-| operation()                                             |
-|   escape = "START"                                      |
-|   loop(5 iterations)                                    |
-|     <iteration 1>                                       |
-|       builder.append(1): StringBuilder#1                |
-|     <iteration 2>                                       |
-|       builder.append(2): StringBuilder#1                |
-|       builder.toString(): "12"                          |
-|       escape = "12"                                     |
-|       StringsKt.clear(StringBuilder#1): StringBuilder#1 |
-|     <iteration 3>                                       |
-|       builder.append(3): StringBuilder#1                |
-|     <iteration 4>                                       |
-|       builder.append(4): StringBuilder#1                |
-|       builder.toString(): "34"                          |
-|       escape = "34"                                     |
-|       StringsKt.clear(StringBuilder#1): StringBuilder#1 |
-|     <iteration 5>                                       |
-|       builder.append(5): StringBuilder#1                |
-|   builder.toString(): "5"                               |
-|   escape = "5"                                          |
-|   escape = "END"                                        |
-|   result: void                                          |
-| ------------------------------------------------------- |
+# Thread 1
+PartiallyEmptyForLoopRepresentationTest.operation() at :0
+  escape = "START" at PartiallyEmptyForLoopRepresentationTest.kt:16
+  builder = "" at PartiallyEmptyForLoopRepresentationTest.kt:17
+  i = 1 at PartiallyEmptyForLoopRepresentationTest.kt:18
+  loop(6 iterations) at PartiallyEmptyForLoopRepresentationTest.kt:18
+    <iteration-1> at PartiallyEmptyForLoopRepresentationTest.kt:18
+      builder.append(i ➜ 1): "1" at PartiallyEmptyForLoopRepresentationTest.kt:19
+      i = 2 at PartiallyEmptyForLoopRepresentationTest.kt:18
+    <iteration-2> at PartiallyEmptyForLoopRepresentationTest.kt:18
+      builder.append(i ➜ 2): "12" at PartiallyEmptyForLoopRepresentationTest.kt:19
+      builder.toString(): "12" at PartiallyEmptyForLoopRepresentationTest.kt:21
+      escape = "12" at PartiallyEmptyForLoopRepresentationTest.kt:21
+      clear(builder ➜ "12"): "" at PartiallyEmptyForLoopRepresentationTest.kt:22
+      i = 3 at PartiallyEmptyForLoopRepresentationTest.kt:18
+    <iteration-3> at PartiallyEmptyForLoopRepresentationTest.kt:18
+      builder.append(i ➜ 3): "3" at PartiallyEmptyForLoopRepresentationTest.kt:19
+      i = 4 at PartiallyEmptyForLoopRepresentationTest.kt:18
+    <iteration-4> at PartiallyEmptyForLoopRepresentationTest.kt:18
+      builder.append(i ➜ 4): "34" at PartiallyEmptyForLoopRepresentationTest.kt:19
+      builder.toString(): "34" at PartiallyEmptyForLoopRepresentationTest.kt:21
+      escape = "34" at PartiallyEmptyForLoopRepresentationTest.kt:21
+      clear(builder ➜ "34"): "" at PartiallyEmptyForLoopRepresentationTest.kt:22
+      i = 5 at PartiallyEmptyForLoopRepresentationTest.kt:18
+    <iteration-5> at PartiallyEmptyForLoopRepresentationTest.kt:18
+      builder.append(i ➜ 5): "5" at PartiallyEmptyForLoopRepresentationTest.kt:19
+      i = 6 at PartiallyEmptyForLoopRepresentationTest.kt:18
+    <iteration-6> at PartiallyEmptyForLoopRepresentationTest.kt:18
+  builder.toString(): "5" at PartiallyEmptyForLoopRepresentationTest.kt:25
+  escape = "5" at PartiallyEmptyForLoopRepresentationTest.kt:25
+  escape = "END" at PartiallyEmptyForLoopRepresentationTest.kt:26

@@ -1,44 +1,43 @@
-= Invalid execution results =
-| ----------------- |
-|     Thread 1      |
-| ----------------- |
-| operation(): void |
-| ----------------- |
-
-The following interleaving leads to the error:
-| ----------- |
-|  Thread 1   |
-| ----------- |
-| operation() |
-| ----------- |
-
-Detailed trace:
-| --------------------------------------- |
-|                Thread 1                 |
-| --------------------------------------- |
-| operation()                             |
-|   escape = "START"                      |
-|   loop(2 iterations)                    |
-|     <iteration 1>                       |
-|       escape = "outer-1"                |
-|       methodWithLoop(1)                 |
-|         escape = "method-start-1"       |
-|         loop(2 iterations)              |
-|           <iteration 1>                 |
-|             escape = "method-inner-1-1" |
-|           <iteration 2>                 |
-|             escape = "method-inner-1-2" |
-|         escape = "method-end-1"         |
-|     <iteration 2>                       |
-|       escape = "outer-2"                |
-|       methodWithLoop(2)                 |
-|         escape = "method-start-2"       |
-|         loop(2 iterations)              |
-|           <iteration 1>                 |
-|             escape = "method-inner-2-1" |
-|           <iteration 2>                 |
-|             escape = "method-inner-2-2" |
-|         escape = "method-end-2"         |
-|   escape = "END"                        |
-|   result: void                          |
-| --------------------------------------- |
+# Thread 1
+LoopWithNestedLoopMethodCallRepresentationTest.operation() at :0
+  escape = "START" at LoopWithNestedLoopMethodCallRepresentationTest.kt:27
+  i = 1 at LoopWithNestedLoopMethodCallRepresentationTest.kt:28
+  loop(3 iterations) at LoopWithNestedLoopMethodCallRepresentationTest.kt:28
+    <iteration-1> at LoopWithNestedLoopMethodCallRepresentationTest.kt:28
+      a = 1 at LoopWithNestedLoopMethodCallRepresentationTest.kt:29
+      escape = "outer-1" at LoopWithNestedLoopMethodCallRepresentationTest.kt:30
+      methodWithLoop(a ➜ 1) at LoopWithNestedLoopMethodCallRepresentationTest.kt:31
+        escape = "method-start-1" at LoopWithNestedLoopMethodCallRepresentationTest.kt:37
+        j = 1 at LoopWithNestedLoopMethodCallRepresentationTest.kt:38
+        loop(3 iterations) at LoopWithNestedLoopMethodCallRepresentationTest.kt:38
+          <iteration-1> at LoopWithNestedLoopMethodCallRepresentationTest.kt:38
+            b = 1 at LoopWithNestedLoopMethodCallRepresentationTest.kt:39
+            escape = "method-inner-1-1" at LoopWithNestedLoopMethodCallRepresentationTest.kt:40
+            j = 2 at LoopWithNestedLoopMethodCallRepresentationTest.kt:38
+          <iteration-2> at LoopWithNestedLoopMethodCallRepresentationTest.kt:38
+            b = 2 at LoopWithNestedLoopMethodCallRepresentationTest.kt:39
+            escape = "method-inner-1-2" at LoopWithNestedLoopMethodCallRepresentationTest.kt:40
+            j = 3 at LoopWithNestedLoopMethodCallRepresentationTest.kt:38
+          <iteration-3> at LoopWithNestedLoopMethodCallRepresentationTest.kt:38
+        escape = "method-end-1" at LoopWithNestedLoopMethodCallRepresentationTest.kt:42
+      i = 2 at LoopWithNestedLoopMethodCallRepresentationTest.kt:28
+    <iteration-2> at LoopWithNestedLoopMethodCallRepresentationTest.kt:28
+      a = 2 at LoopWithNestedLoopMethodCallRepresentationTest.kt:29
+      escape = "outer-2" at LoopWithNestedLoopMethodCallRepresentationTest.kt:30
+      methodWithLoop(a ➜ 2) at LoopWithNestedLoopMethodCallRepresentationTest.kt:31
+        escape = "method-start-2" at LoopWithNestedLoopMethodCallRepresentationTest.kt:37
+        j = 1 at LoopWithNestedLoopMethodCallRepresentationTest.kt:38
+        loop(3 iterations) at LoopWithNestedLoopMethodCallRepresentationTest.kt:38
+          <iteration-1> at LoopWithNestedLoopMethodCallRepresentationTest.kt:38
+            b = 1 at LoopWithNestedLoopMethodCallRepresentationTest.kt:39
+            escape = "method-inner-2-1" at LoopWithNestedLoopMethodCallRepresentationTest.kt:40
+            j = 2 at LoopWithNestedLoopMethodCallRepresentationTest.kt:38
+          <iteration-2> at LoopWithNestedLoopMethodCallRepresentationTest.kt:38
+            b = 2 at LoopWithNestedLoopMethodCallRepresentationTest.kt:39
+            escape = "method-inner-2-2" at LoopWithNestedLoopMethodCallRepresentationTest.kt:40
+            j = 3 at LoopWithNestedLoopMethodCallRepresentationTest.kt:38
+          <iteration-3> at LoopWithNestedLoopMethodCallRepresentationTest.kt:38
+        escape = "method-end-2" at LoopWithNestedLoopMethodCallRepresentationTest.kt:42
+      i = 3 at LoopWithNestedLoopMethodCallRepresentationTest.kt:28
+    <iteration-3> at LoopWithNestedLoopMethodCallRepresentationTest.kt:28
+  escape = "END" at LoopWithNestedLoopMethodCallRepresentationTest.kt:33

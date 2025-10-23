@@ -1,30 +1,19 @@
-= Invalid execution results =
-| ----------------- |
-|     Thread 1      |
-| ----------------- |
-| operation(): void |
-| ----------------- |
-
-The following interleaving leads to the error:
-| ----------- |
-|  Thread 1   |
-| ----------- |
-| operation() |
-| ----------- |
-
-Detailed trace:
-| -------------------- |
-|       Thread 1       |
-| -------------------- |
-| operation()          |
-|   escape = "START"   |
-|   loop(2 iterations) |
-|     <iteration 1>    |
-|       method(1)      |
-|         escape = "1" |
-|     <iteration 2>    |
-|       method(2)      |
-|         escape = "2" |
-|   escape = "END"     |
-|   result: void       |
-| -------------------- |
+# Thread 1
+ForLoopWithMethodCallRepresentationTest.operation() at :0
+  escape = "START" at ForLoopWithMethodCallRepresentationTest.kt:16
+  i = 1 at ForLoopWithMethodCallRepresentationTest.kt:17
+  loop(3 iterations) at ForLoopWithMethodCallRepresentationTest.kt:17
+    <iteration-1> at ForLoopWithMethodCallRepresentationTest.kt:17
+      a = 1 at ForLoopWithMethodCallRepresentationTest.kt:18
+      method(a ➜ 1) at ForLoopWithMethodCallRepresentationTest.kt:19
+        a.toString(): "1" at ForLoopWithMethodCallRepresentationTest.kt:25
+        escape = "1" at ForLoopWithMethodCallRepresentationTest.kt:25
+      i = 2 at ForLoopWithMethodCallRepresentationTest.kt:17
+    <iteration-2> at ForLoopWithMethodCallRepresentationTest.kt:17
+      a = 2 at ForLoopWithMethodCallRepresentationTest.kt:18
+      method(a ➜ 2) at ForLoopWithMethodCallRepresentationTest.kt:19
+        a.toString(): "2" at ForLoopWithMethodCallRepresentationTest.kt:25
+        escape = "2" at ForLoopWithMethodCallRepresentationTest.kt:25
+      i = 3 at ForLoopWithMethodCallRepresentationTest.kt:17
+    <iteration-3> at ForLoopWithMethodCallRepresentationTest.kt:17
+  escape = "END" at ForLoopWithMethodCallRepresentationTest.kt:21

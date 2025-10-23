@@ -1,40 +1,33 @@
-= Invalid execution results =
-| ----------------- |
-|     Thread 1      |
-| ----------------- |
-| operation(): void |
-| ----------------- |
-
-The following interleaving leads to the error:
-| ----------- |
-|  Thread 1   |
-| ----------- |
-| operation() |
-| ----------- |
-
-Detailed trace:
-| --------------------------- |
-|          Thread 1           |
-| --------------------------- |
-| operation()                 |
-|   escape = "START"          |
-|   loop("Loop-A")            |
-|     escape = "Loop-A-START" |
-|     loop(2 iterations)      |
-|       <iteration 1>         |
-|         escape = "Loop-A-1" |
-|       <iteration 2>         |
-|         escape = "Loop-A-2" |
-|     escape = "Loop-A-END"   |
-|   escape = "MID"            |
-|   loop("Loop-B")            |
-|     escape = "Loop-B-START" |
-|     loop(2 iterations)      |
-|       <iteration 1>         |
-|         escape = "Loop-B-1" |
-|       <iteration 2>         |
-|         escape = "Loop-B-2" |
-|     escape = "Loop-B-END"   |
-|   escape = "END"            |
-|   result: void              |
-| --------------------------- |
+# Thread 1
+RepeatedForLoopRepresentationTest.operation() at :0
+  escape = "START" at RepeatedForLoopRepresentationTest.kt:16
+  loop("Loop-A") at RepeatedForLoopRepresentationTest.kt:17
+    escape = "Loop-A-START" at RepeatedForLoopRepresentationTest.kt:24
+    i = 1 at RepeatedForLoopRepresentationTest.kt:25
+    loop(3 iterations) at RepeatedForLoopRepresentationTest.kt:25
+      <iteration-1> at RepeatedForLoopRepresentationTest.kt:25
+        a = 1 at RepeatedForLoopRepresentationTest.kt:26
+        escape = "Loop-A-1" at RepeatedForLoopRepresentationTest.kt:27
+        i = 2 at RepeatedForLoopRepresentationTest.kt:25
+      <iteration-2> at RepeatedForLoopRepresentationTest.kt:25
+        a = 2 at RepeatedForLoopRepresentationTest.kt:26
+        escape = "Loop-A-2" at RepeatedForLoopRepresentationTest.kt:27
+        i = 3 at RepeatedForLoopRepresentationTest.kt:25
+      <iteration-3> at RepeatedForLoopRepresentationTest.kt:25
+    escape = "Loop-A-END" at RepeatedForLoopRepresentationTest.kt:29
+  escape = "MID" at RepeatedForLoopRepresentationTest.kt:18
+  loop("Loop-B") at RepeatedForLoopRepresentationTest.kt:19
+    escape = "Loop-B-START" at RepeatedForLoopRepresentationTest.kt:24
+    i = 1 at RepeatedForLoopRepresentationTest.kt:25
+    loop(3 iterations) at RepeatedForLoopRepresentationTest.kt:25
+      <iteration-1> at RepeatedForLoopRepresentationTest.kt:25
+        a = 1 at RepeatedForLoopRepresentationTest.kt:26
+        escape = "Loop-B-1" at RepeatedForLoopRepresentationTest.kt:27
+        i = 2 at RepeatedForLoopRepresentationTest.kt:25
+      <iteration-2> at RepeatedForLoopRepresentationTest.kt:25
+        a = 2 at RepeatedForLoopRepresentationTest.kt:26
+        escape = "Loop-B-2" at RepeatedForLoopRepresentationTest.kt:27
+        i = 3 at RepeatedForLoopRepresentationTest.kt:25
+      <iteration-3> at RepeatedForLoopRepresentationTest.kt:25
+    escape = "Loop-B-END" at RepeatedForLoopRepresentationTest.kt:29
+  escape = "END" at RepeatedForLoopRepresentationTest.kt:20

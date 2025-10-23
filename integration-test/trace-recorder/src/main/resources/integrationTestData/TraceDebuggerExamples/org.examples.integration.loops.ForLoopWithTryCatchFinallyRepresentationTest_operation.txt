@@ -1,33 +1,24 @@
-= Invalid execution results =
-| ----------------- |
-|     Thread 1      |
-| ----------------- |
-| operation(): void |
-| ----------------- |
-
-The following interleaving leads to the error:
-| ----------- |
-|  Thread 1   |
-| ----------- |
-| operation() |
-| ----------- |
-
-Detailed trace:
-| -------------------------- |
-|          Thread 1          |
-| -------------------------- |
-| operation()                |
-|   escape = "START"         |
-|   loop(3 iterations)       |
-|     <iteration 1>          |
-|       escape = "try-1"     |
-|       escape = "finally-1" |
-|     <iteration 2>          |
-|       escape = "catch-2"   |
-|       escape = "finally-2" |
-|     <iteration 3>          |
-|       escape = "try-3"     |
-|       escape = "finally-3" |
-|   escape = "END"           |
-|   result: void             |
-| -------------------------- |
+# Thread 1
+ForLoopWithTryCatchFinallyRepresentationTest.operation() at :0
+  escape = "START" at ForLoopWithTryCatchFinallyRepresentationTest.kt:26
+  i = 1 at ForLoopWithTryCatchFinallyRepresentationTest.kt:27
+  loop(2 iterations) at ForLoopWithTryCatchFinallyRepresentationTest.kt:27
+    <iteration-1> at ForLoopWithTryCatchFinallyRepresentationTest.kt:27
+      a = 1 at ForLoopWithTryCatchFinallyRepresentationTest.kt:28
+      escape = "try-1" at ForLoopWithTryCatchFinallyRepresentationTest.kt:33
+      escape = "finally-1" at ForLoopWithTryCatchFinallyRepresentationTest.kt:37
+      i = 2 at ForLoopWithTryCatchFinallyRepresentationTest.kt:27
+    <iteration-2> at ForLoopWithTryCatchFinallyRepresentationTest.kt:27
+      a = 2 at ForLoopWithTryCatchFinallyRepresentationTest.kt:28
+  e = RuntimeException@1 at ForLoopWithTryCatchFinallyRepresentationTest.kt:34
+  escape = "catch-2" at ForLoopWithTryCatchFinallyRepresentationTest.kt:35
+  escape = "finally-2" at ForLoopWithTryCatchFinallyRepresentationTest.kt:37
+  i = 3 at ForLoopWithTryCatchFinallyRepresentationTest.kt:27
+  loop(2 iterations) at ForLoopWithTryCatchFinallyRepresentationTest.kt:27
+    <iteration-1> at ForLoopWithTryCatchFinallyRepresentationTest.kt:27
+      a = 3 at ForLoopWithTryCatchFinallyRepresentationTest.kt:28
+      escape = "try-3" at ForLoopWithTryCatchFinallyRepresentationTest.kt:33
+      escape = "finally-3" at ForLoopWithTryCatchFinallyRepresentationTest.kt:37
+      i = 4 at ForLoopWithTryCatchFinallyRepresentationTest.kt:27
+    <iteration-2> at ForLoopWithTryCatchFinallyRepresentationTest.kt:27
+  escape = "END" at ForLoopWithTryCatchFinallyRepresentationTest.kt:40
