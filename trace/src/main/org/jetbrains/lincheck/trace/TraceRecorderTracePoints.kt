@@ -140,7 +140,7 @@ class TRMethodCallTracePoint(
     val flags: Short = 0,
     parentTracePoint: TRContainerTracePoint? = null,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRContainerTracePoint(codeLocationId, threadId, parentTracePoint, eventId) {
+) : TRContainerTracePoint(threadId, codeLocationId, parentTracePoint, eventId) {
     var result: TRObject? = null
     var exceptionClassName: String? = null
 
@@ -268,7 +268,7 @@ class TRLoopTracePoint(
     val loopId: Int,
     parentTracePoint: TRContainerTracePoint? = null,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRContainerTracePoint(codeLocationId, threadId, parentTracePoint, eventId) {
+) : TRContainerTracePoint(threadId, codeLocationId, parentTracePoint, eventId) {
     // This field is not serialized to disk, because it is computable from the number of children of the
     // loop trace point. Basically the number of children is equal to the number of loop iterations.
     // On trace point footer loading this variable will be restored.
@@ -328,7 +328,7 @@ class TRLoopIterationTracePoint(
     val loopIteration: Int,
     parentTracePoint: TRContainerTracePoint? = null,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRContainerTracePoint(codeLocationId, threadId, parentTracePoint, eventId) {
+) : TRContainerTracePoint(threadId, codeLocationId, parentTracePoint, eventId) {
 
     override fun save(out: TraceWriter) {
         super.save(out)
