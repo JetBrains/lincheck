@@ -53,19 +53,21 @@ internal class TraceRecorderMethodTransformer(
     }
 
     override fun onMethodExit(opcode: Int) {
-         invokeStatic(TraceRecorderInjections::stopTraceRecorderAndDumpTrace)
-         super.onMethodExit(opcode)
+        super.onMethodExit(opcode)
+        if (opcode == ATHROW) return
+        invokeStatic(TraceRecorderInjections::stopTraceRecorderAndDumpTrace)
     }
 
     override fun visitMaxs(maxStack: Int, maxLocals: Int) {
         // TODO: repair exception handling here
-        // val endLabel = Label()
-        // visitLabel(endLabel)
-        // visitTryCatchBlock(startLabel, endLabel, endLabel, null)
-        // // Handler
-        // // STACK: Exception
-        // // This will call onMethodExit() too!
-        // visitInsn(ATHROW)
+        val endLabel = Label()
+        visitLabel(endLabel)
+        visitTryCatchBlock(startLabel, endLabel, endLabel, null)
+        // Handler
+        invokeStatic(TraceRecorderInjections::stopTraceRecorderAndDumpTrace)
+        // STACK: Exception
+        // This will call onMethodExit() too!
+        visitInsn(ATHROW)
 
         super.visitMaxs(maxStack, maxLocals)
     }

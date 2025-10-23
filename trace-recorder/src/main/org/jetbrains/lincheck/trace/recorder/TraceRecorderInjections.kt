@@ -15,12 +15,6 @@ import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent
 
 internal object TraceRecorderInjections {
-    // Method `stopTraceRecorderAndDumpTrace` is called in the finally block of the wrapped test:
-    // try { startTraceRecorder(); test() } finally { stopTraceRecorderAndDumpTrace() }
-    // and the way try-finally block is instrumented allows for double call of `stopTraceRecorderAndDumpTrace`
-    // in case if exception is thrown from it.
-    // We want to disallow that explicitly and the simplest way to do that is to add a flag.
-    private var alreadyStopped: Boolean = false
 
     @JvmStatic
     fun prepareTraceRecorder() {
@@ -44,8 +38,6 @@ internal object TraceRecorderInjections {
 
     @JvmStatic
     fun stopTraceRecorderAndDumpTrace() {
-        if (alreadyStopped) return
-        alreadyStopped = true
         TraceRecorder.finishTraceAndDumpResults()
     }
 }
