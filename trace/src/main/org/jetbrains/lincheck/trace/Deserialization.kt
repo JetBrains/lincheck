@@ -402,7 +402,7 @@ class LazyTraceReader private constructor(
 
     fun loadAllChildren(parent: TRContainerTracePoint) {
         val (start, end) = callTracepointChildren[parent.eventId]
-            ?: error("TRMethodCallTracePoint ${parent.eventId} is not found in index")
+            ?: error("TRContainerTracePoint ${parent.eventId} is not found in index")
 
         data.seek(calculatePhysicalOffset(parent.threadId, start))
 
@@ -421,9 +421,9 @@ class LazyTraceReader private constructor(
         }
     }
 
-    fun loadChild(parent: TRMethodCallTracePoint, childIdx: Int): Unit = loadChildrenRange(parent, childIdx, 1)
+    fun loadChild(parent: TRContainerTracePoint, childIdx: Int): Unit = loadChildrenRange(parent, childIdx, 1)
 
-    fun loadChildrenRange(parent: TRMethodCallTracePoint, from: Int, count: Int) {
+    fun loadChildrenRange(parent: TRContainerTracePoint, from: Int, count: Int) {
         require(from in 0 ..< parent.events.size) { "From index $from must be in range 0..<${parent.events.size}" }
         require(count in 1 .. parent.events.size - from) { "Count $count must be in range 1..${parent.events.size - from}" }
 
@@ -438,7 +438,7 @@ class LazyTraceReader private constructor(
         )
     }
 
-    fun getChildAndRestorePosition(parent: TRMethodCallTracePoint, childIdx: Int): TRTracePoint? {
+    fun getChildAndRestorePosition(parent: TRContainerTracePoint, childIdx: Int): TRTracePoint? {
         val oldPosition = data.position()
         loadChild(parent, childIdx)
         data.seek(oldPosition)
@@ -632,11 +632,11 @@ class LazyTraceReader private constructor(
         }
 
         val (start, end) = callTracepointChildren[tracePoint.eventId]
-            ?: error("TRMethodCallTracePoint ${tracePoint.eventId} is not found in index")
+            ?: error("TRContainerTracePoint ${tracePoint.eventId} is not found in index")
 
         val checkFor = calculatePhysicalOffset(tracePoint.threadId, start)
         check(data.position() == checkFor) {
-            "TRMethodCallTracePoint ${tracePoint.eventId} has wrong start position in index: $start / $checkFor, expected ${data.position()}"
+            "TRContainerTracePoint ${tracePoint.eventId} has wrong start position in index: $start / $checkFor, expected ${data.position()}"
         }
 
         val skipTo = calculatePhysicalOffset(tracePoint.threadId, end)
@@ -664,7 +664,7 @@ class LazyTraceReader private constructor(
 
         val checkFor = calculatePhysicalOffset(tracePoint.threadId, start)
         check(data.position() == checkFor) {
-            "TRMethodCallTracePoint ${tracePoint.eventId} has wrong start position in index: $start / $checkFor, expected ${data.position()}"
+            "TRContainerTracePoint ${tracePoint.eventId} has wrong start position in index: $start / $checkFor, expected ${data.position()}"
         }
 
         // Read tracepoints truly shallow
