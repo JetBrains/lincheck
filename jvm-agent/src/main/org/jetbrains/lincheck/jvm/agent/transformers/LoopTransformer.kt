@@ -82,7 +82,7 @@ internal class LoopTransformer(
                         loadLocal(exceptionLocal)
                         push(isReachableFromOutsideLoop)
                         // STACK: codeLocation, loopId, exception, isReachableFromOutsideLoop
-                        invokeStatic(Injections::afterLoopExceptionExit)
+                        invokeStatic(Injections::afterLoopExit)
                         // STACK: <empty>
                     }
                     // Restore the exception object back to the stack for the handler body (e.g., ASTORE)
@@ -119,8 +119,9 @@ internal class LoopTransformer(
                         // STACK: <empty>
                         loadNewCodeLocationId()
                         adapter.push(loopId)
+                        pushNull()
                         push(isReachableFromOutsideLoop)
-                        // STACK: codeLocation, loopId, isReachableFromOutsideLoop
+                        // STACK: codeLocation, loopId, null, isReachableFromOutsideLoop
                         adapter.invokeStatic(Injections::afterLoopExit)
                         // STACK: <empty>
                     }

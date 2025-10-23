@@ -82,8 +82,7 @@ public interface EventTracker {
     BootstrapResult<?> invokeDeterministicallyOrNull(long descriptorId, Object descriptor, Object receiver, Object[] params);
 
     void onLoopIteration(int codeLocation, int loopId);
-    void afterLoopExit(int codeLocation, int loopId, boolean canEnterFromOutsideLoop);
-    void afterLoopExceptionExit(int codeLocation, int loopId, Throwable exception, boolean canEnterFromOutsideLoop);
+    void afterLoopExit(int codeLocation, int loopId, Throwable exception, boolean canEnterFromOutsideLoop);
 
     InjectedRandom getThreadLocalRandom();
     int randomNextInt();

@@ -649,20 +649,14 @@ public class Injections {
     }
 
     /**
-     * Called on a normal (non-exceptional) exit from a loop body.
-     */
-    public static void afterLoopExit(int codeLocation, int loopId, boolean isReachableFromOutsideLoop) {
-        getEventTracker().afterLoopExit(codeLocation, loopId, isReachableFromOutsideLoop);
-    }
-
-    /**
-     * Called at an exception handler entry that is reachable from within a loop body and lies outside it.
+     * Called on a normal (non-exceptional) exit from a loop body and
+     * at an exception handler entry that is reachable from within a loop body and lies outside it.
      *
      * @param isReachableFromOutsideLoop true if the handler can also be reached from outside the loop body;
      *   false if it is exclusive to the loop body.
      */
-    public static void afterLoopExceptionExit(int codeLocation, int loopId, Throwable exception, boolean isReachableFromOutsideLoop) {
-        getEventTracker().afterLoopExceptionExit(codeLocation, loopId, exception, isReachableFromOutsideLoop);
+    public static void afterLoopExit(int codeLocation, int loopId, Throwable exception, boolean isReachableFromOutsideLoop) {
+        getEventTracker().afterLoopExit(codeLocation, loopId, exception, isReachableFromOutsideLoop);
     }
 
     // == Methods required for the IDEA Plugin integration ==

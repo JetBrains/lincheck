@@ -772,7 +772,13 @@ class TraceCollectingEventTracker(
         threadData.addLoopIteration(tracePoint)
     }
 
-    override fun afterLoopExit(codeLocation: Int, loopId: Int, canEnterFromOutsideLoop: Boolean) {
+    override fun afterLoopExit(
+        codeLocation: Int,
+        loopId: Int,
+        exception: Throwable?,
+        canEnterFromOutsideLoop: Boolean
+    ) {
+        // TODO: should we do something about exception?
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
@@ -791,16 +797,6 @@ class TraceCollectingEventTracker(
             }
             while (currentLoopTracePoint.loopId != loopId)
         }
-    }
-
-    override fun afterLoopExceptionExit(
-        codeLocation: Int,
-        loopId: Int,
-        exception: Throwable,
-        canEnterFromOutsideLoop: Boolean
-    ) {
-        // TODO: should we do something about exception?
-        afterLoopExit(codeLocation, loopId, canEnterFromOutsideLoop)
     }
 
     override fun invokeDeterministicallyOrNull(
