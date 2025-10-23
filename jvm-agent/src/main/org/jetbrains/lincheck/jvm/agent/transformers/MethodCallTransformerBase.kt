@@ -211,9 +211,9 @@ internal abstract class MethodCallTransformerBase(
         className == "java/lang/Float" ||
         className == "java/util/Locale" ||
         className == "org/slf4j/helpers/Util" ||
-        className == "java/util/Properties" ||
+        className == "java/util/Properties"
         // TODO: perhaps should use `isIgnoredMethodHandleMethod` instead
-        className.startsWith("java/lang/invoke/")
+        //className.startsWith("java/lang/invoke/")
 
     @Suppress("UNUSED_PARAMETER")
     protected fun isCoroutineResumptionSyntheticAccessor(className: String, methodName: String): Boolean =
