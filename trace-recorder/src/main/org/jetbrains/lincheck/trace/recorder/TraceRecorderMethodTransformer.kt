@@ -48,7 +48,7 @@ internal class TraceRecorderMethodTransformer(
     override fun onMethodEnter() {
         super.onMethodEnter()
         invokeStatic(TraceRecorderInjections::startTraceRecorder)
-        // Start "try-finally block here to add stop & dump in "finally"
+        // Start the "try-finally" block here to add stop & dump in "finally"
         visitLabel(startLabel)
     }
 
