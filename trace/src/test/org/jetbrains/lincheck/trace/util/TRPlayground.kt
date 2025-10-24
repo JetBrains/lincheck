@@ -8,10 +8,13 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck_trace.util
+package org.jetbrains.lincheck.trace.util
 
-import org.jetbrains.lincheck.trace.*
-import org.junit.Test
+import org.jetbrains.lincheck.trace.LazyTraceReader
+import org.jetbrains.lincheck.trace.TRMethodCallTracePoint
+import org.jetbrains.lincheck.trace.loadRecordedTrace
+import org.jetbrains.lincheck.trace.printRecorderTrace
+import java.io.FileInputStream
 
 fun main(args: Array<String>) {
     // Choose one!
@@ -19,24 +22,7 @@ fun main(args: Array<String>) {
     // eagerLoadAndPrintTrace("<path to binary file>")
 
     // lazyLoadAndPrintTrace("<path to binary file>")
-
-    printPostProcessedTrace(null, "/Users/dmitriiart/IdeaProjects/lincheck/trace/output", verbose = true)
 }
-
-class TRPlayground {
-    var escape: Any? = null
-
-    @Test
-    fun testing() {
-        escape = "START"
-        for (i in 1..3) {
-            val a: Any = i
-            escape = a.toString()
-        }
-        escape = "END"
-    }
-}
-
 
 private fun eagerLoadAndPrintTrace(fileName: String) {
     val trace = loadRecordedTrace(fileName)

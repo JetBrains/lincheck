@@ -20,38 +20,23 @@ sourceSets {
     }
 
     dependencies {
-        val junitVersion: String by project
-
         implementation(project(":common"))
 
         testImplementation(project(":common"))
-        testImplementation("junit:junit:${junitVersion}")
     }
 }
 
 tasks {
-//    named<JavaCompile>("compileTestJava") {
-//        setupJavaToolchain(project)
-//    }
-//    named<KotlinCompile>("compileTestKotlin") {
-//        setupKotlinToolchain(project)
-//    }
+    named<JavaCompile>("compileTestJava") {
+        setupJavaToolchain(project)
+    }
+    named<KotlinCompile>("compileTestKotlin") {
+        setupKotlinToolchain(project)
+    }
 
     withType<KotlinCompile> {
         getAccessToInternalDefinitionsOf(project(":common"))
     }
-}
-
-tasks.test {
-    configureJvmTestCommon(project)
-    dependsOn(":trace-recorder:traceRecorderFatJar")
-    jvmArgs(
-        "-javaagent:${project(":trace-recorder").buildDir}/libs/trace-recorder-fat.jar=org.jetbrains.lincheck_trace.util.TRPlayground,testing,output.txt,text,verbose"
-    )
-//    jvmArgs(
-//        "-javaagent:${project(":trace-recorder").buildDir}/libs/trace-recorder-fat.jar=org.jetbrains.lincheck_trace.util.TRPlayground,testing,output,dump,verbose"
-//    )
-    jvmArgs("-Dlincheck.traceRecorderMode=true")
 }
 
 val jar = tasks.jar {
@@ -93,6 +78,3 @@ publishing {
 }
 
 configureSigning()
-dependencies {
-    testImplementation(kotlin("test"))
-}
