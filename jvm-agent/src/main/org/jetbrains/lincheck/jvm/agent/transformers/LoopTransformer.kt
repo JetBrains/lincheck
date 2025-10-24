@@ -13,7 +13,6 @@ package org.jetbrains.lincheck.jvm.agent.transformers
 import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.*
 import org.jetbrains.lincheck.util.*
-import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.commons.GeneratorAdapter
 import sun.nio.ch.lincheck.Injections
@@ -37,21 +36,28 @@ internal class LoopTransformer(
         "Loops information is not available for method $className.$methodName$descriptor"
     }
 
-    // Map from the first loop header instruction index to loopId.
+    // remapping from normal to non-phony instruction indices
+    private val insnIndexRemapping: IntArray =
+        methodInfo.basicControlFlowGraph.computeInstructionIndicesRemapping()
+
+    // Map from the first loop header non-phony instruction index to loopId.
     private val iterationEntrySites: Map<InstructionIndex, LoopId> =
-        methodInfo.basicControlFlowGraph.computeIterationEntrySites(loopInfo)
+        methodInfo.basicControlFlowGraph.computeIterationEntrySites(insnIndexRemapping, loopInfo)
 
-    // Map from a normal exit instruction index to the set of exited loopIds.
+    // Map from a normal exit non-phony instruction index to the set of exited loopIds.
     private val normalExitSites: Map<InstructionIndex, Set<LoopId>> =
-        methodInfo.basicControlFlowGraph.computeNormalExitSites(loopInfo)
+        methodInfo.basicControlFlowGraph.computeNormalExitSites(insnIndexRemapping, loopInfo)
 
-    // Map from an exception handler label block to the set of exited loopIds.
+    // Map from an exceptional exit non-phony instruction index to the set of exited loopIds.
     private val exceptionExitSites: Map<InstructionIndex, Set<LoopId>> =
-        methodInfo.basicControlFlowGraph.computeExceptionExitSites(loopInfo)
+        methodInfo.basicControlFlowGraph.computeExceptionExitSites(insnIndexRemapping, loopInfo)
+
 
     override fun beforeInsn(index: Int, opcode: Int): Unit = adapter.run {
+        val nonPhonyIndex = currentNonPhonyInsnIndex
+
         // Inject `onLoopIteration` at the loop header on every iteration (including the first).
-        iterationEntrySites[index]?.let { loopId ->
+        iterationEntrySites[nonPhonyIndex]?.let { loopId ->
             invokeIfInAnalyzedCode(
                 original = {},
                 instrumented = {
@@ -66,7 +72,7 @@ internal class LoopTransformer(
         }
 
         // Inject `onLoopExit` on transitions from within the loop body to outside.
-        normalExitSites[index]?.let { loopIds ->
+        normalExitSites[nonPhonyIndex]?.let { loopIds ->
             invokeIfInAnalyzedCode(
                 original = {},
                 instrumented = {
@@ -88,7 +94,7 @@ internal class LoopTransformer(
         }
 
         // Inject `onLoopExit` on exceptional transitions from within the loop body to outside exception handlers.
-        exceptionExitSites[index]?.let { loopIds ->
+        exceptionExitSites[nonPhonyIndex]?.let { loopIds ->
             invokeIfInAnalyzedCode(
                 original = { },
                 instrumented = {
@@ -118,8 +124,24 @@ internal class LoopTransformer(
     }
 }
 
+/**
+ * Computes remapping from normal instruction indices (including labels/lines/frames)
+ * to non-phony instruction indices (only real opcodes).
+ * For phony entries, the value is -1.
+ */
+private fun BasicBlockControlFlowGraph.computeInstructionIndicesRemapping(): IntArray {
+    val map = IntArray(instructions.size()) { -1 }
+    var nonPhony = -1
+    instructions.forEachIndexed { i, insn ->
+        // ASM uses opcode == -1 for pseudo instructions (Label, LineNumber, Frame)
+        map[i] = if (insn.opcode != -1) ++nonPhony else -1
+    }
+    return map
+}
+
 private fun BasicBlockControlFlowGraph.computeIterationEntrySites(
-    loopInfo: MethodLoopsInformation
+    insnIndexRemapping: IntArray,
+    loopInfo: MethodLoopsInformation,
 ): Map<InstructionIndex, Int> {
     if (!loopInfo.hasLoops()) return emptyMap()
     val cfg = this
@@ -128,13 +150,14 @@ private fun BasicBlockControlFlowGraph.computeIterationEntrySites(
         val idx = cfg.firstOpcodeIndexOf(loop.header) ?: continue
         // If multiple loops share the same header opcode index (rare),
         // prefer the inner loop by letting the later put override only if absent.
-        result.putIfAbsent(idx, loop.id)
+        result.putIfAbsent(insnIndexRemapping[idx], loop.id)
     }
     return result
 }
 
 private fun BasicBlockControlFlowGraph.computeNormalExitSites(
-    loopInfo: MethodLoopsInformation
+    insnIndexRemapping: IntArray,
+    loopInfo: MethodLoopsInformation,
 ): Map<InstructionIndex, Set<Int>> {
     if (!loopInfo.hasLoops()) return emptyMap()
     val cfg = this
@@ -142,23 +165,24 @@ private fun BasicBlockControlFlowGraph.computeNormalExitSites(
     for (loop in loopInfo.loops) {
         for (e in loop.normalExits) {
             // By cfg/loop invariants every normal exit is decided by the first real opcode of the target block.
-            val insnIndex: InstructionIndex = cfg.firstOpcodeIndexOf(e.target) ?: continue
-            result.updateInplace(insnIndex, default = mutableSetOf()) { add(loop.id) }
+            val idx = cfg.firstOpcodeIndexOf(e.target) ?: continue
+            result.updateInplace(insnIndexRemapping[idx], default = mutableSetOf()) { add(loop.id) }
         }
     }
     return result.mapValues { it.value.toSet() }
 }
 
 private fun BasicBlockControlFlowGraph.computeExceptionExitSites(
-    loopInfo: MethodLoopsInformation
+    insnIndexRemapping: IntArray,
+    loopInfo: MethodLoopsInformation,
 ): Map<InstructionIndex, Set<Int>> {
     if (!loopInfo.hasLoops()) return emptyMap()
     val cfg = this
     val result = mutableMapOf<InstructionIndex, MutableSet<Int>>()
     for (loop in loopInfo.loops) {
         for (handlerBlock in loop.exceptionalExitHandlers) {
-            val insnIndex: InstructionIndex = cfg.firstOpcodeIndexOf(handlerBlock) ?: continue
-            result.updateInplace(insnIndex, default = mutableSetOf()) { add(loop.id) }
+            val idx = cfg.firstOpcodeIndexOf(handlerBlock) ?: continue
+            result.updateInplace(insnIndexRemapping[idx], default = mutableSetOf()) { add(loop.id) }
         }
     }
     return result.mapValues { it.value.toSet() }

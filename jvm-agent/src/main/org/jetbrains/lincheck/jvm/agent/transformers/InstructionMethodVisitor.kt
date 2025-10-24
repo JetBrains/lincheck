@@ -46,6 +46,14 @@ internal abstract class InstructionMethodVisitor(
         private set
 
     /**
+     * Tracks the index of non-phony ("real") instructions only.
+     *
+     * This counter is incremented exclusively for instructions that correspond to actual visited opcodes.
+     */
+    protected var currentNonPhonyInsnIndex: Int = -1
+        private set
+
+    /**
      * Hook invoked before processing an instruction.
      *
      * @param index The index of the instruction being processed.
@@ -63,6 +71,7 @@ internal abstract class InstructionMethodVisitor(
 
     private inline fun processInstruction(opcode: Int, emit: () -> Unit) {
         val index = ++currentInsnIndex
+        ++currentNonPhonyInsnIndex
         beforeInsn(index, opcode)
         emit()
         afterInsn(index, opcode)
