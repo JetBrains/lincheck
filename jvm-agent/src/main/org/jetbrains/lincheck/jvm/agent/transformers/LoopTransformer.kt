@@ -46,52 +46,10 @@ internal class LoopTransformer(
         methodInfo.basicControlFlowGraph.computeNormalExitSites(loopInfo)
 
     // Map from an exception handler label block to the set of exited loopIds.
-    private val handlerEntrySites: Map<Label, Set<LoopId>> =
-        methodInfo.basicControlFlowGraph.computeHandlerEntrySites(loopInfo)
-
-    // Used to defer handler-entry injection until the first real opcode after the label.
-    private var pendingHandlerLoopIds: Set<LoopId>? = null
-
-    override fun visitLabel(label: Label) {
-        // If this label is a handler entry for some loop(s), mark as pending;
-        // it will trigger injection insertion on the first subsequent real opcode in [beforeInsn].
-        handlerEntrySites[label]?.let { ids ->
-            pendingHandlerLoopIds = ids
-        }
-        super.visitLabel(label)
-    }
+    private val exceptionExitSites: Map<InstructionIndex, Set<LoopId>> =
+        methodInfo.basicControlFlowGraph.computeExceptionExitSites(loopInfo)
 
     override fun beforeInsn(index: Int, opcode: Int): Unit = adapter.run {
-        // First real opcode after a handler label — if any pending,
-        // this is where we inject exceptional loop exit notifications.
-        pendingHandlerLoopIds?.let { loopIds ->
-            invokeIfInAnalyzedCode(
-                original = { },
-                instrumented = {
-                    // At handler entry, the thrown exception object is on the stack.
-                    // Store it to a temp local, emit injections, then restore it for original bytecode.
-                    val exceptionLocal = newLocal(THROWABLE_TYPE)
-                    storeLocal(exceptionLocal)
-                    for (loopId in loopIds) {
-                        // conservative default without exclusivity analysis
-                        // TODO: implement exclusivity analysis and use it here
-                        val isReachableFromOutsideLoop = true
-                        // STACK: <empty>
-                        loadNewCodeLocationId()
-                        push(loopId)
-                        loadLocal(exceptionLocal)
-                        push(isReachableFromOutsideLoop)
-                        // STACK: codeLocation, loopId, exception, isReachableFromOutsideLoop
-                        invokeStatic(Injections::afterLoopExit)
-                        // STACK: <empty>
-                    }
-                    // Restore the exception object back to the stack for the handler body (e.g., ASTORE)
-                    loadLocal(exceptionLocal)
-                }
-            )
-            pendingHandlerLoopIds = null
-        }
-
         // Inject `onLoopIteration` at the loop header on every iteration (including the first).
         iterationEntrySites[index]?.let { loopId ->
             invokeIfInAnalyzedCode(
@@ -125,6 +83,35 @@ internal class LoopTransformer(
                         adapter.invokeStatic(Injections::afterLoopExit)
                         // STACK: <empty>
                     }
+                }
+            )
+        }
+
+        // Inject `onLoopExit` on exceptional transitions from within the loop body to outside exception handlers.
+        exceptionExitSites[index]?.let { loopIds ->
+            invokeIfInAnalyzedCode(
+                original = { },
+                instrumented = {
+                    // At handler entry, the thrown exception object is on the stack.
+                    // Store it to a temp local, emit injections, then restore it for original bytecode.
+                    // val exceptionLocal = newLocal(THROWABLE_TYPE)
+                    // storeLocal(exceptionLocal)
+                    for (loopId in loopIds) {
+                        // conservative default without exclusivity analysis
+                        // TODO: implement exclusivity analysis and use it here
+                        val isReachableFromOutsideLoop = true
+                        // STACK: <empty>
+                        loadNewCodeLocationId()
+                        push(loopId)
+                        pushNull()
+                        // loadLocal(exceptionLocal)
+                        push(isReachableFromOutsideLoop)
+                        // STACK: codeLocation, loopId, exception, isReachableFromOutsideLoop
+                        invokeStatic(Injections::afterLoopExit)
+                        // STACK: <empty>
+                    }
+                    // Restore the exception object back to the stack for the handler body (e.g., ASTORE)
+                    // loadLocal(exceptionLocal)
                 }
             )
         }
@@ -162,16 +149,16 @@ private fun BasicBlockControlFlowGraph.computeNormalExitSites(
     return result.mapValues { it.value.toSet() }
 }
 
-private fun BasicBlockControlFlowGraph.computeHandlerEntrySites(
+private fun BasicBlockControlFlowGraph.computeExceptionExitSites(
     loopInfo: MethodLoopsInformation
-): Map<Label, Set<Int>> {
+): Map<InstructionIndex, Set<Int>> {
     if (!loopInfo.hasLoops()) return emptyMap()
     val cfg = this
-    val result = mutableMapOf<Label, MutableSet<Int>>()
+    val result = mutableMapOf<InstructionIndex, MutableSet<Int>>()
     for (loop in loopInfo.loops) {
         for (handlerBlock in loop.exceptionalExitHandlers) {
-            val label = cfg.firstLabelOf(handlerBlock) ?: continue
-            result.updateInplace(label, default = mutableSetOf()) { add(loop.id) }
+            val insnIndex: InstructionIndex = cfg.firstOpcodeIndexOf(handlerBlock) ?: continue
+            result.updateInplace(insnIndex, default = mutableSetOf()) { add(loop.id) }
         }
     }
     return result.mapValues { it.value.toSet() }
