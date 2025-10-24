@@ -18,7 +18,7 @@ import org.objectweb.asm.commons.GeneratorAdapter
 import sun.nio.ch.lincheck.Injections
 
 /**
- * [LoopTransformer] tracks loops enter/exit points and new loop iterations starting points.
+ * LoopTransformer tracks loop start of every loop iteration and loop exit points.
  */
 internal class LoopTransformer(
     fileName: String,
@@ -40,6 +40,29 @@ internal class LoopTransformer(
     private val insnIndexRemapping: IntArray =
         methodInfo.basicControlFlowGraph.computeInstructionIndicesRemapping()
 
+    /*
+     * Why non-phony instruction indexing is used here.
+
+     * This transformer is placed at the beginning of the transformers' chain (see [LincheckClassVisitor]),
+     * but after the analyzers. Normally, these analyzers placed before it should not insert new bytecode,
+     * so the instruction indices stored in the precomputed CFG (built for the original bytecode)
+     * would match the indices we observe while visiting the method.
+     *
+     * However, ASM's [AnalyzerAdapter] used by our type analysis does insert additional bytecode instructions —
+     * specifically [Label] instructions — while visiting [Opcodes.NEW] instructions.
+     *
+     * Label instructions (as well as line number and frame instructions) are "phony" instructions:
+     * they are present in the instructions' list and affect the normal instruction indices,
+     * but they do not correspond to real opcodes executed by the JVM.
+     * Because [AnalyzerAdapter] may add such labels before [LoopTransformer] runs, relying on the
+     * normal instruction indices would make our injection points drift from the indices recorded in the CFG.
+     *
+     * To overcome this problem, we operate on non-phony instruction indices instead:
+     * we compute and use an index that only counts real opcodes.
+     * This protects us against instructions inserted by [AnalyzerAdapter],
+     * as well as in general against the insertion of any kind of phony instructions by other bytecode visitors.
+     */
+
     // Map from the first loop header non-phony instruction index to loopId.
     private val iterationEntrySites: Map<InstructionIndex, LoopId> =
         methodInfo.basicControlFlowGraph.computeIterationEntrySites(insnIndexRemapping, loopInfo)
@@ -51,7 +74,6 @@ internal class LoopTransformer(
     // Map from an exceptional exit non-phony instruction index to the set of exited loopIds.
     private val exceptionExitSites: Map<InstructionIndex, Set<LoopId>> =
         methodInfo.basicControlFlowGraph.computeExceptionExitSites(insnIndexRemapping, loopInfo)
-
 
     override fun beforeInsn(index: Int, opcode: Int): Unit = adapter.run {
         val nonPhonyIndex = currentNonPhonyInsnIndex
