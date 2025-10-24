@@ -32,13 +32,13 @@ internal class LoopTransformer(
 ) : InstructionMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
 
     // Retrieve loop sites planned from the precomputed basic-block CFG.
-    private val loopInfo = methodInfo.basicControlFlowGraph.loopInfo.ensureNotNull {
-        "Loops information is not available for method $className.$methodName$descriptor"
+    private val loopInfo = methodInfo.basicControlFlowGraph?.loopInfo.ensureNotNull {
+        "Loops information is not available for method $className.$methodName $descriptor"
     }
 
     // remapping from normal to non-phony instruction indices
     private val insnIndexRemapping: IntArray =
-        methodInfo.basicControlFlowGraph.computeInstructionIndicesRemapping()
+        methodInfo.basicControlFlowGraph!!.computeInstructionIndicesRemapping()
 
     /*
      * Why non-phony instruction indexing is used here.
@@ -65,15 +65,15 @@ internal class LoopTransformer(
 
     // Map from the first loop header non-phony instruction index to loopId.
     private val iterationEntrySites: Map<InstructionIndex, LoopId> =
-        methodInfo.basicControlFlowGraph.computeIterationEntrySites(insnIndexRemapping, loopInfo)
+        methodInfo.basicControlFlowGraph!!.computeIterationEntrySites(insnIndexRemapping, loopInfo)
 
     // Map from a normal exit non-phony instruction index to the set of exited loopIds.
     private val normalExitSites: Map<InstructionIndex, Set<LoopId>> =
-        methodInfo.basicControlFlowGraph.computeNormalExitSites(insnIndexRemapping, loopInfo)
+        methodInfo.basicControlFlowGraph!!.computeNormalExitSites(insnIndexRemapping, loopInfo)
 
     // Map from an exceptional exit non-phony instruction index to the set of exited loopIds.
     private val exceptionExitSites: Map<InstructionIndex, Set<LoopId>> =
-        methodInfo.basicControlFlowGraph.computeExceptionExitSites(insnIndexRemapping, loopInfo)
+        methodInfo.basicControlFlowGraph!!.computeExceptionExitSites(insnIndexRemapping, loopInfo)
 
     override fun beforeInsn(index: Int, opcode: Int): Unit = adapter.run {
         val nonPhonyIndex = currentNonPhonyInsnIndex
