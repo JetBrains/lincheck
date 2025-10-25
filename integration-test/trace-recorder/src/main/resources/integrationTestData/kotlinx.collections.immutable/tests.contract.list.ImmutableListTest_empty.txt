@@ -106,8 +106,10 @@ ImmutableListTest.empty() at :0
                       getter.invoke(this.actual): false at ComparisonDSL.kt:21
                         propertyEquals.hasNext(): false at CollectionBehaviors.kt:55
                       assertEquals(false, false, message ➜ "") at ComparisonDSL.kt:21
-                    iteratorBehavior.getExpected(): EmptyIterator@1 at CollectionBehaviors.kt:57
-                    EmptyIterator@1.hasNext(): false at CollectionBehaviors.kt:57
+                    loop(1 iterations) at CollectionBehaviors.kt:57
+                      <iteration-1> at CollectionBehaviors.kt:57
+                        iteratorBehavior.getExpected(): EmptyIterator@1 at CollectionBehaviors.kt:57
+                        EmptyIterator@1.hasNext(): false at CollectionBehaviors.kt:57
                     iteratorBehavior.propertyFails(CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:61
                       CompareContext@1.assertFailEquals(CompareContext$$Lambda@1, CompareContext$$Lambda@1, null) at ComparisonDSL.kt:23
                         expected.invoke(): threw NoSuchElementException at ComparisonDSL.kt:31
@@ -161,8 +163,10 @@ ImmutableListTest.empty() at :0
                       getter.invoke(this.actual): -1 at ComparisonDSL.kt:21
                         propertyEquals.previousIndex(): -1 at CollectionBehaviors.kt:51
                       assertEquals(-1, -1, message ➜ "") at ComparisonDSL.kt:21
-                  listIteratorBehavior.getExpected(): EmptyIterator@1 at CollectionBehaviors.kt:34
-                  EmptyIterator@1.hasNext(): false at CollectionBehaviors.kt:34
+                  loop(1 iterations) at CollectionBehaviors.kt:34
+                    <iteration-1> at CollectionBehaviors.kt:34
+                      listIteratorBehavior.getExpected(): EmptyIterator@1 at CollectionBehaviors.kt:34
+                      EmptyIterator@1.hasNext(): false at CollectionBehaviors.kt:34
                   listIteratorBehavior.propertyFails(CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:38
                     CompareContext@1.assertFailEquals(CompareContext$$Lambda@1, CompareContext$$Lambda@1, null) at ComparisonDSL.kt:23
                       expected.invoke(): threw NoSuchElementException at ComparisonDSL.kt:31
@@ -183,8 +187,10 @@ ImmutableListTest.empty() at :0
                         expected.getClass(): Class@1 at testUtilsJvm.kt:11
                         actual.getClass(): Class@1 at testUtilsJvm.kt:11
                         assertEquals$default(Class@1, Class@1, null, 4, null) at testUtilsJvm.kt:11
-                  listIteratorBehavior.getExpected(): EmptyIterator@1 at CollectionBehaviors.kt:40
-                  EmptyIterator@1.hasPrevious(): false at CollectionBehaviors.kt:40
+                  loop(1 iterations) at CollectionBehaviors.kt:40
+                    <iteration-1> at CollectionBehaviors.kt:40
+                      listIteratorBehavior.getExpected(): EmptyIterator@1 at CollectionBehaviors.kt:40
+                      EmptyIterator@1.hasPrevious(): false at CollectionBehaviors.kt:40
                   listIteratorBehavior.propertyFails(CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:44
                     CompareContext@1.assertFailEquals(CompareContext$$Lambda@1, CompareContext$$Lambda@1, null) at ComparisonDSL.kt:23
                       expected.invoke(): threw NoSuchElementException at ComparisonDSL.kt:31
@@ -238,8 +244,10 @@ ImmutableListTest.empty() at :0
                       getter.invoke(this.actual): -1 at ComparisonDSL.kt:21
                         propertyEquals.previousIndex(): -1 at CollectionBehaviors.kt:51
                       assertEquals(-1, -1, message ➜ "") at ComparisonDSL.kt:21
-                  listIteratorBehavior.getExpected(): EmptyIterator@1 at CollectionBehaviors.kt:34
-                  EmptyIterator@1.hasNext(): false at CollectionBehaviors.kt:34
+                  loop(1 iterations) at CollectionBehaviors.kt:34
+                    <iteration-1> at CollectionBehaviors.kt:34
+                      listIteratorBehavior.getExpected(): EmptyIterator@1 at CollectionBehaviors.kt:34
+                      EmptyIterator@1.hasNext(): false at CollectionBehaviors.kt:34
                   listIteratorBehavior.propertyFails(CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:38
                     CompareContext@1.assertFailEquals(CompareContext$$Lambda@1, CompareContext$$Lambda@1, null) at ComparisonDSL.kt:23
                       expected.invoke(): threw NoSuchElementException at ComparisonDSL.kt:31
@@ -260,8 +268,10 @@ ImmutableListTest.empty() at :0
                         expected.getClass(): Class@1 at testUtilsJvm.kt:11
                         actual.getClass(): Class@1 at testUtilsJvm.kt:11
                         assertEquals$default(Class@1, Class@1, null, 4, null) at testUtilsJvm.kt:11
-                  listIteratorBehavior.getExpected(): EmptyIterator@1 at CollectionBehaviors.kt:40
-                  EmptyIterator@1.hasPrevious(): false at CollectionBehaviors.kt:40
+                  loop(1 iterations) at CollectionBehaviors.kt:40
+                    <iteration-1> at CollectionBehaviors.kt:40
+                      listIteratorBehavior.getExpected(): EmptyIterator@1 at CollectionBehaviors.kt:40
+                      EmptyIterator@1.hasPrevious(): false at CollectionBehaviors.kt:40
                   listIteratorBehavior.propertyFails(CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:44
                     CompareContext@1.assertFailEquals(CompareContext$$Lambda@1, CompareContext$$Lambda@1, null) at ComparisonDSL.kt:23
                       expected.invoke(): threw NoSuchElementException at ComparisonDSL.kt:31
@@ -315,8 +325,10 @@ ImmutableListTest.empty() at :0
                       getter.invoke(this.actual): -1 at ComparisonDSL.kt:21
                         propertyEquals.previousIndex(): -1 at CollectionBehaviors.kt:51
                       assertEquals(-1, -1, message ➜ "") at ComparisonDSL.kt:21
-                  listIteratorBehavior.getExpected(): EmptyIterator@1 at CollectionBehaviors.kt:34
-                  EmptyIterator@1.hasNext(): false at CollectionBehaviors.kt:34
+                  loop(1 iterations) at CollectionBehaviors.kt:34
+                    <iteration-1> at CollectionBehaviors.kt:34
+                      listIteratorBehavior.getExpected(): EmptyIterator@1 at CollectionBehaviors.kt:34
+                      EmptyIterator@1.hasNext(): false at CollectionBehaviors.kt:34
                   listIteratorBehavior.propertyFails(CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:38
                     CompareContext@1.assertFailEquals(CompareContext$$Lambda@1, CompareContext$$Lambda@1, null) at ComparisonDSL.kt:23
                       expected.invoke(): threw NoSuchElementException at ComparisonDSL.kt:31
@@ -337,8 +349,10 @@ ImmutableListTest.empty() at :0
                         expected.getClass(): Class@1 at testUtilsJvm.kt:11
                         actual.getClass(): Class@1 at testUtilsJvm.kt:11
                         assertEquals$default(Class@1, Class@1, null, 4, null) at testUtilsJvm.kt:11
-                  listIteratorBehavior.getExpected(): EmptyIterator@1 at CollectionBehaviors.kt:40
-                  EmptyIterator@1.hasPrevious(): false at CollectionBehaviors.kt:40
+                  loop(1 iterations) at CollectionBehaviors.kt:40
+                    <iteration-1> at CollectionBehaviors.kt:40
+                      listIteratorBehavior.getExpected(): EmptyIterator@1 at CollectionBehaviors.kt:40
+                      EmptyIterator@1.hasPrevious(): false at CollectionBehaviors.kt:40
                   listIteratorBehavior.propertyFails(CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:44
                     CompareContext@1.assertFailEquals(CompareContext$$Lambda@1, CompareContext$$Lambda@1, null) at ComparisonDSL.kt:23
                       expected.invoke(): threw NoSuchElementException at ComparisonDSL.kt:31
@@ -401,6 +415,8 @@ ImmutableListTest.empty() at :0
                 assertEquals$default(Class@1, Class@1, null, 4, null) at testUtilsJvm.kt:11
           index = 0 at CollectionBehaviors.kt:18
           listBehavior.getExpected(): EmptyList@1 at CollectionBehaviors.kt:18
+          loop(1 iterations) at CollectionBehaviors.kt:18
+            <iteration-1> at CollectionBehaviors.kt:18
           this_ = CompareContext@1 at CollectionBehaviors.kt:21
           getter = CollectionBehaviorsKt$$Lambda@1 at CollectionBehaviors.kt:21
           i$f$propertyFailsWith = 0 at CollectionBehaviors.kt:21
