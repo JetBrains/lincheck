@@ -1,0 +1,72 @@
+# Thread 1
+WhileWithIfLoopRepresentationTest.operation() at :0
+  escape = "START" at WhileWithIfLoopRepresentationTest.kt:17
+  i = 0 at WhileWithIfLoopRepresentationTest.kt:18
+  total = 0 at WhileWithIfLoopRepresentationTest.kt:19
+  loop(11 iterations) at WhileWithIfLoopRepresentationTest.kt:20
+    <iteration-1> at WhileWithIfLoopRepresentationTest.kt:20
+      total = 1 at WhileWithIfLoopRepresentationTest.kt:21
+      a = 0 at WhileWithIfLoopRepresentationTest.kt:25
+      a.toString(): "0" at WhileWithIfLoopRepresentationTest.kt:26
+      escape = "0" at WhileWithIfLoopRepresentationTest.kt:26
+      i = 1 at WhileWithIfLoopRepresentationTest.kt:27
+    <iteration-2> at WhileWithIfLoopRepresentationTest.kt:20
+      total = 2 at WhileWithIfLoopRepresentationTest.kt:21
+      a = 1 at WhileWithIfLoopRepresentationTest.kt:25
+      a.toString(): "1" at WhileWithIfLoopRepresentationTest.kt:26
+      escape = "1" at WhileWithIfLoopRepresentationTest.kt:26
+      i = 2 at WhileWithIfLoopRepresentationTest.kt:27
+    <iteration-3> at WhileWithIfLoopRepresentationTest.kt:20
+      total = 3 at WhileWithIfLoopRepresentationTest.kt:21
+      a = 2 at WhileWithIfLoopRepresentationTest.kt:25
+      a.toString(): "2" at WhileWithIfLoopRepresentationTest.kt:26
+      escape = "2" at WhileWithIfLoopRepresentationTest.kt:26
+      i = 0 at WhileWithIfLoopRepresentationTest.kt:27
+      escape = "%3-2" at WhileWithIfLoopRepresentationTest.kt:29
+    <iteration-4> at WhileWithIfLoopRepresentationTest.kt:20
+      total = 4 at WhileWithIfLoopRepresentationTest.kt:21
+      a = 0 at WhileWithIfLoopRepresentationTest.kt:25
+      a.toString(): "0" at WhileWithIfLoopRepresentationTest.kt:26
+      escape = "0" at WhileWithIfLoopRepresentationTest.kt:26
+      i = 1 at WhileWithIfLoopRepresentationTest.kt:27
+    <iteration-5> at WhileWithIfLoopRepresentationTest.kt:20
+      total = 5 at WhileWithIfLoopRepresentationTest.kt:21
+      a = 1 at WhileWithIfLoopRepresentationTest.kt:25
+      a.toString(): "1" at WhileWithIfLoopRepresentationTest.kt:26
+      escape = "1" at WhileWithIfLoopRepresentationTest.kt:26
+      i = 2 at WhileWithIfLoopRepresentationTest.kt:27
+    <iteration-6> at WhileWithIfLoopRepresentationTest.kt:20
+      total = 6 at WhileWithIfLoopRepresentationTest.kt:21
+      a = 2 at WhileWithIfLoopRepresentationTest.kt:25
+      a.toString(): "2" at WhileWithIfLoopRepresentationTest.kt:26
+      escape = "2" at WhileWithIfLoopRepresentationTest.kt:26
+      i = 0 at WhileWithIfLoopRepresentationTest.kt:27
+      escape = "%3-2" at WhileWithIfLoopRepresentationTest.kt:29
+    <iteration-7> at WhileWithIfLoopRepresentationTest.kt:20
+      total = 7 at WhileWithIfLoopRepresentationTest.kt:21
+      a = 0 at WhileWithIfLoopRepresentationTest.kt:25
+      a.toString(): "0" at WhileWithIfLoopRepresentationTest.kt:26
+      escape = "0" at WhileWithIfLoopRepresentationTest.kt:26
+      i = 1 at WhileWithIfLoopRepresentationTest.kt:27
+    <iteration-8> at WhileWithIfLoopRepresentationTest.kt:20
+      total = 8 at WhileWithIfLoopRepresentationTest.kt:21
+      a = 1 at WhileWithIfLoopRepresentationTest.kt:25
+      a.toString(): "1" at WhileWithIfLoopRepresentationTest.kt:26
+      escape = "1" at WhileWithIfLoopRepresentationTest.kt:26
+      i = 2 at WhileWithIfLoopRepresentationTest.kt:27
+    <iteration-9> at WhileWithIfLoopRepresentationTest.kt:20
+      total = 9 at WhileWithIfLoopRepresentationTest.kt:21
+      a = 2 at WhileWithIfLoopRepresentationTest.kt:25
+      a.toString(): "2" at WhileWithIfLoopRepresentationTest.kt:26
+      escape = "2" at WhileWithIfLoopRepresentationTest.kt:26
+      i = 0 at WhileWithIfLoopRepresentationTest.kt:27
+      escape = "%3-2" at WhileWithIfLoopRepresentationTest.kt:29
+    <iteration-10> at WhileWithIfLoopRepresentationTest.kt:20
+      total = 10 at WhileWithIfLoopRepresentationTest.kt:21
+      a = 0 at WhileWithIfLoopRepresentationTest.kt:25
+      a.toString(): "0" at WhileWithIfLoopRepresentationTest.kt:26
+      escape = "0" at WhileWithIfLoopRepresentationTest.kt:26
+      i = 1 at WhileWithIfLoopRepresentationTest.kt:27
+    <iteration-11> at WhileWithIfLoopRepresentationTest.kt:20
+      total = 11 at WhileWithIfLoopRepresentationTest.kt:21
+  escape = "END" at WhileWithIfLoopRepresentationTest.kt:32

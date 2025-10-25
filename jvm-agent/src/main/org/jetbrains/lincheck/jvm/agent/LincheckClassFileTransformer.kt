@@ -86,6 +86,17 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         val classNode = ClassNode()
         reader.accept(classNode, ClassReader.EXPAND_FRAMES)
 
+        val (includeClasses, excludeClasses) = if (instrumentationMode == TRACE_RECORDING) {
+            TraceAgentParameters.getIncludePatterns() to TraceAgentParameters.getExcludePatterns()
+        } else {
+            emptyList<String>() to emptyList<String>()
+        }
+        val profile = createTransformationProfile(
+            instrumentationMode,
+            includeClasses = includeClasses,
+            excludeClasses = excludeClasses,
+        )
+
         // Don't use class/method visitors on classNode to collect labels, as
         // MethodNode reset all labels on a re-visit (WHY?!).
         // Only one visit is possible to have labels stable.
@@ -98,18 +109,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             labels = getMethodsLabels(classNode),
             methodsToLineRanges = lineRanges,
             linesToMethodNames = linesToMethodNames,
-            basicCfgs = computeControlFlowGraphs(classNode),
-        )
-
-        val (includeClasses, excludeClasses) = if (instrumentationMode == TRACE_RECORDING) {
-            TraceAgentParameters.getIncludePatterns() to TraceAgentParameters.getExcludePatterns()
-        } else {
-            emptyList<String>() to emptyList<String>()
-        }
-        val profile = createTransformationProfile(
-            instrumentationMode,
-            includeClasses = includeClasses,
-            excludeClasses = excludeClasses,
+            basicCfgs = computeControlFlowGraphs(classNode, profile),
         )
 
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
@@ -183,16 +183,21 @@ object LincheckClassFileTransformer : ClassFileTransformer {
      * For abstract/native or empty methods, returns an empty graph.
      */
     private fun computeControlFlowGraphs(
-        classNode: ClassNode
+        classNode: ClassNode,
+        profile: TransformationProfile,
     ): Map<String, BasicBlockControlFlowGraph> {
         return classNode.methods.mapNotNull { m ->
-            m as org.objectweb.asm.tree.MethodNode
+            val config = profile.getMethodConfiguration(classNode.name.toCanonicalClassName(), m.name, m.desc)
+            if (!config.trackLoops) return@mapNotNull null
+
             val key = m.name + m.desc
             val isAbstractOrNative = (m.access and (Opcodes.ACC_ABSTRACT or Opcodes.ACC_NATIVE)) != 0
             val cfg = if (isAbstractOrNative) {
                 emptyControlFlowGraph()
             } else {
-                buildControlFlowGraph(classNode.name, m)
+                buildControlFlowGraph(classNode.name, m).apply {
+                    computeLoopInformation()
+                }
             }
             key to cfg
         }.toMap()

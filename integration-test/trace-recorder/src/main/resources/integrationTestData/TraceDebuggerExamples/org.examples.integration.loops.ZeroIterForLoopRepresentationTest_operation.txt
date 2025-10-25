@@ -1,0 +1,6 @@
+# Thread 1
+ZeroIterForLoopRepresentationTest.operation() at :0
+  escape = "START" at ZeroIterForLoopRepresentationTest.kt:16
+  start = 2 at ZeroIterForLoopRepresentationTest.kt:17
+  end = 1 at ZeroIterForLoopRepresentationTest.kt:18
+  escape = "END" at ZeroIterForLoopRepresentationTest.kt:23

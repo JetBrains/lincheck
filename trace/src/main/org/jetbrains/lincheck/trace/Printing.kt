@@ -40,7 +40,7 @@ fun printPostProcessedTrace(outputFileName: String?, inputFileName: String, verb
 private fun lazyPrintTRPoint(output: PrintStream, reader: LazyTraceReader, node: TRTracePoint, depth: Int, verbose: Boolean) {
     output.print(" ".repeat(depth * 2))
     output.println(node.toText(verbose))
-    if (node is TRMethodCallTracePoint && node.events.isNotEmpty()) {
+    if (node is TRContainerTracePoint && node.events.isNotEmpty()) {
         reader.loadAllChildren(node)
         node.events.forEach { event ->
             if (event != null) {
@@ -74,7 +74,7 @@ private fun printTRPoint(appendable: TRAppendable, node: TRTracePoint, depth: In
     appendable.append(" ".repeat(depth * 2))
     node.toText(appendable)
     appendable.append("\n")
-    if (node is TRMethodCallTracePoint) {
+    if (node is TRContainerTracePoint) {
         var unloaded = 0
         node.events.forEach { event ->
             if (event == null) {

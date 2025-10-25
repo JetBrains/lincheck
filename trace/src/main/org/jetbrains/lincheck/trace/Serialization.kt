@@ -56,15 +56,15 @@ interface TraceCollectingStrategy {
      * @param parent Current top of the call stack, if exists.
      * @param created New tracepoint
      */
-    fun tracePointCreated(parent: TRMethodCallTracePoint?, created: TRTracePoint)
+    fun tracePointCreated(parent: TRContainerTracePoint?, created: TRTracePoint)
 
     /**
-     * Must be called when the method call is ended and the call stack is popped.
+     * Must be called when the container trace point is ended and popped from the trace tree.
      *
-     * @param thread thread to which belongs [callTracepoint].
-     * @param callTracepoint tracepoint popped from the call stack.
+     * @param thread thread of the [container] trace point.
+     * @param container the completed container trace point.
      */
-    fun callEnded(thread: Thread, callTracepoint: TRMethodCallTracePoint)
+    fun completeContainerTracePoint(thread: Thread, container: TRContainerTracePoint)
 
     /**
      * Must be called when trace is finished
@@ -335,7 +335,9 @@ private sealed class TraceWriterBase(
     }
 
     override fun writeCodeLocation(id: Int) {
-        check(!inTracepointBody) { "Cannot save reference data inside tracepoint" }
+        check(!inTracepointBody) {
+            "Cannot save reference data inside tracepoint"
+        }
         if (id == UNKNOWN_CODE_LOCATION_ID) return
         if (contextState.isCodeLocationSaved(id)) return
 
@@ -727,13 +729,13 @@ class MemoryTraceCollecting(private val context: TraceContext): TraceCollectingS
     override fun completeThread(thread: Thread) {}
 
     override fun tracePointCreated(
-        parent: TRMethodCallTracePoint?,
+        parent: TRContainerTracePoint?,
         created: TRTracePoint
     ) {
         parent?.addChild(created)
     }
 
-    override fun callEnded(thread: Thread, callTracepoint: TRMethodCallTracePoint) {}
+    override fun completeContainerTracePoint(thread: Thread, container: TRContainerTracePoint) {}
 
     /**
      * Do nothing.
@@ -813,7 +815,7 @@ class FileStreamingTraceCollecting(
     }
 
     override fun tracePointCreated(
-        parent: TRMethodCallTracePoint?,
+        parent: TRContainerTracePoint?,
         created: TRTracePoint
     ) {
         val writer = writers[Thread.currentThread()] ?: return
@@ -828,16 +830,16 @@ class FileStreamingTraceCollecting(
         }
     }
 
-    override fun callEnded(thread: Thread, callTracepoint: TRMethodCallTracePoint) {
+    override fun completeContainerTracePoint(thread: Thread, container: TRContainerTracePoint) {
         val writer = writers[thread] ?: return
         try {
             writer.mark()
-            callTracepoint.saveFooter(writer)
+            container.saveFooter(writer)
         } catch (_: BufferOverflowException) {
             // Flush current buffers, start over
             writer.rollback()
             writer.flush()
-            callTracepoint.saveFooter(writer)
+            container.saveFooter(writer)
         }
     }
 
@@ -984,7 +986,7 @@ fun packRecordedTrace(baseFileName: String, metaInfo: TraceMetaInfo, deleteSourc
 
 private fun saveTRTracepoint(writer: TraceWriter, tracepoint: TRTracePoint) {
     tracepoint.save(writer)
-    if (tracepoint is TRMethodCallTracePoint) {
+    if (tracepoint is TRContainerTracePoint) {
         tracepoint.events.forEach {
             if (it != null) {
                 saveTRTracepoint(writer, it)

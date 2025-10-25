@@ -33,7 +33,7 @@ import java.lang.management.ManagementFactory
 
 internal const val TRACE_MAGIC : Long = 0x706e547124ee5f70L
 internal const val INDEX_MAGIC : Long = TRACE_MAGIC.inv()
-internal const val TRACE_VERSION : Long = 12
+internal const val TRACE_VERSION : Long = 13
 
 // This suffix is not enforced, but IDEA plugin rely on it
 const val DATA_FILENAME_EXT = "trace"

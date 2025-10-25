@@ -30,7 +30,7 @@ internal data class MethodInformation(
     val labels: MethodLabels,
     val lineRange: Pair<Int, Int>,
     private val linesToMethodNames: List<Triple<Int, Int, Set<String>>>,
-    val basicControlFlowGraph: BasicBlockControlFlowGraph,
+    val basicControlFlowGraph: BasicBlockControlFlowGraph?,
 ) {
     // TODO: This method should be used by [LincheckBaseMethodVisitor],
     //  but now it leads to flaky tests on TeamCity.

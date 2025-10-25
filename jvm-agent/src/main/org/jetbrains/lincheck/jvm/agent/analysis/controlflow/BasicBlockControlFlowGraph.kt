@@ -165,8 +165,7 @@ class BasicBlockControlFlowGraph(
                         it.validateLoopEdgesInvariants()
                     }
                 }
-            }
-            else {
+            } else {
                 isReducible = false
                 // CFG is irreducible, our loop calculation algorithm will not work with it
                 // so we report that fact and don't compute any loop information

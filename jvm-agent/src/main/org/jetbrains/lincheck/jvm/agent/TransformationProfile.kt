@@ -40,6 +40,8 @@ class TransformationConfiguration(
     var trackSynchronizedBlocks: Boolean = false,
     var trackParkingOperations: Boolean = false,
 
+    var trackLoops: Boolean = false,
+
     var interceptIdentityHashCodes: Boolean = false,
 
     var interceptInvokeDynamic: Boolean = false,
@@ -135,6 +137,8 @@ internal fun TransformationConfiguration.shouldApplyVisitor(visitorClass: Class<
         WaitNotifyTransformer::class.java -> trackWaitNotifyOperations
         SynchronizedMethodTransformer::class.java -> trackSynchronizedBlocks
         ParkingTransformer::class.java -> trackParkingOperations
+
+        LoopTransformer::class.java -> trackLoops
 
         ConstantHashCodeTransformer::class.java -> interceptIdentityHashCodes
 
@@ -252,6 +256,8 @@ object TraceRecorderDefaultTransformationProfile : TransformationProfile {
 
             trackMethodCalls = true
             trackInlineMethodCalls = false
+
+            trackLoops = true
 
             trackThreadsOperations = true
         }
