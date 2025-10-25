@@ -290,15 +290,14 @@ class TRLoopTracePoint(
     override fun saveFooter(out: TraceWriter) {
         // Mark this as a container tracepoint footer
         out.startWriteContainerTracepointFooter()
-        // TODO: what else should go here?
 
+        out.writeInt(iterations)
         out.endWriteContainerTracepointFooter(eventId)
     }
 
     override fun loadFooter(inp: DataInput) {
         childrenAddresses.finishWrite()
-        iterations = childrenAddresses.size
-        // TODO: what else should go here?
+        iterations = inp.readInt()
     }
 
     override fun toText(appendable: TRAppendable) {
@@ -313,7 +312,6 @@ class TRLoopTracePoint(
                 threadId = threadId,
                 codeLocationId = codeLocationId,
                 loopId = loopId,
-                // TODO: should also load iterations number?
                 eventId = eventId,
             )
             return tracePoint
@@ -343,16 +341,11 @@ class TRLoopIterationTracePoint(
     override fun saveFooter(out: TraceWriter) {
         // Mark this as a container tracepoint footer
         out.startWriteContainerTracepointFooter()
-
-        // TODO: what else should go here?
-
         out.endWriteContainerTracepointFooter(eventId)
     }
 
     override fun loadFooter(inp: DataInput) {
         childrenAddresses.finishWrite()
-
-        // TODO: what else should go here?
     }
 
     override fun toText(appendable: TRAppendable) {
@@ -370,7 +363,6 @@ class TRLoopIterationTracePoint(
                 codeLocationId = codeLocationId,
                 loopId = loopId,
                 loopIteration = loopIteration,
-                // TODO: should also load iterations number?
                 eventId = eventId,
             )
 
