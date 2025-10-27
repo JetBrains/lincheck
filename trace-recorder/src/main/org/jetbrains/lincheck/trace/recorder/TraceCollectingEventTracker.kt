@@ -754,9 +754,7 @@ class TraceCollectingEventTracker(
             threadData.enterLoop(tracePoint)
         }
 
-        val currentLoopTracePoint = threadData.currentLoopTracePoint().ensureNotNull {
-            "Unexpected loop iteration: no loop trace point found"
-        }
+        val currentLoopTracePoint = threadData.currentLoopTracePoint()!!
         // complete previous iteration, if any
         threadData.currentLoopIterationTracePoint()?.also { previousIteration ->
             strategy.completeContainerTracePoint(Thread.currentThread(), previousIteration)
