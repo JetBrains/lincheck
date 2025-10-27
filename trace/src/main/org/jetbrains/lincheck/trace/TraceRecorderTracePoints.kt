@@ -269,6 +269,18 @@ class TRLoopTracePoint(
     parentTracePoint: TRContainerTracePoint? = null,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
 ) : TRContainerTracePoint(threadId, codeLocationId, parentTracePoint, eventId) {
+
+    internal constructor(
+        threadId: Int,
+        codeLocationId: Int,
+        loopId: Int,
+        parentTracePoint: TRContainerTracePoint?,
+        eventId: Int,
+        iterations: Int
+    ) : this(threadId, codeLocationId, loopId, parentTracePoint, eventId) {
+        this.iterations = iterations
+    }
+
     // This field is not serialized to disk, because it is computable from the number of children of the
     // loop trace point. Basically the number of children is equal to the number of loop iterations.
     // On trace point footer loading this variable will be restored.

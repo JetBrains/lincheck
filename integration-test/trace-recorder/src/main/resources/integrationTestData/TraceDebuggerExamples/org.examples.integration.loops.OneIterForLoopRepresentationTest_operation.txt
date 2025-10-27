@@ -2,11 +2,10 @@
 OneIterForLoopRepresentationTest.operation() at :0
   escape = "START" at OneIterForLoopRepresentationTest.kt:16
   i = 1 at OneIterForLoopRepresentationTest.kt:17
-  loop(2 iterations) at OneIterForLoopRepresentationTest.kt:17
+  loop(1 iterations) at OneIterForLoopRepresentationTest.kt:17
     <iteration 1> at OneIterForLoopRepresentationTest.kt:17
       a = 1 at OneIterForLoopRepresentationTest.kt:18
       a.toString(): "1" at OneIterForLoopRepresentationTest.kt:19
       escape = "1" at OneIterForLoopRepresentationTest.kt:19
       i = 2 at OneIterForLoopRepresentationTest.kt:17
-    <iteration 2> at OneIterForLoopRepresentationTest.kt:17
   escape = "END" at OneIterForLoopRepresentationTest.kt:21

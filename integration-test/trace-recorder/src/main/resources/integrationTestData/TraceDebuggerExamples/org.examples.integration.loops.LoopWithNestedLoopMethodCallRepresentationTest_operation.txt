@@ -2,14 +2,14 @@
 LoopWithNestedLoopMethodCallRepresentationTest.operation() at :0
   escape = "START" at LoopWithNestedLoopMethodCallRepresentationTest.kt:27
   i = 1 at LoopWithNestedLoopMethodCallRepresentationTest.kt:28
-  loop(3 iterations) at LoopWithNestedLoopMethodCallRepresentationTest.kt:28
+  loop(2 iterations) at LoopWithNestedLoopMethodCallRepresentationTest.kt:28
     <iteration 1> at LoopWithNestedLoopMethodCallRepresentationTest.kt:28
       a = 1 at LoopWithNestedLoopMethodCallRepresentationTest.kt:29
       escape = "outer-1" at LoopWithNestedLoopMethodCallRepresentationTest.kt:30
       methodWithLoop(a ➜ 1) at LoopWithNestedLoopMethodCallRepresentationTest.kt:31
         escape = "method-start-1" at LoopWithNestedLoopMethodCallRepresentationTest.kt:37
         j = 1 at LoopWithNestedLoopMethodCallRepresentationTest.kt:38
-        loop(3 iterations) at LoopWithNestedLoopMethodCallRepresentationTest.kt:38
+        loop(2 iterations) at LoopWithNestedLoopMethodCallRepresentationTest.kt:38
           <iteration 1> at LoopWithNestedLoopMethodCallRepresentationTest.kt:38
             b = 1 at LoopWithNestedLoopMethodCallRepresentationTest.kt:39
             escape = "method-inner-1-1" at LoopWithNestedLoopMethodCallRepresentationTest.kt:40
@@ -18,7 +18,6 @@ LoopWithNestedLoopMethodCallRepresentationTest.operation() at :0
             b = 2 at LoopWithNestedLoopMethodCallRepresentationTest.kt:39
             escape = "method-inner-1-2" at LoopWithNestedLoopMethodCallRepresentationTest.kt:40
             j = 3 at LoopWithNestedLoopMethodCallRepresentationTest.kt:38
-          <iteration 3> at LoopWithNestedLoopMethodCallRepresentationTest.kt:38
         escape = "method-end-1" at LoopWithNestedLoopMethodCallRepresentationTest.kt:42
       i = 2 at LoopWithNestedLoopMethodCallRepresentationTest.kt:28
     <iteration 2> at LoopWithNestedLoopMethodCallRepresentationTest.kt:28
@@ -27,7 +26,7 @@ LoopWithNestedLoopMethodCallRepresentationTest.operation() at :0
       methodWithLoop(a ➜ 2) at LoopWithNestedLoopMethodCallRepresentationTest.kt:31
         escape = "method-start-2" at LoopWithNestedLoopMethodCallRepresentationTest.kt:37
         j = 1 at LoopWithNestedLoopMethodCallRepresentationTest.kt:38
-        loop(3 iterations) at LoopWithNestedLoopMethodCallRepresentationTest.kt:38
+        loop(2 iterations) at LoopWithNestedLoopMethodCallRepresentationTest.kt:38
           <iteration 1> at LoopWithNestedLoopMethodCallRepresentationTest.kt:38
             b = 1 at LoopWithNestedLoopMethodCallRepresentationTest.kt:39
             escape = "method-inner-2-1" at LoopWithNestedLoopMethodCallRepresentationTest.kt:40
@@ -36,8 +35,6 @@ LoopWithNestedLoopMethodCallRepresentationTest.operation() at :0
             b = 2 at LoopWithNestedLoopMethodCallRepresentationTest.kt:39
             escape = "method-inner-2-2" at LoopWithNestedLoopMethodCallRepresentationTest.kt:40
             j = 3 at LoopWithNestedLoopMethodCallRepresentationTest.kt:38
-          <iteration 3> at LoopWithNestedLoopMethodCallRepresentationTest.kt:38
         escape = "method-end-2" at LoopWithNestedLoopMethodCallRepresentationTest.kt:42
       i = 3 at LoopWithNestedLoopMethodCallRepresentationTest.kt:28
-    <iteration 3> at LoopWithNestedLoopMethodCallRepresentationTest.kt:28
   escape = "END" at LoopWithNestedLoopMethodCallRepresentationTest.kt:33

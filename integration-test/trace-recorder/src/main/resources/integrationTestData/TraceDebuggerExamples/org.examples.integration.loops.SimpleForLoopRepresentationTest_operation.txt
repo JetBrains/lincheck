@@ -2,7 +2,7 @@
 SimpleForLoopRepresentationTest.operation() at :0
   escape = "START" at SimpleForLoopRepresentationTest.kt:16
   i = 1 at SimpleForLoopRepresentationTest.kt:17
-  loop(3 iterations) at SimpleForLoopRepresentationTest.kt:17
+  loop(2 iterations) at SimpleForLoopRepresentationTest.kt:17
     <iteration 1> at SimpleForLoopRepresentationTest.kt:17
       a = 1 at SimpleForLoopRepresentationTest.kt:18
       a.toString(): "1" at SimpleForLoopRepresentationTest.kt:19
@@ -13,5 +13,4 @@ SimpleForLoopRepresentationTest.operation() at :0
       a.toString(): "2" at SimpleForLoopRepresentationTest.kt:19
       escape = "2" at SimpleForLoopRepresentationTest.kt:19
       i = 3 at SimpleForLoopRepresentationTest.kt:17
-    <iteration 3> at SimpleForLoopRepresentationTest.kt:17
   escape = "END" at SimpleForLoopRepresentationTest.kt:21

@@ -2,7 +2,7 @@
 JavaForLoopRepresentationTest.operation() at :0
   escape = "START" at JavaForLoopRepresentationTest.java:17
   i = 1 at JavaForLoopRepresentationTest.java:18
-  loop(4 iterations) at JavaForLoopRepresentationTest.java:18
+  loop(3 iterations) at JavaForLoopRepresentationTest.java:18
     <iteration 1> at JavaForLoopRepresentationTest.java:18
       a = 1 at JavaForLoopRepresentationTest.java:19
       a.toString(): "1" at JavaForLoopRepresentationTest.java:20
@@ -18,5 +18,4 @@ JavaForLoopRepresentationTest.operation() at :0
       a.toString(): "3" at JavaForLoopRepresentationTest.java:20
       escape = "3" at JavaForLoopRepresentationTest.java:20
       i = 4 at JavaForLoopRepresentationTest.java:18
-    <iteration 4> at JavaForLoopRepresentationTest.java:18
   escape = "END" at JavaForLoopRepresentationTest.java:22

@@ -8,7 +8,7 @@ NestedLoopWithExceptionRepresentationTest.operation() at :0
       <iteration 1> at NestedLoopWithExceptionRepresentationTest.kt:27
         a = 1 at NestedLoopWithExceptionRepresentationTest.kt:28
         j = 1 at NestedLoopWithExceptionRepresentationTest.kt:29
-        loop(4 iterations) at NestedLoopWithExceptionRepresentationTest.kt:29
+        loop(3 iterations) at NestedLoopWithExceptionRepresentationTest.kt:29
           <iteration 1> at NestedLoopWithExceptionRepresentationTest.kt:29
             escape = "1.1" at NestedLoopWithExceptionRepresentationTest.kt:30
             j = 2 at NestedLoopWithExceptionRepresentationTest.kt:29
@@ -18,7 +18,6 @@ NestedLoopWithExceptionRepresentationTest.operation() at :0
           <iteration 3> at NestedLoopWithExceptionRepresentationTest.kt:29
             escape = "1.3" at NestedLoopWithExceptionRepresentationTest.kt:30
             j = 4 at NestedLoopWithExceptionRepresentationTest.kt:29
-          <iteration 4> at NestedLoopWithExceptionRepresentationTest.kt:29
         i = 2 at NestedLoopWithExceptionRepresentationTest.kt:27
       <iteration 2> at NestedLoopWithExceptionRepresentationTest.kt:27
         a = 2 at NestedLoopWithExceptionRepresentationTest.kt:28

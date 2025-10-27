@@ -411,8 +411,6 @@ ImmutableListTest.empty() at :0
                 assertEquals$default(Class@1, Class@1, null, 4, null) at testUtilsJvm.kt:11
           index = 0 at CollectionBehaviors.kt:18
           listBehavior.getExpected(): EmptyList@1 at CollectionBehaviors.kt:18
-          loop(1 iterations) at CollectionBehaviors.kt:18
-            <iteration 1> at CollectionBehaviors.kt:18
           this_ = CompareContext@1 at CollectionBehaviors.kt:21
           getter = CollectionBehaviorsKt$$Lambda@1 at CollectionBehaviors.kt:21
           i$f$propertyFailsWith = 0 at CollectionBehaviors.kt:21

@@ -2,7 +2,7 @@
 ForLoopWithTryCatchRepresentationTest.operation() at :0
   escape = "START" at ForLoopWithTryCatchRepresentationTest.kt:26
   i = 1 at ForLoopWithTryCatchRepresentationTest.kt:27
-  loop(4 iterations) at ForLoopWithTryCatchRepresentationTest.kt:27
+  loop(3 iterations) at ForLoopWithTryCatchRepresentationTest.kt:27
     <iteration 1> at ForLoopWithTryCatchRepresentationTest.kt:27
       a = 1 at ForLoopWithTryCatchRepresentationTest.kt:28
       escape = "try-1" at ForLoopWithTryCatchRepresentationTest.kt:33
@@ -16,5 +16,4 @@ ForLoopWithTryCatchRepresentationTest.operation() at :0
       a = 3 at ForLoopWithTryCatchRepresentationTest.kt:28
       escape = "try-3" at ForLoopWithTryCatchRepresentationTest.kt:33
       i = 4 at ForLoopWithTryCatchRepresentationTest.kt:27
-    <iteration 4> at ForLoopWithTryCatchRepresentationTest.kt:27
   escape = "END" at ForLoopWithTryCatchRepresentationTest.kt:38

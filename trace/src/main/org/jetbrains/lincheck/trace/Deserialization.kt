@@ -316,7 +316,7 @@ class LazyTraceReader private constructor(
     }
 
     private fun interface TracepointRegistrator {
-        fun register(indexInParent: Int, tracePoint: TRTracePoint, physicalOffset: Long)
+        fun register(indexInParent: Int, tracePoint: TRTracePoint?, physicalOffset: Long)
     }
 
     constructor(baseFileName: String, postprocessor: TracePostprocessor = CompressingPostprocessor) :
@@ -326,7 +326,7 @@ class LazyTraceReader private constructor(
                 postprocessor = postprocessor
             )
 
-    private fun readTracePointWithPostprocessor(): TRTracePoint =
+    private fun readTracePointWithPostprocessor(): TRTracePoint? =
         postprocessor.postprocess(
             reader = this@LazyTraceReader,
             tracePoint = readTracePointWithChildAddresses()
@@ -383,7 +383,7 @@ class LazyTraceReader private constructor(
                 maxRead = Integer.MAX_VALUE,
                 reader = this::readTracePointWithPostprocessor,
                 registrator = { _, tracePoint, _ ->
-                    tracepoints.add(tracePoint)
+                    if (tracePoint != null) tracepoints.add(tracePoint)
                 }
             )
             if (tracepoints.isEmpty()) {
@@ -411,7 +411,7 @@ class LazyTraceReader private constructor(
             maxRead = Integer.MAX_VALUE,
             reader = this::readTracePointWithPostprocessor,
             registrator = { idx, tracePoint, _ ->
-                parent.loadChild(idx, tracePoint)
+                if (tracePoint != null) parent.loadChild(idx, tracePoint)
             }
         )
 
@@ -433,7 +433,7 @@ class LazyTraceReader private constructor(
             maxRead = count,
             reader = this::readTracePointWithPostprocessor,
             registrator = { idx, tracePoint, _ ->
-                parent.loadChild(idx + from, tracePoint)
+                if (tracePoint != null) parent.loadChild(idx + from, tracePoint)
             }
         )
     }
@@ -445,14 +445,16 @@ class LazyTraceReader private constructor(
         return parent.events[childIdx]
     }
 
-    private fun loadTracePoints(threadId: Int, maxRead: Int, reader: () -> TRTracePoint, registrator: TracepointRegistrator) {
+    private fun loadTracePoints(threadId: Int, maxRead: Int, reader: () -> TRTracePoint?, registrator: TracepointRegistrator) {
         val blocks = dataBlocks[threadId] ?: error("No data blocks for Thread $threadId")
         var idx = 0
         while (true) {
             var kind = loadObjects(data, context, CodeLocationsContext(), false) { _, _, _ ->
                 val tracePointOffset = data.position() - 1 // account for Kind
                 val tracePoint = reader()
-                registrator.register(idx++, tracePoint, tracePointOffset)
+                if (tracePoint != null) {
+                    registrator.register(idx++, tracePoint, tracePointOffset)
+                }
                 idx < maxRead
             }
             if (idx == maxRead) {

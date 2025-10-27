@@ -2,7 +2,7 @@
 ForLoopWithMethodCallRepresentationTest.operation() at :0
   escape = "START" at ForLoopWithMethodCallRepresentationTest.kt:16
   i = 1 at ForLoopWithMethodCallRepresentationTest.kt:17
-  loop(3 iterations) at ForLoopWithMethodCallRepresentationTest.kt:17
+  loop(2 iterations) at ForLoopWithMethodCallRepresentationTest.kt:17
     <iteration 1> at ForLoopWithMethodCallRepresentationTest.kt:17
       a = 1 at ForLoopWithMethodCallRepresentationTest.kt:18
       method(a ➜ 1) at ForLoopWithMethodCallRepresentationTest.kt:19
@@ -15,5 +15,4 @@ ForLoopWithMethodCallRepresentationTest.operation() at :0
         a.toString(): "2" at ForLoopWithMethodCallRepresentationTest.kt:25
         escape = "2" at ForLoopWithMethodCallRepresentationTest.kt:25
       i = 3 at ForLoopWithMethodCallRepresentationTest.kt:17
-    <iteration 3> at ForLoopWithMethodCallRepresentationTest.kt:17
   escape = "END" at ForLoopWithMethodCallRepresentationTest.kt:21
