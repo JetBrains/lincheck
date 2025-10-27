@@ -818,7 +818,6 @@ private fun getLoaderByClassId(id: Byte): TRLoader {
         6 -> TRWriteTracePoint::load
         7 -> TRLoopTracePoint::load
         8 -> TRLoopIterationTracePoint::load
-        // TODO: support loop trace points
         else -> error("Unknown TRTracePoint class id $id")
     }
 }
