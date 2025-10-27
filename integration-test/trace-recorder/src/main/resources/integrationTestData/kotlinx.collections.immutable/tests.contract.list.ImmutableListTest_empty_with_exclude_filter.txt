@@ -103,7 +103,7 @@ ImmutableListTest.empty() at :0
                         propertyEquals.hasNext(): false at CollectionBehaviors.kt:55
                       assertEquals(false, false, message ➜ "") at ComparisonDSL.kt:21
                     loop(1 iterations) at CollectionBehaviors.kt:57
-                      <iteration-1> at CollectionBehaviors.kt:57
+                      <iteration 1> at CollectionBehaviors.kt:57
                         iteratorBehavior.getExpected(): EmptyIterator@1 at CollectionBehaviors.kt:57
                         EmptyIterator@1.hasNext(): false at CollectionBehaviors.kt:57
                     iteratorBehavior.propertyFails(CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:61
@@ -160,7 +160,7 @@ ImmutableListTest.empty() at :0
                         propertyEquals.previousIndex(): -1 at CollectionBehaviors.kt:51
                       assertEquals(-1, -1, message ➜ "") at ComparisonDSL.kt:21
                   loop(1 iterations) at CollectionBehaviors.kt:34
-                    <iteration-1> at CollectionBehaviors.kt:34
+                    <iteration 1> at CollectionBehaviors.kt:34
                       listIteratorBehavior.getExpected(): EmptyIterator@1 at CollectionBehaviors.kt:34
                       EmptyIterator@1.hasNext(): false at CollectionBehaviors.kt:34
                   listIteratorBehavior.propertyFails(CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:38
@@ -184,7 +184,7 @@ ImmutableListTest.empty() at :0
                         actual.getClass(): Class@1 at testUtilsJvm.kt:11
                         assertEquals$default(Class@1, Class@1, null, 4, null) at testUtilsJvm.kt:11
                   loop(1 iterations) at CollectionBehaviors.kt:40
-                    <iteration-1> at CollectionBehaviors.kt:40
+                    <iteration 1> at CollectionBehaviors.kt:40
                       listIteratorBehavior.getExpected(): EmptyIterator@1 at CollectionBehaviors.kt:40
                       EmptyIterator@1.hasPrevious(): false at CollectionBehaviors.kt:40
                   listIteratorBehavior.propertyFails(CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:44
@@ -241,7 +241,7 @@ ImmutableListTest.empty() at :0
                         propertyEquals.previousIndex(): -1 at CollectionBehaviors.kt:51
                       assertEquals(-1, -1, message ➜ "") at ComparisonDSL.kt:21
                   loop(1 iterations) at CollectionBehaviors.kt:34
-                    <iteration-1> at CollectionBehaviors.kt:34
+                    <iteration 1> at CollectionBehaviors.kt:34
                       listIteratorBehavior.getExpected(): EmptyIterator@1 at CollectionBehaviors.kt:34
                       EmptyIterator@1.hasNext(): false at CollectionBehaviors.kt:34
                   listIteratorBehavior.propertyFails(CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:38
@@ -265,7 +265,7 @@ ImmutableListTest.empty() at :0
                         actual.getClass(): Class@1 at testUtilsJvm.kt:11
                         assertEquals$default(Class@1, Class@1, null, 4, null) at testUtilsJvm.kt:11
                   loop(1 iterations) at CollectionBehaviors.kt:40
-                    <iteration-1> at CollectionBehaviors.kt:40
+                    <iteration 1> at CollectionBehaviors.kt:40
                       listIteratorBehavior.getExpected(): EmptyIterator@1 at CollectionBehaviors.kt:40
                       EmptyIterator@1.hasPrevious(): false at CollectionBehaviors.kt:40
                   listIteratorBehavior.propertyFails(CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:44
@@ -322,7 +322,7 @@ ImmutableListTest.empty() at :0
                         propertyEquals.previousIndex(): -1 at CollectionBehaviors.kt:51
                       assertEquals(-1, -1, message ➜ "") at ComparisonDSL.kt:21
                   loop(1 iterations) at CollectionBehaviors.kt:34
-                    <iteration-1> at CollectionBehaviors.kt:34
+                    <iteration 1> at CollectionBehaviors.kt:34
                       listIteratorBehavior.getExpected(): EmptyIterator@1 at CollectionBehaviors.kt:34
                       EmptyIterator@1.hasNext(): false at CollectionBehaviors.kt:34
                   listIteratorBehavior.propertyFails(CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:38
@@ -346,7 +346,7 @@ ImmutableListTest.empty() at :0
                         actual.getClass(): Class@1 at testUtilsJvm.kt:11
                         assertEquals$default(Class@1, Class@1, null, 4, null) at testUtilsJvm.kt:11
                   loop(1 iterations) at CollectionBehaviors.kt:40
-                    <iteration-1> at CollectionBehaviors.kt:40
+                    <iteration 1> at CollectionBehaviors.kt:40
                       listIteratorBehavior.getExpected(): EmptyIterator@1 at CollectionBehaviors.kt:40
                       EmptyIterator@1.hasPrevious(): false at CollectionBehaviors.kt:40
                   listIteratorBehavior.propertyFails(CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:44
@@ -412,7 +412,7 @@ ImmutableListTest.empty() at :0
           index = 0 at CollectionBehaviors.kt:18
           listBehavior.getExpected(): EmptyList@1 at CollectionBehaviors.kt:18
           loop(1 iterations) at CollectionBehaviors.kt:18
-            <iteration-1> at CollectionBehaviors.kt:18
+            <iteration 1> at CollectionBehaviors.kt:18
           this_ = CompareContext@1 at CollectionBehaviors.kt:21
           getter = CollectionBehaviorsKt$$Lambda@1 at CollectionBehaviors.kt:21
           i$f$propertyFailsWith = 0 at CollectionBehaviors.kt:21
