@@ -48,7 +48,7 @@ object TraceRecorder {
         format: String?,
         formatOption: String?,
         pack: Boolean,
-        traceAllThreads: Boolean
+        trackAllThreads: Boolean
     ) {
         // Set signal "void" object from Injections for better text output
         INJECTIONS_VOID_OBJECT = Injections.VOID_RESULT
@@ -69,7 +69,7 @@ object TraceRecorder {
 
         eventTracker!!.enableTrace()
         desc.enableAnalysis()
-        if (traceAllThreads) {
+        if (trackAllThreads) {
             Injections.enableGlobalThreadsTracking(eventTracker)
         }
     }
