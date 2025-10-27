@@ -788,6 +788,7 @@ class TraceCollectingEventTracker(
             }
             exitCurrentLoop(threadData)
         } else {
+            if (threadData.currentLoopTracePoint()?.loopId != loopId) return
             do {
                 val currentLoopTracePoint = threadData.currentLoopTracePoint() ?: break
                 exitCurrentLoop(threadData)
