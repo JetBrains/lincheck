@@ -652,6 +652,7 @@ public class Injections {
      * Called on a normal (non-exceptional) exit from a loop body and
      * at an exception handler entry that is reachable from within a loop body and lies outside it.
      *
+     * @param exception the exception that was thrown during the loop exit in case of exceptional exit, null otherwise.
      * @param isReachableFromOutsideLoop true if the handler can also be reached from outside the loop body;
      *   false if it is exclusive to the loop body.
      */
