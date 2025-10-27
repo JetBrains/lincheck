@@ -259,4 +259,58 @@ class TraceDebuggerExamplesTraceRecorderIntegrationTest : AbstractTraceRecorderI
             gradleCommands = listOf(":test"),
         )
     }
+
+    @Test
+    fun `org_examples_integration_loops_BreakedNestedRepeatLoopRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.BreakedNestedRepeatLoopRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_loops_BreakedOuterForLoopRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.BreakedOuterForLoopRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_loops_ContinuedNestedRepeatLoopRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.ContinuedNestedRepeatLoopRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_loops_ContinuedOuterForLoopRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.ContinuedOuterForLoopRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_loops_NestedRepeatLoopRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.NestedRepeatLoopRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_loops_RepeatLoopRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.RepeatLoopRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
 }
