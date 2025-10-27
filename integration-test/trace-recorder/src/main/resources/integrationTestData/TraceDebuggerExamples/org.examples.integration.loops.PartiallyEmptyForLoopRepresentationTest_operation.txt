@@ -4,28 +4,28 @@ PartiallyEmptyForLoopRepresentationTest.operation() at :0
   builder = "" at PartiallyEmptyForLoopRepresentationTest.kt:17
   i = 1 at PartiallyEmptyForLoopRepresentationTest.kt:18
   loop(6 iterations) at PartiallyEmptyForLoopRepresentationTest.kt:18
-    <iteration-1> at PartiallyEmptyForLoopRepresentationTest.kt:18
+    <iteration 1> at PartiallyEmptyForLoopRepresentationTest.kt:18
       builder.append(i ➜ 1): "1" at PartiallyEmptyForLoopRepresentationTest.kt:19
       i = 2 at PartiallyEmptyForLoopRepresentationTest.kt:18
-    <iteration-2> at PartiallyEmptyForLoopRepresentationTest.kt:18
+    <iteration 2> at PartiallyEmptyForLoopRepresentationTest.kt:18
       builder.append(i ➜ 2): "12" at PartiallyEmptyForLoopRepresentationTest.kt:19
       builder.toString(): "12" at PartiallyEmptyForLoopRepresentationTest.kt:21
       escape = "12" at PartiallyEmptyForLoopRepresentationTest.kt:21
       clear(builder ➜ "12"): "" at PartiallyEmptyForLoopRepresentationTest.kt:22
       i = 3 at PartiallyEmptyForLoopRepresentationTest.kt:18
-    <iteration-3> at PartiallyEmptyForLoopRepresentationTest.kt:18
+    <iteration 3> at PartiallyEmptyForLoopRepresentationTest.kt:18
       builder.append(i ➜ 3): "3" at PartiallyEmptyForLoopRepresentationTest.kt:19
       i = 4 at PartiallyEmptyForLoopRepresentationTest.kt:18
-    <iteration-4> at PartiallyEmptyForLoopRepresentationTest.kt:18
+    <iteration 4> at PartiallyEmptyForLoopRepresentationTest.kt:18
       builder.append(i ➜ 4): "34" at PartiallyEmptyForLoopRepresentationTest.kt:19
       builder.toString(): "34" at PartiallyEmptyForLoopRepresentationTest.kt:21
       escape = "34" at PartiallyEmptyForLoopRepresentationTest.kt:21
       clear(builder ➜ "34"): "" at PartiallyEmptyForLoopRepresentationTest.kt:22
       i = 5 at PartiallyEmptyForLoopRepresentationTest.kt:18
-    <iteration-5> at PartiallyEmptyForLoopRepresentationTest.kt:18
+    <iteration 5> at PartiallyEmptyForLoopRepresentationTest.kt:18
       builder.append(i ➜ 5): "5" at PartiallyEmptyForLoopRepresentationTest.kt:19
       i = 6 at PartiallyEmptyForLoopRepresentationTest.kt:18
-    <iteration-6> at PartiallyEmptyForLoopRepresentationTest.kt:18
+    <iteration 6> at PartiallyEmptyForLoopRepresentationTest.kt:18
   builder.toString(): "5" at PartiallyEmptyForLoopRepresentationTest.kt:25
   escape = "5" at PartiallyEmptyForLoopRepresentationTest.kt:25
   escape = "END" at PartiallyEmptyForLoopRepresentationTest.kt:26

@@ -244,8 +244,7 @@ abstract class AbstractTRLoopIterationTracePointPrinter {
 
     protected fun TRAppendable.appendTracePoint(tracePoint: TRLoopIterationTracePoint): TRAppendable {
         appendSpecialSymbol("<")
-        appendKeyword("iteration")
-        appendSpecialSymbol("-")
+        appendKeyword("iteration ")
         append("${tracePoint.loopIteration + 1}")
         appendSpecialSymbol(">")
         return this

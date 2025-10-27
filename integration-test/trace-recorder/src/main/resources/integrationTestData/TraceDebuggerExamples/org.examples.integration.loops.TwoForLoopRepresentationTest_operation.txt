@@ -3,48 +3,48 @@ TwoForLoopRepresentationTest.operation() at :0
   escape = "START" at TwoForLoopRepresentationTest.kt:16
   i = 1 at TwoForLoopRepresentationTest.kt:17
   loop(6 iterations) at TwoForLoopRepresentationTest.kt:17
-    <iteration-1> at TwoForLoopRepresentationTest.kt:17
+    <iteration 1> at TwoForLoopRepresentationTest.kt:17
       a = 1 at TwoForLoopRepresentationTest.kt:18
       escape = "A.1" at TwoForLoopRepresentationTest.kt:19
       i = 2 at TwoForLoopRepresentationTest.kt:17
-    <iteration-2> at TwoForLoopRepresentationTest.kt:17
+    <iteration 2> at TwoForLoopRepresentationTest.kt:17
       a = 2 at TwoForLoopRepresentationTest.kt:18
       escape = "A.2" at TwoForLoopRepresentationTest.kt:19
       i = 3 at TwoForLoopRepresentationTest.kt:17
-    <iteration-3> at TwoForLoopRepresentationTest.kt:17
+    <iteration 3> at TwoForLoopRepresentationTest.kt:17
       a = 3 at TwoForLoopRepresentationTest.kt:18
       escape = "A.3" at TwoForLoopRepresentationTest.kt:19
       i = 4 at TwoForLoopRepresentationTest.kt:17
-    <iteration-4> at TwoForLoopRepresentationTest.kt:17
+    <iteration 4> at TwoForLoopRepresentationTest.kt:17
       a = 4 at TwoForLoopRepresentationTest.kt:18
       escape = "A.4" at TwoForLoopRepresentationTest.kt:19
       i = 5 at TwoForLoopRepresentationTest.kt:17
-    <iteration-5> at TwoForLoopRepresentationTest.kt:17
+    <iteration 5> at TwoForLoopRepresentationTest.kt:17
       a = 5 at TwoForLoopRepresentationTest.kt:18
       escape = "A.5" at TwoForLoopRepresentationTest.kt:19
       i = 6 at TwoForLoopRepresentationTest.kt:17
-    <iteration-6> at TwoForLoopRepresentationTest.kt:17
+    <iteration 6> at TwoForLoopRepresentationTest.kt:17
   i = 1 at TwoForLoopRepresentationTest.kt:21
   loop(6 iterations) at TwoForLoopRepresentationTest.kt:21
-    <iteration-1> at TwoForLoopRepresentationTest.kt:21
+    <iteration 1> at TwoForLoopRepresentationTest.kt:21
       a = 1 at TwoForLoopRepresentationTest.kt:22
       escape = "B.1" at TwoForLoopRepresentationTest.kt:23
       i = 2 at TwoForLoopRepresentationTest.kt:21
-    <iteration-2> at TwoForLoopRepresentationTest.kt:21
+    <iteration 2> at TwoForLoopRepresentationTest.kt:21
       a = 2 at TwoForLoopRepresentationTest.kt:22
       escape = "B.2" at TwoForLoopRepresentationTest.kt:23
       i = 3 at TwoForLoopRepresentationTest.kt:21
-    <iteration-3> at TwoForLoopRepresentationTest.kt:21
+    <iteration 3> at TwoForLoopRepresentationTest.kt:21
       a = 3 at TwoForLoopRepresentationTest.kt:22
       escape = "B.3" at TwoForLoopRepresentationTest.kt:23
       i = 4 at TwoForLoopRepresentationTest.kt:21
-    <iteration-4> at TwoForLoopRepresentationTest.kt:21
+    <iteration 4> at TwoForLoopRepresentationTest.kt:21
       a = 4 at TwoForLoopRepresentationTest.kt:22
       escape = "B.4" at TwoForLoopRepresentationTest.kt:23
       i = 5 at TwoForLoopRepresentationTest.kt:21
-    <iteration-5> at TwoForLoopRepresentationTest.kt:21
+    <iteration 5> at TwoForLoopRepresentationTest.kt:21
       a = 5 at TwoForLoopRepresentationTest.kt:22
       escape = "B.5" at TwoForLoopRepresentationTest.kt:23
       i = 6 at TwoForLoopRepresentationTest.kt:21
-    <iteration-6> at TwoForLoopRepresentationTest.kt:21
+    <iteration 6> at TwoForLoopRepresentationTest.kt:21
   escape = "END" at TwoForLoopRepresentationTest.kt:25

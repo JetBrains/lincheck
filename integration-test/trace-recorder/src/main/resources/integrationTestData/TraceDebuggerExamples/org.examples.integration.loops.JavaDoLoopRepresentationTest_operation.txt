@@ -3,17 +3,17 @@ JavaDoLoopRepresentationTest.operation() at :0
   i = 1 at JavaDoLoopRepresentationTest.java:17
   escape = "START" at JavaDoLoopRepresentationTest.java:18
   loop(3 iterations) at JavaDoLoopRepresentationTest.java:20
-    <iteration-1> at JavaDoLoopRepresentationTest.java:20
+    <iteration 1> at JavaDoLoopRepresentationTest.java:20
       a = 1 at JavaDoLoopRepresentationTest.java:20
       a.toString(): "1" at JavaDoLoopRepresentationTest.java:21
       escape = "1" at JavaDoLoopRepresentationTest.java:21
       i = 2 at JavaDoLoopRepresentationTest.java:22
-    <iteration-2> at JavaDoLoopRepresentationTest.java:20
+    <iteration 2> at JavaDoLoopRepresentationTest.java:20
       a = 2 at JavaDoLoopRepresentationTest.java:20
       a.toString(): "2" at JavaDoLoopRepresentationTest.java:21
       escape = "2" at JavaDoLoopRepresentationTest.java:21
       i = 3 at JavaDoLoopRepresentationTest.java:22
-    <iteration-3> at JavaDoLoopRepresentationTest.java:20
+    <iteration 3> at JavaDoLoopRepresentationTest.java:20
       a = 3 at JavaDoLoopRepresentationTest.java:20
       a.toString(): "3" at JavaDoLoopRepresentationTest.java:21
       escape = "3" at JavaDoLoopRepresentationTest.java:21

@@ -3,20 +3,20 @@ JavaWhileLoopRepresentationTest.operation() at :0
   i = 1 at JavaWhileLoopRepresentationTest.java:17
   escape = "START" at JavaWhileLoopRepresentationTest.java:18
   loop(4 iterations) at JavaWhileLoopRepresentationTest.java:19
-    <iteration-1> at JavaWhileLoopRepresentationTest.java:19
+    <iteration 1> at JavaWhileLoopRepresentationTest.java:19
       a = 1 at JavaWhileLoopRepresentationTest.java:20
       a.toString(): "1" at JavaWhileLoopRepresentationTest.java:21
       escape = "1" at JavaWhileLoopRepresentationTest.java:21
       i = 2 at JavaWhileLoopRepresentationTest.java:22
-    <iteration-2> at JavaWhileLoopRepresentationTest.java:19
+    <iteration 2> at JavaWhileLoopRepresentationTest.java:19
       a = 2 at JavaWhileLoopRepresentationTest.java:20
       a.toString(): "2" at JavaWhileLoopRepresentationTest.java:21
       escape = "2" at JavaWhileLoopRepresentationTest.java:21
       i = 3 at JavaWhileLoopRepresentationTest.java:22
-    <iteration-3> at JavaWhileLoopRepresentationTest.java:19
+    <iteration 3> at JavaWhileLoopRepresentationTest.java:19
       a = 3 at JavaWhileLoopRepresentationTest.java:20
       a.toString(): "3" at JavaWhileLoopRepresentationTest.java:21
       escape = "3" at JavaWhileLoopRepresentationTest.java:21
       i = 4 at JavaWhileLoopRepresentationTest.java:22
-    <iteration-4> at JavaWhileLoopRepresentationTest.java:19
+    <iteration 4> at JavaWhileLoopRepresentationTest.java:19
   escape = "END" at JavaWhileLoopRepresentationTest.java:24
