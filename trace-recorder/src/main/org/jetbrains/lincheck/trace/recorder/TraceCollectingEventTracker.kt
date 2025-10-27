@@ -796,6 +796,25 @@ class TraceCollectingEventTracker(
         }
     }
 
+    /**
+     * Method takes the currently open loop trace point and finishes
+     * its last open iteration (if it exists) and then the loop itself.
+     *
+     * Note: assumes there is an open loop trace point.
+     */
+    private fun exitCurrentLoop(threadData: ThreadData) {
+        val thread = Thread.currentThread()
+        val currentLoopTracePoint = threadData.currentLoopTracePoint() ?: error("No loop trace point exists")
+        val currentLoopIterationTracePoint = threadData.currentLoopIterationTracePoint()
+
+        // complete the last loop iteration if it exists and then loop itself
+        if (currentLoopIterationTracePoint != null) {
+            strategy.completeContainerTracePoint(thread, currentLoopIterationTracePoint)
+        }
+        strategy.completeContainerTracePoint(thread, currentLoopTracePoint)
+        threadData.exitLoop()
+    }
+
     override fun invokeDeterministicallyOrNull(
         descriptorId: Long,
         descriptor: Any?,
@@ -967,24 +986,5 @@ class TraceCollectingEventTracker(
             return AnalysisSectionType.IGNORED
         }
         return analysisProfile.getAnalysisSectionFor(ownerName, methodName)
-    }
-
-    /**
-     * Method takes the currently open loop trace point and finishes
-     * its last open iteration (if it exists) and then the loop itself.
-     *
-     * Note: assumes there is an open loop trace point.
-     */
-    private fun exitCurrentLoop(threadData: ThreadData) {
-        val thread = Thread.currentThread()
-        val currentLoopTracePoint = threadData.currentLoopTracePoint() ?: error("No loop trace point exists")
-        val currentLoopIterationTracePoint = threadData.currentLoopIterationTracePoint()
-
-        // complete the last loop iteration if it exists and then loop itself
-        if (currentLoopIterationTracePoint != null) {
-            strategy.completeContainerTracePoint(thread, currentLoopIterationTracePoint)
-        }
-        strategy.completeContainerTracePoint(thread, currentLoopTracePoint)
-        threadData.exitLoop()
     }
 }
