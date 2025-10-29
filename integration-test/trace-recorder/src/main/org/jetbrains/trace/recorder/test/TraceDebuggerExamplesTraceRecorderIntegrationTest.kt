@@ -313,4 +313,76 @@ class TraceDebuggerExamplesTraceRecorderIntegrationTest : AbstractTraceRecorderI
             gradleCommands = listOf(":test"),
         )
     }
+
+    @Test
+    fun `org_examples_integration_loops_ListBreakedForAndMapLoopRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.ListBreakedForAndMapLoopRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_loops_ListBreakedForLoopRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.ListBreakedForLoopRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_loops_ListContinuedForAndMapLoopRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.ListContinuedForAndMapLoopRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_loops_ListContinuedForLoopRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.ListContinuedForLoopRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_loops_ListForEachBreakedLoopRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.ListForEachBreakedLoopRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_loops_ListForEachContinuedLoopRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.ListForEachContinuedLoopRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_loops_SequenceBreakedForAndMapLoopRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.SequenceBreakedForAndMapLoopRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_loops_SequenceContinuedForAndMapLoopRepresentationTest operation`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.loops.SequenceContinuedForAndMapLoopRepresentationTest",
+            testMethodName = "operation",
+            gradleCommands = listOf(":test"),
+        )
+    }
 }
