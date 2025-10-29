@@ -41,7 +41,15 @@ import sun.nio.ch.lincheck.ThreadDescriptor
 object TraceRecorder {
     private var eventTracker: TraceCollectingEventTracker? = null
 
-    fun installAndStartTrace(className: String, methodName: String, traceFileName: String?, format: String?, formatOption: String?, pack: Boolean) {
+    fun installAndStartTrace(
+        className: String,
+        methodName: String,
+        traceFileName: String?,
+        format: String?,
+        formatOption: String?,
+        pack: Boolean,
+        trackAllThreads: Boolean
+    ) {
         // Set signal "void" object from Injections for better text output
         INJECTIONS_VOID_OBJECT = Injections.VOID_RESULT
 
@@ -61,7 +69,9 @@ object TraceRecorder {
 
         eventTracker!!.enableTrace()
         desc.enableAnalysis()
-        Injections.enableGlobalThreadsTracking(eventTracker)
+        if (trackAllThreads) {
+            Injections.enableGlobalThreadsTracking(eventTracker)
+        }
     }
 
     fun finishTraceAndDumpResults() {
