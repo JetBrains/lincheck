@@ -20,6 +20,8 @@ import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.trace.DefaultTRArrayTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRFieldTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRLocalVariableTracePointPrinter.append
+import org.jetbrains.lincheck.trace.DefaultTRLoopIterationTracePointPrinter.append
+import org.jetbrains.lincheck.trace.DefaultTRLoopTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRMethodCallTracePointPrinter.append
 import java.io.DataInput
 import java.io.DataOutput
@@ -61,7 +63,74 @@ sealed class TRTracePoint(
     abstract fun toText(appendable: TRAppendable)
 }
 
-// Only trace point which is "container"
+sealed class TRContainerTracePoint(
+    threadId: Int,
+    codeLocationId: Int,
+    var parentTracePoint: TRContainerTracePoint? = null,
+    eventId: Int
+) : TRTracePoint(codeLocationId, threadId, eventId) {
+    protected var children: ChunkedList<TRTracePoint> = ChunkedList()
+        private set
+
+    protected var childrenAddresses: AddressIndex = AddressIndex.create()
+        private set
+
+    // TODO: do we need this, why not just leave only children/events
+    val events: List<TRTracePoint?> get() = children
+
+    private fun TRTracePoint.setParentIfContainer(parent: TRContainerTracePoint) {
+        if (this !is TRContainerTracePoint) return
+        parentTracePoint = parent
+    }
+
+    internal fun addChildAddress(address: Long) {
+        childrenAddresses.add(address)
+        children.add(null)
+    }
+
+    internal fun addChild(child: TRTracePoint, address: Long = -1) {
+        childrenAddresses.add(address)
+        children.add(child)
+        child.setParentIfContainer(this)
+    }
+
+    internal fun getChildAddress(index: Int): Long {
+        require(index in 0 ..< children.size) {
+            "Index $index out of range 0..<${children.size}"
+        }
+        return childrenAddresses[index]
+    }
+
+    internal fun replaceChildren(from: TRContainerTracePoint) {
+        children = from.children
+        childrenAddresses = from.childrenAddresses
+        from.children.forEach { it?.setParentIfContainer(this) }
+    }
+
+    internal fun loadChild(index: Int, child: TRTracePoint) {
+        require(index in 0 ..< children.size) {
+            "Index $index out of range 0..<${children.size}"
+        }
+        // Should we check for override? Lets skip for now
+        children[index] = child
+        child.setParentIfContainer(this)
+    }
+
+    fun unloadChild(index: Int) {
+        require(index in 0 ..< children.size) {
+            "Index $index out of range 0..<${children.size}"
+        }
+        children[index] = null
+    }
+
+    fun unloadAllChildren() {
+        children.forgetAll()
+    }
+
+    internal abstract fun saveFooter(out: TraceWriter)
+    internal abstract fun loadFooter(inp: DataInput)
+}
+
 class TRMethodCallTracePoint(
     threadId: Int,
     codeLocationId: Int,
@@ -69,14 +138,11 @@ class TRMethodCallTracePoint(
     val obj: TRObject?,
     val parameters: List<TRObject?>,
     val flags: Short = 0,
-    var parentTracePoint: TRMethodCallTracePoint? = null,
+    parentTracePoint: TRContainerTracePoint? = null,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRTracePoint(codeLocationId, threadId, eventId) {
+) : TRContainerTracePoint(threadId, codeLocationId, parentTracePoint, eventId) {
     var result: TRObject? = null
     var exceptionClassName: String? = null
-
-    private var children: ChunkedList<TRTracePoint> = ChunkedList()
-    private var childrenAddresses: AddressIndex = AddressIndex.create()
 
     // TODO Make parametrized
     val methodDescriptor: MethodDescriptor get() = TRACE_CONTEXT.getMethodDescriptor(methodId)
@@ -89,63 +155,18 @@ class TRMethodCallTracePoint(
     val argumentTypes: List<Types.Type> get() = methodDescriptor.argumentTypes
     val returnType: Types.Type get() = methodDescriptor.returnType
 
-    val events: List<TRTracePoint?> get() = children
-
-    fun setExceptionResult(exception: Throwable) {
-        exceptionClassName = exception::class.java.simpleName
-    }
-
-    private fun TRTracePoint.setParentIfMethodCall(parent: TRMethodCallTracePoint) {
-        if (this !is TRMethodCallTracePoint) return
-        parentTracePoint = parent
-    }
-
-    internal fun addChildAddress(address: Long) {
-        childrenAddresses.add(address)
-        children.add(null)
-    }
-
-    internal fun addChild(child: TRTracePoint, address: Long = -1) {
-        childrenAddresses.add(address)
-        children.add(child)
-        child.setParentIfMethodCall(this)
-    }
-
-    internal fun getChildAddress(index: Int): Long {
-        require(index in 0 ..< children.size) { "Index $index out of range 0..<${children.size}" }
-        return childrenAddresses[index]
-    }
-
-    internal fun replaceChildren(from: TRMethodCallTracePoint) {
-        children = from.children
-        childrenAddresses = from.childrenAddresses
-        from.children.forEach { it?.setParentIfMethodCall(this) }
-    }
-
-    internal fun loadChild(index: Int, child: TRTracePoint) {
-        require(index in 0 ..< children.size) { "Index $index out of range 0..<${children.size}" }
-        // Should we check for override? Lets skip for now
-        children[index] = child
-        child.setParentIfMethodCall(this)
-    }
-
-    fun unloadChild(index: Int) {
-        require(index in 0 ..< children.size) { "Index $index out of range 0..<${children.size}" }
-        children[index] = null
-    }
-
-    fun unloadAllChildren() {
-        children.forgetAll()
-    }
-
     fun isStatic(): Boolean = obj == null
 
     fun isCalledFromDefiningClass(): Boolean {
-        if (parentTracePoint == null) return false
+        val parent = (parentTracePoint as? TRMethodCallTracePoint) ?: return false
         return className.let {
-            it == parentTracePoint!!.className ||
-            it.removeCompanionSuffix() == parentTracePoint!!.className
+            it == parent.className ||
+            it.removeCompanionSuffix() == parent.className
         }
+    }
+
+    fun setExceptionResult(exception: Throwable) {
+        exceptionClassName = exception::class.java.simpleName
     }
 
     /**
@@ -188,7 +209,7 @@ class TRMethodCallTracePoint(
         }
     }
 
-    internal fun saveFooter(out: TraceWriter) {
+    override fun saveFooter(out: TraceWriter) {
         out.preWriteTRObject(result)
 
         // Mark this as a container tracepoint footer
@@ -198,7 +219,7 @@ class TRMethodCallTracePoint(
         out.endWriteContainerTracepointFooter(eventId)
     }
 
-    internal fun loadFooter(inp: DataInput) {
+    override fun loadFooter(inp: DataInput) {
         childrenAddresses.finishWrite()
 
         result = inp.readTRObject()
@@ -213,7 +234,7 @@ class TRMethodCallTracePoint(
     }
 
     companion object {
-        // Flag which tells that method was not tracked from its start and has some missing tracepoints
+        // Flag which tells that the method was not tracked from its start and has some missing tracepoints
         const val INCOMPLETE_METHOD_FLAG: Int = 1
 
         internal fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRMethodCallTracePoint {
@@ -233,6 +254,127 @@ class TRMethodCallTracePoint(
                 obj = obj,
                 parameters = parameters,
                 flags = flags,
+                eventId = eventId,
+            )
+
+            return tracePoint
+        }
+    }
+}
+
+class TRLoopTracePoint(
+    threadId: Int,
+    codeLocationId: Int,
+    val loopId: Int,
+    parentTracePoint: TRContainerTracePoint? = null,
+    eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
+) : TRContainerTracePoint(threadId, codeLocationId, parentTracePoint, eventId) {
+
+    internal constructor(
+        threadId: Int,
+        codeLocationId: Int,
+        loopId: Int,
+        parentTracePoint: TRContainerTracePoint?,
+        eventId: Int,
+        iterations: Int
+    ) : this(threadId, codeLocationId, loopId, parentTracePoint, eventId) {
+        this.iterations = iterations
+    }
+
+    // This field is not serialized to disk, because it is computable from the number of children of the
+    // loop trace point. Basically the number of children is equal to the number of loop iterations.
+    // On trace point footer loading this variable will be restored.
+    var iterations: Int = 0
+        private set
+
+    fun incrementIterations(): Int {
+        return iterations++
+    }
+
+    override fun save(out: TraceWriter) {
+        super.save(out)
+        out.writeInt(loopId)
+
+        // Mark this as container tracepoint which could have children and will have footer
+        out.endWriteContainerTracepointHeader(eventId)
+    }
+
+    override fun saveFooter(out: TraceWriter) {
+        // Mark this as a container tracepoint footer
+        out.startWriteContainerTracepointFooter()
+
+        out.writeInt(iterations)
+        out.endWriteContainerTracepointFooter(eventId)
+    }
+
+    override fun loadFooter(inp: DataInput) {
+        childrenAddresses.finishWrite()
+        iterations = inp.readInt()
+    }
+
+    override fun toText(appendable: TRAppendable) {
+        appendable.append(tracePoint = this)
+    }
+
+    companion object {
+
+        internal fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRLoopTracePoint {
+            val loopId = inp.readInt()
+            val tracePoint = TRLoopTracePoint(
+                threadId = threadId,
+                codeLocationId = codeLocationId,
+                loopId = loopId,
+                eventId = eventId,
+            )
+            return tracePoint
+        }
+    }
+}
+
+class TRLoopIterationTracePoint(
+    threadId: Int,
+    codeLocationId: Int,
+    val loopId: Int,
+    val loopIteration: Int,
+    parentTracePoint: TRContainerTracePoint? = null,
+    eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
+) : TRContainerTracePoint(threadId, codeLocationId, parentTracePoint, eventId) {
+
+    override fun save(out: TraceWriter) {
+        super.save(out)
+
+        out.writeInt(loopId)
+        out.writeInt(loopIteration)
+
+        // Mark this as container tracepoint which could have children and will have footer
+        out.endWriteContainerTracepointHeader(eventId)
+    }
+
+    override fun saveFooter(out: TraceWriter) {
+        // Mark this as a container tracepoint footer
+        out.startWriteContainerTracepointFooter()
+        out.endWriteContainerTracepointFooter(eventId)
+    }
+
+    override fun loadFooter(inp: DataInput) {
+        childrenAddresses.finishWrite()
+    }
+
+    override fun toText(appendable: TRAppendable) {
+        appendable.append(tracePoint = this)
+    }
+
+    companion object {
+
+        internal fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRLoopIterationTracePoint {
+            val loopId = inp.readInt()
+            val loopIteration = inp.readInt()
+
+            val tracePoint = TRLoopIterationTracePoint(
+                threadId = threadId,
+                codeLocationId = codeLocationId,
+                loopId = loopId,
+                loopIteration = loopIteration,
                 eventId = eventId,
             )
 
@@ -672,6 +814,8 @@ private fun getClassId(point: TRTracePoint): Int {
         is TRWriteArrayTracePoint -> 4
         is TRWriteLocalVariableTracePoint -> 5
         is TRWriteTracePoint -> 6
+        is TRLoopTracePoint -> 7
+        is TRLoopIterationTracePoint -> 8
     }
 }
 
@@ -684,6 +828,8 @@ private fun getLoaderByClassId(id: Byte): TRLoader {
         4 -> TRWriteArrayTracePoint::load
         5 -> TRWriteLocalVariableTracePoint::load
         6 -> TRWriteTracePoint::load
+        7 -> TRLoopTracePoint::load
+        8 -> TRLoopIterationTracePoint::load
         else -> error("Unknown TRTracePoint class id $id")
     }
 }

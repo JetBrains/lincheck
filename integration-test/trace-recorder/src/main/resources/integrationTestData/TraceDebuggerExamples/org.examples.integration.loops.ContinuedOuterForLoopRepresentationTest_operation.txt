@@ -1,0 +1,48 @@
+# Thread 1
+ContinuedOuterForLoopRepresentationTest.operation() at :0
+  escape = "START" at ContinuedOuterForLoopRepresentationTest.kt:16
+  j = 1 at ContinuedOuterForLoopRepresentationTest.kt:17
+  loop(3 iterations) at ContinuedOuterForLoopRepresentationTest.kt:17
+    <iteration 1> at ContinuedOuterForLoopRepresentationTest.kt:17
+      i = 1 at ContinuedOuterForLoopRepresentationTest.kt:18
+      loop(2 iterations) at ContinuedOuterForLoopRepresentationTest.kt:18
+        <iteration 1> at ContinuedOuterForLoopRepresentationTest.kt:18
+          a = 1 at ContinuedOuterForLoopRepresentationTest.kt:19
+          a.toString(): "1" at ContinuedOuterForLoopRepresentationTest.kt:20
+          escape = "1" at ContinuedOuterForLoopRepresentationTest.kt:20
+          escape = "1 is odd" at ContinuedOuterForLoopRepresentationTest.kt:24
+          i = 2 at ContinuedOuterForLoopRepresentationTest.kt:18
+        <iteration 2> at ContinuedOuterForLoopRepresentationTest.kt:18
+          a = 2 at ContinuedOuterForLoopRepresentationTest.kt:19
+          a.toString(): "2" at ContinuedOuterForLoopRepresentationTest.kt:20
+          escape = "2" at ContinuedOuterForLoopRepresentationTest.kt:20
+      j = 2 at ContinuedOuterForLoopRepresentationTest.kt:17
+    <iteration 2> at ContinuedOuterForLoopRepresentationTest.kt:17
+      i = 1 at ContinuedOuterForLoopRepresentationTest.kt:18
+      loop(2 iterations) at ContinuedOuterForLoopRepresentationTest.kt:18
+        <iteration 1> at ContinuedOuterForLoopRepresentationTest.kt:18
+          a = 1 at ContinuedOuterForLoopRepresentationTest.kt:19
+          a.toString(): "1" at ContinuedOuterForLoopRepresentationTest.kt:20
+          escape = "1" at ContinuedOuterForLoopRepresentationTest.kt:20
+          escape = "1 is odd" at ContinuedOuterForLoopRepresentationTest.kt:24
+          i = 2 at ContinuedOuterForLoopRepresentationTest.kt:18
+        <iteration 2> at ContinuedOuterForLoopRepresentationTest.kt:18
+          a = 2 at ContinuedOuterForLoopRepresentationTest.kt:19
+          a.toString(): "2" at ContinuedOuterForLoopRepresentationTest.kt:20
+          escape = "2" at ContinuedOuterForLoopRepresentationTest.kt:20
+      j = 3 at ContinuedOuterForLoopRepresentationTest.kt:17
+    <iteration 3> at ContinuedOuterForLoopRepresentationTest.kt:17
+      i = 1 at ContinuedOuterForLoopRepresentationTest.kt:18
+      loop(2 iterations) at ContinuedOuterForLoopRepresentationTest.kt:18
+        <iteration 1> at ContinuedOuterForLoopRepresentationTest.kt:18
+          a = 1 at ContinuedOuterForLoopRepresentationTest.kt:19
+          a.toString(): "1" at ContinuedOuterForLoopRepresentationTest.kt:20
+          escape = "1" at ContinuedOuterForLoopRepresentationTest.kt:20
+          escape = "1 is odd" at ContinuedOuterForLoopRepresentationTest.kt:24
+          i = 2 at ContinuedOuterForLoopRepresentationTest.kt:18
+        <iteration 2> at ContinuedOuterForLoopRepresentationTest.kt:18
+          a = 2 at ContinuedOuterForLoopRepresentationTest.kt:19
+          a.toString(): "2" at ContinuedOuterForLoopRepresentationTest.kt:20
+          escape = "2" at ContinuedOuterForLoopRepresentationTest.kt:20
+      j = 4 at ContinuedOuterForLoopRepresentationTest.kt:17
+  escape = "END" at ContinuedOuterForLoopRepresentationTest.kt:27

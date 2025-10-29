@@ -1,0 +1,16 @@
+# Thread 1
+SimpleDoWhileLoopRepresentationTest.operation() at :0
+  escape = "START" at SimpleDoWhileLoopRepresentationTest.kt:16
+  i = 2 at SimpleDoWhileLoopRepresentationTest.kt:17
+  loop(2 iterations) at SimpleDoWhileLoopRepresentationTest.kt:19
+    <iteration 1> at SimpleDoWhileLoopRepresentationTest.kt:19
+      a = 2 at SimpleDoWhileLoopRepresentationTest.kt:19
+      a.toString(): "2" at SimpleDoWhileLoopRepresentationTest.kt:20
+      escape = "2" at SimpleDoWhileLoopRepresentationTest.kt:20
+      i = 3 at SimpleDoWhileLoopRepresentationTest.kt:21
+    <iteration 2> at SimpleDoWhileLoopRepresentationTest.kt:19
+      a = 3 at SimpleDoWhileLoopRepresentationTest.kt:19
+      a.toString(): "3" at SimpleDoWhileLoopRepresentationTest.kt:20
+      escape = "3" at SimpleDoWhileLoopRepresentationTest.kt:20
+      i = 4 at SimpleDoWhileLoopRepresentationTest.kt:21
+  escape = "END" at SimpleDoWhileLoopRepresentationTest.kt:23

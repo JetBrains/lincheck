@@ -247,7 +247,7 @@ internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(): MethodLoop
             if (body.add(u)) stack.add(u)
             while (stack.isNotEmpty()) {
                 val x = stack.removeLast()
-                for (p in normalPredecessors.neighbours(x)) {
+                for (p in allPredecessors.neighbours(x)) {
                     if (body.add(p)) stack.add(p)
                 }
             }

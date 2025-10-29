@@ -48,13 +48,14 @@ internal class TraceRecorderMethodTransformer(
     override fun onMethodEnter() {
         super.onMethodEnter()
         invokeStatic(TraceRecorderInjections::startTraceRecorder)
-        // Start "try-finally block here to add stop & dump in "finally"
+        // Start the "try-finally" block here to add stop & dump in "finally"
         visitLabel(startLabel)
     }
 
     override fun onMethodExit(opcode: Int) {
-         invokeStatic(TraceRecorderInjections::stopTraceRecorderAndDumpTrace)
-         super.onMethodExit(opcode)
+        super.onMethodExit(opcode)
+        if (opcode == ATHROW) return
+        invokeStatic(TraceRecorderInjections::stopTraceRecorderAndDumpTrace)
     }
 
     override fun visitMaxs(maxStack: Int, maxLocals: Int) {
@@ -62,6 +63,7 @@ internal class TraceRecorderMethodTransformer(
         visitLabel(endLabel)
         visitTryCatchBlock(startLabel, endLabel, endLabel, null)
         // Handler
+        invokeStatic(TraceRecorderInjections::stopTraceRecorderAndDumpTrace)
         // STACK: Exception
         // This will call onMethodExit() too!
         visitInsn(ATHROW)

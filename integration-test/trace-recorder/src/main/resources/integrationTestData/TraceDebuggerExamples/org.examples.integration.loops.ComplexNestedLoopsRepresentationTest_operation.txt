@@ -1,0 +1,90 @@
+# Thread 1
+ComplexNestedLoopsRepresentationTest.operation() at :0
+  escape = "START" at ComplexNestedLoopsRepresentationTest.kt:19
+  i = 1 at ComplexNestedLoopsRepresentationTest.kt:21
+  loop(2 iterations) at ComplexNestedLoopsRepresentationTest.kt:21
+    <iteration 1> at ComplexNestedLoopsRepresentationTest.kt:21
+      a = 1 at ComplexNestedLoopsRepresentationTest.kt:22
+      escape = "for-1" at ComplexNestedLoopsRepresentationTest.kt:23
+      j = 1 at ComplexNestedLoopsRepresentationTest.kt:26
+      loop(2 iterations) at ComplexNestedLoopsRepresentationTest.kt:27
+        <iteration 1> at ComplexNestedLoopsRepresentationTest.kt:27
+          b = 1 at ComplexNestedLoopsRepresentationTest.kt:28
+          escape = "for-1-while-1" at ComplexNestedLoopsRepresentationTest.kt:29
+          k = 1 at ComplexNestedLoopsRepresentationTest.kt:32
+          loop(3 iterations) at ComplexNestedLoopsRepresentationTest.kt:34
+            <iteration 1> at ComplexNestedLoopsRepresentationTest.kt:34
+              c = 1 at ComplexNestedLoopsRepresentationTest.kt:34
+              escape = "for-1-while-1-dowhile-1" at ComplexNestedLoopsRepresentationTest.kt:35
+              k = 2 at ComplexNestedLoopsRepresentationTest.kt:36
+            <iteration 2> at ComplexNestedLoopsRepresentationTest.kt:34
+              c = 2 at ComplexNestedLoopsRepresentationTest.kt:34
+              escape = "for-1-while-1-dowhile-2" at ComplexNestedLoopsRepresentationTest.kt:35
+              k = 3 at ComplexNestedLoopsRepresentationTest.kt:36
+            <iteration 3> at ComplexNestedLoopsRepresentationTest.kt:34
+              c = 3 at ComplexNestedLoopsRepresentationTest.kt:34
+              escape = "for-1-while-1-dowhile-3" at ComplexNestedLoopsRepresentationTest.kt:35
+              k = 4 at ComplexNestedLoopsRepresentationTest.kt:36
+          j = 2 at ComplexNestedLoopsRepresentationTest.kt:39
+        <iteration 2> at ComplexNestedLoopsRepresentationTest.kt:27
+          b = 2 at ComplexNestedLoopsRepresentationTest.kt:28
+          escape = "for-1-while-2" at ComplexNestedLoopsRepresentationTest.kt:29
+          k = 1 at ComplexNestedLoopsRepresentationTest.kt:32
+          loop(3 iterations) at ComplexNestedLoopsRepresentationTest.kt:34
+            <iteration 1> at ComplexNestedLoopsRepresentationTest.kt:34
+              c = 1 at ComplexNestedLoopsRepresentationTest.kt:34
+              escape = "for-1-while-2-dowhile-1" at ComplexNestedLoopsRepresentationTest.kt:35
+              k = 2 at ComplexNestedLoopsRepresentationTest.kt:36
+            <iteration 2> at ComplexNestedLoopsRepresentationTest.kt:34
+              c = 2 at ComplexNestedLoopsRepresentationTest.kt:34
+              escape = "for-1-while-2-dowhile-2" at ComplexNestedLoopsRepresentationTest.kt:35
+              k = 3 at ComplexNestedLoopsRepresentationTest.kt:36
+            <iteration 3> at ComplexNestedLoopsRepresentationTest.kt:34
+              c = 3 at ComplexNestedLoopsRepresentationTest.kt:34
+              escape = "for-1-while-2-dowhile-3" at ComplexNestedLoopsRepresentationTest.kt:35
+              k = 4 at ComplexNestedLoopsRepresentationTest.kt:36
+          j = 3 at ComplexNestedLoopsRepresentationTest.kt:39
+      i = 2 at ComplexNestedLoopsRepresentationTest.kt:21
+    <iteration 2> at ComplexNestedLoopsRepresentationTest.kt:21
+      a = 2 at ComplexNestedLoopsRepresentationTest.kt:22
+      escape = "for-2" at ComplexNestedLoopsRepresentationTest.kt:23
+      j = 1 at ComplexNestedLoopsRepresentationTest.kt:26
+      loop(2 iterations) at ComplexNestedLoopsRepresentationTest.kt:27
+        <iteration 1> at ComplexNestedLoopsRepresentationTest.kt:27
+          b = 1 at ComplexNestedLoopsRepresentationTest.kt:28
+          escape = "for-2-while-1" at ComplexNestedLoopsRepresentationTest.kt:29
+          k = 1 at ComplexNestedLoopsRepresentationTest.kt:32
+          loop(3 iterations) at ComplexNestedLoopsRepresentationTest.kt:34
+            <iteration 1> at ComplexNestedLoopsRepresentationTest.kt:34
+              c = 1 at ComplexNestedLoopsRepresentationTest.kt:34
+              escape = "for-2-while-1-dowhile-1" at ComplexNestedLoopsRepresentationTest.kt:35
+              k = 2 at ComplexNestedLoopsRepresentationTest.kt:36
+            <iteration 2> at ComplexNestedLoopsRepresentationTest.kt:34
+              c = 2 at ComplexNestedLoopsRepresentationTest.kt:34
+              escape = "for-2-while-1-dowhile-2" at ComplexNestedLoopsRepresentationTest.kt:35
+              k = 3 at ComplexNestedLoopsRepresentationTest.kt:36
+            <iteration 3> at ComplexNestedLoopsRepresentationTest.kt:34
+              c = 3 at ComplexNestedLoopsRepresentationTest.kt:34
+              escape = "for-2-while-1-dowhile-3" at ComplexNestedLoopsRepresentationTest.kt:35
+              k = 4 at ComplexNestedLoopsRepresentationTest.kt:36
+          j = 2 at ComplexNestedLoopsRepresentationTest.kt:39
+        <iteration 2> at ComplexNestedLoopsRepresentationTest.kt:27
+          b = 2 at ComplexNestedLoopsRepresentationTest.kt:28
+          escape = "for-2-while-2" at ComplexNestedLoopsRepresentationTest.kt:29
+          k = 1 at ComplexNestedLoopsRepresentationTest.kt:32
+          loop(3 iterations) at ComplexNestedLoopsRepresentationTest.kt:34
+            <iteration 1> at ComplexNestedLoopsRepresentationTest.kt:34
+              c = 1 at ComplexNestedLoopsRepresentationTest.kt:34
+              escape = "for-2-while-2-dowhile-1" at ComplexNestedLoopsRepresentationTest.kt:35
+              k = 2 at ComplexNestedLoopsRepresentationTest.kt:36
+            <iteration 2> at ComplexNestedLoopsRepresentationTest.kt:34
+              c = 2 at ComplexNestedLoopsRepresentationTest.kt:34
+              escape = "for-2-while-2-dowhile-2" at ComplexNestedLoopsRepresentationTest.kt:35
+              k = 3 at ComplexNestedLoopsRepresentationTest.kt:36
+            <iteration 3> at ComplexNestedLoopsRepresentationTest.kt:34
+              c = 3 at ComplexNestedLoopsRepresentationTest.kt:34
+              escape = "for-2-while-2-dowhile-3" at ComplexNestedLoopsRepresentationTest.kt:35
+              k = 4 at ComplexNestedLoopsRepresentationTest.kt:36
+          j = 3 at ComplexNestedLoopsRepresentationTest.kt:39
+      i = 3 at ComplexNestedLoopsRepresentationTest.kt:21
+  escape = "END" at ComplexNestedLoopsRepresentationTest.kt:42

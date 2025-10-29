@@ -1,0 +1,15 @@
+# Thread 1
+EmptyForLoopRepresentationTest.operation() at :0
+  escape = "START" at EmptyForLoopRepresentationTest.kt:19
+  builder = "" at EmptyForLoopRepresentationTest.kt:20
+  i = 1 at EmptyForLoopRepresentationTest.kt:21
+  loop(2 iterations) at EmptyForLoopRepresentationTest.kt:21
+    <iteration 1> at EmptyForLoopRepresentationTest.kt:21
+      builder.append(i ➜ 1): "1" at EmptyForLoopRepresentationTest.kt:22
+      i = 2 at EmptyForLoopRepresentationTest.kt:21
+    <iteration 2> at EmptyForLoopRepresentationTest.kt:21
+      builder.append(i ➜ 2): "12" at EmptyForLoopRepresentationTest.kt:22
+      i = 3 at EmptyForLoopRepresentationTest.kt:21
+  builder.toString(): "12" at EmptyForLoopRepresentationTest.kt:24
+  escape = "12" at EmptyForLoopRepresentationTest.kt:24
+  escape = "END" at EmptyForLoopRepresentationTest.kt:25

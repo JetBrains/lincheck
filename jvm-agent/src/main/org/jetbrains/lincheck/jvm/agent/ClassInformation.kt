@@ -44,7 +44,6 @@ internal data class ClassInformation(
             lineRange = methodsToLineRanges[methodName + methodDesc] ?: (0 to 0),
             linesToMethodNames = linesToMethodNames,
             basicControlFlowGraph = basicCfgs[methodName + methodDesc]
-                ?: error("No CFG computed for method $methodName$methodDesc")
         )
 }
 

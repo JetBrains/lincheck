@@ -168,6 +168,20 @@ internal class LincheckClassVisitor(
             InlineMethodCallTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
         }
 
+        // ======== Loops ========
+        // TODO: we put loop transformer at the beginning of the chain,
+        //   because it relies on original bytecode instruction numeration
+        //   (it should match the instruction numeration in CFG).
+        //   The placement of this transformer in the chain should not actually matter,
+        //   because intermediate transformers should not affect downstream transformers in the chain,
+        //   as they should normally supply original bytecode to them
+        //   (and otherwise use singe `adapter` placed at the end of the chain to inject new bytecode).
+        //   But apparently this assumption is currently violated,
+        //   and most likely we have some bug in one of the transformers.
+        chain.addTransformer { adapter, mv ->
+            LoopTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+        }
+
         // ======== Analyzers ========
         chain.addAnalyzerAdapter(access, className, methodName, desc)
         chain.addOwnerNameAnalyzerAdapter(access, className, methodName, desc, methodInfo)

@@ -1,0 +1,43 @@
+# Thread 1
+ListBreakedForLoopRepresentationTest.operation() at :0
+  escape = "START" at ListBreakedForLoopRepresentationTest.kt:16
+  Integer;@1[0] = 1 at ListBreakedForLoopRepresentationTest.kt:17
+  Integer;@1[1] = 2 at ListBreakedForLoopRepresentationTest.kt:17
+  Integer;@1[2] = 3 at ListBreakedForLoopRepresentationTest.kt:17
+  Integer;@1[3] = 4 at ListBreakedForLoopRepresentationTest.kt:17
+  listOf(Integer;@1): Arrays.ArrayList@1 at ListBreakedForLoopRepresentationTest.kt:17
+  list = Arrays.ArrayList@1 at ListBreakedForLoopRepresentationTest.kt:17
+  list.iterator(): Arrays.ArrayItr@1 at ListBreakedForLoopRepresentationTest.kt:18
+  loop(4 iterations) at ListBreakedForLoopRepresentationTest.kt:18
+    <iteration 1> at ListBreakedForLoopRepresentationTest.kt:18
+      Arrays.ArrayItr@1.hasNext(): true at ListBreakedForLoopRepresentationTest.kt:18
+      Arrays.ArrayItr@1.next(): 1 at ListBreakedForLoopRepresentationTest.kt:18
+      i = 1 at ListBreakedForLoopRepresentationTest.kt:18
+      a = 1 at ListBreakedForLoopRepresentationTest.kt:19
+      a.toString(): "1" at ListBreakedForLoopRepresentationTest.kt:20
+      escape = "1" at ListBreakedForLoopRepresentationTest.kt:20
+      escape = "1 is saved" at ListBreakedForLoopRepresentationTest.kt:24
+    <iteration 2> at ListBreakedForLoopRepresentationTest.kt:18
+      Arrays.ArrayItr@1.hasNext(): true at ListBreakedForLoopRepresentationTest.kt:18
+      Arrays.ArrayItr@1.next(): 2 at ListBreakedForLoopRepresentationTest.kt:18
+      i = 2 at ListBreakedForLoopRepresentationTest.kt:18
+      a = 2 at ListBreakedForLoopRepresentationTest.kt:19
+      a.toString(): "2" at ListBreakedForLoopRepresentationTest.kt:20
+      escape = "2" at ListBreakedForLoopRepresentationTest.kt:20
+      escape = "2 is saved" at ListBreakedForLoopRepresentationTest.kt:24
+    <iteration 3> at ListBreakedForLoopRepresentationTest.kt:18
+      Arrays.ArrayItr@1.hasNext(): true at ListBreakedForLoopRepresentationTest.kt:18
+      Arrays.ArrayItr@1.next(): 3 at ListBreakedForLoopRepresentationTest.kt:18
+      i = 3 at ListBreakedForLoopRepresentationTest.kt:18
+      a = 3 at ListBreakedForLoopRepresentationTest.kt:19
+      a.toString(): "3" at ListBreakedForLoopRepresentationTest.kt:20
+      escape = "3" at ListBreakedForLoopRepresentationTest.kt:20
+      escape = "3 is saved" at ListBreakedForLoopRepresentationTest.kt:24
+    <iteration 4> at ListBreakedForLoopRepresentationTest.kt:18
+      Arrays.ArrayItr@1.hasNext(): true at ListBreakedForLoopRepresentationTest.kt:18
+      Arrays.ArrayItr@1.next(): 4 at ListBreakedForLoopRepresentationTest.kt:18
+      i = 4 at ListBreakedForLoopRepresentationTest.kt:18
+      a = 4 at ListBreakedForLoopRepresentationTest.kt:19
+      a.toString(): "4" at ListBreakedForLoopRepresentationTest.kt:20
+      escape = "4" at ListBreakedForLoopRepresentationTest.kt:20
+  escape = "END" at ListBreakedForLoopRepresentationTest.kt:26

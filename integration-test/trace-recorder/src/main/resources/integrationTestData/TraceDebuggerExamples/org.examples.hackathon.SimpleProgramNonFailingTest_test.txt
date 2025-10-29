@@ -8,11 +8,14 @@ SimpleProgramNonFailingTest.test() at :0
   sum(numbers): 3 at SimpleProgramNonFailingTest.kt:10
     sum = 0 at SimpleProgramNonFailingTest.kt:20
     i = 0 at SimpleProgramNonFailingTest.kt:21
-    numbers.get(i ➜ 0): 1 at SimpleProgramNonFailingTest.kt:22
-    sum = 1 at SimpleProgramNonFailingTest.kt:22
-    i = 1 at SimpleProgramNonFailingTest.kt:21
-    numbers.get(i ➜ 1): 2 at SimpleProgramNonFailingTest.kt:22
-    sum = 3 at SimpleProgramNonFailingTest.kt:22
-    i = 2 at SimpleProgramNonFailingTest.kt:21
+    loop(2 iterations) at SimpleProgramNonFailingTest.kt:21
+      <iteration 1> at SimpleProgramNonFailingTest.kt:21
+        numbers.get(i ➜ 0): 1 at SimpleProgramNonFailingTest.kt:22
+        sum = 1 at SimpleProgramNonFailingTest.kt:22
+        i = 1 at SimpleProgramNonFailingTest.kt:21
+      <iteration 2> at SimpleProgramNonFailingTest.kt:21
+        numbers.get(i ➜ 1): 2 at SimpleProgramNonFailingTest.kt:22
+        sum = 3 at SimpleProgramNonFailingTest.kt:22
+        i = 2 at SimpleProgramNonFailingTest.kt:21
   sum = 3 at SimpleProgramNonFailingTest.kt:10
   Assertions.assertEquals(6, sum ➜ 3): threw AssertionFailedError at SimpleProgramNonFailingTest.kt:12

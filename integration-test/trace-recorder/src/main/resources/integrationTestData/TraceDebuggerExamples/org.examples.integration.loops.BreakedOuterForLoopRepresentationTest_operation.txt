@@ -1,0 +1,57 @@
+# Thread 1
+BreakedOuterForLoopRepresentationTest.operation() at :0
+  escape = "START" at BreakedOuterForLoopRepresentationTest.kt:17
+  k = 0 at BreakedOuterForLoopRepresentationTest.kt:18
+  loop(3 iterations) at BreakedOuterForLoopRepresentationTest.kt:18
+    <iteration 1> at BreakedOuterForLoopRepresentationTest.kt:18
+      j = 1 at BreakedOuterForLoopRepresentationTest.kt:19
+      loop(1 iterations) at BreakedOuterForLoopRepresentationTest.kt:19
+        <iteration 1> at BreakedOuterForLoopRepresentationTest.kt:19
+          i = 1 at BreakedOuterForLoopRepresentationTest.kt:20
+          loop(2 iterations) at BreakedOuterForLoopRepresentationTest.kt:20
+            <iteration 1> at BreakedOuterForLoopRepresentationTest.kt:20
+              a = 1 at BreakedOuterForLoopRepresentationTest.kt:21
+              a.toString(): "1" at BreakedOuterForLoopRepresentationTest.kt:22
+              escape = "1" at BreakedOuterForLoopRepresentationTest.kt:22
+              escape = "1 is odd" at BreakedOuterForLoopRepresentationTest.kt:26
+              i = 2 at BreakedOuterForLoopRepresentationTest.kt:20
+            <iteration 2> at BreakedOuterForLoopRepresentationTest.kt:20
+              a = 2 at BreakedOuterForLoopRepresentationTest.kt:21
+              a.toString(): "2" at BreakedOuterForLoopRepresentationTest.kt:22
+              escape = "2" at BreakedOuterForLoopRepresentationTest.kt:22
+      k = 1 at BreakedOuterForLoopRepresentationTest.kt:18
+    <iteration 2> at BreakedOuterForLoopRepresentationTest.kt:18
+      j = 1 at BreakedOuterForLoopRepresentationTest.kt:19
+      loop(1 iterations) at BreakedOuterForLoopRepresentationTest.kt:19
+        <iteration 1> at BreakedOuterForLoopRepresentationTest.kt:19
+          i = 1 at BreakedOuterForLoopRepresentationTest.kt:20
+          loop(2 iterations) at BreakedOuterForLoopRepresentationTest.kt:20
+            <iteration 1> at BreakedOuterForLoopRepresentationTest.kt:20
+              a = 1 at BreakedOuterForLoopRepresentationTest.kt:21
+              a.toString(): "1" at BreakedOuterForLoopRepresentationTest.kt:22
+              escape = "1" at BreakedOuterForLoopRepresentationTest.kt:22
+              escape = "1 is odd" at BreakedOuterForLoopRepresentationTest.kt:26
+              i = 2 at BreakedOuterForLoopRepresentationTest.kt:20
+            <iteration 2> at BreakedOuterForLoopRepresentationTest.kt:20
+              a = 2 at BreakedOuterForLoopRepresentationTest.kt:21
+              a.toString(): "2" at BreakedOuterForLoopRepresentationTest.kt:22
+              escape = "2" at BreakedOuterForLoopRepresentationTest.kt:22
+      k = 2 at BreakedOuterForLoopRepresentationTest.kt:18
+    <iteration 3> at BreakedOuterForLoopRepresentationTest.kt:18
+      j = 1 at BreakedOuterForLoopRepresentationTest.kt:19
+      loop(1 iterations) at BreakedOuterForLoopRepresentationTest.kt:19
+        <iteration 1> at BreakedOuterForLoopRepresentationTest.kt:19
+          i = 1 at BreakedOuterForLoopRepresentationTest.kt:20
+          loop(2 iterations) at BreakedOuterForLoopRepresentationTest.kt:20
+            <iteration 1> at BreakedOuterForLoopRepresentationTest.kt:20
+              a = 1 at BreakedOuterForLoopRepresentationTest.kt:21
+              a.toString(): "1" at BreakedOuterForLoopRepresentationTest.kt:22
+              escape = "1" at BreakedOuterForLoopRepresentationTest.kt:22
+              escape = "1 is odd" at BreakedOuterForLoopRepresentationTest.kt:26
+              i = 2 at BreakedOuterForLoopRepresentationTest.kt:20
+            <iteration 2> at BreakedOuterForLoopRepresentationTest.kt:20
+              a = 2 at BreakedOuterForLoopRepresentationTest.kt:21
+              a.toString(): "2" at BreakedOuterForLoopRepresentationTest.kt:22
+              escape = "2" at BreakedOuterForLoopRepresentationTest.kt:22
+      k = 3 at BreakedOuterForLoopRepresentationTest.kt:18
+  escape = "END" at BreakedOuterForLoopRepresentationTest.kt:30

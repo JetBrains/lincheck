@@ -1,0 +1,19 @@
+# Thread 1
+ForLoopWithTryCatchRepresentationTest.operation() at :0
+  escape = "START" at ForLoopWithTryCatchRepresentationTest.kt:26
+  i = 1 at ForLoopWithTryCatchRepresentationTest.kt:27
+  loop(3 iterations) at ForLoopWithTryCatchRepresentationTest.kt:27
+    <iteration 1> at ForLoopWithTryCatchRepresentationTest.kt:27
+      a = 1 at ForLoopWithTryCatchRepresentationTest.kt:28
+      escape = "try-1" at ForLoopWithTryCatchRepresentationTest.kt:33
+      i = 2 at ForLoopWithTryCatchRepresentationTest.kt:27
+    <iteration 2> at ForLoopWithTryCatchRepresentationTest.kt:27
+      a = 2 at ForLoopWithTryCatchRepresentationTest.kt:28
+      e = RuntimeException@1 at ForLoopWithTryCatchRepresentationTest.kt:34
+      escape = "catch-2" at ForLoopWithTryCatchRepresentationTest.kt:35
+      i = 3 at ForLoopWithTryCatchRepresentationTest.kt:27
+    <iteration 3> at ForLoopWithTryCatchRepresentationTest.kt:27
+      a = 3 at ForLoopWithTryCatchRepresentationTest.kt:28
+      escape = "try-3" at ForLoopWithTryCatchRepresentationTest.kt:33
+      i = 4 at ForLoopWithTryCatchRepresentationTest.kt:27
+  escape = "END" at ForLoopWithTryCatchRepresentationTest.kt:38

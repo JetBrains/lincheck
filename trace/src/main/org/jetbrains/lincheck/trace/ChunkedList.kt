@@ -16,7 +16,7 @@ private const val CHUNK_SIZE = 1024
 private const val CHUNK_SHIFT = 10 // log2(CHUNK_SIZE)
 private const val CHUNK_MASK = (1 shl CHUNK_SHIFT) - 1
 
-internal class ChunkedList<T>: List<T?>, RandomAccess {
+class ChunkedList<T>: List<T?>, RandomAccess {
     private var totalSize: Int = 0
     private val chunks: MutableList<MutableList<T?>?> = ArrayList()
 
