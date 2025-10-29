@@ -299,6 +299,7 @@ internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(): MethodLoop
  */
 internal fun BasicBlockControlFlowGraph.isReducible(): Boolean {
     val n = basicBlocks.size
+    if (n == 0) return true
     val backEdges = backEdges
     require(backEdges != null) { "Back edges must be computed before checking reducibility" }
     // Calculate successors for each basic block (excluding back edges)

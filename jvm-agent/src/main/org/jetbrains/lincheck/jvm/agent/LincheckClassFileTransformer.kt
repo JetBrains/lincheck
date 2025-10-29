@@ -195,10 +195,9 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             val cfg = if (isAbstractOrNative) {
                 emptyControlFlowGraph()
             } else {
-                buildControlFlowGraph(classNode.name, m).apply {
-                    computeLoopInformation()
-                }
+                buildControlFlowGraph(classNode.name, m)
             }
+            cfg.computeLoopInformation()
             key to cfg
         }.toMap()
     }
