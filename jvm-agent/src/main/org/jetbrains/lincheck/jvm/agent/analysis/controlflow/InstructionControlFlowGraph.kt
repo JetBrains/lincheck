@@ -10,6 +10,9 @@
 
 package org.jetbrains.lincheck.jvm.agent.analysis.controlflow
 
+import org.jetbrains.lincheck.descriptors.MethodSignature
+import org.jetbrains.lincheck.jvm.agent.toCanonicalClassName
+import org.jetbrains.lincheck.trace.UNKNOWN_METHOD_TYPE
 import org.objectweb.asm.tree.InsnList
 
 /**
@@ -23,6 +26,6 @@ typealias InstructionIndex = Int
  * Each node in the graph represents an instruction of the method, stored as an instruction index.
  * Each edge in the graph represents a control flow transition between two instructions.
  */
-class InstructionControlFlowGraph(val instructions: InsnList) : ControlFlowGraph() {
-    constructor() : this(InsnList())
+class InstructionControlFlowGraph(val instructions: InsnList, className: String, method: MethodSignature) : ControlFlowGraph(className.toCanonicalClassName(), method) {
+    constructor() : this(InsnList(), "<unknown>", MethodSignature("<unknown>", UNKNOWN_METHOD_TYPE))
 }

@@ -193,7 +193,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             val key = m.name + m.desc
             val isAbstractOrNative = (m.access and (Opcodes.ACC_ABSTRACT or Opcodes.ACC_NATIVE)) != 0
             val cfg = if (isAbstractOrNative) {
-                emptyControlFlowGraph()
+                emptyControlFlowGraph(classNode.name, m)
             } else {
                 buildControlFlowGraph(classNode.name, m)
             }

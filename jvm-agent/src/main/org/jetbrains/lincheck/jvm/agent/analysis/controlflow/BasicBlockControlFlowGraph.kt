@@ -10,6 +10,8 @@
 
 package org.jetbrains.lincheck.jvm.agent.analysis.controlflow
 
+import org.jetbrains.lincheck.descriptors.MethodSignature
+import org.jetbrains.lincheck.jvm.agent.toCanonicalClassName
 import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.Label
 import org.objectweb.asm.tree.*
@@ -71,7 +73,9 @@ typealias InstructionsRange = IntRange
 class BasicBlockControlFlowGraph(
     val instructions: InsnList,
     val basicBlocks: List<BasicBlock>,
-) : ControlFlowGraph() {
+    className: String,
+    method: MethodSignature
+) : ControlFlowGraph(className.toCanonicalClassName(), method) {
 
     init {
         validateStructure()
@@ -169,7 +173,7 @@ class BasicBlockControlFlowGraph(
                 isReducible = false
                 // CFG is irreducible, our loop calculation algorithm will not work with it
                 // so we report that fact and don't compute any loop information
-                Logger.warn { "Irreducible CFG detected, loop information will not be computed:\n${toFormattedString()}" }
+                Logger.warn { "Irreducible CFG detected, loop information will not be computed for $className::$method\n${toFormattedString()}" }
                 loopInfo = MethodLoopsInformation()
             }
         }
@@ -318,7 +322,7 @@ fun InstructionControlFlowGraph.toBasicBlockGraph(): BasicBlockControlFlowGraph 
     }
     
     // Project instruction edges onto basic blocks.
-    val basicBlockGraph = BasicBlockControlFlowGraph(instructions, basicBlocks)
+    val basicBlockGraph = BasicBlockControlFlowGraph(instructions, basicBlocks, className, method)
     for ((u, edges) in allSuccessors) {
         val bu = instructionToBlock[u] ?: continue
         for (edge in edges) {

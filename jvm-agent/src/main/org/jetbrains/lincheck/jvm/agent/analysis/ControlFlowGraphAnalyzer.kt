@@ -10,6 +10,8 @@
 
 package org.jetbrains.lincheck.jvm.agent.analysis
 
+import org.jetbrains.lincheck.descriptors.MethodSignature
+import org.jetbrains.lincheck.descriptors.Types.convertAsmMethodType
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.*
 import org.objectweb.asm.tree.InsnList
 import org.objectweb.asm.tree.MethodNode
@@ -32,7 +34,7 @@ class ControlFlowGraphAnalyzer : Analyzer<BasicValue> {
 
     override fun init(owner: String, method: MethodNode) {
         super.init(owner, method)
-        graph = InstructionControlFlowGraph(method.instructions)
+        graph = InstructionControlFlowGraph(method.instructions, owner, method.toMethodSignature())
     }
 
     override fun newControlFlowEdge(src: Int, dst: Int) {
@@ -96,8 +98,8 @@ class ControlFlowGraphAnalyzer : Analyzer<BasicValue> {
     }
 }
 
-fun emptyControlFlowGraph(): BasicBlockControlFlowGraph =
-    BasicBlockControlFlowGraph(InsnList(), emptyList())
+fun emptyControlFlowGraph(owner: String, method: MethodNode): BasicBlockControlFlowGraph =
+    BasicBlockControlFlowGraph(InsnList(), emptyList(), owner, method.toMethodSignature())
 
 fun ControlFlowGraphAnalyzer.buildControlFlowGraph(owner: String, method: MethodNode): BasicBlockControlFlowGraph {
     analyze(owner, method)
@@ -107,3 +109,6 @@ fun ControlFlowGraphAnalyzer.buildControlFlowGraph(owner: String, method: Method
 fun buildControlFlowGraph(owner: String, method: MethodNode): BasicBlockControlFlowGraph {
     return ControlFlowGraphAnalyzer().buildControlFlowGraph(owner, method)
 }
+
+private fun MethodNode.toMethodSignature() =
+    MethodSignature(name, convertAsmMethodType(desc))
