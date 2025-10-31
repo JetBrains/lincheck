@@ -10,6 +10,7 @@
 
 package org.jetbrains.lincheck.jvm.agent.analysis.controlflow
 
+import org.jetbrains.lincheck.descriptors.MethodSignature
 import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.AbstractInsnNode
@@ -149,7 +150,7 @@ fun AdjacencyMap.neighbours(idx: NodeIndex): Iterable<NodeIndex> = (this[idx]?.m
  * - each node represents an instruction or basic block;
  * - edges denote possible transitions in method execution, either regular or exceptional.
  */
-sealed class ControlFlowGraph {
+sealed class ControlFlowGraph(val className: String, val method: MethodSignature) {
 
     /**
      * Nodes (instruction or basic-block indices) of the control flow graph.
