@@ -14,6 +14,7 @@ import org.jetbrains.lincheck.analysis.ShadowStackFrame
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.trace.TRACE_CONTEXT
 import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent
+import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent.ensureClassHierarchyIsTransformed
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.trace.TRMethodCallTracePoint.Companion.INCOMPLETE_METHOD_FLAG
@@ -563,8 +564,13 @@ class TraceCollectingEventTracker(
             return null
         }
 
-        if (receiver == null && methodSection < AnalysisSectionType.ATOMIC) {
-            LincheckJavaAgent.ensureClassHierarchyIsTransformed(methodDescriptor.className)
+        if (methodSection < AnalysisSectionType.ATOMIC) {
+            val javaClass = receiver?.javaClass
+            if (javaClass != null) {
+                ensureClassHierarchyIsTransformed(javaClass)
+            } else {
+                ensureClassHierarchyIsTransformed(methodDescriptor.className)
+            }
         }
 
         val tracePoint = TRMethodCallTracePoint(
