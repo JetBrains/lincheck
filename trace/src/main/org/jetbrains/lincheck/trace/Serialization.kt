@@ -17,11 +17,14 @@ import org.jetbrains.lincheck.descriptors.ClassDescriptor
 import org.jetbrains.lincheck.descriptors.FieldDescriptor
 import org.jetbrains.lincheck.descriptors.MethodDescriptor
 import org.jetbrains.lincheck.descriptors.VariableDescriptor
+import org.jetbrains.lincheck.util.Logger
 import java.io.*
 import java.nio.ByteBuffer
 import java.nio.file.Files
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
+
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlin.io.path.Path
@@ -744,6 +747,33 @@ class MemoryTraceCollecting(private val context: TraceContext): TraceCollectingS
     override fun traceEnded() {}
 }
 
+class NullTraceCollecting(private val context: TraceContext): TraceCollectingStrategy {
+    val points = AtomicLong(0)
+
+    override fun registerCurrentThread(threadId: Int) {
+        context.setThreadName(threadId, Thread.currentThread().name)
+    }
+
+    override fun completeThread(thread: Thread) {}
+
+    override fun tracePointCreated(
+        parent: TRContainerTracePoint?,
+        created: TRTracePoint
+    ) {
+        points.incrementAndGet()
+    }
+
+    override fun completeContainerTracePoint(thread: Thread, container: TRContainerTracePoint) {}
+
+    /**
+     * Do nothing.
+     * Trace collected in memory can be saved by external means, if needed.
+     */
+    override fun traceEnded() {
+        Logger.info { "Collected ${points.get()} points" }
+    }
+}
+
 class FileStreamingTraceCollecting(
     dataStream: OutputStream,
     indexStream: OutputStream,
@@ -948,8 +978,8 @@ fun packRecordedTrace(baseFileName: String, metaInfo: TraceMetaInfo, deleteSourc
             var input: InputStream
 
             // Don't compress for now, but STORED requires pre-compute CRC32, and we don't want to do it.
-            zip.setMethod(ZipOutputStream.DEFLATED);
-            zip.setLevel(0);
+            zip.setMethod(ZipOutputStream.DEFLATED)
+            zip.setLevel(0)
 
             // Store metadata first
             zip.putNextEntry(ZipEntry(PACKED_META_ITEM_NAME))

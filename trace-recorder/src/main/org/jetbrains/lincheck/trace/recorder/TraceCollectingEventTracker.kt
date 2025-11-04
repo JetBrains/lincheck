@@ -165,7 +165,12 @@ enum class TraceCollectorMode {
      * Collect full trace in memory and print it as text to the output file,
      * with code locations.
      */
-    TEXT_VERBOSE
+    TEXT_VERBOSE,
+
+    /**
+     * Throw away all data, for benchmarking purposes
+     */
+    NULL
 }
 
 fun parseOutputMode(outputMode: String?, outputOption: String?): TraceCollectorMode {
@@ -182,6 +187,8 @@ fun parseOutputMode(outputMode: String?, outputOption: String?): TraceCollectorM
         } else {
             return TraceCollectorMode.TEXT
         }
+    } else if ("null".equals(outputMode, true)) {
+        return TraceCollectorMode.NULL
     } else {
         // Default
         return TraceCollectorMode.BINARY_STREAM
@@ -223,6 +230,9 @@ class TraceCollectingEventTracker(
             TraceCollectorMode.BINARY_DUMP -> {
                 check(traceDumpPath != null) { "Binary output type needs non-empty output file name" }
                 strategy = MemoryTraceCollecting(TRACE_CONTEXT)
+            }
+            TraceCollectorMode.NULL -> {
+                strategy = NullTraceCollecting(TRACE_CONTEXT)
             }
             else -> {
                 strategy = MemoryTraceCollecting(TRACE_CONTEXT)
@@ -976,12 +986,15 @@ class TraceCollectingEventTracker(
                 TraceCollectorMode.TEXT -> printPostProcessedTrace(traceDumpPath, TRACE_CONTEXT, roots, false)
                 TraceCollectorMode.TEXT_VERBOSE -> printPostProcessedTrace(traceDumpPath, TRACE_CONTEXT, roots, true)
                 TraceCollectorMode.BINARY_STREAM -> {}
+                TraceCollectorMode.NULL -> {}
             }
         } catch (t: Throwable) {
             System.err.println("TraceRecorder: Cannot write output file $traceDumpPath: ${t.message} at ${t.stackTraceToString()}")
             return
         } finally {
-            System.err.println("Trace dumped in ${System.currentTimeMillis() - startTime} ms")
+            if (mode != TraceCollectorMode.NULL) {
+                System.err.println("Trace dumped in ${System.currentTimeMillis() - startTime} ms")
+            }
         }
     }
 
