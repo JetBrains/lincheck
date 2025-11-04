@@ -592,6 +592,7 @@ class TraceCollectingEventTracker(
     ): Any? = runInsideInjectedCode(result) {
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return result
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return result
+        val thread = Thread.currentThread()
         val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
 
         val methodSection = methodAnalysisSectionType(receiver, methodDescriptor.className, methodDescriptor.methodName)
@@ -604,7 +605,7 @@ class TraceCollectingEventTracker(
         //  The inline methods should be closed after closing the loops inside them.
         // close all existing loops
         while (threadData.currentLoopTracePoint() != null) {
-            exitCurrentLoop(threadData)
+            exitCurrentLoop(thread, threadData)
         }
 
         while (threadData.isCurrentMethodCallInline()) {
@@ -627,7 +628,7 @@ class TraceCollectingEventTracker(
         }
 
         tracePoint.result = TRObjectOrVoid(result)
-        strategy.completeContainerTracePoint(Thread.currentThread(), tracePoint)
+        strategy.completeContainerTracePoint(thread, tracePoint)
 
         threadData.leaveAnalysisSection(methodSection)
 
@@ -644,6 +645,7 @@ class TraceCollectingEventTracker(
     ): Throwable = runInsideInjectedCode(t) {
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return t
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return t
+        val thread = Thread.currentThread()
         val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
 
         val methodSection = methodAnalysisSectionType(receiver, methodDescriptor.className, methodDescriptor.methodName)
@@ -656,7 +658,7 @@ class TraceCollectingEventTracker(
         //  The inline methods should be closed after closing the loops inside them.
         // close all existing loops
         while (threadData.currentLoopTracePoint() != null) {
-            exitCurrentLoop(threadData)
+            exitCurrentLoop(thread, threadData)
         }
 
         while (threadData.isCurrentMethodCallInline()) {
@@ -679,7 +681,7 @@ class TraceCollectingEventTracker(
         }
 
         tracePoint.setExceptionResult(t)
-        strategy.completeContainerTracePoint(Thread.currentThread(), tracePoint)
+        strategy.completeContainerTracePoint(thread, tracePoint)
 
         threadData.leaveAnalysisSection(methodSection)
 
@@ -739,7 +741,7 @@ class TraceCollectingEventTracker(
         strategy.completeContainerTracePoint(Thread.currentThread(), tracePoint)
     }
 
-    override fun onLoopIteration(codeLocation: Int, loopId: Int) {
+    override fun onLoopIteration(codeLocation: Int, loopId: Int) = runInsideInjectedCode {
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
@@ -775,10 +777,11 @@ class TraceCollectingEventTracker(
         loopId: Int,
         exception: Throwable?,
         canEnterFromOutsideLoop: Boolean
-    ) {
+    ) = runInsideInjectedCode {
         // TODO: should we do something about exception?
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
+        val thread = Thread.currentThread()
 
         if (!canEnterFromOutsideLoop) {
             val currentLoopTracePoint = threadData.currentLoopTracePoint()!!
@@ -786,25 +789,24 @@ class TraceCollectingEventTracker(
             check(currentLoopTracePoint.loopId == loopId) {
                 "Unexpected loop exit: expected loopId ${currentLoopTracePoint.loopId}, but was $loopId"
             }
-            exitCurrentLoop(threadData)
+            exitCurrentLoop(thread, threadData)
         } else {
             if (threadData.currentLoopTracePoint()?.loopId != loopId) return
             do {
                 val currentLoopTracePoint = threadData.currentLoopTracePoint() ?: break
-                exitCurrentLoop(threadData)
+                exitCurrentLoop(thread, threadData)
             }
             while (currentLoopTracePoint.loopId != loopId)
         }
     }
 
     /**
-     * Method takes the currently open loop trace point and finishes
+     * Method takes the currently open loop trace point in [thread] and finishes
      * its last open iteration (if it exists) and then the loop itself.
      *
-     * Note: assumes there is an open loop trace point.
+     * Note: assumes there is an open loop trace point in the provided thread.
      */
-    private fun exitCurrentLoop(threadData: ThreadData) {
-        val thread = Thread.currentThread()
+    private fun exitCurrentLoop(thread: Thread, threadData: ThreadData) {
         val currentLoopTracePoint = threadData.currentLoopTracePoint() ?: error("No loop trace point exists")
         val currentLoopIterationTracePoint = threadData.currentLoopIterationTracePoint()
 
@@ -879,11 +881,26 @@ class TraceCollectingEventTracker(
         spinner.spinWaitUntil { !threadDescriptor.isInsideInjectedCode }
         // now, we are sure that another thread has finished its injected code
         // and will not attempt to execute anything else, because we disabled analysis in it
-        val stackFrames = threadData.getStack().asReversed()
-        stackFrames.forEach { frame ->
+        val stack = threadData.getStack()
+        while (stack.isNotEmpty()) {
+            val frame = stack.last()
             val tracePoint = frame.call
+            // complete all open loops with their last iterations
+            while (threadData.currentLoopTracePoint() != null) {
+                exitCurrentLoop(thread, threadData)
+            }
+            // complete the method call
             tracePoint.result = TR_OBJECT_UNFINISHED_METHOD_RESULT
             strategy.completeContainerTracePoint(thread, tracePoint)
+            // do not pop the last method call in order for 'text' tracing mode to work
+            // it is used for debugging in the `TRPlayground.kt` file
+            if (stack.size != 1) {
+                threadData.popStackFrame() // remove the current frame from the stack
+            } else {
+                // basically, the last `Thread.run()` call is preserved as a root node
+                // for 'text' tracing mode to work properly
+                break
+            }
         }
         strategy.completeThread(thread)
     }
