@@ -66,7 +66,7 @@ data class TraceMetaInfo private constructor(
     val methodName: String,
     val startTime: Long
 ) {
-    var endTime: Long = 1
+    var endTime: Long = -1
         private set
 
     private val props: MutableMap<String, String> = mutableMapOf()
