@@ -1005,4 +1005,8 @@ class TraceCollectingEventTracker(
         }
         return analysisProfile.getAnalysisSectionFor(ownerName, methodName)
     }
+
+    override fun ensureClassHierarchyIsTransformed(clazz: Class<*>) {
+        LincheckJavaAgent.ensureClassHierarchyIsTransformed(clazz)
+    }
 }

@@ -2356,6 +2356,10 @@ internal abstract class ManagedStrategy(
     fun enumerateObjects(): Map<Any, Int> {
         return objectTracker.enumerateAllObjects()
     }
+
+    override fun ensureClassHierarchyIsTransformed(clazz: Class<*>) {
+        LincheckJavaAgent.ensureClassHierarchyIsTransformed(clazz)
+    }
 }
 
 private fun TracePoint.isActorMethodCallTracePoint() =

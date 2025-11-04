@@ -777,4 +777,8 @@ public class Injections {
         }
         return lookUpPrivateConstructor.newInstance(callerClass, -1);
     }
+    
+    public static void ensureClassHierarchyIsTransformed(Class<?> clazz) {
+        getEventTracker().ensureClassHierarchyIsTransformed(clazz);
+    }
 }

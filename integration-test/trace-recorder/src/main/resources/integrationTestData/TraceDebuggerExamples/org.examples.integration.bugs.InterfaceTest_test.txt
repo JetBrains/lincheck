@@ -1,0 +1,34 @@
+# Thread 1
+InterfaceTest.test() at :0
+  getInterface1(): InterfaceImpl1@1 at InterfaceTest.kt:70
+    getClassName(1): "org.examples.integration.bugs.InterfaceImpl1" at InterfaceTest.kt:57
+    Class.forName("org.examples.integration.bugs.InterfaceImpl1"): Class@1 at InterfaceTest.kt:57
+    Class@1.getDeclaredConstructor(Class;@1): Constructor@1 at InterfaceTest.kt:57
+    Constructor@1.newInstance(Object;@1): InterfaceImpl1@1 at InterfaceTest.kt:57
+  i1 = InterfaceImpl1@1 at InterfaceTest.kt:70
+  i1.method() at InterfaceTest.kt:71
+    f() at InterfaceTest.kt:14
+  getInterface2(): InterfaceImpl2@1 at InterfaceTest.kt:72
+    getClassName(2): "org.examples.integration.bugs.InterfaceImpl2" at InterfaceTest.kt:58
+    InterfaceTestKt.classLoader.loadClass("org.examples.integration.bugs.InterfaceImpl2"): Class@1 at InterfaceTest.kt:58
+    Class@1.getDeclaredConstructor(Class;@1): Constructor@1 at InterfaceTest.kt:58
+    Constructor@1.newInstance(Object;@1): InterfaceImpl2@1 at InterfaceTest.kt:58
+  i2 = InterfaceImpl2@1 at InterfaceTest.kt:72
+  i2.method() at InterfaceTest.kt:73
+    f() at InterfaceTest.kt:21
+  getInterface3(): InterfaceImpl3@1 at InterfaceTest.kt:74
+    getClassName(3): "org.examples.integration.bugs.InterfaceImpl3" at InterfaceTest.kt:59
+    MyClassLoader@1.loadClass("org.examples.integration.bugs.InterfaceImpl3"): Class@1 at InterfaceTest.kt:59
+    Class@1.getDeclaredConstructor(Class;@1): Constructor@1 at InterfaceTest.kt:59
+    Constructor@1.newInstance(Object;@1): InterfaceImpl3@1 at InterfaceTest.kt:59
+  i3 = InterfaceImpl3@1 at InterfaceTest.kt:74
+  i3.method() at InterfaceTest.kt:75
+    f() at InterfaceTest.kt:28
+  getInterface4(): InterfaceImpl4@1 at InterfaceTest.kt:76
+    getClassName(4): "org.examples.integration.bugs.InterfaceImpl4" at InterfaceTest.kt:60
+    MyClassLoader@1.loadClass("org.examples.integration.bugs.InterfaceImpl4", true): Class@1 at InterfaceTest.kt:60
+    Class@1.getDeclaredConstructor(Class;@1): Constructor@1 at InterfaceTest.kt:60
+    Constructor@1.newInstance(Object;@1): InterfaceImpl4@1 at InterfaceTest.kt:60
+  i4 = InterfaceImpl4@1 at InterfaceTest.kt:76
+  i4.method() at InterfaceTest.kt:77
+    f() at InterfaceTest.kt:35

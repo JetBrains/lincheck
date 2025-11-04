@@ -16,6 +16,7 @@ import org.jetbrains.lincheck.descriptors.OwnerName
 import org.jetbrains.lincheck.util.isInLincheckPackage
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.INVOKESTATIC
+import org.objectweb.asm.Opcodes.INVOKEVIRTUAL
 import org.objectweb.asm.Type
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
@@ -65,8 +66,24 @@ internal abstract class MethodCallTransformerBase(
             },
             instrumented = {
                 processMethodCall(desc, opcode, owner, name, itf)
+                ensureNewJavaClassIsTransformed(opcode, owner, name, desc)
             }
         )
+    }
+
+    private fun GeneratorAdapter.ensureNewJavaClassIsTransformed(
+        opcode: Int,
+        owner: String,
+        name: String,
+        desc: String
+    ) {
+        if (
+            opcode == INVOKESTATIC && isClassForName(owner.toCanonicalClassName(), name, desc) ||
+            opcode == INVOKEVIRTUAL && isClassLoaderClassName(owner) && isLoadClassMethod(name, desc)
+        ) {
+            dup()
+            invokeStatic(Injections::ensureClassHierarchyIsTransformed)
+        }
     }
 
     private fun isThreadLocalRandomCurrent(owner: String, methodName: String): Boolean {

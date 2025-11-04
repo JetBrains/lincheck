@@ -546,10 +546,10 @@ internal fun isClassLoaderClassName(className: String): Boolean =
 
 /**
  * Checks if the given method name and descriptor correspond to
- * the `ClassLoader.loadClass(String name)` method.
+ * the `ClassLoader.loadClass(String name)` or `ClassLoader.loadClass(String name, resolve)` method.
  */
 internal fun isLoadClassMethod(methodName: String, desc: String) =
-    methodName == "loadClass" && desc == "(Ljava/lang/String;)Ljava/lang/Class;"
+    methodName == "loadClass" && (desc == "(Ljava/lang/String;)Ljava/lang/Class;" || desc == "(Ljava/lang/String;Z)Ljava/lang/Class;")
 
 /**
  * Tests if the provided [className] represents [StackTraceElement] class.
@@ -600,3 +600,9 @@ internal val CLASS_TYPE = getType(Class::class.java)
 internal val THROWABLE_TYPE = getType(Throwable::class.java)
 
 internal val CLASS_FOR_NAME_METHOD = Method("forName", CLASS_TYPE, arrayOf(STRING_TYPE))
+
+/**
+ * Checks if the given method name and descriptor correspond to the `Class.forName(String)` method.
+ */
+internal fun isClassForName(className: String, methodName: String, methodDesc: String) =
+    className == CLASS_TYPE.className && methodName == CLASS_FOR_NAME_METHOD.name && methodDesc == CLASS_FOR_NAME_METHOD.descriptor
