@@ -934,34 +934,29 @@ class TraceCollectingEventTracker(
         strategy.traceEnded()
         metaInfo.traceEnded()
 
-        System.err.println("Trace collected in ${System.currentTimeMillis() - startTime} ms")
+        Logger.debug { "Trace collected in ${System.currentTimeMillis() - startTime} ms" }
         startTime = System.currentTimeMillis()
 
-        if (mode == TraceCollectorMode.BINARY_STREAM) {
-            if (packTrace) {
-                packRecordedTrace(traceDumpPath!!, metaInfo)
-            }
-            return
-        }
-
         try {
-            val appendable = DefaultTRTextAppendable(System.err)
+            val sb = StringBuilder()
+            val appendable = DefaultTRTextAppendable(sb)
             val roots = mutableListOf<TRTracePoint>()
 
             allThreads.sortBy { it.threadId }
             allThreads.forEach { thread ->
                 val st = thread.getStack()
                 if (st.isEmpty()) {
-                    System.err.println("Trace Recorder: Thread ${thread.threadId + 1}: Stack underflow, report bug")
+                    Logger.error { "Trace Recorder: Thread ${thread.threadId + 1}: Stack underflow, report bug" }
                 } else {
                     if (st.size > 1) {
-                        System.err.println("Trace Recorder: Thread ${thread.threadId + 1}: Stack is not empty, contains ${st.size} elements, report bug")
-                        System.err.println("Stack leftover:")
+                        Logger.error { "Trace Recorder: Thread ${thread.threadId + 1}: Stack is not empty, contains ${st.size} elements, report bug" }
+                        Logger.error { "Stack leftover:" }
                         st.reversed().forEach {
                             appendable.append("  ")
                             it.call.toText(appendable)
                             appendable.append("\n")
                         }
+                        Logger.error { sb.toString() }
                     }
                     roots.add(st.first().call)
                 }
@@ -973,15 +968,19 @@ class TraceCollectingEventTracker(
                         packRecordedTrace(traceDumpPath, metaInfo)
                     }
                 }
+                TraceCollectorMode.BINARY_STREAM -> {
+                    if (packTrace) {
+                        packRecordedTrace(traceDumpPath!!, metaInfo)
+                    }
+                }
                 TraceCollectorMode.TEXT -> printPostProcessedTrace(traceDumpPath, TRACE_CONTEXT, roots, false)
                 TraceCollectorMode.TEXT_VERBOSE -> printPostProcessedTrace(traceDumpPath, TRACE_CONTEXT, roots, true)
-                TraceCollectorMode.BINARY_STREAM -> {}
             }
         } catch (t: Throwable) {
-            System.err.println("TraceRecorder: Cannot write output file $traceDumpPath: ${t.message} at ${t.stackTraceToString()}")
+            Logger.error { "TraceRecorder: Cannot write output file $traceDumpPath: ${t.message} at ${t.stackTraceToString()}" }
             return
         } finally {
-            System.err.println("Trace dumped in ${System.currentTimeMillis() - startTime} ms")
+            Logger.debug { "Trace finalized in ${System.currentTimeMillis() - startTime} ms" }
         }
     }
 
