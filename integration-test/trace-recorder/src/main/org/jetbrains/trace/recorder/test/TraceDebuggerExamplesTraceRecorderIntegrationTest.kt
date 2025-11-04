@@ -54,6 +54,15 @@ class TraceDebuggerExamplesTraceRecorderIntegrationTest : AbstractTraceRecorderI
     }
 
     @Test
+    fun `org_examples_integration_bugs_ThreadsTest daemonThreadTest`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.bugs.ThreadsTest",
+            testMethodName = "daemonThreadTest",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
     fun `org_examples_integration_loops_JavaForLoopRepresentationTest operation`() {
         runGradleTest(
             testClassName = "org.examples.integration.loops.JavaForLoopRepresentationTest",
