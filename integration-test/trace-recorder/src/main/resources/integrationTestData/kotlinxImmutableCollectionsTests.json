@@ -1,0 +1,23 @@
+[
+  {
+    "class": "tests.contract.list.ImmutableListTest",
+    "gradleCommand": ":kotlinx-collections-immutable:jvmTest",
+    "methods": [
+      "empty",
+      "persistentListFails",
+      "ofElements",
+      "toImmutable",
+      "emptyListToPersistentList",
+      "addElements",
+      "replaceElements",
+      "removeElements",
+      "smallPersistentListFromMutableBuffer",
+      "subList",
+      "builder",
+      "subListOfBuilder",
+      "noOperation",
+      "covariantTyping"
+    ],
+    "checkRepresentation": true
+  }
+]

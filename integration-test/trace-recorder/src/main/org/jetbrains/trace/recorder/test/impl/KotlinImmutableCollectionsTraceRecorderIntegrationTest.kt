@@ -11,65 +11,50 @@
 package org.jetbrains.trace.recorder.test.impl
 
 import org.jetbrains.trace.recorder.test.runner.AbstractTraceRecorderIntegrationTest
+import org.jetbrains.trace.recorder.test.runner.ExtendedTraceRecorderTest
+import org.jetbrains.trace.recorder.test.runner.loadResourceText
+import org.jetbrains.trace.recorder.test.runner.parseJsonEntries
+import org.jetbrains.trace.recorder.test.runner.transformEntriesToArray
 import org.junit.Test
+import org.junit.experimental.categories.Category
+import org.junit.experimental.runners.Enclosed
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
 import java.nio.file.Paths
 
-class KotlinImmutableCollectionsTraceRecorderIntegrationTest : AbstractTraceRecorderIntegrationTest() {
-    override val projectPath: String = Paths.get("build", "integrationTestProjects", "kotlinx.collections.immutable").toString()
+@RunWith(Enclosed::class)
+class KotlinImmutableCollectionsTraceRecorderIntegrationTest {
+    @Category(ExtendedTraceRecorderTest::class)
+    @RunWith(Parameterized::class)
+    class Parametrized(
+        private val testClassName: String,
+        private val testMethodName: String,
+        private val gradleCommand: String,
+        private val perEntryJvmArgs: List<String>,
+        private val perEntryCheckRepresentation: Boolean,
+    ) : AbstractTraceRecorderIntegrationTest() {
+        override val projectPath: String = Paths.get("build", "integrationTestProjects", "kotlinx.collections.immutable").toString()
 
-    @Test
-    fun `tests_contract_list_ImmutableListTest empty`() {
-        runGradleTest(
-            testClassName = "tests.contract.list.ImmutableListTest",
-            testMethodName = "empty",
-            gradleCommands = listOf(
-                ":kotlinx-collections-immutable:cleanJvmTest",
-                ":kotlinx-collections-immutable:jvmTest",
-            )
+        @Test(timeout = 10 * 60 * 1000L)
+        fun runKotlinImmutableCollectionsTest() = runGradleTest(
+            testClassName = testClassName,
+            testMethodName = testMethodName,
+            gradleCommands = listOf(gradleCommand),
+            extraJvmArgs = perEntryJvmArgs,
+            checkRepresentation = perEntryCheckRepresentation,
         )
-    }
 
-    @Test
-    fun `tests_contract_list_ImmutableListTest`() {
-        runGradleTests(
-            testClassNamePrefix = "tests.contract.list.ImmutableListTest",
-            gradleBuildCommands = listOf(":kotlinx-collections-immutable:compileTestKotlinJvm"),
-            gradleTestCommands = listOf(
-                ":kotlinx-collections-immutable:cleanJvmTest",
-                ":kotlinx-collections-immutable:jvmTest",
-            ),
-            checkRepresentation = false
-        )
-    }
-
-    @Test
-    fun `tests_contract_list_ImmutableListTest empty with include filter`() {
-        runGradleTest(
-            testClassName = "tests.contract.list.ImmutableListTest",
-            testMethodName = "empty",
-            gradleCommands = listOf(
-                ":kotlinx-collections-immutable:cleanJvmTest",
-                ":kotlinx-collections-immutable:jvmTest",
-            ),
-            extraAgentArgs = mapOf(
-                "include" to "tests.contract.list.ImmutableListTest",
-                "lazyInstrumentation" to "false"
-            ),
-            testNameSuffix = "with_include_filter",
-        )
-    }
-
-    @Test
-    fun `tests_contract_list_ImmutableListTest empty with exclude filter`() {
-        runGradleTest(
-            testClassName = "tests.contract.list.ImmutableListTest",
-            testMethodName = "empty",
-            gradleCommands = listOf(
-                ":kotlinx-collections-immutable:cleanJvmTest",
-                ":kotlinx-collections-immutable:jvmTest",
-            ),
-            extraAgentArgs = mapOf("exclude" to "kotlinx.collections.immutable.*"),
-            testNameSuffix = "with_exclude_filter",
-        )
+        companion object {
+            @JvmStatic
+            @Parameterized.Parameters(name = "{index}: {0}::{1}")
+            fun data(): Collection<Array<Any>> {
+                val json = loadResourceText(
+                    "/integrationTestData/kotlinxImmutableCollectionsTests.json",
+                    KotlinImmutableCollectionsTraceRecorderIntegrationTest::class.java
+                )
+                val entries = parseJsonEntries(json)
+                return entries.transformEntriesToArray()
+            }
+        }
     }
 }

@@ -1,0 +1,101 @@
+# Thread 1
+ImmutableListTest.replaceElements() at :0
+  list = null at ImmutableListTest.kt:91
+  toImmutableList("abcxaxab12"): SmallPersistentVector@1 at ImmutableListTest.kt:91
+    toPersistentList(toImmutableList ➜ "abcxaxab12"): SmallPersistentVector@1 at extensions.kt:595
+      persistentListOf(): SmallPersistentVector@1 at extensions.kt:623
+        persistentVectorOf(): SmallPersistentVector@1 at extensions.kt:452
+          SmallPersistentVector.getEMPTY(): SmallPersistentVector@1 at Utils.kt:18
+      mutate = SmallPersistentVector@1 at extensions.kt:623
+      mutate.builder(): PersistentVectorBuilder@1 at extensions.kt:41
+      it = PersistentVectorBuilder@1 at extensions.kt:41
+      toCollection(toPersistentList ➜ "abcxaxab12", it): PersistentVectorBuilder@1 at extensions.kt:623
+      PersistentVectorBuilder@1.build(): SmallPersistentVector@1 at extensions.kt:41
+  toPersistentList(SmallPersistentVector@1): SmallPersistentVector@1 at ImmutableListTest.kt:91
+  list = SmallPersistentVector@1 at ImmutableListTest.kt:91
+  i = 0 at ImmutableListTest.kt:93
+  list.size(): 10 at ImmutableListTest.kt:93
+  loop(10 iterations) at ImmutableListTest.kt:93
+    <iteration 1> at ImmutableListTest.kt:93
+      list.get(i ➜ 0): 'a' at ImmutableListTest.kt:94
+      'a'.charValue(): 'a' at ImmutableListTest.kt:94
+      Character.valueOf('a'): 'a' at ImmutableListTest.kt:94
+      list.set(i ➜ 0, 'a'): SmallPersistentVector@1 at ImmutableListTest.kt:94
+      list = SmallPersistentVector@1 at ImmutableListTest.kt:94
+      i = 1 at ImmutableListTest.kt:93
+    <iteration 2> at ImmutableListTest.kt:93
+      list.get(i ➜ 1): 'b' at ImmutableListTest.kt:94
+      'b'.charValue(): 'b' at ImmutableListTest.kt:94
+      Character.valueOf('c'): 'c' at ImmutableListTest.kt:94
+      list.set(i ➜ 1, 'c'): SmallPersistentVector@1 at ImmutableListTest.kt:94
+      list = SmallPersistentVector@1 at ImmutableListTest.kt:94
+      i = 2 at ImmutableListTest.kt:93
+    <iteration 3> at ImmutableListTest.kt:93
+      list.get(i ➜ 2): 'c' at ImmutableListTest.kt:94
+      'c'.charValue(): 'c' at ImmutableListTest.kt:94
+      Character.valueOf('e'): 'e' at ImmutableListTest.kt:94
+      list.set(i ➜ 2, 'e'): SmallPersistentVector@1 at ImmutableListTest.kt:94
+      list = SmallPersistentVector@1 at ImmutableListTest.kt:94
+      i = 3 at ImmutableListTest.kt:93
+    <iteration 4> at ImmutableListTest.kt:93
+      list.get(i ➜ 3): 'x' at ImmutableListTest.kt:94
+      'x'.charValue(): 'x' at ImmutableListTest.kt:94
+      Character.valueOf('{'): '{' at ImmutableListTest.kt:94
+      list.set(i ➜ 3, '{'): SmallPersistentVector@1 at ImmutableListTest.kt:94
+      list = SmallPersistentVector@1 at ImmutableListTest.kt:94
+      i = 4 at ImmutableListTest.kt:93
+    <iteration 5> at ImmutableListTest.kt:93
+      list.get(i ➜ 4): 'a' at ImmutableListTest.kt:94
+      'a'.charValue(): 'a' at ImmutableListTest.kt:94
+      Character.valueOf('e'): 'e' at ImmutableListTest.kt:94
+      list.set(i ➜ 4, 'e'): SmallPersistentVector@1 at ImmutableListTest.kt:94
+      list = SmallPersistentVector@1 at ImmutableListTest.kt:94
+      i = 5 at ImmutableListTest.kt:93
+    <iteration 6> at ImmutableListTest.kt:93
+      list.get(i ➜ 5): 'x' at ImmutableListTest.kt:94
+      'x'.charValue(): 'x' at ImmutableListTest.kt:94
+      Character.valueOf('}'): '}' at ImmutableListTest.kt:94
+      list.set(i ➜ 5, '}'): SmallPersistentVector@1 at ImmutableListTest.kt:94
+      list = SmallPersistentVector@1 at ImmutableListTest.kt:94
+      i = 6 at ImmutableListTest.kt:93
+    <iteration 7> at ImmutableListTest.kt:93
+      list.get(i ➜ 6): 'a' at ImmutableListTest.kt:94
+      'a'.charValue(): 'a' at ImmutableListTest.kt:94
+      Character.valueOf('g'): 'g' at ImmutableListTest.kt:94
+      list.set(i ➜ 6, 'g'): SmallPersistentVector@1 at ImmutableListTest.kt:94
+      list = SmallPersistentVector@1 at ImmutableListTest.kt:94
+      i = 7 at ImmutableListTest.kt:93
+    <iteration 8> at ImmutableListTest.kt:93
+      list.get(i ➜ 7): 'b' at ImmutableListTest.kt:94
+      'b'.charValue(): 'b' at ImmutableListTest.kt:94
+      Character.valueOf('i'): 'i' at ImmutableListTest.kt:94
+      list.set(i ➜ 7, 'i'): SmallPersistentVector@1 at ImmutableListTest.kt:94
+      list = SmallPersistentVector@1 at ImmutableListTest.kt:94
+      i = 8 at ImmutableListTest.kt:93
+    <iteration 9> at ImmutableListTest.kt:93
+      list.get(i ➜ 8): '1' at ImmutableListTest.kt:94
+      '1'.charValue(): '1' at ImmutableListTest.kt:94
+      Character.valueOf('9'): '9' at ImmutableListTest.kt:94
+      list.set(i ➜ 8, '9'): SmallPersistentVector@1 at ImmutableListTest.kt:94
+      list = SmallPersistentVector@1 at ImmutableListTest.kt:94
+      i = 9 at ImmutableListTest.kt:93
+    <iteration 10> at ImmutableListTest.kt:93
+      list.get(i ➜ 9): '2' at ImmutableListTest.kt:94
+      '2'.charValue(): '2' at ImmutableListTest.kt:94
+      Character.valueOf(';'): ';' at ImmutableListTest.kt:94
+      list.set(i ➜ 9, ';'): SmallPersistentVector@1 at ImmutableListTest.kt:94
+      list = SmallPersistentVector@1 at ImmutableListTest.kt:94
+      i = 10 at ImmutableListTest.kt:93
+  joinToString(list, "", null, null, 0, null, null, 62, null): "ace{e}gi9;" at ImmutableListTest.kt:97
+  assertEquals("ace{e}gi9;", "ace{e}gi9;", null, 4, null) at ImmutableListTest.kt:97
+  Character.valueOf('0'): '0' at ImmutableListTest.kt:98
+  list.set(-1, '0'): threw IndexOutOfBoundsException at ImmutableListTest.kt:98
+  createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ImmutableListTest.kt:98
+  Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ImmutableListTest.kt:98
+  checkResultIsFailure(IndexOutOfBoundsException.kclass, null, Result.Failure@1): IndexOutOfBoundsException@1 at ImmutableListTest.kt:98
+  list.size(): 10 at ImmutableListTest.kt:99
+  Character.valueOf('0'): '0' at ImmutableListTest.kt:99
+  list.set(11, '0'): threw IndexOutOfBoundsException at ImmutableListTest.kt:99
+  createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ImmutableListTest.kt:99
+  Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ImmutableListTest.kt:99
+  checkResultIsFailure(IndexOutOfBoundsException.kclass, null, Result.Failure@1): IndexOutOfBoundsException@1 at ImmutableListTest.kt:99
