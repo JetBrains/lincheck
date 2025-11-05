@@ -82,7 +82,7 @@ if [[ "$DRY_RUN" == true ]]; then
   echo -e "\nDry-run complete. No files were committed."
 else
   git add gradle.properties common/gradle.properties jvm-agent/gradle.properties trace/gradle.properties
-  git commit -m "Prepare minor release ${VERSION} for \`trace\` and \`common\` modules"
+  git commit -m "Prepare minor release ${VERSION}"
   echo -e "\nAll done."
 fi
 
