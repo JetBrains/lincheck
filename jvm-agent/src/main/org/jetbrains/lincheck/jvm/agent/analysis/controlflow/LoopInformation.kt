@@ -407,6 +407,11 @@ private class MethodLoopsInformationPrinter(val loopInfo: MethodLoopsInformation
                 if (it.isEmpty()) sb.appendLine("    NONE")
                 else sb.appendLine(it.sorted().joinToString(", ") { block -> "B$block" }.prependIndent("    "))
             }
+            sb.appendLine("  EXCLUSIVE EXITS:")
+            loop.exclusiveExits.let {
+                if (it.isEmpty()) sb.appendLine("    NONE")
+                else sb.appendLine(it.sorted().joinToString(", ") { block -> "B$block" }.prependIndent("    "))
+            }
         }
         return sb.toString()
     }
