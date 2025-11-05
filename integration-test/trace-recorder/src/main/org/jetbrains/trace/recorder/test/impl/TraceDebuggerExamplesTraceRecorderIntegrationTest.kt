@@ -53,16 +53,6 @@ class TraceDebuggerExamplesTraceRecorderIntegrationTest : AbstractTraceRecorderI
         )
     }
 
-    @Test // actually runs the same test as above, but via the `runGradleTests` call
-    fun `org_examples_integration_bugs_LinkedHashSetTest`() {
-        runGradleTests(
-            testClassNamePrefix = "org.examples.integration.bugs.LinkedHashSetTest",
-            gradleBuildCommands = listOf(":compileTestKotlin"),
-            gradleTestCommands = listOf(":test"),
-            checkRepresentation = false,
-        )
-    }
-
     @Test
     fun `org_examples_integration_bugs_ElementRefTest accessLocalVariableFromLambda`() {
         runGradleTest(
