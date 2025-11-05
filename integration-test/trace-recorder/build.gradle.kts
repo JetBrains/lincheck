@@ -48,7 +48,7 @@ tasks {
 
         // Do not run extended tests in the basic task
         useJUnit {
-            excludeCategories("org.jetbrains.trace.recorder.test.ExtendedTraceRecorderTest")
+            excludeCategories("org.jetbrains.trace.recorder.test.runner.ExtendedTraceRecorderTest")
         }
 
         outputs.upToDateWhen { false } // Always run tests when called
@@ -66,7 +66,7 @@ tasks {
 
         // Only run tests marked as extended
         useJUnit {
-            includeCategories("org.jetbrains.trace.recorder.test.ExtendedTraceRecorderTest")
+            includeCategories("org.jetbrains.trace.recorder.test.runner.ExtendedTraceRecorderTest")
         }
 
         outputs.upToDateWhen { false } // Always run tests when called

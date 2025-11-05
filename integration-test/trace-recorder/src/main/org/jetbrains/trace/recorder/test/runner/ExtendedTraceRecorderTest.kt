@@ -8,7 +8,7 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.trace.recorder.test
+package org.jetbrains.trace.recorder.test.runner
 
 /**
  * Marker interface for JUnit 4 Categories to mark extended trace-recorder integration tests.
