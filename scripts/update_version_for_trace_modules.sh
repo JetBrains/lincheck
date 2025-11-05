@@ -12,11 +12,11 @@
 # Updates the project version across 4 gradle.properties files and commits the changes.
 #
 # Usage:
-#   ./scripts/update_version_for_trace_modules.sh <new-version> [--dry-run]
+#   ./scripts/update_version_for_trace_modules.sh <new-version> [--commit]
 #
 # Example:
 #   ./scripts/update_version_for_trace_modules.sh 3.4.1
-#   ./scripts/update_version_for_trace_modules.sh 3.5-SNAPSHOT --dry-run
+#   ./scripts/update_version_for_trace_modules.sh 3.5-SNAPSHOT --commit
 #
 # What it changes:
 #   - gradle.properties:           version=
@@ -27,19 +27,19 @@
 # Notes:
 #   - The script is portable across macOS and Linux (`sed -i` differences handled).
 #   - It validates that each target key exists before attempting to modify.
-#   - Use `--dry-run` to preview changes before commit.
+#   - Use `--commit` to actually commit changes to git.
 
 set -euo pipefail
 
 if [[ ${1:-} == "" ]] || [[ ${1:-} == "-h" ]] || [[ ${1:-} == "--help" ]]; then
-  echo "Usage: $0 <new-version> [--dry-run]"
+  echo "Usage: $0 <new-version> [--commit]"
   exit 1
 fi
 
 VERSION="$1"
-DRY_RUN=false
-if [[ ${2:-} == "--dry-run" ]]; then
-  DRY_RUN=true
+COMMIT=false
+if [[ ${2:-} == "--commit" ]]; then
+  COMMIT=true
 fi
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -78,7 +78,7 @@ update_version "${repo_root}/common/gradle.properties" "commonVersion"
 update_version "${repo_root}/jvm-agent/gradle.properties" "jvmAgentVersion"
 update_version "${repo_root}/trace/gradle.properties" "traceVersion"
 
-if [[ "$DRY_RUN" == true ]]; then
+if [[ "$COMMIT" == false ]]; then
   echo -e "\nDry-run complete. No files were committed."
 else
   git add gradle.properties common/gradle.properties jvm-agent/gradle.properties trace/gradle.properties
