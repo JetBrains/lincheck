@@ -68,12 +68,16 @@ internal class LoopTransformer(
         methodInfo.basicControlFlowGraph!!.computeIterationEntrySites(insnIndexRemapping, loopInfo)
 
     // Map from a normal exit non-phony instruction index to the set of exited loopIds.
-    private val normalExitSites: Map<InstructionIndex, Set<LoopId>> =
+    private val normalExitSites: Map<InstructionIndex, List<LoopId>> =
         methodInfo.basicControlFlowGraph!!.computeNormalExitSites(insnIndexRemapping, loopInfo)
 
     // Map from an exceptional exit non-phony instruction index to the set of exited loopIds.
-    private val exceptionExitSites: Map<InstructionIndex, Set<LoopId>> =
+    private val exceptionExitSites: Map<InstructionIndex, List<LoopId>> =
         methodInfo.basicControlFlowGraph!!.computeExceptionExitSites(insnIndexRemapping, loopInfo)
+
+    // Map from normal and exceptional exits non-phony instruction index to the set of loopIds for which it is reachable from outside them.
+    private val opcodesReachableFromOutsideLoops: Map<InstructionIndex, Set<LoopId>> =
+        methodInfo.basicControlFlowGraph!!.computeReachabilityFromOutsideLoops(insnIndexRemapping, loopInfo)
 
     override fun beforeInsn(index: Int, opcode: Int): Unit = adapter.run {
         val nonPhonyIndex = currentNonPhonyInsnIndex
@@ -99,9 +103,7 @@ internal class LoopTransformer(
                 original = {},
                 instrumented = {
                     for (loopId in loopIds) {
-                        // conservative default without exclusivity analysis
-                        // TODO: implement exclusivity analysis and use it here
-                        val isReachableFromOutsideLoop = true
+                        val isReachableFromOutsideLoop = opcodesReachableFromOutsideLoops[nonPhonyIndex]?.contains(loopId) ?: true
                         // STACK: <empty>
                         loadNewCodeLocationId()
                         adapter.push(loopId)
@@ -125,9 +127,7 @@ internal class LoopTransformer(
                     // val exceptionLocal = newLocal(THROWABLE_TYPE)
                     // storeLocal(exceptionLocal)
                     for (loopId in loopIds) {
-                        // conservative default without exclusivity analysis
-                        // TODO: implement exclusivity analysis and use it here
-                        val isReachableFromOutsideLoop = true
+                        val isReachableFromOutsideLoop = opcodesReachableFromOutsideLoops[nonPhonyIndex]?.contains(loopId) ?: true
                         // STACK: <empty>
                         loadNewCodeLocationId()
                         push(loopId)
@@ -180,7 +180,7 @@ private fun BasicBlockControlFlowGraph.computeIterationEntrySites(
 private fun BasicBlockControlFlowGraph.computeNormalExitSites(
     insnIndexRemapping: IntArray,
     loopInfo: MethodLoopsInformation,
-): Map<InstructionIndex, Set<Int>> {
+): Map<InstructionIndex, List<Int>> {
     if (!loopInfo.hasLoops()) return emptyMap()
     val cfg = this
     val result = mutableMapOf<InstructionIndex, MutableSet<Int>>()
@@ -191,13 +191,16 @@ private fun BasicBlockControlFlowGraph.computeNormalExitSites(
             result.updateInplace(insnIndexRemapping[idx], default = mutableSetOf()) { add(loop.id) }
         }
     }
-    return result.mapValues { it.value.toSet() }
+    // We reverse the order of all loop ids, because when we insert `afterLoopExit`
+    // into the normal exit, we need to do that from innermost loop to outermost.
+    // And the inner loop will have a bigger id than its outer loop.
+    return result.mapValues { it.value.reversed() }
 }
 
 private fun BasicBlockControlFlowGraph.computeExceptionExitSites(
     insnIndexRemapping: IntArray,
     loopInfo: MethodLoopsInformation,
-): Map<InstructionIndex, Set<Int>> {
+): Map<InstructionIndex, List<Int>> {
     if (!loopInfo.hasLoops()) return emptyMap()
     val cfg = this
     val result = mutableMapOf<InstructionIndex, MutableSet<Int>>()
@@ -205,6 +208,37 @@ private fun BasicBlockControlFlowGraph.computeExceptionExitSites(
         for (handlerBlock in loop.exceptionalExitHandlers) {
             val idx = cfg.firstOpcodeIndexOf(handlerBlock) ?: continue
             result.updateInplace(insnIndexRemapping[idx], default = mutableSetOf()) { add(loop.id) }
+        }
+    }
+    // We reverse the order of all loop ids, because when we insert `afterLoopExit`
+    // into the exception handler, we need to do that from innermost loop to outermost.
+    // And the inner loop will have a bigger id than its outer loop.
+    return result.mapValues { it.value.reversed() }
+}
+
+/**
+ * Computes a map from opcode index to the set of loop ids.
+ * For each opcode it stores all loops for which it is reachable from outside them.
+ */
+private fun BasicBlockControlFlowGraph.computeReachabilityFromOutsideLoops(
+    insnIndexRemapping: IntArray,
+    loopInfo: MethodLoopsInformation
+): Map<InstructionIndex, Set<Int>> {
+    if (!loopInfo.hasLoops()) return emptyMap()
+    val cfg = this
+    val result = mutableMapOf<InstructionIndex, MutableSet<Int>>()
+    for (loop in loopInfo.loops) {
+        val exitBlocks = sequence {
+            yieldAll(loop.normalExits.asSequence().map { it.target })
+            yieldAll(loop.exceptionalExitHandlers)
+        }
+        for (exit in exitBlocks) {
+            val idx = cfg.firstOpcodeIndexOf(exit) ?: continue
+            result.updateInplace(insnIndexRemapping[idx], default = mutableSetOf()) {
+                if (exit !in loop.exclusiveExits) {
+                    add(loop.id)
+                }
+            }
         }
     }
     return result.mapValues { it.value.toSet() }
