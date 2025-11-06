@@ -39,9 +39,16 @@ class KotlinCompilerBlackBoxTraceRecorderIntegrationTest {
         override val formatArgs: Map<String, String> = mapOf("format" to "binary", "formatOption" to "stream")
 
         @Test(timeout = 10 * 60 * 1000L)
-        fun runKotlinCompilerTest() = runKotlinCompilerTestImpl(
-            testClassName, testMethodName, gradleCommand, perEntryJvmArgs, perEntryCheckRepresentation
-        )
+        fun runKotlinCompilerTest() = withPermissions { permissions ->
+            val allJvmArgs = listOf("-Djava.security.policy==${permissions.absolutePath}") + perEntryJvmArgs
+            runTest(
+                testClassName = testClassName,
+                testMethodName = testMethodName,
+                extraJvmArgs = allJvmArgs,
+                commands = listOf(element = gradleCommand),
+                checkRepresentation = perEntryCheckRepresentation,
+            )
+        }
 
         companion object {
             @JvmStatic
@@ -55,25 +62,6 @@ class KotlinCompilerBlackBoxTraceRecorderIntegrationTest {
                 return entries.transformEntriesToArray()
             }
         }
-    }
-}
-
-private fun AbstractTraceRecorderIntegrationTest.runKotlinCompilerTestImpl(
-    testClassName: String,
-    testMethodName: String,
-    gradleCommand: String,
-    jvmArgs: List<String>,
-    checkRepresentation: Boolean,
-) {
-    withPermissions { permissions ->
-        val allJvmArgs = listOf("-Djava.security.policy==${permissions.absolutePath}") + jvmArgs
-        runTest(
-            testClassName = testClassName,
-            testMethodName = testMethodName,
-            extraJvmArgs = allJvmArgs,
-            commands = listOf(gradleCommand),
-            checkRepresentation = checkRepresentation,
-        )
     }
 }
 
