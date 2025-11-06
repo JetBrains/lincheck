@@ -130,15 +130,26 @@ abstract class AbstractTraceIntegrationTest {
 
         runGradleTest(testClassName, testMethodName, extraJvmArgs, extraAgentArgs, commands, tmpFile)
 
+        compareOutput(checkRepresentation, testClassName, testMethodName, testNameSuffix, tmpFile, packedTraceFile)
+    }
+
+    private fun compareOutput(
+        checkRepresentation: Boolean,
+        testClassName: String,
+        testMethodName: String,
+        testNameSuffix: String?,
+        outputFile: File,
+        packedOutputFile: File
+    ) {
         // TODO decide how to test: with gold data or run twice?
         if (checkRepresentation) { // otherwise we just want to make sure that tests do not fail
             val expectedOutput = getGoldenDataFileFor(testClassName, testMethodName, testNameSuffix)
             if (expectedOutput.exists()) {
-                Assert.assertEquals(expectedOutput.readText(), tmpFile.readText())
+                Assert.assertEquals(expectedOutput.readText(), outputFile.readText())
             } else {
                 if (OVERWRITE_REPRESENTATION_TESTS_OUTPUT) {
                     expectedOutput.parentFile.mkdirs()
-                    copy(tmpFile, expectedOutput)
+                    copy(outputFile, expectedOutput)
                     Assert.fail("The gold data file was created. Please rerun the test.")
                 } else {
                     Assert.fail(
@@ -155,11 +166,11 @@ abstract class AbstractTraceIntegrationTest {
                 }
             }
 
-            if (tmpFile.exists()) {
-                checkNonEmptyNess(tmpFile)
+            if (outputFile.exists()) {
+                checkNonEmptyNess(outputFile)
             } else {
-                if (packedTraceFile.exists()) {
-                    checkNonEmptyNess(packedTraceFile)
+                if (packedOutputFile.exists()) {
+                    checkNonEmptyNess(packedOutputFile)
                 } else {
                     Assert.fail("No output was produced by the test.")
                 }
