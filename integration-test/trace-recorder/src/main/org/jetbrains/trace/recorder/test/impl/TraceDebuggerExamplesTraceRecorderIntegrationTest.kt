@@ -19,505 +19,505 @@ class TraceDebuggerExamplesTraceRecorderIntegrationTest : AbstractTraceRecorderI
 
     @Test
     fun simpleProgramNonFailingTest() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.hackathon.SimpleProgramNonFailingTest",
             testMethodName = "test",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun koverAddTest() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.kover.CalculatorTest",
             testMethodName = "addTest",
-            gradleCommands = listOf(":test-kover:test"),
+            commands = listOf(":test-kover:test"),
         )
     }
 
     @Test
     fun koverIsEvenTest() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.kover.CalculatorTest",
             testMethodName = "isEvenTest",
-            gradleCommands = listOf(":test-kover:test"),
+            commands = listOf(":test-kover:test"),
         )
     }
 
     @Test
     fun `org_examples_integration_bugs_LinkedHashSetTest putAnObjectWithoutDefinedHashCode`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.bugs.LinkedHashSetTest",
             testMethodName = "putAnObjectWithoutDefinedHashCode",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_bugs_ElementRefTest accessLocalVariableFromLambda`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.bugs.ElementRefTest",
             testMethodName = "accessLocalVariableFromLambda",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_bugs_ThreadsTest daemonThreadTest`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.bugs.ThreadsTest",
             testMethodName = "daemonThreadTest",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_bugs_ManglingTest testInline`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.bugs.ManglingTest",
             testMethodName = "testInline",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_bugs_ManglingTest testPrintln`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.bugs.ManglingTest",
             testMethodName = "testPrintln",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_bugs_ManglingTest testRepeat`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.bugs.ManglingTest",
             testMethodName = "testRepeat",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_bugs_ManglingTest testInlineLambda`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.bugs.ManglingTest",
             testMethodName = "testInlineLambda",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_bugs_ManglingTest testDefaultArg`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.bugs.ManglingTest",
             testMethodName = "testDefaultArg",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_bugs_ManglingTest testInlineClass`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.bugs.ManglingTest",
             testMethodName = "testInlineClass",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_bugs_ManglingTest testInner`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.bugs.ManglingTest",
             testMethodName = "testInner",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_bugs_ManglingTest testInlineClassInlineFunction`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.bugs.ManglingTest",
             testMethodName = "testInlineClassInlineFunction",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_bugs_ManglingTest testInlineClassInlineFunctionWithDefault`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.bugs.ManglingTest",
             testMethodName = "testInlineClassInlineFunctionWithDefault",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_bugs_ManglingTest testCapture`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.bugs.ManglingTest",
             testMethodName = "testCapture",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_bugs_ManglingTest testReceivers`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.bugs.ManglingTest",
             testMethodName = "testReceivers",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_bugs_ManglingTest testInternalViaAccessor`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.bugs.ManglingTest",
             testMethodName = "testInternalViaAccessor",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_bugs_ManglingTest testNestedInlineFunction`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.bugs.ManglingTest",
             testMethodName = "testNestedInlineFunction",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_JavaForLoopRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.JavaForLoopRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_JavaWhileLoopRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.JavaWhileLoopRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_JavaDoLoopRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.JavaDoLoopRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_BreakedForLoopRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.BreakedForLoopRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_ComplexNestedLoopsRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.ComplexNestedLoopsRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_ContinuedForLoopRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.ContinuedForLoopRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_EmptyForLoopRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.EmptyForLoopRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_ForLoopWithMethodCallRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.ForLoopWithMethodCallRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_ForLoopWithTryCatchFinallyRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.ForLoopWithTryCatchFinallyRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_ForLoopWithTryCatchRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.ForLoopWithTryCatchRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_ForWithIfLoopRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.ForWithIfLoopRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_LoopWithNestedLoopMethodCallRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.LoopWithNestedLoopMethodCallRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_NestedForLoopRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.NestedForLoopRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_NestedLoopWithExceptionRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.NestedLoopWithExceptionRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_OneIterForLoopRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.OneIterForLoopRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_PartiallyEmptyForLoopRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.PartiallyEmptyForLoopRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_RepeatedForLoopRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.RepeatedForLoopRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_SimpleDoWhileLoopRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.SimpleDoWhileLoopRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_SimpleForLoopRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.SimpleForLoopRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_SimpleWhileLoopRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.SimpleWhileLoopRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_TwoForLoopRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.TwoForLoopRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_WhileWithIfLoopRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.WhileWithIfLoopRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_ZeroIterForLoopRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.ZeroIterForLoopRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_BreakedNestedRepeatLoopRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.BreakedNestedRepeatLoopRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_BreakedOuterForLoopRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.BreakedOuterForLoopRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_ContinuedNestedRepeatLoopRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.ContinuedNestedRepeatLoopRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_ContinuedOuterForLoopRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.ContinuedOuterForLoopRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_NestedRepeatLoopRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.NestedRepeatLoopRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_RepeatLoopRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.RepeatLoopRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_ListBreakedForAndMapLoopRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.ListBreakedForAndMapLoopRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_ListBreakedForLoopRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.ListBreakedForLoopRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_ListContinuedForAndMapLoopRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.ListContinuedForAndMapLoopRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_ListContinuedForLoopRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.ListContinuedForLoopRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_ListForEachBreakedLoopRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.ListForEachBreakedLoopRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_ListForEachContinuedLoopRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.ListForEachContinuedLoopRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_SequenceBreakedForAndMapLoopRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.SequenceBreakedForAndMapLoopRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Test
     fun `org_examples_integration_loops_SequenceContinuedForAndMapLoopRepresentationTest operation`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.loops.SequenceContinuedForAndMapLoopRepresentationTest",
             testMethodName = "operation",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 }

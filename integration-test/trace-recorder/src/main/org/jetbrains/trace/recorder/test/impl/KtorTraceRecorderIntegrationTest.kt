@@ -63,10 +63,10 @@ private fun AbstractTraceRecorderIntegrationTest.runKtorTestImpl(
     jvmArgs: List<String>,
     checkRepresentation: Boolean,
 ) {
-    runGradleTest(
+    runTest(
         testClassName = testClassName,
         testMethodName = testMethodName,
-        gradleCommands = listOf(gradleCommand),
+        commands = listOf(gradleCommand),
         extraJvmArgs = jvmArgs,
         checkRepresentation = checkRepresentation,
     )

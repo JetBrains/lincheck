@@ -21,10 +21,10 @@ class KotlinCoroutinesTraceRecorderIntegrationTest : AbstractTraceRecorderIntegr
     @Test
     @Ignore("Flaky test")
     fun `kotlinx_coroutines_ExecutorsTest testDefaultDispatcherToExecutor`() {
-        runGradleTest(
+        runTest(
             testClassName = "kotlinx.coroutines.ExecutorsTest",
             testMethodName = "testDefaultDispatcherToExecutor",
-            gradleCommands = listOf(
+            commands = listOf(
                 ":kotlinx-coroutines-core:jvmTest",
             )
         )

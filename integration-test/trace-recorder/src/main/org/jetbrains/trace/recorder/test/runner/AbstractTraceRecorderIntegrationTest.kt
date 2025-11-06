@@ -20,18 +20,18 @@ abstract class AbstractTraceRecorderIntegrationTest : AbstractTraceIntegrationTe
         "formatOption" to "verbose",
     )
 
-    public final override fun runGradleTest(
+    public final override fun runTest(
         testClassName: String,
         testMethodName: String,
         extraJvmArgs: List<String>,
         extraAgentArgs: Map<String, String>,
-        gradleCommands: List<String>,
+        commands: List<String>,
         checkRepresentation: Boolean,
         testNameSuffix: String?,
         onStdErrOutput: (String) -> Unit,
     ) {
         val (_, output) = withStdErrTee {
-            runGradleTestImpl(
+            runTestImpl(
                 testClassName,
                 testMethodName,
                 extraJvmArgs + listOf(
@@ -40,7 +40,7 @@ abstract class AbstractTraceRecorderIntegrationTest : AbstractTraceIntegrationTe
                     "-XX:hashCode=2",
                 ),
                 extraAgentArgs + formatArgs,
-                gradleCommands,
+                commands,
                 checkRepresentation,
                 testNameSuffix,
             )

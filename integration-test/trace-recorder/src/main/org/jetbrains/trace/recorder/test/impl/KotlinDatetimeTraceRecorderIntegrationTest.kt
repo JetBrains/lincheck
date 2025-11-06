@@ -22,10 +22,10 @@ class KotlinDatetimeTraceRecorderIntegrationTest : AbstractTraceRecorderIntegrat
     // See JBRes-6555 for details.
     @Test
     fun `kotlinx_datetime_test_ConvertersTest instant`() {
-        runGradleTest(
+        runTest(
             testClassName = "kotlinx.datetime.test.ConvertersTest",
             testMethodName = "instant",
-            gradleCommands = listOf(":kotlinx-datetime:jvmTest"),
+            commands = listOf(":kotlinx-datetime:jvmTest"),
             checkRepresentation = false,
         )
     }

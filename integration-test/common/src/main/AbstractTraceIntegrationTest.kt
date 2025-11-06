@@ -84,24 +84,24 @@ abstract class AbstractTraceIntegrationTest {
         }
     }
 
-    protected abstract fun runGradleTest(
+    protected abstract fun runTest(
         testClassName: String,
         testMethodName: String,
         extraJvmArgs: List<String> = emptyList(),
         extraAgentArgs: Map<String, String> = emptyMap(),
-        gradleCommands: List<String>,
+        commands: List<String>,
         checkRepresentation: Boolean = true,
         testNameSuffix: String? = null,
         onStdErrOutput: (String) -> Unit = failOnErrorInStdErr,
     )
 
     // TODO: rewrite to accept array of tests (or TestSuite maybe better)
-    protected fun runGradleTestImpl(
+    protected fun runTestImpl(
         testClassName: String,
         testMethodName: String,
         extraJvmArgs: List<String> = emptyList(),
         extraAgentArgs: Map<String, String> = emptyMap(),
-        gradleCommands: List<String>,
+        commands: List<String>,
         checkRepresentation: Boolean = true,
         testNameSuffix: String? = null,
     ) {
@@ -124,11 +124,11 @@ abstract class AbstractTraceIntegrationTest {
                     "--init-script",
                     createInitScriptAsTempFile(
                         buildGradleInitScriptToDumpTrace(
-                            gradleCommands, testClassName, testMethodName, tmpFile, extraJvmArgs, extraAgentArgs
+                            commands, testClassName, testMethodName, tmpFile, extraJvmArgs, extraAgentArgs
                         )
                     ).absolutePath,
                 ).forTasks(
-                    *gradleCommands.toTypedArray(),
+                    *commands.toTypedArray(),
                     "--tests",
                     "$testClassName.$testMethodName",
                 ).run()

@@ -67,11 +67,11 @@ private fun AbstractTraceRecorderIntegrationTest.runKotlinCompilerTestImpl(
 ) {
     withPermissions { permissions ->
         val allJvmArgs = listOf("-Djava.security.policy==${permissions.absolutePath}") + jvmArgs
-        runGradleTest(
+        runTest(
             testClassName = testClassName,
             testMethodName = testMethodName,
             extraJvmArgs = allJvmArgs,
-            gradleCommands = listOf(gradleCommand),
+            commands = listOf(gradleCommand),
             checkRepresentation = checkRepresentation,
         )
     }
