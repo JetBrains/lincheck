@@ -84,7 +84,7 @@ abstract class AbstractTraceIntegrationTest {
         }
     }
 
-    protected abstract fun runTest(
+    protected open fun runTest(
         testClassName: String,
         testMethodName: String,
         extraJvmArgs: List<String> = emptyList(),
@@ -93,10 +93,23 @@ abstract class AbstractTraceIntegrationTest {
         checkRepresentation: Boolean = true,
         testNameSuffix: String? = null,
         onStdErrOutput: (String) -> Unit = failOnErrorInStdErr,
-    )
+    ) {
+        val (_, output) = withStdErrTee {
+            runTestImpl(
+                testClassName,
+                testMethodName,
+                extraJvmArgs,
+                extraAgentArgs,
+                commands,
+                checkRepresentation,
+                testNameSuffix,
+            )
+        }
+        onStdErrOutput(output)
+    }
 
     // TODO: rewrite to accept array of tests (or TestSuite maybe better)
-    protected fun runTestImpl(
+    private fun runTestImpl(
         testClassName: String,
         testMethodName: String,
         extraJvmArgs: List<String> = emptyList(),
