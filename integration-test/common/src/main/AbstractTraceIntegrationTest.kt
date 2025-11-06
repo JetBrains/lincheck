@@ -115,24 +115,7 @@ abstract class AbstractTraceIntegrationTest {
             indexFile.delete()
         }
 
-        createGradleConnection().use { connection ->
-            connection
-                .newBuild()
-                .setStandardError(System.err)
-                .addArguments(
-                    "-Dorg.gradle.daemon=false",
-                    "--init-script",
-                    createInitScriptAsTempFile(
-                        buildGradleInitScriptToDumpTrace(
-                            commands, testClassName, testMethodName, tmpFile, extraJvmArgs, extraAgentArgs
-                        )
-                    ).absolutePath,
-                ).forTasks(
-                    *commands.toTypedArray(),
-                    "--tests",
-                    "$testClassName.$testMethodName",
-                ).run()
-        }
+        runGradleTest(testClassName, testMethodName, extraJvmArgs, extraAgentArgs, commands, tmpFile)
 
         // TODO decide how to test: with gold data or run twice?
         if (checkRepresentation) { // otherwise we just want to make sure that tests do not fail
@@ -168,6 +151,34 @@ abstract class AbstractTraceIntegrationTest {
                     Assert.fail("No output was produced by the test.")
                 }
             }
+        }
+    }
+
+    private fun runGradleTest(
+        testClassName: String,
+        testMethodName: String,
+        extraJvmArgs: List<String>,
+        extraAgentArgs: Map<String, String>,
+        gradleCommands: List<String>,
+        outputFile: File
+    ) {
+        createGradleConnection().use { connection ->
+            connection
+                .newBuild()
+                .setStandardError(System.err)
+                .addArguments(
+                    "-Dorg.gradle.daemon=false",
+                    "--init-script",
+                    createInitScriptAsTempFile(
+                        buildGradleInitScriptToDumpTrace(
+                            gradleCommands, testClassName, testMethodName, outputFile, extraJvmArgs, extraAgentArgs
+                        )
+                    ).absolutePath,
+                ).forTasks(
+                    *gradleCommands.toTypedArray(),
+                    "--tests",
+                    "$testClassName.$testMethodName",
+                ).run()
         }
     }
 
