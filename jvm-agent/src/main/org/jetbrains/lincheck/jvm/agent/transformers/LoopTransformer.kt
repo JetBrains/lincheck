@@ -122,8 +122,8 @@ internal class LoopTransformer(
                 instrumented = {
                     // At handler entry, the thrown exception object is on the stack.
                     // Store it to a temp local, emit injections, then restore it for original bytecode.
-                    // val exceptionLocal = newLocal(THROWABLE_TYPE)
-                    // storeLocal(exceptionLocal)
+                    val exceptionLocal = newLocal(THROWABLE_TYPE)
+                    storeLocal(exceptionLocal)
                     for (loopId in loopIds) {
                         // conservative default without exclusivity analysis
                         // TODO: implement exclusivity analysis and use it here
@@ -131,15 +131,14 @@ internal class LoopTransformer(
                         // STACK: <empty>
                         loadNewCodeLocationId()
                         push(loopId)
-                        pushNull()
-                        // loadLocal(exceptionLocal)
+                        loadLocal(exceptionLocal)
                         push(isReachableFromOutsideLoop)
                         // STACK: codeLocation, loopId, exception, isReachableFromOutsideLoop
                         invokeStatic(Injections::afterLoopExit)
                         // STACK: <empty>
                     }
                     // Restore the exception object back to the stack for the handler body (e.g., ASTORE)
-                    // loadLocal(exceptionLocal)
+                    loadLocal(exceptionLocal)
                 }
             )
         }
