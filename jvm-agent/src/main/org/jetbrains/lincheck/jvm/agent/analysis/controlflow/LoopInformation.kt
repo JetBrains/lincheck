@@ -127,7 +127,8 @@ typealias LoopId = Int
 /**
  * Aggregates loop information for a single method.
  *
- * @property loops All loops detected in the method.
+ * @property loops All loops detected in the method. Note that there is an invariant which holds: for every two loops
+ *                 `a` and `b`: if `a` is an outer loop of `b` (meaning that `b.body` is a subset of `a.body`), then `a.id < b.id`.
  * @property loopsByBlock For each basic block, the list of loop ids this block belongs to.
  */
 class MethodLoopsInformation(
