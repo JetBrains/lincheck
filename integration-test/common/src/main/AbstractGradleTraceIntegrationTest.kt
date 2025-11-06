@@ -65,9 +65,6 @@ abstract class AbstractGradleTraceIntegrationTest: AbstractTraceIntegrationTest(
         extraJvmArgs: List<String>,
         extraAgentArgs: Map<String, String>,
     ): String {
-        fun String.escapeDollar() = replace("$", "\\$")
-
-        val pathToFatJar = File(Paths.get("build", "libs", fatJarName).toString()).absolutePath.escape()
         // We need to escape it twice, as our argument parser will de-escape it when split into array
         val pathToOutput = fileToDump.absolutePath.escape().escape()
         val agentArgs =
@@ -94,6 +91,4 @@ abstract class AbstractGradleTraceIntegrationTest: AbstractTraceIntegrationTest(
             }
         """.trimIndent()
     }
-
-    private fun String.escape(): String = this.replace("\\", "\\\\")
 }

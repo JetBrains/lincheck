@@ -21,6 +21,9 @@ abstract class AbstractTraceIntegrationTest {
     abstract val fatJarName: String
     abstract val projectPath: String
 
+    protected val pathToFatJar: String
+        get() = File(Paths.get("build", "libs", fatJarName).toString()).absolutePath.escape()
+
     private fun getGoldenDataFileFor(
         testClassName: String,
         testMethodName: String,

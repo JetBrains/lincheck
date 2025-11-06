@@ -1,0 +1,10 @@
+[
+  {
+    "class": "com.intellij.util.ArrayUtilTest",
+    "gradleCommand": ":kotlinx-collections-immutable:jvmTest",
+    "methods": [
+      "testInsertString"
+    ],
+    "checkRepresentation": true
+  }
+]
