@@ -36,10 +36,10 @@ class KotlinImmutableCollectionsTraceRecorderIntegrationTest {
         override val projectPath: String = Paths.get("build", "integrationTestProjects", "kotlinx.collections.immutable").toString()
 
         @Test(timeout = 10 * 60 * 1000L)
-        fun runKotlinImmutableCollectionsTest() = runGradleTest(
+        fun runKotlinImmutableCollectionsTest() = runTest(
             testClassName = testClassName,
             testMethodName = testMethodName,
-            gradleCommands = listOf(gradleCommand),
+            commands = listOf(gradleCommand),
             extraJvmArgs = perEntryJvmArgs,
             checkRepresentation = perEntryCheckRepresentation,
         )

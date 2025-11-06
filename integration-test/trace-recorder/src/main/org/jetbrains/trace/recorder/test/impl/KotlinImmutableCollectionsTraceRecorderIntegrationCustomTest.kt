@@ -19,10 +19,10 @@ class KotlinImmutableCollectionsTraceRecorderIntegrationCustomTest : AbstractTra
 
     @Test
     fun `tests_contract_list_ImmutableListTest empty with include filter`() {
-        runGradleTest(
+        runTest(
             testClassName = "tests.contract.list.ImmutableListTest",
             testMethodName = "empty",
-            gradleCommands = listOf(
+            commands = listOf(
                 ":kotlinx-collections-immutable:cleanJvmTest",
                 ":kotlinx-collections-immutable:jvmTest",
             ),
@@ -36,10 +36,10 @@ class KotlinImmutableCollectionsTraceRecorderIntegrationCustomTest : AbstractTra
 
     @Test
     fun `tests_contract_list_ImmutableListTest empty with exclude filter`() {
-        runGradleTest(
+        runTest(
             testClassName = "tests.contract.list.ImmutableListTest",
             testMethodName = "empty",
-            gradleCommands = listOf(
+            commands = listOf(
                 ":kotlinx-collections-immutable:cleanJvmTest",
                 ":kotlinx-collections-immutable:jvmTest",
             ),

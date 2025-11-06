@@ -16,18 +16,18 @@ import withStdErrTee
 abstract class AbstractTraceDebuggerIntegrationTest : AbstractTraceIntegrationTest() {
     override val fatJarName: String = "trace-debugger-fat.jar"
 
-    final override fun runGradleTest(
+    final override fun runTest(
         testClassName: String,
         testMethodName: String,
         extraJvmArgs: List<String>,
         extraAgentArgs: Map<String, String>,
-        gradleCommands: List<String>,
+        commands: List<String>,
         checkRepresentation: Boolean,
         testNameSuffix: String?,
         onStdErrOutput: (String) -> Unit,
     ) {
         val (_, output) = withStdErrTee {
-            runGradleTestImpl(
+            runTestImpl(
                 testClassName,
                 testMethodName,
                 extraJvmArgs + listOf(
@@ -36,7 +36,7 @@ abstract class AbstractTraceDebuggerIntegrationTest : AbstractTraceIntegrationTe
                     "-XX:hashCode=2"
                 ),
                 extraAgentArgs,
-                gradleCommands,
+                commands,
                 checkRepresentation,
             )
         }
