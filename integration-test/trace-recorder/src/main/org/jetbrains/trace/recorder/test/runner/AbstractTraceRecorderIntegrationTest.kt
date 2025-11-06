@@ -10,27 +10,25 @@
 
 package org.jetbrains.trace.recorder.test.runner
 
-import AbstractTraceIntegrationTest
-import withStdErrTee
+import AbstractGradleTraceIntegrationTest
+import java.io.File
 
-abstract class AbstractTraceRecorderIntegrationTest : AbstractTraceIntegrationTest() {
+abstract class AbstractTraceRecorderIntegrationTest : AbstractGradleTraceIntegrationTest() {
     override val fatJarName: String = "trace-recorder-fat.jar"
     open val formatArgs: Map<String, String> = mapOf(
         "format" to "text",
         "formatOption" to "verbose",
     )
 
-    public final override fun runTest(
+    override fun runTestImpl(
         testClassName: String,
         testMethodName: String,
         extraJvmArgs: List<String>,
         extraAgentArgs: Map<String, String>,
         commands: List<String>,
-        checkRepresentation: Boolean,
-        testNameSuffix: String?,
-        onStdErrOutput: (String) -> Unit,
+        outputFile: File
     ) {
-        super.runTest(
+        super.runTestImpl(
             testClassName,
             testMethodName,
             extraJvmArgs + listOf(
@@ -40,9 +38,7 @@ abstract class AbstractTraceRecorderIntegrationTest : AbstractTraceIntegrationTe
             ),
             extraAgentArgs + formatArgs,
             commands,
-            checkRepresentation,
-            testNameSuffix,
-            onStdErrOutput,
+            outputFile
         )
     }
 }

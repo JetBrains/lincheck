@@ -37,8 +37,12 @@ class KtorTraceRecorderIntegrationTest {
         override val formatArgs: Map<String, String> = mapOf("format" to "binary", "formatOption" to "stream")
 
         @Test(timeout = 10 * 60 * 1000L)
-        fun runKtorTest() = runKtorTestImpl(
-            testClassName, testMethodName, gradleCommand, perEntryJvmArgs, perEntryCheckRepresentation
+        fun runKtorTest() = runTest(
+            testClassName = testClassName,
+            testMethodName = testMethodName,
+            commands = listOf(gradleCommand),
+            extraJvmArgs = perEntryJvmArgs,
+            checkRepresentation = perEntryCheckRepresentation
         )
 
         companion object {
@@ -56,18 +60,3 @@ class KtorTraceRecorderIntegrationTest {
     }
 }
 
-private fun AbstractTraceRecorderIntegrationTest.runKtorTestImpl(
-    testClassName: String,
-    testMethodName: String,
-    gradleCommand: String,
-    jvmArgs: List<String>,
-    checkRepresentation: Boolean,
-) {
-    runTest(
-        testClassName = testClassName,
-        testMethodName = testMethodName,
-        commands = listOf(gradleCommand),
-        extraJvmArgs = jvmArgs,
-        checkRepresentation = checkRepresentation,
-    )
-}
