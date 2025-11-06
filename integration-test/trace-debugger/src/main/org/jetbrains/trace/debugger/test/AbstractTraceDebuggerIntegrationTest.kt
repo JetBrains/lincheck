@@ -26,20 +26,19 @@ abstract class AbstractTraceDebuggerIntegrationTest : AbstractTraceIntegrationTe
         testNameSuffix: String?,
         onStdErrOutput: (String) -> Unit,
     ) {
-        val (_, output) = withStdErrTee {
-            runTestImpl(
-                testClassName,
-                testMethodName,
-                extraJvmArgs + listOf(
-                    "-Dlincheck.traceDebuggerMode=true",
-                    "-XX:+UnlockExperimentalVMOptions",
-                    "-XX:hashCode=2"
-                ),
-                extraAgentArgs,
-                commands,
-                checkRepresentation,
-            )
-        }
-        onStdErrOutput(output)
+        super.runTest(
+            testClassName,
+            testMethodName,
+            extraJvmArgs + listOf(
+                "-Dlincheck.traceDebuggerMode=true",
+                "-XX:+UnlockExperimentalVMOptions",
+                "-XX:hashCode=2"
+            ),
+            extraAgentArgs,
+            commands,
+            checkRepresentation,
+            testNameSuffix,
+            onStdErrOutput,
+        )
     }
 }
