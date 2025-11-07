@@ -20,6 +20,7 @@ import org.jetbrains.lincheck.descriptors.VariableDescriptor
 import java.io.*
 import java.nio.ByteBuffer
 import java.nio.file.Files
+import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.zip.ZipEntry
@@ -512,7 +513,7 @@ private class BufferedTraceWriter (
     data = DataOutputStream(dataStream)
 ) {
     private var currentStartDataPosition: Long = 0
-    private val index = mutableListOf<IndexCell>()
+    private var index = mutableListOf<IndexCell>()
 
     override val currentDataPosition: Long get() = currentStartDataPosition + dataStream.position()
 
@@ -556,9 +557,15 @@ private class BufferedTraceWriter (
     fun flush() {
         val logicalStart = currentStartDataPosition
         currentStartDataPosition += dataStream.position()
-        storage.saveDataAndIndexBlock(writerId, logicalStart, dataStream.getBuffer(), index)
-        dataStream.reset()
-        index.clear()
+        // Don't allocate new index if it is empty
+        val indexToSave = if (index.isEmpty()) {
+            emptyList() // Singleton
+        } else {
+            val oldIndex = index
+            index = mutableListOf()
+            oldIndex
+        }
+        storage.saveDataAndIndexBlock(writerId, logicalStart, dataStream.detachBuffer(), indexToSave)
     }
 
     private fun maybeFlushData() {
@@ -744,6 +751,85 @@ class MemoryTraceCollecting(private val context: TraceContext): TraceCollectingS
     override fun traceEnded() {}
 }
 
+private class FileStreamingThread(
+    dataStream: OutputStream,
+    indexStream: OutputStream,
+): Thread() {
+    private sealed class Job()
+    private data class SaveBlockJob(val writerId: Int, val logicalBlockStart: Long, val dataBlock: ByteBuffer, val indexList: List<IndexCell>): Job()
+    private class ExitJob(): Job()
+
+    private val pos: PositionCalculatingOutputStream = PositionCalculatingOutputStream(dataStream)
+    private val data: DataOutputStream = DataOutputStream(pos)
+    private val index: DataOutputStream = DataOutputStream(indexStream.buffered(OUTPUT_BUFFER_SIZE))
+
+    private val queue = ArrayBlockingQueue<Job>(1024)
+
+    init {
+        data.writeLong(TRACE_MAGIC)
+        data.writeLong(TRACE_VERSION)
+
+        index.writeLong(INDEX_MAGIC)
+        index.writeLong(TRACE_VERSION)
+    }
+
+    fun addBlock(writerId: Int, logicalBlockStart: Long, dataBlock: ByteBuffer, indexList: List<IndexCell>) {
+        while (!queue.add(SaveBlockJob(writerId, logicalBlockStart, dataBlock, indexList))) {}
+    }
+
+    fun exit() {
+        queue.add(ExitJob())
+        join()
+    }
+
+    override fun run() {
+        while (true) {
+            val j = queue.take()
+            when (j) {
+                is SaveBlockJob -> saveBlock(j)
+                is ExitJob -> {
+                    closeStreams()
+                    break
+                }
+            }
+        }
+    }
+
+    private fun saveBlock(job: SaveBlockJob) {
+        val startPosition = pos.currentPosition
+        data.writeKind(ObjectKind.BLOCK_START)
+        data.writeInt(job.writerId)
+        val indexShift = pos.currentPosition - job.logicalBlockStart
+        data.write(job.dataBlock.array(), 0, job.dataBlock.limit())
+        val endPosition = pos.currentPosition
+        data.writeKind(ObjectKind.BLOCK_END)
+        data.flush()
+
+        index.writeIndexCell(ObjectKind.BLOCK_START, job.writerId, startPosition, endPosition)
+        job.indexList.forEach {
+            if (it.kind == ObjectKind.TRACEPOINT) {
+                // Trace points indices are in "local" offsets, as they should be loaded
+                // from interleaving per-thread blocks
+                index.writeIndexCell(it.kind, it.id, it.startPos, it.endPos)
+            } else {
+                // All other objects are in "global" offsets as they cannot be split between blocks
+                // and can be loaded without taking blocks in consideration
+                index.writeIndexCell(it.kind, it.id, it.startPos + indexShift, it.endPos + indexShift)
+            }
+        }
+        index.flush()
+    }
+
+    private fun closeStreams() {
+        data.writeKind(ObjectKind.EOF)
+        data.close()
+
+        index.writeIndexCell(ObjectKind.EOF, -1, -1, -1)
+        index.writeLong(INDEX_MAGIC)
+        index.close()
+    }
+}
+
 class FileStreamingTraceCollecting(
     dataStream: OutputStream,
     indexStream: OutputStream,
@@ -756,9 +842,10 @@ class FileStreamingTraceCollecting(
                 context = context
             )
 
-    private val pos: PositionCalculatingOutputStream = PositionCalculatingOutputStream(dataStream)
-    private val data: DataOutputStream = DataOutputStream(pos)
-    private val index: DataOutputStream = DataOutputStream(indexStream.buffered(OUTPUT_BUFFER_SIZE))
+    private val ioThread = FileStreamingThread(dataStream, indexStream)
+    init {
+        ioThread.start()
+    }
 
     private var seenClassDescriptors = AtomicBitmap()
     private var seenMethodDescriptors = AtomicBitmap()
@@ -785,14 +872,6 @@ class FileStreamingTraceCollecting(
         }
     }
 
-    init {
-        data.writeLong(TRACE_MAGIC)
-        data.writeLong(TRACE_VERSION)
-
-        index.writeLong(INDEX_MAGIC)
-        index.writeLong(TRACE_VERSION)
-    }
-
     override fun registerCurrentThread(threadId: Int) {
         val thread = Thread.currentThread()
         if (writers[thread] != null) return
@@ -803,7 +882,7 @@ class FileStreamingTraceCollecting(
             // This is needed to work around visibility problems
             storage = object : BlockSaver {
                 override fun saveDataAndIndexBlock(writerId: Int, logicalBlockStart: Long, dataBlock: ByteBuffer, indexList: List<IndexCell>) =
-                    saveDataAndIndexBlockImpl(writerId, logicalBlockStart,dataBlock, indexList)
+                    ioThread.addBlock(writerId, logicalBlockStart, dataBlock, indexList)
             }
         )
         context.setThreadName(threadId, thread.name)
@@ -850,39 +929,8 @@ class FileStreamingTraceCollecting(
         }
         writers.values.forEach { it.close() }
 
-        data.writeKind(ObjectKind.EOF)
-        data.close()
-
-        index.writeIndexCell(ObjectKind.EOF, -1, -1, -1)
-        index.writeLong(INDEX_MAGIC)
-        index.close()
-    }
-
-    // This is a synchronization point for all real stream writes
-    @Synchronized
-    private fun saveDataAndIndexBlockImpl(writerId: Int, logicalBlockStart: Long, dataBlock: ByteBuffer, indexList: List<IndexCell>) {
-        val startPosition = pos.currentPosition
-        data.writeKind(ObjectKind.BLOCK_START)
-        data.writeInt(writerId)
-        val indexShift = pos.currentPosition - logicalBlockStart
-        data.write(dataBlock.array(), 0, dataBlock.limit())
-        val endPosition = pos.currentPosition
-        data.writeKind(ObjectKind.BLOCK_END)
-        data.flush()
-
-        index.writeIndexCell(ObjectKind.BLOCK_START, writerId, startPosition, endPosition)
-        indexList.forEach {
-            if (it.kind == ObjectKind.TRACEPOINT) {
-                // Trace points indices are in "local" offsets, as they should be loaded
-                // from interleaving per-thread blocks
-                index.writeIndexCell(it.kind, it.id, it.startPos, it.endPos)
-            } else {
-                // All other objects are in "global" offsets as they cannot be split between blocks
-                // and can be loaded without taking blocks in consideration
-                index.writeIndexCell(it.kind, it.id, it.startPos + indexShift, it.endPos + indexShift)
-            }
-        }
-        index.flush()
+        // Flush all output & exit
+        ioThread.exit()
     }
 
     override fun isClassDescriptorSaved(id: Int): Boolean = seenClassDescriptors.isSet(id)
