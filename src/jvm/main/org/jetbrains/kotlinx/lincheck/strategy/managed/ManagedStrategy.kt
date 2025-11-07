@@ -1845,7 +1845,7 @@ internal abstract class ManagedStrategy(
         error("Lincheck managed strategy does not support CFG-based loops tracking.")
     }
 
-    override fun afterLoopExit(codeLocation: Int, loopId: Int, exception: Throwable?, canEnterFromOutsideLoop: Boolean) {
+    override fun afterLoopExit(codeLocation: Int, loopId: Int, exception: Throwable?, isReachableFromOutsideLoop: Boolean) {
         error("Lincheck managed strategy does not support CFG-based loops tracking.")
     }
 

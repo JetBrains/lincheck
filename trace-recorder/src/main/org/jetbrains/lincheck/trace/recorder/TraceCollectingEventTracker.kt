@@ -776,27 +776,23 @@ class TraceCollectingEventTracker(
         codeLocation: Int,
         loopId: Int,
         exception: Throwable?,
-        canEnterFromOutsideLoop: Boolean
+        isReachableFromOutsideLoop: Boolean
     ) = runInsideInjectedCode {
         // TODO: should we do something about exception?
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
         val thread = Thread.currentThread()
+        val currentLoopTracePoint = threadData.currentLoopTracePoint()
 
-        if (!canEnterFromOutsideLoop) {
-            val currentLoopTracePoint = threadData.currentLoopTracePoint()!!
-            // TODO: perhaps better to use logging instead of throwing exception
-            check(currentLoopTracePoint.loopId == loopId) {
-                "Unexpected loop exit: expected loopId ${currentLoopTracePoint.loopId}, but was $loopId"
+        if (!isReachableFromOutsideLoop) {
+            if (currentLoopTracePoint == null) {
+                Logger.error { "Exit from loop $loopId outside of it" }
+            } else if (currentLoopTracePoint.loopId != loopId) {
+                Logger.error { "Unexpected loop exit: expected loopId ${currentLoopTracePoint.loopId}, but was $loopId" }
             }
+        }
+        if (currentLoopTracePoint?.loopId == loopId) {
             exitCurrentLoop(thread, threadData)
-        } else {
-            if (threadData.currentLoopTracePoint()?.loopId != loopId) return
-            do {
-                val currentLoopTracePoint = threadData.currentLoopTracePoint() ?: break
-                exitCurrentLoop(thread, threadData)
-            }
-            while (currentLoopTracePoint.loopId != loopId)
         }
     }
 

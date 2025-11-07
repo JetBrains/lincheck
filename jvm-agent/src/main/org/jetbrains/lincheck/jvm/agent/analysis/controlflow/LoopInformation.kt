@@ -68,6 +68,10 @@ typealias LoopId = Int
  *   Thus, injections placed in the exception handlers may need to perform additional checks at runtime
  *   to see whether the injection was reached from loop or not.
  *
+ * @property exclusiveExits The set of exceptional and normal exits that are only reachable from
+ *   within the loop body. This is useful for calculating the reachability of exception handler opcodes
+ *   from outside loops.
+ *
  * @property isReducible True if this loop is reducible (i.e., single-header), false otherwise.
  */
  data class LoopInformation(
@@ -78,6 +82,7 @@ typealias LoopId = Int
      val backEdges: Set<Edge>,
      val normalExits: Set<Edge>,
      val exceptionalExitHandlers: Set<BasicBlockIndex>,
+     val exclusiveExits: Set<BasicBlockIndex>
  ) {
      init {
          validate()
@@ -112,13 +117,18 @@ typealias LoopId = Int
          require(exceptionalExitHandlers.all { it !in body }) {
              "Exceptional exit handlers must be outside of loop body"
          }
+
+         require(exclusiveExits.all { it in exceptionalExitHandlers || normalExits.any { e -> it == e.target } }) {
+             "Exclusive exits must be either exceptional or normal"
+         }
      }
  }
 
 /**
  * Aggregates loop information for a single method.
  *
- * @property loops All loops detected in the method.
+ * @property loops All loops detected in the method. Note that there is an invariant which holds: for every two loops
+ *                 `a` and `b`: if `a` is an outer loop of `b` (meaning that `b.body` is a subset of `a.body`), then `a.id < b.id`.
  * @property loopsByBlock For each basic block, the list of loop ids this block belongs to.
  */
 class MethodLoopsInformation(
@@ -210,7 +220,6 @@ internal fun BasicBlockControlFlowGraph.computeBackEdges(): Set<Edge> {
  * If there is more than one back edge to the same header, the body of the loop is the union of the nodes computed for each back edge.
  * Since loops can nest, a header for one loop can be in the body of (but not the header of) another loop.
  *
- * @param dominators An array of dominator sets for each basic block.
  * @return A list of detected loops, each represented by a [LoopInformation] object.
  *   The list is empty if no loops were detected.
  *   The loops are sorted by the header block index.
@@ -236,6 +245,7 @@ internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(): MethodLoop
     val backEdgesByHeader = backEdges.groupBy { it.target }
     val loops = mutableListOf<LoopInformation>()
     var nextLoopId = 0
+    val loopBodiesWithHeader = mutableListOf<Pair<BasicBlockIndex, Set<BasicBlockIndex>>>()
     for ((h, adjacentBackEdges) in backEdgesByHeader) {
         val body = mutableSetOf<BasicBlockIndex>()
         body.add(h)
@@ -252,6 +262,21 @@ internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(): MethodLoop
                 }
             }
         }
+        loopBodiesWithHeader.add(h to body.toSet())
+    }
+
+    // Sort loop bodies by containment and header values, so that for any two loops a and b we could say that
+    // if b is an inner loop of a, then id(a) < id(b), so "outer" loops have smaller ids than "inner" loops
+    loopBodiesWithHeader.sortWith { a, b ->
+        val aBody = a.second
+        val bBody = b.second
+        // the "outer" loops will come before their "inner" loops
+        if (aBody.size >= bBody.size && aBody.containsAll(bBody)) -1
+        else if (aBody.size < bBody.size && bBody.containsAll(aBody)) 1
+        else a.first.compareTo(b.first)
+    }
+
+    for ((h, body) in loopBodiesWithHeader) {
         // Normal exits: edges from body to outside, non-exception
         val normalExits = buildSet {
             for (e in normalEdges) {
@@ -266,14 +291,19 @@ internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(): MethodLoop
                 }
             }
         }
+        // All exits that are only reachable from the loop body
+        val exclusiveExits = (normalExits.asSequence().map { it.target } + exceptionalExitHandlers.asSequence())
+            .filterTo(mutableSetOf()) { isExclusiveExitFromLoopBody(it, body) }
+
         loops += LoopInformation(
             id = nextLoopId++,
             header = h,
             headers = setOf(h),
             body = body,
-            backEdges = adjacentBackEdges.toSet(),
+            backEdges = backEdgesByHeader[h]!!.toSet(),
             normalExits = normalExits,
             exceptionalExitHandlers = exceptionalExitHandlers,
+            exclusiveExits = exclusiveExits
         )
     }
 
@@ -328,6 +358,26 @@ internal fun BasicBlockControlFlowGraph.isReducible(): Boolean {
     return !hasCycle && allBlocksReachable
 }
 
+/**
+ * Checks if the given exit block is exclusive to the loop body,
+ * meaning that there is no reverse normal/exceptional edge in the CFG that leads to
+ * a basic block outside the loop body.
+ */
+private fun BasicBlockControlFlowGraph.isExclusiveExitFromLoopBody(
+    exitBlock: BasicBlockIndex,
+    loopBody: Set<BasicBlockIndex>
+): Boolean {
+    val neighs = allPredecessors.neighbours(exitBlock)
+    var exitIsReachableOnlyFromLoop = true
+    for (pred in neighs) {
+        if (pred !in loopBody) {
+            exitIsReachableOnlyFromLoop = false
+            break
+        }
+    }
+    return exitIsReachableOnlyFromLoop
+}
+
 // == LOOPS PRETTY-PRINTING ==
 
 fun MethodLoopsInformation.toFormattedString(): String =
@@ -353,6 +403,11 @@ private class MethodLoopsInformationPrinter(val loopInfo: MethodLoopsInformation
             }
             sb.appendLine("  EXCEPTION EXIT HANDLERS:")
             loop.exceptionalExitHandlers.let {
+                if (it.isEmpty()) sb.appendLine("    NONE")
+                else sb.appendLine(it.sorted().joinToString(", ") { block -> "B$block" }.prependIndent("    "))
+            }
+            sb.appendLine("  EXCLUSIVE EXITS:")
+            loop.exclusiveExits.let {
                 if (it.isEmpty()) sb.appendLine("    NONE")
                 else sb.appendLine(it.sorted().joinToString(", ") { block -> "B$block" }.prependIndent("    "))
             }
