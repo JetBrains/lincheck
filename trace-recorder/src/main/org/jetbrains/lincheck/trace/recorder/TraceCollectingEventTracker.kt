@@ -995,10 +995,6 @@ class TraceCollectingEventTracker(
         methodName: String
     ): AnalysisSectionType {
         val ownerName = owner?.javaClass?.canonicalName ?: className
-        // Do not track Collection.size() calls
-        if (methodName == "size" && owner is Collection<*>) {
-            return AnalysisSectionType.IGNORED
-        }
         return analysisProfile.getAnalysisSectionFor(ownerName, methodName)
     }
 }
