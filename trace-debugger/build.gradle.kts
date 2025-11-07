@@ -20,7 +20,6 @@ sourceSets {
 
     dependencies {
         // main
-        val kotlinVersion: String by project
         val asmVersion: String by project
         val byteBuddyVersion: String by project
 
@@ -29,7 +28,7 @@ sourceSets {
         implementation(project(":common"))
         implementation(project(":jvm-agent"))
 
-        api("org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}")
+        api(kotlin("reflect"))
         api("org.ow2.asm:asm-commons:${asmVersion}")
         api("org.ow2.asm:asm-util:${asmVersion}")
         api("net.bytebuddy:byte-buddy:${byteBuddyVersion}")
