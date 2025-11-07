@@ -245,7 +245,7 @@ internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(): MethodLoop
     val backEdgesByHeader = backEdges.groupBy { it.target }
     val loops = mutableListOf<LoopInformation>()
     var nextLoopId = 0
-    val loopBodiesByHeader = mutableListOf<Pair<BasicBlockIndex, Set<BasicBlockIndex>>>()
+    val loopBodiesWithHeader = mutableListOf<Pair<BasicBlockIndex, Set<BasicBlockIndex>>>()
     for ((h, adjacentBackEdges) in backEdgesByHeader) {
         val body = mutableSetOf<BasicBlockIndex>()
         body.add(h)
@@ -262,12 +262,12 @@ internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(): MethodLoop
                 }
             }
         }
-        loopBodiesByHeader.add(h to body.toSet())
+        loopBodiesWithHeader.add(h to body.toSet())
     }
 
     // Sort loop bodies by containment and header values, so that for any two loops a and b we could say that
     // if b is an inner loop of a, then id(a) < id(b), so "outer" loops have smaller ids than "inner" loops
-    loopBodiesByHeader.sortWith { a, b ->
+    loopBodiesWithHeader.sortWith { a, b ->
         val aBody = a.second
         val bBody = b.second
         // the "outer" loops will come before their "inner" loops
@@ -276,7 +276,7 @@ internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(): MethodLoop
         else a.first.compareTo(b.first)
     }
 
-    for ((h, body) in loopBodiesByHeader) {
+    for ((h, body) in loopBodiesWithHeader) {
         // Normal exits: edges from body to outside, non-exception
         val normalExits = buildSet {
             for (e in normalEdges) {
