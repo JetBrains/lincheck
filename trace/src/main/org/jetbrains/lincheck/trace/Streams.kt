@@ -131,9 +131,9 @@ internal class SeekableDataInput (
 internal class BufferOverflowException: Exception()
 
 internal class ByteBufferOutputStream(
-    bufferSize: Int
+    private val bufferSize: Int
 ) : OutputStream() {
-    private val buffer = ByteBuffer.allocate(bufferSize)
+    private var buffer = ByteBuffer.allocate(bufferSize)
 
     override fun write(b: Int) {
         if (buffer.remaining() < 1) {
@@ -151,13 +151,11 @@ internal class ByteBufferOutputStream(
 
     fun available(): Int = buffer.remaining()
 
-    fun getBuffer(): ByteBuffer {
-        buffer.flip()
-        return buffer
-    }
-
-    fun reset() {
-        buffer.clear()
+    fun detachBuffer(): ByteBuffer {
+        val current = buffer
+        buffer = ByteBuffer.allocate(bufferSize)
+        current.flip()
+        return current
     }
 
     fun mark() {
