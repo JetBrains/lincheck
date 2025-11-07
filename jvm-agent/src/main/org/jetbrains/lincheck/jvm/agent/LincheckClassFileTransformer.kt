@@ -16,6 +16,7 @@ import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent.instrumentationMode
 import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent.instrumentedClasses
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.BasicBlockControlFlowGraph
 import org.jetbrains.lincheck.jvm.agent.analysis.*
+import org.jetbrains.lincheck.jvm.agent.transformers.sanitizeMethodName
 import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.*
 import org.objectweb.asm.tree.ClassNode
@@ -105,7 +106,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
 
         val classInfo = ClassInformation(
             smap = readClassSMAP(classNode, reader),
-            locals = getMethodsLocalVariables(classNode),
+            locals = getMethodsLocalVariables(classNode, profile),
             labels = getMethodsLabels(classNode),
             methodsToLineRanges = lineRanges,
             linesToMethodNames = linesToMethodNames,
@@ -136,11 +137,12 @@ object LincheckClassFileTransformer : ClassFileTransformer {
     }
 
     private fun getMethodsLocalVariables(
-        classNode: ClassNode
+        classNode: ClassNode, profile: TransformationProfile,
     ): Map<String, MethodVariables> {
         return classNode.methods.associateBy(
             keySelector = { m -> m.name + m.desc },
             valueTransform = { m ->
+                val config = profile.getMethodConfiguration(classNode.name.toCanonicalClassName(), m.name, m.desc)
                 mutableMapOf<Int, MutableList<LocalVariableInfo>>().also { map ->
                     m.localVariables?.forEach { local ->
                         if (
@@ -151,8 +153,9 @@ object LincheckClassFileTransformer : ClassFileTransformer {
 
                         val index = local.index
                         val type = Type.getType(local.desc)
-                        val info = LocalVariableInfo(local.name, local.index, type,
-                            local.start.label to local.end.label
+                        val name = sanitizeVariableName(classNode.name, local.name, config, type) ?: return@forEach
+                        val info = LocalVariableInfo(
+                            name, local.index, type, local.start.label to local.end.label
                         )
                         map.getOrPut(index) { mutableListOf() }.add(info)
                     }
@@ -160,6 +163,27 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             }
         )
         .mapValues { MethodVariables(it.value) }
+    }
+
+    private fun sanitizeVariableName(owner: String, originalName: String, config: TransformationConfiguration, type: Type): String? {
+        fun callRecursive(originalName: String) = sanitizeVariableName(owner, originalName, config, type)
+        return when {
+            !config.trackInlineMethodCalls && originalName.startsWith($$"$i$a$-") -> null
+            !config.trackInlineMethodCalls && originalName.startsWith($$"$i$f$") -> {
+                val sanitizedMethodName = sanitizeMethodName(
+                    owner, originalName.removePrefix($$"$i$f$"), instrumentationMode
+                )
+                "Inline call of $sanitizedMethodName"
+            }
+
+            !config.trackInlineMethodCalls && originalName.endsWith($$"$iv") ->
+                callRecursive(originalName.removeSuffix($$"$iv"))
+
+            originalName.contains('-') -> callRecursive(originalName.substringBeforeLast('-'))
+            originalName.contains("_u24lambda_u24") -> callRecursive(originalName.replace("_u24lambda_u24", $$"$lambda$"))
+            originalName.isOuterReceiverName() -> "this@${type.className.substringAfterLast('.')}"
+            else -> originalName
+        }
     }
 
     private fun getMethodsLabels(

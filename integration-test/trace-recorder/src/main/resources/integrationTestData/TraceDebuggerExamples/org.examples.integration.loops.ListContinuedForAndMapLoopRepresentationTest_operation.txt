@@ -8,44 +8,40 @@ ListContinuedForAndMapLoopRepresentationTest.operation() at :0
   listOf(Integer;@1): Arrays.ArrayList@1 at ListContinuedForAndMapLoopRepresentationTest.kt:18
   list = Arrays.ArrayList@1 at ListContinuedForAndMapLoopRepresentationTest.kt:18
   map = Arrays.ArrayList@1 at ListContinuedForAndMapLoopRepresentationTest.kt:19
-  i$f$map = 0 at ListContinuedForAndMapLoopRepresentationTest.kt:19
+  Inline call of map = 0 at ListContinuedForAndMapLoopRepresentationTest.kt:19
   collectionSizeOrDefault(map, 10): 4 at _Collections.kt:1563
-  mapTo$iv = Arrays.ArrayList@1 at _Collections.kt:1563
-  destination$iv = ArrayList@1 at _Collections.kt:1563
-  i$f$mapTo = 0 at _Collections.kt:1563
-  iterator(): Arrays.ArrayItr@1 at _Collections.kt:1634
+  mapTo = Arrays.ArrayList@1 at _Collections.kt:1563
+  destination = ArrayList@1 at _Collections.kt:1563
+  Inline call of mapTo = 0 at _Collections.kt:1563
+  mapTo.iterator(): Arrays.ArrayItr@1 at _Collections.kt:1634
   loop(5 iterations) at _Collections.kt:1634
     <iteration 1> at _Collections.kt:1634
       Arrays.ArrayItr@1.hasNext(): true at _Collections.kt:1634
       Arrays.ArrayItr@1.next(): 1 at _Collections.kt:1634
-      item$iv = 1 at _Collections.kt:1634
+      item = 1 at _Collections.kt:1634
       it = 1 at _Collections.kt:1635
-      i$a$-map-ListContinuedForAndMapLoopRepresentationTest$operation$1 = 0 at _Collections.kt:1635
-      destination$iv.add(2): true at _Collections.kt:1635
+      destination.add(2): true at _Collections.kt:1635
     <iteration 2> at _Collections.kt:1634
       Arrays.ArrayItr@1.hasNext(): true at _Collections.kt:1634
       Arrays.ArrayItr@1.next(): 2 at _Collections.kt:1634
-      item$iv = 2 at _Collections.kt:1634
+      item = 2 at _Collections.kt:1634
       it = 2 at _Collections.kt:1635
-      i$a$-map-ListContinuedForAndMapLoopRepresentationTest$operation$1 = 0 at _Collections.kt:1635
-      destination$iv.add(4): true at _Collections.kt:1635
+      destination.add(4): true at _Collections.kt:1635
     <iteration 3> at _Collections.kt:1634
       Arrays.ArrayItr@1.hasNext(): true at _Collections.kt:1634
       Arrays.ArrayItr@1.next(): 3 at _Collections.kt:1634
-      item$iv = 3 at _Collections.kt:1634
+      item = 3 at _Collections.kt:1634
       it = 3 at _Collections.kt:1635
-      i$a$-map-ListContinuedForAndMapLoopRepresentationTest$operation$1 = 0 at _Collections.kt:1635
-      destination$iv.add(6): true at _Collections.kt:1635
+      destination.add(6): true at _Collections.kt:1635
     <iteration 4> at _Collections.kt:1634
       Arrays.ArrayItr@1.hasNext(): true at _Collections.kt:1634
       Arrays.ArrayItr@1.next(): 4 at _Collections.kt:1634
-      item$iv = 4 at _Collections.kt:1634
+      item = 4 at _Collections.kt:1634
       it = 4 at _Collections.kt:1635
-      i$a$-map-ListContinuedForAndMapLoopRepresentationTest$operation$1 = 0 at _Collections.kt:1635
-      destination$iv.add(8): true at _Collections.kt:1635
+      destination.add(8): true at _Collections.kt:1635
     <iteration 5> at _Collections.kt:1634
       Arrays.ArrayItr@1.hasNext(): false at _Collections.kt:1634
-  destination$iv.iterator(): ArrayList.Itr@1 at ListContinuedForAndMapLoopRepresentationTest.kt:19
+  destination.iterator(): ArrayList.Itr@1 at ListContinuedForAndMapLoopRepresentationTest.kt:19
   loop(5 iterations) at ListContinuedForAndMapLoopRepresentationTest.kt:19
     <iteration 1> at ListContinuedForAndMapLoopRepresentationTest.kt:19
       ArrayList.Itr@1.hasNext(): true at ListContinuedForAndMapLoopRepresentationTest.kt:19

@@ -4,12 +4,11 @@ ImmutableListTest.empty() at :0
   empty1 = SmallPersistentVector@1 at ImmutableListTest.kt:20
   persistentListOf(): SmallPersistentVector@1 at ImmutableListTest.kt:21
   empty2 = SmallPersistentVector@1 at ImmutableListTest.kt:21
-  assertEquals$default(empty1, empty2, null, 4, null) at ImmutableListTest.kt:22
+  assertEquals(empty1, empty2, null, 4, null) at ImmutableListTest.kt:22
   emptyList(): EmptyList@1 at ImmutableListTest.kt:23
-  assertEquals$default(EmptyList@1, empty1, null, 4, null) at ImmutableListTest.kt:23
-  assertTrue$default(true, null, 2, null) at ImmutableListTest.kt:24
+  assertEquals(EmptyList@1, empty1, null, 4, null) at ImmutableListTest.kt:23
+  assertTrue(true, null, 2, null) at ImmutableListTest.kt:24
   Reflection.getOrCreateKotlinClass(Class@1): KClassImpl@1 at ImmutableListTest.kt:26
-  i$a$-assertFailsWith$default-ImmutableListTest$empty$1 = 0 at fake.kt:1
   empty1.iterator(): BufferIterator@1 at ImmutableListTest.kt:26
   BufferIterator@1.next(): threw NoSuchElementException at ImmutableListTest.kt:26
   createFailure(NoSuchElementException@1): Result.Failure@1 at ImmutableListTest.kt:26

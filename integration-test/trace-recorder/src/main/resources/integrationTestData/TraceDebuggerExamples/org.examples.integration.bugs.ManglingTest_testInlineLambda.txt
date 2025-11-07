@@ -1,0 +1,4 @@
+# Thread 1
+ManglingTest.testInlineLambda() at :0
+  it = 2 at ManglingTest.kt:33
+  System.out.println(4) at ManglingTest.kt:33

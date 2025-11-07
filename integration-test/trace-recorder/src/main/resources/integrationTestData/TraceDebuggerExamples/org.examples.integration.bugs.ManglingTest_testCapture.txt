@@ -1,0 +1,7 @@
+# Thread 1
+ManglingTest.testCapture() at :0
+  multi = 2 at ManglingTest.kt:86
+  testCapture$multiply(multi ➜ 2, 3): 6 at ManglingTest.kt:91
+  System.out.println(6) at ManglingTest.kt:91
+  ManglingTest$testCapture$A@1.multiply(3): 6 at ManglingTest.kt:92
+  System.out.println(6) at ManglingTest.kt:92

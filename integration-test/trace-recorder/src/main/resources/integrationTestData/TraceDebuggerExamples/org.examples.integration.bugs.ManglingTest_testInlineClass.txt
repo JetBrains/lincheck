@@ -1,0 +1,12 @@
+# Thread 1
+ManglingTest.testInlineClass() at :0
+  sum(2, 3): 5 at ManglingTest.kt:52
+    UInt.constructor-impl(5): 5 at ManglingTest.kt:48
+  UInt.box-impl(5): UInt@1 at ManglingTest.kt:52
+  x = UInt@1 at ManglingTest.kt:52
+  System.out.println(x) at ManglingTest.kt:53
+  x.unbox-impl(): 5 at ManglingTest.kt:54
+  sum(5, 4): 9 at ManglingTest.kt:54
+    UInt.constructor-impl(9): 9 at ManglingTest.kt:48
+  UInt.box-impl(9): UInt@1 at ManglingTest.kt:54
+  System.out.println(UInt@1) at ManglingTest.kt:54
