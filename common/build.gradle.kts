@@ -17,13 +17,10 @@ sourceSets {
 
     dependencies {
         // main
-        val kotlinVersion: String by project
         val asmVersion: String by project
 
         compileOnly(project(":bootstrap"))
-        api("org.jetbrains.kotlin:kotlin-stdlib:${kotlinVersion}")
-        api("org.jetbrains.kotlin:kotlin-stdlib-common:${kotlinVersion}")
-        api("org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}")
+        api(kotlin("reflect"))
         api("org.ow2.asm:asm-commons:${asmVersion}")
     }
 }

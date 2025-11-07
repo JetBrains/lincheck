@@ -101,7 +101,6 @@ sourceSets {
 
     dependencies {
         // main
-        val kotlinVersion: String by project
         val kotlinxCoroutinesVersion: String by project
         val asmVersion: String by project
         val byteBuddyVersion: String by project
@@ -113,9 +112,7 @@ sourceSets {
         implementation(project(":jvm-agent"))
         implementation(project(":trace"))
 
-        api("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
-        api("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion")
-        api("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
+        api(kotlin("reflect"))
         api("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinxCoroutinesVersion")
         api("org.ow2.asm:asm-commons:$asmVersion")
         api("org.ow2.asm:asm-util:$asmVersion")
