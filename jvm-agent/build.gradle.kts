@@ -28,8 +28,6 @@ sourceSets {
         compileOnly(project(":bootstrap"))
         implementation(project(":common"))
 
-        api("org.jetbrains.kotlin:kotlin-stdlib:${kotlinVersion}")
-        api("org.jetbrains.kotlin:kotlin-stdlib-common:${kotlinVersion}")
         api("org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}")
         api("org.ow2.asm:asm-commons:${asmVersion}")
         api("org.ow2.asm:asm-util:${asmVersion}")
