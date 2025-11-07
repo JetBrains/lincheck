@@ -292,10 +292,8 @@ internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(): MethodLoop
             }
         }
         // All exits that are only reachable from the loop body
-        val exclusiveExits = sequence {
-            yieldAll(normalExits.asSequence().map { it.target })
-            yieldAll(exceptionalExitHandlers)
-        }.filterTo(mutableSetOf()) { isExclusiveExitFromLoopBody(it, body) }
+        val exclusiveExits = (normalExits.asSequence().map { it.target } + exceptionalExitHandlers.asSequence())
+            .filterTo(mutableSetOf()) { isExclusiveExitFromLoopBody(it, body) }
 
         loops += LoopInformation(
             id = nextLoopId++,

@@ -228,10 +228,7 @@ private fun BasicBlockControlFlowGraph.computeReachabilityFromOutsideLoops(
     val cfg = this
     val result = mutableMapOf<InstructionIndex, MutableSet<Int>>()
     for (loop in loopInfo.loops) {
-        val exitBlocks = sequence {
-            yieldAll(loop.normalExits.asSequence().map { it.target })
-            yieldAll(loop.exceptionalExitHandlers)
-        }
+        val exitBlocks = (loop.normalExits.asSequence().map { it.target } + loop.exceptionalExitHandlers.asSequence())
         for (exit in exitBlocks) {
             val idx = cfg.firstOpcodeIndexOf(exit) ?: continue
             result.updateInplace(insnIndexRemapping[idx], default = mutableSetOf()) {
