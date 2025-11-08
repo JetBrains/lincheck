@@ -160,16 +160,32 @@ object LincheckClassFileTransformer : ClassFileTransformer {
 
     private fun sanitizeVariableName(owner: String, originalName: String, config: TransformationConfiguration, type: Type): String? {
         fun callRecursive(originalName: String) = sanitizeVariableName(owner, originalName, config, type)
+
+        fun callRecursiveForSuffixAfter(prefix: String): String =
+            "$prefix${callRecursive(originalName.removePrefix(prefix))}"
+
+        fun callRecursiveForPrefixBefore(suffix: String): String =
+            "${callRecursive(originalName.removeSuffix(suffix))}$suffix"
+
         return when {
-            !config.trackInlineMethodCalls && originalName.startsWith($$"$i$a$-") -> null
-            !config.trackInlineMethodCalls && originalName.startsWith($$"$i$f$") -> null
-            !config.trackInlineMethodCalls && originalName.endsWith($$"$iv") ->
-                callRecursive(originalName.removeSuffix($$"$iv"))
+            originalName.startsWith($$"$i$a$-") -> if (config.trackInlineMethodCalls) {
+                val firstSuffix = originalName.substringAfter($$"$i$a$-")
+                val prefix =
+                    if (firstSuffix.contains('-')) $$"$i$a$-$${firstSuffix.substringBefore('-')}-"
+                    else $$"$i$a$-"
+                callRecursiveForSuffixAfter(prefix)
+            } else {
+                null
+            }
+            originalName.startsWith($$"$i$f$") ->
+                if (config.trackInlineMethodCalls) callRecursiveForSuffixAfter($$"$i$f$") else null
+            originalName.endsWith($$"$iv") ->
+                if (config.trackInlineMethodCalls) callRecursiveForPrefixBefore($$"$iv")
+                else callRecursive(originalName.removeSuffix($$"$iv"))
 
-            !config.trackInlineMethodCalls && originalName.contains('-') ->
-                callRecursive(originalName.substringBeforeLast('-'))
-
-            originalName.contains("_u24lambda_u24") -> callRecursive(originalName.replace("_u24lambda_u24", $$"$lambda$"))
+            originalName.contains('-') -> callRecursive(originalName.substringBeforeLast('-'))
+            originalName.contains("_u24lambda_u24") ->
+                callRecursive(originalName.replace("_u24lambda_u24", $$"$lambda$"))
             else -> originalName
         }
     }
