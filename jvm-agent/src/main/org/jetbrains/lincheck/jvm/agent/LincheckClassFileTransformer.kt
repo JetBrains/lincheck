@@ -166,7 +166,9 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             !config.trackInlineMethodCalls && originalName.endsWith($$"$iv") ->
                 callRecursive(originalName.removeSuffix($$"$iv"))
 
-            originalName.contains('-') -> callRecursive(originalName.substringBeforeLast('-'))
+            !config.trackInlineMethodCalls && originalName.contains('-') ->
+                callRecursive(originalName.substringBeforeLast('-'))
+
             originalName.contains("_u24lambda_u24") -> callRecursive(originalName.replace("_u24lambda_u24", $$"$lambda$"))
             else -> originalName
         }
