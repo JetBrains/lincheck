@@ -30,22 +30,22 @@ ImmutableListTest.empty() at :0
             "".toString(): "" at CollectionBehaviors.kt:96
             prefix = "" at CollectionBehaviors.kt:96
             equalityBehavior.equals(objectName ➜ "") at CollectionBehaviors.kt:97
-              assertEquals(this.expected, this.actual, message ➜ "") at ComparisonDSL.kt:18
+              assertEquals(expected, actual, message ➜ "") at ComparisonDSL.kt:18
             "".append(prefix ➜ ""): "" at CollectionBehaviors.kt:98
             "".append("hashCode"): "hashCode" at CollectionBehaviors.kt:98
             "hashCode".toString(): "hashCode" at CollectionBehaviors.kt:98
             equalityBehavior.propertyEquals("hashCode", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:98
-              getter.invoke(this.expected): 1 at ComparisonDSL.kt:21
+              getter.invoke(expected): 1 at ComparisonDSL.kt:21
                 propertyEquals.hashCode(): 1 at CollectionBehaviors.kt:98
-              getter.invoke(this.actual): 1 at ComparisonDSL.kt:21
+              getter.invoke(actual): 1 at ComparisonDSL.kt:21
                 propertyEquals.hashCode(): 1 at CollectionBehaviors.kt:98
               assertEquals(1, 1, message ➜ "hashCode") at ComparisonDSL.kt:21
             "".append(prefix ➜ ""): "" at CollectionBehaviors.kt:100
             "".append("toString"): "toString" at CollectionBehaviors.kt:100
             "toString".toString(): "toString" at CollectionBehaviors.kt:100
             equalityBehavior.propertyEquals("toString", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:100
-              getter.invoke(this.expected): "[]" at ComparisonDSL.kt:21
-              getter.invoke(this.actual): "[]" at ComparisonDSL.kt:21
+              getter.invoke(expected): "[]" at ComparisonDSL.kt:21
+              getter.invoke(actual): "[]" at ComparisonDSL.kt:21
               assertEquals("[]", "[]", message ➜ "toString") at ComparisonDSL.kt:21
           collectionBehavior(CompareContext@1, "", true) at CollectionBehaviors.kt:10
             "".append(objectName ➜ ""): "" at CollectionBehaviors.kt:105
@@ -57,53 +57,53 @@ ImmutableListTest.empty() at :0
             "".append("size"): "size" at CollectionBehaviors.kt:106
             "size".toString(): "size" at CollectionBehaviors.kt:106
             collectionBehavior.propertyEquals("size", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:106
-              getter.invoke(this.expected): 0 at ComparisonDSL.kt:21
+              getter.invoke(expected): 0 at ComparisonDSL.kt:21
                 propertyEquals.size(): 0 at CollectionBehaviors.kt:106
-              getter.invoke(this.actual): 0 at ComparisonDSL.kt:21
+              getter.invoke(actual): 0 at ComparisonDSL.kt:21
                 propertyEquals.size(): 0 at CollectionBehaviors.kt:106
               assertEquals(0, 0, message ➜ "size") at ComparisonDSL.kt:21
             "".append(prefix ➜ ""): "" at CollectionBehaviors.kt:107
             "".append("isEmpty"): "isEmpty" at CollectionBehaviors.kt:107
             "isEmpty".toString(): "isEmpty" at CollectionBehaviors.kt:107
             collectionBehavior.propertyEquals("isEmpty", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:107
-              getter.invoke(this.expected): true at ComparisonDSL.kt:21
+              getter.invoke(expected): true at ComparisonDSL.kt:21
                 propertyEquals.isEmpty(): true at CollectionBehaviors.kt:107
-              getter.invoke(this.actual): true at ComparisonDSL.kt:21
+              getter.invoke(actual): true at ComparisonDSL.kt:21
                 propertyEquals.isEmpty(): true at CollectionBehaviors.kt:107
               assertEquals(true, true, message ➜ "isEmpty") at ComparisonDSL.kt:21
             it = CollectionBehaviorsKt$collectionBehavior$3@1 at CollectionBehaviors.kt:109
             CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:109
-              getter.invoke(this.expected): false at ComparisonDSL.kt:21
+              getter.invoke(expected): false at ComparisonDSL.kt:21
                 contains(propertyEquals, it): false at CollectionBehaviors.kt:109
-              getter.invoke(this.actual): false at ComparisonDSL.kt:21
+              getter.invoke(actual): false at ComparisonDSL.kt:21
                 contains(propertyEquals, it): false at CollectionBehaviors.kt:109
               assertEquals(false, false, message ➜ "") at ComparisonDSL.kt:21
             CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:110
-              getter.invoke(this.expected): false at ComparisonDSL.kt:21
+              getter.invoke(expected): false at ComparisonDSL.kt:21
                 firstOrNull(propertyEquals): null at CollectionBehaviors.kt:110
                 contains(propertyEquals, null): false at CollectionBehaviors.kt:110
-              getter.invoke(this.actual): false at ComparisonDSL.kt:21
+              getter.invoke(actual): false at ComparisonDSL.kt:21
                 firstOrNull(propertyEquals): null at CollectionBehaviors.kt:110
                 contains(propertyEquals, null): false at CollectionBehaviors.kt:110
               assertEquals(false, false, message ➜ "") at ComparisonDSL.kt:21
             CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:111
-              getter.invoke(this.expected): true at ComparisonDSL.kt:21
+              getter.invoke(expected): true at ComparisonDSL.kt:21
                 propertyEquals.containsAll(propertyEquals): true at CollectionBehaviors.kt:111
-              getter.invoke(this.actual): true at ComparisonDSL.kt:21
+              getter.invoke(actual): true at ComparisonDSL.kt:21
                 propertyEquals.containsAll(propertyEquals): true at CollectionBehaviors.kt:111
               assertEquals(true, true, message ➜ "") at ComparisonDSL.kt:21
             collectionBehavior.compareProperty(CollectionBehaviorsKt$$Lambda@1, CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:113
-              getter.invoke(this.expected): EmptyIterator@1 at ComparisonDSL.kt:27
+              getter.invoke(expected): EmptyIterator@1 at ComparisonDSL.kt:27
                 compareProperty.iterator(): EmptyIterator@1 at CollectionBehaviors.kt:113
-              getter.invoke(this.actual): BufferIterator@1 at ComparisonDSL.kt:27
+              getter.invoke(actual): BufferIterator@1 at ComparisonDSL.kt:27
                 compareProperty.iterator(): BufferIterator@1 at CollectionBehaviors.kt:113
               compare(EmptyIterator@1, BufferIterator@1, block) at ComparisonDSL.kt:27
                 block.invoke(CompareContext@1): Unit at ComparisonDSL.kt:12
                   iteratorBehavior(compareProperty) at CollectionBehaviors.kt:113
                     CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:55
-                      getter.invoke(this.expected): false at ComparisonDSL.kt:21
+                      getter.invoke(expected): false at ComparisonDSL.kt:21
                         propertyEquals.hasNext(): false at CollectionBehaviors.kt:55
-                      getter.invoke(this.actual): false at ComparisonDSL.kt:21
+                      getter.invoke(actual): false at ComparisonDSL.kt:21
                         propertyEquals.hasNext(): false at CollectionBehaviors.kt:55
                       assertEquals(false, false, message ➜ "") at ComparisonDSL.kt:21
                     loop(1 iterations) at CollectionBehaviors.kt:57
@@ -113,14 +113,14 @@ ImmutableListTest.empty() at :0
                     iteratorBehavior.propertyFails(CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:61
                       assertFailEquals(CompareContext$$Lambda@1, CompareContext$$Lambda@1, null) at ComparisonDSL.kt:23
                         expected.invoke(): threw NoSuchElementException at ComparisonDSL.kt:31
-                          getter.invoke(this@CompareContext.expected): threw NoSuchElementException at ComparisonDSL.kt:23
+                          getter.invoke(expected): threw NoSuchElementException at ComparisonDSL.kt:23
                             propertyFails.next(): threw NoSuchElementException at CollectionBehaviors.kt:61
                         createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:31
                         Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
                         checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:31
                         expectedFail = NoSuchElementException@1 at ComparisonDSL.kt:31
                         actual.invoke(): threw NoSuchElementException at ComparisonDSL.kt:32
-                          getter.invoke(this@CompareContext.actual): threw NoSuchElementException at ComparisonDSL.kt:23
+                          getter.invoke(actual): threw NoSuchElementException at ComparisonDSL.kt:23
                             propertyFails.next(): threw NoSuchElementException at CollectionBehaviors.kt:61
                         createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:32
                         Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
@@ -131,36 +131,36 @@ ImmutableListTest.empty() at :0
                           actual.getClass(): Class@1 at testUtilsJvm.kt:11
                           assertEquals(Class@1, Class@1, null, 4, null) at testUtilsJvm.kt:11
           listBehavior.compareProperty(CollectionBehaviorsKt$$Lambda@1, CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:11
-            getter.invoke(this.expected): EmptyIterator@1 at ComparisonDSL.kt:27
+            getter.invoke(expected): EmptyIterator@1 at ComparisonDSL.kt:27
               compareProperty.listIterator(): EmptyIterator@1 at CollectionBehaviors.kt:11
-            getter.invoke(this.actual): BufferIterator@1 at ComparisonDSL.kt:27
+            getter.invoke(actual): BufferIterator@1 at ComparisonDSL.kt:27
               compareProperty.listIterator(): BufferIterator@1 at CollectionBehaviors.kt:11
             compare(EmptyIterator@1, BufferIterator@1, block) at ComparisonDSL.kt:27
               block.invoke(CompareContext@1): Unit at ComparisonDSL.kt:12
                 listIteratorBehavior(compareProperty) at CollectionBehaviors.kt:11
                   listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:32
                     CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
-                      getter.invoke(this.expected): false at ComparisonDSL.kt:21
+                      getter.invoke(expected): false at ComparisonDSL.kt:21
                         propertyEquals.hasNext(): false at CollectionBehaviors.kt:48
-                      getter.invoke(this.actual): false at ComparisonDSL.kt:21
+                      getter.invoke(actual): false at ComparisonDSL.kt:21
                         propertyEquals.hasNext(): false at CollectionBehaviors.kt:48
                       assertEquals(false, false, message ➜ "") at ComparisonDSL.kt:21
                     CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:49
-                      getter.invoke(this.expected): false at ComparisonDSL.kt:21
+                      getter.invoke(expected): false at ComparisonDSL.kt:21
                         propertyEquals.hasPrevious(): false at CollectionBehaviors.kt:49
-                      getter.invoke(this.actual): false at ComparisonDSL.kt:21
+                      getter.invoke(actual): false at ComparisonDSL.kt:21
                         propertyEquals.hasPrevious(): false at CollectionBehaviors.kt:49
                       assertEquals(false, false, message ➜ "") at ComparisonDSL.kt:21
                     CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:50
-                      getter.invoke(this.expected): 0 at ComparisonDSL.kt:21
+                      getter.invoke(expected): 0 at ComparisonDSL.kt:21
                         propertyEquals.nextIndex(): 0 at CollectionBehaviors.kt:50
-                      getter.invoke(this.actual): 0 at ComparisonDSL.kt:21
+                      getter.invoke(actual): 0 at ComparisonDSL.kt:21
                         propertyEquals.nextIndex(): 0 at CollectionBehaviors.kt:50
                       assertEquals(0, 0, message ➜ "") at ComparisonDSL.kt:21
                     CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:51
-                      getter.invoke(this.expected): -1 at ComparisonDSL.kt:21
+                      getter.invoke(expected): -1 at ComparisonDSL.kt:21
                         propertyEquals.previousIndex(): -1 at CollectionBehaviors.kt:51
-                      getter.invoke(this.actual): -1 at ComparisonDSL.kt:21
+                      getter.invoke(actual): -1 at ComparisonDSL.kt:21
                         propertyEquals.previousIndex(): -1 at CollectionBehaviors.kt:51
                       assertEquals(-1, -1, message ➜ "") at ComparisonDSL.kt:21
                   loop(1 iterations) at CollectionBehaviors.kt:34
@@ -170,14 +170,14 @@ ImmutableListTest.empty() at :0
                   listIteratorBehavior.propertyFails(CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:38
                     assertFailEquals(CompareContext$$Lambda@1, CompareContext$$Lambda@1, null) at ComparisonDSL.kt:23
                       expected.invoke(): threw NoSuchElementException at ComparisonDSL.kt:31
-                        getter.invoke(this@CompareContext.expected): threw NoSuchElementException at ComparisonDSL.kt:23
+                        getter.invoke(expected): threw NoSuchElementException at ComparisonDSL.kt:23
                           propertyFails.next(): threw NoSuchElementException at CollectionBehaviors.kt:38
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:31
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:31
                       expectedFail = NoSuchElementException@1 at ComparisonDSL.kt:31
                       actual.invoke(): threw NoSuchElementException at ComparisonDSL.kt:32
-                        getter.invoke(this@CompareContext.actual): threw NoSuchElementException at ComparisonDSL.kt:23
+                        getter.invoke(actual): threw NoSuchElementException at ComparisonDSL.kt:23
                           propertyFails.next(): threw NoSuchElementException at CollectionBehaviors.kt:38
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:32
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
@@ -194,14 +194,14 @@ ImmutableListTest.empty() at :0
                   listIteratorBehavior.propertyFails(CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:44
                     assertFailEquals(CompareContext$$Lambda@1, CompareContext$$Lambda@1, null) at ComparisonDSL.kt:23
                       expected.invoke(): threw NoSuchElementException at ComparisonDSL.kt:31
-                        getter.invoke(this@CompareContext.expected): threw NoSuchElementException at ComparisonDSL.kt:23
+                        getter.invoke(expected): threw NoSuchElementException at ComparisonDSL.kt:23
                           propertyFails.previous(): threw NoSuchElementException at CollectionBehaviors.kt:44
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:31
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:31
                       expectedFail = NoSuchElementException@1 at ComparisonDSL.kt:31
                       actual.invoke(): threw NoSuchElementException at ComparisonDSL.kt:32
-                        getter.invoke(this@CompareContext.actual): threw NoSuchElementException at ComparisonDSL.kt:23
+                        getter.invoke(actual): threw NoSuchElementException at ComparisonDSL.kt:23
                           propertyFails.previous(): threw NoSuchElementException at CollectionBehaviors.kt:44
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:32
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
@@ -212,36 +212,36 @@ ImmutableListTest.empty() at :0
                         actual.getClass(): Class@1 at testUtilsJvm.kt:11
                         assertEquals(Class@1, Class@1, null, 4, null) at testUtilsJvm.kt:11
           listBehavior.compareProperty(CollectionBehaviorsKt$$Lambda@1, CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:12
-            getter.invoke(this.expected): EmptyIterator@1 at ComparisonDSL.kt:27
+            getter.invoke(expected): EmptyIterator@1 at ComparisonDSL.kt:27
               compareProperty.listIterator(0): EmptyIterator@1 at CollectionBehaviors.kt:12
-            getter.invoke(this.actual): BufferIterator@1 at ComparisonDSL.kt:27
+            getter.invoke(actual): BufferIterator@1 at ComparisonDSL.kt:27
               compareProperty.listIterator(0): BufferIterator@1 at CollectionBehaviors.kt:12
             compare(EmptyIterator@1, BufferIterator@1, block) at ComparisonDSL.kt:27
               block.invoke(CompareContext@1): Unit at ComparisonDSL.kt:12
                 listIteratorBehavior(compareProperty) at CollectionBehaviors.kt:12
                   listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:32
                     CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
-                      getter.invoke(this.expected): false at ComparisonDSL.kt:21
+                      getter.invoke(expected): false at ComparisonDSL.kt:21
                         propertyEquals.hasNext(): false at CollectionBehaviors.kt:48
-                      getter.invoke(this.actual): false at ComparisonDSL.kt:21
+                      getter.invoke(actual): false at ComparisonDSL.kt:21
                         propertyEquals.hasNext(): false at CollectionBehaviors.kt:48
                       assertEquals(false, false, message ➜ "") at ComparisonDSL.kt:21
                     CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:49
-                      getter.invoke(this.expected): false at ComparisonDSL.kt:21
+                      getter.invoke(expected): false at ComparisonDSL.kt:21
                         propertyEquals.hasPrevious(): false at CollectionBehaviors.kt:49
-                      getter.invoke(this.actual): false at ComparisonDSL.kt:21
+                      getter.invoke(actual): false at ComparisonDSL.kt:21
                         propertyEquals.hasPrevious(): false at CollectionBehaviors.kt:49
                       assertEquals(false, false, message ➜ "") at ComparisonDSL.kt:21
                     CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:50
-                      getter.invoke(this.expected): 0 at ComparisonDSL.kt:21
+                      getter.invoke(expected): 0 at ComparisonDSL.kt:21
                         propertyEquals.nextIndex(): 0 at CollectionBehaviors.kt:50
-                      getter.invoke(this.actual): 0 at ComparisonDSL.kt:21
+                      getter.invoke(actual): 0 at ComparisonDSL.kt:21
                         propertyEquals.nextIndex(): 0 at CollectionBehaviors.kt:50
                       assertEquals(0, 0, message ➜ "") at ComparisonDSL.kt:21
                     CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:51
-                      getter.invoke(this.expected): -1 at ComparisonDSL.kt:21
+                      getter.invoke(expected): -1 at ComparisonDSL.kt:21
                         propertyEquals.previousIndex(): -1 at CollectionBehaviors.kt:51
-                      getter.invoke(this.actual): -1 at ComparisonDSL.kt:21
+                      getter.invoke(actual): -1 at ComparisonDSL.kt:21
                         propertyEquals.previousIndex(): -1 at CollectionBehaviors.kt:51
                       assertEquals(-1, -1, message ➜ "") at ComparisonDSL.kt:21
                   loop(1 iterations) at CollectionBehaviors.kt:34
@@ -251,14 +251,14 @@ ImmutableListTest.empty() at :0
                   listIteratorBehavior.propertyFails(CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:38
                     assertFailEquals(CompareContext$$Lambda@1, CompareContext$$Lambda@1, null) at ComparisonDSL.kt:23
                       expected.invoke(): threw NoSuchElementException at ComparisonDSL.kt:31
-                        getter.invoke(this@CompareContext.expected): threw NoSuchElementException at ComparisonDSL.kt:23
+                        getter.invoke(expected): threw NoSuchElementException at ComparisonDSL.kt:23
                           propertyFails.next(): threw NoSuchElementException at CollectionBehaviors.kt:38
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:31
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:31
                       expectedFail = NoSuchElementException@1 at ComparisonDSL.kt:31
                       actual.invoke(): threw NoSuchElementException at ComparisonDSL.kt:32
-                        getter.invoke(this@CompareContext.actual): threw NoSuchElementException at ComparisonDSL.kt:23
+                        getter.invoke(actual): threw NoSuchElementException at ComparisonDSL.kt:23
                           propertyFails.next(): threw NoSuchElementException at CollectionBehaviors.kt:38
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:32
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
@@ -275,14 +275,14 @@ ImmutableListTest.empty() at :0
                   listIteratorBehavior.propertyFails(CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:44
                     assertFailEquals(CompareContext$$Lambda@1, CompareContext$$Lambda@1, null) at ComparisonDSL.kt:23
                       expected.invoke(): threw NoSuchElementException at ComparisonDSL.kt:31
-                        getter.invoke(this@CompareContext.expected): threw NoSuchElementException at ComparisonDSL.kt:23
+                        getter.invoke(expected): threw NoSuchElementException at ComparisonDSL.kt:23
                           propertyFails.previous(): threw NoSuchElementException at CollectionBehaviors.kt:44
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:31
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:31
                       expectedFail = NoSuchElementException@1 at ComparisonDSL.kt:31
                       actual.invoke(): threw NoSuchElementException at ComparisonDSL.kt:32
-                        getter.invoke(this@CompareContext.actual): threw NoSuchElementException at ComparisonDSL.kt:23
+                        getter.invoke(actual): threw NoSuchElementException at ComparisonDSL.kt:23
                           propertyFails.previous(): threw NoSuchElementException at CollectionBehaviors.kt:44
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:32
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
@@ -293,10 +293,10 @@ ImmutableListTest.empty() at :0
                         actual.getClass(): Class@1 at testUtilsJvm.kt:11
                         assertEquals(Class@1, Class@1, null, 4, null) at testUtilsJvm.kt:11
           listBehavior.compareProperty(CollectionBehaviorsKt$$Lambda@1, CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:13
-            getter.invoke(this.expected): EmptyIterator@1 at ComparisonDSL.kt:27
+            getter.invoke(expected): EmptyIterator@1 at ComparisonDSL.kt:27
               compareProperty.size(): 0 at CollectionBehaviors.kt:13
               compareProperty.listIterator(0): EmptyIterator@1 at CollectionBehaviors.kt:13
-            getter.invoke(this.actual): BufferIterator@1 at ComparisonDSL.kt:27
+            getter.invoke(actual): BufferIterator@1 at ComparisonDSL.kt:27
               compareProperty.size(): 0 at CollectionBehaviors.kt:13
               compareProperty.listIterator(0): BufferIterator@1 at CollectionBehaviors.kt:13
             compare(EmptyIterator@1, BufferIterator@1, block) at ComparisonDSL.kt:27
@@ -304,27 +304,27 @@ ImmutableListTest.empty() at :0
                 listIteratorBehavior(compareProperty) at CollectionBehaviors.kt:13
                   listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:32
                     CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
-                      getter.invoke(this.expected): false at ComparisonDSL.kt:21
+                      getter.invoke(expected): false at ComparisonDSL.kt:21
                         propertyEquals.hasNext(): false at CollectionBehaviors.kt:48
-                      getter.invoke(this.actual): false at ComparisonDSL.kt:21
+                      getter.invoke(actual): false at ComparisonDSL.kt:21
                         propertyEquals.hasNext(): false at CollectionBehaviors.kt:48
                       assertEquals(false, false, message ➜ "") at ComparisonDSL.kt:21
                     CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:49
-                      getter.invoke(this.expected): false at ComparisonDSL.kt:21
+                      getter.invoke(expected): false at ComparisonDSL.kt:21
                         propertyEquals.hasPrevious(): false at CollectionBehaviors.kt:49
-                      getter.invoke(this.actual): false at ComparisonDSL.kt:21
+                      getter.invoke(actual): false at ComparisonDSL.kt:21
                         propertyEquals.hasPrevious(): false at CollectionBehaviors.kt:49
                       assertEquals(false, false, message ➜ "") at ComparisonDSL.kt:21
                     CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:50
-                      getter.invoke(this.expected): 0 at ComparisonDSL.kt:21
+                      getter.invoke(expected): 0 at ComparisonDSL.kt:21
                         propertyEquals.nextIndex(): 0 at CollectionBehaviors.kt:50
-                      getter.invoke(this.actual): 0 at ComparisonDSL.kt:21
+                      getter.invoke(actual): 0 at ComparisonDSL.kt:21
                         propertyEquals.nextIndex(): 0 at CollectionBehaviors.kt:50
                       assertEquals(0, 0, message ➜ "") at ComparisonDSL.kt:21
                     CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:51
-                      getter.invoke(this.expected): -1 at ComparisonDSL.kt:21
+                      getter.invoke(expected): -1 at ComparisonDSL.kt:21
                         propertyEquals.previousIndex(): -1 at CollectionBehaviors.kt:51
-                      getter.invoke(this.actual): -1 at ComparisonDSL.kt:21
+                      getter.invoke(actual): -1 at ComparisonDSL.kt:21
                         propertyEquals.previousIndex(): -1 at CollectionBehaviors.kt:51
                       assertEquals(-1, -1, message ➜ "") at ComparisonDSL.kt:21
                   loop(1 iterations) at CollectionBehaviors.kt:34
@@ -334,14 +334,14 @@ ImmutableListTest.empty() at :0
                   listIteratorBehavior.propertyFails(CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:38
                     assertFailEquals(CompareContext$$Lambda@1, CompareContext$$Lambda@1, null) at ComparisonDSL.kt:23
                       expected.invoke(): threw NoSuchElementException at ComparisonDSL.kt:31
-                        getter.invoke(this@CompareContext.expected): threw NoSuchElementException at ComparisonDSL.kt:23
+                        getter.invoke(expected): threw NoSuchElementException at ComparisonDSL.kt:23
                           propertyFails.next(): threw NoSuchElementException at CollectionBehaviors.kt:38
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:31
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:31
                       expectedFail = NoSuchElementException@1 at ComparisonDSL.kt:31
                       actual.invoke(): threw NoSuchElementException at ComparisonDSL.kt:32
-                        getter.invoke(this@CompareContext.actual): threw NoSuchElementException at ComparisonDSL.kt:23
+                        getter.invoke(actual): threw NoSuchElementException at ComparisonDSL.kt:23
                           propertyFails.next(): threw NoSuchElementException at CollectionBehaviors.kt:38
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:32
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
@@ -358,14 +358,14 @@ ImmutableListTest.empty() at :0
                   listIteratorBehavior.propertyFails(CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:44
                     assertFailEquals(CompareContext$$Lambda@1, CompareContext$$Lambda@1, null) at ComparisonDSL.kt:23
                       expected.invoke(): threw NoSuchElementException at ComparisonDSL.kt:31
-                        getter.invoke(this@CompareContext.expected): threw NoSuchElementException at ComparisonDSL.kt:23
+                        getter.invoke(expected): threw NoSuchElementException at ComparisonDSL.kt:23
                           propertyFails.previous(): threw NoSuchElementException at CollectionBehaviors.kt:44
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:31
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:31
                       expectedFail = NoSuchElementException@1 at ComparisonDSL.kt:31
                       actual.invoke(): threw NoSuchElementException at ComparisonDSL.kt:32
-                        getter.invoke(this@CompareContext.actual): threw NoSuchElementException at ComparisonDSL.kt:23
+                        getter.invoke(actual): threw NoSuchElementException at ComparisonDSL.kt:23
                           propertyFails.previous(): threw NoSuchElementException at CollectionBehaviors.kt:44
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:32
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
@@ -378,14 +378,14 @@ ImmutableListTest.empty() at :0
           listBehavior.propertyFails(CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:15
             assertFailEquals(CompareContext$$Lambda@1, CompareContext$$Lambda@1, null) at ComparisonDSL.kt:23
               expected.invoke(): threw IndexOutOfBoundsException at ComparisonDSL.kt:31
-                getter.invoke(this@CompareContext.expected): threw IndexOutOfBoundsException at ComparisonDSL.kt:23
+                getter.invoke(expected): threw IndexOutOfBoundsException at ComparisonDSL.kt:23
                   propertyFails.listIterator(-1): threw IndexOutOfBoundsException at CollectionBehaviors.kt:15
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:31
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:31
               expectedFail = IndexOutOfBoundsException@1 at ComparisonDSL.kt:31
               actual.invoke(): threw IndexOutOfBoundsException at ComparisonDSL.kt:32
-                getter.invoke(this@CompareContext.actual): threw IndexOutOfBoundsException at ComparisonDSL.kt:23
+                getter.invoke(actual): threw IndexOutOfBoundsException at ComparisonDSL.kt:23
                   propertyFails.listIterator(-1): threw IndexOutOfBoundsException at CollectionBehaviors.kt:15
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:32
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
@@ -398,7 +398,7 @@ ImmutableListTest.empty() at :0
           listBehavior.propertyFails(CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:16
             assertFailEquals(CompareContext$$Lambda@1, CompareContext$$Lambda@1, null) at ComparisonDSL.kt:23
               expected.invoke(): threw IndexOutOfBoundsException at ComparisonDSL.kt:31
-                getter.invoke(this@CompareContext.expected): threw IndexOutOfBoundsException at ComparisonDSL.kt:23
+                getter.invoke(expected): threw IndexOutOfBoundsException at ComparisonDSL.kt:23
                   propertyFails.size(): 0 at CollectionBehaviors.kt:16
                   propertyFails.listIterator(1): threw IndexOutOfBoundsException at CollectionBehaviors.kt:16
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:31
@@ -406,7 +406,7 @@ ImmutableListTest.empty() at :0
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:31
               expectedFail = IndexOutOfBoundsException@1 at ComparisonDSL.kt:31
               actual.invoke(): threw IndexOutOfBoundsException at ComparisonDSL.kt:32
-                getter.invoke(this@CompareContext.actual): threw IndexOutOfBoundsException at ComparisonDSL.kt:23
+                getter.invoke(actual): threw IndexOutOfBoundsException at ComparisonDSL.kt:23
                   propertyFails.size(): 0 at CollectionBehaviors.kt:16
                   propertyFails.listIterator(1): threw IndexOutOfBoundsException at CollectionBehaviors.kt:16
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:32
@@ -426,7 +426,7 @@ ImmutableListTest.empty() at :0
           this_.propertyFailsWith(CollectionBehaviorsKt$listBehavior$$inlined$propertyFailsWith$1.INSTANCE, getter) at ComparisonDSL.kt:24
             assertFailEquals(CompareContext$$Lambda@1, CompareContext$$Lambda@1, exceptionPredicate) at ComparisonDSL.kt:25
               expected.invoke(): threw IndexOutOfBoundsException at ComparisonDSL.kt:31
-                getter.invoke(this@CompareContext.expected): threw IndexOutOfBoundsException at ComparisonDSL.kt:25
+                getter.invoke(expected): threw IndexOutOfBoundsException at ComparisonDSL.kt:25
                   propertyFailsWith.size(): 0 at CollectionBehaviors.kt:21
                   propertyFailsWith.get(0): threw IndexOutOfBoundsException at CollectionBehaviors.kt:21
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:31
@@ -434,7 +434,7 @@ ImmutableListTest.empty() at :0
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:31
               expectedFail = IndexOutOfBoundsException@1 at ComparisonDSL.kt:31
               actual.invoke(): threw IndexOutOfBoundsException at ComparisonDSL.kt:32
-                getter.invoke(this@CompareContext.actual): threw IndexOutOfBoundsException at ComparisonDSL.kt:25
+                getter.invoke(actual): threw IndexOutOfBoundsException at ComparisonDSL.kt:25
                   propertyFailsWith.size(): 0 at CollectionBehaviors.kt:21
                   propertyFailsWith.get(0): threw IndexOutOfBoundsException at CollectionBehaviors.kt:21
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:32
@@ -446,25 +446,25 @@ ImmutableListTest.empty() at :0
               exceptionPredicate.invoke(actualFail): true at ComparisonDSL.kt:36
               assertTrue(true, "actual fail") at ComparisonDSL.kt:36
           CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:23
-            getter.invoke(this.expected): -1 at ComparisonDSL.kt:21
+            getter.invoke(expected): -1 at ComparisonDSL.kt:21
               getOrNull(propertyEquals, 0): null at CollectionBehaviors.kt:23
               indexOf(propertyEquals, null): -1 at CollectionBehaviors.kt:23
-            getter.invoke(this.actual): -1 at ComparisonDSL.kt:21
+            getter.invoke(actual): -1 at ComparisonDSL.kt:21
               getOrNull(propertyEquals, 0): null at CollectionBehaviors.kt:23
               indexOf(propertyEquals, null): -1 at CollectionBehaviors.kt:23
             assertEquals(-1, -1, message ➜ "") at ComparisonDSL.kt:21
           CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:24
-            getter.invoke(this.expected): -1 at ComparisonDSL.kt:21
+            getter.invoke(expected): -1 at ComparisonDSL.kt:21
               getOrNull(propertyEquals, 0): null at CollectionBehaviors.kt:24
               lastIndexOf(propertyEquals, null): -1 at CollectionBehaviors.kt:24
-            getter.invoke(this.actual): -1 at ComparisonDSL.kt:21
+            getter.invoke(actual): -1 at ComparisonDSL.kt:21
               getOrNull(propertyEquals, 0): null at CollectionBehaviors.kt:24
               lastIndexOf(propertyEquals, null): -1 at CollectionBehaviors.kt:24
             assertEquals(-1, -1, message ➜ "") at ComparisonDSL.kt:21
           listBehavior.propertyFails(CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:26
             assertFailEquals(CompareContext$$Lambda@1, CompareContext$$Lambda@1, null) at ComparisonDSL.kt:23
               expected.invoke(): threw IndexOutOfBoundsException at ComparisonDSL.kt:31
-                getter.invoke(this@CompareContext.expected): threw IndexOutOfBoundsException at ComparisonDSL.kt:23
+                getter.invoke(expected): threw IndexOutOfBoundsException at ComparisonDSL.kt:23
                   propertyFails.size(): 0 at CollectionBehaviors.kt:26
                   propertyFails.subList(0, 1): threw IndexOutOfBoundsException at CollectionBehaviors.kt:26
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:31
@@ -472,7 +472,7 @@ ImmutableListTest.empty() at :0
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:31
               expectedFail = IndexOutOfBoundsException@1 at ComparisonDSL.kt:31
               actual.invoke(): threw IndexOutOfBoundsException at ComparisonDSL.kt:32
-                getter.invoke(this@CompareContext.actual): threw IndexOutOfBoundsException at ComparisonDSL.kt:23
+                getter.invoke(actual): threw IndexOutOfBoundsException at ComparisonDSL.kt:23
                   propertyFails.size(): 0 at CollectionBehaviors.kt:26
                   propertyFails.subList(0, 1): threw IndexOutOfBoundsException at CollectionBehaviors.kt:26
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:32
@@ -486,14 +486,14 @@ ImmutableListTest.empty() at :0
           listBehavior.propertyFails(CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:27
             assertFailEquals(CompareContext$$Lambda@1, CompareContext$$Lambda@1, null) at ComparisonDSL.kt:23
               expected.invoke(): threw IndexOutOfBoundsException at ComparisonDSL.kt:31
-                getter.invoke(this@CompareContext.expected): threw IndexOutOfBoundsException at ComparisonDSL.kt:23
+                getter.invoke(expected): threw IndexOutOfBoundsException at ComparisonDSL.kt:23
                   propertyFails.subList(-1, 0): threw IndexOutOfBoundsException at CollectionBehaviors.kt:27
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:31
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:31
               expectedFail = IndexOutOfBoundsException@1 at ComparisonDSL.kt:31
               actual.invoke(): threw IndexOutOfBoundsException at ComparisonDSL.kt:32
-                getter.invoke(this@CompareContext.actual): threw IndexOutOfBoundsException at ComparisonDSL.kt:23
+                getter.invoke(actual): threw IndexOutOfBoundsException at ComparisonDSL.kt:23
                   propertyFails.subList(-1, 0): threw IndexOutOfBoundsException at CollectionBehaviors.kt:27
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:32
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
@@ -504,10 +504,10 @@ ImmutableListTest.empty() at :0
                 actual.getClass(): Class@1 at testUtilsJvm.kt:11
                 assertEquals(Class@1, Class@1, null, 4, null) at testUtilsJvm.kt:11
           CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:28
-            getter.invoke(this.expected): EmptyList@1 at ComparisonDSL.kt:21
+            getter.invoke(expected): EmptyList@1 at ComparisonDSL.kt:21
               propertyEquals.size(): 0 at CollectionBehaviors.kt:28
               propertyEquals.subList(0, 0): EmptyList@1 at CollectionBehaviors.kt:28
-            getter.invoke(this.actual): ImmutableList.SubList@1 at ComparisonDSL.kt:21
+            getter.invoke(actual): ImmutableList.SubList@1 at ComparisonDSL.kt:21
               propertyEquals.size(): 0 at CollectionBehaviors.kt:28
               propertyEquals.subList(0, 0): ImmutableList.SubList@1 at CollectionBehaviors.kt:28
             assertEquals(EmptyList@1, ImmutableList.SubList@1, message ➜ "") at ComparisonDSL.kt:21

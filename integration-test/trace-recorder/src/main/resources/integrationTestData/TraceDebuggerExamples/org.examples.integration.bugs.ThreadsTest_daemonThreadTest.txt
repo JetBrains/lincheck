@@ -13,57 +13,57 @@ ThreadsTest.daemonThreadTest() at :0
   field = "Complete Main thread" at ThreadsTest.kt:36
 # Thread 2 (Thread-3)
 ThreadsKt$thread$thread$1@1.run(): <unfinished method> at :0
-  this.$block.invoke(): <unfinished method> at Thread.kt:30
+  $block.invoke(): <unfinished method> at Thread.kt:30
     loop(11 iterations) at ThreadsTest.kt:21
       <iteration 1> at ThreadsTest.kt:21
         it = 0 at ThreadsTest.kt:21
         inc.get(): 0 at ThreadsTest.kt:22
-        this@ThreadsTest.field = "Finish iteration 0" at ThreadsTest.kt:26
+        field = "Finish iteration 0" at ThreadsTest.kt:26
         inc.incrementAndGet(): 1 at ThreadsTest.kt:27
       <iteration 2> at ThreadsTest.kt:21
         it = 1 at ThreadsTest.kt:21
         inc.get(): 1 at ThreadsTest.kt:22
-        this@ThreadsTest.field = "Finish iteration 1" at ThreadsTest.kt:26
+        field = "Finish iteration 1" at ThreadsTest.kt:26
         inc.incrementAndGet(): 2 at ThreadsTest.kt:27
       <iteration 3> at ThreadsTest.kt:21
         it = 2 at ThreadsTest.kt:21
         inc.get(): 2 at ThreadsTest.kt:22
-        this@ThreadsTest.field = "Finish iteration 2" at ThreadsTest.kt:26
+        field = "Finish iteration 2" at ThreadsTest.kt:26
         inc.incrementAndGet(): 3 at ThreadsTest.kt:27
       <iteration 4> at ThreadsTest.kt:21
         it = 3 at ThreadsTest.kt:21
         inc.get(): 3 at ThreadsTest.kt:22
-        this@ThreadsTest.field = "Finish iteration 3" at ThreadsTest.kt:26
+        field = "Finish iteration 3" at ThreadsTest.kt:26
         inc.incrementAndGet(): 4 at ThreadsTest.kt:27
       <iteration 5> at ThreadsTest.kt:21
         it = 4 at ThreadsTest.kt:21
         inc.get(): 4 at ThreadsTest.kt:22
-        this@ThreadsTest.field = "Finish iteration 4" at ThreadsTest.kt:26
+        field = "Finish iteration 4" at ThreadsTest.kt:26
         inc.incrementAndGet(): 5 at ThreadsTest.kt:27
       <iteration 6> at ThreadsTest.kt:21
         it = 5 at ThreadsTest.kt:21
         inc.get(): 5 at ThreadsTest.kt:22
-        this@ThreadsTest.field = "Finish iteration 5" at ThreadsTest.kt:26
+        field = "Finish iteration 5" at ThreadsTest.kt:26
         inc.incrementAndGet(): 6 at ThreadsTest.kt:27
       <iteration 7> at ThreadsTest.kt:21
         it = 6 at ThreadsTest.kt:21
         inc.get(): 6 at ThreadsTest.kt:22
-        this@ThreadsTest.field = "Finish iteration 6" at ThreadsTest.kt:26
+        field = "Finish iteration 6" at ThreadsTest.kt:26
         inc.incrementAndGet(): 7 at ThreadsTest.kt:27
       <iteration 8> at ThreadsTest.kt:21
         it = 7 at ThreadsTest.kt:21
         inc.get(): 7 at ThreadsTest.kt:22
-        this@ThreadsTest.field = "Finish iteration 7" at ThreadsTest.kt:26
+        field = "Finish iteration 7" at ThreadsTest.kt:26
         inc.incrementAndGet(): 8 at ThreadsTest.kt:27
       <iteration 9> at ThreadsTest.kt:21
         it = 8 at ThreadsTest.kt:21
         inc.get(): 8 at ThreadsTest.kt:22
-        this@ThreadsTest.field = "Finish iteration 8" at ThreadsTest.kt:26
+        field = "Finish iteration 8" at ThreadsTest.kt:26
         inc.incrementAndGet(): 9 at ThreadsTest.kt:27
       <iteration 10> at ThreadsTest.kt:21
         it = 9 at ThreadsTest.kt:21
         inc.get(): 9 at ThreadsTest.kt:22
-        this@ThreadsTest.field = "Finish iteration 9" at ThreadsTest.kt:26
+        field = "Finish iteration 9" at ThreadsTest.kt:26
         inc.incrementAndGet(): 10 at ThreadsTest.kt:27
       <iteration 11> at ThreadsTest.kt:21
         it = 10 at ThreadsTest.kt:21

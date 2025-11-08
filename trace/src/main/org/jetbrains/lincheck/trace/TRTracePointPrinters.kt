@@ -33,6 +33,8 @@ fun TRAppendable.appendAccessPath(accessPath: AccessPath) {
         val location = accessPath.locations[i]
         val nextLocation = accessPath.locations.getOrNull(i + 1)
 
+        if (location.isThisAccess()) continue
+
         when (location) {
             is LocalVariableAccessLocation -> {
                 appendVariableName(location.variableDescriptor)

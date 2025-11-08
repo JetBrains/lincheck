@@ -145,12 +145,6 @@ object LincheckClassFileTransformer : ClassFileTransformer {
                 val config = profile.getMethodConfiguration(classNode.name.toCanonicalClassName(), m.name, m.desc)
                 mutableMapOf<Int, MutableList<LocalVariableInfo>>().also { map ->
                     m.localVariables?.forEach { local ->
-                        if (
-                            m.name == "<init>" &&
-                            isCoroutineStateMachineClass(classNode.name) &&
-                            local.name.isOuterReceiverName()
-                        ) return@forEach
-
                         val index = local.index
                         val type = Type.getType(local.desc)
                         val name = sanitizeVariableName(classNode.name, local.name, config, type) ?: return@forEach
@@ -181,7 +175,6 @@ object LincheckClassFileTransformer : ClassFileTransformer {
 
             originalName.contains('-') -> callRecursive(originalName.substringBeforeLast('-'))
             originalName.contains("_u24lambda_u24") -> callRecursive(originalName.replace("_u24lambda_u24", $$"$lambda$"))
-            originalName.isOuterReceiverName() -> "this@${type.className.substringAfterLast('.')}"
             else -> originalName
         }
     }
@@ -356,9 +349,6 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         }
         return SMAPInfo("")
     }
-
-    private fun String.isOuterReceiverName() = this == "this$0"
-
 
     @Suppress("SpellCheckingInspection")
     fun shouldTransform(className: String, instrumentationMode: InstrumentationMode): Boolean {

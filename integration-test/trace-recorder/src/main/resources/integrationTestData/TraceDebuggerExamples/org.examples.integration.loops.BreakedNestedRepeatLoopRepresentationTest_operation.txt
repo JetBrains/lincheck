@@ -11,14 +11,14 @@ BreakedNestedRepeatLoopRepresentationTest.operation() at :0
           a.toString(): "0" at BreakedNestedRepeatLoopRepresentationTest.kt:20
           escape = "0" at BreakedNestedRepeatLoopRepresentationTest.kt:20
           escape = "0 is saved" at BreakedNestedRepeatLoopRepresentationTest.kt:24
-          System.out.println(this.escape ➜ "0 is saved") at BreakedNestedRepeatLoopRepresentationTest.kt:25
+          System.out.println(escape ➜ "0 is saved") at BreakedNestedRepeatLoopRepresentationTest.kt:25
         <iteration 2> at BreakedNestedRepeatLoopRepresentationTest.kt:18
           i = 1 at BreakedNestedRepeatLoopRepresentationTest.kt:18
           a = 1 at BreakedNestedRepeatLoopRepresentationTest.kt:19
           a.toString(): "1" at BreakedNestedRepeatLoopRepresentationTest.kt:20
           escape = "1" at BreakedNestedRepeatLoopRepresentationTest.kt:20
           escape = "1 is saved" at BreakedNestedRepeatLoopRepresentationTest.kt:24
-          System.out.println(this.escape ➜ "1 is saved") at BreakedNestedRepeatLoopRepresentationTest.kt:25
+          System.out.println(escape ➜ "1 is saved") at BreakedNestedRepeatLoopRepresentationTest.kt:25
         <iteration 3> at BreakedNestedRepeatLoopRepresentationTest.kt:18
           i = 2 at BreakedNestedRepeatLoopRepresentationTest.kt:18
           a = 2 at BreakedNestedRepeatLoopRepresentationTest.kt:19
