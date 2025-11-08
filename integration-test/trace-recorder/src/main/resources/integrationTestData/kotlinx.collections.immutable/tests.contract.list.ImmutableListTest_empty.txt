@@ -422,7 +422,6 @@ ImmutableListTest.empty() at :0
           EmptyList@1.size(): 0 at CollectionBehaviors.kt:18
           this_ = CompareContext@1 at CollectionBehaviors.kt:21
           getter = CollectionBehaviorsKt$$Lambda@1 at CollectionBehaviors.kt:21
-          Inline call of propertyFailsWith = 0 at CollectionBehaviors.kt:21
           this_.propertyFailsWith(CollectionBehaviorsKt$listBehavior$$inlined$propertyFailsWith$1.INSTANCE, getter) at ComparisonDSL.kt:24
             assertFailEquals(CompareContext$$Lambda@1, CompareContext$$Lambda@1, exceptionPredicate) at ComparisonDSL.kt:25
               expected.invoke(): threw IndexOutOfBoundsException at ComparisonDSL.kt:31

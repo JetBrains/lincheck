@@ -3,11 +3,9 @@ ManglingTest.testNestedInlineFunction() at :0
   this_ = ManglingTest@1 at ManglingTest.kt:123
   x = 2 at ManglingTest.kt:123
   y = 3 at ManglingTest.kt:123
-  Inline call of outerInlineFunction = 0 at ManglingTest.kt:123
   this_ = ManglingTest@1 at ManglingTest.kt:127
   x = 2 at ManglingTest.kt:127
   y = 3 at ManglingTest.kt:127
-  Inline call of inlineFunction = 0 at ManglingTest.kt:127
   a = 2 at ManglingTest.kt:10
   b = 3 at ManglingTest.kt:10
   UInt.constructor-impl(5): 5 at ManglingTest.kt:123

@@ -16,7 +16,6 @@ import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent.instrumentationMode
 import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent.instrumentedClasses
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.BasicBlockControlFlowGraph
 import org.jetbrains.lincheck.jvm.agent.analysis.*
-import org.jetbrains.lincheck.jvm.agent.transformers.sanitizeMethodName
 import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.*
 import org.objectweb.asm.tree.ClassNode
@@ -163,13 +162,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         fun callRecursive(originalName: String) = sanitizeVariableName(owner, originalName, config, type)
         return when {
             !config.trackInlineMethodCalls && originalName.startsWith($$"$i$a$-") -> null
-            !config.trackInlineMethodCalls && originalName.startsWith($$"$i$f$") -> {
-                val sanitizedMethodName = sanitizeMethodName(
-                    owner, originalName.removePrefix($$"$i$f$"), instrumentationMode
-                )
-                "Inline call of $sanitizedMethodName"
-            }
-
+            !config.trackInlineMethodCalls && originalName.startsWith($$"$i$f$") -> null
             !config.trackInlineMethodCalls && originalName.endsWith($$"$iv") ->
                 callRecursive(originalName.removeSuffix($$"$iv"))
 

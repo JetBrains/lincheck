@@ -8,7 +8,6 @@ ListForEachBreakedLoopRepresentationTest.operation() at :0
   listOf(Integer;@1): Arrays.ArrayList@1 at ListForEachBreakedLoopRepresentationTest.kt:18
   list = Arrays.ArrayList@1 at ListForEachBreakedLoopRepresentationTest.kt:18
   forEach = Arrays.ArrayList@1 at ListForEachBreakedLoopRepresentationTest.kt:19
-  Inline call of forEach = 0 at ListForEachBreakedLoopRepresentationTest.kt:19
   forEach.iterator(): Arrays.ArrayItr@1 at _Collections.kt:1869
   loop(3 iterations) at _Collections.kt:1869
     <iteration 1> at _Collections.kt:1869

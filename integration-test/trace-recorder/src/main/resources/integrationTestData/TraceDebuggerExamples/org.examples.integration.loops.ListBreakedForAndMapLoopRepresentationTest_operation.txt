@@ -8,11 +8,9 @@ ListBreakedForAndMapLoopRepresentationTest.operation() at :0
   listOf(Integer;@1): Arrays.ArrayList@1 at ListBreakedForAndMapLoopRepresentationTest.kt:18
   list = Arrays.ArrayList@1 at ListBreakedForAndMapLoopRepresentationTest.kt:18
   map = Arrays.ArrayList@1 at ListBreakedForAndMapLoopRepresentationTest.kt:19
-  Inline call of map = 0 at ListBreakedForAndMapLoopRepresentationTest.kt:19
   collectionSizeOrDefault(map, 10): 4 at _Collections.kt:1563
   mapTo = Arrays.ArrayList@1 at _Collections.kt:1563
   destination = ArrayList@1 at _Collections.kt:1563
-  Inline call of mapTo = 0 at _Collections.kt:1563
   mapTo.iterator(): Arrays.ArrayItr@1 at _Collections.kt:1634
   loop(5 iterations) at _Collections.kt:1634
     <iteration 1> at _Collections.kt:1634

@@ -217,43 +217,43 @@ internal abstract class MethodCallTransformerBase(
     @Suppress("UNUSED_PARAMETER")
     protected fun isCoroutineResumptionSyntheticAccessor(className: String, methodName: String): Boolean =
         (this.methodName == "invokeSuspend") && methodName.startsWith("access\$")
-}
 
-internal fun sanitizeMethodName(
-    owner: String, originalName: String, instrumentationMode: InstrumentationMode
-): String {
-    fun callRecursive(originalName: String) = sanitizeMethodName(owner, originalName, instrumentationMode)
+    protected fun sanitizeMethodName(
+        owner: String, originalName: String, instrumentationMode: InstrumentationMode
+    ): String {
+        fun callRecursive(originalName: String) = sanitizeMethodName(owner, originalName, instrumentationMode)
 
-    fun endsWithModuleName(): Boolean {
-        val tail = originalName.substringAfterLast("$", "")
-        if (tail.isEmpty()) return false
-        val sourceSetName = tail.substringAfterLast('_', "")
-        if (sourceSetName.isEmpty()) return false
-        return sourceSetName == "main" || sourceSetName == "test" ||
-                sourceSetName.endsWith("Main") || sourceSetName.endsWith("Test")
-    }
-    return when (originalName) {
-        "constructor-impl", "box-impl", "unbox-impl" -> originalName
-        else if originalName.startsWith("access$") -> {
-            val base = originalName.removePrefix("access$")
-            if (originalName.endsWith($$"$p") || originalName.endsWith($$"$cp")) {
-                callRecursive(base.removeSuffix($$"$p").removeSuffix($$"$cp"))
-            } else {
-                // will be excluded further by postprocessor
-                $$"access$$${callRecursive(base)}"
-            }
+        fun endsWithModuleName(): Boolean {
+            val tail = originalName.substringAfterLast("$", "")
+            if (tail.isEmpty()) return false
+            val sourceSetName = tail.substringAfterLast('_', "")
+            if (sourceSetName.isEmpty()) return false
+            return sourceSetName == "main" || sourceSetName == "test" ||
+                    sourceSetName.endsWith("Main") || sourceSetName.endsWith("Test")
         }
-        else if originalName.endsWith($$"$default") -> {
-            val base = callRecursive(originalName.removeSuffix($$"$default"))
-            if (LincheckClassFileTransformer.shouldTransform(owner.toCanonicalClassName(), instrumentationMode)) {
-                // will be excluded further by postprocessor
-                $$"$$base$default"
-            } else {
-                base
+        return when (originalName) {
+            "constructor-impl", "box-impl", "unbox-impl" -> originalName
+            else if originalName.startsWith("access$") -> {
+                val base = originalName.removePrefix("access$")
+                if (originalName.endsWith($$"$p") || originalName.endsWith($$"$cp")) {
+                    callRecursive(base.removeSuffix($$"$p").removeSuffix($$"$cp"))
+                } else {
+                    // will be excluded further by postprocessor
+                    $$"access$$${callRecursive(base)}"
+                }
             }
+            else if originalName.endsWith($$"$default") -> {
+                val base = callRecursive(originalName.removeSuffix($$"$default"))
+                if (LincheckClassFileTransformer.shouldTransform(owner.toCanonicalClassName(), instrumentationMode)) {
+                    // will be excluded further by postprocessor
+                    $$"$$base$default"
+                } else {
+                    base
+                }
+            }
+            else if originalName.contains("-") -> callRecursive(originalName.substringBeforeLast('-'))
+            else if originalName.contains("$") && endsWithModuleName() -> callRecursive(originalName.substringBeforeLast('$'))
+            else -> originalName
         }
-        else if originalName.contains("-") -> callRecursive(originalName.substringBeforeLast('-'))
-        else if originalName.contains("$") && endsWithModuleName() -> callRecursive(originalName.substringBeforeLast('$'))
-        else -> originalName
     }
 }
