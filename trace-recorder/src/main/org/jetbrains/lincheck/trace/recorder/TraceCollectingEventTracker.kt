@@ -175,19 +175,19 @@ enum class TraceCollectorMode {
 
 fun parseOutputMode(outputMode: String?, outputOption: String?): TraceCollectorMode {
     if (outputMode == null) return TraceCollectorMode.BINARY_STREAM
-    if ("binary".startsWith(outputMode, true)) {
-        if (outputOption != null && "dump".startsWith(outputOption, true)) {
+    if ("binary".startsWith(outputMode, ignoreCase = true)) {
+        if (outputOption != null && "dump".startsWith(outputOption, ignoreCase = true)) {
             return TraceCollectorMode.BINARY_DUMP
         } else {
             return TraceCollectorMode.BINARY_STREAM
         }
     } else if ("text".startsWith(outputMode, true)) {
-        if (outputOption != null && "verbose".startsWith(outputOption, true)) {
+        if (outputOption != null && "verbose".startsWith(outputOption, ignoreCase = true)) {
             return TraceCollectorMode.TEXT_VERBOSE
         } else {
             return TraceCollectorMode.TEXT
         }
-    } else if ("null".equals(outputMode, true)) {
+    } else if ("null".equals(outputMode, ignoreCase = true)) {
         return TraceCollectorMode.NULL
     } else {
         // Default
