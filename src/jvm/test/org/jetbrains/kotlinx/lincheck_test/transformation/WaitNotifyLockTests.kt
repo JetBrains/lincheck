@@ -8,16 +8,13 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-@file:Suppress("DEPRECATION")
 package org.jetbrains.kotlinx.lincheck_test.transformation
 
-import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTest
+import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.junit.Test
 
 // tests wait/notify support in model checking strategy
-@ModelCheckingCTest(iterations = 30)
 class WaitNotifyLockTest {
     private var counter = 0
     private val lock = WaitNotifyLock()
@@ -27,13 +24,13 @@ class WaitNotifyLockTest {
 
     @Test
     fun test() {
-        @Suppress("DEPRECATION")
-        LinChecker.check(this::class.java)
+        val opts = ModelCheckingOptions()
+            .iterations(30)
+        opts.check(this::class)
     }
 }
 
 // tests wait/notify support under lock re-entrance in model checking strategy
-@ModelCheckingCTest(iterations = 30)
 class NestedWaitNotifyLockTest {
     private var counter = 0
     private val lock = NestedWaitNotifyLock()
@@ -43,8 +40,9 @@ class NestedWaitNotifyLockTest {
 
     @Test
     fun test() {
-        @Suppress("DEPRECATION")
-        LinChecker.check(this::class.java)
+        val opts = ModelCheckingOptions()
+            .iterations(30)
+        opts.check(this::class)
     }
 }
 

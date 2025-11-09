@@ -39,6 +39,6 @@ public class StressOptionsTest {
             .actorsPerThread(3)
             .logLevel(LoggingLevel.WARN)
             .minimizeFailedScenario(false);
-        LinChecker.check(StressOptionsTest.class, opts);
+        opts.check(StressOptionsTest.class);
     }
 }
