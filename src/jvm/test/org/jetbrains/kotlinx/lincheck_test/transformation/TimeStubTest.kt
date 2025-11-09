@@ -7,12 +7,11 @@
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-@file:Suppress("DEPRECATION")
 package org.jetbrains.kotlinx.lincheck_test.transformation
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import org.junit.*
 import org.junit.Assume.assumeFalse
@@ -21,7 +20,6 @@ import org.junit.Assume.assumeFalse
  * Checks that [System.nanoTime] and [System.currentTimeMillis] are
  * replaced with deterministic implementations in the model checking mode.
  */
-@ModelCheckingCTest(iterations = 30, invocationsPerIteration = 1000)
 class TimeStubTest {
     @Volatile
     private var a: Any = Any()
@@ -47,7 +45,9 @@ class TimeStubTest {
     @Test
     fun test() {
         assumeFalse(isInTraceDebuggerMode)
-        @Suppress("DEPRECATION")
-        LinChecker.check(this::class.java)
+        ModelCheckingOptions()
+            .iterations(30)
+            .invocationsPerIteration(1000)
+            .check(this::class)
     }
 }

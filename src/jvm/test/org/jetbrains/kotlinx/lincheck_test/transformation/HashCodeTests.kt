@@ -7,20 +7,17 @@
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-@file:Suppress("DEPRECATION")
 package org.jetbrains.kotlinx.lincheck_test.transformation
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTest
 import org.junit.*
 
 /**
  * Checks that [Object.hashCode] is replaced with a deterministic
  * implementations in the model checking mode.
  */
-@ModelCheckingCTest(iterations = 50, invocationsPerIteration = 1000)
 class HashCodeStubTest {
     @Volatile
     private var a: Any = Any()
@@ -37,10 +34,10 @@ class HashCodeStubTest {
     }
 
     @Test
-    fun test() {
-        @Suppress("DEPRECATION")
-        LinChecker.check(this::class.java)
-    }
+    fun test() = ModelCheckingOptions()
+        .iterations(50)
+        .invocationsPerIteration(1000)
+        .check(this::class)
 }
 
 class HashCodeCallSensitivityTest() {

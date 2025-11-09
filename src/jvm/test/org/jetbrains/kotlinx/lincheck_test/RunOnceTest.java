@@ -10,12 +10,10 @@
 
 package org.jetbrains.kotlinx.lincheck_test;
 
-import org.jetbrains.kotlinx.lincheck.LinChecker;
 import org.jetbrains.lincheck.datastructures.Operation;
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest;
+import org.jetbrains.lincheck.datastructures.StressOptions;
 import org.junit.Test;
 
-@StressCTest(threads = 3, iterations = 10, invocationsPerIteration = 10, requireStateEquivalenceImplCheck = false)
 public class RunOnceTest {
     private A a = new A();
 
@@ -31,7 +29,11 @@ public class RunOnceTest {
 
     @Test
     public void test() {
-        LinChecker.check(RunOnceTest.class);
+        new StressOptions()
+            .threads(3)
+            .iterations(10)
+            .invocationsPerIteration(10)
+            .check(RunOnceTest.class);
     }
 
     class A {

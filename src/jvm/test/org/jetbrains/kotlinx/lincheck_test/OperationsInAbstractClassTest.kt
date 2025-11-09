@@ -7,19 +7,18 @@
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-@file:Suppress("DEPRECATION")
 package org.jetbrains.kotlinx.lincheck_test
 
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+import org.jetbrains.lincheck.datastructures.StressOptions
 import org.jetbrains.lincheck.datastructures.Operation
 import org.junit.*
 
-@StressCTest(iterations = 1, minimizeFailedScenario = false)
 class OperationsInAbstractClassTest : AbstractTestClass() {
-    @Suppress("DEPRECATION")
     @Test
-    fun test(): Unit = LinChecker.check(this::class.java)
+    fun test(): Unit = StressOptions()
+        .iterations(1)
+        .minimizeFailedScenario(false)
+        .check(this::class)
 }
 
 open class AbstractTestClass {

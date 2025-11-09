@@ -9,8 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.transformation;
 
-import org.jetbrains.kotlinx.lincheck.LinChecker;
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTest;
+import org.jetbrains.lincheck.datastructures.ModelCheckingOptions;
 import org.jetbrains.lincheck.LincheckAssertionError;
 import org.jetbrains.lincheck.datastructures.Operation;
 import org.junit.Test;
@@ -24,7 +23,6 @@ import static org.junit.Assert.fail;
  * This test checks that indirect writes via {@link AtomicIntegerFieldUpdater}-s
  * are processed as normal writes.
  */
-@ModelCheckingCTest(actorsPerThread = 1, actorsBefore = 0, actorsAfter = 0, iterations = 1)
 public class WritesViaAtomicFieldUpdaterTest {
     private static final AtomicReferenceFieldUpdater<WritesViaAtomicFieldUpdaterTest, VariableHolder> afu = AtomicReferenceFieldUpdater.newUpdater(WritesViaAtomicFieldUpdaterTest.class, VariableHolder.class, "holder");
 
@@ -40,7 +38,12 @@ public class WritesViaAtomicFieldUpdaterTest {
     @Test
     public void test() {
         try {
-            LinChecker.check(this.getClass());
+            new ModelCheckingOptions()
+                .actorsPerThread(1)
+                .actorsBefore(0)
+                .actorsAfter(0)
+                .iterations(1)
+                .check(this.getClass());
         } catch (LincheckAssertionError e) {
             // the test should fail
             return;
