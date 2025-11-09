@@ -9,7 +9,6 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking;
 
-import kotlin.Deprecated;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.execution.*;
 import org.jetbrains.kotlinx.lincheck.annotations.DummySequentialSpecification;
@@ -24,7 +23,7 @@ import static org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.Mode
 /**
  * This annotation configures concurrent test using {@link ModelCheckingStrategy managed} strategy.
  */
-@Deprecated(message = "Use ModelCheckingOptions instead")
+@Deprecated
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 @Repeatable(ModelCheckingCTest.ModelCheckingCTests.class)
@@ -110,7 +109,7 @@ public @interface ModelCheckingCTest {
      * Essentially, it checks whether two new instances of the test class are equal.
      * If the check fails, an {@link IllegalStateException} is thrown.
      */
-    @Deprecated(message = "Does nothing, because equals/hashcode don't always improve performance of verification")
+    @Deprecated
     boolean requireStateEquivalenceImplCheck() default false;
 
     /**
@@ -133,7 +132,7 @@ public @interface ModelCheckingCTest {
     /**
      * Holder annotation for {@link ModelCheckingCTest}.
      */
-    @Deprecated(message = "Deprecated along with @ModelCheckingCTest")
+    @Deprecated
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.TYPE)
     @Inherited
