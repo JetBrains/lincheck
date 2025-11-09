@@ -1,0 +1,29 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| ------------------------------------------------------------------------------------------------- |
+|                                             Thread 1                                              |
+| ------------------------------------------------------------------------------------------------- |
+| operation()                                                                                       |
+|   inlineFunctionWithDefault() at InlineClassTest.<unknown method>(InlineClassTest.kt:19)          |
+|     inlineFunctionWithDefault$Lambda() at InlineClassTest.<unknown method>(InlineClassTest.kt:16) |
+|       UInt.constructor-impl(5): 5 at InlineClassTest.<unknown method>(InlineClassTest.kt:19)      |
+|   UInt.box-impl(5): UInt#1 at InlineClassTest.<unknown method>(InlineClassTest.kt:16)             |
+|   inlineFunctionWithDefault() at InlineClassTest.<unknown method>(InlineClassTest.kt:16)          |
+|     inlineFunctionWithDefault$Lambda() at InlineClassTest.<unknown method>(InlineClassTest.kt:16) |
+|       UInt.constructor-impl(12): 12 at InlineClassTest.<unknown method>(InlineClassTest.kt:20)    |
+|   UInt.box-impl(12): UInt#2 at InlineClassTest.<unknown method>(InlineClassTest.kt:16)            |
+|   result: void                                                                                    |
+| ------------------------------------------------------------------------------------------------- |
