@@ -30,6 +30,7 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlin.io.path.Path
 import kotlin.math.absoluteValue
+import kotlin.math.max
 
 // Buffer for saving trace in one piece
 private const val OUTPUT_BUFFER_SIZE: Int = 16 * 1024 * 1024
@@ -196,8 +197,9 @@ internal interface ContextSavingState {
 private sealed class TraceWriterBase(
     private val context: TraceContext,
     private val contextState: ContextSavingState,
-    protected val data: DataOutputStream
-): TraceWriter, DataOutput by data {
+    protected val dataStream: OutputStream,
+    protected val dataOutput: DataOutput
+): TraceWriter, DataOutput by dataOutput {
     // Stack of "container" tracepoints
     private val containerStack = mutableListOf<Pair<Int, Long>>()
 
@@ -208,8 +210,8 @@ private sealed class TraceWriterBase(
     abstract val writerId: Int
 
     override fun close() {
-        data.writeKind(ObjectKind.EOF)
-        data.close()
+        dataOutput.writeKind(ObjectKind.EOF)
+        dataStream.close()
 
         writeIndexCell(ObjectKind.EOF,-1, -1, -1)
     }
@@ -222,12 +224,12 @@ private sealed class TraceWriterBase(
 
     override fun writeTRObject(value: TRObject?) {
         check(inTracepointBody) { "Cannot write TRObject outside tracepoint body" }
-        data.writeTRObject(value)
+        dataOutput.writeTRObject(value)
     }
 
     override fun startWriteAnyTracepoint() {
         check(!inTracepointBody) { "Cannot start nested tracepoint body" }
-        data.writeKind(ObjectKind.TRACEPOINT)
+        dataOutput.writeKind(ObjectKind.TRACEPOINT)
         inTracepointBody = true
     }
 
@@ -254,7 +256,7 @@ private sealed class TraceWriterBase(
         }
 
         // Start object
-        data.writeKind(ObjectKind.TRACEPOINT_FOOTER)
+        dataOutput.writeKind(ObjectKind.TRACEPOINT_FOOTER)
     }
 
     override fun endWriteContainerTracepointFooter(id: Int) {
@@ -275,9 +277,9 @@ private sealed class TraceWriterBase(
         check(!inTracepointBody) { "Cannot write thread name inside tracepoint" }
 
         val position = currentDataPosition
-        data.writeKind(ObjectKind.THREAD_NAME)
-        data.writeInt(id)
-        data.writeUTF(name)
+        dataOutput.writeKind(ObjectKind.THREAD_NAME)
+        dataOutput.writeInt(id)
+        dataOutput.writeUTF(name)
         writeIndexCell(ObjectKind.THREAD_NAME, id, position, -1)
     }
 
@@ -286,9 +288,9 @@ private sealed class TraceWriterBase(
         if (contextState.isClassDescriptorSaved(id)) return
         // Write class descriptor into data and position into index
         val position = currentDataPosition
-        data.writeKind(ObjectKind.CLASS_DESCRIPTOR)
-        data.writeInt(id)
-        data.writeClassDescriptor(context.getClassDescriptor(id))
+        dataOutput.writeKind(ObjectKind.CLASS_DESCRIPTOR)
+        dataOutput.writeInt(id)
+        dataOutput.writeClassDescriptor(context.getClassDescriptor(id))
         contextState.markClassDescriptorSaved(id)
 
         writeIndexCell(ObjectKind.CLASS_DESCRIPTOR, id, position, -1)
@@ -302,9 +304,9 @@ private sealed class TraceWriterBase(
 
         // Write method descriptor into data and position into index
         val position = currentDataPosition
-        data.writeKind(ObjectKind.METHOD_DESCRIPTOR)
-        data.writeInt(id)
-        data.writeMethodDescriptor(descriptor)
+        dataOutput.writeKind(ObjectKind.METHOD_DESCRIPTOR)
+        dataOutput.writeInt(id)
+        dataOutput.writeMethodDescriptor(descriptor)
         contextState.markMethodDescriptorSaved(id)
 
         writeIndexCell(ObjectKind.METHOD_DESCRIPTOR, id, position, -1)
@@ -317,9 +319,9 @@ private sealed class TraceWriterBase(
         writeClassDescriptor(descriptor.classId)
         // Write field descriptor into data and position into index
         val position = currentDataPosition
-        data.writeKind(ObjectKind.FIELD_DESCRIPTOR)
-        data.writeInt(id)
-        data.writeFieldDescriptor(descriptor)
+        dataOutput.writeKind(ObjectKind.FIELD_DESCRIPTOR)
+        dataOutput.writeInt(id)
+        dataOutput.writeFieldDescriptor(descriptor)
         contextState.markFieldDescriptorSaved(id)
 
         writeIndexCell(ObjectKind.FIELD_DESCRIPTOR, id, position, -1)
@@ -330,9 +332,9 @@ private sealed class TraceWriterBase(
         if (contextState.isVariableDescriptorSaved(id)) return
         // Write variable descriptor into data and position into index
         val position = currentDataPosition
-        data.writeKind(ObjectKind.VARIABLE_DESCRIPTOR)
-        data.writeInt(id)
-        data.writeVariableDescriptor(context.getVariableDescriptor(id))
+        dataOutput.writeKind(ObjectKind.VARIABLE_DESCRIPTOR)
+        dataOutput.writeInt(id)
+        dataOutput.writeVariableDescriptor(context.getVariableDescriptor(id))
         contextState.markVariableDescriptorSaved(id)
 
         writeIndexCell(ObjectKind.VARIABLE_DESCRIPTOR, id, position, -1)
@@ -358,15 +360,15 @@ private sealed class TraceWriterBase(
 
         // Code location into data and position into index
         val position = currentDataPosition
-        data.writeKind(ObjectKind.CODE_LOCATION)
-        data.writeInt(id)
-        data.writeInt(fileNameId)
-        data.writeInt(classNameId)
-        data.writeInt(methodNameId)
-        data.writeInt(codeLocation.lineNumber)
-        data.writeInt(accessPathId)
-        data.writeInt(argumentNamesIds?.size ?: 0)
-        argumentNamesIds?.forEach { data.writeInt(it) }
+        dataOutput.writeKind(ObjectKind.CODE_LOCATION)
+        dataOutput.writeInt(id)
+        dataOutput.writeInt(fileNameId)
+        dataOutput.writeInt(classNameId)
+        dataOutput.writeInt(methodNameId)
+        dataOutput.writeInt(codeLocation.lineNumber)
+        dataOutput.writeInt(accessPathId)
+        dataOutput.writeInt(argumentNamesIds?.size ?: 0)
+        argumentNamesIds?.forEach { dataOutput.writeInt(it) }
         contextState.markCodeLocationSaved(id)
 
         writeIndexCell(ObjectKind.CODE_LOCATION, id, position, -1)
@@ -380,9 +382,9 @@ private sealed class TraceWriterBase(
         if (id > 0) return id
 
         val position = currentDataPosition
-        data.writeKind(ObjectKind.STRING)
-        data.writeInt(-id)
-        data.writeUTF(value)
+        dataOutput.writeKind(ObjectKind.STRING)
+        dataOutput.writeInt(-id)
+        dataOutput.writeUTF(value)
         contextState.markStringSaved(value)
 
         // It cannot fail
@@ -445,9 +447,9 @@ private sealed class TraceWriterBase(
                 if (value == root) rootId = id.absoluteValue
                 if (id > 0) return@onEach // already saved
 
-                data.writeKind(ObjectKind.ACCESS_PATH)
-                data.writeInt(-id)
-                data.writeInt(value.locations.size)
+                dataOutput.writeKind(ObjectKind.ACCESS_PATH)
+                dataOutput.writeInt(-id)
+                dataOutput.writeInt(value.locations.size)
 
                 value.locations.forEach { location ->
                     location.save(this, context, contextState)
@@ -509,16 +511,17 @@ private class BufferedTraceWriter (
     context: TraceContext,
     contextState: ContextSavingState,
     private val storage: BlockSaver,
-    private val dataStream: ByteBufferOutputStream = ByteBufferOutputStream(PER_THREAD_DATA_BUFFER_SIZE)
+    private val bufferStream: ByteBufferOutputStream = ByteBufferOutputStream(PER_THREAD_DATA_BUFFER_SIZE)
 ) : TraceWriterBase(
     context = context,
     contextState = contextState,
-    data = DataOutputStream(dataStream)
+    dataStream = bufferStream,
+    dataOutput = bufferStream
 ) {
     private var currentStartDataPosition: Long = 0
     private var index = mutableListOf<IndexCell>()
 
-    override val currentDataPosition: Long get() = currentStartDataPosition + dataStream.position()
+    override val currentDataPosition: Long get() = currentStartDataPosition + bufferStream.position()
 
     override fun close() {
         flush()
@@ -539,7 +542,7 @@ private class BufferedTraceWriter (
         index.add(IndexCell(kind, id, startPos, endPos))
         // Rollback to here in case of overflow, as the index cell is written after all
         // object data, it means that object is in data buffer completely.
-        dataStream.mark()
+        bufferStream.mark()
     }
 
     // Cut string to half a buffer size
@@ -549,17 +552,17 @@ private class BufferedTraceWriter (
     }
 
     fun mark() {
-        dataStream.mark()
+        bufferStream.mark()
     }
 
     fun rollback() {
         resetTracepointState()
-        dataStream.rollback()
+        bufferStream.rollback()
     }
 
     fun flush() {
         val logicalStart = currentStartDataPosition
-        currentStartDataPosition += dataStream.position()
+        currentStartDataPosition += bufferStream.position()
         // Don't allocate new index if it is empty
         val indexToSave = if (index.isEmpty()) {
             emptyList() // Singleton
@@ -568,11 +571,11 @@ private class BufferedTraceWriter (
             index = mutableListOf()
             oldIndex
         }
-        storage.saveDataAndIndexBlock(writerId, logicalStart, dataStream.detachBuffer(), indexToSave)
+        storage.saveDataAndIndexBlock(writerId, logicalStart, bufferStream.detachBuffer(), indexToSave)
     }
 
     private fun maybeFlushData() {
-        if (dataStream.available() < DATA_FLUSH_THRESHOLD) {
+        if (bufferStream.available() < DATA_FLUSH_THRESHOLD) {
             flush()
         }
     }
@@ -683,7 +686,8 @@ private class DirectTraceWriter(
 ) : TraceWriterBase(
     context = context,
     contextState = SimpleContextSavingState(),
-    data = DataOutputStream(pos)
+    dataStream = pos,
+    dataOutput = DataOutputStream(pos)
 ) {
     private val index = DataOutputStream(indexStream)
 
@@ -695,8 +699,8 @@ private class DirectTraceWriter(
     override val writerId: Int get() = currentWriterId
 
     init {
-        data.writeLong(TRACE_MAGIC)
-        data.writeLong(TRACE_VERSION)
+        dataOutput.writeLong(TRACE_MAGIC)
+        dataOutput.writeLong(TRACE_VERSION)
 
         index.writeLong(INDEX_MAGIC)
         index.writeLong(TRACE_VERSION)
@@ -719,14 +723,14 @@ private class DirectTraceWriter(
     fun startNewRoot(id: Int) {
         currentWriterId = id
         currentBlockStart = pos.currentPosition
-        data.writeKind(ObjectKind.BLOCK_START)
-        data.writeInt(id)
+        dataOutput.writeKind(ObjectKind.BLOCK_START)
+        dataOutput.writeInt(id)
         currentDataStart = pos.currentPosition
     }
 
     fun endRoot() {
         val endPos = pos.currentPosition
-        data.writeKind(ObjectKind.BLOCK_END)
+        dataOutput.writeKind(ObjectKind.BLOCK_END)
         index.writeIndexCell(ObjectKind.BLOCK_START, currentWriterId, currentBlockStart, endPos)
     }
 }
@@ -790,12 +794,17 @@ private class FileStreamingThread(
     private class ExitJob(): Job()
 
     private val pos: PositionCalculatingOutputStream = PositionCalculatingOutputStream(dataStream)
-    private val data: DataOutputStream = DataOutputStream(pos)
-    private val index: DataOutputStream = DataOutputStream(indexStream.buffered(OUTPUT_BUFFER_SIZE))
+    private val data: OutputStream = pos
+    private val index: OutputStream = indexStream.buffered(OUTPUT_BUFFER_SIZE)
+
+    private var bufferSize = 1024
+    private var buffer: ByteBuffer = ByteBuffer.allocate(INDEX_CELL_SIZE * bufferSize)
 
     private val queue = ArrayBlockingQueue<Job>(1024)
 
     init {
+        name = "TR-Block-Writer"
+
         data.writeLong(TRACE_MAGIC)
         data.writeLong(TRACE_VERSION)
 
@@ -804,11 +813,11 @@ private class FileStreamingThread(
     }
 
     fun addBlock(writerId: Int, logicalBlockStart: Long, dataBlock: ByteBuffer, indexList: List<IndexCell>) {
-        while (!queue.add(SaveBlockJob(writerId, logicalBlockStart, dataBlock, indexList))) {}
+        queue.put(SaveBlockJob(writerId, logicalBlockStart, dataBlock, indexList))
     }
 
     fun exit() {
-        queue.add(ExitJob())
+        queue.put(ExitJob())
         join()
     }
 
@@ -835,18 +844,27 @@ private class FileStreamingThread(
         data.writeKind(ObjectKind.BLOCK_END)
         data.flush()
 
-        index.writeIndexCell(ObjectKind.BLOCK_START, job.writerId, startPosition, endPosition)
+        if (bufferSize < job.indexList.size + 1) {
+            bufferSize = max(job.indexList.size + 1, (bufferSize * 1.5).toInt())
+            buffer = ByteBuffer.allocate(INDEX_CELL_SIZE * bufferSize)
+        } else {
+            buffer.clear()
+        }
+
+        buffer.putIndexCell(ObjectKind.BLOCK_START, job.writerId, startPosition, endPosition)
         job.indexList.forEach {
             if (it.kind == ObjectKind.TRACEPOINT) {
                 // Trace points indices are in "local" offsets, as they should be loaded
                 // from interleaving per-thread blocks
-                index.writeIndexCell(it.kind, it.id, it.startPos, it.endPos)
+                buffer.putIndexCell(it.kind, it.id, it.startPos, it.endPos)
             } else {
                 // All other objects are in "global" offsets as they cannot be split between blocks
                 // and can be loaded without taking blocks in consideration
-                index.writeIndexCell(it.kind, it.id, it.startPos + indexShift, it.endPos + indexShift)
+                buffer.putIndexCell(it.kind, it.id, it.startPos + indexShift, it.endPos + indexShift)
             }
         }
+        buffer.flip()
+        index.write(buffer.array(), 0, buffer.limit())
         index.flush()
     }
 
@@ -854,9 +872,38 @@ private class FileStreamingThread(
         data.writeKind(ObjectKind.EOF)
         data.close()
 
-        index.writeIndexCell(ObjectKind.EOF, -1, -1, -1)
+        buffer.clear()
+        buffer.putIndexCell(ObjectKind.EOF, -1, -1, -1)
+        buffer.flip()
+        index.write(buffer.array(), 0, buffer.limit())
         index.writeLong(INDEX_MAGIC)
         index.close()
+    }
+
+    private companion object {
+        private val staticBuffer = ByteBuffer.allocate(Long.SIZE_BYTES)
+
+        private fun OutputStream.writeKind(v: ObjectKind) {
+            write(v.ordinal)
+        }
+
+        private fun OutputStream.writeInt(v: Int) {
+            staticBuffer.clear()
+            staticBuffer.putInt(v)
+            staticBuffer.flip()
+            write(staticBuffer.array(), 0, Int.SIZE_BYTES)
+        }
+
+        private fun OutputStream.writeLong(v: Long) {
+            staticBuffer.clear()
+            staticBuffer.putLong(v)
+            staticBuffer.flip()
+            write(staticBuffer.array(), 0, Long.SIZE_BYTES)
+        }
+
+        private fun ByteBuffer.putKind(v: ObjectKind) {
+            put(v.ordinal.toByte())
+        }
     }
 }
 
@@ -1074,9 +1121,16 @@ private fun saveTRTracepoint(writer: TraceWriter, tracepoint: TRTracePoint) {
     }
 }
 
-private fun DataOutputStream.writeIndexCell(kind: ObjectKind, id: Int, startPos: Long, endPos: Long) {
+private fun DataOutput.writeIndexCell(kind: ObjectKind, id: Int, startPos: Long, endPos: Long) {
     writeByte(kind.ordinal)
     writeInt(id)
     writeLong(startPos)
     writeLong(endPos)
+}
+
+private fun ByteBuffer.putIndexCell(kind: ObjectKind, id: Int, startPos: Long, endPos: Long) {
+    put(kind.ordinal.toByte())
+    putInt(id)
+    putLong(startPos)
+    putLong(endPos)
 }

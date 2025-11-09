@@ -48,6 +48,8 @@ internal const val PACKED_META_ITEM_NAME = "info.txt"
 internal const val BLOCK_HEADER_SIZE: Int = Byte.SIZE_BYTES + Int.SIZE_BYTES
 internal const val BLOCK_FOOTER_SIZE: Int = Byte.SIZE_BYTES
 
+internal const val INDEX_CELL_SIZE: Int = Byte.SIZE_BYTES + Int.SIZE_BYTES + Long.SIZE_BYTES * 2
+
 /**
  * Information about conditions in which trace was collected.
  *
