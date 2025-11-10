@@ -80,53 +80,77 @@ internal class MethodCallEntryExitTransformer(
         argumentsArrayLocal = newLocal(OBJECT_ARRAY_TYPE)
         createArgumentsArrayIntoLocal(argumentsArrayLocal)
 
-        // Inject method entry callback
-        processMethodCallEnter(
-            methodId = methodId,
-            receiverLocal = if (isStatic) null else 0, // use original receiver slot
-            argumentsArrayLocal = argumentsArrayLocal,
-            ownerName = null,
-            argumentNames = null,
+        invokeIfInAnalyzedCode(
+            original = {},
+            instrumented = {
+                // Inject method entry callback
+                processMethodCallEnter(
+                    methodId = methodId,
+                    receiverLocal = null, // if (isStatic) null else 0, // use original receiver slot
+                    argumentsArrayLocal = argumentsArrayLocal,
+                    ownerName = null,
+                    argumentNames = null,
+                )
+                // We don't use deterministic call descriptor in this prototype
+                pop()
+            }
         )
-        // We don't use deterministic call descriptor in this prototype
-        pop()
 
         // Wrap the rest of the method body into try/catch to intercept exceptional exit
-        mv.visitTryCatchBlock(tryBlock, catchBlock, catchBlock, null)
-        mv.visitLabel(tryBlock)
+        adapter.visitTryCatchBlock(tryBlock, catchBlock, catchBlock, null)
+        adapter.visitLabel(tryBlock)
     }
 
     override fun visitInsn(opcode: Int) = adapter.run {
-        if (enabled) {
-            when (opcode) {
-                ARETURN, DRETURN, FRETURN, IRETURN, LRETURN, RETURN -> {
-                    // On normal return, report the result (if any)
-                    processMethodCallReturn(
-                        returnType = returnType,
-                        deterministicCallIdLocal = null,
-                        deterministicMethodDescriptorLocal = null,
-                        methodId = methodId,
-                        receiverLocal = if (isStatic) null else 0,
-                        argumentsArrayLocal = argumentsArrayLocal,
-                    )
-                }
+        if (!enabled) {
+            super.visitInsn(opcode)
+            return
+        }
+
+        when (opcode) {
+            ARETURN, DRETURN, FRETURN, IRETURN, LRETURN, RETURN -> {
+                invokeIfInAnalyzedCode(
+                    original = {},
+                    instrumented = {
+                        // On normal return, report the result (if any)
+                        processMethodCallReturn(
+                            returnType = Type.getReturnType(descriptor), // returnType,
+                            deterministicCallIdLocal = null,
+                            deterministicMethodDescriptorLocal = null,
+                            methodId = methodId,
+                            receiverLocal = null, // if (isStatic) null else 0,
+                            argumentsArrayLocal = argumentsArrayLocal,
+                        )
+                    }
+                )
             }
         }
         super.visitInsn(opcode)
     }
 
     override fun visitMaxs(maxStack: Int, maxLocals: Int) = adapter.run {
-        if (enabled) {
-            mv.visitLabel(catchBlock)
-            // Exception is on the stack here
-            processMethodCallException(
-                deterministicCallIdLocal = null,
-                deterministicMethodDescriptorLocal = null,
-                methodId = methodId,
-                receiverLocal = if (isStatic) null else 0,
-                argumentsArrayLocal = argumentsArrayLocal,
-            )
+        if (!enabled) {
+            super.visitMaxs(maxStack, maxLocals)
+            return
         }
+
+        adapter.visitLabel(catchBlock)
+
+        invokeIfInAnalyzedCode(
+            original = {},
+            instrumented = {
+                // Exception is on the stack here
+                processMethodCallException(
+                    deterministicCallIdLocal = null,
+                    deterministicMethodDescriptorLocal = null,
+                    methodId = methodId,
+                    receiverLocal = null, // if (isStatic) null else 0,
+                    argumentsArrayLocal = argumentsArrayLocal,
+                )
+            }
+        )
+
+        adapter.visitInsn(ATHROW)
         super.visitMaxs(maxStack, maxLocals)
     }
 
@@ -143,14 +167,19 @@ internal class MethodCallEntryExitTransformer(
         newArray(objType)
         storeLocal(argumentsArrayLocal)
 
-        var slot = if (isStatic) 0 else 1
-        for ((i, type) in argTypes.withIndex()) {
-            loadLocal(argumentsArrayLocal)
-            push(i)
-            loadLocal(slot, type)
-            box(type)
-            arrayStore(objType)
-            slot += type.size
-        }
+        // var slot = if (isStatic) 0 else 1
+        // for ((i, type) in argTypes.withIndex()) {
+        //     loadLocal(argumentsArrayLocal)
+        //     push(i)
+        //     try {
+        //         loadLocal(slot, type)
+        //     } catch (e: IndexOutOfBoundsException) {
+        //         Logger.debug { "Out of bounds access to local variable #$slot of type $type in $className.$methodName$descriptor (isStatic=$isStatic)" }
+        //         throw e
+        //     }
+        //     box(type)
+        //     arrayStore(objType)
+        //     slot += type.size
+        // }
     }
 }
