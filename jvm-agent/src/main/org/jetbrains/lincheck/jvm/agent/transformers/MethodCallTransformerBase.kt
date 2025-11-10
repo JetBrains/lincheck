@@ -73,16 +73,6 @@ internal abstract class MethodCallTransformerBase(
 
     protected abstract fun processMethodCall(desc: String, opcode: Int, owner: String, name: String, itf: Boolean)
 
-    protected fun GeneratorAdapter.pushReceiver(receiverLocal: Int?) {
-        // STACK: <empty>
-        if (receiverLocal != null) {
-            loadLocal(receiverLocal)
-        } else {
-            pushNull()
-        }
-        // STACK: receiver?
-    }
-
     protected fun GeneratorAdapter.processMethodCallEnter(
         methodId: Int,
         receiverLocal: Int?,
@@ -201,6 +191,16 @@ internal abstract class MethodCallTransformerBase(
             position += argType.size
             argPath
         }.reversed()
+    }
+
+    protected fun GeneratorAdapter.pushReceiver(receiverLocal: Int?) {
+        // STACK: <empty>
+        if (receiverLocal != null) {
+            loadLocal(receiverLocal)
+        } else {
+            pushNull()
+        }
+        // STACK: receiver?
     }
 
     protected fun isIgnoredMethod(className: String) =
