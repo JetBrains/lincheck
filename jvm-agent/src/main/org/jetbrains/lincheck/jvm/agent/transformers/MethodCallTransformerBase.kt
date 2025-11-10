@@ -113,8 +113,10 @@ internal abstract class MethodCallTransformerBase(
         }
         // STACK: deterministicCallId, deterministicMethodDescriptor, methodId, receiver, arguments, result?
         when {
-            returnType == VOID_TYPE -> invokeStatic(Injections::onMethodCallReturnVoid)
-            else                    -> {
+            returnType == VOID_TYPE -> {
+                invokeStatic(Injections::onMethodCallReturnVoid)
+            }
+            else -> {
                 invokeStatic(Injections::onMethodCallReturn)
                 // STACK: boxedResult
                 unbox(returnType)
