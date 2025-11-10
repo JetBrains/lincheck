@@ -39,24 +39,15 @@ internal abstract class MethodCallTransformerBase(
     override val requiresOwnerNameAnalyzer: Boolean = true
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
-        // TODO: do not ignore <init>
-        if (name == "<init>" || isIgnoredMethod(className = owner)) {
+        if (!shouldTrackMethodCall(owner, name, desc)) {
             super.visitMethodInsn(opcode, owner, name, desc, itf)
             return
         }
+        // TODO: unify with `IgnoredSectionWrapperTransformer` ?
         if (isCoroutineInternalClass(owner.toCanonicalClassName())) {
             invokeInsideIgnoredSection {
                 super.visitMethodInsn(opcode, owner, name, desc, itf)
             }
-            return
-        }
-        if (isCoroutineResumptionSyntheticAccessor(owner, name)) {
-            super.visitMethodInsn(opcode, owner, name, desc, itf)
-            return
-        }
-        // It is useless for the user, and it depends on static initialization which is not instrumented.
-        if (isThreadLocalRandomCurrent(owner, name)) {
-            super.visitMethodInsn(opcode, owner, name, desc, itf)
             return
         }
         invokeIfInAnalyzedCode(
@@ -67,10 +58,6 @@ internal abstract class MethodCallTransformerBase(
                 processMethodCall(desc, opcode, owner, name, itf)
             }
         )
-    }
-
-    private fun isThreadLocalRandomCurrent(owner: String, methodName: String): Boolean {
-        return owner == "java/util/concurrent/ThreadLocalRandom" && methodName == "current"
     }
 
     protected abstract fun processMethodCall(desc: String, opcode: Int, owner: String, name: String, itf: Boolean)
@@ -196,7 +183,19 @@ internal abstract class MethodCallTransformerBase(
         // STACK: receiver?
     }
 
-    protected fun isIgnoredMethod(className: String) =
+    @Suppress("UNUSED_PARAMETER")
+    protected fun shouldTrackMethodCall(className: String, methodName: String, descriptor: String): Boolean {
+        // TODO: do not ignore <init>
+        if (methodName == "<init>") return false
+        if (isIgnoredClass(className)) return false
+        if (isCoroutineResumptionSyntheticAccessor(className, methodName)) return false
+        // `ThreadLocalRandom` is useless for the user,
+        // and it depends on static initialization which is not instrumented.
+        if (isThreadLocalRandomCurrent(className, methodName)) return false
+        return true
+    }
+
+    private fun isIgnoredClass(className: String) =
         isInLincheckPackage(className.toCanonicalClassName()) ||
         className == "kotlin/jvm/internal/Intrinsics" ||
         className == "java/util/Objects" ||
@@ -215,6 +214,10 @@ internal abstract class MethodCallTransformerBase(
         className == "java/lang/invoke/MethodHandles"
 
     @Suppress("UNUSED_PARAMETER")
-    protected fun isCoroutineResumptionSyntheticAccessor(className: String, methodName: String): Boolean =
+    private fun isCoroutineResumptionSyntheticAccessor(className: String, methodName: String): Boolean =
         (this.methodName == "invokeSuspend") && methodName.startsWith("access\$")
+
+    private fun isThreadLocalRandomCurrent(className: String, methodName: String): Boolean {
+        return className == "java/util/concurrent/ThreadLocalRandom" && methodName == "current"
+    }
 }
