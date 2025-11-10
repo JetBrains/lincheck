@@ -349,39 +349,39 @@ class TraceCollectingEventTracker(
     }
 
     override fun beforeLock(codeLocation: Int) = runInsideIgnoredSection {
-        System.err.println("Trace Recorder mode doesn't support lock and monitor instrumentation")
+        Logger. error { "Trace Recorder mode doesn't support lock and monitor instrumentation" }
     }
 
     override fun lock(monitor: Any) = runInsideIgnoredSection {
-        System.err.println("Trace Recorder mode doesn't support lock and monitor instrumentation")
+        Logger. error { "Trace Recorder mode doesn't support lock and monitor instrumentation" }
     }
 
     override fun unlock(monitor: Any, codeLocation: Int) = runInsideIgnoredSection {
-        System.err.println("Trace Recorder mode doesn't support lock and monitor instrumentation")
+        Logger. error { "Trace Recorder mode doesn't support lock and monitor instrumentation" }
     }
 
     override fun beforePark(codeLocation: Int) = runInsideIgnoredSection {
-        System.err.println("Trace Recorder mode doesn't support lock and monitor instrumentation")
+        Logger. error { "Trace Recorder mode doesn't support lock and monitor instrumentation" }
     }
 
     override fun park(codeLocation: Int) = runInsideIgnoredSection {
-        System.err.println("Trace Recorder mode doesn't support lock and monitor instrumentation")
+        Logger. error { "Trace Recorder mode doesn't support lock and monitor instrumentation" }
     }
 
     override fun unpark(thread: Thread, codeLocation: Int) = runInsideIgnoredSection {
-        System.err.println("Trace Recorder mode doesn't support lock and monitor instrumentation")
+        Logger. error { "Trace Recorder mode doesn't support lock and monitor instrumentation" }
     }
 
     override fun beforeWait(codeLocation: Int) = runInsideIgnoredSection {
-        System.err.println("Trace Recorder mode doesn't support lock and monitor instrumentation")
+        Logger. error { "Trace Recorder mode doesn't support lock and monitor instrumentation" }
     }
 
     override fun wait(monitor: Any, withTimeout: Boolean) = runInsideIgnoredSection {
-        System.err.println("Trace Recorder mode doesn't support lock and monitor instrumentation")
+        Logger. error { "Trace Recorder mode doesn't support lock and monitor instrumentation" }
     }
 
     override fun notify(monitor: Any, codeLocation: Int, notifyAll: Boolean) = runInsideIgnoredSection {
-        System.err.println("Trace Recorder mode doesn't support lock and monitor instrumentation")
+        Logger. error { "Trace Recorder mode doesn't support lock and monitor instrumentation" }
     }
 
     override fun beforeNewObjectCreation(className: String) = runInsideIgnoredSection {
@@ -391,13 +391,13 @@ class TraceCollectingEventTracker(
     override fun afterNewObjectCreation(obj: Any) = Unit
 
     override fun getNextTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker): Long = runInsideIgnoredSection {
-        System.err.println("Trace Recorder mode doesn't support Trace Debugger-specific instrumentation")
+        Logger. error { "Trace Recorder mode doesn't support Trace Debugger-specific instrumentation" }
         return 0
     }
 
     override fun advanceCurrentTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker, oldId: Long) =
         runInsideIgnoredSection {
-            System.err.println("Trace Recorder mode doesn't support Trace Debugger-specific instrumentation")
+            Logger. error { "Trace Recorder mode doesn't support Trace Debugger-specific instrumentation" }
         }
 
     override fun getCachedInvokeDynamicCallSite(
@@ -406,7 +406,7 @@ class TraceCollectingEventTracker(
         bootstrapMethodData: Injections.HandlePojo,
         bootstrapMethodArguments: Array<out Any?>
     ): CallSite? = runInsideIgnoredSection {
-        System.err.println("Trace Recorder mode doesn't support invoke dynamic instrumentation")
+        Logger. error { "Trace Recorder mode doesn't support invoke dynamic instrumentation" }
         return null
     }
 
@@ -417,7 +417,7 @@ class TraceCollectingEventTracker(
         bootstrapMethodArguments: Array<out Any?>,
         callSite: CallSite
     ) = runInsideIgnoredSection {
-        System.err.println("Trace Recorder mode doesn't support invoke dynamic instrumentation")
+        Logger. error { "Trace Recorder mode doesn't support invoke dynamic instrumentation" }
     }
 
     override fun updateSnapshotBeforeConstructorCall(objs: Array<out Any?>) = Unit
@@ -844,16 +844,16 @@ class TraceCollectingEventTracker(
     }
 
     override fun shouldInvokeBeforeEvent(): Boolean = runInsideIgnoredSection {
-        System.err.println("Trace Recorder mode doesn't support IDEA Plugin integration")
+        Logger. error { "Trace Recorder mode doesn't support IDEA Plugin integration" }
         return false
     }
 
     override fun beforeEvent(eventId: Int, type: String) = runInsideIgnoredSection {
-        System.err.println("Trace Recorder mode doesn't support IDEA Plugin integration")
+        Logger. error { "Trace Recorder mode doesn't support IDEA Plugin integration" }
     }
 
     override fun getCurrentEventId(): Int = runInsideIgnoredSection {
-        System.err.println("Trace Recorder mode doesn't support IDEA Plugin integration")
+        Logger. error { "Trace Recorder mode doesn't support IDEA Plugin integration" }
         return -1
     }
 
@@ -985,7 +985,6 @@ class TraceCollectingEventTracker(
                 }
                 TraceCollectorMode.TEXT -> printPostProcessedTrace(traceDumpPath, TRACE_CONTEXT, roots, false)
                 TraceCollectorMode.TEXT_VERBOSE -> printPostProcessedTrace(traceDumpPath, TRACE_CONTEXT, roots, true)
-                TraceCollectorMode.BINARY_STREAM -> {}
                 TraceCollectorMode.NULL -> {}
             }
         } catch (t: Throwable) {
