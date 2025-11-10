@@ -52,6 +52,7 @@ internal class MethodCallEntryExitTransformer(
     private val catchBlock: Label = adapter.newLabel()
 
     private var argumentsArrayLocal: Int = -1
+    private var receiverLocal: Int? = null
 
     private val enabled: Boolean = run {
         // Do not instrument constructors and class initializers to avoid illegal receiver access before super-call
@@ -78,7 +79,12 @@ internal class MethodCallEntryExitTransformer(
         // Do not instrument constructors and class initializers to avoid illegal receiver access before super-call
         if (!enabled) return
 
-        // Build the arguments array from local variables and store it for later reuse
+        // Store the receiver object for later use.
+        receiverLocal = newLocal(OBJECT_TYPE)
+        if (!isStatic) { loadThis() } else { pushNull() }
+        storeLocal(receiverLocal!!)
+
+        // Build the arguments array from method arguments and store it for later reuse
         argumentsArrayLocal = newLocal(OBJECT_ARRAY_TYPE)
         createArgumentsArrayIntoLocal(argumentsArrayLocal)
 
@@ -88,7 +94,7 @@ internal class MethodCallEntryExitTransformer(
                 // Inject method entry callback
                 processMethodCallEnter(
                     methodId = methodId,
-                    receiverLocal = null, // if (isStatic) null else 0, // use original receiver slot
+                    receiverLocal = receiverLocal,
                     argumentsArrayLocal = argumentsArrayLocal,
                     ownerName = null,
                     argumentNames = null,
@@ -116,11 +122,11 @@ internal class MethodCallEntryExitTransformer(
                     instrumented = {
                         // On normal return, report the result (if any)
                         processMethodCallReturn(
-                            returnType = Type.getReturnType(descriptor), // returnType,
+                            returnType = Type.getReturnType(descriptor),
                             deterministicCallIdLocal = null,
                             deterministicMethodDescriptorLocal = null,
                             methodId = methodId,
-                            receiverLocal = null, // if (isStatic) null else 0,
+                            receiverLocal = receiverLocal,
                             argumentsArrayLocal = argumentsArrayLocal,
                         )
                     }
@@ -146,7 +152,7 @@ internal class MethodCallEntryExitTransformer(
                     deterministicCallIdLocal = null,
                     deterministicMethodDescriptorLocal = null,
                     methodId = methodId,
-                    receiverLocal = null, // if (isStatic) null else 0,
+                    receiverLocal = receiverLocal,
                     argumentsArrayLocal = argumentsArrayLocal,
                 )
             }
@@ -169,19 +175,12 @@ internal class MethodCallEntryExitTransformer(
         newArray(objType)
         storeLocal(argumentsArrayLocal)
 
-        // var slot = if (isStatic) 0 else 1
-        // for ((i, type) in argTypes.withIndex()) {
-        //     loadLocal(argumentsArrayLocal)
-        //     push(i)
-        //     try {
-        //         loadLocal(slot, type)
-        //     } catch (e: IndexOutOfBoundsException) {
-        //         Logger.debug { "Out of bounds access to local variable #$slot of type $type in $className.$methodName$descriptor (isStatic=$isStatic)" }
-        //         throw e
-        //     }
-        //     box(type)
-        //     arrayStore(objType)
-        //     slot += type.size
-        // }
+        for ((i, type) in argTypes.withIndex()) {
+            loadLocal(argumentsArrayLocal)
+            push(i)
+            loadArg(i)
+            box(type)
+            arrayStore(objType)
+        }
     }
 }
