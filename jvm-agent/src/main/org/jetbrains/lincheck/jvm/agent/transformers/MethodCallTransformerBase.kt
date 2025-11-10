@@ -40,7 +40,7 @@ internal abstract class MethodCallTransformerBase(
     override val requiresOwnerNameAnalyzer: Boolean = true
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
-        // TODO: do not ignore <init> for lincheck managed strategy
+        // TODO: JBRes-6844 do not ignore <init> for lincheck managed strategy
         if ((name == "<init>" && !isInTraceRecorderMode) || isIgnoredMethod(className = owner)) {
             super.visitMethodInsn(opcode, owner, name, desc, itf)
             return
