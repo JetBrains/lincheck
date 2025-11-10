@@ -125,8 +125,12 @@ internal class LincheckClassVisitor(
         }
 
         // ======== Method Calls ========
+
+        // chain.addTransformer { adapter, mv ->
+        //     applyMethodCallTransformer(methodName, desc, access, methodInfo, adapter, mv)
+        // }
         chain.addTransformer { adapter, mv ->
-            applyMethodCallTransformer(methodName, desc, access, methodInfo, config, adapter, mv)
+            MethodCallEntryExitTransformer(fileName, className, methodName, desc, access, methodInfo, config, adapter, mv)
         }
 
         // ======== Object Creation ========
