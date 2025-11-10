@@ -1,7 +1,9 @@
 # Thread 1 (Test worker)
 ThreadsTest.daemonThreadTest() at :0
+  AtomicInteger.<init>(0): AtomicInteger@1 at ThreadsTest.kt:18
   inc = AtomicInteger@1 at ThreadsTest.kt:18
   thread(true, false, null, null, -1, ThreadsTest$$Lambda@1): ThreadsKt$thread$thread$1@1 at ThreadsTest.kt:20
+    ThreadsKt$thread$thread$1.<init>(block): ThreadsKt$thread$thread$1@1 at Thread.kt:28
     thread = ThreadsKt$thread$thread$1@1 at Thread.kt:28
     thread.start() at Thread.kt:42
   loop(2 iterations) at ThreadsTest.kt:31

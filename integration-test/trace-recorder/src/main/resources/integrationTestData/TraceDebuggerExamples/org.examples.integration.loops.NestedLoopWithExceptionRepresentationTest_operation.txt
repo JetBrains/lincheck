@@ -28,6 +28,7 @@ NestedLoopWithExceptionRepresentationTest.operation() at :0
             j = 2 at NestedLoopWithExceptionRepresentationTest.kt:29
           <iteration 2> at NestedLoopWithExceptionRepresentationTest.kt:29
             escape = "2.2" at NestedLoopWithExceptionRepresentationTest.kt:30
+    RuntimeException.<init>("Exception in nested loop"): RuntimeException@1 at NestedLoopWithExceptionRepresentationTest.kt:32
   e = RuntimeException@1 at NestedLoopWithExceptionRepresentationTest.kt:44
   escape = "CAUGHT EXCEPTION" at NestedLoopWithExceptionRepresentationTest.kt:45
   escape = "END" at NestedLoopWithExceptionRepresentationTest.kt:47

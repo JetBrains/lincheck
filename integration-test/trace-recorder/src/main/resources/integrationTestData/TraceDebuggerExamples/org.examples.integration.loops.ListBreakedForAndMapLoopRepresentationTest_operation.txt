@@ -9,6 +9,7 @@ ListBreakedForAndMapLoopRepresentationTest.operation() at :0
   list = Arrays.ArrayList@1 at ListBreakedForAndMapLoopRepresentationTest.kt:18
   map = Arrays.ArrayList@1 at ListBreakedForAndMapLoopRepresentationTest.kt:19
   collectionSizeOrDefault(map, 10): 4 at _Collections.kt:1563
+  ArrayList.<init>(4): ArrayList@1 at _Collections.kt:1563
   mapTo = Arrays.ArrayList@1 at _Collections.kt:1563
   destination = ArrayList@1 at _Collections.kt:1563
   mapTo.iterator(): Arrays.ArrayItr@1 at _Collections.kt:1634
