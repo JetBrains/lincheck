@@ -10,18 +10,17 @@
 
 package org.jetbrains.lincheck.jvm.agent
 
-import org.jetbrains.lincheck.util.isJavaLambdaClass
-import org.objectweb.asm.*
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.ClassVisitor
+import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Opcodes.*
+import org.objectweb.asm.Type
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import org.objectweb.asm.commons.Method
 import sun.nio.ch.lincheck.Injections
 import java.io.InputStream
-import java.lang.invoke.MethodHandle
-import java.lang.invoke.MethodHandles
-import java.lang.invoke.MethodType
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KFunction
 import kotlin.reflect.jvm.javaMethod

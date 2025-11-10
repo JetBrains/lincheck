@@ -644,6 +644,12 @@ fun loadTRTracePoint(inp: DataInput): TRTracePoint {
     return loader(inp, codeLocationId, threadId, eventId)
 }
 
+private fun String.escape() = this
+    .replace("\\", "\\\\")
+    .replace("\n", "\\n")
+    .replace("\r", "\\r")
+    .replace("\t", "\\t")
+
 @ConsistentCopyVisibility
 data class TRObject internal constructor (
     internal val classNameId: Int,
@@ -663,15 +669,8 @@ data class TRObject internal constructor (
                 is String -> {
                     when (classNameId) {
                         TR_OBJECT_P_RAW_STRING, TR_OBJECT_P_JAVA_CLASS, TR_OBJECT_P_KOTLIN_CLASS -> primitiveValue
-                        else -> {
-                            // Escape special characters
-                            val v = primitiveValue
-                                .replace("\\", "\\\\")
-                                .replace("\n", "\\n")
-                                .replace("\r", "\\r")
-                                .replace("\t", "\\t")
-                            "\"$v\""
-                        }
+                        TR_OBJECT_P_STRING_BUILDER -> "StringBuilder@$identityHashCode(\"${primitiveValue.escape()}\")"
+                        else -> "\"${primitiveValue.escape()}\""
                     }
                 }
                 is Char -> "'$primitiveValue'"
@@ -712,6 +711,7 @@ const val TR_OBJECT_P_RAW_STRING = TR_OBJECT_P_UNIT - 1
 const val TR_OBJECT_P_BOOLEAN = TR_OBJECT_P_RAW_STRING - 1
 const val TR_OBJECT_P_JAVA_CLASS = TR_OBJECT_P_BOOLEAN - 1
 const val TR_OBJECT_P_KOTLIN_CLASS = TR_OBJECT_P_JAVA_CLASS - 1
+const val TR_OBJECT_P_STRING_BUILDER = TR_OBJECT_P_KOTLIN_CLASS - 1
 
 fun TRObjectOrNull(obj: Any?): TRObject? =
     obj?.let { TRObject(it) }
@@ -737,6 +737,7 @@ fun TRObject(obj: Any): TRObject {
         is Double -> TRObject(TR_OBJECT_P_DOUBLE, 0, obj)
         is Char -> TRObject(TR_OBJECT_P_CHAR, 0, obj)
         is String -> TRObject(TR_OBJECT_P_STRING, 0, trimString(obj))
+        is StringBuilder -> TRObject(TR_OBJECT_P_STRING_BUILDER, System.identityHashCode(obj), obj.toString())
         is CharSequence -> runCatching { trimString(obj) }.let {
             // Some implementations of CharSequence might throw when `subSequence` is invoked at some unexpected moment,
             // like when this sequence is considered "destroyed" at this point
@@ -780,6 +781,10 @@ internal fun DataOutput.writeTRObject(value: TRObject?) {
         is Float -> writeFloat(value.primitiveValue)
         is Double -> writeDouble(value.primitiveValue)
         is Char -> writeChar(value.primitiveValue.code)
+        is String if value.classNameId == TR_OBJECT_P_STRING_BUILDER -> {
+            writeInt(value.identityHashCode)
+            writeUTF(value.primitiveValue)
+        }
         is String -> writeUTF(value.primitiveValue) // Both STRING and RAW_STRING
         is Boolean -> writeBoolean(value.primitiveValue)
         is Unit -> {}
@@ -804,6 +809,7 @@ internal fun DataInput.readTRObject(): TRObject? {
         TR_OBJECT_P_BOOLEAN -> TRObject(classNameId, 0, readBoolean())
         TR_OBJECT_P_JAVA_CLASS -> TRObject(classNameId, 0, readUTF())
         TR_OBJECT_P_KOTLIN_CLASS -> TRObject(classNameId, 0, readUTF())
+        TR_OBJECT_P_STRING_BUILDER -> TRObject(classNameId, readInt(), readUTF())
         else -> {
             if (classNameId >= 0) {
                 TRObject(classNameId, readInt(), null)

@@ -23,47 +23,47 @@ ImmutableListTest.empty() at :0
       block.invoke(CompareContext@1): Unit at ComparisonDSL.kt:12
         listBehavior(compare) at ImmutableListTest.kt:16
           equalityBehavior(CompareContext@1, "", true) at CollectionBehaviors.kt:9
-            "".append(objectName ➜ ""): "" at CollectionBehaviors.kt:96
+            StringBuilder@1("").append(objectName ➜ ""): StringBuilder@1("") at CollectionBehaviors.kt:96
             objectName.length(): 0 at CollectionBehaviors.kt:96
-            "".append(""): "" at CollectionBehaviors.kt:96
-            "".toString(): "" at CollectionBehaviors.kt:96
+            StringBuilder@1("").append(""): StringBuilder@1("") at CollectionBehaviors.kt:96
+            StringBuilder@1("").toString(): "" at CollectionBehaviors.kt:96
             prefix = "" at CollectionBehaviors.kt:96
             equalityBehavior.equals(objectName ➜ "") at CollectionBehaviors.kt:97
               assertEquals(expected, actual, message ➜ "") at ComparisonDSL.kt:18
-            "".append(prefix ➜ ""): "" at CollectionBehaviors.kt:98
-            "".append("hashCode"): "hashCode" at CollectionBehaviors.kt:98
-            "hashCode".toString(): "hashCode" at CollectionBehaviors.kt:98
+            StringBuilder@1("").append(prefix ➜ ""): StringBuilder@1("") at CollectionBehaviors.kt:98
+            StringBuilder@1("").append("hashCode"): StringBuilder@1("hashCode") at CollectionBehaviors.kt:98
+            StringBuilder@1("hashCode").toString(): "hashCode" at CollectionBehaviors.kt:98
             equalityBehavior.propertyEquals("hashCode", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:98
               getter.invoke(expected): 1 at ComparisonDSL.kt:21
                 propertyEquals.hashCode(): 1 at CollectionBehaviors.kt:98
               getter.invoke(actual): 1 at ComparisonDSL.kt:21
                 propertyEquals.hashCode(): 1 at CollectionBehaviors.kt:98
               assertEquals(1, 1, message ➜ "hashCode") at ComparisonDSL.kt:21
-            "".append(prefix ➜ ""): "" at CollectionBehaviors.kt:100
-            "".append("toString"): "toString" at CollectionBehaviors.kt:100
-            "toString".toString(): "toString" at CollectionBehaviors.kt:100
+            StringBuilder@1("").append(prefix ➜ ""): StringBuilder@1("") at CollectionBehaviors.kt:100
+            StringBuilder@1("").append("toString"): StringBuilder@1("toString") at CollectionBehaviors.kt:100
+            StringBuilder@1("toString").toString(): "toString" at CollectionBehaviors.kt:100
             equalityBehavior.propertyEquals("toString", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:100
               getter.invoke(expected): "[]" at ComparisonDSL.kt:21
               getter.invoke(actual): "[]" at ComparisonDSL.kt:21
               assertEquals("[]", "[]", message ➜ "toString") at ComparisonDSL.kt:21
           collectionBehavior(CompareContext@1, "", true) at CollectionBehaviors.kt:10
-            "".append(objectName ➜ ""): "" at CollectionBehaviors.kt:105
+            StringBuilder@1("").append(objectName ➜ ""): StringBuilder@1("") at CollectionBehaviors.kt:105
             objectName.length(): 0 at CollectionBehaviors.kt:105
-            "".append(""): "" at CollectionBehaviors.kt:105
-            "".toString(): "" at CollectionBehaviors.kt:105
+            StringBuilder@1("").append(""): StringBuilder@1("") at CollectionBehaviors.kt:105
+            StringBuilder@1("").toString(): "" at CollectionBehaviors.kt:105
             prefix = "" at CollectionBehaviors.kt:105
-            "".append(prefix ➜ ""): "" at CollectionBehaviors.kt:106
-            "".append("size"): "size" at CollectionBehaviors.kt:106
-            "size".toString(): "size" at CollectionBehaviors.kt:106
+            StringBuilder@1("").append(prefix ➜ ""): StringBuilder@1("") at CollectionBehaviors.kt:106
+            StringBuilder@1("").append("size"): StringBuilder@1("size") at CollectionBehaviors.kt:106
+            StringBuilder@1("size").toString(): "size" at CollectionBehaviors.kt:106
             collectionBehavior.propertyEquals("size", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:106
               getter.invoke(expected): 0 at ComparisonDSL.kt:21
                 propertyEquals.size(): 0 at CollectionBehaviors.kt:106
               getter.invoke(actual): 0 at ComparisonDSL.kt:21
                 propertyEquals.size(): 0 at CollectionBehaviors.kt:106
               assertEquals(0, 0, message ➜ "size") at ComparisonDSL.kt:21
-            "".append(prefix ➜ ""): "" at CollectionBehaviors.kt:107
-            "".append("isEmpty"): "isEmpty" at CollectionBehaviors.kt:107
-            "isEmpty".toString(): "isEmpty" at CollectionBehaviors.kt:107
+            StringBuilder@1("").append(prefix ➜ ""): StringBuilder@1("") at CollectionBehaviors.kt:107
+            StringBuilder@1("").append("isEmpty"): StringBuilder@1("isEmpty") at CollectionBehaviors.kt:107
+            StringBuilder@1("isEmpty").toString(): "isEmpty" at CollectionBehaviors.kt:107
             collectionBehavior.propertyEquals("isEmpty", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:107
               getter.invoke(expected): true at ComparisonDSL.kt:21
                 propertyEquals.isEmpty(): true at CollectionBehaviors.kt:107
