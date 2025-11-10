@@ -98,6 +98,7 @@ abstract class AbstractTRAppendable: TRAppendable {
 
     private fun String.prettifyFieldName(): String = this
         .removeVolatileDollarFU()
+        .removeLeadingDollar()
 
     private fun String.prettifyVariableName(): String = this
         .removeInlineIV()
