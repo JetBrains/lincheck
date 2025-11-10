@@ -352,7 +352,7 @@ private data class ClassNameRepresentation(
 
 private fun Any.getSpecialClassNameRepresentation(): ClassNameRepresentation? = when {
     this is Thread                                -> ThreadClassNameRepresentation
-    isJavaLambdaClass(javaClass.name)             -> LambdaClassNameRepresentation
+    isJavaLambdaClass(javaClass.name) -> LambdaClassNameRepresentation
     this is Continuation<*>                       -> ContinuationClassNameRepresentation
     else                                          -> null
 }

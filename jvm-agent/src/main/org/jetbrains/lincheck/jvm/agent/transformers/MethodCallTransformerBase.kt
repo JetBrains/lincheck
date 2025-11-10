@@ -14,6 +14,7 @@ import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.descriptors.AccessPath
 import org.jetbrains.lincheck.descriptors.OwnerName
 import org.jetbrains.lincheck.util.isInLincheckPackage
+import org.jetbrains.lincheck.util.isInTraceRecorderMode
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.INVOKESTATIC
 import org.objectweb.asm.Type
@@ -39,8 +40,8 @@ internal abstract class MethodCallTransformerBase(
     override val requiresOwnerNameAnalyzer: Boolean = true
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
-        // TODO: do not ignore <init>
-        if (name == "<init>" || isIgnoredMethod(className = owner)) {
+        // TODO: do not ignore <init> for lincheck managed strategy
+        if ((name == "<init>" && !isInTraceRecorderMode) || isIgnoredMethod(className = owner)) {
             super.visitMethodInsn(opcode, owner, name, desc, itf)
             return
         }

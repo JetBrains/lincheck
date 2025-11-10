@@ -31,7 +31,7 @@ internal class TransformerChain(
         return null
     }
 
-    fun addAnalyzerAdapter(access: Int, className: String, methodName: String, desc: String) {
+    fun addTypeAnalyzerAdapter(access: Int, className: String, methodName: String, desc: String) {
         val requiresTypeAnalyzer = methodVisitors.any {
             it is LincheckMethodVisitor && it.requiresTypeAnalyzer
         }

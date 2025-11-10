@@ -43,8 +43,9 @@ internal class MethodCallMinimalTransformer(
 ) : MethodCallTransformerBase(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
 
     override fun processMethodCall(desc: String, opcode: Int, owner: String, name: String, itf: Boolean) = adapter.run {
+        val isConstructorCall = name == "<init>"
         val receiverType = getType("L$owner;")
-        val returnType = getReturnType(desc)
+        val returnType = if (isConstructorCall) receiverType else getReturnType(desc)
         val argumentNames = getArgumentNames(desc, opcode)
         val ownerName = when {
             opcode == INVOKESTATIC && name.endsWith($$"$default") &&
@@ -58,7 +59,7 @@ internal class MethodCallMinimalTransformer(
             storeLocal(it)
         }
         val receiverLocal = when {
-            (opcode != INVOKESTATIC) -> newLocal(receiverType).also { storeLocal(it) }
+            (opcode != INVOKESTATIC && !isConstructorCall) -> newLocal(receiverType).also { storeLocal(it) }
             else -> null
         }
         val sanitizedMethodName = sanitizeMethodName(owner, name, InstrumentationMode.TRACE_RECORDING)
