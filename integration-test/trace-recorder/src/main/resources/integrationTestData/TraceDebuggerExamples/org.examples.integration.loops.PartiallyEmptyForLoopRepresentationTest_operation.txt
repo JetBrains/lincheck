@@ -1,6 +1,7 @@
 # Thread 1
 PartiallyEmptyForLoopRepresentationTest.operation() at :0
   escape = "START" at PartiallyEmptyForLoopRepresentationTest.kt:16
+  StringBuilder.<init>(): "" at PartiallyEmptyForLoopRepresentationTest.kt:17
   builder = "" at PartiallyEmptyForLoopRepresentationTest.kt:17
   i = 1 at PartiallyEmptyForLoopRepresentationTest.kt:18
   loop(5 iterations) at PartiallyEmptyForLoopRepresentationTest.kt:18

@@ -10,6 +10,7 @@ ListBreakedForAndMapLoopRepresentationTest.operation() at :0
   map = Arrays.ArrayList@1 at ListBreakedForAndMapLoopRepresentationTest.kt:19
   i$f$map = 0 at ListBreakedForAndMapLoopRepresentationTest.kt:19
   collectionSizeOrDefault(map, 10): 4 at _Collections.kt:1563
+  ArrayList.<init>(4): ArrayList@1 at _Collections.kt:1563
   mapTo$iv = Arrays.ArrayList@1 at _Collections.kt:1563
   destination$iv = ArrayList@1 at _Collections.kt:1563
   i$f$mapTo = 0 at _Collections.kt:1563

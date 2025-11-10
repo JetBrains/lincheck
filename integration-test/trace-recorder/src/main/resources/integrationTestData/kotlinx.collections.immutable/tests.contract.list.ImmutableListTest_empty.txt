@@ -22,9 +22,11 @@ ImmutableListTest.empty() at :0
   emptyList(): EmptyList@1 at ImmutableListTest.kt:28
   compareLists(EmptyList@1, empty1) at ImmutableListTest.kt:28
     compare(expected, actual, ImmutableListTest$$Lambda@1) at ImmutableListTest.kt:16
+      CompareContext.<init>(expected, actual): CompareContext@1 at ComparisonDSL.kt:12
       block.invoke(CompareContext@1): Unit at ComparisonDSL.kt:12
         listBehavior(compare) at ImmutableListTest.kt:16
           equalityBehavior(CompareContext@1, "", true) at CollectionBehaviors.kt:9
+            StringBuilder.<init>(): "" at CollectionBehaviors.kt:96
             "".append(objectName ➜ ""): "" at CollectionBehaviors.kt:96
             objectName.length(): 0 at CollectionBehaviors.kt:96
             "".append(""): "" at CollectionBehaviors.kt:96
@@ -32,6 +34,7 @@ ImmutableListTest.empty() at :0
             prefix = "" at CollectionBehaviors.kt:96
             equalityBehavior.equals(objectName ➜ "") at CollectionBehaviors.kt:97
               assertEquals(this.expected, this.actual, message ➜ "") at ComparisonDSL.kt:18
+            StringBuilder.<init>(): "" at CollectionBehaviors.kt:98
             "".append(prefix ➜ ""): "" at CollectionBehaviors.kt:98
             "".append("hashCode"): "hashCode" at CollectionBehaviors.kt:98
             "hashCode".toString(): "hashCode" at CollectionBehaviors.kt:98
@@ -41,6 +44,7 @@ ImmutableListTest.empty() at :0
               getter.invoke(this.actual): 1 at ComparisonDSL.kt:21
                 propertyEquals.hashCode(): 1 at CollectionBehaviors.kt:98
               assertEquals(1, 1, message ➜ "hashCode") at ComparisonDSL.kt:21
+            StringBuilder.<init>(): "" at CollectionBehaviors.kt:100
             "".append(prefix ➜ ""): "" at CollectionBehaviors.kt:100
             "".append("toString"): "toString" at CollectionBehaviors.kt:100
             "toString".toString(): "toString" at CollectionBehaviors.kt:100
@@ -49,11 +53,13 @@ ImmutableListTest.empty() at :0
               getter.invoke(this.actual): "[]" at ComparisonDSL.kt:21
               assertEquals("[]", "[]", message ➜ "toString") at ComparisonDSL.kt:21
           collectionBehavior(CompareContext@1, "", true) at CollectionBehaviors.kt:10
+            StringBuilder.<init>(): "" at CollectionBehaviors.kt:105
             "".append(objectName ➜ ""): "" at CollectionBehaviors.kt:105
             objectName.length(): 0 at CollectionBehaviors.kt:105
             "".append(""): "" at CollectionBehaviors.kt:105
             "".toString(): "" at CollectionBehaviors.kt:105
             prefix = "" at CollectionBehaviors.kt:105
+            StringBuilder.<init>(): "" at CollectionBehaviors.kt:106
             "".append(prefix ➜ ""): "" at CollectionBehaviors.kt:106
             "".append("size"): "size" at CollectionBehaviors.kt:106
             "size".toString(): "size" at CollectionBehaviors.kt:106
@@ -61,6 +67,7 @@ ImmutableListTest.empty() at :0
               getter.invoke(this.expected): 0 at ComparisonDSL.kt:21
               getter.invoke(this.actual): 0 at ComparisonDSL.kt:21
               assertEquals(0, 0, message ➜ "size") at ComparisonDSL.kt:21
+            StringBuilder.<init>(): "" at CollectionBehaviors.kt:107
             "".append(prefix ➜ ""): "" at CollectionBehaviors.kt:107
             "".append("isEmpty"): "isEmpty" at CollectionBehaviors.kt:107
             "isEmpty".toString(): "isEmpty" at CollectionBehaviors.kt:107
@@ -70,6 +77,7 @@ ImmutableListTest.empty() at :0
               getter.invoke(this.actual): true at ComparisonDSL.kt:21
                 propertyEquals.isEmpty(): true at CollectionBehaviors.kt:107
               assertEquals(true, true, message ➜ "isEmpty") at ComparisonDSL.kt:21
+            CollectionBehaviorsKt$collectionBehavior$3.<init>(): CollectionBehaviorsKt$collectionBehavior$3@1 at CollectionBehaviors.kt:109
             it = CollectionBehaviorsKt$collectionBehavior$3@1 at CollectionBehaviors.kt:109
             i$a$-let-CollectionBehaviorsKt$collectionBehavior$4 = 0 at fake.kt:1
             CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:109
@@ -98,6 +106,7 @@ ImmutableListTest.empty() at :0
               getter.invoke(this.actual): BufferIterator@1 at ComparisonDSL.kt:27
                 compareProperty.iterator(): BufferIterator@1 at CollectionBehaviors.kt:113
               compare(EmptyIterator@1, BufferIterator@1, block) at ComparisonDSL.kt:27
+                CompareContext.<init>(expected, actual): CompareContext@1 at ComparisonDSL.kt:12
                 block.invoke(CompareContext@1): Unit at ComparisonDSL.kt:12
                   iteratorBehavior(compareProperty) at CollectionBehaviors.kt:113
                     CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:55
@@ -136,6 +145,7 @@ ImmutableListTest.empty() at :0
             getter.invoke(this.actual): BufferIterator@1 at ComparisonDSL.kt:27
               compareProperty.listIterator(): BufferIterator@1 at CollectionBehaviors.kt:11
             compare(EmptyIterator@1, BufferIterator@1, block) at ComparisonDSL.kt:27
+              CompareContext.<init>(expected, actual): CompareContext@1 at ComparisonDSL.kt:12
               block.invoke(CompareContext@1): Unit at ComparisonDSL.kt:12
                 listIteratorBehavior(compareProperty) at CollectionBehaviors.kt:11
                   listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:32
@@ -217,6 +227,7 @@ ImmutableListTest.empty() at :0
             getter.invoke(this.actual): BufferIterator@1 at ComparisonDSL.kt:27
               compareProperty.listIterator(0): BufferIterator@1 at CollectionBehaviors.kt:12
             compare(EmptyIterator@1, BufferIterator@1, block) at ComparisonDSL.kt:27
+              CompareContext.<init>(expected, actual): CompareContext@1 at ComparisonDSL.kt:12
               block.invoke(CompareContext@1): Unit at ComparisonDSL.kt:12
                 listIteratorBehavior(compareProperty) at CollectionBehaviors.kt:12
                   listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:32
@@ -298,6 +309,7 @@ ImmutableListTest.empty() at :0
             getter.invoke(this.actual): BufferIterator@1 at ComparisonDSL.kt:27
               compareProperty.listIterator(0): BufferIterator@1 at CollectionBehaviors.kt:13
             compare(EmptyIterator@1, BufferIterator@1, block) at ComparisonDSL.kt:27
+              CompareContext.<init>(expected, actual): CompareContext@1 at ComparisonDSL.kt:12
               block.invoke(CompareContext@1): Unit at ComparisonDSL.kt:12
                 listIteratorBehavior(compareProperty) at CollectionBehaviors.kt:13
                   listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:32
