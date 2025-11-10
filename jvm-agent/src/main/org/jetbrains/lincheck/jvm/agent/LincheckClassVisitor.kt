@@ -183,7 +183,7 @@ internal class LincheckClassVisitor(
         }
 
         // ======== Analyzers ========
-        chain.addAnalyzerAdapter(access, className, methodName, desc)
+        chain.addTypeAnalyzerAdapter(access, className, methodName, desc)
         chain.addOwnerNameAnalyzerAdapter(access, className, methodName, desc, methodInfo)
 
         mv = chain.methodVisitors.last()
