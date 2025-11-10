@@ -28,6 +28,7 @@ import java.io.DataOutput
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.reflect.KClass
 
 private val EVENT_ID_GENERATOR = AtomicInteger(0)
 
@@ -660,14 +661,18 @@ data class TRObject internal constructor (
         return if (primitiveValue != null) {
             when (primitiveValue) {
                 is String -> {
-                    if (classNameId == TR_OBJECT_P_RAW_STRING) return primitiveValue
-                    // Escape special characters
-                    val v = primitiveValue
-                        .replace("\\", "\\\\")
-                        .replace("\n", "\\n")
-                        .replace("\r", "\\r")
-                        .replace("\t", "\\t")
-                    return "\"$v\""
+                    when (classNameId) {
+                        TR_OBJECT_P_RAW_STRING, TR_OBJECT_P_JAVA_CLASS, TR_OBJECT_P_KOTLIN_CLASS -> primitiveValue
+                        else -> {
+                            // Escape special characters
+                            val v = primitiveValue
+                                .replace("\\", "\\\\")
+                                .replace("\n", "\\n")
+                                .replace("\r", "\\r")
+                                .replace("\t", "\\t")
+                            "\"$v\""
+                        }
+                    }
                 }
                 is Char -> "'$primitiveValue'"
                 is Unit -> "Unit"
@@ -705,6 +710,8 @@ const val TR_OBJECT_P_STRING = TR_OBJECT_P_CHAR - 1
 const val TR_OBJECT_P_UNIT = TR_OBJECT_P_STRING - 1
 const val TR_OBJECT_P_RAW_STRING = TR_OBJECT_P_UNIT - 1
 const val TR_OBJECT_P_BOOLEAN = TR_OBJECT_P_RAW_STRING - 1
+const val TR_OBJECT_P_JAVA_CLASS = TR_OBJECT_P_BOOLEAN - 1
+const val TR_OBJECT_P_KOTLIN_CLASS = TR_OBJECT_P_JAVA_CLASS - 1
 
 fun TRObjectOrNull(obj: Any?): TRObject? =
     obj?.let { TRObject(it) }
@@ -742,6 +749,8 @@ fun TRObject(obj: Any): TRObject {
         is Enum<*> -> TRObject(TR_OBJECT_P_RAW_STRING, 0, "${obj.javaClass.simpleName}.${obj.name}")
         is BigInteger -> TRObject(TR_OBJECT_P_RAW_STRING, 0, obj.toString())
         is BigDecimal -> TRObject(TR_OBJECT_P_RAW_STRING, 0, obj.toString())
+        is Class<*> -> TRObject(TR_OBJECT_P_JAVA_CLASS, 0, "${obj.simpleName}.class")
+        is KClass<*> -> TRObject(TR_OBJECT_P_KOTLIN_CLASS, 0, "${obj.simpleName}.kclass")
         // Generic case
         // TODO Make parametrized
         else -> defaultTRObject()
@@ -793,6 +802,8 @@ internal fun DataInput.readTRObject(): TRObject? {
         TR_OBJECT_P_UNIT -> TRObject(classNameId, 0, Unit)
         TR_OBJECT_P_RAW_STRING -> TRObject(classNameId, 0, readUTF())
         TR_OBJECT_P_BOOLEAN -> TRObject(classNameId, 0, readBoolean())
+        TR_OBJECT_P_JAVA_CLASS -> TRObject(classNameId, 0, readUTF())
+        TR_OBJECT_P_KOTLIN_CLASS -> TRObject(classNameId, 0, readUTF())
         else -> {
             if (classNameId >= 0) {
                 TRObject(classNameId, readInt(), null)

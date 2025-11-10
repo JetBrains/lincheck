@@ -17,6 +17,7 @@ import kotlin.coroutines.Continuation
 import java.lang.ref.ReferenceQueue
 import java.lang.ref.WeakReference
 import java.util.WeakHashMap
+import kotlin.reflect.KClass
 
 /**
  * Tracks objects and changes in object graph topology.
@@ -289,6 +290,9 @@ fun ObjectTracker.getObjectRepresentation(obj: Any?): String = when {
 
     obj is Triple<*, *, *> ->
         "(${getObjectRepresentation(obj.first)}, ${getObjectRepresentation(obj.second)}, ${getObjectRepresentation(obj.third)})"
+
+    obj is Class<*> -> "${obj.simpleName}.class"
+    obj is KClass<*> -> "${obj.simpleName}.kclass"
 
     else -> {
         // special representation for anonymous classes

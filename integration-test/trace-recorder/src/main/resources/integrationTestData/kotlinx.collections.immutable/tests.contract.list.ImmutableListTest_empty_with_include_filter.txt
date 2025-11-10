@@ -8,12 +8,11 @@ ImmutableListTest.empty() at :0
   emptyList(): EmptyList@1 at ImmutableListTest.kt:23
   assertEquals(EmptyList@1, empty1, null, 4, null) at ImmutableListTest.kt:23
   assertTrue(true, null, 2, null) at ImmutableListTest.kt:24
-  Reflection.getOrCreateKotlinClass(Class@1): KClassImpl@1 at ImmutableListTest.kt:26
   empty1.iterator(): BufferIterator@1 at ImmutableListTest.kt:26
   BufferIterator@1.next(): threw NoSuchElementException at ImmutableListTest.kt:26
   createFailure(NoSuchElementException@1): Result.Failure@1 at ImmutableListTest.kt:26
   Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ImmutableListTest.kt:26
-  checkResultIsFailure(KClassImpl@1, null, Result.Failure@1): NoSuchElementException@1 at ImmutableListTest.kt:26
+  checkResultIsFailure(NoSuchElementException.kclass, null, Result.Failure@1): NoSuchElementException@1 at ImmutableListTest.kt:26
   emptyList(): EmptyList@1 at ImmutableListTest.kt:28
   compareLists(EmptyList@1, empty1) at ImmutableListTest.kt:28
     compare(expected, actual, ImmutableListTest$$Lambda@1) at ImmutableListTest.kt:16
