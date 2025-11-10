@@ -56,6 +56,8 @@ internal class MethodCallEntryExitTransformer(
     private val enabled: Boolean = run {
         // Do not instrument constructors and class initializers to avoid illegal receiver access before super-call
         if (methodName == "<init>" || methodName == "<clinit>") return@run false
+        // Do not instrument methods from `java.lang.Thread`
+        if (isThreadClass(className.toCanonicalClassName())) return@run false
         if (!shouldTrackMethodCall(className, methodName, descriptor)) return@run false
         return@run true
     }
