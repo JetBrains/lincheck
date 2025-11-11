@@ -373,11 +373,15 @@ public class Injections {
     }
 
     public static void afterLocalRead(int codeLocation, int variableId, Object value) {
-        getEventTracker().afterLocalRead(codeLocation, variableId, value);
+        EventTracker eventTracker = getEventTrackerIfInAnalyzedCode();
+        if (eventTracker == null) return;
+        eventTracker.afterLocalRead(codeLocation, variableId, value);
     }
 
     public static void afterLocalWrite(int codeLocation, int variableId, Object value) {
-        getEventTracker().afterLocalWrite(codeLocation, variableId, value);
+        EventTracker eventTracker = getEventTrackerIfInAnalyzedCode();
+        if (eventTracker == null) return;
+        eventTracker.afterLocalWrite(codeLocation, variableId, value);
     }
 
     /**
