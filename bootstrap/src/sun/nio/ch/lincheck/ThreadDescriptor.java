@@ -276,6 +276,7 @@ public class ThreadDescriptor {
 
     /**
      * Thread local variable storing the thread descriptor for each thread.
+     * <br>
      *
      * NOTE: as an optimization, for the `TestThread` instances,
      *   we avoid lookup via `ThreadLocal` by instead storing
@@ -308,6 +309,7 @@ public class ThreadDescriptor {
      * Typically, the main thread or the test executor thread are used as the "root" thread.
      */
     private static ThreadDescriptor rootDescriptor = null;
+
     /**
      * Store the "root" thread.
      *

@@ -114,7 +114,7 @@ public class Injections {
      *
      * <p>
      * Does not affect the current thread if it is untracked
-     * (e.g. not registered in the Lincheck strategy).
+     * (that is not registered in the Lincheck strategy).
      */
     public static void enterIgnoredSection() {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
@@ -124,10 +124,10 @@ public class Injections {
 
     /**
      * Leaves an ignored section for the current thread.
-     *
      * <p>
+     *
      * Does not affect the current thread if it is untracked
-     * (e.g. not registered in the Lincheck strategy).
+     * (that is not registered in the Lincheck strategy).
      */
     public static void leaveIgnoredSection() {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
@@ -346,8 +346,6 @@ public class Injections {
 
     /**
      * Called from the instrumented code before each field read.
-     *
-     * @return whether the trace point was created
      */
     public static void beforeReadField(Object obj, int codeLocation, int fieldId) {
         getEventTracker().beforeReadField(obj, codeLocation, fieldId);
@@ -355,17 +353,21 @@ public class Injections {
 
     /**
      * Called from the instrumented code before any array cell read.
-     *
-     * @return whether the trace point was created
      */
     public static void beforeReadArray(Object array, int index, int codeLocation) {
         getEventTracker().beforeReadArrayElement(array, index, codeLocation);
     }
 
+    /**
+     * Called from the instrumented code after each local variable read.
+     */
     public static void afterLocalRead(int codeLocation, int variableId, Object value) {
         getEventTracker().afterLocalRead(codeLocation, variableId, value);
     }
 
+    /**
+     * Called from the instrumented code after each local variable write.
+     */
     public static void afterLocalWrite(int codeLocation, int variableId, Object value) {
         getEventTracker().afterLocalWrite(codeLocation, variableId, value);
     }
@@ -515,7 +517,7 @@ public class Injections {
      * the function sets the counter to the {@code newId}.
      * <p>
      * This function is typically used to account for some cached computations:
-     * on the first run the actual computation is performed and its result is cached,
+     * on the first run the actual computation is performed, and its result is cached,
      * and on subsequent runs the cached value is re-used.
      * One example of such a situation is the {@code invokedynamic} instruction.
      * <p>
