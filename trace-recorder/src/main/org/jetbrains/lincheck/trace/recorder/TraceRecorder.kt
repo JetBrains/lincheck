@@ -11,7 +11,7 @@
 package org.jetbrains.lincheck.trace.recorder
 
 import org.jetbrains.lincheck.trace.INJECTIONS_VOID_OBJECT
-import org.jetbrains.lincheck.util.Logger
+import org.jetbrains.lincheck.util.*
 import sun.nio.ch.lincheck.Injections
 import sun.nio.ch.lincheck.ThreadDescriptor
 import java.util.concurrent.atomic.AtomicInteger
@@ -77,7 +77,7 @@ object TraceRecorder {
             ThreadDescriptor.setCurrentThreadDescriptor(it)
         }
         traceStarterThread = Thread.currentThread()
-        desc.setAsRootDescriptor()
+        ThreadDescriptor.setCurrentThreadAsRoot(desc)
         desc.eventTracker = eventTracker
 
         eventTracker!!.enableTrace()
@@ -95,7 +95,7 @@ object TraceRecorder {
             // But try to de-register itself as root descriptor, if we started tracing
             if (traceStarterThread == Thread.currentThread()) {
                 val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
-                desc.removeAsRootDescriptor()
+                ThreadDescriptor.unsetRootThread().ensure { it == desc }
                 traceStarterThread = null
             }
             return
@@ -109,7 +109,7 @@ object TraceRecorder {
         val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         Injections.disableGlobalThreadsTracking()
         if (traceStarterThread == Thread.currentThread()) {
-            desc.removeAsRootDescriptor()
+            ThreadDescriptor.unsetRootThread().ensure { it == desc }
             traceStarterThread = null
         }
 

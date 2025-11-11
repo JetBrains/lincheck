@@ -140,31 +140,6 @@ public class ThreadDescriptor {
         this.eventTrackerData = new WeakReference<>(eventTrackerData);
     }
 
-    public void setAsRootDescriptor() {
-        if (rootThread != null) {
-            throw new IllegalStateException("Root Thread Descriptor is already set");
-        }
-        if (Thread.currentThread() instanceof TestThread) {
-            throw new IllegalStateException("Root Thread cannot be TestThread");
-        }
-        rootThread = Thread.currentThread();
-        rootDescriptor = this;
-    }
-
-    public void removeAsRootDescriptor() {
-        if (rootThread == null) {
-            throw new IllegalStateException("Root Thread Descriptor is not set");
-        }
-        if (rootThread != Thread.currentThread()) {
-            throw new IllegalStateException("Root Thread Descriptor was set from other thread");
-        }
-        if (rootDescriptor != this) {
-            throw new IllegalStateException("Root Thread Descriptor was set to oher descriptor");
-        }
-        rootThread = null;
-        rootDescriptor = null;
-    }
-
     /**
      * Determines whether the thread is currently within an analyzed code section,
      * that is analysis was enabled and the thread is not currently within an ignored section.
@@ -382,6 +357,37 @@ public class ThreadDescriptor {
             throw DescriptorAlreadySetException(thread);
         }
         threadDescriptorsMap.put(thread, descriptor);
+    }
+
+    public static void setCurrentThreadAsRoot(ThreadDescriptor descriptor) {
+        if (descriptor == null) {
+            throw new IllegalArgumentException("Thread descriptor must not be null");
+        }
+        if (rootThread != null) {
+            throw new IllegalStateException("Root thread is already set");
+        }
+
+        Thread thread = Thread.currentThread();
+        if (thread instanceof TestThread) {
+            throw new IllegalStateException("Root thread cannot be TestThread");
+        }
+
+        rootThread = thread;
+        rootDescriptor = descriptor;
+    }
+
+    public static ThreadDescriptor unsetRootThread() {
+        if (rootThread == null) {
+            throw new IllegalStateException("Root thread is not set");
+        }
+        if (rootThread != Thread.currentThread()) {
+            throw new IllegalStateException("Root thread descriptor was set from another thread");
+        }
+
+        ThreadDescriptor descriptor = rootDescriptor;
+        rootThread = null;
+        rootDescriptor = null;
+        return descriptor;
     }
 
     private static IllegalStateException DescriptorAlreadySetException(Thread thread) {
