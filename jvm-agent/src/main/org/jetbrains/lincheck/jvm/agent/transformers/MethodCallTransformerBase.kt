@@ -61,14 +61,8 @@ internal abstract class MethodCallTransformerBase(
             super.visitMethodInsn(opcode, owner, name, desc, itf)
             return
         }
-        invokeIfInAnalyzedCode(
-            original = {
-                super.visitMethodInsn(opcode, owner, name, desc, itf)
-            },
-            instrumented = {
-                processMethodCall(desc, opcode, owner, name, itf)
-            }
-        )
+
+        processMethodCall(desc, opcode, owner, name, itf)
     }
 
     private fun isThreadLocalRandomCurrent(owner: String, methodName: String): Boolean {
@@ -91,8 +85,9 @@ internal abstract class MethodCallTransformerBase(
         methodId: Int,
         receiverLocal: Int?,
         argumentsArrayLocal: Int,
-        ownerName: OwnerName? = null,
-        argumentNames: List<AccessPath?>? = null,
+        ownerName: OwnerName?,
+        argumentNames: List<AccessPath?>?,
+        inAnalyzedCodeLocal: Int,
     ) {
         // STACK: <empty>
         loadNewCodeLocationId(accessPath = ownerName, argumentNames = argumentNames)
@@ -100,7 +95,8 @@ internal abstract class MethodCallTransformerBase(
         push(methodId)
         pushReceiver(receiverLocal)
         loadLocal(argumentsArrayLocal)
-        // STACK: codeLocation, methodId, receiver?, argumentsArray
+        loadLocal(inAnalyzedCodeLocal)
+        // STACK: codeLocation, methodId, receiver?, argumentsArray, inAnalyzedCode
         invokeStatic(Injections::onMethodCall)
         // STACK: deterministicCallDescriptor
         invokeBeforeEventIfPluginEnabled("method call ${this@MethodCallTransformerBase.methodName}")
@@ -112,7 +108,8 @@ internal abstract class MethodCallTransformerBase(
         deterministicMethodDescriptorLocal: Int?,
         methodId: Int,
         receiverLocal: Int?,
-        argumentsArrayLocal: Int
+        argumentsArrayLocal: Int,
+        inAnalyzedCodeLocal: Int,
     ) {
         // STACK: result?
         val resultLocal = when {
@@ -136,10 +133,13 @@ internal abstract class MethodCallTransformerBase(
             loadLocal(it)
             box(returnType)
         }
-        // STACK: deterministicCallId, deterministicMethodDescriptor, methodId, receiver, arguments, result?
+        loadLocal(inAnalyzedCodeLocal)
+        // STACK: deterministicCallId, deterministicMethodDescriptor, methodId, receiver, arguments, result?, inAnalyzedCode
         when {
-            returnType == VOID_TYPE -> invokeStatic(Injections::onMethodCallReturnVoid)
-            else                    -> {
+            returnType == VOID_TYPE -> {
+                invokeStatic(Injections::onMethodCallReturnVoid)
+            }
+            else -> {
                 invokeStatic(Injections::onMethodCallReturn)
                 // STACK: boxedResult
                 unbox(returnType)
@@ -155,6 +155,7 @@ internal abstract class MethodCallTransformerBase(
         methodId: Int,
         receiverLocal: Int?,
         argumentsArrayLocal: Int,
+        inAnalyzedCodeLocal: Int,
     ) {
         // STACK: exception
         val exceptionLocal = newLocal(THROWABLE_TYPE)
@@ -174,7 +175,8 @@ internal abstract class MethodCallTransformerBase(
         pushReceiver(receiverLocal)
         loadLocal(argumentsArrayLocal)
         loadLocal(exceptionLocal)
-        // STACK: deterministicCallId, deterministicMethodDescriptor, methodId, receiver, params, exception
+        loadLocal(inAnalyzedCodeLocal)
+        // STACK: deterministicCallId, deterministicMethodDescriptor, methodId, receiver, params, exception, inAnalyzedCode
         invokeStatic(Injections::onMethodCallException)
         // STACK: Throwable
         throwException()

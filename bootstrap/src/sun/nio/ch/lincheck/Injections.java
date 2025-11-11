@@ -65,6 +65,12 @@ public class Injections {
         return descriptor.getEventTracker();
     }
 
+    static EventTracker getEventTrackerIfInAnalyzedCode() {
+        ThreadDescriptor descriptor = getOrCreateCurrentThreadDescriptor();
+        if (descriptor == null) return null;
+        return descriptor.inAnalyzedCode() ? descriptor.getEventTracker() : null;
+    }
+
     public static void storeCancellableContinuation(Object cont) {
         Thread t = Thread.currentThread();
         if (t instanceof TestThread) {
@@ -350,7 +356,9 @@ public class Injections {
      * @return whether the trace point was created
      */
     public static void beforeReadField(Object obj, int codeLocation, int fieldId) {
-        getEventTracker().beforeReadField(obj, codeLocation, fieldId);
+        EventTracker eventTracker = getEventTrackerIfInAnalyzedCode();
+        if (eventTracker == null) return;
+        eventTracker.beforeReadField(obj, codeLocation, fieldId);
     }
 
     /**
@@ -359,50 +367,66 @@ public class Injections {
      * @return whether the trace point was created
      */
     public static void beforeReadArray(Object array, int index, int codeLocation) {
-        getEventTracker().beforeReadArrayElement(array, index, codeLocation);
+        EventTracker eventTracker = getEventTrackerIfInAnalyzedCode();
+        if (eventTracker == null) return;
+        eventTracker.beforeReadArrayElement(array, index, codeLocation);
     }
 
     public static void afterLocalRead(int codeLocation, int variableId, Object value) {
-        getEventTracker().afterLocalRead(codeLocation, variableId, value);
+        EventTracker eventTracker = getEventTrackerIfInAnalyzedCode();
+        if (eventTracker == null) return;
+        eventTracker.afterLocalRead(codeLocation, variableId, value);
     }
 
     public static void afterLocalWrite(int codeLocation, int variableId, Object value) {
-        getEventTracker().afterLocalWrite(codeLocation, variableId, value);
+        EventTracker eventTracker = getEventTrackerIfInAnalyzedCode();
+        if (eventTracker == null) return;
+        eventTracker.afterLocalWrite(codeLocation, variableId, value);
     }
 
     /**
      * Called from the instrumented code after each field read (final field reads can be ignored here).
      */
     public static void afterReadField(Object obj, int codeLocation, int fieldId, Object value) {
-        getEventTracker().afterReadField(obj, codeLocation, fieldId, value);
+        EventTracker eventTracker = getEventTrackerIfInAnalyzedCode();
+        if (eventTracker == null) return;
+        eventTracker.afterReadField(obj, codeLocation, fieldId, value);
     }
 
     /**
      * Called from the instrumented code after each array read.
      */
     public static void afterReadArray(Object array, int index, int codeLocation, Object value) {
-        getEventTracker().afterReadArrayElement(array, index, codeLocation, value);
+        EventTracker eventTracker = getEventTrackerIfInAnalyzedCode();
+        if (eventTracker == null) return;
+        eventTracker.afterReadArrayElement(array, index, codeLocation, value);
     }
 
     /**
      * Called from the instrumented code before each field write.
      */
     public static void beforeWriteField(Object obj, Object value, int codeLocation, int fieldId) {
-        getEventTracker().beforeWriteField(obj, value, codeLocation, fieldId);
+        EventTracker eventTracker = getEventTrackerIfInAnalyzedCode();
+        if (eventTracker == null) return;
+        eventTracker.beforeWriteField(obj, value, codeLocation, fieldId);
     }
 
     /**
      * Called from the instrumented code before any array cell write.
      */
     public static void beforeWriteArray(Object array, int index, Object value, int codeLocation) {
-        getEventTracker().beforeWriteArrayElement(array, index, value, codeLocation);
+        EventTracker eventTracker = getEventTrackerIfInAnalyzedCode();
+        if (eventTracker == null) return;
+        eventTracker.beforeWriteArrayElement(array, index, value, codeLocation);
     }
 
     /**
      * Called from the instrumented code before any write operation.
      */
     public static void afterWrite() {
-        getEventTracker().afterWrite();
+        EventTracker eventTracker = getEventTrackerIfInAnalyzedCode();
+        if (eventTracker == null) return;
+        eventTracker.afterWrite();
     }
 
     /**
@@ -411,7 +435,8 @@ public class Injections {
      * @param receiver is `null` for public static methods.
      * @return Deterministic call descriptor or null.
      */
-    public static Object onMethodCall(int codeLocation, int methodId, Object receiver, Object[] params) {
+    public static Object onMethodCall(int codeLocation, int methodId, Object receiver, Object[] params, boolean inAnalyzedSection) {
+        if (!inAnalyzedSection) return null;
         return getEventTracker().onMethodCall(codeLocation, methodId, receiver, params);
     }
 
@@ -423,7 +448,8 @@ public class Injections {
      * @param result The call result.
      * @return The potentially modified {@code result}.
      */
-    public static Object onMethodCallReturn(long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Object result) {
+    public static Object onMethodCallReturn(long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Object result, boolean inAnalyzedSection) {
+        if (!inAnalyzedSection) return result;
         return getEventTracker().onMethodCallReturn(descriptorId, descriptor, methodId, receiver, params, result);
     }
 
@@ -433,7 +459,8 @@ public class Injections {
      * @param descriptor Deterministic call descriptor or null.
      * @param descriptorId Deterministic call descriptor id when applicable, or any other value otherwise.
      */
-    public static void onMethodCallReturnVoid(long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params) {
+    public static void onMethodCallReturnVoid(long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, boolean inAnalyzedSection) {
+        if (!inAnalyzedSection) return;
         getEventTracker().onMethodCallReturn(descriptorId, descriptor, methodId, receiver, params, VOID_RESULT);
     }
 
@@ -445,7 +472,8 @@ public class Injections {
      * @param t Thrown exception.
      * @return The potentially modified {@code t}.
      */
-    public static Throwable onMethodCallException(long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Throwable t) {
+    public static Throwable onMethodCallException(long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Throwable t, boolean inAnalyzedSection) {
+        if (!inAnalyzedSection) return t;
         return getEventTracker().onMethodCallException(descriptorId, descriptor, methodId, receiver, params, t);
     }
 
@@ -645,7 +673,9 @@ public class Injections {
      * Called at the beginning of every loop iteration (including the first one).
      */
     public static void onLoopIteration(int codeLocation, int loopId) {
-        getEventTracker().onLoopIteration(codeLocation, loopId);
+        EventTracker eventTracker = getEventTrackerIfInAnalyzedCode();
+        if (eventTracker == null) return;
+        getEventTrackerIfInAnalyzedCode().onLoopIteration(codeLocation, loopId);
     }
 
     /**
@@ -657,6 +687,8 @@ public class Injections {
      *   false if it is exclusive to the loop body.
      */
     public static void afterLoopExit(int codeLocation, int loopId, Throwable exception, boolean isReachableFromOutsideLoop) {
+        EventTracker eventTracker = getEventTrackerIfInAnalyzedCode();
+        if (eventTracker == null) return;
         getEventTracker().afterLoopExit(codeLocation, loopId, exception, isReachableFromOutsideLoop);
     }
 
@@ -693,7 +725,9 @@ public class Injections {
      * @return true if the {@link #beforeEvent} method should be invoked before the event, false otherwise
      */
     public static boolean shouldInvokeBeforeEvent() {
-        return getEventTracker().shouldInvokeBeforeEvent();
+        EventTracker eventTracker = getEventTrackerIfInAnalyzedCode();
+        if (eventTracker == null) return false;
+        return eventTracker.shouldInvokeBeforeEvent();
     }
 
     /**
