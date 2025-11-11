@@ -84,63 +84,48 @@ internal class LoopTransformer(
 
         // Inject `onLoopIteration` at the loop header on every iteration (including the first).
         iterationEntrySites[nonPhonyIndex]?.let { loopId ->
-            invokeIfInAnalyzedCode(
-                original = {},
-                instrumented = {
-                    // STACK: <empty>
-                    loadNewCodeLocationId()
-                    adapter.push(loopId)
-                    // STACK: codeLocation, loopId
-                    adapter.invokeStatic(Injections::onLoopIteration)
-                    // STACK: <empty>
-                }
-            )
+            // STACK: <empty>
+            loadNewCodeLocationId()
+            adapter.push(loopId)
+            // STACK: codeLocation, loopId
+            adapter.invokeStatic(Injections::onLoopIteration)
+            // STACK: <empty>
         }
 
         // Inject `onLoopExit` on transitions from within the loop body to outside.
         normalExitSites[nonPhonyIndex]?.let { loopIds ->
-            invokeIfInAnalyzedCode(
-                original = {},
-                instrumented = {
-                    for (loopId in loopIds) {
-                        val isReachableFromOutsideLoop = opcodesReachableFromOutsideLoops[nonPhonyIndex]?.contains(loopId) ?: true
-                        // STACK: <empty>
-                        loadNewCodeLocationId()
-                        adapter.push(loopId)
-                        pushNull()
-                        push(isReachableFromOutsideLoop)
-                        // STACK: codeLocation, loopId, null, isReachableFromOutsideLoop
-                        adapter.invokeStatic(Injections::afterLoopExit)
-                        // STACK: <empty>
-                    }
-                }
-            )
+            for (loopId in loopIds) {
+                val isReachableFromOutsideLoop = opcodesReachableFromOutsideLoops[nonPhonyIndex]?.contains(loopId) ?: true
+                // STACK: <empty>
+                loadNewCodeLocationId()
+                adapter.push(loopId)
+                pushNull()
+                push(isReachableFromOutsideLoop)
+                // STACK: codeLocation, loopId, null, isReachableFromOutsideLoop
+                adapter.invokeStatic(Injections::afterLoopExit)
+                // STACK: <empty>
+            }
         }
 
         // Inject `onLoopExit` on exceptional transitions from within the loop body to outside exception handlers.
         exceptionExitSites[nonPhonyIndex]?.let { loopIds ->
-            invokeIfInAnalyzedCode(
-                original = { },
-                instrumented = {
-                    // At handler entry, the thrown exception object is on the stack.
-                    // Store it to a temp local, emit injections, then restore it for original bytecode.
-                    val exceptionLocal = newLocal(THROWABLE_TYPE)
-                    storeLocal(exceptionLocal)
-                    for (loopId in loopIds) {
-                        val isReachableFromOutsideLoop = opcodesReachableFromOutsideLoops[nonPhonyIndex]?.contains(loopId) ?: true
-                        // STACK: <empty>
-                        loadNewCodeLocationId()
-                        push(loopId)
-                        loadLocal(exceptionLocal)
-                        push(isReachableFromOutsideLoop)
-                        // STACK: codeLocation, loopId, exception, isReachableFromOutsideLoop
-                        invokeStatic(Injections::afterLoopExit)
-                        // STACK: <empty>
-                    }
-                    // Restore the exception object back to the stack for the handler body (e.g., ASTORE)
-                    loadLocal(exceptionLocal)
-                }
-            )
+            // At handler entry, the thrown exception object is on the stack.
+            // Store it to a temp local, emit injections, then restore it for original bytecode.
+            val exceptionLocal = newLocal(THROWABLE_TYPE)
+            storeLocal(exceptionLocal)
+            for (loopId in loopIds) {
+                val isReachableFromOutsideLoop = opcodesReachableFromOutsideLoops[nonPhonyIndex]?.contains(loopId) ?: true
+                // STACK: <empty>
+                loadNewCodeLocationId()
+                push(loopId)
+                loadLocal(exceptionLocal)
+                push(isReachableFromOutsideLoop)
+                // STACK: codeLocation, loopId, exception, isReachableFromOutsideLoop
+                invokeStatic(Injections::afterLoopExit)
+                // STACK: <empty>
+            }
+            // Restore the exception object back to the stack for the handler body (e.g., ASTORE)
+            loadLocal(exceptionLocal)
         }
     }
 }

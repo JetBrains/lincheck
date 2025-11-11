@@ -78,8 +78,13 @@ internal class MethodCallMinimalTransformer(
         }
         val sanitizedMethodName = sanitizeMethodName(owner, name, InstrumentationMode.TRACE_RECORDING)
         val methodId = TRACE_CONTEXT.getOrCreateMethodId(owner.toCanonicalClassName(), sanitizedMethodName, Types.convertAsmMethodType(desc))
+
+        val inAnalyzedCodeLocal = newLocal(BOOLEAN_TYPE).also {
+            invokeStatic(Injections::inAnalyzedCode)
+            storeLocal(it)
+        }
         // STACK: <empty>
-        processMethodCallEnter(methodId, receiverLocal, argumentsArrayLocal, ownerName, argumentNames)
+        processMethodCallEnter(methodId, receiverLocal, argumentsArrayLocal, ownerName, argumentNames, inAnalyzedCodeLocal)
         // STACK: deterministicCallDescriptor
         pop()
         // STACK: <empty>
@@ -98,6 +103,7 @@ internal class MethodCallMinimalTransformer(
                     methodId,
                     receiverLocal,
                     argumentsArrayLocal,
+                    inAnalyzedCodeLocal,
                 )
                 // STACK: result?
             },
@@ -108,7 +114,8 @@ internal class MethodCallMinimalTransformer(
                     null,
                     methodId,
                     receiverLocal,
-                    argumentsArrayLocal
+                    argumentsArrayLocal,
+                    inAnalyzedCodeLocal,
                 )
             }
         )
