@@ -62,7 +62,7 @@ object TraceRecorder {
         if (startedCount > 1) {
             return
         }
-        // Set signal "void" object from Injections for better text output
+        // Set a signal "void" object from Injections for better text output
         INJECTIONS_VOID_OBJECT = Injections.VOID_RESULT
 
         // this method does not need 'runInsideIgnoredSection' because analysis is not enabled until its completion
@@ -79,12 +79,13 @@ object TraceRecorder {
         traceStarterThread = Thread.currentThread()
         ThreadDescriptor.setCurrentThreadAsRoot(desc)
         desc.eventTracker = eventTracker
-
         eventTracker!!.enableTrace()
-        desc.enableAnalysis()
+
+        ThreadDescriptor.setCurrentThreadAsRoot(desc)
         if (trackAllThreads) {
             Injections.enableGlobalThreadsTracking(eventTracker)
         }
+        desc.enableAnalysis()
     }
 
     fun finishTraceAndDumpResults() {
@@ -114,8 +115,16 @@ object TraceRecorder {
         }
 
         val currentTracker = desc.eventTracker
-        if (currentTracker == eventTracker) {
+        val shouldFinish = (currentTracker == eventTracker)
+
+        if (shouldFinish) {
             desc.disableAnalysis()
+        }
+        Injections.disableGlobalThreadsTracking()
+        ThreadDescriptor.unsetRootThread()
+            .ensure { it == desc }
+
+        if (shouldFinish) {
             eventTracker?.finishAndDumpTrace()
             eventTracker = null
         }
