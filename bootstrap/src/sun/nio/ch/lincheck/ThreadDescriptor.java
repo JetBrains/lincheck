@@ -367,12 +367,15 @@ public class ThreadDescriptor {
             throw new IllegalStateException("Root thread is already set");
         }
 
-        Thread thread = Thread.currentThread();
-        if (thread instanceof TestThread) {
+        Thread currentThread = Thread.currentThread();
+        if (descriptor.getThread() != currentThread) {
+            throw new IllegalStateException("Thread descriptor is not associated with the current thread");
+        }
+        if (currentThread instanceof TestThread) {
             throw new IllegalStateException("Root thread cannot be TestThread");
         }
 
-        rootThread = thread;
+        rootThread = currentThread;
         rootDescriptor = descriptor;
     }
 
