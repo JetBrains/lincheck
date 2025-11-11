@@ -10,10 +10,9 @@
 
 package org.jetbrains.lincheck.trace
 
-import java.io.DataInputStream
-import java.io.InputStream
-import java.io.OutputStream
+import java.io.*
 import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.nio.channels.SeekableByteChannel
 import kotlin.math.max
 import kotlin.math.min
@@ -130,10 +129,16 @@ internal class SeekableDataInput (
 
 internal class BufferOverflowException: Exception()
 
+/**
+ * DataOutputStream wrapper from JDK is unbelievably slow on old JDK versions (8, 11 at least).
+ *
+ * Implement `DataOutput` here directly to `ByteBuffer` gives huge boost to performance.
+ */
 internal class ByteBufferOutputStream(
-    bufferSize: Int
-) : OutputStream() {
-    private val buffer = ByteBuffer.allocate(bufferSize)
+    private val bufferSize: Int
+) : OutputStream(), DataOutput {
+    // DataOutput uses big endian order
+    private var buffer = ByteBuffer.allocate(bufferSize).order(ByteOrder.BIG_ENDIAN)
 
     override fun write(b: Int) {
         if (buffer.remaining() < 1) {
@@ -149,15 +154,118 @@ internal class ByteBufferOutputStream(
         buffer.put(b, off, len)
     }
 
-    fun available(): Int = buffer.remaining()
-
-    fun getBuffer(): ByteBuffer {
-        buffer.flip()
-        return buffer
+    override fun writeBoolean(v: Boolean) {
+        if (buffer.remaining() < Byte.SIZE_BYTES) {
+            throw BufferOverflowException()
+        }
+        buffer.put(if(v) 1 else 0)
     }
 
-    fun reset() {
-        buffer.clear()
+    override fun writeByte(v: Int) {
+        if (buffer.remaining() < Byte.SIZE_BYTES) {
+            throw BufferOverflowException()
+        }
+        buffer.put(v.toByte())
+    }
+
+    override fun writeShort(v: Int) {
+        if (buffer.remaining() < Short.SIZE_BYTES) {
+            throw BufferOverflowException()
+        }
+        buffer.putShort(v.toShort())
+    }
+
+    override fun writeChar(v: Int) {
+        if (buffer.remaining() < Char.SIZE_BYTES) {
+            throw BufferOverflowException()
+        }
+        buffer.putChar(v.toChar())
+    }
+
+    override fun writeInt(v: Int) {
+        if (buffer.remaining() < Int.SIZE_BYTES) {
+            throw BufferOverflowException()
+        }
+        buffer.putInt(v)
+    }
+
+    override fun writeLong(v: Long) {
+        if (buffer.remaining() < Long.SIZE_BYTES) {
+            throw BufferOverflowException()
+        }
+        buffer.putLong(v)
+    }
+
+    override fun writeFloat(v: Float) {
+        if (buffer.remaining() < Float.SIZE_BYTES) {
+            throw BufferOverflowException()
+        }
+        buffer.putFloat(v)
+    }
+
+    override fun writeDouble(v: Double) {
+        if (buffer.remaining() < Double.SIZE_BYTES) {
+            throw BufferOverflowException()
+        }
+        buffer.putDouble(v)
+    }
+
+    override fun writeBytes(s: String) {
+        if (buffer.remaining() < s.length) {
+            throw BufferOverflowException()
+        }
+        s.forEach {
+            buffer.put(it.code.toByte())
+        }
+    }
+
+    override fun writeChars(s: String) {
+        if (buffer.remaining() < s.length * Char.SIZE_BYTES) {
+            throw BufferOverflowException()
+        }
+        s.forEach {
+            buffer.putChar(it)
+        }
+    }
+
+    override fun writeUTF(s: String) {
+        val strlen = s.length
+        var utflen = strlen // optimized for ASCII
+
+        repeat(strlen) { i ->
+            val c = s[i].code
+            if (c >= 0x80 || c == 0) utflen += if (c >= 0x800) 2 else 1
+        }
+
+        require(utflen < 65536 && utflen >= strlen) { "Invalid input string" }
+        if (buffer.remaining() < 2 + utflen) {
+            throw BufferOverflowException()
+        }
+
+        buffer.putShort(utflen.toShort())
+
+        repeat(strlen) { i ->
+            val c: Int = s[i].code
+            if (c < 0x80 && c != 0) {
+                buffer.put(c.toByte())
+            } else if (c >= 0x800) {
+                buffer.put((0xE0 or ((c shr 12) and 0x0F)).toByte())
+                buffer.put((0x80 or ((c shr 6) and 0x3F)).toByte())
+                buffer.put((0x80 or ((c shr 0) and 0x3F)).toByte())
+            } else {
+                buffer.put((0xC0 or ((c shr 6) and 0x1F)).toByte())
+                buffer.put((0x80 or ((c shr 0) and 0x3F)).toByte())
+            }
+        }
+    }
+
+    fun available(): Int = buffer.remaining()
+
+    fun detachBuffer(): ByteBuffer {
+        val current = buffer
+        buffer = ByteBuffer.allocate(bufferSize)
+        current.flip()
+        return current
     }
 
     fun mark() {
