@@ -26,9 +26,6 @@ public class Injections {
     // in already running threads. Field is non-null in case if all-threads tracking is enabled.
     public static volatile EventTracker globalEventTracker = null;
 
-    // Used in the verification phase to store a suspended continuation.
-    public static Object lastSuspendedCancellableContinuationDuringVerification = null;
-
     /**
      * In case if {@code globalEventTracker == null}, returns the current thread descriptor or {@code null}.
      * </br></br>
@@ -63,16 +60,6 @@ public class Injections {
             throw new RuntimeException("No event tracker set by Lincheck");
         }
         return descriptor.getEventTracker();
-    }
-
-    public static void storeCancellableContinuation(Object cont) {
-        Thread t = Thread.currentThread();
-        if (t instanceof TestThread) {
-            ((TestThread) t).suspendedContinuation = cont;
-        } else {
-            // We are in the verification phase.
-            lastSuspendedCancellableContinuationDuringVerification = cont;
-        }
     }
 
     /**
@@ -660,6 +647,19 @@ public class Injections {
      */
     public static void afterLoopExit(int codeLocation, int loopId, Throwable exception, boolean isReachableFromOutsideLoop) {
         getEventTracker().afterLoopExit(codeLocation, loopId, exception, isReachableFromOutsideLoop);
+    }
+
+    // Used in the verification phase to store a suspended continuation.
+    public static Object lastSuspendedCancellableContinuationDuringVerification = null;
+
+    public static void storeCancellableContinuation(Object cont) {
+        Thread t = Thread.currentThread();
+        if (t instanceof TestThread) {
+            ((TestThread) t).suspendedContinuation = cont;
+        } else {
+            // We are in the verification phase.
+            lastSuspendedCancellableContinuationDuringVerification = cont;
+        }
     }
 
     // == Methods required for the IDEA Plugin integration ==
