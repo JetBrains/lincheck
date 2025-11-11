@@ -194,6 +194,15 @@ internal interface ContextSavingState {
     fun markAccessPathSaved(value: AccessPath)
 }
 
+/**
+ * [dataStream] responsible for operations like `close()` and [dataOutput] for real data output.
+ *
+ * As this class is used with both JDK's [DataOutputStream] and project-local [ByteBufferOutputStream],
+ * and [OutputStream] is abstract class and not an interface, it is impossible to make one property which
+ * is compatible with both [DataOutputStream] and [ByteBufferOutputStream] at the same time.
+ *
+ * `dataStream` can be relaxed to [Closeable], but it will hide its intention even more.
+ */
 private sealed class TraceWriterBase(
     private val context: TraceContext,
     private val contextState: ContextSavingState,
