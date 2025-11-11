@@ -356,7 +356,9 @@ public class Injections {
      * @return whether the trace point was created
      */
     public static void beforeReadField(Object obj, int codeLocation, int fieldId) {
-        getEventTracker().beforeReadField(obj, codeLocation, fieldId);
+        EventTracker eventTracker = getEventTrackerIfInAnalyzedCode();
+        if (eventTracker == null) return;
+        eventTracker.beforeReadField(obj, codeLocation, fieldId);
     }
 
     /**
@@ -365,7 +367,9 @@ public class Injections {
      * @return whether the trace point was created
      */
     public static void beforeReadArray(Object array, int index, int codeLocation) {
-        getEventTracker().beforeReadArrayElement(array, index, codeLocation);
+        EventTracker eventTracker = getEventTrackerIfInAnalyzedCode();
+        if (eventTracker == null) return;
+        eventTracker.beforeReadArrayElement(array, index, codeLocation);
     }
 
     public static void afterLocalRead(int codeLocation, int variableId, Object value) {
@@ -380,35 +384,45 @@ public class Injections {
      * Called from the instrumented code after each field read (final field reads can be ignored here).
      */
     public static void afterReadField(Object obj, int codeLocation, int fieldId, Object value) {
-        getEventTracker().afterReadField(obj, codeLocation, fieldId, value);
+        EventTracker eventTracker = getEventTrackerIfInAnalyzedCode();
+        if (eventTracker == null) return;
+        eventTracker.afterReadField(obj, codeLocation, fieldId, value);
     }
 
     /**
      * Called from the instrumented code after each array read.
      */
     public static void afterReadArray(Object array, int index, int codeLocation, Object value) {
-        getEventTracker().afterReadArrayElement(array, index, codeLocation, value);
+        EventTracker eventTracker = getEventTrackerIfInAnalyzedCode();
+        if (eventTracker == null) return;
+        eventTracker.afterReadArrayElement(array, index, codeLocation, value);
     }
 
     /**
      * Called from the instrumented code before each field write.
      */
     public static void beforeWriteField(Object obj, Object value, int codeLocation, int fieldId) {
-        getEventTracker().beforeWriteField(obj, value, codeLocation, fieldId);
+        EventTracker eventTracker = getEventTrackerIfInAnalyzedCode();
+        if (eventTracker == null) return;
+        eventTracker.beforeWriteField(obj, value, codeLocation, fieldId);
     }
 
     /**
      * Called from the instrumented code before any array cell write.
      */
     public static void beforeWriteArray(Object array, int index, Object value, int codeLocation) {
-        getEventTracker().beforeWriteArrayElement(array, index, value, codeLocation);
+        EventTracker eventTracker = getEventTrackerIfInAnalyzedCode();
+        if (eventTracker == null) return;
+        eventTracker.beforeWriteArrayElement(array, index, value, codeLocation);
     }
 
     /**
      * Called from the instrumented code before any write operation.
      */
     public static void afterWrite() {
-        getEventTracker().afterWrite();
+        EventTracker eventTracker = getEventTrackerIfInAnalyzedCode();
+        if (eventTracker == null) return;
+        eventTracker.afterWrite();
     }
 
     /**

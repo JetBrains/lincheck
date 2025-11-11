@@ -52,44 +52,16 @@ internal class SharedMemoryAccessTransformer(
         }
         when (opcode) {
             GETSTATIC if configuration.trackStaticFieldReads -> {
-                invokeIfInAnalyzedCode(
-                    original = {
-                        super.visitFieldInsn(opcode, owner, fieldName, desc)
-                    },
-                    instrumented = {
-                        processStaticFieldGet(owner, fieldName, opcode, desc)
-                    }
-                )
+                processStaticFieldGet(owner, fieldName, opcode, desc)
             }
             GETFIELD if configuration.trackRegularFieldReads -> {
-                invokeIfInAnalyzedCode(
-                    original = {
-                        super.visitFieldInsn(opcode, owner, fieldName, desc)
-                    },
-                    instrumented = {
-                        processInstanceFieldGet(owner, fieldName, opcode, desc)
-                    }
-                )
+                processInstanceFieldGet(owner, fieldName, opcode, desc)
             }
             PUTSTATIC if configuration.trackStaticFieldWrites -> {
-                invokeIfInAnalyzedCode(
-                    original = {
-                        super.visitFieldInsn(opcode, owner, fieldName, desc)
-                    },
-                    instrumented = {
-                        processStaticFieldPut(desc, owner, fieldName, opcode)
-                    }
-                )
+                processStaticFieldPut(desc, owner, fieldName, opcode)
             }
             PUTFIELD if configuration.trackRegularFieldWrites -> {
-                invokeIfInAnalyzedCode(
-                    original = {
-                        super.visitFieldInsn(opcode, owner, fieldName, desc)
-                    },
-                    instrumented = {
-                        processInstanceFieldPut(desc, owner, fieldName, opcode)
-                    }
-                )
+                processInstanceFieldPut(desc, owner, fieldName, opcode)
             }
             else -> super.visitFieldInsn(opcode, owner, fieldName, desc)
         }
@@ -203,14 +175,7 @@ internal class SharedMemoryAccessTransformer(
         when (opcode) {
             AALOAD, LALOAD, FALOAD, DALOAD, IALOAD, BALOAD, CALOAD, SALOAD -> {
                 if (configuration.trackArrayElementReads) {
-                    invokeIfInAnalyzedCode(
-                        original = {
-                            super.visitInsn(opcode)
-                        },
-                        instrumented = {
-                            processArrayLoad(opcode)
-                        }
-                    )
+                    processArrayLoad(opcode)
                 } else {
                     super.visitInsn(opcode)
                 }
@@ -218,14 +183,7 @@ internal class SharedMemoryAccessTransformer(
 
             AASTORE, IASTORE, FASTORE, BASTORE, CASTORE, SASTORE, LASTORE, DASTORE -> {
                 if (configuration.trackArrayElementWrites) {
-                    invokeIfInAnalyzedCode(
-                        original = {
-                            super.visitInsn(opcode)
-                        },
-                        instrumented = {
-                            processArrayStore(opcode)
-                        }
-                    )
+                    processArrayStore(opcode)
                 } else {
                     super.visitInsn(opcode)
                 }
