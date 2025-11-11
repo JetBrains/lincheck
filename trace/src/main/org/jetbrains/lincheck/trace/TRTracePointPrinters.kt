@@ -128,8 +128,7 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
             appendParameters(tracePoint)
             appendSpecialSymbol(")")
             appendResult(tracePoint)
-        }
-        else {
+        } else {
             appendOwner(tracePoint)
             appendMethodName(tracePoint.methodDescriptor)
             appendSpecialSymbol("(")
