@@ -86,8 +86,8 @@ object TraceRecorder {
             Injections.enableEventTracking(Injections.EventTrackingMode.SINGLE_THREAD, eventTracker)
             ThreadDescriptor.setRootThreadDescriptor(Thread.currentThread(), descriptor)
         }
-
         eventTracker!!.enableTrace()
+
         descriptor.enableAnalysis()
     }
 
@@ -109,7 +109,7 @@ object TraceRecorder {
             return
         }
         // this method does not need 'runInsideIgnoredSection' because we do not call instrumented code
-        // and 'eventTracker.finishAndDumpTrace()' is called after analysis is disabled
+        // and we call `disableAnalysis` as a first action
         val descriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         Injections.disableGlobalThreadsTracking()
         if (traceStarterThread == Thread.currentThread()) {
@@ -121,21 +121,20 @@ object TraceRecorder {
 
         descriptor.disableAnalysis()
 
+        if (descriptor.eventTracker != eventTracker) {
+            Logger.warn {
+                "Unexpected event tracker observed during trace finishing - " +
+                "most likely trace finishing invoked not from the same thread as trace starting" +
+                "(${Thread.currentThread().name})."
+            }
+        }
+
         val mode = Injections.eventTrackingMode
         if (mode == Injections.EventTrackingMode.SINGLE_THREAD) {
             ThreadDescriptor.unsetRootThread()
                 .ensure { it == descriptor }
         }
         Injections.disableGlobalThreadsTracking()
-
-        if (currentTracker != eventTracker) {
-            Logger.warn {
-                "Unexpected event tracker observed during trace finishing - " +
-                "most likely trace finishing invoked not from the same thread as trace starting" +
-                "(${Thread.currentThread().name})."
-            }
-            return
-        }
 
         eventTracker?.finishAndDumpTrace()
         eventTracker = null
