@@ -40,9 +40,8 @@ internal class MethodCallTransformer(
 ) : MethodCallTransformerBase(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
 
     override fun processMethodCall(desc: String, opcode: Int, owner: String, name: String, itf: Boolean) = adapter.run {
-        val isConstructorCall = (name == "<init>")
         val receiverType = getType("L$owner;")
-        val returnType = if (isConstructorCall) receiverType else getReturnType(desc)
+        val returnType = getReturnType(desc)
         val ownerName = getOwnerName(desc, opcode)
         val argumentNames = getArgumentNames(desc, opcode)
         // STACK: receiver?, arguments
@@ -52,44 +51,35 @@ internal class MethodCallTransformer(
             storeLocal(it)
         }
         val receiverLocal = when {
-            (opcode != INVOKESTATIC && !isConstructorCall) -> newLocal(receiverType).also { storeLocal(it) }
+            (opcode != INVOKESTATIC) -> newLocal(receiverType).also { storeLocal(it) }
             else -> null
         }
         val methodId = TRACE_CONTEXT.getOrCreateMethodId(owner.toCanonicalClassName(), name, Types.convertAsmMethodType(desc))
-        val methodDefaultInvoke: GeneratorAdapter.() -> Unit = {
-            // STACK: <empty>
-            receiverLocal?.let { loadLocal(it) }
-            loadLocals(argumentLocals)
-            // STACK: receiver?, arguments
-            mv.visitMethodInsn(opcode, owner, name, desc, itf)
-        }
-
         // STACK: <empty>
         processMethodCallEnter(methodId, receiverLocal, argumentsArrayLocal, ownerName, argumentNames)
         // STACK: deterministicCallDescriptor
-        val deterministicMethodDescriptorLocal =
-            if (isConstructorCall) null.also { pop() }
-            else newLocal(OBJECT_TYPE).also { storeLocal(it) }
+        val deterministicMethodDescriptorLocal = newLocal(OBJECT_TYPE)
+            .also { storeLocal(it) }
         // STACK: <empty>
-        val deterministicCallIdLocal =
-            if (isConstructorCall) null
-            else {
-                pushDeterministicCallId(deterministicMethodDescriptorLocal!!)
-                newLocal(LONG_TYPE).also { storeLocal(it) }
-            }
+        pushDeterministicCallId(deterministicMethodDescriptorLocal)
+        val deterministicCallIdLocal = newLocal(LONG_TYPE)
+            .also { storeLocal(it) }
         // STACK: <empty>
         tryCatchFinally(
             tryBlock = {
-                if (isConstructorCall) methodDefaultInvoke()
-                else {
-                    invokeMethodOrDeterministicCall(
-                        returnType,
-                        deterministicCallIdLocal!!,
-                        deterministicMethodDescriptorLocal!!,
-                        receiverLocal,
-                        argumentsArrayLocal,
-                        methodDefaultInvoke
-                    )
+                invokeMethodOrDeterministicCall(
+                    returnType,
+                    deterministicCallIdLocal,
+                    deterministicMethodDescriptorLocal,
+                    receiverLocal,
+                    argumentsArrayLocal,
+                ) {
+                    // STACK: <empty>
+                    receiverLocal?.let { loadLocal(it) }
+                    loadLocals(argumentLocals)
+                    // STACK: receiver?, arguments
+                    mv.visitMethodInsn(opcode, owner, name, desc, itf)
+                    // STACK: result?
                 }
                 // STACK: result?
                 processMethodCallReturn(
