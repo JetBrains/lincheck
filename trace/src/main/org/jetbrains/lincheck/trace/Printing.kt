@@ -14,9 +14,6 @@ import java.io.File
 import java.io.OutputStream
 import java.io.PrintStream
 
-private const val OUTPUT_BUFFER_SIZE: Int = 16*1024*1024
-
-
 fun printPostProcessedTrace(outputFileName: String?, context: TraceContext, rootCallsPerThread: List<TRTracePoint>, verbose: Boolean) {
     val input = File.createTempFile("lincheck-trace", ".tmp")
     saveRecorderTrace(input.absolutePath, context, rootCallsPerThread)
