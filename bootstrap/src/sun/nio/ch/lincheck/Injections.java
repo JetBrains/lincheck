@@ -941,6 +941,7 @@ public class Injections {
      * Called at the beginning of every loop iteration (including the first one).
      */
     public static void onLoopIteration(ThreadDescriptor descriptor, int codeLocation, int loopId) {
+        if (descriptor == null) return;
         EventTracker eventTracker = getEventTracker(descriptor);
         eventTracker.onLoopIteration(descriptor, codeLocation, loopId);
     }
@@ -954,6 +955,7 @@ public class Injections {
      *   false if it is exclusive to the loop body.
      */
     public static void afterLoopExit(ThreadDescriptor descriptor, int codeLocation, int loopId, Throwable exception, boolean isReachableFromOutsideLoop) {
+        if (descriptor == null) return;
         EventTracker eventTracker = getEventTracker(descriptor);
         eventTracker.afterLoopExit(descriptor, codeLocation, loopId, exception, isReachableFromOutsideLoop);
     }
