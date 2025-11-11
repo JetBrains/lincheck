@@ -35,13 +35,14 @@ internal abstract class MethodCallTransformerBase(
     methodInfo: MethodInformation,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
+    val configuration: TransformationConfiguration,
 ) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
 
     override val requiresOwnerNameAnalyzer: Boolean = true
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
         // TODO: JBRes-6844 do not ignore <init> for lincheck managed strategy
-        if ((name == "<init>" && !isInTraceRecorderMode) || isIgnoredMethod(className = owner)) {
+        if ((name == "<init>" && !configuration.trackConstructorCalls) || isIgnoredMethod(className = owner)) {
             super.visitMethodInsn(opcode, owner, name, desc, itf)
             return
         }

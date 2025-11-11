@@ -31,6 +31,7 @@ class TransformationConfiguration(
     var trackArrayElementWrites: Boolean = false,
 
     var trackMethodCalls: Boolean = false,
+    var trackConstructorCalls: Boolean = false,
     var trackInlineMethodCalls: Boolean = false,
 
     var trackThreadsOperations: Boolean = false,
@@ -255,6 +256,7 @@ object TraceRecorderDefaultTransformationProfile : TransformationProfile {
             trackArrayElementWrites = true
 
             trackMethodCalls = true
+            trackConstructorCalls = true
             trackInlineMethodCalls = false
 
             trackLoops = true
