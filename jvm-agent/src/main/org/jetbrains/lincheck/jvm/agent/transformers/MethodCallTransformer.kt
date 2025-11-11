@@ -40,7 +40,7 @@ internal class MethodCallTransformer(
 ) : MethodCallTransformerBase(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
 
     override fun processMethodCall(desc: String, opcode: Int, owner: String, name: String, itf: Boolean) = adapter.run {
-        val isConstructorCall = name == "<init>"
+        val isConstructorCall = (name == "<init>")
         val receiverType = getType("L$owner;")
         val returnType = if (isConstructorCall) receiverType else getReturnType(desc)
         val ownerName = getOwnerName(desc, opcode)
