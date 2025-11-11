@@ -65,6 +65,12 @@ public class Injections {
         return descriptor.getEventTracker();
     }
 
+    static EventTracker getEventTrackerIfInAnalyzedCode() {
+        ThreadDescriptor descriptor = getOrCreateCurrentThreadDescriptor();
+        if (descriptor == null) return null;
+        return descriptor.inAnalyzedCode() ? descriptor.getEventTracker() : null;
+    }
+
     public static void storeCancellableContinuation(Object cont) {
         Thread t = Thread.currentThread();
         if (t instanceof TestThread) {
