@@ -359,21 +359,23 @@ public class ThreadDescriptor {
         threadDescriptorsMap.put(thread, descriptor);
     }
 
-    public static void setRootThreadDescriptor(Thread thread, ThreadDescriptor descriptor) {
+    public static void setCurrentThreadAsRoot(ThreadDescriptor descriptor) {
         if (descriptor == null) {
             throw new IllegalArgumentException("Thread descriptor must not be null");
         }
         if (rootThread != null) {
             throw new IllegalStateException("Root thread is already set");
         }
-        if (descriptor.getThread() != thread) {
-            throw new IllegalStateException("Thread descriptor is not associated with the given thread");
+
+        Thread currentThread = Thread.currentThread();
+        if (descriptor.getThread() != currentThread) {
+            throw new IllegalStateException("Thread descriptor is not associated with the current thread");
         }
-        if (thread instanceof TestThread) {
+        if (currentThread instanceof TestThread) {
             throw new IllegalStateException("Root thread cannot be TestThread");
         }
 
-        rootThread = thread;
+        rootThread = currentThread;
         rootDescriptor = descriptor;
     }
 

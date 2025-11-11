@@ -84,7 +84,7 @@ object TraceRecorder {
             Injections.enableGlobalEventTracking(eventTracker)
         } else {
             Injections.enableEventTracking(Injections.EventTrackingMode.SINGLE_THREAD)
-            ThreadDescriptor.setRootThreadDescriptor(Thread.currentThread(), descriptor)
+            ThreadDescriptor.setCurrentThreadAsRoot(descriptor)
         }
         eventTracker!!.enableTrace()
 
