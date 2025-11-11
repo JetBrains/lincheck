@@ -41,6 +41,17 @@ internal class MethodCallTransformer(
 ) : MethodCallTransformerBase(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor, configuration) {
 
     override fun processMethodCall(desc: String, opcode: Int, owner: String, name: String, itf: Boolean) = adapter.run {
+        invokeIfInAnalyzedCode(
+            original = {
+                super.visitMethodInsn(opcode, owner, name, desc, itf)
+            },
+            instrumented = {
+                processInstrumentedMethodCall(desc, opcode, owner, name, itf)
+            }
+        )
+    }
+
+    private fun processInstrumentedMethodCall(desc: String, opcode: Int, owner: String, name: String, itf: Boolean) = adapter.run {
         val receiverType = getType("L$owner;")
         val returnType = getReturnType(desc)
         val ownerName = getOwnerName(desc, opcode)

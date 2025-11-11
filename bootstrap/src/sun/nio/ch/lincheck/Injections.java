@@ -436,7 +436,9 @@ public class Injections {
      * @return Deterministic call descriptor or null.
      */
     public static Object onMethodCall(int codeLocation, int methodId, Object receiver, Object[] params) {
-        return getEventTracker().onMethodCall(codeLocation, methodId, receiver, params);
+        EventTracker eventTracker = getEventTrackerIfInAnalyzedCode();
+        if (eventTracker == null) return null;
+        return eventTracker.onMethodCall(codeLocation, methodId, receiver, params);
     }
 
     /**
@@ -448,7 +450,9 @@ public class Injections {
      * @return The potentially modified {@code result}.
      */
     public static Object onMethodCallReturn(long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Object result) {
-        return getEventTracker().onMethodCallReturn(descriptorId, descriptor, methodId, receiver, params, result);
+        EventTracker eventTracker = getEventTrackerIfInAnalyzedCode();
+        if (eventTracker == null) return result;
+        return eventTracker.onMethodCallReturn(descriptorId, descriptor, methodId, receiver, params, result);
     }
 
     /**
@@ -458,7 +462,9 @@ public class Injections {
      * @param descriptorId Deterministic call descriptor id when applicable, or any other value otherwise.
      */
     public static void onMethodCallReturnVoid(long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params) {
-        getEventTracker().onMethodCallReturn(descriptorId, descriptor, methodId, receiver, params, VOID_RESULT);
+        EventTracker eventTracker = getEventTrackerIfInAnalyzedCode();
+        if (eventTracker == null) return;
+        eventTracker.onMethodCallReturn(descriptorId, descriptor, methodId, receiver, params, VOID_RESULT);
     }
 
     /**
@@ -470,7 +476,9 @@ public class Injections {
      * @return The potentially modified {@code t}.
      */
     public static Throwable onMethodCallException(long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Throwable t) {
-        return getEventTracker().onMethodCallException(descriptorId, descriptor, methodId, receiver, params, t);
+        EventTracker eventTracker = getEventTrackerIfInAnalyzedCode();
+        if (eventTracker == null) return t;
+        return eventTracker.onMethodCallException(descriptorId, descriptor, methodId, receiver, params, t);
     }
 
     /**

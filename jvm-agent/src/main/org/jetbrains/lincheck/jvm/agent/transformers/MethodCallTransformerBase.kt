@@ -61,14 +61,8 @@ internal abstract class MethodCallTransformerBase(
             super.visitMethodInsn(opcode, owner, name, desc, itf)
             return
         }
-        invokeIfInAnalyzedCode(
-            original = {
-                super.visitMethodInsn(opcode, owner, name, desc, itf)
-            },
-            instrumented = {
-                processMethodCall(desc, opcode, owner, name, itf)
-            }
-        )
+
+        processMethodCall(desc, opcode, owner, name, itf)
     }
 
     private fun isThreadLocalRandomCurrent(owner: String, methodName: String): Boolean {
