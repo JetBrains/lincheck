@@ -73,19 +73,19 @@ object TraceRecorder {
             mode = parseOutputMode(format, formatOption),
             packTrace = pack
         )
-        val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: ThreadDescriptor(Thread.currentThread()).also {
+        val descriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: ThreadDescriptor(Thread.currentThread()).also {
             ThreadDescriptor.setCurrentThreadDescriptor(it)
         }
         traceStarterThread = Thread.currentThread()
-        ThreadDescriptor.setCurrentThreadAsRoot(desc)
-        desc.eventTracker = eventTracker
+        ThreadDescriptor.setCurrentThreadAsRoot(descriptor)
+        descriptor.eventTracker = eventTracker
         eventTracker!!.enableTrace()
 
-        ThreadDescriptor.setCurrentThreadAsRoot(desc)
+        ThreadDescriptor.setCurrentThreadAsRoot(descriptor)
         if (trackAllThreads) {
             Injections.enableGlobalThreadsTracking(eventTracker)
         }
-        desc.enableAnalysis()
+        descriptor.enableAnalysis()
     }
 
     fun finishTraceAndDumpResults() {
@@ -107,22 +107,22 @@ object TraceRecorder {
         }
         // this method does not need 'runInsideIgnoredSection' because we do not call instrumented code
         // and 'eventTracker.finishAndDumpTrace()' is called after analysis is disabled
-        val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
+        val descriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         Injections.disableGlobalThreadsTracking()
         if (traceStarterThread == Thread.currentThread()) {
             ThreadDescriptor.unsetRootThread().ensure { it == desc }
             traceStarterThread = null
         }
 
-        val currentTracker = desc.eventTracker
+        val currentTracker = descriptor.eventTracker
         val shouldFinish = (currentTracker == eventTracker)
 
         if (shouldFinish) {
-            desc.disableAnalysis()
+            descriptor.disableAnalysis()
         }
         Injections.disableGlobalThreadsTracking()
         ThreadDescriptor.unsetRootThread()
-            .ensure { it == desc }
+            .ensure { it == descriptor }
 
         if (shouldFinish) {
             eventTracker?.finishAndDumpTrace()
