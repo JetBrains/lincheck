@@ -614,6 +614,7 @@ public class Injections {
      * Called from the instrumented code before each field read.
      */
     public static void beforeReadField(ThreadDescriptor descriptor, int codeLocation, Object obj, int fieldId) {
+        if (descriptor == null) return;
         EventTracker eventTracker = getEventTracker(descriptor);
         eventTracker.beforeReadField(descriptor, codeLocation, obj, fieldId);
     }
@@ -622,6 +623,7 @@ public class Injections {
      * Called from the instrumented code before any array cell read.
      */
     public static void beforeReadArray(ThreadDescriptor descriptor, int codeLocation, Object array, int index) {
+        if (descriptor == null) return;
         EventTracker eventTracker = getEventTracker(descriptor);
         eventTracker.beforeReadArrayElement(descriptor, codeLocation, array, index);
     }
@@ -646,6 +648,7 @@ public class Injections {
      * Called from the instrumented code after each field read (final field reads can be ignored here).
      */
     public static void afterReadField(ThreadDescriptor descriptor, int codeLocation, Object obj, int fieldId, Object value) {
+        if (descriptor == null) return;
         EventTracker eventTracker = getEventTracker(descriptor);
         eventTracker.afterReadField(descriptor, codeLocation, obj, fieldId, value);
     }
@@ -654,6 +657,7 @@ public class Injections {
      * Called from the instrumented code after each array read.
      */
     public static void afterReadArray(ThreadDescriptor descriptor, int codeLocation, Object array, int index, Object value) {
+        if (descriptor == null) return;
         EventTracker eventTracker = getEventTracker(descriptor);
         eventTracker.afterReadArrayElement(descriptor, codeLocation, array, index, value);
     }
@@ -662,6 +666,7 @@ public class Injections {
      * Called from the instrumented code before each field write.
      */
     public static void beforeWriteField(ThreadDescriptor descriptor, int codeLocation, Object obj, Object value, int fieldId) {
+        if (descriptor == null) return;
         EventTracker eventTracker = getEventTracker(descriptor);
         eventTracker.beforeWriteField(descriptor, codeLocation, obj, value, fieldId);
     }
@@ -670,6 +675,7 @@ public class Injections {
      * Called from the instrumented code before any array cell write.
      */
     public static void beforeWriteArray(ThreadDescriptor descriptor, int codeLocation, Object array, int index, Object value) {
+        if (descriptor == null) return;
         EventTracker eventTracker = getEventTracker(descriptor);
         eventTracker.beforeWriteArrayElement(descriptor, codeLocation, array, index, value);
     }
@@ -678,6 +684,7 @@ public class Injections {
      * Called from the instrumented code before any write operation.
      */
     public static void afterWrite(ThreadDescriptor descriptor) {
+        if (descriptor == null) return;
         EventTracker eventTracker = getEventTracker(descriptor);
         eventTracker.afterWrite(descriptor);
     }
