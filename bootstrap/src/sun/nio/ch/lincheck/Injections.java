@@ -698,6 +698,7 @@ public class Injections {
      * @return Deterministic call descriptor or null.
      */
     public static Object onMethodCall(ThreadDescriptor descriptor, int codeLocation, int methodId, Object receiver, Object[] params) {
+        if (descriptor == null) return null;
         EventTracker eventTracker = getEventTracker(descriptor);
         return eventTracker.onMethodCall(descriptor, codeLocation, methodId, receiver, params);
     }
@@ -711,6 +712,7 @@ public class Injections {
      * @return The potentially modified {@code result}.
      */
     public static Object onMethodCallReturn(ThreadDescriptor threadDescriptor, long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Object result) {
+        if (threadDescriptor == null) return result;
         EventTracker eventTracker = getEventTracker(threadDescriptor);
         return eventTracker.onMethodCallReturn(threadDescriptor, descriptorId, descriptor, methodId, receiver, params, result);
     }
@@ -722,6 +724,7 @@ public class Injections {
      * @param descriptorId Deterministic call descriptor id when applicable, or any other value otherwise.
      */
     public static void onMethodCallReturnVoid(ThreadDescriptor threadDescriptor, long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params) {
+        if (threadDescriptor == null) return;
         EventTracker eventTracker = getEventTracker(threadDescriptor);
         eventTracker.onMethodCallReturn(threadDescriptor, descriptorId, descriptor, methodId, receiver, params, VOID_RESULT);
     }
@@ -735,6 +738,7 @@ public class Injections {
      * @return The potentially modified {@code t}.
      */
     public static Throwable onMethodCallException(ThreadDescriptor threadDescriptor, long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Throwable t) {
+        if (threadDescriptor == null) return t;
         EventTracker eventTracker = getEventTracker(threadDescriptor);
         return eventTracker.onMethodCallException(threadDescriptor, descriptorId, descriptor, methodId, receiver, params, t);
     }

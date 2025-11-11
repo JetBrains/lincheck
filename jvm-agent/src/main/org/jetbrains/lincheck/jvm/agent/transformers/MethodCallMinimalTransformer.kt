@@ -18,6 +18,7 @@ import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
+import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import sun.nio.ch.lincheck.*
 
 /**
@@ -78,8 +79,14 @@ internal class MethodCallMinimalTransformer(
         }
         val sanitizedMethodName = sanitizeMethodName(owner, name, InstrumentationMode.TRACE_RECORDING)
         val methodId = TRACE_CONTEXT.getOrCreateMethodId(owner.toCanonicalClassName(), sanitizedMethodName, Types.convertAsmMethodType(desc))
+
+        val threadDescriptorLocal = newLocal(OBJECT_TYPE).also {
+            invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
+            storeLocal(it)
+        }
+
         // STACK: <empty>
-        processMethodCallEnter(methodId, receiverLocal, argumentsArrayLocal, ownerName, argumentNames)
+        processMethodCallEnter(methodId, receiverLocal, argumentsArrayLocal, ownerName, argumentNames, threadDescriptorLocal)
         // STACK: deterministicCallDescriptor
         pop()
         // STACK: <empty>
@@ -98,6 +105,7 @@ internal class MethodCallMinimalTransformer(
                     methodId,
                     receiverLocal,
                     argumentsArrayLocal,
+                    threadDescriptorLocal,
                 )
                 // STACK: result?
             },
@@ -108,7 +116,8 @@ internal class MethodCallMinimalTransformer(
                     null,
                     methodId,
                     receiverLocal,
-                    argumentsArrayLocal
+                    argumentsArrayLocal,
+                    threadDescriptorLocal,
                 )
             }
         )
