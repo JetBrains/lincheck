@@ -19,9 +19,6 @@ import java.lang.reflect.Constructor;
  */
 public class Injections {
 
-    // Special object to represent void method call result.
-    public static final Object VOID_RESULT = new Object();
-
     // Agent passes the event tracker if it decides to start recording trace points
     // in already running threads. Field is non-null in case if all-threads tracking is enabled.
     public static volatile EventTracker globalEventTracker = null;
@@ -779,4 +776,9 @@ public class Injections {
         }
         return lookUpPrivateConstructor.newInstance(callerClass, -1);
     }
+
+    // == Utilities ==
+
+    // Special object to represent void method call result.
+    public static final Object VOID_RESULT = new Object();
 }
