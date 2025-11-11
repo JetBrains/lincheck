@@ -46,6 +46,12 @@ internal class MethodCallMinimalTransformer(
     override fun processMethodCall(desc: String, opcode: Int, owner: String, name: String, itf: Boolean) = adapter.run {
         val isConstructorCall = (name == "<init>")
         val receiverType = getType("L$owner;")
+        // We assume that constructors return some value even though they don't (because their descriptor specifies return value of 'void').
+        // It is possible because the constructor invocation sequence looks like this:
+        // NEW Clazz + DUP + push args + INVOKESPECIAL Clazz.<init>
+        // before invoking <init> method the stack has the following shape: "non-init this, non-init this, args"
+        // after its invocation: "init this", so we assume that constructors return values.
+        // Later 'processMethodCallReturn' will work with this "pseudo-returned" value.
         val returnType = if (isConstructorCall) receiverType else getReturnType(desc)
         val argumentNames = getArgumentNames(desc, opcode)
         val ownerName = when {
