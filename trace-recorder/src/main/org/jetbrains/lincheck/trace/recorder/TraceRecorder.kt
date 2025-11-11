@@ -81,7 +81,7 @@ object TraceRecorder {
         descriptor.eventTracker = eventTracker
         eventTracker!!.enableTrace()
 
-        ThreadDescriptor.setCurrentThreadAsRoot(descriptor)
+        ThreadDescriptor.setRootThreadDescriptor(Thread.currentThread(), descriptor)
         if (trackAllThreads) {
             Injections.enableGlobalThreadsTracking(eventTracker)
         }
