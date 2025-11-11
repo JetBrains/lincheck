@@ -81,9 +81,9 @@ object TraceRecorder {
         descriptor.eventTracker = eventTracker
 
         if (trackAllThreads) {
-            Injections.enableEventTracking(Injections.EventTrackingMode.GLOBAL, eventTracker)
+            Injections.enableGlobalEventTracking(eventTracker)
         } else {
-            Injections.enableEventTracking(Injections.EventTrackingMode.SINGLE_THREAD, eventTracker)
+            Injections.enableEventTracking(Injections.EventTrackingMode.SINGLE_THREAD)
             ThreadDescriptor.setRootThreadDescriptor(Thread.currentThread(), descriptor)
         }
         eventTracker!!.enableTrace()
@@ -130,11 +130,15 @@ object TraceRecorder {
         }
 
         val mode = Injections.eventTrackingMode
-        if (mode == Injections.EventTrackingMode.SINGLE_THREAD) {
+        if (mode == Injections.EventTrackingMode.GLOBAL) {
+            Injections.disableGlobalEventTracking()
+        } else if (mode == Injections.EventTrackingMode.SINGLE_THREAD) {
             ThreadDescriptor.unsetRootThread()
                 .ensure { it == descriptor }
+            Injections.disableGlobalEventTracking()
+        } else {
+            throw IllegalStateException("Unexpected event tracking mode $mode")
         }
-        Injections.disableGlobalThreadsTracking()
 
         eventTracker?.finishAndDumpTrace()
         eventTracker = null
