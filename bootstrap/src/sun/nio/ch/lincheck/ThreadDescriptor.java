@@ -15,10 +15,11 @@ import java.util.Collections;
 import java.util.Map;
 
 /**
- * Represents a descriptor for a thread, containing metadata requited for
- * the Lincheck analysis of the thread execution.
+ * Represents a descriptor for a thread containing metadata requited for
+ * the Lincheck's analysis of the thread execution.
  *
- * <p>
+ * <br>
+ *
  * The thread descriptor can be registered in the thread registry and then retrieved at any point,
  * using the static methods of this class:
  * - {@link ThreadDescriptor#setCurrentThreadDescriptor(ThreadDescriptor)}
@@ -26,7 +27,8 @@ import java.util.Map;
  * - {@link ThreadDescriptor#getCurrentThreadDescriptor()}
  * - {@link ThreadDescriptor#getThreadDescriptor(Thread)}
  *
- * <p>
+ * <br>
+ *
  * The registry uses a combination of techniques to associate and retrieve thread descriptors with threads.
  * - For the instances of the {@link TestThread} class, that is threads usually created by the Lincheck itself,
  *   the descriptor is stored in one of the fields of the class.
@@ -61,22 +63,26 @@ public class ThreadDescriptor {
     /**
      * This flag indicates whether the Lincheck analysis is currently enabled in this thread.
      * <br><br>
+     *
      * Note: the field is volatile because it could be modified from different threads:
-     * owner of this {@code ThreadDescriptor} and the Main thread of the test.
+     * another thread may reset it to false, signaling that the thread should is no longer be analyzed.
      */
     private volatile boolean isAnalysisEnabled = false;
 
     /**
      * This flag indicates whether the thread is currently executing injected code (e.g., method from {@code EventTracker}).
      * <br><br>
+     *
      * This flag is used together with {@code isAnalysisEnabled}, they allow for proper synchronization in
      * case if Trace Recorder is used with {@code globalEventTracker != null}.
      * <br>
+     *
      * When the Main thread wants to dump the trace, it needs to logically "finish" all currently running threads
      * so that they stop writing their trace points. For that Main marks some thread's {@code isAnalysisEnabled} flag as false,
      * and then waits until that thread's {@code isInsideInjectedCode} flag is also false,
      * afterward Main thread dumps the remaining tracepoints of thread that it waited for.
      * <br><br>
+     *
      * Note: the field is volatile because it could be modified from different threads:
      * owner of this {@code ThreadDescriptor} and the Main thread of the test.
      */
@@ -89,6 +95,9 @@ public class ThreadDescriptor {
      */
     private int ignoredSectionDepth = 0;
 
+    /**
+     * Creates a new thread descriptor for the given thread.
+     */
     public ThreadDescriptor(Thread thread) {
         if (thread == null) {
             throw new IllegalArgumentException("Thread must not be null");
@@ -96,22 +105,37 @@ public class ThreadDescriptor {
         this.thread = new WeakReference<>(thread);
     }
 
+    /**
+     * Retrieves the thread associated with this descriptor.
+     */
     public Thread getThread() {
         return thread.get();
     }
 
+    /**
+     * Retrieves the thread-local {@code EventTracker} associated with this descriptor.
+     */
     public EventTracker getEventTracker() {
         return eventTracker.get();
     }
 
+    /**
+     * Sets the thread-local {@code EventTracker} associated with this descriptor.
+     */
     public void setEventTracker(EventTracker eventTracker) {
         this.eventTracker = new WeakReference<>(eventTracker);
     }
 
+    /**
+     * Retrieves the additional event-tracker-specific data associated with this descriptor.
+     */
     public Object getEventTrackerData() {
         return eventTrackerData.get();
     }
 
+    /**
+     * Sets the additional event-tracker-specific data associated with this descriptor.
+     */
     public void setEventTrackerData(Object eventTrackerData) {
         this.eventTrackerData = new WeakReference<>(eventTrackerData);
     }
@@ -250,7 +274,7 @@ public class ThreadDescriptor {
         ignoredSectionDepth = depth;
     }
 
-    /*
+    /**
      * Thread local variable storing the thread descriptor for each thread.
      *
      * NOTE: as an optimization, for the `TestThread` instances,
@@ -260,13 +284,15 @@ public class ThreadDescriptor {
     private static final ThreadLocal<ThreadDescriptor> threadDescriptor =
         ThreadLocal.withInitial(() -> null);
 
-    /*
+    /**
      * A global map storing a thread descriptor for each thread object.
+     * <br>
      *
      * The map should be concurrent, use identity hash code,
      * and do not prevent garbage collection of thread objects (i.e., use weak keys).
      * However, because there is no `ConcurrentWeakIdentityHashMap` out of the box in
      * the java standard library, we use a few tricks to achieve a similar effect.
+     * <br>
      *
      * - We use `ConcurrentHashMap` to guarantee thread safety.
      * - We use identity hash codes of the thread objects as keys.
@@ -278,11 +304,14 @@ public class ThreadDescriptor {
         Collections.synchronizedMap(new WeakIdentityHashMap<>());
 
     /**
-     * Store fast-path descriptor for "main" thread
+     * Store a fast-path "root" descriptor.
+     * Typically, the main thread or the test executor thread are used as the "root" thread.
      */
     private static ThreadDescriptor rootDescriptor = null;
     /**
-     * Store "main" thread for
+     * Store the "root" thread.
+     *
+     * @see #rootDescriptor
      */
     private static Thread rootThread = null;
 
