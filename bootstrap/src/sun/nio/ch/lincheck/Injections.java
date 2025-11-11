@@ -435,10 +435,9 @@ public class Injections {
      * @param receiver is `null` for public static methods.
      * @return Deterministic call descriptor or null.
      */
-    public static Object onMethodCall(int codeLocation, int methodId, Object receiver, Object[] params) {
-        EventTracker eventTracker = getEventTrackerIfInAnalyzedCode();
-        if (eventTracker == null) return null;
-        return eventTracker.onMethodCall(codeLocation, methodId, receiver, params);
+    public static Object onMethodCall(int codeLocation, int methodId, Object receiver, Object[] params, boolean inAnalyzedSection) {
+        if (!inAnalyzedSection) return null;
+        return getEventTracker().onMethodCall(codeLocation, methodId, receiver, params);
     }
 
     /**
@@ -449,10 +448,9 @@ public class Injections {
      * @param result The call result.
      * @return The potentially modified {@code result}.
      */
-    public static Object onMethodCallReturn(long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Object result) {
-        EventTracker eventTracker = getEventTrackerIfInAnalyzedCode();
-        if (eventTracker == null) return result;
-        return eventTracker.onMethodCallReturn(descriptorId, descriptor, methodId, receiver, params, result);
+    public static Object onMethodCallReturn(long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Object result, boolean inAnalyzedSection) {
+        if (!inAnalyzedSection) return result;
+        return getEventTracker().onMethodCallReturn(descriptorId, descriptor, methodId, receiver, params, result);
     }
 
     /**
@@ -461,10 +459,9 @@ public class Injections {
      * @param descriptor Deterministic call descriptor or null.
      * @param descriptorId Deterministic call descriptor id when applicable, or any other value otherwise.
      */
-    public static void onMethodCallReturnVoid(long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params) {
-        EventTracker eventTracker = getEventTrackerIfInAnalyzedCode();
-        if (eventTracker == null) return;
-        eventTracker.onMethodCallReturn(descriptorId, descriptor, methodId, receiver, params, VOID_RESULT);
+    public static void onMethodCallReturnVoid(long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, boolean inAnalyzedSection) {
+        if (!inAnalyzedSection) return;
+        getEventTracker().onMethodCallReturn(descriptorId, descriptor, methodId, receiver, params, VOID_RESULT);
     }
 
     /**
@@ -475,10 +472,9 @@ public class Injections {
      * @param t Thrown exception.
      * @return The potentially modified {@code t}.
      */
-    public static Throwable onMethodCallException(long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Throwable t) {
-        EventTracker eventTracker = getEventTrackerIfInAnalyzedCode();
-        if (eventTracker == null) return t;
-        return eventTracker.onMethodCallException(descriptorId, descriptor, methodId, receiver, params, t);
+    public static Throwable onMethodCallException(long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Throwable t, boolean inAnalyzedSection) {
+        if (!inAnalyzedSection) return t;
+        return getEventTracker().onMethodCallException(descriptorId, descriptor, methodId, receiver, params, t);
     }
 
     /**

@@ -67,8 +67,14 @@ internal class MethodCallTransformer(
             else -> null
         }
         val methodId = TRACE_CONTEXT.getOrCreateMethodId(owner.toCanonicalClassName(), name, Types.convertAsmMethodType(desc))
+
+        val inAnalyzedCodeLocal = newLocal(BOOLEAN_TYPE).also {
+            push(true)
+            storeLocal(it)
+        }
+
         // STACK: <empty>
-        processMethodCallEnter(methodId, receiverLocal, argumentsArrayLocal, ownerName, argumentNames)
+        processMethodCallEnter(methodId, receiverLocal, argumentsArrayLocal, ownerName, argumentNames, inAnalyzedCodeLocal)
         // STACK: deterministicCallDescriptor
         val deterministicMethodDescriptorLocal = newLocal(OBJECT_TYPE)
             .also { storeLocal(it) }
@@ -101,6 +107,7 @@ internal class MethodCallTransformer(
                     methodId,
                     receiverLocal,
                     argumentsArrayLocal,
+                    inAnalyzedCodeLocal,
                 )
                 // STACK: result?
             },
@@ -112,6 +119,7 @@ internal class MethodCallTransformer(
                     methodId,
                     receiverLocal,
                     argumentsArrayLocal,
+                    inAnalyzedCodeLocal,
                 )
             }
         )
