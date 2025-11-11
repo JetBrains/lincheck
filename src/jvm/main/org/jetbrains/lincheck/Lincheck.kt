@@ -28,6 +28,7 @@ import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent.ensureObjectIsTransfor
 import org.jetbrains.lincheck.jvm.agent.withLincheckJavaAgent
 import org.jetbrains.lincheck.datastructures.ManagedCTestConfiguration
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
+import sun.nio.ch.lincheck.Injections
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
@@ -124,7 +125,14 @@ internal inline fun withLincheckTestContext(
     block: () -> Unit
 ) {
     LINCHECK_TEST_LOCK.withLock {
-        withLincheckJavaAgent(instrumentationMode, block)
+        withLincheckJavaAgent(instrumentationMode) {
+            Injections.enableEventTracking(Injections.EventTrackingMode.THREAD_LOCAL)
+            try {
+                block()
+            } finally {
+                Injections.disableEventTracking()
+            }
+        }
     }
 }
 
