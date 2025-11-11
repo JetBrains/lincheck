@@ -105,7 +105,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
 
         val classInfo = ClassInformation(
             smap = readClassSMAP(classNode, reader),
-            locals = getMethodsLocalVariables(classNode),
+            locals = getMethodsLocalVariables(classNode, profile),
             labels = getMethodsLabels(classNode),
             methodsToLineRanges = lineRanges,
             linesToMethodNames = linesToMethodNames,
@@ -136,23 +136,19 @@ object LincheckClassFileTransformer : ClassFileTransformer {
     }
 
     private fun getMethodsLocalVariables(
-        classNode: ClassNode
+        classNode: ClassNode, profile: TransformationProfile,
     ): Map<String, MethodVariables> {
         return classNode.methods.associateBy(
             keySelector = { m -> m.name + m.desc },
             valueTransform = { m ->
+                val config = profile.getMethodConfiguration(classNode.name.toCanonicalClassName(), m.name, m.desc)
                 mutableMapOf<Int, MutableList<LocalVariableInfo>>().also { map ->
                     m.localVariables?.forEach { local ->
-                        if (
-                            m.name == "<init>" &&
-                            isCoroutineStateMachineClass(classNode.name) &&
-                            local.name.isOuterReceiverName()
-                        ) return@forEach
-
                         val index = local.index
                         val type = Type.getType(local.desc)
-                        val info = LocalVariableInfo(local.name, local.index, type,
-                            local.start.label to local.end.label
+                        val name = sanitizeVariableName(classNode.name, local.name, config, type) ?: return@forEach
+                        val info = LocalVariableInfo(
+                            name, local.index, type, local.start.label to local.end.label
                         )
                         map.getOrPut(index) { mutableListOf() }.add(info)
                     }
@@ -160,6 +156,38 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             }
         )
         .mapValues { MethodVariables(it.value) }
+    }
+
+    private fun sanitizeVariableName(owner: String, originalName: String, config: TransformationConfiguration, type: Type): String? {
+        fun callRecursive(originalName: String) = sanitizeVariableName(owner, originalName, config, type)
+
+        fun callRecursiveForSuffixAfter(prefix: String): String =
+            "$prefix${callRecursive(originalName.removePrefix(prefix))}"
+
+        fun callRecursiveForPrefixBefore(suffix: String): String =
+            "${callRecursive(originalName.removeSuffix(suffix))}$suffix"
+
+        return when {
+            originalName.startsWith($$"$i$a$-") -> if (config.trackInlineMethodCalls) {
+                val firstSuffix = originalName.substringAfter($$"$i$a$-")
+                val prefix =
+                    if (firstSuffix.contains('-')) $$"$i$a$-$${firstSuffix.substringBefore('-')}-"
+                    else $$"$i$a$-"
+                callRecursiveForSuffixAfter(prefix)
+            } else {
+                null
+            }
+            originalName.startsWith($$"$i$f$") ->
+                if (config.trackInlineMethodCalls) callRecursiveForSuffixAfter($$"$i$f$") else null
+            originalName.endsWith($$"$iv") ->
+                if (config.trackInlineMethodCalls) callRecursiveForPrefixBefore($$"$iv")
+                else callRecursive(originalName.removeSuffix($$"$iv"))
+
+            originalName.contains('-') -> callRecursive(originalName.substringBeforeLast('-'))
+            originalName.contains("_u24lambda_u24") ->
+                callRecursive(originalName.replace("_u24lambda_u24", $$"$lambda$"))
+            else -> originalName
+        }
     }
 
     private fun getMethodsLabels(
@@ -332,9 +360,6 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         }
         return SMAPInfo("")
     }
-
-    private fun String.isOuterReceiverName() = this == "this$0"
-
 
     @Suppress("SpellCheckingInspection")
     fun shouldTransform(className: String, instrumentationMode: InstrumentationMode): Boolean {

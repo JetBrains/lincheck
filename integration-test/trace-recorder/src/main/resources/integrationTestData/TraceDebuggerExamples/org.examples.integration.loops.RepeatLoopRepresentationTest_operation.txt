@@ -4,35 +4,30 @@ RepeatLoopRepresentationTest.operation() at :0
   loop(5 iterations) at RepeatLoopRepresentationTest.kt:17
     <iteration 1> at RepeatLoopRepresentationTest.kt:17
       i = 0 at RepeatLoopRepresentationTest.kt:17
-      i$a$-repeat-RepeatLoopRepresentationTest$operation$1 = 0 at RepeatLoopRepresentationTest.kt:17
       a = 0 at RepeatLoopRepresentationTest.kt:18
       a.toString(): "0" at RepeatLoopRepresentationTest.kt:19
       escape = "0" at RepeatLoopRepresentationTest.kt:19
       escape = "0 is saved" at RepeatLoopRepresentationTest.kt:23
     <iteration 2> at RepeatLoopRepresentationTest.kt:17
       i = 1 at RepeatLoopRepresentationTest.kt:17
-      i$a$-repeat-RepeatLoopRepresentationTest$operation$1 = 0 at RepeatLoopRepresentationTest.kt:17
       a = 1 at RepeatLoopRepresentationTest.kt:18
       a.toString(): "1" at RepeatLoopRepresentationTest.kt:19
       escape = "1" at RepeatLoopRepresentationTest.kt:19
       escape = "1 is saved" at RepeatLoopRepresentationTest.kt:23
     <iteration 3> at RepeatLoopRepresentationTest.kt:17
       i = 2 at RepeatLoopRepresentationTest.kt:17
-      i$a$-repeat-RepeatLoopRepresentationTest$operation$1 = 0 at RepeatLoopRepresentationTest.kt:17
       a = 2 at RepeatLoopRepresentationTest.kt:18
       a.toString(): "2" at RepeatLoopRepresentationTest.kt:19
       escape = "2" at RepeatLoopRepresentationTest.kt:19
       escape = "2 is saved" at RepeatLoopRepresentationTest.kt:23
     <iteration 4> at RepeatLoopRepresentationTest.kt:17
       i = 3 at RepeatLoopRepresentationTest.kt:17
-      i$a$-repeat-RepeatLoopRepresentationTest$operation$1 = 0 at RepeatLoopRepresentationTest.kt:17
       a = 3 at RepeatLoopRepresentationTest.kt:18
       a.toString(): "3" at RepeatLoopRepresentationTest.kt:19
       escape = "3" at RepeatLoopRepresentationTest.kt:19
       escape = "3 is saved" at RepeatLoopRepresentationTest.kt:23
     <iteration 5> at RepeatLoopRepresentationTest.kt:17
       i = 4 at RepeatLoopRepresentationTest.kt:17
-      i$a$-repeat-RepeatLoopRepresentationTest$operation$1 = 0 at RepeatLoopRepresentationTest.kt:17
       a = 4 at RepeatLoopRepresentationTest.kt:18
       a.toString(): "4" at RepeatLoopRepresentationTest.kt:19
       escape = "4" at RepeatLoopRepresentationTest.kt:19

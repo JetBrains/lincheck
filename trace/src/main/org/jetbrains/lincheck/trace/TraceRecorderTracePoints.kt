@@ -28,6 +28,7 @@ import java.io.DataOutput
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.reflect.KClass
 
 private val EVENT_ID_GENERATOR = AtomicInteger(0)
 
@@ -643,6 +644,12 @@ fun loadTRTracePoint(inp: DataInput): TRTracePoint {
     return loader(inp, codeLocationId, threadId, eventId)
 }
 
+private fun String.escape() = this
+    .replace("\\", "\\\\")
+    .replace("\n", "\\n")
+    .replace("\r", "\\r")
+    .replace("\t", "\\t")
+
 @ConsistentCopyVisibility
 data class TRObject internal constructor (
     internal val classNameId: Int,
@@ -660,14 +667,11 @@ data class TRObject internal constructor (
         return if (primitiveValue != null) {
             when (primitiveValue) {
                 is String -> {
-                    if (classNameId == TR_OBJECT_P_RAW_STRING) return primitiveValue
-                    // Escape special characters
-                    val v = primitiveValue
-                        .replace("\\", "\\\\")
-                        .replace("\n", "\\n")
-                        .replace("\r", "\\r")
-                        .replace("\t", "\\t")
-                    return "\"$v\""
+                    when (classNameId) {
+                        TR_OBJECT_P_RAW_STRING, TR_OBJECT_P_JAVA_CLASS, TR_OBJECT_P_KOTLIN_CLASS -> primitiveValue
+                        TR_OBJECT_P_STRING_BUILDER -> "StringBuilder@$identityHashCode(\"${primitiveValue.escape()}\")"
+                        else -> "\"${primitiveValue.escape()}\""
+                    }
                 }
                 is Char -> "'$primitiveValue'"
                 is Unit -> "Unit"
@@ -705,6 +709,9 @@ const val TR_OBJECT_P_STRING = TR_OBJECT_P_CHAR - 1
 const val TR_OBJECT_P_UNIT = TR_OBJECT_P_STRING - 1
 const val TR_OBJECT_P_RAW_STRING = TR_OBJECT_P_UNIT - 1
 const val TR_OBJECT_P_BOOLEAN = TR_OBJECT_P_RAW_STRING - 1
+const val TR_OBJECT_P_JAVA_CLASS = TR_OBJECT_P_BOOLEAN - 1
+const val TR_OBJECT_P_KOTLIN_CLASS = TR_OBJECT_P_JAVA_CLASS - 1
+const val TR_OBJECT_P_STRING_BUILDER = TR_OBJECT_P_KOTLIN_CLASS - 1
 
 fun TRObjectOrNull(obj: Any?): TRObject? =
     obj?.let { TRObject(it) }
@@ -730,6 +737,7 @@ fun TRObject(obj: Any): TRObject {
         is Double -> TRObject(TR_OBJECT_P_DOUBLE, 0, obj)
         is Char -> TRObject(TR_OBJECT_P_CHAR, 0, obj)
         is String -> TRObject(TR_OBJECT_P_STRING, 0, trimString(obj))
+        is StringBuilder -> TRObject(TR_OBJECT_P_STRING_BUILDER, System.identityHashCode(obj), obj.toString())
         is CharSequence -> runCatching { trimString(obj) }.let {
             // Some implementations of CharSequence might throw when `subSequence` is invoked at some unexpected moment,
             // like when this sequence is considered "destroyed" at this point
@@ -742,6 +750,8 @@ fun TRObject(obj: Any): TRObject {
         is Enum<*> -> TRObject(TR_OBJECT_P_RAW_STRING, 0, "${obj.javaClass.simpleName}.${obj.name}")
         is BigInteger -> TRObject(TR_OBJECT_P_RAW_STRING, 0, obj.toString())
         is BigDecimal -> TRObject(TR_OBJECT_P_RAW_STRING, 0, obj.toString())
+        is Class<*> -> TRObject(TR_OBJECT_P_JAVA_CLASS, 0, "${obj.simpleName}.class")
+        is KClass<*> -> TRObject(TR_OBJECT_P_KOTLIN_CLASS, 0, "${obj.simpleName}.kclass")
         // Generic case
         // TODO Make parametrized
         else -> defaultTRObject()
@@ -771,6 +781,10 @@ internal fun DataOutput.writeTRObject(value: TRObject?) {
         is Float -> writeFloat(value.primitiveValue)
         is Double -> writeDouble(value.primitiveValue)
         is Char -> writeChar(value.primitiveValue.code)
+        is String if value.classNameId == TR_OBJECT_P_STRING_BUILDER -> {
+            writeInt(value.identityHashCode)
+            writeUTF(value.primitiveValue)
+        }
         is String -> writeUTF(value.primitiveValue) // Both STRING and RAW_STRING
         is Boolean -> writeBoolean(value.primitiveValue)
         is Unit -> {}
@@ -793,6 +807,9 @@ internal fun DataInput.readTRObject(): TRObject? {
         TR_OBJECT_P_UNIT -> TRObject(classNameId, 0, Unit)
         TR_OBJECT_P_RAW_STRING -> TRObject(classNameId, 0, readUTF())
         TR_OBJECT_P_BOOLEAN -> TRObject(classNameId, 0, readBoolean())
+        TR_OBJECT_P_JAVA_CLASS -> TRObject(classNameId, 0, readUTF())
+        TR_OBJECT_P_KOTLIN_CLASS -> TRObject(classNameId, 0, readUTF())
+        TR_OBJECT_P_STRING_BUILDER -> TRObject(classNameId, readInt(), readUTF())
         else -> {
             if (classNameId >= 0) {
                 TRObject(classNameId, readInt(), null)

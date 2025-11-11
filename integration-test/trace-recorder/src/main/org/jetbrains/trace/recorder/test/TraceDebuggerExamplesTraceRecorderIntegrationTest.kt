@@ -63,6 +63,123 @@ class TraceDebuggerExamplesTraceRecorderIntegrationTest : AbstractTraceRecorderI
     }
 
     @Test
+    fun `org_examples_integration_bugs_ManglingTest testInline`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.bugs.ManglingTest",
+            testMethodName = "testInline",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_bugs_ManglingTest testPrintln`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.bugs.ManglingTest",
+            testMethodName = "testPrintln",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_bugs_ManglingTest testRepeat`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.bugs.ManglingTest",
+            testMethodName = "testRepeat",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_bugs_ManglingTest testInlineLambda`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.bugs.ManglingTest",
+            testMethodName = "testInlineLambda",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_bugs_ManglingTest testDefaultArg`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.bugs.ManglingTest",
+            testMethodName = "testDefaultArg",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_bugs_ManglingTest testInlineClass`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.bugs.ManglingTest",
+            testMethodName = "testInlineClass",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_bugs_ManglingTest testInner`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.bugs.ManglingTest",
+            testMethodName = "testInner",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_bugs_ManglingTest testInlineClassInlineFunction`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.bugs.ManglingTest",
+            testMethodName = "testInlineClassInlineFunction",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_bugs_ManglingTest testInlineClassInlineFunctionWithDefault`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.bugs.ManglingTest",
+            testMethodName = "testInlineClassInlineFunctionWithDefault",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_bugs_ManglingTest testCapture`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.bugs.ManglingTest",
+            testMethodName = "testCapture",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_bugs_ManglingTest testReceivers`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.bugs.ManglingTest",
+            testMethodName = "testReceivers",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_bugs_ManglingTest testInternalViaAccessor`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.bugs.ManglingTest",
+            testMethodName = "testInternalViaAccessor",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_bugs_ManglingTest testNestedInlineFunction`() {
+        runGradleTest(
+            testClassName = "org.examples.integration.bugs.ManglingTest",
+            testMethodName = "testNestedInlineFunction",
+            gradleCommands = listOf(":test"),
+        )
+    }
+
+    @Test
     fun `org_examples_integration_loops_JavaForLoopRepresentationTest operation`() {
         runGradleTest(
             testClassName = "org.examples.integration.loops.JavaForLoopRepresentationTest",

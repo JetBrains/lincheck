@@ -353,6 +353,7 @@ class AnalysisProfile(val analyzeStdLib: Boolean) {
      * @return The [AnalysisSectionType] to use for analyzing this class/method
      */
     fun getAnalysisSectionFor(className: String,  methodName: String): AnalysisSectionType = when {
+        className == "kotlin.jvm.internal.Reflection" && methodName == "getOrCreateKotlinClass" -> IGNORED
         !className.startsWith("java.util.concurrent.") -> NORMAL // hot path
         isJavaExecutorService(className) -> if (methodName == "submit") SILENT_PROPAGATING else SILENT
         className.startsWith("java.util.concurrent.locks.AbstractQueuedSynchronizer") -> SILENT

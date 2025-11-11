@@ -1,0 +1,33 @@
+# Thread 1
+ManglingTest.testRepeat() at :0
+  loop(10 iterations) at ManglingTest.kt:25
+    <iteration 1> at ManglingTest.kt:25
+      it = 0 at ManglingTest.kt:25
+      System.out.println("Hello world") at ManglingTest.kt:26
+    <iteration 2> at ManglingTest.kt:25
+      it = 1 at ManglingTest.kt:25
+      System.out.println("Hello world") at ManglingTest.kt:26
+    <iteration 3> at ManglingTest.kt:25
+      it = 2 at ManglingTest.kt:25
+      System.out.println("Hello world") at ManglingTest.kt:26
+    <iteration 4> at ManglingTest.kt:25
+      it = 3 at ManglingTest.kt:25
+      System.out.println("Hello world") at ManglingTest.kt:26
+    <iteration 5> at ManglingTest.kt:25
+      it = 4 at ManglingTest.kt:25
+      System.out.println("Hello world") at ManglingTest.kt:26
+    <iteration 6> at ManglingTest.kt:25
+      it = 5 at ManglingTest.kt:25
+      System.out.println("Hello world") at ManglingTest.kt:26
+    <iteration 7> at ManglingTest.kt:25
+      it = 6 at ManglingTest.kt:25
+      System.out.println("Hello world") at ManglingTest.kt:26
+    <iteration 8> at ManglingTest.kt:25
+      it = 7 at ManglingTest.kt:25
+      System.out.println("Hello world") at ManglingTest.kt:26
+    <iteration 9> at ManglingTest.kt:25
+      it = 8 at ManglingTest.kt:25
+      System.out.println("Hello world") at ManglingTest.kt:26
+    <iteration 10> at ManglingTest.kt:25
+      it = 9 at ManglingTest.kt:25
+      System.out.println("Hello world") at ManglingTest.kt:26

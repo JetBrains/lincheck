@@ -13,6 +13,7 @@ package org.jetbrains.lincheck.jvm.agent.transformers
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.trace.TRACE_CONTEXT
+import org.jetbrains.lincheck.trace.isThisAccess
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type.*
@@ -44,8 +45,12 @@ internal class MethodCallMinimalTransformer(
     override fun processMethodCall(desc: String, opcode: Int, owner: String, name: String, itf: Boolean) = adapter.run {
         val receiverType = getType("L$owner;")
         val returnType = getReturnType(desc)
-        val ownerName = getOwnerName(desc, opcode)
         val argumentNames = getArgumentNames(desc, opcode)
+        val ownerName = when {
+            opcode == INVOKESTATIC && name.endsWith($$"$default") &&
+                    argumentNames?.firstOrNull()?.locations?.singleOrNull()?.isThisAccess() == true -> argumentNames[0]
+            else -> getOwnerName(desc, opcode)
+        }
         // STACK: receiver?, arguments
         val argumentLocals = storeArguments(desc)
         val argumentsArrayLocal = newLocal(OBJECT_ARRAY_TYPE).also {
@@ -56,7 +61,8 @@ internal class MethodCallMinimalTransformer(
             (opcode != INVOKESTATIC) -> newLocal(receiverType).also { storeLocal(it) }
             else -> null
         }
-        val methodId = TRACE_CONTEXT.getOrCreateMethodId(owner.toCanonicalClassName(), name, Types.convertAsmMethodType(desc))
+        val sanitizedMethodName = sanitizeMethodName(owner, name, InstrumentationMode.TRACE_RECORDING)
+        val methodId = TRACE_CONTEXT.getOrCreateMethodId(owner.toCanonicalClassName(), sanitizedMethodName, Types.convertAsmMethodType(desc))
         // STACK: <empty>
         processMethodCallEnter(methodId, receiverLocal, argumentsArrayLocal, ownerName, argumentNames)
         // STACK: deterministicCallDescriptor

@@ -33,6 +33,8 @@ fun TRAppendable.appendAccessPath(accessPath: AccessPath) {
         val location = accessPath.locations[i]
         val nextLocation = accessPath.locations.getOrNull(i + 1)
 
+        if (location.isThisAccess()) continue
+
         when (location) {
             is LocalVariableAccessLocation -> {
                 appendVariableName(location.variableDescriptor)
@@ -96,6 +98,7 @@ abstract class AbstractTRAppendable: TRAppendable {
 
     private fun String.prettifyFieldName(): String = this
         .removeVolatileDollarFU()
+        .removeLeadingDollar()
 
     private fun String.prettifyVariableName(): String = this
         .removeInlineIV()
@@ -163,7 +166,7 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
 
     protected fun TRAppendable.appendParameters(tracePoint: TRMethodCallTracePoint): TRAppendable {
         // Due to trace compression codelocation can be shifted and therefore argument names do not match
-        // Without having paramter names it is impossible to match up
+        // Without having parameter names it is impossible to match up
         // In practise I have only seen `null` names for those kind of pais so probably doesn't really matter.
         val argumentNames = if (tracePoint.parameters.size == tracePoint.argumentNames.size) {
             tracePoint.argumentNames

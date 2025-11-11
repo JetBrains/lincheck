@@ -1,0 +1,10 @@
+# Thread 1
+ManglingTest.testInlineClassInlineFunction() at :0
+  this_ = ManglingTest@1 at ManglingTest.kt:75
+  x = 2 at ManglingTest.kt:75
+  y = 3 at ManglingTest.kt:75
+  x = 2 at ManglingTest.kt:10
+  y = 3 at ManglingTest.kt:10
+  UInt.constructor-impl(5): 5 at ManglingTest.kt:75
+  UInt.box-impl(5): UInt@1 at ManglingTest.kt:10
+  System.out.println(UInt@1) at ManglingTest.kt:75

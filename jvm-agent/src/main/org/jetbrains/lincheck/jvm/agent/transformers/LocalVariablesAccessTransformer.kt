@@ -55,7 +55,7 @@ internal class LocalVariablesAccessTransformer(
     }
 
     override fun visitVarInsn(opcode: Int, varIndex: Int) = adapter.run {
-        val localVariableInfo = getVariableInfo(varIndex)?.takeIf { it.name != "this" }
+        val localVariableInfo = getVariableInfo(varIndex)?.takeIf { !isThisName(it.name) }
         if (localVariableInfo == null) {
             super.visitVarInsn(opcode, varIndex)
             return

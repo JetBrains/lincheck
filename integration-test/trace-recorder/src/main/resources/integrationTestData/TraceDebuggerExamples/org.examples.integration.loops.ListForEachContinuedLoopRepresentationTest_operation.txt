@@ -8,15 +8,13 @@ ListForEachContinuedLoopRepresentationTest.operation() at :0
   listOf(Integer;@1): Arrays.ArrayList@1 at ListForEachContinuedLoopRepresentationTest.kt:18
   list = Arrays.ArrayList@1 at ListForEachContinuedLoopRepresentationTest.kt:18
   forEach = Arrays.ArrayList@1 at ListForEachContinuedLoopRepresentationTest.kt:19
-  i$f$forEach = 0 at ListForEachContinuedLoopRepresentationTest.kt:19
-  iterator(): Arrays.ArrayItr@1 at _Collections.kt:1869
+  forEach.iterator(): Arrays.ArrayItr@1 at _Collections.kt:1869
   loop(5 iterations) at _Collections.kt:1869
     <iteration 1> at _Collections.kt:1869
       Arrays.ArrayItr@1.hasNext(): true at _Collections.kt:1869
       Arrays.ArrayItr@1.next(): 1 at _Collections.kt:1869
       element = 1 at _Collections.kt:1869
       i = 1 at _Collections.kt:1869
-      i$a$-forEach-ListForEachContinuedLoopRepresentationTest$operation$1 = 0 at _Collections.kt:1869
       a = 1 at ListForEachContinuedLoopRepresentationTest.kt:20
       a.toString(): "1" at ListForEachContinuedLoopRepresentationTest.kt:21
       escape = "1" at ListForEachContinuedLoopRepresentationTest.kt:21
@@ -26,7 +24,6 @@ ListForEachContinuedLoopRepresentationTest.operation() at :0
       Arrays.ArrayItr@1.next(): 2 at _Collections.kt:1869
       element = 2 at _Collections.kt:1869
       i = 2 at _Collections.kt:1869
-      i$a$-forEach-ListForEachContinuedLoopRepresentationTest$operation$1 = 0 at _Collections.kt:1869
       a = 2 at ListForEachContinuedLoopRepresentationTest.kt:20
       a.toString(): "2" at ListForEachContinuedLoopRepresentationTest.kt:21
       escape = "2" at ListForEachContinuedLoopRepresentationTest.kt:21
@@ -36,7 +33,6 @@ ListForEachContinuedLoopRepresentationTest.operation() at :0
       Arrays.ArrayItr@1.next(): 3 at _Collections.kt:1869
       element = 3 at _Collections.kt:1869
       i = 3 at _Collections.kt:1869
-      i$a$-forEach-ListForEachContinuedLoopRepresentationTest$operation$1 = 0 at _Collections.kt:1869
       a = 3 at ListForEachContinuedLoopRepresentationTest.kt:20
       a.toString(): "3" at ListForEachContinuedLoopRepresentationTest.kt:21
       escape = "3" at ListForEachContinuedLoopRepresentationTest.kt:21
@@ -45,7 +41,6 @@ ListForEachContinuedLoopRepresentationTest.operation() at :0
       Arrays.ArrayItr@1.next(): 4 at _Collections.kt:1869
       element = 4 at _Collections.kt:1869
       i = 4 at _Collections.kt:1869
-      i$a$-forEach-ListForEachContinuedLoopRepresentationTest$operation$1 = 0 at _Collections.kt:1869
       a = 4 at ListForEachContinuedLoopRepresentationTest.kt:20
       a.toString(): "4" at ListForEachContinuedLoopRepresentationTest.kt:21
       escape = "4" at ListForEachContinuedLoopRepresentationTest.kt:21

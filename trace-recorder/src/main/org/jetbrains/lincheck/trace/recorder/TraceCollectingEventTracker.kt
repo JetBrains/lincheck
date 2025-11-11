@@ -1003,14 +1003,6 @@ class TraceCollectingEventTracker(
         methodName: String
     ): AnalysisSectionType {
         val ownerName = owner?.javaClass?.canonicalName ?: className
-        // Ignore methods called on standard I/O streams
-        if (owner === System.`in` || owner === System.out || owner === System.err) {
-            return AnalysisSectionType.IGNORED
-        }
-        // Do not track Collection.size() calls
-        if (methodName == "size" && owner is Collection<*>) {
-            return AnalysisSectionType.IGNORED
-        }
         return analysisProfile.getAnalysisSectionFor(ownerName, methodName)
     }
 }
