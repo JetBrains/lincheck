@@ -79,12 +79,15 @@ object TraceRecorder {
         traceStarterThread = Thread.currentThread()
         ThreadDescriptor.setCurrentThreadAsRoot(descriptor)
         descriptor.eventTracker = eventTracker
-        eventTracker!!.enableTrace()
 
-        ThreadDescriptor.setRootThreadDescriptor(Thread.currentThread(), descriptor)
         if (trackAllThreads) {
-            Injections.enableGlobalThreadsTracking(eventTracker)
+            Injections.enableEventTracking(Injections.EventTrackingMode.GLOBAL, eventTracker)
+        } else {
+            Injections.enableEventTracking(Injections.EventTrackingMode.SINGLE_THREAD, eventTracker)
+            ThreadDescriptor.setRootThreadDescriptor(Thread.currentThread(), descriptor)
         }
+
+        eventTracker!!.enableTrace()
         descriptor.enableAnalysis()
     }
 
@@ -117,9 +120,13 @@ object TraceRecorder {
         val currentTracker = descriptor.eventTracker
 
         descriptor.disableAnalysis()
+
+        val mode = Injections.eventTrackingMode
+        if (mode == Injections.EventTrackingMode.SINGLE_THREAD) {
+            ThreadDescriptor.unsetRootThread()
+                .ensure { it == descriptor }
+        }
         Injections.disableGlobalThreadsTracking()
-        ThreadDescriptor.unsetRootThread()
-            .ensure { it == descriptor }
 
         if (currentTracker != eventTracker) {
             Logger.warn {
