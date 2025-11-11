@@ -69,12 +69,12 @@ internal class LambdaRunner(
         private fun onStart() {
             if (strategy !is ManagedStrategy) return
             strategy.beforePart(ExecutionPart.PARALLEL)
-            strategy.beforeThreadStart()
+            strategy.beforeThreadRun()
         }
 
         private fun onFinish() {
             if (strategy !is ManagedStrategy) return
-            strategy.afterThreadFinish()
+            strategy.afterThreadRunReturn()
         }
     }
 

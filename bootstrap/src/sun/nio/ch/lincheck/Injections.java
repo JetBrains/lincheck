@@ -135,20 +135,22 @@ public class Injections {
     }
 
     /**
-     * Current thread reports that it is going to start a new child thread {@code forkedThread}.
+     * Called from instrumented code before {@code Thread::start} method.
+     *
+     * @param startingThread the thread which is going to be started.
      */
-    public static void beforeThreadFork(Thread forkedThread) {
+    public static void beforeThreadStart(Thread startingThread) {
         // TestThread is handled separately
-        if (forkedThread instanceof TestThread) return;
+        if (startingThread instanceof TestThread) return;
         // If thread is started return immediately, as in this case, JVM will throw an `IllegalThreadStateException`
-        if (forkedThread.getState() != Thread.State.NEW) return;
+        if (startingThread.getState() != Thread.State.NEW) return;
+
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
-        if (descriptor == null) {
-            return;
-        }
+        if (descriptor == null) return;
         EventTracker tracker = descriptor.getEventTracker();
-        ThreadDescriptor forkedThreadDescriptor = new ThreadDescriptor(forkedThread);
-        forkedThreadDescriptor.setEventTracker(tracker);
+
+        ThreadDescriptor startingThreadDescriptor = new ThreadDescriptor(startingThread);
+        startingThreadDescriptor.setEventTracker(tracker);
         /*
          * Method `setThreadDescriptor` calls methods of `ConcurrentHashMap` (instrumented class),
          * and at this point the calling thread can have the event tracker set,
@@ -160,67 +162,74 @@ public class Injections {
          *   (2) they do not call any instrumented methods themselves.
          */
         descriptor.enterIgnoredSection();
-        ThreadDescriptor.setThreadDescriptor(forkedThread, forkedThreadDescriptor);
+        ThreadDescriptor.setThreadDescriptor(startingThread, startingThreadDescriptor);
         descriptor.leaveIgnoredSection();
         /*
          * End of the ignored section, the rest should be
          * wrapped into an ignored section by the event tracker itself, if necessary.
          */
-        tracker.beforeThreadFork(forkedThread, forkedThreadDescriptor);
+        tracker.beforeThreadStart(startingThread, startingThreadDescriptor);
     }
 
     /**
-     * Current thread entered its {@code run} method.
+     * Called from instrumented code at the beginning of {@code Thread::run} method.
      */
-    public static void beforeThreadStart() {
+    public static void beforeThreadRun() {
         Thread thread = Thread.currentThread();
         // TestThread is handled separately
         if (thread instanceof TestThread) return;
+
         ThreadDescriptor descriptor = ThreadDescriptor.getThreadDescriptor(thread);
-        if (descriptor == null) {
-            return;
-        }
+        if (descriptor == null) return;
+
         ThreadDescriptor.setCurrentThreadDescriptor(descriptor);
         EventTracker tracker = descriptor.getEventTracker();
-        tracker.beforeThreadStart();
+        tracker.beforeThreadRun();
     }
 
     /**
-     * Current thread returned from its {@code run} method.
+     * Called from instrumented code at the end of {@code Thread::run} method,
+     * in case of normal exit method exit.
      */
-    public static void afterThreadFinish() {
+    public static void afterThreadRunReturn() {
         Thread thread = Thread.currentThread();
         // TestThread is handled separately
         if (thread instanceof TestThread) return;
+
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) return;
         EventTracker tracker = descriptor.getEventTracker();
-        tracker.afterThreadFinish();
+
+        tracker.afterThreadRunReturn();
     }
 
     /**
-     * Called from thread's {@code run} method failed with an exception.
+     * Called from instrumented code at the end of {@code Thread::run} method,
+     * in case of exceptional exit.
      *
      * @param exception the exception that was thrown in the thread.
      */
-    public static void onThreadRunException(Throwable exception) {
+    public static void afterThreadRunException(Throwable exception) {
         Thread thread = Thread.currentThread();
         // TestThread is handled separately
         if (thread instanceof TestThread) return;
+
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) return;
         EventTracker tracker = descriptor.getEventTracker();
-        tracker.onThreadRunException(exception);
+
+        tracker.afterThreadRunException(exception);
     }
 
     /**
-     * Called from instrumented code instead of {@code thread.join()}.
+     * Called from instrumented code instead of {@code Thread::join} method.
      */
-    public static void threadJoin(Thread thread, boolean withTimeout) {
+    public static void onThreadJoin(Thread thread, boolean withTimeout) {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) return;
         EventTracker tracker = descriptor.getEventTracker();
-        tracker.threadJoin(thread, withTimeout);
+
+        tracker.onThreadJoin(thread, withTimeout);
     }
 
     /**

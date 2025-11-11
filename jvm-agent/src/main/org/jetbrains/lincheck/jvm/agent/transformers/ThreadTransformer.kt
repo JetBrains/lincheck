@@ -47,7 +47,7 @@ internal class ThreadTransformer(
             // STACK: <empty>
             loadThis()
             // STACK: forkedThread
-            invokeStatic(Injections::beforeThreadFork)
+            invokeStatic(Injections::beforeThreadStart)
             // STACK: <empty>
         }
         if (isThreadRunMethod(methodName, desc)) {
@@ -55,7 +55,7 @@ internal class ThreadTransformer(
             visitTryCatchBlock(runMethodTryBlockStart, runMethodTryBlockEnd, runMethodCatchBlock, null)
             visitLabel(runMethodTryBlockStart)
             // STACK: <empty>
-            invokeStatic(Injections::beforeThreadStart)
+            invokeStatic(Injections::beforeThreadRun)
             // STACK: <empty>
         }
     }
@@ -64,7 +64,7 @@ internal class ThreadTransformer(
         // TODO: this approach does not support thread interruptions and any other thrown exceptions
         if (isThreadRunMethod(methodName, desc) && opcode == Opcodes.RETURN) {
             // STACK: <empty>
-            invokeStatic(Injections::afterThreadFinish)
+            invokeStatic(Injections::afterThreadRunReturn)
         }
         super.visitInsn(opcode)
     }
@@ -78,7 +78,7 @@ internal class ThreadTransformer(
         visitLabel(runMethodTryBlockEnd)
         visitLabel(runMethodCatchBlock)
         // STACK: exception
-        invokeStatic(Injections::onThreadRunException)
+        invokeStatic(Injections::afterThreadRunException)
         // STACK: <empty>
 
         // Notify that the thread has finished.
@@ -127,7 +127,7 @@ internal class ThreadTransformer(
             loadLocal(threadLocal)
             push(withTimeout)
             // STACK: thread, millis?, nanos?, thread, withTimeout
-            invokeStatic(Injections::threadJoin)
+            invokeStatic(Injections::onThreadJoin)
             // STACK: thread, millis?, nanos?
         }
         // In some newer versions of JDK, `ThreadPoolExecutor` uses
@@ -143,7 +143,7 @@ internal class ThreadTransformer(
             storeLocal(threadContainerLocal)
             dup()
             // STACK: thread, thread
-            invokeStatic(Injections::beforeThreadFork)
+            invokeStatic(Injections::beforeThreadStart)
             // STACK: thread
             loadLocal(threadContainerLocal)
             // STACK: thread, threadContainer
