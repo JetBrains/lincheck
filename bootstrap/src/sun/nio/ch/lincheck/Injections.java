@@ -94,19 +94,26 @@ public class Injections {
         eventTrackingMode = null;
     }
 
+    public static void enableEventTracking(EventTrackingMode mode) {
+        enableEventTracking(mode, null);
+    }
+
     /**
      * Enables tracking of all threads. Expects {@code eventTracker} to be the tracker
      * which will be responsible for registering existing threads when they generate some trace point.
      */
-    public static void enableGlobalThreadsTracking(EventTracker eventTracker) {
-        globalEventTracker = eventTracker;
+    public static void enableGlobalEventTracking(EventTracker eventTracker) {
+        enableEventTracking(EventTrackingMode.GLOBAL, eventTracker);
     }
 
     /**
      * Disables tracking of all threads.
      */
-    public static void disableGlobalThreadsTracking() {
-        globalEventTracker = null;
+    public static void disableGlobalEventTracking() {
+        if (eventTrackingMode != EventTrackingMode.GLOBAL) {
+            throw new IllegalStateException("Global event tracking is not enabled");
+        }
+        disableEventTracking();
     }
 
     /**
