@@ -92,14 +92,9 @@ internal class LocalVariablesAccessTransformer(
     @Suppress("UNUSED_PARAMETER")
     private fun GeneratorAdapter.processWriteVarInsn(localVariableInfo: LocalVariableInfo, opcode: Int, varIndex: Int) {
         super.visitVarInsn(opcode, varIndex)
-        invokeIfInAnalyzedCode(
-            original = {},
-            instrumented = {
-                // STACK: <empty>
-                trackLocalVariableAccess(localVariableInfo, AccessType.WRITE)
-                // STACK: <empty>
-            }
-        )
+        // STACK: <empty>
+        trackLocalVariableAccess(localVariableInfo, AccessType.WRITE)
+        // STACK: <empty>
     }
 
     private fun GeneratorAdapter.processReadVarInsn(localVariableInfo: LocalVariableInfo, opcode: Int, varIndex: Int) {
@@ -111,44 +106,33 @@ internal class LocalVariablesAccessTransformer(
         }
 
         super.visitVarInsn(opcode, varIndex)
-        invokeIfInAnalyzedCode(
-            original = {},
-            instrumented = {
-                // STACK: value
-                trackLocalVariableAccess(localVariableInfo, AccessType.READ)
-                // STACK: value
-            }
-        )
+        // STACK: value
+        trackLocalVariableAccess(localVariableInfo, AccessType.READ)
+        // STACK: value
     }
 
+    // loads the current value stored in the local variable and calls `afterLocalRead`/`afterLocalWrite` with it
     private fun GeneratorAdapter.trackLocalVariableAccess(variableInfo: LocalVariableInfo, accessType: AccessType) {
-        invokeIfInAnalyzedCode(
-            original = {},
-            // load the current value of stored in the local variable and call `afterLocalWrite` with it
-            instrumented = {
-                // STACK: <empty>
-                // Push descriptor, then other args to match new Injections API
-                invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
-                loadNewCodeLocationId()
-                val variableId = TRACE_CONTEXT.getOrCreateVariableId(variableInfo.name)
-                push(variableId)
-                // VerifyError with `loadLocal(..)`, here is a workaround
-                visitVarInsn(variableInfo.type.getVarInsnOpcode(), variableInfo.index)
-                box(variableInfo.type)
-                // STACK: descriptor, codeLocation, variableId, boxedValue
-                when (accessType) {
-                    AccessType.READ -> {
-                        invokeStatic(Injections::afterLocalRead)
-                        // invokeBeforeEventIfPluginEnabled("read local")
-                    }
-                    AccessType.WRITE -> {
-                        invokeStatic(Injections::afterLocalWrite)
-                        // invokeBeforeEventIfPluginEnabled("write local")
-                    }
-                }
-                // STACK: <empty>
+        // STACK: <empty>
+        invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
+        loadNewCodeLocationId()
+        val variableId = TRACE_CONTEXT.getOrCreateVariableId(variableInfo.name)
+        push(variableId)
+        // VerifyError with `loadLocal(..)`, here is a workaround
+        visitVarInsn(variableInfo.type.getVarInsnOpcode(), variableInfo.index)
+        box(variableInfo.type)
+        // STACK: descriptor, codeLocation, variableId, boxedValue
+        when (accessType) {
+            AccessType.READ -> {
+                invokeStatic(Injections::afterLocalRead)
+                // invokeBeforeEventIfPluginEnabled("read local")
             }
-        )
+            AccessType.WRITE -> {
+                invokeStatic(Injections::afterLocalWrite)
+                // invokeBeforeEventIfPluginEnabled("write local")
+            }
+        }
+        // STACK: <empty>
     }
 
     private enum class AccessType { READ, WRITE }
