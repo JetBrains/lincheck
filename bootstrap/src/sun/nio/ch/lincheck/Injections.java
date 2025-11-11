@@ -669,7 +669,9 @@ public class Injections {
      * Called at the beginning of every loop iteration (including the first one).
      */
     public static void onLoopIteration(int codeLocation, int loopId) {
-        getEventTracker().onLoopIteration(codeLocation, loopId);
+        EventTracker eventTracker = getEventTrackerIfInAnalyzedCode();
+        if (eventTracker == null) return;
+        getEventTrackerIfInAnalyzedCode().onLoopIteration(codeLocation, loopId);
     }
 
     /**
@@ -681,6 +683,8 @@ public class Injections {
      *   false if it is exclusive to the loop body.
      */
     public static void afterLoopExit(int codeLocation, int loopId, Throwable exception, boolean isReachableFromOutsideLoop) {
+        EventTracker eventTracker = getEventTrackerIfInAnalyzedCode();
+        if (eventTracker == null) return;
         getEventTracker().afterLoopExit(codeLocation, loopId, exception, isReachableFromOutsideLoop);
     }
 
