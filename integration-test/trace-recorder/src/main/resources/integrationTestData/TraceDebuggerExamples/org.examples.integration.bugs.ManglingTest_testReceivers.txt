@@ -4,6 +4,7 @@ ManglingTest.testReceivers() at :0
   testReceivers$lambda$7 = 1 at ManglingTest.kt:109
   ManglingTest.Wrapper.constructor-impl(2): 2 at ManglingTest.kt:110
   ManglingTest.Wrapper.box-impl(2): ManglingTest.Wrapper@1 at ManglingTest.kt:110
+    new ManglingTest.Wrapper(v ➜ 2): ManglingTest.Wrapper@1 at ManglingTest.kt:0
   ManglingTest.Wrapper@1.unbox-impl(): 2 at ManglingTest.kt:110
   ManglingTest.Wrapper.constructor-impl(4): 4 at ManglingTest.kt:111
   ManglingTest.Wrapper.f(testReceivers$lambda$7 ➜ 1, 2, 3, 4): "Wrapper(x=4) Wrapper(x=2) Wrapper(x=1) 3" at ManglingTest.kt:111
