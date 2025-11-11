@@ -115,18 +115,22 @@ object TraceRecorder {
         }
 
         val currentTracker = descriptor.eventTracker
-        val shouldFinish = (currentTracker == eventTracker)
 
-        if (shouldFinish) {
-            descriptor.disableAnalysis()
-        }
+        descriptor.disableAnalysis()
         Injections.disableGlobalThreadsTracking()
         ThreadDescriptor.unsetRootThread()
             .ensure { it == descriptor }
 
-        if (shouldFinish) {
-            eventTracker?.finishAndDumpTrace()
-            eventTracker = null
+        if (currentTracker != eventTracker) {
+            Logger.warn {
+                "Unexpected event tracker observed during trace finishing - " +
+                "most likely trace finishing invoked not from the same thread as trace starting" +
+                "(${Thread.currentThread().name})."
+            }
+            return
         }
+
+        eventTracker?.finishAndDumpTrace()
+        eventTracker = null
     }
 }
