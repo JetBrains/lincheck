@@ -9,44 +9,39 @@ ImmutableListTest.noOperation() at :0
         SmallPersistentVector.getEMPTY(): SmallPersistentVector@1 at Utils.kt:18
     result = SmallPersistentVector@1 at ImmutableListTest.kt:211
     mutate = SmallPersistentVector@1 at ImmutableListTest.kt:212
-    i$f$mutate = 0 at ImmutableListTest.kt:212
-    builder(): PersistentVectorBuilder@1 at extensions.kt:41
+    mutate.builder(): PersistentVectorBuilder@1 at extensions.kt:41
     mutating.invoke(PersistentVectorBuilder@1): Unit at extensions.kt:41
       testNoOperation.clear() at ImmutableListTest.kt:197
     PersistentVectorBuilder@1.build(): SmallPersistentVector@1 at extensions.kt:41
     buildResult = SmallPersistentVector@1 at ImmutableListTest.kt:212
-    assertTrue$default(true, null, 2, null) at ImmutableListTest.kt:214
-    assertTrue$default(true, null, 2, null) at ImmutableListTest.kt:215
+    assertTrue(true, null, 2, null) at ImmutableListTest.kt:214
+    assertTrue(true, null, 2, null) at ImmutableListTest.kt:215
   toPersistentList("abcxaxyz12"): SmallPersistentVector@1 at ImmutableListTest.kt:199
     persistentListOf(): SmallPersistentVector@1 at extensions.kt:623
       persistentVectorOf(): SmallPersistentVector@1 at extensions.kt:452
         SmallPersistentVector.getEMPTY(): SmallPersistentVector@1 at Utils.kt:18
     mutate = SmallPersistentVector@1 at extensions.kt:623
-    i$f$mutate = 0 at extensions.kt:623
-    builder(): PersistentVectorBuilder@1 at extensions.kt:41
+    mutate.builder(): PersistentVectorBuilder@1 at extensions.kt:41
     it = PersistentVectorBuilder@1 at extensions.kt:41
-    i$a$-mutate-ExtensionsKt$toPersistentList$1 = 0 at extensions.kt:41
     toCollection(toPersistentList ➜ "abcxaxyz12", it): PersistentVectorBuilder@1 at extensions.kt:623
     PersistentVectorBuilder@1.build(): SmallPersistentVector@1 at extensions.kt:41
   list = SmallPersistentVector@1 at ImmutableListTest.kt:199
-  noOperation_u24lambda_u2445 = SmallPersistentVector@1 at ImmutableListTest.kt:200
-  i$a$-with-ImmutableListTest$noOperation$3 = 0 at ImmutableListTest.kt:200
-  testNoOperation(noOperation_u24lambda_u2445, ImmutableListTest$$Lambda@1, ImmutableListTest$$Lambda@1) at ImmutableListTest.kt:201
+  noOperation$lambda$45 = SmallPersistentVector@1 at ImmutableListTest.kt:200
+  testNoOperation(noOperation$lambda$45, ImmutableListTest$$Lambda@1, ImmutableListTest$$Lambda@1) at ImmutableListTest.kt:201
     persistent.invoke(testNoOperation): SmallPersistentVector@1 at ImmutableListTest.kt:211
       Character.valueOf('d'): 'd' at ImmutableListTest.kt:201
       testNoOperation.remove('d'): SmallPersistentVector@1 at ImmutableListTest.kt:201
     result = SmallPersistentVector@1 at ImmutableListTest.kt:211
     mutate = SmallPersistentVector@1 at ImmutableListTest.kt:212
-    i$f$mutate = 0 at ImmutableListTest.kt:212
-    builder(): PersistentVectorBuilder@1 at extensions.kt:41
+    mutate.builder(): PersistentVectorBuilder@1 at extensions.kt:41
     mutating.invoke(PersistentVectorBuilder@1): Unit at extensions.kt:41
       Character.valueOf('d'): 'd' at ImmutableListTest.kt:201
       testNoOperation.remove('d'): false at ImmutableListTest.kt:201
     PersistentVectorBuilder@1.build(): SmallPersistentVector@1 at extensions.kt:41
     buildResult = SmallPersistentVector@1 at ImmutableListTest.kt:212
-    assertTrue$default(true, null, 2, null) at ImmutableListTest.kt:214
-    assertTrue$default(true, null, 2, null) at ImmutableListTest.kt:215
-  testNoOperation(noOperation_u24lambda_u2445, ImmutableListTest$$Lambda@1, ImmutableListTest$$Lambda@1) at ImmutableListTest.kt:202
+    assertTrue(true, null, 2, null) at ImmutableListTest.kt:214
+    assertTrue(true, null, 2, null) at ImmutableListTest.kt:215
+  testNoOperation(noOperation$lambda$45, ImmutableListTest$$Lambda@1, ImmutableListTest$$Lambda@1) at ImmutableListTest.kt:202
     persistent.invoke(testNoOperation): SmallPersistentVector@1 at ImmutableListTest.kt:211
       Character.valueOf('d'): 'd' at ImmutableListTest.kt:202
       Character;@1[0] = 'd' at ImmutableListTest.kt:202
@@ -56,8 +51,7 @@ ImmutableListTest.noOperation() at :0
       testNoOperation.removeAll(Arrays.ArrayList@1): SmallPersistentVector@1 at ImmutableListTest.kt:202
     result = SmallPersistentVector@1 at ImmutableListTest.kt:211
     mutate = SmallPersistentVector@1 at ImmutableListTest.kt:212
-    i$f$mutate = 0 at ImmutableListTest.kt:212
-    builder(): PersistentVectorBuilder@1 at extensions.kt:41
+    mutate.builder(): PersistentVectorBuilder@1 at extensions.kt:41
     mutating.invoke(PersistentVectorBuilder@1): Unit at extensions.kt:41
       Character.valueOf('d'): 'd' at ImmutableListTest.kt:202
       Character;@1[0] = 'd' at ImmutableListTest.kt:202
@@ -67,9 +61,9 @@ ImmutableListTest.noOperation() at :0
       testNoOperation.removeAll(Arrays.ArrayList@1): false at ImmutableListTest.kt:202
     PersistentVectorBuilder@1.build(): SmallPersistentVector@1 at extensions.kt:41
     buildResult = SmallPersistentVector@1 at ImmutableListTest.kt:212
-    assertTrue$default(true, null, 2, null) at ImmutableListTest.kt:214
-    assertTrue$default(true, null, 2, null) at ImmutableListTest.kt:215
-  testNoOperation(noOperation_u24lambda_u2445, ImmutableListTest$$Lambda@1, ImmutableListTest$$Lambda@1) at ImmutableListTest.kt:203
+    assertTrue(true, null, 2, null) at ImmutableListTest.kt:214
+    assertTrue(true, null, 2, null) at ImmutableListTest.kt:215
+  testNoOperation(noOperation$lambda$45, ImmutableListTest$$Lambda@1, ImmutableListTest$$Lambda@1) at ImmutableListTest.kt:203
     persistent.invoke(testNoOperation): SmallPersistentVector@1 at ImmutableListTest.kt:211
       testNoOperation.removeAll(ImmutableListTest$$Lambda@1): SmallPersistentVector@1 at ImmutableListTest.kt:203
         isUpperCase(it ➜ 'a'): false at ImmutableListTest.kt:203
@@ -84,8 +78,7 @@ ImmutableListTest.noOperation() at :0
         isUpperCase(it ➜ '2'): false at ImmutableListTest.kt:203
     result = SmallPersistentVector@1 at ImmutableListTest.kt:211
     mutate = SmallPersistentVector@1 at ImmutableListTest.kt:212
-    i$f$mutate = 0 at ImmutableListTest.kt:212
-    builder(): PersistentVectorBuilder@1 at extensions.kt:41
+    mutate.builder(): PersistentVectorBuilder@1 at extensions.kt:41
     mutating.invoke(PersistentVectorBuilder@1): Unit at extensions.kt:41
       removeAll(testNoOperation, ImmutableListTest$$Lambda@1): false at ImmutableListTest.kt:203
         isUpperCase(it ➜ 'a'): false at ImmutableListTest.kt:203
@@ -100,50 +93,47 @@ ImmutableListTest.noOperation() at :0
         isUpperCase(it ➜ '2'): false at ImmutableListTest.kt:203
     PersistentVectorBuilder@1.build(): SmallPersistentVector@1 at extensions.kt:41
     buildResult = SmallPersistentVector@1 at ImmutableListTest.kt:212
-    assertTrue$default(true, null, 2, null) at ImmutableListTest.kt:214
-    assertTrue$default(true, null, 2, null) at ImmutableListTest.kt:215
-  testNoOperation(noOperation_u24lambda_u2445, ImmutableListTest$$Lambda@1, ImmutableListTest$$Lambda@1) at ImmutableListTest.kt:204
+    assertTrue(true, null, 2, null) at ImmutableListTest.kt:214
+    assertTrue(true, null, 2, null) at ImmutableListTest.kt:215
+  testNoOperation(noOperation$lambda$45, ImmutableListTest$$Lambda@1, ImmutableListTest$$Lambda@1) at ImmutableListTest.kt:204
     persistent.invoke(testNoOperation): SmallPersistentVector@1 at ImmutableListTest.kt:211
       emptyList(): EmptyList@1 at ImmutableListTest.kt:204
       testNoOperation.removeAll(EmptyList@1): SmallPersistentVector@1 at ImmutableListTest.kt:204
     result = SmallPersistentVector@1 at ImmutableListTest.kt:211
     mutate = SmallPersistentVector@1 at ImmutableListTest.kt:212
-    i$f$mutate = 0 at ImmutableListTest.kt:212
-    builder(): PersistentVectorBuilder@1 at extensions.kt:41
+    mutate.builder(): PersistentVectorBuilder@1 at extensions.kt:41
     mutating.invoke(PersistentVectorBuilder@1): Unit at extensions.kt:41
       emptyList(): EmptyList@1 at ImmutableListTest.kt:204
       testNoOperation.removeAll(EmptyList@1): false at ImmutableListTest.kt:204
     PersistentVectorBuilder@1.build(): SmallPersistentVector@1 at extensions.kt:41
     buildResult = SmallPersistentVector@1 at ImmutableListTest.kt:212
-    assertTrue$default(true, null, 2, null) at ImmutableListTest.kt:214
-    assertTrue$default(true, null, 2, null) at ImmutableListTest.kt:215
-  testNoOperation(noOperation_u24lambda_u2445, ImmutableListTest$$Lambda@1, ImmutableListTest$$Lambda@1) at ImmutableListTest.kt:205
+    assertTrue(true, null, 2, null) at ImmutableListTest.kt:214
+    assertTrue(true, null, 2, null) at ImmutableListTest.kt:215
+  testNoOperation(noOperation$lambda$45, ImmutableListTest$$Lambda@1, ImmutableListTest$$Lambda@1) at ImmutableListTest.kt:205
     persistent.invoke(testNoOperation): SmallPersistentVector@1 at ImmutableListTest.kt:211
       emptyList(): EmptyList@1 at ImmutableListTest.kt:205
       testNoOperation.addAll(EmptyList@1): SmallPersistentVector@1 at ImmutableListTest.kt:205
     result = SmallPersistentVector@1 at ImmutableListTest.kt:211
     mutate = SmallPersistentVector@1 at ImmutableListTest.kt:212
-    i$f$mutate = 0 at ImmutableListTest.kt:212
-    builder(): PersistentVectorBuilder@1 at extensions.kt:41
+    mutate.builder(): PersistentVectorBuilder@1 at extensions.kt:41
     mutating.invoke(PersistentVectorBuilder@1): Unit at extensions.kt:41
       emptyList(): EmptyList@1 at ImmutableListTest.kt:205
       testNoOperation.addAll(EmptyList@1): false at ImmutableListTest.kt:205
     PersistentVectorBuilder@1.build(): SmallPersistentVector@1 at extensions.kt:41
     buildResult = SmallPersistentVector@1 at ImmutableListTest.kt:212
-    assertTrue$default(true, null, 2, null) at ImmutableListTest.kt:214
-    assertTrue$default(true, null, 2, null) at ImmutableListTest.kt:215
-  testNoOperation(noOperation_u24lambda_u2445, ImmutableListTest$$Lambda@1, ImmutableListTest$$Lambda@1) at ImmutableListTest.kt:206
+    assertTrue(true, null, 2, null) at ImmutableListTest.kt:214
+    assertTrue(true, null, 2, null) at ImmutableListTest.kt:215
+  testNoOperation(noOperation$lambda$45, ImmutableListTest$$Lambda@1, ImmutableListTest$$Lambda@1) at ImmutableListTest.kt:206
     persistent.invoke(testNoOperation): SmallPersistentVector@1 at ImmutableListTest.kt:211
       emptyList(): EmptyList@1 at ImmutableListTest.kt:206
       testNoOperation.addAll(2, EmptyList@1): SmallPersistentVector@1 at ImmutableListTest.kt:206
     result = SmallPersistentVector@1 at ImmutableListTest.kt:211
     mutate = SmallPersistentVector@1 at ImmutableListTest.kt:212
-    i$f$mutate = 0 at ImmutableListTest.kt:212
-    builder(): PersistentVectorBuilder@1 at extensions.kt:41
+    mutate.builder(): PersistentVectorBuilder@1 at extensions.kt:41
     mutating.invoke(PersistentVectorBuilder@1): Unit at extensions.kt:41
       emptyList(): EmptyList@1 at ImmutableListTest.kt:206
       testNoOperation.addAll(2, EmptyList@1): false at ImmutableListTest.kt:206
     PersistentVectorBuilder@1.build(): SmallPersistentVector@1 at extensions.kt:41
     buildResult = SmallPersistentVector@1 at ImmutableListTest.kt:212
-    assertTrue$default(true, null, 2, null) at ImmutableListTest.kt:214
-    assertTrue$default(true, null, 2, null) at ImmutableListTest.kt:215
+    assertTrue(true, null, 2, null) at ImmutableListTest.kt:214
+    assertTrue(true, null, 2, null) at ImmutableListTest.kt:215

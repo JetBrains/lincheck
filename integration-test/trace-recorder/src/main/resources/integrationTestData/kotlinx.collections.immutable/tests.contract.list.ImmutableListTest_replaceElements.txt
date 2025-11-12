@@ -7,15 +7,14 @@ ImmutableListTest.replaceElements() at :0
         persistentVectorOf(): SmallPersistentVector@1 at extensions.kt:452
           SmallPersistentVector.getEMPTY(): SmallPersistentVector@1 at Utils.kt:18
       mutate = SmallPersistentVector@1 at extensions.kt:623
-      i$f$mutate = 0 at extensions.kt:623
-      builder(): PersistentVectorBuilder@1 at extensions.kt:41
+      mutate.builder(): PersistentVectorBuilder@1 at extensions.kt:41
       it = PersistentVectorBuilder@1 at extensions.kt:41
-      i$a$-mutate-ExtensionsKt$toPersistentList$1 = 0 at extensions.kt:41
       toCollection(toPersistentList ➜ "abcxaxab12", it): PersistentVectorBuilder@1 at extensions.kt:623
       PersistentVectorBuilder@1.build(): SmallPersistentVector@1 at extensions.kt:41
   toPersistentList(SmallPersistentVector@1): SmallPersistentVector@1 at ImmutableListTest.kt:91
   list = SmallPersistentVector@1 at ImmutableListTest.kt:91
   i = 0 at ImmutableListTest.kt:93
+  list.size(): 10 at ImmutableListTest.kt:93
   loop(10 iterations) at ImmutableListTest.kt:93
     <iteration 1> at ImmutableListTest.kt:93
       list.get(i ➜ 0): 'a' at ImmutableListTest.kt:94
@@ -87,19 +86,16 @@ ImmutableListTest.replaceElements() at :0
       list.set(i ➜ 9, ';'): SmallPersistentVector@1 at ImmutableListTest.kt:94
       list = SmallPersistentVector@1 at ImmutableListTest.kt:94
       i = 10 at ImmutableListTest.kt:93
-  joinToString$default(list, "", null, null, 0, null, null, 62, null): "ace{e}gi9;" at ImmutableListTest.kt:97
-  assertEquals$default("ace{e}gi9;", "ace{e}gi9;", null, 4, null) at ImmutableListTest.kt:97
-  Reflection.getOrCreateKotlinClass(Class@1): KClassImpl@1 at ImmutableListTest.kt:98
-  i$a$-assertFailsWith$default-ImmutableListTest$replaceElements$1 = 0 at fake.kt:1
+  joinToString(list, "", null, null, 0, null, null, 62, null): "ace{e}gi9;" at ImmutableListTest.kt:97
+  assertEquals("ace{e}gi9;", "ace{e}gi9;", null, 4, null) at ImmutableListTest.kt:97
   Character.valueOf('0'): '0' at ImmutableListTest.kt:98
   list.set(-1, '0'): threw IndexOutOfBoundsException at ImmutableListTest.kt:98
   createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ImmutableListTest.kt:98
   Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ImmutableListTest.kt:98
-  checkResultIsFailure(KClassImpl@1, null, Result.Failure@1): IndexOutOfBoundsException@1 at ImmutableListTest.kt:98
-  Reflection.getOrCreateKotlinClass(Class@1): KClassImpl@1 at ImmutableListTest.kt:99
-  i$a$-assertFailsWith$default-ImmutableListTest$replaceElements$2 = 0 at fake.kt:1
+  checkResultIsFailure(IndexOutOfBoundsException.kclass, null, Result.Failure@1): IndexOutOfBoundsException@1 at ImmutableListTest.kt:98
+  list.size(): 10 at ImmutableListTest.kt:99
   Character.valueOf('0'): '0' at ImmutableListTest.kt:99
   list.set(11, '0'): threw IndexOutOfBoundsException at ImmutableListTest.kt:99
   createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ImmutableListTest.kt:99
   Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ImmutableListTest.kt:99
-  checkResultIsFailure(KClassImpl@1, null, Result.Failure@1): IndexOutOfBoundsException@1 at ImmutableListTest.kt:99
+  checkResultIsFailure(IndexOutOfBoundsException.kclass, null, Result.Failure@1): IndexOutOfBoundsException@1 at ImmutableListTest.kt:99
