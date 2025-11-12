@@ -41,7 +41,8 @@ object LincheckClassFileTransformer : ClassFileTransformer {
     val transformedClassesCache
         get() = transformedClassesCachesByMode.computeIfAbsent(instrumentationMode) { ConcurrentHashMap() }
 
-    private val statsTracker = TransformationStatisticsTracker()
+    private val statsTracker: TransformationStatisticsTracker? =
+        if (collectTransformationStatistics) TransformationStatisticsTracker() else null
 
     override fun transform(
         loader: ClassLoader?,
@@ -123,7 +124,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
                 classNode.accept(visitor)
             }
             writer.toByteArray().also { transformedBytes ->
-                statsTracker.saveStatistics(
+                statsTracker?.saveStatistics(
                     originalClassNode = classNode,
                     originalClassBytes = classBytes,
                     transformedClassBytes = transformedBytes,
@@ -140,8 +141,8 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         }
     }
 
-    fun computeStatistics(): TransformationStatistics =
-        statsTracker.computeStatistics()
+    fun computeStatistics(): TransformationStatistics? =
+        statsTracker?.computeStatistics()
 
     private fun dumpClassBytecode(className: String, bytes: ByteArray?) {
         val cr = ClassReader(bytes)

@@ -484,3 +484,8 @@ internal val dumpTransformedSources by lazy {
     System.getProperty(DUMP_TRANSFORMED_SOURCES_PROPERTY, "false").toBoolean()
 }
 private const val DUMP_TRANSFORMED_SOURCES_PROPERTY = "lincheck.dumpTransformedSources"
+
+internal val collectTransformationStatistics by lazy {
+    System.getProperty(COLLECT_TRANSFORMATION_STATISTICS_PROPERTY, "false").toBoolean()
+}
+private const val COLLECT_TRANSFORMATION_STATISTICS_PROPERTY = "lincheck.collectTransformationStatistics"
