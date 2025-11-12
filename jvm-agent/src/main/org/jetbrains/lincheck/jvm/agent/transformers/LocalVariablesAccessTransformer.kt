@@ -31,6 +31,8 @@ internal class LocalVariablesAccessTransformer(
     val configuration: TransformationConfiguration,
 ) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
 
+    override val requiresTypeAnalyzer: Boolean = true
+
     private val isStatic: Boolean = (access and ACC_STATIC != 0)
 
     private val numberOfLocals = convertAsmMethodType(descriptor).argumentTypes.size + if (isStatic) 0 else 1
@@ -45,9 +47,14 @@ internal class LocalVariablesAccessTransformer(
         }
 
         if (configuration.trackLocalVariableWrites) {
-            // For each variable that starts at this label, read its value and inject an `afterLocalWrite` call
+            // For each variable that starts at this label, read its value and inject an `afterLocalWrite` call.
+            // Local variable initialization might go before the label from which it starts to live, that is why
+            // we insert `afterLocalWrite`, however, it is not always the case, so we need to check the actual locals count
+            val livingLocalsCount = typeAnalyzer?.locals?.size ?: 0
             methodInfo.locals.variablesStartAt(label).forEach {
-                registerLocalVariableAccess(it, AccessType.WRITE)
+                if (it.index < livingLocalsCount) {
+                    registerLocalVariableAccess(it, AccessType.WRITE)
+                }
             }
         }
 
