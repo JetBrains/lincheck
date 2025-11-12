@@ -94,31 +94,26 @@ class TransformationStatisticsTracker {
         )
     }
 
-    fun getTransformationStatistics(): TransformationStatistics {
+    fun computeStatistics(): TransformationStatistics {
         val classes = classStats.toList()
         val methods = methodStats.toList()
-
-        val totalClasses = classes.size
-        val totalMethods = methods.size
-
-        val avgClassBefore = classes.map { it.classBytesSizeBefore.toLong() }.averageOrNull() ?: 0.0
-        val avgClassAfter = classes.map { it.classBytesSizeAfter.toLong() }.averageOrNull() ?: 0.0
-
-        val avgMethodBefore = methods.map { it.methodInstructionsCountBefore.toLong() }.averageOrNull() ?: 0.0
-        val avgMethodAfter = methods.map { it.methodInstructionsCountAfter.toLong() }.averageOrNull() ?: 0.0
-
-        val totalTime = classes.sumOf { it.transformationTimeNanos }
-        val avgTime = classes.map { it.transformationTimeNanos }.averageOrNull() ?: 0.0
-
         return TransformationStatistics(
-            totalTransformedClassesCount = totalClasses,
-            totalTransformedMethodsCount = totalMethods,
-            averageClassBytesSizeBefore = avgClassBefore,
-            averageClassBytesSizeAfter = avgClassAfter,
-            averageMethodInstructionsCountBefore = avgMethodBefore,
-            averageMethodInstructionsCountAfter = avgMethodAfter,
-            totalTransformationTimeNanos = totalTime,
-            averageTransformationTimeNanos = avgTime,
+            totalTransformedClassesCount =
+                classes.size,
+            totalTransformedMethodsCount =
+                methods.size,
+            averageClassBytesSizeBefore =
+                classes.map { it.classBytesSizeBefore.toLong() }.averageOrNull() ?: 0.0,
+            averageClassBytesSizeAfter =
+                classes.map { it.classBytesSizeAfter.toLong() }.averageOrNull() ?: 0.0,
+            averageMethodInstructionsCountBefore =
+                methods.map { it.methodInstructionsCountBefore.toLong() }.averageOrNull() ?: 0.0,
+            averageMethodInstructionsCountAfter =
+                methods.map { it.methodInstructionsCountAfter.toLong() }.averageOrNull() ?: 0.0,
+            totalTransformationTimeNanos =
+                classes.sumOf { it.transformationTimeNanos },
+            averageTransformationTimeNanos =
+                classes.map { it.transformationTimeNanos }.averageOrNull() ?: 0.0,
         )
     }
 

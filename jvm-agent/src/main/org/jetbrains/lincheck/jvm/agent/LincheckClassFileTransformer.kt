@@ -141,7 +141,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
     }
 
     fun computeStatistics(): TransformationStatistics =
-        statsTracker.getTransformationStatistics()
+        statsTracker.computeStatistics()
 
     private fun dumpClassBytecode(className: String, bytes: ByteArray?) {
         val cr = ClassReader(bytes)
