@@ -87,60 +87,60 @@ class TransformationStatisticsTracker {
                 classes.map { it.transformationTimeNanos }.averageOrNull() ?: 0.0,
         )
     }
+}
 
-    private class ClassStatisticsTracker {
-        var classStats: ClassTransformationStatistics? = null
-            private set
+private class ClassStatisticsTracker {
+    var classStats: ClassTransformationStatistics? = null
+        private set
 
-        private val _methodStats: MutableList<MethodTransformationStatistics> = mutableListOf()
-        val methodStats: List<MethodTransformationStatistics> get() = _methodStats
+    private val _methodStats: MutableList<MethodTransformationStatistics> = mutableListOf()
+    val methodStats: List<MethodTransformationStatistics> get() = _methodStats
 
-        val isRecorded: Boolean get() = (classStats != null)
+    val isRecorded: Boolean get() = (classStats != null)
 
-        fun saveStatistics(
-            originalClassNode: ClassNode,
-            originalClassBytes: ByteArray,
-            transformedClassBytes: ByteArray,
-            transformationTimeNanos: Long,
-        ) {
-            check(classStats == null) { "Class statistics already recorded" }
+    fun saveStatistics(
+        originalClassNode: ClassNode,
+        originalClassBytes: ByteArray,
+        transformedClassBytes: ByteArray,
+        transformationTimeNanos: Long,
+    ) {
+        check(classStats == null) { "Class statistics already recorded" }
 
-            classStats = ClassTransformationStatistics(
+        classStats = ClassTransformationStatistics(
+            className = originalClassNode.name,
+            classBytesSizeBefore = originalClassBytes.size,
+            classBytesSizeAfter = transformedClassBytes.size,
+            transformationTimeNanos = transformationTimeNanos,
+        )
+
+        originalClassNode.methods.forEach { originalMethodNode ->
+            saveMethodStatistics(
                 className = originalClassNode.name,
-                classBytesSizeBefore = originalClassBytes.size,
-                classBytesSizeAfter = transformedClassBytes.size,
-                transformationTimeNanos = transformationTimeNanos,
-            )
-
-            originalClassNode.methods.forEach { originalMethodNode ->
-                saveMethodStatistics(
-                    className = originalClassNode.name,
-                    methodName = originalMethodNode.name,
-                    methodDescriptor = originalMethodNode.desc,
-                    originalMethodNode = originalMethodNode
-                )
-            }
-        }
-
-        private fun saveMethodStatistics(
-            className: String,
-            methodName: String,
-            methodDescriptor: String,
-            originalMethodNode: MethodNode,
-        ) {
-            val before = originalMethodNode.countInstructions()
-            val after = -1 // TODO
-
-            _methodStats.add(
-                MethodTransformationStatistics(
-                    className = className,
-                    methodName = methodName,
-                    methodDescriptor = methodDescriptor,
-                    methodInstructionsCountBefore = before,
-                    methodInstructionsCountAfter = after,
-                )
+                methodName = originalMethodNode.name,
+                methodDescriptor = originalMethodNode.desc,
+                originalMethodNode = originalMethodNode
             )
         }
+    }
+
+    private fun saveMethodStatistics(
+        className: String,
+        methodName: String,
+        methodDescriptor: String,
+        originalMethodNode: MethodNode,
+    ) {
+        val before = originalMethodNode.countInstructions()
+        val after = -1 // TODO
+
+        _methodStats.add(
+            MethodTransformationStatistics(
+                className = className,
+                methodName = methodName,
+                methodDescriptor = methodDescriptor,
+                methodInstructionsCountBefore = before,
+                methodInstructionsCountAfter = after,
+            )
+        )
     }
 }
 
