@@ -31,6 +31,7 @@ class TransformationConfiguration(
     var trackArrayElementWrites: Boolean = false,
 
     var trackMethodCalls: Boolean = false,
+    var trackConstructorCalls: Boolean = false,
     var trackInlineMethodCalls: Boolean = false,
 
     var trackThreadsOperations: Boolean = false,
@@ -241,7 +242,7 @@ object TraceRecorderDefaultTransformationProfile : TransformationProfile {
         // Currently, constructors are treated in a special way to avoid problems
         // with `VerificationError` due to leaking this problem,
         // see: https://github.com/JetBrains/lincheck/issues/424
-        if ((methodName == "<init>")) {
+        if (methodName == "<init>") {
             return config.apply {
                 trackObjectCreations = true
             }
@@ -255,6 +256,7 @@ object TraceRecorderDefaultTransformationProfile : TransformationProfile {
             trackArrayElementWrites = true
 
             trackMethodCalls = true
+            trackConstructorCalls = true
             trackInlineMethodCalls = false
 
             trackLoops = true
@@ -357,7 +359,7 @@ object ModelCheckingDefaultTransformationProfile : TransformationProfile {
         // Currently, constructors are treated in a special way to avoid problems
         // with `VerificationError` due to leaking this problem,
         // see: https://github.com/JetBrains/lincheck/issues/424
-        if ((methodName == "<init>")) {
+        if (methodName == "<init>") {
             return config.apply {
                 trackObjectCreations = true
                 trackAllSharedMemoryAccesses = true

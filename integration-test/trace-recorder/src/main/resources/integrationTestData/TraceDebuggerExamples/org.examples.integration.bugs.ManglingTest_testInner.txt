@@ -1,5 +1,7 @@
 # Thread 1
 ManglingTest.testInner() at :0
+  new ManglingTest.Inner(): ManglingTest.Inner@1 at ManglingTest.kt:70
+  new ManglingTest.Inner.Deeper(ManglingTest.Inner@1): ManglingTest.Inner.Deeper@1 at ManglingTest.kt:70
   ManglingTest.Inner.Deeper@1.f(): "org.examples.integration.bugs.ManglingTest@1:org.e" at ManglingTest.kt:70
     outer = ManglingTest@1 at ManglingTest.kt:60
     inner = ManglingTest.Inner@1 at ManglingTest.kt:61

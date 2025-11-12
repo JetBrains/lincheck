@@ -1,6 +1,7 @@
 # Thread 1
 EmptyForLoopRepresentationTest.operation() at :0
   escape = "START" at EmptyForLoopRepresentationTest.kt:19
+  new StringBuilder(): StringBuilder@1("") at EmptyForLoopRepresentationTest.kt:20
   builder = StringBuilder@1("") at EmptyForLoopRepresentationTest.kt:20
   i = 1 at EmptyForLoopRepresentationTest.kt:21
   loop(2 iterations) at EmptyForLoopRepresentationTest.kt:21

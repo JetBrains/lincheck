@@ -121,7 +121,7 @@ internal class LincheckClassVisitor(
 
         // ======== Method Calls ========
         chain.addTransformer { adapter, mv ->
-            applyMethodCallTransformer(methodName, desc, access, methodInfo, adapter, mv)
+            applyMethodCallTransformer(methodName, desc, access, methodInfo, config, adapter, mv)
         }
 
         // ======== Object Creation ========
@@ -183,7 +183,7 @@ internal class LincheckClassVisitor(
         }
 
         // ======== Analyzers ========
-        chain.addAnalyzerAdapter(access, className, methodName, desc)
+        chain.addTypeAnalyzerAdapter(access, className, methodName, desc)
         chain.addOwnerNameAnalyzerAdapter(access, className, methodName, desc, methodInfo)
 
         mv = chain.methodVisitors.last()
@@ -229,14 +229,15 @@ internal class LincheckClassVisitor(
         desc: String,
         access: Int,
         methodInfo: MethodInformation,
+        configuration: TransformationConfiguration,
         adapter: GeneratorAdapter,
         methodVisitor: MethodVisitor,
     ): MethodCallTransformerBase {
         var mv = methodVisitor
         if (instrumentationMode == TRACE_RECORDING) {
-            mv = MethodCallMinimalTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+            mv = MethodCallMinimalTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv, configuration)
         } else {
-            mv = MethodCallTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+            mv = MethodCallTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv, configuration)
         }
         return mv
     }

@@ -40,17 +40,32 @@ internal class MethodCallMinimalTransformer(
     methodInfo: MethodInformation,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
-) : MethodCallTransformerBase(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
+    configuration: TransformationConfiguration,
+) : MethodCallTransformerBase(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor, configuration) {
 
     override fun processMethodCall(desc: String, opcode: Int, owner: String, name: String, itf: Boolean) = adapter.run {
+        val isConstructorCall = (name == "<init>")
         val receiverType = getType("L$owner;")
-        val returnType = getReturnType(desc)
         val argumentNames = getArgumentNames(desc, opcode)
         val ownerName = when {
             opcode == INVOKESTATIC && name.endsWith($$"$default") &&
                     argumentNames?.firstOrNull()?.locations?.singleOrNull()?.isThisAccess() == true -> argumentNames[0]
             else -> getOwnerName(desc, opcode)
         }
+
+        // We assume that constructors return an object even though they don't
+        // (because their descriptor specifies the 'void' return type).
+        // Later 'processMethodCallReturn' takes this object and reports it as "return value" of a constructor.
+        //
+        // This assumption holds because the constructor invocation bytecode sequence looks as follows:
+        // `NEW Clazz; DUP; push args; INVOKESPECIAL Clazz.<init>`.
+        //
+        // Before invoking the `<init>` method, the stack has the following shape:
+        //   `STACK: this (uninitialized), this (uninitialized), args`
+        // and after its invocation:
+        //    `STACK: this (initialized)`.
+        val returnType = if (isConstructorCall) receiverType else getReturnType(desc)
+
         // STACK: receiver?, arguments
         val argumentLocals = storeArguments(desc)
         val argumentsArrayLocal = newLocal(OBJECT_ARRAY_TYPE).also {
@@ -58,7 +73,7 @@ internal class MethodCallMinimalTransformer(
             storeLocal(it)
         }
         val receiverLocal = when {
-            (opcode != INVOKESTATIC) -> newLocal(receiverType).also { storeLocal(it) }
+            (opcode != INVOKESTATIC && !isConstructorCall) -> newLocal(receiverType).also { storeLocal(it) }
             else -> null
         }
         val sanitizedMethodName = sanitizeMethodName(owner, name, InstrumentationMode.TRACE_RECORDING)

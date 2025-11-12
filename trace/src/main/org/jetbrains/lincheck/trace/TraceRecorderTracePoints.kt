@@ -158,6 +158,8 @@ class TRMethodCallTracePoint(
 
     fun isStatic(): Boolean = obj == null
 
+    fun isConstructor(): Boolean = methodName == "<init>"
+
     fun isCalledFromDefiningClass(): Boolean {
         val parent = (parentTracePoint as? TRMethodCallTracePoint) ?: return false
         return className.let {

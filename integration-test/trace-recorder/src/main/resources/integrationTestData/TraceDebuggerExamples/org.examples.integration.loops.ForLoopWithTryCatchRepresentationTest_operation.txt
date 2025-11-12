@@ -9,6 +9,7 @@ ForLoopWithTryCatchRepresentationTest.operation() at :0
       i = 2 at ForLoopWithTryCatchRepresentationTest.kt:27
     <iteration 2> at ForLoopWithTryCatchRepresentationTest.kt:27
       a = 2 at ForLoopWithTryCatchRepresentationTest.kt:28
+      new RuntimeException("Exception in loop"): RuntimeException@1 at ForLoopWithTryCatchRepresentationTest.kt:31
       e = RuntimeException@1 at ForLoopWithTryCatchRepresentationTest.kt:34
       escape = "catch-2" at ForLoopWithTryCatchRepresentationTest.kt:35
       i = 3 at ForLoopWithTryCatchRepresentationTest.kt:27

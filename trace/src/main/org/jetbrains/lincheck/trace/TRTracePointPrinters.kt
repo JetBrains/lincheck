@@ -120,14 +120,22 @@ class DefaultTRTextAppendable(
 abstract class AbstractTRMethodCallTracePointPrinter() {
 
     protected fun TRAppendable.appendTracePoint(tracePoint: TRMethodCallTracePoint): TRAppendable {
-        val md = tracePoint.methodDescriptor
-
-        appendOwner(tracePoint)
-        appendMethodName(md)
-        appendSpecialSymbol("(")
-        appendParameters(tracePoint)
-        appendSpecialSymbol(")")
-        appendResult(tracePoint)
+        if (tracePoint.isConstructor()) {
+            appendKeyword("new")
+            appendSpecialSymbol(" ")
+            appendClassName(tracePoint.classDescriptor)
+            appendSpecialSymbol("(")
+            appendParameters(tracePoint)
+            appendSpecialSymbol(")")
+            appendResult(tracePoint)
+        } else {
+            appendOwner(tracePoint)
+            appendMethodName(tracePoint.methodDescriptor)
+            appendSpecialSymbol("(")
+            appendParameters(tracePoint)
+            appendSpecialSymbol(")")
+            appendResult(tracePoint)
+        }
         return this
     }
 

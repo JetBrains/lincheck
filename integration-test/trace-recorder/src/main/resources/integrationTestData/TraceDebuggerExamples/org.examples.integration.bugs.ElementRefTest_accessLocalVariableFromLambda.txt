@@ -1,5 +1,6 @@
 # Thread 1
 ElementRefTest.accessLocalVariableFromLambda() at :0
+  new IntRef(): IntRef@1 at ElementRefTest.kt:9
   localVariable = IntRef@1 at ElementRefTest.kt:9
   localVariable = 1 at ElementRefTest.kt:9
   modify = ElementRefTest$$Lambda@1 at ElementRefTest.kt:10

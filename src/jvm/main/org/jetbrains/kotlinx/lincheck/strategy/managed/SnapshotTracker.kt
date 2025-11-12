@@ -275,8 +275,7 @@ class SnapshotTracker {
     private fun createFieldNode(obj: Any?, field: Field, value: Any?): MemoryNode {
         return if (obj == null) {
             StaticFieldNode(field, value)
-        }
-        else {
+        } else {
             RegularFieldNode(field, value)
         }
     }
