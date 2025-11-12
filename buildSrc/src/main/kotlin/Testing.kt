@@ -51,6 +51,10 @@ fun Test.configureJvmTestCommon(project: Project) {
     if (dumpTransformedSources.toBoolean()) {
         extraArgs.add("-Dlincheck.dumpTransformedSources=true")
     }
+    val collectTransformationStatistics: String by project
+    if (collectTransformationStatistics.toBoolean()) {
+        extraArgs.add("-Dlincheck.collectTransformationStatistics=true")
+    }
     extraArgs.add("-Dlincheck.version=${project.version}")
 
     project.findProperty("lincheck.logFile")?.let { extraArgs.add("-Dlincheck.logFile=${it as String}") }
