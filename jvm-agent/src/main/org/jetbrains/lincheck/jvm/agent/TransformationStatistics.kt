@@ -10,6 +10,7 @@
 
 package org.jetbrains.lincheck.jvm.agent
 
+import org.jetbrains.lincheck.util.averageOrNull
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.MethodNode
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -100,14 +101,14 @@ class TransformationStatisticsTracker {
         val totalClasses = classes.size
         val totalMethods = methods.size
 
-        val avgClassBefore = if (totalClasses == 0) 0.0 else classes.map { it.classBytesSizeBefore.toLong() }.average()
-        val avgClassAfter = if (totalClasses == 0) 0.0 else classes.map { it.classBytesSizeAfter.toLong() }.average()
+        val avgClassBefore = classes.map { it.classBytesSizeBefore.toLong() }.averageOrNull() ?: 0.0
+        val avgClassAfter = classes.map { it.classBytesSizeAfter.toLong() }.averageOrNull() ?: 0.0
 
-        val avgMethodBefore = if (totalMethods == 0) 0.0 else methods.map { it.methodInstructionsCountBefore.toLong() }.average()
-        val avgMethodAfter = if (totalMethods == 0) 0.0 else methods.map { it.methodInstructionsCountAfter.toLong() }.average()
+        val avgMethodBefore = methods.map { it.methodInstructionsCountBefore.toLong() }.averageOrNull() ?: 0.0
+        val avgMethodAfter = methods.map { it.methodInstructionsCountAfter.toLong() }.averageOrNull() ?: 0.0
 
         val totalTime = classes.sumOf { it.transformationTimeNanos }
-        val avgTime = if (totalClasses == 0) 0.0 else classes.map { it.transformationTimeNanos }.average()
+        val avgTime = classes.map { it.transformationTimeNanos }.averageOrNull() ?: 0.0
 
         return TransformationStatistics(
             totalTransformedClassesCount = totalClasses,
