@@ -725,7 +725,10 @@ fun TRObjectOrVoid(obj: Any?): TRObject? =
 
 const val MAX_TROBJECT_STRING_LENGTH = 50
 
-private fun trimString(s: CharSequence): String = s.take(MAX_TROBJECT_STRING_LENGTH).toString()
+private fun CharSequence.trimToString(): String {
+    val string = toString()
+    return if (string.length > MAX_TROBJECT_STRING_LENGTH) "${string.take(MAX_TROBJECT_STRING_LENGTH)}..." else string
+}
 
 fun TRObject(obj: Any): TRObject {
     val defaultTRObject = { TRObject(TRACE_CONTEXT.getOrCreateClassId(obj.javaClass.name), System.identityHashCode(obj), null) }
@@ -738,9 +741,12 @@ fun TRObject(obj: Any): TRObject {
         is Float -> TRObject(TR_OBJECT_P_FLOAT, 0, obj)
         is Double -> TRObject(TR_OBJECT_P_DOUBLE, 0, obj)
         is Char -> TRObject(TR_OBJECT_P_CHAR, 0, obj)
-        is String -> TRObject(TR_OBJECT_P_STRING, 0, trimString(obj))
-        is StringBuilder -> TRObject(TR_OBJECT_P_STRING_BUILDER, System.identityHashCode(obj), obj.toString())
-        is CharSequence -> runCatching { trimString(obj) }.let {
+        is String -> TRObject(TR_OBJECT_P_STRING, 0, obj.trimToString())
+        is StringBuilder -> TRObject(
+            TR_OBJECT_P_STRING_BUILDER, System.identityHashCode(obj), obj.trimToString()
+        )
+
+        is CharSequence -> runCatching { obj.trimToString() }.let {
             // Some implementations of CharSequence might throw when `subSequence` is invoked at some unexpected moment,
             // like when this sequence is considered "destroyed" at this point
             if (it.isSuccess) TRObject(TR_OBJECT_P_STRING, 0, it.getOrThrow())
