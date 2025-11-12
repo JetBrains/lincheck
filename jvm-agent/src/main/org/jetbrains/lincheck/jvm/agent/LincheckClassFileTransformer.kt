@@ -124,15 +124,15 @@ object LincheckClassFileTransformer : ClassFileTransformer {
                 classNode.accept(visitor)
             }
             writer.toByteArray().also { transformedBytes ->
+                if (dumpTransformedSources) {
+                    dumpClassBytecode(classNode.name, transformedBytes)
+                }
                 statsTracker?.saveStatistics(
                     originalClassNode = classNode,
                     originalClassBytes = classBytes,
                     transformedClassBytes = transformedBytes,
                     transformationTimeNanos = timeNano,
                 )
-                if (dumpTransformedSources) {
-                    dumpClassBytecode(classNode.name, transformedBytes)
-                }
             }
         } catch (e: Throwable) {
             System.err.println("Unable to transform $internalClassName")
@@ -140,9 +140,6 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             classBytes
         }
     }
-
-    fun computeStatistics(): TransformationStatistics? =
-        statsTracker?.computeStatistics()
 
     private fun dumpClassBytecode(className: String, bytes: ByteArray?) {
         val cr = ClassReader(bytes)
@@ -153,6 +150,9 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             .apply { parentFile.mkdirs() }
             .writeText(sw.toString())
     }
+
+    fun computeStatistics(): TransformationStatistics? =
+        statsTracker?.computeStatistics()
 
     private fun getMethodsLocalVariables(
         classNode: ClassNode, profile: TransformationProfile,
