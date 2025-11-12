@@ -17,7 +17,6 @@ ImmutableListTest.subListOfBuilder() at :0
   subList = null at ImmutableListTest.kt:168
   builder.subList(2, 5): AbstractList.SubList@1 at ImmutableListTest.kt:168
   subList = AbstractList.SubList@1 at ImmutableListTest.kt:168
-  Character.valueOf('x'): 'x' at ImmutableListTest.kt:169
   builder.set(4, 'x'): 'a' at ImmutableListTest.kt:169
   platform = TestPlatform.JVM at ImmutableListTest.kt:170
   getCurrentPlatform(): TestPlatform.JVM at testUtils.kt:34
@@ -29,7 +28,6 @@ ImmutableListTest.subListOfBuilder() at :0
   subList = AbstractList.SubList@1 at ImmutableListTest.kt:176
   joinToString(subList, "", null, null, 0, null, null, 62, null): "cxx" at ImmutableListTest.kt:177
   assertEquals("cxx", "cxx", null, 4, null) at ImmutableListTest.kt:177
-  Character.valueOf('b'): 'b' at ImmutableListTest.kt:178
   builder.set(4, 'b'): 'x' at ImmutableListTest.kt:178
   joinToString(subList, "", null, null, 0, null, null, 62, null): "cxb" at ImmutableListTest.kt:179
   assertEquals("cxb", "cxb", null, 4, null) at ImmutableListTest.kt:179

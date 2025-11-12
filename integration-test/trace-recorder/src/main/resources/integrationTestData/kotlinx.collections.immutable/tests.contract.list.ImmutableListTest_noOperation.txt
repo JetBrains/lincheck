@@ -29,13 +29,11 @@ ImmutableListTest.noOperation() at :0
   noOperation$lambda$45 = SmallPersistentVector@1 at ImmutableListTest.kt:200
   testNoOperation(noOperation$lambda$45, ImmutableListTest$$Lambda@1, ImmutableListTest$$Lambda@1) at ImmutableListTest.kt:201
     persistent.invoke(testNoOperation): SmallPersistentVector@1 at ImmutableListTest.kt:211
-      Character.valueOf('d'): 'd' at ImmutableListTest.kt:201
       testNoOperation.remove('d'): SmallPersistentVector@1 at ImmutableListTest.kt:201
     result = SmallPersistentVector@1 at ImmutableListTest.kt:211
     mutate = SmallPersistentVector@1 at ImmutableListTest.kt:212
     mutate.builder(): PersistentVectorBuilder@1 at extensions.kt:41
     mutating.invoke(PersistentVectorBuilder@1): Unit at extensions.kt:41
-      Character.valueOf('d'): 'd' at ImmutableListTest.kt:201
       testNoOperation.remove('d'): false at ImmutableListTest.kt:201
     PersistentVectorBuilder@1.build(): SmallPersistentVector@1 at extensions.kt:41
     buildResult = SmallPersistentVector@1 at ImmutableListTest.kt:212
@@ -43,9 +41,7 @@ ImmutableListTest.noOperation() at :0
     assertTrue(true, null, 2, null) at ImmutableListTest.kt:215
   testNoOperation(noOperation$lambda$45, ImmutableListTest$$Lambda@1, ImmutableListTest$$Lambda@1) at ImmutableListTest.kt:202
     persistent.invoke(testNoOperation): SmallPersistentVector@1 at ImmutableListTest.kt:211
-      Character.valueOf('d'): 'd' at ImmutableListTest.kt:202
       Character;@1[0] = 'd' at ImmutableListTest.kt:202
-      Character.valueOf('e'): 'e' at ImmutableListTest.kt:202
       Character;@1[1] = 'e' at ImmutableListTest.kt:202
       listOf(Character;@1): Arrays.ArrayList@1 at ImmutableListTest.kt:202
       testNoOperation.removeAll(Arrays.ArrayList@1): SmallPersistentVector@1 at ImmutableListTest.kt:202
@@ -53,9 +49,7 @@ ImmutableListTest.noOperation() at :0
     mutate = SmallPersistentVector@1 at ImmutableListTest.kt:212
     mutate.builder(): PersistentVectorBuilder@1 at extensions.kt:41
     mutating.invoke(PersistentVectorBuilder@1): Unit at extensions.kt:41
-      Character.valueOf('d'): 'd' at ImmutableListTest.kt:202
       Character;@1[0] = 'd' at ImmutableListTest.kt:202
-      Character.valueOf('e'): 'e' at ImmutableListTest.kt:202
       Character;@1[1] = 'e' at ImmutableListTest.kt:202
       listOf(Character;@1): Arrays.ArrayList@1 at ImmutableListTest.kt:202
       testNoOperation.removeAll(Arrays.ArrayList@1): false at ImmutableListTest.kt:202

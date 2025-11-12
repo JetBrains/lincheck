@@ -13,11 +13,8 @@ ImmutableListTest.subList() at :0
   list = SmallPersistentVector@1 at ImmutableListTest.kt:128
   list.subList(2, 5): ImmutableList.SubList@1 at ImmutableListTest.kt:129
   subList = ImmutableList.SubList@1 at ImmutableListTest.kt:129
-  Character.valueOf('c'): 'c' at ImmutableListTest.kt:130
   Character;@1[0] = 'c' at ImmutableListTest.kt:130
-  Character.valueOf('x'): 'x' at ImmutableListTest.kt:130
   Character;@1[1] = 'x' at ImmutableListTest.kt:130
-  Character.valueOf('a'): 'a' at ImmutableListTest.kt:130
   Character;@1[2] = 'a' at ImmutableListTest.kt:130
   listOf(Character;@1): Arrays.ArrayList@1 at ImmutableListTest.kt:130
   compareLists(Arrays.ArrayList@1, subList) at ImmutableListTest.kt:130
