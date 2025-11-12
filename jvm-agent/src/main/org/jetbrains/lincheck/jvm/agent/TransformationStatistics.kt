@@ -17,6 +17,8 @@ import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.MethodNode
 import java.util.concurrent.ConcurrentHashMap
+import java.io.PrintStream
+import java.util.Locale
 
 data class ClassTransformationStatistics(
     val className: String,
@@ -46,6 +48,38 @@ data class TransformationStatistics(
     val totalTransformationTimeNanos: Long,
     val averageTransformationTimeNanos: Double,
 )
+
+fun TransformationStatistics.printTo(out: PrintStream) {
+    fun fmtTime(d: Double): String = String.format(Locale.US, "%.0f", d)
+    fun fmtByte(d: Double): String = String.format(Locale.US, "%.0f", d)
+    fun fmtInsn(d: Double): String = String.format(Locale.US, "%.0f", d)
+
+    val avgClassDelta = averageClassBytesSizeAfter - averageClassBytesSizeBefore
+    val avgInsnDelta = averageMethodInstructionsCountAfter - averageMethodInstructionsCountBefore
+
+    val totalMs = totalTransformationTimeNanos / 1_000_000.0
+    val avgMs = averageTransformationTimeNanos / 1_000_000.0
+
+    with(out) {
+        println("== Lincheck transformation statistics ==")
+        println("Total transformed classes: $totalTransformedClassesCount")
+        println("Total transformed methods: $totalTransformedMethodsCount")
+        println(
+            "Average class size: " +
+                "before=${fmtByte(averageClassBytesSizeBefore)} B, " +
+                "after=${fmtByte(averageClassBytesSizeAfter)} B, " +
+                "delta=${fmtByte(avgClassDelta)} B"
+        )
+        println(
+            "Average method instructions count: " +
+                "before=${fmtInsn(averageMethodInstructionsCountBefore)}, " +
+                "after=${fmtInsn(averageMethodInstructionsCountAfter)}, " +
+                "delta=${fmtInsn(avgInsnDelta)}"
+        )
+        println("Total transformation time: ${fmtTime(totalMs)} ms")
+        println("Average transformation time per class: ${fmtTime(avgMs)} ms")
+    }
+}
 
 /**
  * Tracks and aggregates class and method transformation statistics.
