@@ -23,7 +23,7 @@ import org.junit.runners.Parameterized
 import java.nio.file.Paths
 
 @RunWith(Enclosed::class)
-class KtorTraceRecorderIntegrationTest {
+class KotlinImmutableCollectionsTraceRecorderExtendedIntegrationTest {
     @Category(ExtendedTraceRecorderTest::class)
     @RunWith(Parameterized::class)
     class Parametrized(
@@ -33,16 +33,15 @@ class KtorTraceRecorderIntegrationTest {
         private val perEntryJvmArgs: List<String>,
         private val perEntryCheckRepresentation: Boolean,
     ) : AbstractTraceRecorderIntegrationTest() {
-        override val projectPath: String = Paths.get("build", "integrationTestProjects", "ktor").toString()
-        override val formatArgs: Map<String, String> = mapOf("format" to "binary", "formatOption" to "stream")
+        override val projectPath: String = Paths.get("build", "integrationTestProjects", "kotlinx.collections.immutable").toString()
 
         @Test(timeout = 10 * 60 * 1000L)
-        fun runKtorTest() = runTest(
+        fun runKotlinImmutableCollectionsTest() = runTest(
             testClassName = testClassName,
             testMethodName = testMethodName,
             commands = listOf(gradleCommand),
             extraJvmArgs = perEntryJvmArgs,
-            checkRepresentation = perEntryCheckRepresentation
+            checkRepresentation = perEntryCheckRepresentation,
         )
 
         companion object {
@@ -50,8 +49,8 @@ class KtorTraceRecorderIntegrationTest {
             @Parameterized.Parameters(name = "{index}: {0}::{1}")
             fun data(): Collection<Array<Any>> {
                 val json = loadResourceText(
-                    "/integrationTestData/ktorTests.json",
-                    KtorTraceRecorderIntegrationTest::class.java
+                    "/integrationTestData/kotlinxImmutableCollectionsTests.json",
+                    KotlinImmutableCollectionsTraceRecorderExtendedIntegrationTest::class.java
                 )
                 val entries = parseJsonEntries(json)
                 return entries.transformEntriesToArray()
@@ -59,4 +58,3 @@ class KtorTraceRecorderIntegrationTest {
         }
     }
 }
-
