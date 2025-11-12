@@ -41,6 +41,8 @@ object LincheckClassFileTransformer : ClassFileTransformer {
     val transformedClassesCache
         get() = transformedClassesCachesByMode.computeIfAbsent(instrumentationMode) { ConcurrentHashMap() }
 
+    private val statsTracker = TransformationStatisticsTracker()
+
     override fun transform(
         loader: ClassLoader?,
         internalClassName: String?,
@@ -115,11 +117,20 @@ object LincheckClassFileTransformer : ClassFileTransformer {
 
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
         val visitor = LincheckClassVisitor(writer, classInfo, instrumentationMode, profile)
+
         try {
+            val t0 = System.nanoTime()
             classNode.accept(visitor)
-            writer.toByteArray().also { bytes ->
+            writer.toByteArray().also { transformedBytes ->
+                val duration = System.nanoTime() - t0
+                statsTracker.saveStatistics(
+                    originalClassNode = classNode,
+                    originalClassBytes = classBytes,
+                    transformedClassBytes = transformedBytes,
+                    transformationTimeNanos = duration,
+                )
                 if (dumpTransformedSources) {
-                    dumpClassBytecode(classNode.name, bytes)
+                    dumpClassBytecode(classNode.name, transformedBytes)
                 }
             }
         } catch (e: Throwable) {
@@ -128,6 +139,9 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             classBytes
         }
     }
+
+    fun computeStatistics(): TransformationStatistics =
+        statsTracker.getTransformationStatistics()
 
     private fun dumpClassBytecode(className: String, bytes: ByteArray?) {
         val cr = ClassReader(bytes)
