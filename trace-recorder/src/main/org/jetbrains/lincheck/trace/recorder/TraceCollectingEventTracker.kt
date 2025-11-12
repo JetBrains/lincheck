@@ -974,7 +974,7 @@ class TraceCollectingEventTracker(
             allThreads.filter { it.started }.forEach { thread ->
                 val st = thread.getStack()
                 if (st.isEmpty()) {
-                    Logger.error { "Trace Recorder: Thread ${thread.threadId + 1}: Stack underflow, report bug" }
+                    Logger.error { "Trace Recorder: Thread #${thread.threadId + 1} (\"${TRACE_CONTEXT.getThreadName(thread.threadId)}\"): Stack underflow, report bug" }
                 } else {
                     if (st.size > 1) {
                         Logger.error { "Trace Recorder: Thread ${thread.threadId + 1}: Stack is not empty, contains ${st.size} elements, report bug" }
