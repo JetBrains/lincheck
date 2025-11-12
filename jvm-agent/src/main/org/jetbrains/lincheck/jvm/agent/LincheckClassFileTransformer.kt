@@ -19,6 +19,7 @@ import org.jetbrains.lincheck.jvm.agent.analysis.*
 import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.*
 import org.objectweb.asm.tree.ClassNode
+import org.objectweb.asm.util.TraceClassVisitor
 import java.io.File
 import java.io.PrintWriter
 import java.io.StringWriter
@@ -116,16 +117,9 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         val visitor = LincheckClassVisitor(writer, classInfo, instrumentationMode, profile)
         try {
             classNode.accept(visitor)
-            writer.toByteArray().also {
+            writer.toByteArray().also { bytes ->
                 if (dumpTransformedSources) {
-                    val cr = ClassReader(it)
-                    val sw = StringWriter()
-                    val pw = PrintWriter(sw)
-                    cr.accept(org.objectweb.asm.util.TraceClassVisitor(pw), 0)
-
-                    File("build/transformedBytecode/${classNode.name}.txt")
-                        .apply { parentFile.mkdirs() }
-                        .writeText(sw.toString())
+                    dumpClassBytecode(classNode.name, bytes)
                 }
             }
         } catch (e: Throwable) {
@@ -133,6 +127,16 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             e.printStackTrace()
             classBytes
         }
+    }
+
+    private fun dumpClassBytecode(className: String, bytes: ByteArray?) {
+        val cr = ClassReader(bytes)
+        val sw = StringWriter()
+        val pw = PrintWriter(sw)
+        cr.accept(TraceClassVisitor(pw), 0)
+        File("build/transformedBytecode/$className.txt")
+            .apply { parentFile.mkdirs() }
+            .writeText(sw.toString())
     }
 
     private fun getMethodsLocalVariables(
