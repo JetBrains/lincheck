@@ -19,6 +19,7 @@ import org.jetbrains.lincheck.jvm.agent.analysis.*
 import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.*
 import org.objectweb.asm.tree.ClassNode
+import org.objectweb.asm.util.TraceClassVisitor
 import java.io.File
 import java.io.PrintWriter
 import java.io.StringWriter
@@ -39,6 +40,9 @@ object LincheckClassFileTransformer : ClassFileTransformer {
 
     val transformedClassesCache
         get() = transformedClassesCachesByMode.computeIfAbsent(instrumentationMode) { ConcurrentHashMap() }
+
+    private val statsTracker: TransformationStatisticsTracker? =
+        if (collectTransformationStatistics) TransformationStatisticsTracker() else null
 
     override fun transform(
         loader: ClassLoader?,
@@ -113,26 +117,45 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         )
 
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
-        val visitor = LincheckClassVisitor(writer, classInfo, instrumentationMode, profile)
-        try {
-            classNode.accept(visitor)
-            writer.toByteArray().also {
-                if (dumpTransformedSources) {
-                    val cr = ClassReader(it)
-                    val sw = StringWriter()
-                    val pw = PrintWriter(sw)
-                    cr.accept(org.objectweb.asm.util.TraceClassVisitor(pw), 0)
+        val visitor = LincheckClassVisitor(writer, classInfo, instrumentationMode, profile, statsTracker)
 
-                    File("build/transformedBytecode/${classNode.name}.txt")
-                        .apply { parentFile.mkdirs() }
-                        .writeText(sw.toString())
+        try {
+            val timeNano = measureTimeNano {
+                classNode.accept(visitor)
+            }
+            writer.toByteArray().also { transformedBytes ->
+                if (dumpTransformedSources) {
+                    dumpClassBytecode(classNode.name, transformedBytes)
                 }
+                statsTracker?.saveStatistics(
+                    originalClassNode = classNode,
+                    originalClassBytes = classBytes,
+                    transformedClassBytes = transformedBytes,
+                    transformationTimeNanos = timeNano,
+                )
             }
         } catch (e: Throwable) {
             System.err.println("Unable to transform $internalClassName")
             e.printStackTrace()
             classBytes
         }
+    }
+
+    private fun dumpClassBytecode(className: String, bytes: ByteArray?) {
+        val cr = ClassReader(bytes)
+        val sw = StringWriter()
+        val pw = PrintWriter(sw)
+        cr.accept(TraceClassVisitor(pw), 0)
+        File("build/transformedBytecode/$className.txt")
+            .apply { parentFile.mkdirs() }
+            .writeText(sw.toString())
+    }
+
+    fun computeStatistics(): TransformationStatistics? =
+        statsTracker?.computeStatistics()
+
+    fun resetStatistics() {
+        statsTracker?.reset()
     }
 
     private fun getMethodsLocalVariables(

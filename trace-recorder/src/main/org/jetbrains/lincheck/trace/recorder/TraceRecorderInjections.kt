@@ -47,5 +47,6 @@ internal object TraceRecorderInjections {
     fun stopTraceRecorderAndDumpTrace() {
         if (alreadyStopped) return
         TraceRecorder.finishTraceAndDumpResults()
+        LincheckJavaAgent.reportStatistics()
     }
 }
