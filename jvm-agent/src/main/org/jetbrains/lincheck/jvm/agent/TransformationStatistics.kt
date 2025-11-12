@@ -11,6 +11,9 @@
 package org.jetbrains.lincheck.jvm.agent
 
 import org.jetbrains.lincheck.util.*
+import org.objectweb.asm.Handle
+import org.objectweb.asm.Opcodes
+import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.MethodNode
 import java.util.concurrent.ConcurrentHashMap
@@ -50,6 +53,22 @@ data class TransformationStatistics(
  */
 class TransformationStatisticsTracker {
     private val classStats = ConcurrentHashMap<String, ClassStatisticsTracker>()
+
+    fun createStatisticsCollectingVisitor(
+        className: String,
+        methodName: String,
+        methodDescriptor: String,
+        methodVisitor: MethodVisitor,
+    ): StatisticsCollectingMethodVisitor {
+        val classStats = classStats.computeIfAbsent(className) { ClassStatisticsTracker() }
+        return StatisticsCollectingMethodVisitorImpl(
+            className = className,
+            methodName = methodName,
+            methodDescriptor = methodDescriptor,
+            classStatsTracker = classStats,
+            methodVisitor = methodVisitor,
+        )
+    }
 
     fun saveStatistics(
         originalClassNode: ClassNode,
@@ -96,6 +115,9 @@ private class ClassStatisticsTracker {
     private val _methodStats: MutableList<MethodTransformationStatistics> = mutableListOf()
     val methodStats: List<MethodTransformationStatistics> get() = _methodStats
 
+    // Map: (methodName + methodDescriptor) -> instructions count AFTER transformation
+    private val methodInstructionsCountAfter = ConcurrentHashMap<String, Int>()
+
     val isRecorded: Boolean get() = (classStats != null)
 
     fun saveStatistics(
@@ -130,7 +152,7 @@ private class ClassStatisticsTracker {
         originalMethodNode: MethodNode,
     ) {
         val before = originalMethodNode.countInstructions()
-        val after = -1 // TODO
+        val after = methodInstructionsCountAfter[methodName + methodDescriptor] ?: before
 
         _methodStats.add(
             MethodTransformationStatistics(
@@ -141,6 +163,113 @@ private class ClassStatisticsTracker {
                 methodInstructionsCountAfter = after,
             )
         )
+    }
+
+    fun registerMethodVisitorStatistics(visitor: StatisticsCollectingMethodVisitor) {
+        val key = visitor.methodName + visitor.methodDescriptor
+        methodInstructionsCountAfter[key] = visitor.instructionsCount
+    }
+}
+
+abstract class StatisticsCollectingMethodVisitor(
+    val className: String,
+    val methodName: String,
+    val methodDescriptor: String,
+    methodVisitor: MethodVisitor
+) : MethodVisitor(Opcodes.ASM9, methodVisitor) {
+
+    var instructionsCount: Int = 0
+        private set
+
+    protected abstract fun registerMethodStatistics()
+
+    override fun visitInsn(opcode: Int) {
+        super.visitInsn(opcode)
+        instructionsCount++
+    }
+
+    override fun visitIntInsn(opcode: Int, operand: Int) {
+        super.visitIntInsn(opcode, operand)
+        instructionsCount++
+    }
+
+    override fun visitVarInsn(opcode: Int, `var`: Int) {
+        super.visitVarInsn(opcode, `var`)
+        instructionsCount++
+    }
+
+    override fun visitTypeInsn(opcode: Int, type: String) {
+        super.visitTypeInsn(opcode, type)
+        instructionsCount++
+    }
+
+    override fun visitFieldInsn(opcode: Int, owner: String, name: String, descriptor: String) {
+        super.visitFieldInsn(opcode, owner, name, descriptor)
+        instructionsCount++
+    }
+
+    override fun visitMethodInsn(
+        opcode: Int,
+        owner: String,
+        name: String,
+        descriptor: String,
+        isInterface: Boolean
+    ) {
+        super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+        instructionsCount++
+    }
+
+    override fun visitInvokeDynamicInsn(name: String, descriptor: String, bootstrapMethodHandle: Handle, vararg bootstrapMethodArguments: Any) {
+        super.visitInvokeDynamicInsn(name, descriptor, bootstrapMethodHandle, *bootstrapMethodArguments)
+        instructionsCount++
+    }
+
+    override fun visitJumpInsn(opcode: Int, label: org.objectweb.asm.Label) {
+        super.visitJumpInsn(opcode, label)
+        instructionsCount++
+    }
+
+    override fun visitLdcInsn(value: Any) {
+        super.visitLdcInsn(value)
+        instructionsCount++
+    }
+
+    override fun visitIincInsn(`var`: Int, increment: Int) {
+        super.visitIincInsn(`var`, increment)
+        instructionsCount++
+    }
+
+    override fun visitTableSwitchInsn(min: Int, max: Int, dflt: org.objectweb.asm.Label, vararg labels: org.objectweb.asm.Label) {
+        super.visitTableSwitchInsn(min, max, dflt, *labels)
+        instructionsCount++
+    }
+
+    override fun visitLookupSwitchInsn(dflt: org.objectweb.asm.Label, keys: IntArray, labels: Array<org.objectweb.asm.Label>) {
+        super.visitLookupSwitchInsn(dflt, keys, labels)
+        instructionsCount++
+    }
+
+    override fun visitMultiANewArrayInsn(descriptor: String, numDimensions: Int) {
+        super.visitMultiANewArrayInsn(descriptor, numDimensions)
+        instructionsCount++
+    }
+
+    override fun visitEnd() {
+        super.visitEnd()
+        registerMethodStatistics()
+    }
+}
+
+private class StatisticsCollectingMethodVisitorImpl(
+    className: String,
+    methodName: String,
+    methodDescriptor: String,
+    private val classStatsTracker: ClassStatisticsTracker,
+    methodVisitor: MethodVisitor,
+) : StatisticsCollectingMethodVisitor(className, methodName, methodDescriptor, methodVisitor) {
+
+    override fun registerMethodStatistics() {
+        classStatsTracker.registerMethodVisitorStatistics(this)
     }
 }
 
