@@ -37,8 +37,23 @@ private class ThreadData(
         val iterations: MutableList<TRLoopIterationTracePoint>,
     )
 
+    /**
+     * Sometimes a thread can be registered (gets its own ThreadDescriptor and ThreadData),
+     * but not started (not registered in Strategy and don't have "top" frame on stack).
+     *
+     * To distinguish such threads from threads with underfilled stack, this flag is used.
+     */
+    @Volatile
+    var started = false
+        private set
+
     private val stack: MutableList<StackFrame> = arrayListOf()
     private val analysisSectionStack: MutableList<AnalysisSectionType> = arrayListOf()
+
+    fun startThread() {
+        check(!started) { "Thread #${threadId + 1} started twice" }
+        started = true
+    }
 
     fun currentMethodCallTracePoint(): TRMethodCallTracePoint? =
         stack.lastOrNull()?.call
@@ -280,6 +295,7 @@ class TraceCollectingEventTracker(
                     appendMethodCall(null, frame.className, frame.methodName,  UNKNOWN_METHOD_TYPE, UNKNOWN_CODE_LOCATION_ID)
                 }
             }
+            threadData.startThread()
         }
     }
 
@@ -311,6 +327,7 @@ class TraceCollectingEventTracker(
                 parameters = emptyList()
             )
             strategy.tracePointCreated(null, tracePoint)
+            threadData.startThread()
             threadData.pushStackFrame(tracePoint, thread, isInline = false)
         }
     }
@@ -875,6 +892,7 @@ class TraceCollectingEventTracker(
         )
         strategy.registerCurrentThread(threadData.threadId)
         strategy.tracePointCreated(null,tracePoint)
+        threadData.startThread()
         threadData.pushStackFrame(tracePoint, null, isInline = false)
 
         startTime = System.currentTimeMillis()
@@ -953,7 +971,7 @@ class TraceCollectingEventTracker(
             val roots = mutableListOf<TRTracePoint>()
 
             allThreads.sortBy { it.threadId }
-            allThreads.forEach { thread ->
+            allThreads.filter { it.started }.forEach { thread ->
                 val st = thread.getStack()
                 if (st.isEmpty()) {
                     Logger.error { "Trace Recorder: Thread ${thread.threadId + 1}: Stack underflow, report bug" }
