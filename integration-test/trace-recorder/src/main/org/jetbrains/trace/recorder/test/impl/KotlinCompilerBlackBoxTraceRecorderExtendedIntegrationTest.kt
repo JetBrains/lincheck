@@ -25,7 +25,7 @@ import java.nio.file.Paths
 import kotlin.io.path.createTempFile
 
 @RunWith(Enclosed::class)
-class KotlinCompilerBlackBoxTraceRecorderIntegrationTest {
+class KotlinCompilerBlackBoxTraceRecorderExtendedIntegrationTest {
     @Category(ExtendedTraceRecorderTest::class)
     @RunWith(Parameterized::class)
     class Parametrized(
@@ -56,7 +56,7 @@ class KotlinCompilerBlackBoxTraceRecorderIntegrationTest {
             fun data(): Collection<Array<Any>> {
                 val json = loadResourceText(
                     "/integrationTestData/kotlinCompilerTests.json",
-                    KotlinCompilerBlackBoxTraceRecorderIntegrationTest::class.java
+                    KotlinCompilerBlackBoxTraceRecorderExtendedIntegrationTest::class.java
                 )
                 val entries = parseJsonEntries(json)
                 return entries.transformEntriesToArray()
