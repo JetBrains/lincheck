@@ -326,6 +326,10 @@ object LincheckJavaAgent {
         retransformClasses(classes)
         // Clear the set of instrumented classes.
         instrumentedClasses.clear()
+
+        if (collectTransformationStatistics) {
+            LincheckClassFileTransformer.computeStatistics()?.printTo(System.err)
+        }
     }
 
     /**
