@@ -10,10 +10,10 @@
 
 package org.jetbrains.lincheck.jvm.agent
 
-import org.jetbrains.lincheck.util.averageOrNull
+import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.MethodNode
-import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.ConcurrentHashMap
 
 data class ClassTransformationStatistics(
     val className: String,
@@ -25,6 +25,7 @@ data class ClassTransformationStatistics(
 data class MethodTransformationStatistics(
     val className: String,
     val methodName: String,
+    val methodDescriptor: String,
     val methodInstructionsCountBefore: Int,
     val methodInstructionsCountAfter: Int,
 )
@@ -48,8 +49,7 @@ data class TransformationStatistics(
  * Thread-safe and allocation-light relative to the accumulated data sizes.
  */
 class TransformationStatisticsTracker {
-    private val classStats = ConcurrentLinkedQueue<ClassTransformationStatistics>()
-    private val methodStats = ConcurrentLinkedQueue<MethodTransformationStatistics>()
+    private val classStats = ConcurrentHashMap<String, ClassStatisticsTracker>()
 
     fun saveStatistics(
         originalClassNode: ClassNode,
@@ -57,46 +57,17 @@ class TransformationStatisticsTracker {
         transformedClassBytes: ByteArray,
         transformationTimeNanos: Long,
     ) {
-        classStats.add(
-            ClassTransformationStatistics(
-                className = originalClassNode.name,
-                classBytesSizeBefore = originalClassBytes.size,
-                classBytesSizeAfter = transformedClassBytes.size,
-                transformationTimeNanos = transformationTimeNanos,
-            )
-        )
-        originalClassNode.methods.forEach { originalMethodNode ->
-            saveMethodStatistics(
-                className = originalClassNode.name,
-                methodName = originalMethodNode.name,
-                methodDescriptor = originalMethodNode.desc,
-                originalMethodNode = originalMethodNode
-            )
+        classStats.updateInplace(originalClassNode.name, default = ClassStatisticsTracker()) {
+            saveStatistics(originalClassNode, originalClassBytes, transformedClassBytes, transformationTimeNanos)
         }
     }
 
-    private fun saveMethodStatistics(
-        className: String,
-        methodName: String,
-        methodDescriptor: String,
-        originalMethodNode: MethodNode,
-    ) {
-        val before = countInstructions(originalMethodNode)
-        val after = -1 // TODO
-
-        methodStats.add(
-            MethodTransformationStatistics(
-                className = className,
-                methodName = methodName,
-                methodInstructionsCountBefore = before,
-                methodInstructionsCountAfter = after,
-            )
-        )
-    }
-
     fun computeStatistics(): TransformationStatistics {
-        val classes = classStats.toList()
-        val methods = methodStats.toList()
+        val classes = classStats.values
+            .mapNotNull { it.classStats }
+        val methods = classStats.values
+            .flatMap { if (it.isRecorded) it.methodStats else emptyList() }
+
         return TransformationStatistics(
             totalTransformedClassesCount =
                 classes.size,
@@ -117,7 +88,62 @@ class TransformationStatisticsTracker {
         )
     }
 
-    // Count only executable instructions, skip labels/line numbers/frames etc.
-    private fun countInstructions(m: MethodNode): Int =
-        m.instructions.count { insn -> insn.opcode >= 0 }
+    private class ClassStatisticsTracker {
+        var classStats: ClassTransformationStatistics? = null
+            private set
+
+        private val _methodStats: MutableList<MethodTransformationStatistics> = mutableListOf()
+        val methodStats: List<MethodTransformationStatistics> get() = _methodStats
+
+        val isRecorded: Boolean get() = (classStats != null)
+
+        fun saveStatistics(
+            originalClassNode: ClassNode,
+            originalClassBytes: ByteArray,
+            transformedClassBytes: ByteArray,
+            transformationTimeNanos: Long,
+        ) {
+            check(classStats == null) { "Class statistics already recorded" }
+
+            classStats = ClassTransformationStatistics(
+                className = originalClassNode.name,
+                classBytesSizeBefore = originalClassBytes.size,
+                classBytesSizeAfter = transformedClassBytes.size,
+                transformationTimeNanos = transformationTimeNanos,
+            )
+
+            originalClassNode.methods.forEach { originalMethodNode ->
+                saveMethodStatistics(
+                    className = originalClassNode.name,
+                    methodName = originalMethodNode.name,
+                    methodDescriptor = originalMethodNode.desc,
+                    originalMethodNode = originalMethodNode
+                )
+            }
+        }
+
+        private fun saveMethodStatistics(
+            className: String,
+            methodName: String,
+            methodDescriptor: String,
+            originalMethodNode: MethodNode,
+        ) {
+            val before = originalMethodNode.countInstructions()
+            val after = -1 // TODO
+
+            _methodStats.add(
+                MethodTransformationStatistics(
+                    className = className,
+                    methodName = methodName,
+                    methodDescriptor = methodDescriptor,
+                    methodInstructionsCountBefore = before,
+                    methodInstructionsCountAfter = after,
+                )
+            )
+        }
+    }
 }
+
+// Count only executable instructions, skip labels/line numbers/frames etc.
+private fun MethodNode.countInstructions(): Int =
+    instructions.count { insn -> insn.opcode >= 0 }
