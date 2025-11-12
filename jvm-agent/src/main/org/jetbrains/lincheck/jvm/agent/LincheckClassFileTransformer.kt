@@ -119,15 +119,15 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         val visitor = LincheckClassVisitor(writer, classInfo, instrumentationMode, profile)
 
         try {
-            val t0 = System.nanoTime()
-            classNode.accept(visitor)
+            val timeNano = measureTimeNano {
+                classNode.accept(visitor)
+            }
             writer.toByteArray().also { transformedBytes ->
-                val duration = System.nanoTime() - t0
                 statsTracker.saveStatistics(
                     originalClassNode = classNode,
                     originalClassBytes = classBytes,
                     transformedClassBytes = transformedBytes,
-                    transformationTimeNanos = duration,
+                    transformationTimeNanos = timeNano,
                 )
                 if (dumpTransformedSources) {
                     dumpClassBytecode(classNode.name, transformedBytes)
