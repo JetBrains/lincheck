@@ -79,10 +79,10 @@ internal class LincheckClassVisitor(
         val methodInfo = classInformation.methodInformation(methodName, desc)
 
         if (isNative) {
-            Logger.debug { "Skipping transformation of the native method $className.$methodName" }
+            // Logger.debug { "Skipping transformation of the native method $className.$methodName" }
             return mv
         } else {
-            Logger.debug { "Transforming method $className.$methodName" }
+            // Logger.debug { "Transforming method $className.$methodName" }
         }
 
         if (statsTracker != null) {

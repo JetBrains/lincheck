@@ -80,7 +80,7 @@ object Logger {
 
 private val LINE_SEPARATOR = System.lineSeparator()
 
-@JvmField val DEFAULT_LOG_LEVEL = LoggingLevel.WARN
+@JvmField val DEFAULT_LOG_LEVEL = LoggingLevel.DEBUG
 
 enum class LoggingLevel {
     DEBUG, INFO, WARN, ERROR, OFF

@@ -84,6 +84,10 @@ object LincheckClassFileTransformer : ClassFileTransformer {
     ): ByteArray = transformedClassesCache.computeIfAbsent(internalClassName.toCanonicalClassName()) {
         Logger.debug { "Transforming $internalClassName" }
 
+        if (transformedClassesCache.size % 500 == 0) {
+            LincheckJavaAgent.reportStatistics()
+        }
+
         val reader = ClassReader(classBytes)
 
         // the following code is required for local variables access tracking
@@ -395,6 +399,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             if (className == "java.lang.Thread") return true
             if (className.startsWith("kotlin.concurrent.ThreadsKt")) return true
             if (className.startsWith("java.") || className.startsWith("kotlin.") || className.startsWith("jdk.")) return false
+            if (className.startsWith("com.android.tools.")) return false
         }
         if (isEagerlyInstrumentedClass(className)) return true
 

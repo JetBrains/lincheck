@@ -168,12 +168,13 @@ object LincheckJavaAgent {
      * - Else use Lazy if [instrumentationMode] supports it, Eager otherwise.
      */
     private fun setInstrumentationStrategy() {
-        instrumentationStrategy = when {
-            INSTRUMENT_ALL_CLASSES -> InstrumentationStrategy.Eager
-            TraceAgentParameters.getLazyTransformationEnabled() 
-                    && instrumentationMode.supportsLazyTransformation -> InstrumentationStrategy.Lazy
-            else -> InstrumentationStrategy.Eager
-        }
+        instrumentationStrategy = InstrumentationStrategy.Eager
+        // when {
+        //     INSTRUMENT_ALL_CLASSES -> InstrumentationStrategy.Eager
+        //     TraceAgentParameters.getLazyTransformationEnabled()
+        //             && instrumentationMode.supportsLazyTransformation -> InstrumentationStrategy.Lazy
+        //     else -> InstrumentationStrategy.Eager
+        // }
     }
 
     /**
@@ -333,7 +334,7 @@ object LincheckJavaAgent {
     fun reportStatistics() {
         if (collectTransformationStatistics) {
             LincheckClassFileTransformer.computeStatistics()?.writeTo(Logger.logWriter)
-            LincheckClassFileTransformer.resetStatistics()
+            // LincheckClassFileTransformer.resetStatistics()
         }
     }
 
@@ -476,6 +477,7 @@ internal val dumpTransformedSources by lazy {
 private const val DUMP_TRANSFORMED_SOURCES_PROPERTY = "lincheck.dumpTransformedSources"
 
 internal val collectTransformationStatistics by lazy {
-    System.getProperty(COLLECT_TRANSFORMATION_STATISTICS_PROPERTY, "false").toBoolean()
+    true
+    // System.getProperty(COLLECT_TRANSFORMATION_STATISTICS_PROPERTY, "false").toBoolean()
 }
 private const val COLLECT_TRANSFORMATION_STATISTICS_PROPERTY = "lincheck.collectTransformationStatistics"
