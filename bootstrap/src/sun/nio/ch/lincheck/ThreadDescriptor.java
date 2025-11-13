@@ -359,6 +359,12 @@ public class ThreadDescriptor {
         threadDescriptorsMap.put(thread, descriptor);
     }
 
+    /**
+     * Sets the current thread as the root thread.
+     *
+     * @param descriptor the {@code ThreadDescriptor} associated with the current thread.
+     * @throws IllegalStateException if the root thread is already set.
+     */
     public static void setCurrentThreadAsRoot(ThreadDescriptor descriptor) {
         if (descriptor == null) {
             throw new IllegalArgumentException("Thread descriptor must not be null");
@@ -379,6 +385,13 @@ public class ThreadDescriptor {
         rootDescriptor = descriptor;
     }
 
+    /**
+     * Unregisters the root thread descriptor, ensuring the current thread was previously set as the root thread.
+     *
+     * @return the {@code ThreadDescriptor} that was previously associated as the root.
+     * @throws IllegalStateException if no root thread is set,
+     *   or if the current thread is different from the root thread.
+     */
     public static ThreadDescriptor unsetRootThread() {
         if (rootThread == null) {
             throw new IllegalStateException("Root thread is not set");
