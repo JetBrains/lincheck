@@ -38,7 +38,7 @@ public class Injections {
             if (eventTracker != null && descriptor == null && registerRunningThread) {
                 // Handle the case when all threads tracking was requested,
                 // and we need to self-register the currently running thread by creating a new descriptor for it.
-                registerRunningThread(Thread.currentThread(), eventTracker);
+                registerRunningThread(eventTracker, Thread.currentThread());
             }
             return eventTracker;
         }
@@ -173,7 +173,7 @@ public class Injections {
         return descriptor.inAnalyzedCode();
     }
 
-    public static ThreadDescriptor registerThread(Thread thread, EventTracker eventTracker) {
+    public static ThreadDescriptor registerThread(EventTracker eventTracker, Thread thread) {
         ThreadDescriptor descriptor = ThreadDescriptor.getThreadDescriptor(thread);
         if (descriptor == null) {
             descriptor = new ThreadDescriptor(thread);
@@ -192,8 +192,8 @@ public class Injections {
         descriptor.setEventTracker(null);
     }
 
-    private static void registerRunningThread(Thread thread, EventTracker eventTracker) {
-        ThreadDescriptor descriptor = registerThread(thread, eventTracker);
+    private static void registerRunningThread(EventTracker eventTracker, Thread thread) {
+        ThreadDescriptor descriptor = registerThread(eventTracker, thread);
         ThreadDescriptor.setCurrentThreadDescriptor(descriptor);
         eventTracker.registerRunningThread(thread, descriptor);
     }

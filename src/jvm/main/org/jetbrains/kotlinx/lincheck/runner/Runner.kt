@@ -15,7 +15,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.lincheck.util.ensure
 import sun.nio.ch.lincheck.Injections
 import sun.nio.ch.lincheck.TestThread
-import sun.nio.ch.lincheck.ThreadDescriptor
 import java.io.*
 
 /**
@@ -67,7 +66,7 @@ internal abstract class AbstractActiveThreadPoolRunner : Runner {
     protected fun setEventTracker() {
         val eventTracker = (strategy as? ManagedStrategy) ?: return
         executor.threads.forEachIndexed { i, thread ->
-            val descriptor = Injections.registerThread(thread, eventTracker)
+            val descriptor = Injections.registerThread(eventTracker, thread)
             eventTracker.registerThread(thread, descriptor)
                 .ensure { threadId -> threadId == i }
         }
