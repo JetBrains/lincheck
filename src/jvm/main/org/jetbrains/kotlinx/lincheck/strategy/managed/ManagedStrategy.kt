@@ -679,7 +679,7 @@ internal abstract class ManagedStrategy(
         threadDescriptor: ThreadDescriptor,
         startingThread: Thread,
         startingThreadDescriptor: ThreadDescriptor
-    ): Unit = runInsideIgnoredSection {
+    ): Unit = threadDescriptor.runInsideIgnoredSection {
         val currentThreadId = threadScheduler.getCurrentThreadId()
         // do not track threads forked from unregistered threads
         if (currentThreadId < 0) return
@@ -688,7 +688,9 @@ internal abstract class ManagedStrategy(
         registerThread(startingThread, startingThreadDescriptor)
     }
 
-    override fun beforeThreadStart(threadDescriptor: ThreadDescriptor) = runInsideIgnoredSection {
+    override fun beforeThreadStart(
+        threadDescriptor: ThreadDescriptor
+    ) = threadDescriptor.runInsideIgnoredSection {
         val currentThreadId = threadScheduler.getCurrentThreadId()
         // do not track unregistered threads
         if (currentThreadId < 0) return
@@ -718,7 +720,9 @@ internal abstract class ManagedStrategy(
         enableAnalysis()
     }
 
-    override fun afterThreadFinish(threadDescriptor: ThreadDescriptor) = runInsideIgnoredSection {
+    override fun afterThreadFinish(
+        threadDescriptor: ThreadDescriptor
+    ) = threadDescriptor.runInsideIgnoredSection {
         val currentThreadId = threadScheduler.getCurrentThreadId()
         // do not track unregistered threads
         if (currentThreadId < 0) return
@@ -742,7 +746,7 @@ internal abstract class ManagedStrategy(
     override fun onThreadRunException(
         threadDescriptor: ThreadDescriptor,
         exception: Throwable
-    ) = runInsideIgnoredSection {
+    ) = threadDescriptor.runInsideIgnoredSection {
         val currentThreadId = threadScheduler.getCurrentThreadId()
         // do not track unregistered threads
         if (currentThreadId < 0) return
@@ -769,7 +773,7 @@ internal abstract class ManagedStrategy(
         threadDescriptor: ThreadDescriptor,
         joinedThread: Thread?,
         withTimeout: Boolean
-    ) = runInsideIgnoredSection {
+    ) = threadDescriptor.runInsideIgnoredSection {
         if (withTimeout) return // timeouts occur instantly
         val currentThreadId = threadScheduler.getCurrentThreadId()
         val joinedThreadId = threadScheduler.getThreadId(joinedThread!!)
@@ -999,7 +1003,7 @@ internal abstract class ManagedStrategy(
     override fun beforeLock(
         threadDescriptor: ThreadDescriptor,
         codeLocation: Int
-    ): Unit = runInsideIgnoredSection {
+    ): Unit = threadDescriptor.runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
         newSwitchPoint(threadId, codeLocation)
 
@@ -1032,7 +1036,7 @@ internal abstract class ManagedStrategy(
     override fun lock(
         threadDescriptor: ThreadDescriptor,
         monitor: Any
-    ): Unit = runInsideIgnoredSection {
+    ): Unit = threadDescriptor.runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
         // Try to acquire the monitor
         while (!monitorTracker.acquireMonitor(threadId, monitor)) {
@@ -1046,7 +1050,7 @@ internal abstract class ManagedStrategy(
         threadDescriptor: ThreadDescriptor,
         codeLocation: Int,
         monitor: Any,
-    ): Unit = runInsideIgnoredSection {
+    ): Unit = threadDescriptor.runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
         // We need to be extremely careful with the MONITOREXIT instruction,
         // as it can be put into a recursive "finally" block, releasing
@@ -1075,7 +1079,7 @@ internal abstract class ManagedStrategy(
     override fun beforePark(
         threadDescriptor: ThreadDescriptor,
         codeLocation: Int
-    ): Unit = runInsideIgnoredSection {
+    ): Unit = threadDescriptor.runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
         // Instead of fairly supporting the park/unpark semantics,
         // we simply add a new switch point here, thus, also
@@ -1111,7 +1115,7 @@ internal abstract class ManagedStrategy(
     override fun park(
         threadDescriptor: ThreadDescriptor,
         codeLocation: Int
-    ): Unit = runInsideIgnoredSection {
+    ): Unit = threadDescriptor.runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
         // Do not park and exit immediately if the thread's interrupted flag set.
         if (Thread.currentThread().isInterrupted) return
@@ -1151,7 +1155,7 @@ internal abstract class ManagedStrategy(
         threadDescriptor: ThreadDescriptor,
         codeLocation: Int,
         thread: Thread,
-    ): Unit = runInsideIgnoredSection {
+    ): Unit = threadDescriptor.runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
         val unparkedThreadId = threadScheduler.getThreadId(thread)
         parkingTracker.unpark(threadId, unparkedThreadId)
@@ -1172,7 +1176,7 @@ internal abstract class ManagedStrategy(
     override fun beforeWait(
         threadDescriptor: ThreadDescriptor,
         codeLocation: Int
-    ): Unit = runInsideIgnoredSection {
+    ): Unit = threadDescriptor.runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
         newSwitchPoint(threadId, codeLocation)
 
@@ -1206,7 +1210,7 @@ internal abstract class ManagedStrategy(
         threadDescriptor: ThreadDescriptor,
         monitor: Any,
         withTimeout: Boolean
-    ): Unit = runInsideIgnoredSection {
+    ): Unit = threadDescriptor.runInsideIgnoredSection {
         if (withTimeout) return // timeouts occur instantly
         // we check the interruption flag both before entering `wait` and after,
         // to ensure the monitor is acquired when `InterruptionException` is thrown
@@ -1226,7 +1230,7 @@ internal abstract class ManagedStrategy(
         codeLocation: Int,
         monitor: Any,
         notifyAll: Boolean
-    ): Unit = runInsideIgnoredSection {
+    ): Unit = threadDescriptor.runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
         monitorTracker.notify(threadId, monitor, notifyAll = notifyAll)
 
@@ -1283,7 +1287,7 @@ internal abstract class ManagedStrategy(
         codeLocation: Int,
         obj: Any?,
         fieldId: Int
-    ): Unit = runInsideIgnoredSection {
+    ): Unit = threadDescriptor.runInsideIgnoredSection {
         val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
         if (!fieldDescriptor.isStatic && obj == null) {
             return // ignore, `NullPointerException` will be thrown
@@ -1308,7 +1312,7 @@ internal abstract class ManagedStrategy(
         codeLocation: Int,
         array: Any?,
         index: Int,
-    ): Unit = runInsideIgnoredSection {
+    ): Unit = threadDescriptor.runInsideIgnoredSection {
         if (array == null) return // ignore, `NullPointerException` will be thrown
         updateSnapshotOnArrayElementAccess(array, index)
         if (!shouldTrackArrayAccess(array)) {
@@ -1325,7 +1329,7 @@ internal abstract class ManagedStrategy(
         obj: Any?,
         fieldId: Int,
         value: Any?
-    ) = runInsideIgnoredSection {
+    ) = threadDescriptor.runInsideIgnoredSection {
         val eventId = getNextEventId()
         val threadId = threadScheduler.getCurrentThreadId()
         val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
@@ -1359,7 +1363,7 @@ internal abstract class ManagedStrategy(
         array: Any?,
         index: Int,
         value: Any?
-    ) = runInsideIgnoredSection {
+    ) = threadDescriptor.runInsideIgnoredSection {
         if (collectTrace) {
             val eventId = getNextEventId()
             val threadId = threadScheduler.getCurrentThreadId()
@@ -1389,7 +1393,7 @@ internal abstract class ManagedStrategy(
         obj: Any?,
         value: Any?,
         fieldId: Int
-    ): Unit = runInsideIgnoredSection {
+    ): Unit = threadDescriptor.runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
         val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
         if (!fieldDescriptor.isStatic && obj == null) {
@@ -1430,7 +1434,7 @@ internal abstract class ManagedStrategy(
         array: Any?,
         index: Int,
         value: Any?,
-    ): Unit = runInsideIgnoredSection {
+    ): Unit = threadDescriptor.runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
         if (array == null) {
             return // ignore, `NullPointerException` will be thrown
@@ -1466,7 +1470,7 @@ internal abstract class ManagedStrategy(
 
     override fun afterWrite(threadDescriptor: ThreadDescriptor) {
         if (collectTrace) {
-            runInsideIgnoredSection {
+            threadDescriptor.runInsideIgnoredSection {
                 traceCollector?.addStateRepresentation()
             }
         }
@@ -1479,7 +1483,7 @@ internal abstract class ManagedStrategy(
     override fun beforeNewObjectCreation(
         threadDescriptor: ThreadDescriptor,
         className: String
-    ) = runInsideIgnoredSection {
+    ) = threadDescriptor.runInsideIgnoredSection {
         LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
     }
 
@@ -1487,7 +1491,7 @@ internal abstract class ManagedStrategy(
         // Fast-check for immutable objects without entering an ignored section.
         // Please note that this check must not produce Lincheck events.
         if (obj.isImmutable) return
-        runInsideIgnoredSection {
+        threadDescriptor.runInsideIgnoredSection {
             identityHashCodeTracker.afterNewTrackedObjectCreation(obj)
             objectTracker.registerNewObject(obj)
         }
@@ -1633,7 +1637,7 @@ internal abstract class ManagedStrategy(
         methodId: Int,
         receiver: Any?,
         params: Array<Any?>
-    ): Any? = runInsideIgnoredSection {
+    ): Any? = threadDescriptor.runInsideIgnoredSection {
         val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
         // check if the called method is an atomics API method
         // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
@@ -1748,7 +1752,7 @@ internal abstract class ManagedStrategy(
         receiver: Any?,
         params: Array<Any?>,
         result: Any?
-    ): Any? = runInsideIgnoredSection {
+    ): Any? = threadDescriptor.runInsideIgnoredSection {
         val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
         var newResult = result
         if (deterministicMethodDescriptor != null) {
@@ -1823,7 +1827,7 @@ internal abstract class ManagedStrategy(
         receiver: Any?,
         params: Array<Any?>,
         throwable: Throwable
-    ): Throwable = runInsideIgnoredSection {
+    ): Throwable = threadDescriptor.runInsideIgnoredSection {
         var newThrowable = throwable
         val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
         if (deterministicMethodDescriptor != null) {
@@ -1871,7 +1875,7 @@ internal abstract class ManagedStrategy(
         codeLocation: Int,
         methodId: Int,
         owner: Any?,
-    ) = runInsideIgnoredSection {
+    ) = threadDescriptor.runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
         val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
         if (threadScheduler.isAborted(threadId)) {
@@ -1899,7 +1903,7 @@ internal abstract class ManagedStrategy(
     override fun onInlineMethodCallReturn(
         threadDescriptor: ThreadDescriptor,
         methodId: Int,
-    ) = runInsideIgnoredSection {
+    ) = threadDescriptor.runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
         if (collectTrace) {
             if (callStackTrace[threadId]!!.isNotEmpty()) {
@@ -1915,7 +1919,7 @@ internal abstract class ManagedStrategy(
         threadDescriptor: ThreadDescriptor,
         methodId: Int,
         throwable: Throwable
-    ) = runInsideIgnoredSection {
+    ) = threadDescriptor.runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
         if (collectTrace) {
             if (callStackTrace[threadId]!!.isNotEmpty()) {
@@ -1945,7 +1949,7 @@ internal abstract class ManagedStrategy(
         descriptor: Any?,
         receiver: Any?,
         params: Array<Any?>
-    ): BootstrapResult<*>? = runInsideIgnoredSection {
+    ): BootstrapResult<*>? = threadDescriptor.runInsideIgnoredSection {
         when {
             descriptor !is DeterministicMethodDescriptor<*, *> -> null
             !isInTraceDebuggerMode -> descriptor.runFake(receiver, params).toBootstrapResult()
