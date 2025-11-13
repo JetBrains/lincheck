@@ -421,6 +421,7 @@ class TraceCollectingEventTracker(
     override fun updateSnapshotBeforeConstructorCall(objs: Array<out Any?>) = Unit
 
     override fun beforeReadField(
+        threadDescriptor: ThreadDescriptor,
         obj: Any?,
         codeLocation: Int,
         fieldId: Int
@@ -433,6 +434,7 @@ class TraceCollectingEventTracker(
     }
 
     override fun beforeReadArrayElement(
+        threadDescriptor: ThreadDescriptor,
         array: Any,
         index: Int,
         codeLocation: Int
@@ -446,7 +448,13 @@ class TraceCollectingEventTracker(
     //
     // This means that technically any function marked as silent or ignored can be overshadowed 
     // and therefore all injected functions should run inside ignored section.
-    override fun afterReadField(obj: Any?, codeLocation: Int, fieldId: Int, value: Any?) = runInsideInjectedCode {
+    override fun afterReadField(
+        threadDescriptor: ThreadDescriptor,
+        obj: Any?,
+        codeLocation: Int,
+        fieldId: Int,
+        value: Any?
+    ) = runInsideInjectedCode {
         val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
         if (fieldDescriptor.isStatic) {
             if (value !== null && !value.isImmutable) {
@@ -455,7 +463,6 @@ class TraceCollectingEventTracker(
             // NOTE: for static reads we never create trace points
             return
         }
-        val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
         val tracePoint = TRReadTracePoint(
@@ -468,8 +475,13 @@ class TraceCollectingEventTracker(
         strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
     }
 
-    override fun afterReadArrayElement(array: Any, index: Int, codeLocation: Int, value: Any?) = runInsideInjectedCode {
-        val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
+    override fun afterReadArrayElement(
+        threadDescriptor: ThreadDescriptor,
+        array: Any,
+        index: Int,
+        codeLocation: Int,
+        value: Any?
+    ) = runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
         val tracePoint = TRReadArrayTracePoint(
@@ -483,6 +495,7 @@ class TraceCollectingEventTracker(
     }
 
     override fun beforeWriteField(
+        threadDescriptor: ThreadDescriptor,
         obj: Any?,
         value: Any?,
         codeLocation: Int,
@@ -493,7 +506,6 @@ class TraceCollectingEventTracker(
             // Ignore, NullPointerException will be thrown
             return
         }
-        val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
         val tracePoint = TRWriteTracePoint(
@@ -507,12 +519,12 @@ class TraceCollectingEventTracker(
     }
 
     override fun beforeWriteArrayElement(
+        threadDescriptor: ThreadDescriptor,
         array: Any,
         index: Int,
         value: Any?,
         codeLocation: Int
     ): Unit = runInsideInjectedCode {
-        val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
         val tracePoint = TRWriteArrayTracePoint(
@@ -525,7 +537,7 @@ class TraceCollectingEventTracker(
         strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
     }
 
-    override fun afterWrite() = Unit
+    override fun afterWrite(threadDescriptor: ThreadDescriptor) = Unit
 
     override fun afterLocalRead(codeLocation: Int, variableId: Int, value: Any?) = runInsideInjectedCode {
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return

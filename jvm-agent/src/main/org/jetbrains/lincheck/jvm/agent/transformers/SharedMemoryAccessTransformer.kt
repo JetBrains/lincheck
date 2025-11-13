@@ -102,11 +102,13 @@ internal class SharedMemoryAccessTransformer(
             isStatic = true,
             isFinal = FinalFields.isFinalField(owner, fieldName)
         )
+
         // STACK: <empty>
+        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
         pushNull()
         val codeLocationId = loadNewCodeLocationId()
         push(fieldId)
-        // STACK: null, codeLocation, fieldId
+        // STACK: descriptor, null, codeLocation, fieldId
         invokeStatic(Injections::beforeReadField)
         // STACK: <empty>
         super.visitFieldInsn(opcode, owner, fieldName, desc)
@@ -127,11 +129,12 @@ internal class SharedMemoryAccessTransformer(
         // STACK: obj
         val ownerName = ownerNameAnalyzer?.stack?.getStackElementAt(0)
         val ownerLocal = newLocal(getType("L$owner;")).also { copyLocal(it) }
+
+        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
         loadLocal(ownerLocal)
-        // STACK: obj, obj
         val codeLocationId = loadNewCodeLocationId(accessPath = ownerName)
         push(fieldId)
-        // STACK: obj, obj, codeLocation, fieldId
+        // STACK: descriptor, obj, codeLocation, fieldId
         invokeStatic(Injections::beforeReadField)
         // STACK: obj
         super.visitFieldInsn(opcode, owner, fieldName, desc)
@@ -150,21 +153,24 @@ internal class SharedMemoryAccessTransformer(
             isStatic = true,
             isFinal = FinalFields.isFinalField(owner, fieldName)
         )
-        val valueLocal = newLocal(valueType) // we cannot use DUP as long/double require DUP2
-        copyLocal(valueLocal)
+        val valueLocal = newLocal(valueType).also { storeLocal(it) } // we cannot use DUP as long/double require DUP2
+
         // STACK: value
+        loadLocal(valueLocal)
+        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
         pushNull()
         loadLocal(valueLocal)
         box(valueType)
         loadNewCodeLocationId()
         push(fieldId)
-        // STACK: value, null, value, codeLocation, fieldId
+        // STACK: value, descriptor, null, value, codeLocation, fieldId
         invokeStatic(Injections::beforeWriteField)
         // STACK: value
         invokeBeforeEventIfPluginEnabled("write static field")
         // STACK: value
         super.visitFieldInsn(opcode, owner, fieldName, desc)
         // STACK: <empty>
+        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
         invokeStatic(Injections::afterWrite)
     }
 
@@ -177,25 +183,26 @@ internal class SharedMemoryAccessTransformer(
             isStatic = false,
             isFinal = FinalFields.isFinalField(owner, fieldName)
         )
-        val valueLocal = newLocal(valueType) // we cannot use DUP as long/double require DUP2
+        val valueLocal = newLocal(valueType).also { storeLocal(it) } // we cannot use DUP as long/double require DUP2
+        val ownerLocal = newLocal(getType("L$owner;")).also { storeLocal(it) }
         val ownerName = ownerNameAnalyzer?.stack?.getStackElementAt(valueType.size)
-        storeLocal(valueLocal)
-        // STACK: obj
-        dup()
-        // STACK: obj, obj
+
+        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+        loadLocal(ownerLocal)
         loadLocal(valueLocal)
         box(valueType)
         loadNewCodeLocationId(accessPath = ownerName)
         push(fieldId)
-        // STACK: obj, obj, value, codeLocation, fieldId
+        // STACK: descriptor, obj, value, codeLocation, fieldId
         invokeStatic(Injections::beforeWriteField)
-        // STACK: obj
+        // STACK: <empty>
         invokeBeforeEventIfPluginEnabled("write field")
-        // STACK: obj
+        // STACK: <empty>
+        loadLocal(ownerLocal)
         loadLocal(valueLocal)
         // STACK: obj, value
         super.visitFieldInsn(opcode, owner, fieldName, desc)
-        // STACK: <empty>
+        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
         invokeStatic(Injections::afterWrite)
     }
 
@@ -243,11 +250,13 @@ internal class SharedMemoryAccessTransformer(
         val indexLocal = newLocal(INT_TYPE).also { storeLocal(it) }
         val arrayLocal = newLocal(getType("[$arrayElementType")).also { storeLocal(it) }
         val ownerName = ownerNameAnalyzer?.stack?.getStackElementAt(1)
+
+        // STACK: <empty>
+        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
         loadLocal(arrayLocal)
         loadLocal(indexLocal)
-        // STACK: array, index
         val codeLocationId = loadNewCodeLocationId(accessPath = ownerName)
-        // STACK: array, index, codeLocation
+        // STACK: descriptor, array, index, codeLocation
         invokeStatic(Injections::beforeReadArray)
         // STACK: <empty>
         loadLocal(arrayLocal)
@@ -267,20 +276,27 @@ internal class SharedMemoryAccessTransformer(
         val valueLocal = newLocal(arrayElementType) // we cannot use DUP as long/double require DUP2
         val ownerName = ownerNameAnalyzer?.stack?.getStackElementAt(1 + arrayElementType.size)
         storeLocal(valueLocal)
-        // STACK: array, index
-        dup2()
-        // STACK: array, index, array, index
+        val indexLocal = newLocal(INT_TYPE).also { storeLocal(it) }
+        val arrayLocal = newLocal(getType("[$arrayElementType")).also { storeLocal(it) }
+
+        // STACK: <empty>
+        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+        loadLocal(arrayLocal)
+        loadLocal(indexLocal)
         loadLocal(valueLocal)
         box(arrayElementType)
         loadNewCodeLocationId(accessPath = ownerName)
-        // STACK: array, index, array, index, value, codeLocation
+        // STACK: descriptor, array, index, array, index
         invokeStatic(Injections::beforeWriteArray)
         invokeBeforeEventIfPluginEnabled("write array")
-        // STACK: array, index
+        // STACK: <empty>
+        loadLocal(arrayLocal)
+        loadLocal(indexLocal)
         loadLocal(valueLocal)
         // STACK: array, index, value
         super.visitInsn(opcode)
         // STACK: <empty>
+        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
         invokeStatic(Injections::afterWrite)
     }
 
@@ -288,6 +304,7 @@ internal class SharedMemoryAccessTransformer(
         // STACK: value
         val resultLocal = newLocal(valueType)
         copyLocal(resultLocal)
+        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
         if (ownerLocal != null) {
             loadLocal(ownerLocal)
         } else {
@@ -297,7 +314,7 @@ internal class SharedMemoryAccessTransformer(
         push(fieldId)
         loadLocal(resultLocal)
         box(valueType)
-        // STACK: value, owner, codeLocation, fieldId, boxed value
+        // STACK: value, descriptor, owner, codeLocation, fieldId, boxed value
         invokeStatic(Injections::afterReadField)
         // STACK: value
     }
@@ -306,12 +323,13 @@ internal class SharedMemoryAccessTransformer(
         // STACK: value
         val resultLocal = newLocal(valueType)
         copyLocal(resultLocal)
+        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
         loadLocal(arrayLocal)
         loadLocal(indexLocal)
         push(codeLocationId)
         loadLocal(resultLocal)
         box(valueType)
-        // STACK: value, array, index, codeLocation, boxed value
+        // STACK: value, descriptor, array, index, codeLocation, boxed value
         invokeStatic(Injections::afterReadArray)
         // STACK: value
     }

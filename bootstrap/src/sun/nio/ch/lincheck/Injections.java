@@ -572,15 +572,17 @@ public class Injections {
     /**
      * Called from the instrumented code before each field read.
      */
-    public static void beforeReadField(Object obj, int codeLocation, int fieldId) {
-        getEventTracker().beforeReadField(obj, codeLocation, fieldId);
+    public static void beforeReadField(ThreadDescriptor descriptor, Object obj, int codeLocation, int fieldId) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        eventTracker.beforeReadField(descriptor, obj, codeLocation, fieldId);
     }
 
     /**
      * Called from the instrumented code before any array cell read.
      */
-    public static void beforeReadArray(Object array, int index, int codeLocation) {
-        getEventTracker().beforeReadArrayElement(array, index, codeLocation);
+    public static void beforeReadArray(ThreadDescriptor descriptor, Object array, int index, int codeLocation) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        eventTracker.beforeReadArrayElement(descriptor, array, index, codeLocation);
     }
 
     /**
@@ -600,36 +602,41 @@ public class Injections {
     /**
      * Called from the instrumented code after each field read (final field reads can be ignored here).
      */
-    public static void afterReadField(Object obj, int codeLocation, int fieldId, Object value) {
-        getEventTracker().afterReadField(obj, codeLocation, fieldId, value);
+    public static void afterReadField(ThreadDescriptor descriptor, Object obj, int codeLocation, int fieldId, Object value) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        eventTracker.afterReadField(descriptor, obj, codeLocation, fieldId, value);
     }
 
     /**
      * Called from the instrumented code after each array read.
      */
-    public static void afterReadArray(Object array, int index, int codeLocation, Object value) {
-        getEventTracker().afterReadArrayElement(array, index, codeLocation, value);
+    public static void afterReadArray(ThreadDescriptor descriptor, Object array, int index, int codeLocation, Object value) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        eventTracker.afterReadArrayElement(descriptor, array, index, codeLocation, value);
     }
 
     /**
      * Called from the instrumented code before each field write.
      */
-    public static void beforeWriteField(Object obj, Object value, int codeLocation, int fieldId) {
-        getEventTracker().beforeWriteField(obj, value, codeLocation, fieldId);
+    public static void beforeWriteField(ThreadDescriptor descriptor, Object obj, Object value, int codeLocation, int fieldId) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        eventTracker.beforeWriteField(descriptor, obj, value, codeLocation, fieldId);
     }
 
     /**
      * Called from the instrumented code before any array cell write.
      */
-    public static void beforeWriteArray(Object array, int index, Object value, int codeLocation) {
-        getEventTracker().beforeWriteArrayElement(array, index, value, codeLocation);
+    public static void beforeWriteArray(ThreadDescriptor descriptor, Object array, int index, Object value, int codeLocation) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        eventTracker.beforeWriteArrayElement(descriptor, array, index, value, codeLocation);
     }
 
     /**
      * Called from the instrumented code before any write operation.
      */
-    public static void afterWrite() {
-        getEventTracker().afterWrite();
+    public static void afterWrite(ThreadDescriptor descriptor) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        eventTracker.afterWrite(descriptor);
     }
 
     /**
