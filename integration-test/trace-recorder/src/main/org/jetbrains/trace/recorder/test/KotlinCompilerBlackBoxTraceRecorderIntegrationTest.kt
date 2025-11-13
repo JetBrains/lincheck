@@ -33,7 +33,7 @@ class KotlinCompilerBlackBoxTraceRecorderIntegrationTest {
         override val projectPath: String = Paths.get("build", "integrationTestProjects", "kotlin").toString()
         override val formatArgs: Map<String, String> = mapOf("format" to "binary", "formatOption" to "stream")
 
-        @Test(timeout = 3 * 60 * 1000L)
+        @Test(timeout = 10 * 60 * 1000L)
         fun runKotlinCompilerTest() = runKotlinCompilerTestImpl(
             testClassName, testMethodName, gradleCommand, perEntryJvmArgs, perEntryCheckRepresentation
         )
