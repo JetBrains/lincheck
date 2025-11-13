@@ -67,6 +67,14 @@ public class Injections {
     }
 
     /**
+     * Retrieves an instance of an event tracker based on the provided thread descriptor and
+     * current event tracking mode.
+     */
+    public static EventTracker getEventTracker(ThreadDescriptor descriptor) {
+        return getEventTracker(descriptor, false);
+    }
+
+    /**
      * Retrieves the appropriate {@link EventTracker}
      * based on the specified event tracking mode and the provided parameters.
      * <br>
@@ -103,17 +111,6 @@ public class Injections {
     }
 
     /**
-     * Retrieves an instance of an event tracker based on the provided thread descriptor.
-     * <br>
-     *
-     * In GLOBAL mode, if {@code descriptor} is null, will automatically register the currently running thread,
-     * creating a new thread descriptor for it.
-     */
-    private static EventTracker getEventTracker(ThreadDescriptor descriptor) {
-        return getEventTracker(descriptor, true);
-    }
-
-    /**
      * Retrieves an event tracker instance for the current thread.
      * <br>
      *
@@ -122,7 +119,7 @@ public class Injections {
      */
     private static EventTracker getEventTracker() {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
-        return getEventTracker(descriptor);
+        return getEventTracker(descriptor, true);
     }
 
     /**

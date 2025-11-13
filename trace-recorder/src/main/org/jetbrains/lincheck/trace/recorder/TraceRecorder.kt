@@ -111,7 +111,7 @@ object TraceRecorder {
         val descriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         descriptor.disableAnalysis()
 
-        if (eventTracker != Injections.getGlobalEventTracker()) {
+        if (eventTracker != Injections.getEventTracker(descriptor)) {
             Logger.warn { "Unexpected event tracker observed during trace finishing" }
         }
 
