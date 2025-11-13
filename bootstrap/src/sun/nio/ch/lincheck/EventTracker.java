@@ -75,9 +75,9 @@ public interface EventTracker {
     Object onMethodCallReturn(ThreadDescriptor descriptor, long descriptorId, Object detDescriptor, int methodId, Object receiver, Object[] params, Object result);
     Throwable onMethodCallException(ThreadDescriptor descriptor, long descriptorId, Object detDescriptor, int methodId, Object receiver, Object[] params, Throwable t);
 
-    void onInlineMethodCall(int codeLocation, int methodId, Object owner);
-    void onInlineMethodCallReturn(int methodId);
-    void onInlineMethodCallException(int methodId, Throwable t);
+    void onInlineMethodCall(ThreadDescriptor descriptor, int codeLocation, int methodId, Object owner);
+    void onInlineMethodCallReturn(ThreadDescriptor descriptor, int methodId);
+    void onInlineMethodCallException(ThreadDescriptor descriptor, int methodId, Throwable t);
 
     BootstrapResult<?> invokeDeterministicallyOrNull(ThreadDescriptor threadDescriptor, long descriptorId, Object descriptor, Object receiver, Object[] params);
 

@@ -879,22 +879,25 @@ public class Injections {
     /**
      * Called from the instrumented code before any kotlin inlined method call.
      */
-    public static void onInlineMethodCall(int methodId, int codeLocation, Object owner) {
-        getEventTracker().onInlineMethodCall(methodId, codeLocation, owner);
+    public static void onInlineMethodCall(ThreadDescriptor descriptor, int codeLocation, int methodId, Object owner) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        eventTracker.onInlineMethodCall(descriptor, codeLocation, methodId, owner);
     }
 
     /**
      * Called from the instrumented code after any kotlin inline method successful call, i.e., without any exception.
      */
-    public static void onInlineMethodCallReturn(int methodId) {
-        getEventTracker().onInlineMethodCallReturn(methodId);
+    public static void onInlineMethodCallReturn(ThreadDescriptor descriptor, int methodId) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        eventTracker.onInlineMethodCallReturn(descriptor, methodId);
     }
 
     /**
      * Called from the instrumented code after any kotlin inline method throws exception
      */
-    public static void onInlineMethodCallException(int methodId, Throwable t) {
-        getEventTracker().onInlineMethodCallException(methodId, t);
+    public static void onInlineMethodCallException(ThreadDescriptor descriptor, int methodId, Throwable t) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        eventTracker.onInlineMethodCallException(descriptor, methodId, t);
     }
 
     /**

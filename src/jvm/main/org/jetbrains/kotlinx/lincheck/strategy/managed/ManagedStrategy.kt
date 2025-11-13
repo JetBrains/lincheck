@@ -1867,8 +1867,9 @@ internal abstract class ManagedStrategy(
     }
 
     override fun onInlineMethodCall(
-        methodId: Int,
+        threadDescriptor: ThreadDescriptor,
         codeLocation: Int,
+        methodId: Int,
         owner: Any?,
     ) = runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
@@ -1896,6 +1897,7 @@ internal abstract class ManagedStrategy(
     }
 
     override fun onInlineMethodCallReturn(
+        threadDescriptor: ThreadDescriptor,
         methodId: Int,
     ) = runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
@@ -1910,6 +1912,7 @@ internal abstract class ManagedStrategy(
     }
 
     override fun onInlineMethodCallException(
+        threadDescriptor: ThreadDescriptor,
         methodId: Int,
         throwable: Throwable
     ) = runInsideIgnoredSection {
