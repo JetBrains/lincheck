@@ -667,7 +667,7 @@ class TraceCollectingEventTracker(
                 " due to return from method $methodId "                         +
                 "${methodDescriptor.className}.${methodDescriptor.methodName}"
             }
-            onInlineMethodCallReturn(inlineTracePoint.methodId)
+            onInlineMethodCallReturn(threadDescriptor, inlineTracePoint.methodId)
         }
 
         val tracePoint = threadData.popStackFrame()
@@ -720,7 +720,7 @@ class TraceCollectingEventTracker(
                 " due to exception in method $methodId "                        +
                 "${methodDescriptor.className}.${methodDescriptor.methodName}"
             }
-            onInlineMethodCallException(inlineTracePoint.methodId, t)
+            onInlineMethodCallException(threadDescriptor, inlineTracePoint.methodId, t)
         }
 
         val tracePoint = threadData.popStackFrame()
@@ -740,11 +740,11 @@ class TraceCollectingEventTracker(
     }
 
     override fun onInlineMethodCall(
-        methodId: Int,
+        threadDescriptor: ThreadDescriptor,
         codeLocation: Int,
+        methodId: Int,
         owner: Any?,
     ): Unit = runInsideInjectedCode {
-        val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
         val tracePoint = TRMethodCallTracePoint(
@@ -759,8 +759,10 @@ class TraceCollectingEventTracker(
         threadData.pushStackFrame(tracePoint, owner, isInline = true)
     }
 
-    override fun onInlineMethodCallReturn(methodId: Int): Unit = runInsideInjectedCode {
-        val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
+    override fun onInlineMethodCallReturn(
+        threadDescriptor: ThreadDescriptor,
+        methodId: Int
+    ): Unit = runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
         val tracePoint = threadData.popStackFrame()
@@ -775,8 +777,11 @@ class TraceCollectingEventTracker(
         strategy.completeContainerTracePoint(Thread.currentThread(), tracePoint)
     }
 
-    override fun onInlineMethodCallException(methodId: Int, t: Throwable): Unit = runInsideInjectedCode {
-        val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
+    override fun onInlineMethodCallException(
+        threadDescriptor: ThreadDescriptor,
+        methodId: Int,
+        t: Throwable
+    ): Unit = runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
         val tracePoint = threadData.popStackFrame()
