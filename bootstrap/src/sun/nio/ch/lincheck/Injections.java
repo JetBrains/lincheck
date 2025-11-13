@@ -73,17 +73,6 @@ public class Injections {
         return null;
     }
 
-    private static void registerRunningThread(Thread thread, EventTracker eventTracker) {
-        ThreadDescriptor descriptor = ThreadDescriptor.getThreadDescriptor(thread);
-        if (descriptor == null) {
-            descriptor = new ThreadDescriptor(thread);
-            ThreadDescriptor.setThreadDescriptor(thread, descriptor);
-        }
-        descriptor.setEventTracker(eventTracker);
-        ThreadDescriptor.setCurrentThreadDescriptor(descriptor);
-        eventTracker.registerRunningThread(thread, descriptor);
-    }
-
     public static synchronized void enableEventTracking(EventTrackingMode mode, EventTracker eventTracker) {
         if (eventTrackingMode != null) {
             throw new IllegalStateException("Event tracking is already enabled");
@@ -182,6 +171,17 @@ public class Injections {
         ThreadDescriptor descriptor = getOrCreateCurrentThreadDescriptor();
         if (descriptor == null) return false;
         return descriptor.inAnalyzedCode();
+    }
+
+    private static void registerRunningThread(Thread thread, EventTracker eventTracker) {
+        ThreadDescriptor descriptor = ThreadDescriptor.getThreadDescriptor(thread);
+        if (descriptor == null) {
+            descriptor = new ThreadDescriptor(thread);
+            ThreadDescriptor.setThreadDescriptor(thread, descriptor);
+        }
+        descriptor.setEventTracker(eventTracker);
+        ThreadDescriptor.setCurrentThreadDescriptor(descriptor);
+        eventTracker.registerRunningThread(thread, descriptor);
     }
 
     /**
