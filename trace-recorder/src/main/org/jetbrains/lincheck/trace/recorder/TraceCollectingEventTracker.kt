@@ -255,7 +255,7 @@ class TraceCollectingEventTracker(
         }
     }
 
-    override fun registerRunningThread(thread: Thread, descriptor: ThreadDescriptor): Unit = runInsideIgnoredSection {
+    override fun registerRunningThread(descriptor: ThreadDescriptor, thread: Thread): Unit = runInsideIgnoredSection {
         val threadData = threads.computeIfAbsent(thread) {
             val threadData = ThreadData(threads.size)
             ThreadDescriptor.getThreadDescriptor(thread).eventTrackerData = threadData
@@ -353,7 +353,7 @@ class TraceCollectingEventTracker(
         threadDescriptor.disableAnalysis()
     }
 
-    override fun threadJoin(threadDescriptor: ThreadDescriptor, thread: Thread?, withTimeout: Boolean) = Unit
+    override fun threadJoin(threadDescriptor: ThreadDescriptor, joinedThread: Thread?, withTimeout: Boolean) = Unit
 
     override fun onThreadRunException(
         threadDescriptor: ThreadDescriptor,

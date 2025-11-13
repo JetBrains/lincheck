@@ -18,11 +18,11 @@ import java.lang.invoke.CallSite;
  */
 public interface EventTracker {
 
-    void registerRunningThread(Thread thread, ThreadDescriptor descriptor);
+    void registerRunningThread(ThreadDescriptor descriptor, Thread thread);
     void beforeThreadFork(ThreadDescriptor descriptor, Thread startingThread, ThreadDescriptor startingThreadDescriptor);
     void beforeThreadStart(ThreadDescriptor descriptor);
     void afterThreadFinish(ThreadDescriptor descriptor);
-    void threadJoin(ThreadDescriptor descriptor, Thread thread, boolean withTimeout);
+    void threadJoin(ThreadDescriptor descriptor, Thread joinedThread, boolean withTimeout);
     void onThreadRunException(ThreadDescriptor descriptor, Throwable exception);
 
     void beforeLock(ThreadDescriptor descriptor, int codeLocation);

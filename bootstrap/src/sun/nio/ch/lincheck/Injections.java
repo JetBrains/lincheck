@@ -53,7 +53,7 @@ public class Injections {
         }
         descriptor.setEventTracker(globalEventTracker);
         ThreadDescriptor.setCurrentThreadDescriptor(descriptor);
-        globalEventTracker.registerRunningThread(t, descriptor);
+        globalEventTracker.registerRunningThread(descriptor, t);
         return descriptor;
     }
 
