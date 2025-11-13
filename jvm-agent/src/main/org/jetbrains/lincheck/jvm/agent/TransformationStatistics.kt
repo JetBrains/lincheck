@@ -17,7 +17,7 @@ import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.MethodNode
 import java.util.concurrent.ConcurrentHashMap
-import java.io.PrintStream
+import java.io.Writer
 import java.util.Locale
 
 data class ClassTransformationStatistics(
@@ -49,36 +49,37 @@ data class TransformationStatistics(
     val averageTransformationTimeNanos: Double,
 )
 
-fun TransformationStatistics.printTo(out: PrintStream) {
-    fun fmtTime(d: Double): String = String.format(Locale.US, "%.0f", d)
-    fun fmtByte(d: Double): String = String.format(Locale.US, "%.0f", d)
-    fun fmtInsn(d: Double): String = String.format(Locale.US, "%.0f", d)
-
+fun TransformationStatistics.writeTo(writer: Writer) {
     val avgClassDelta = averageClassBytesSizeAfter - averageClassBytesSizeBefore
     val avgInsnDelta = averageMethodInstructionsCountAfter - averageMethodInstructionsCountBefore
 
     val totalMs = totalTransformationTimeNanos / 1_000_000.0
     val avgMs = averageTransformationTimeNanos / 1_000_000.0
 
-    with(out) {
-        println("== Lincheck transformation statistics ==")
-        println("Total transformed classes: $totalTransformedClassesCount")
-        println("Total transformed methods: $totalTransformedMethodsCount")
-        println(
-            "Average class size: " +
-                "before=${fmtByte(averageClassBytesSizeBefore)} B, " +
-                "after=${fmtByte(averageClassBytesSizeAfter)} B, " +
-                "delta=${fmtByte(avgClassDelta)} B"
-        )
-        println(
-            "Average method instructions count: " +
-                "before=${fmtInsn(averageMethodInstructionsCountBefore)}, " +
-                "after=${fmtInsn(averageMethodInstructionsCountAfter)}, " +
-                "delta=${fmtInsn(avgInsnDelta)}"
-        )
-        println("Total transformation time: ${fmtTime(totalMs)} ms")
-        println("Average transformation time per class: ${fmtTime(avgMs)} ms")
-    }
+    fun fmtTime(d: Double): String = String.format(Locale.US, "%.0f", d)
+    fun fmtByte(d: Double): String = String.format(Locale.US, "%.0f", d)
+    fun fmtInsn(d: Double): String = String.format(Locale.US, "%.0f", d)
+
+    fun writeln(s: String) { writer.write("$s\n"); writer.flush() }
+
+    writeln("==== Transformation statistics ====")
+    writeln("Total transformed classes: $totalTransformedClassesCount")
+    writeln("Total transformed methods: $totalTransformedMethodsCount")
+    writeln("Total transformation time: ${fmtTime(totalMs)} ms")
+    writeln("Average transformation time per class: ${fmtTime(avgMs)} ms")
+
+    writeln(
+        "Average class size:\n" +
+            "\tbefore: ${fmtByte(averageClassBytesSizeBefore)} B\n" +
+            "\tafter: ${fmtByte(averageClassBytesSizeAfter)} B\n" +
+            "\tdelta: ${fmtByte(avgClassDelta)} B"
+    )
+    writeln(
+        "Average method instructions count:\n" +
+            "\tbefore: ${fmtInsn(averageMethodInstructionsCountBefore)}\n" +
+            "\tafter: ${fmtInsn(averageMethodInstructionsCountAfter)}\n" +
+            "\tdelta: ${fmtInsn(avgInsnDelta)}"
+    )
 }
 
 /**
