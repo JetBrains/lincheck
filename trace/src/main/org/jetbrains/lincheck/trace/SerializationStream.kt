@@ -130,7 +130,29 @@ private class FileStreamingThread(
     private var bufferSize = 1024
     private var buffer: ByteBuffer = ByteBuffer.allocate(INDEX_CELL_SIZE * bufferSize)
 
-    private val queue = ArrayBlockingQueue<Job>(1024)
+    /**
+     * We should finish current `put` operation even if the thread is interrupted.
+     */
+    private class TraceSerializationTaskQueue(capacity: Int) : ArrayBlockingQueue<Job>(capacity) {
+        override fun put(job: Job) {
+            var wasInterrupted = false
+            while (true) {
+                try {
+                    super.put(job)
+                    if (wasInterrupted) {
+                        // Restore the interrupt status that was consumed by put() loop above.
+                        currentThread().interrupt()
+                    }
+                    return
+                } catch (_: InterruptedException) {
+                    // Remember the interrupt and retry until we manage to enqueue the job.
+                    wasInterrupted = true
+                }
+            }
+        }
+    }
+
+    private val queue = TraceSerializationTaskQueue(1024)
 
     init {
         name = "TR-Block-Writer"
