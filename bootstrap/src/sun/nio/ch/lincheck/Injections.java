@@ -28,7 +28,11 @@ public class Injections {
 
     // Agent passes the event tracker if it decides to start recording trace points
     // in already running threads. Field is non-null in case if all-threads tracking is enabled.
-    public static volatile EventTracker globalEventTracker = null;
+    private static volatile EventTracker globalEventTracker = null;
+
+    public static EventTracker getGlobalEventTracker() {
+        return globalEventTracker;
+    }
 
     private static EventTracker getEventTracker(ThreadDescriptor descriptor, boolean registerRunningThread) {
         EventTrackingMode mode = eventTrackingMode;
@@ -182,7 +186,9 @@ public class Injections {
             descriptor = new ThreadDescriptor(thread);
             ThreadDescriptor.setThreadDescriptor(thread, descriptor);
         }
-        descriptor.setEventTracker(eventTracker);
+        if (eventTrackingMode == EventTrackingMode.THREAD_LOCAL) {
+            descriptor.setEventTracker(eventTracker);
+        }
         return descriptor;
     }
 
@@ -192,7 +198,9 @@ public class Injections {
 
         // We only reset the event tracker but keep the thread in the global map,
         // so later it can be re-registered if requested without the need to update the map.
-        descriptor.setEventTracker(null);
+        if (eventTrackingMode == EventTrackingMode.THREAD_LOCAL) {
+            descriptor.setEventTracker(null);
+        }
     }
 
     public static ThreadDescriptor registerCurrentThread(EventTracker eventTracker) {
@@ -234,7 +242,9 @@ public class Injections {
          */
 
         ThreadDescriptor startingThreadDescriptor = new ThreadDescriptor(startingThread);
-        startingThreadDescriptor.setEventTracker(eventTracker);
+        if (eventTrackingMode == EventTrackingMode.THREAD_LOCAL) {
+            startingThreadDescriptor.setEventTracker(eventTracker);
+        }
 
         /* Method `setThreadDescriptor` calls methods of `ConcurrentHashMap` (instrumented class),
          * and at this point the calling thread can have the event tracker set,

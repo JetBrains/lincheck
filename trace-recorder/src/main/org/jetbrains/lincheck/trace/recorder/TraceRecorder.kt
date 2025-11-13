@@ -118,11 +118,9 @@ object TraceRecorder {
 
         descriptor.disableAnalysis()
 
-        if (descriptor.eventTracker != eventTracker) {
+        if (eventTracker != Injections.getGlobalEventTracker()) {
             Logger.warn {
-                "Unexpected event tracker observed during trace finishing - " +
-                "most likely trace finishing invoked not from the same thread as trace starting" +
-                "(${Thread.currentThread().name})."
+                "Unexpected event tracker observed during trace finishing."
             }
         }
 
