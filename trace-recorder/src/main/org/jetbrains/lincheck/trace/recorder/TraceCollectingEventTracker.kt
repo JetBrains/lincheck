@@ -287,9 +287,7 @@ class TraceCollectingEventTracker(
 
     override fun onThreadJoin(thread: Thread?, withTimeout: Boolean) {}
 
-    override fun beforeThreadRun() = runInsideIgnoredSection {
-        val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
-
+    override fun beforeThreadRun(threadDescriptor: ThreadDescriptor) = runInsideIgnoredSection {
         // Create new thread data
         val threadData = ThreadData(threads.size)
         val thread = Thread.currentThread()
@@ -315,8 +313,7 @@ class TraceCollectingEventTracker(
         }
     }
 
-    override fun afterThreadRunReturn() = runInsideInjectedCode {
-        val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
+    override fun afterThreadRunReturn(threadDescriptor: ThreadDescriptor) = runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
         val thread = Thread.currentThread()
 
@@ -335,8 +332,10 @@ class TraceCollectingEventTracker(
         threadDescriptor.disableAnalysis()
     }
 
-    override fun afterThreadRunException(exception: Throwable) = runInsideInjectedCode {
-        val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: throw exception
+    override fun afterThreadRunException(
+        threadDescriptor: ThreadDescriptor,
+        exception: Throwable
+    ) = runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: throw exception
         // Don't pop, we need it
         val tracePoint = threadData.firstMethodCallTracePoint()!!

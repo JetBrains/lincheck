@@ -381,7 +381,7 @@ public class Injections {
          * wrapped into an ignored section by the event tracker itself, if necessary.
          */
 
-        eventTracker.beforeThreadStart(startingThread, startingThreadDescriptor);
+        eventTracker.beforeThreadStart(descriptor, startingThread, startingThreadDescriptor);
     }
 
     /**
@@ -403,7 +403,7 @@ public class Injections {
         ThreadDescriptor.setCurrentThreadDescriptor(descriptor);
 
         EventTracker eventTracker = getEventTracker(descriptor, false);
-        eventTracker.beforeThreadRun();
+        eventTracker.beforeThreadRun(descriptor);
     }
 
     /**
@@ -430,7 +430,7 @@ public class Injections {
         if (descriptor == null) return;
 
         EventTracker eventTracker = getEventTracker(descriptor, false);
-        eventTracker.afterThreadRunReturn();
+        eventTracker.afterThreadRunReturn(descriptor);
     }
 
     /**
@@ -451,17 +451,19 @@ public class Injections {
         if (descriptor == null) return;
 
         EventTracker tracker = getEventTracker(descriptor, false);
-        tracker.afterThreadRunException(exception);
+        tracker.afterThreadRunException(descriptor, exception);
     }
 
     /**
      * Called from instrumented code instead of {@code Thread::join} method.
      */
     public static void onThreadJoin(Thread thread, boolean withTimeout) {
-        EventTracker eventTracker = getEventTracker();
+        ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
+        if (descriptor == null) return;
+        EventTracker eventTracker = getEventTracker(descriptor);
         if (eventTracker == null) return;
 
-        eventTracker.onThreadJoin(thread, withTimeout);
+        eventTracker.onThreadJoin(descriptor, thread, withTimeout);
     }
 
     /**
