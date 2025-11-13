@@ -1433,11 +1433,14 @@ internal abstract class ManagedStrategy(
 
     override fun afterLocalWrite(threadDescriptor: ThreadDescriptor, codeLocation: Int, variableId: Int, value: Any?) {}
 
-    override fun beforeNewObjectCreation(className: String) = runInsideIgnoredSection {
+    override fun beforeNewObjectCreation(
+        threadDescriptor: ThreadDescriptor,
+        className: String
+    ) = runInsideIgnoredSection {
         LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
     }
 
-    override fun afterNewObjectCreation(obj: Any) {
+    override fun afterNewObjectCreation(threadDescriptor: ThreadDescriptor, obj: Any) {
         // Fast-check for immutable objects without entering an ignored section.
         // Please note that this check must not produce Lincheck events.
         if (obj.isImmutable) return
@@ -1566,8 +1569,9 @@ internal abstract class ManagedStrategy(
      * *Must be called from [runInsideIgnoredSection].*
      */
     private fun processIntrinsicMethodEffects(
+        threadDescriptor: ThreadDescriptor,
         methodId: Int,
-        result: Any?
+        result: Any?,
     ) {
         val intrinsicDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
         check(intrinsicDescriptor.isIntrinsic) { "Processing intrinsic method effect of non-intrinsic call" }
@@ -1576,7 +1580,7 @@ internal abstract class ManagedStrategy(
             intrinsicDescriptor.isArraysCopyOfIntrinsic() ||
             intrinsicDescriptor.isArraysCopyOfRangeIntrinsic()
         ) {
-            result?.let { afterNewObjectCreation(it) }
+            result?.let { afterNewObjectCreation(threadDescriptor, it) }
         }
     }
 
@@ -1711,7 +1715,7 @@ internal abstract class ManagedStrategy(
         require(deterministicMethodDescriptor is DeterministicMethodDescriptor<*, *>?)
         // process intrinsic candidate methods
         if (methodDescriptor.isIntrinsic) {
-            processIntrinsicMethodEffects(methodId, result)
+            processIntrinsicMethodEffects(threadDescriptor, methodId, result)
         }
 
         if (isInTraceDebuggerMode && isFirstReplay && deterministicMethodDescriptor != null) {

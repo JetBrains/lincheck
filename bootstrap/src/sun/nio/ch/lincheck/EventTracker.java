@@ -37,8 +37,8 @@ public interface EventTracker {
     void wait(Object monitor, boolean withTimeout);
     void notify(Object monitor, int codeLocation, boolean notifyAll);
 
-    void beforeNewObjectCreation(String className);
-    void afterNewObjectCreation(Object obj);
+    void beforeNewObjectCreation(ThreadDescriptor descriptor, String className);
+    void afterNewObjectCreation(ThreadDescriptor descriptor, Object obj);
 
     long getNextTraceDebuggerEventTrackerId(TraceDebuggerTracker tracker);
     void advanceCurrentTraceDebuggerEventTrackerId(TraceDebuggerTracker tracker, long oldId);
