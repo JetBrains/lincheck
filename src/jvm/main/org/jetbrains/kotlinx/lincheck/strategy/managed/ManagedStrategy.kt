@@ -671,7 +671,7 @@ internal abstract class ManagedStrategy(
 
     // == LISTENING METHODS ==
 
-    override fun registerRunningThread(thread: Thread, descriptor: ThreadDescriptor) {
+    override fun registerRunningThread(descriptor: ThreadDescriptor, thread: Thread) {
         error("Lincheck managed strategy does not support tracking of threads, started before agent attach.")
     }
 
@@ -767,18 +767,18 @@ internal abstract class ManagedStrategy(
 
     override fun onThreadJoin(
         threadDescriptor: ThreadDescriptor,
-        thread: Thread?,
+        joinedThread: Thread?,
         withTimeout: Boolean
     ) = runInsideIgnoredSection {
         if (withTimeout) return // timeouts occur instantly
         val currentThreadId = threadScheduler.getCurrentThreadId()
-        val joinThreadId = threadScheduler.getThreadId(thread!!)
-        while (threadScheduler.getThreadState(joinThreadId) != ThreadState.FINISHED) {
+        val joinedThreadId = threadScheduler.getThreadId(joinedThread!!)
+        while (threadScheduler.getThreadState(joinedThreadId) != ThreadState.FINISHED) {
             throwIfInterrupted()
             // TODO: should wait on thread-join be considered an obstruction-freedom violation?
             onSwitchPoint(currentThreadId)
             // Switch to another thread and wait for a moment when the thread is finished
-            switchCurrentThread(currentThreadId, BlockingReason.ThreadJoin(joinThreadId))
+            switchCurrentThread(currentThreadId, BlockingReason.ThreadJoin(joinedThreadId))
         }
     }
 

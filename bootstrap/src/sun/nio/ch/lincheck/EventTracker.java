@@ -23,7 +23,7 @@ public interface EventTracker {
     void afterThreadRunReturn(ThreadDescriptor descriptor);
     void afterThreadRunException(ThreadDescriptor descriptor, Throwable exception);
     void onThreadJoin(ThreadDescriptor descriptor, Thread thread, boolean withTimeout);
-    void registerRunningThread(Thread thread, ThreadDescriptor descriptor);
+    void registerRunningThread(ThreadDescriptor descriptor, Thread thread);
 
     void beforeLock(ThreadDescriptor descriptor, int codeLocation);
     void lock(ThreadDescriptor descriptor, Object monitor);

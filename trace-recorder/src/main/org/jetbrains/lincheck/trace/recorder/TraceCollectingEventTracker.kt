@@ -240,7 +240,7 @@ class TraceCollectingEventTracker(
         }
     }
 
-    override fun registerRunningThread(thread: Thread, descriptor: ThreadDescriptor): Unit = runInsideIgnoredSection {
+    override fun registerRunningThread(descriptor: ThreadDescriptor, thread: Thread): Unit = runInsideIgnoredSection {
         val threadData = threads.computeIfAbsent(thread) {
             val threadData = ThreadData(threads.size)
             ThreadDescriptor.getThreadDescriptor(thread).eventTrackerData = threadData
