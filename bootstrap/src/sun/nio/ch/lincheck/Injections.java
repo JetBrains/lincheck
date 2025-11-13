@@ -57,6 +57,10 @@ public class Injections {
         return descriptor;
     }
 
+    public static EventTracker getEventTracker(ThreadDescriptor descriptor) {
+        return descriptor.getEventTracker();
+    }
+
     public static EventTracker getEventTracker() {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) {
