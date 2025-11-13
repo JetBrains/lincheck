@@ -11,8 +11,10 @@
 package org.jetbrains.lincheck.trace.recorder
 
 import org.jetbrains.lincheck.trace.INJECTIONS_VOID_OBJECT
+import org.jetbrains.lincheck.util.Logger
 import sun.nio.ch.lincheck.Injections
 import sun.nio.ch.lincheck.ThreadDescriptor
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * This object is glue between injections into method user wants to record trace of and real trace recording code.
@@ -41,6 +43,11 @@ import sun.nio.ch.lincheck.ThreadDescriptor
 object TraceRecorder {
     private var eventTracker: TraceCollectingEventTracker? = null
 
+    private val installCount = AtomicInteger(0)
+
+    @Volatile
+    private var traceStarterThread: Thread? = null
+
     fun installAndStartTrace(
         className: String,
         methodName: String,
@@ -50,6 +57,11 @@ object TraceRecorder {
         pack: Boolean,
         trackAllThreads: Boolean
     ) {
+        val startedCount = installCount.incrementAndGet()
+        Logger.info { "Trace recorder has been started from $className::$methodName in thread \"${Thread.currentThread().name}\" (installCount=$startedCount)" }
+        if (startedCount > 1) {
+            return
+        }
         // Set signal "void" object from Injections for better text output
         INJECTIONS_VOID_OBJECT = Injections.VOID_RESULT
 
@@ -64,6 +76,7 @@ object TraceRecorder {
         val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: ThreadDescriptor(Thread.currentThread()).also {
             ThreadDescriptor.setCurrentThreadDescriptor(it)
         }
+        traceStarterThread = Thread.currentThread()
         desc.setAsRootDescriptor()
         desc.eventTracker = eventTracker
 
@@ -75,11 +88,31 @@ object TraceRecorder {
     }
 
     fun finishTraceAndDumpResults() {
+        val startedCount = installCount.decrementAndGet()
+        Logger.info { "Trace recorder has been stopped in thread \"${Thread.currentThread().name}\" (installCount=$startedCount)" }
+        if (startedCount > 0) {
+            Logger.debug { "Recording has been stopped less times than started: $startedCount (${Thread.currentThread().name})" }
+            // But try to de-register itself as root descriptor, if we started tracing
+            if (traceStarterThread == Thread.currentThread()) {
+                val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
+                desc.removeAsRootDescriptor()
+                traceStarterThread = null
+            }
+            return
+        }
+        if (startedCount < 0) {
+            Logger.error { "Recording has been stopped more times than started: $startedCount (${Thread.currentThread().name})" }
+            return
+        }
         // this method does not need 'runInsideIgnoredSection' because we do not call instrumented code
         // and 'eventTracker.finishAndDumpTrace()' is called after analysis is disabled
         val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         Injections.disableGlobalThreadsTracking()
-        desc.removeAsRootDescriptor()
+        if (traceStarterThread == Thread.currentThread()) {
+            desc.removeAsRootDescriptor()
+            traceStarterThread = null
+        }
+
         val currentTracker = desc.eventTracker
         if (currentTracker == eventTracker) {
             desc.disableAnalysis()
