@@ -767,8 +767,11 @@ class TraceCollectingEventTracker(
         strategy.completeContainerTracePoint(Thread.currentThread(), tracePoint)
     }
 
-    override fun onLoopIteration(codeLocation: Int, loopId: Int) = runInsideInjectedCode {
-        val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
+    override fun onLoopIteration(
+        threadDescriptor: ThreadDescriptor,
+        codeLocation: Int,
+        loopId: Int
+    ) = runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
         // create a new loop if required
@@ -799,13 +802,13 @@ class TraceCollectingEventTracker(
     }
 
     override fun afterLoopExit(
+        threadDescriptor: ThreadDescriptor,
         codeLocation: Int,
         loopId: Int,
         exception: Throwable?,
         isReachableFromOutsideLoop: Boolean
     ) = runInsideInjectedCode {
         // TODO: should we do something about exception?
-        val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
         val thread = Thread.currentThread()
         val currentLoopTracePoint = threadData.currentLoopTracePoint()

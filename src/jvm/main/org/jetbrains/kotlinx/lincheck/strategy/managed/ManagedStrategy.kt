@@ -1877,11 +1877,11 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    override fun onLoopIteration(codeLocation: Int, loopId: Int) {
+    override fun onLoopIteration(threadDescriptor: ThreadDescriptor, codeLocation: Int, loopId: Int) {
         error("Lincheck managed strategy does not support CFG-based loops tracking.")
     }
 
-    override fun afterLoopExit(codeLocation: Int, loopId: Int, exception: Throwable?, isReachableFromOutsideLoop: Boolean) {
+    override fun afterLoopExit(threadDescriptor: ThreadDescriptor, codeLocation: Int, loopId: Int, exception: Throwable?, isReachableFromOutsideLoop: Boolean) {
         error("Lincheck managed strategy does not support CFG-based loops tracking.")
     }
 

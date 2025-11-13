@@ -885,8 +885,9 @@ public class Injections {
     /**
      * Called at the beginning of every loop iteration (including the first one).
      */
-    public static void onLoopIteration(int codeLocation, int loopId) {
-        getEventTracker().onLoopIteration(codeLocation, loopId);
+    public static void onLoopIteration(ThreadDescriptor descriptor, int codeLocation, int loopId) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        eventTracker.onLoopIteration(descriptor, codeLocation, loopId);
     }
 
     /**
@@ -897,8 +898,9 @@ public class Injections {
      * @param isReachableFromOutsideLoop true if the handler can also be reached from outside the loop body;
      *   false if it is exclusive to the loop body.
      */
-    public static void afterLoopExit(int codeLocation, int loopId, Throwable exception, boolean isReachableFromOutsideLoop) {
-        getEventTracker().afterLoopExit(codeLocation, loopId, exception, isReachableFromOutsideLoop);
+    public static void afterLoopExit(ThreadDescriptor descriptor, int codeLocation, int loopId, Throwable exception, boolean isReachableFromOutsideLoop) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        eventTracker.afterLoopExit(descriptor, codeLocation, loopId, exception, isReachableFromOutsideLoop);
     }
 
     // Used in the verification phase to store a suspended continuation.
