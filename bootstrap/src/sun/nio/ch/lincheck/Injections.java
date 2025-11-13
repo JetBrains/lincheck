@@ -249,23 +249,26 @@ public class Injections {
      *
      * Creates a trace point which is used in the subsequent [beforeEvent] method call.
      */
-    public static void beforeLock(int codeLocation) {
-        getEventTracker().beforeLock(codeLocation);
+    public static void beforeLock(ThreadDescriptor descriptor, int codeLocation) {
+        EventTracker tracker = getEventTracker(descriptor);
+        tracker.beforeLock(descriptor, codeLocation);
     }
 
     /**
      * Called from instrumented code instead of the MONITORENTER instruction,
      * but after [beforeEvent] method call, if the plugin is enabled.
      */
-    public static void lock(Object monitor) {
-        getEventTracker().lock(monitor);
+    public static void lock(ThreadDescriptor descriptor, Object monitor) {
+        EventTracker tracker = getEventTracker(descriptor);
+        tracker.lock(descriptor, monitor);
     }
 
     /**
      * Called from instrumented code instead of the MONITOREXIT instruction.
      */
-    public static void unlock(Object monitor, int codeLocation) {
-        getEventTracker().unlock(monitor, codeLocation);
+    public static void unlock(ThreadDescriptor descriptor, Object monitor, int codeLocation) {
+        EventTracker tracker = getEventTracker(descriptor);
+        tracker.unlock(descriptor, monitor, codeLocation);
     }
 
     /**
@@ -298,16 +301,18 @@ public class Injections {
      *
      * Creates a trace point which is used in the subsequent [beforeEvent] method call.
      */
-    public static void beforeWait(int codeLocation) {
-        getEventTracker().beforeWait(codeLocation);
+    public static void beforeWait(ThreadDescriptor descriptor, int codeLocation) {
+        EventTracker tracker = getEventTracker(descriptor);
+        tracker.beforeWait(descriptor, codeLocation);
     }
 
     /**
      * Called from the instrumented code instead of [Object.wait],
      * but after [beforeEvent] method call, if the plugin is enabled.
      */
-    public static void wait(Object monitor) {
-        getEventTracker().wait(monitor, false);
+    public static void wait(ThreadDescriptor descriptor, Object monitor) {
+        EventTracker tracker = getEventTracker(descriptor);
+        tracker.wait(descriptor, monitor, false);
     }
 
 
@@ -315,23 +320,26 @@ public class Injections {
      * Called from the instrumented code instead of [Object.wait] with timeout,
      * but after [beforeEvent] method call, if the plugin is enabled.
      */
-    public static void waitWithTimeout(Object monitor) {
-        getEventTracker().wait(monitor, true);
+    public static void waitWithTimeout(ThreadDescriptor descriptor, Object monitor) {
+        EventTracker tracker = getEventTracker(descriptor);
+        tracker.wait(descriptor, monitor, true);
     }
 
 
     /**
      * Called from the instrumented code instead of [Object.notify].
      */
-    public static void notify(Object monitor, int codeLocation) {
-        getEventTracker().notify(monitor, codeLocation, false);
+    public static void notify(ThreadDescriptor descriptor, Object monitor, int codeLocation) {
+        EventTracker tracker = getEventTracker(descriptor);
+        tracker.notify(descriptor, monitor, codeLocation, false);
     }
 
     /**
      * Called from the instrumented code instead of [Object.notify].
      */
-    public static void notifyAll(Object monitor, int codeLocation) {
-        getEventTracker().notify(monitor, codeLocation, true);
+    public static void notifyAll(ThreadDescriptor descriptor, Object monitor, int codeLocation) {
+        EventTracker tracker = getEventTracker(descriptor);
+        tracker.notify(descriptor, monitor, codeLocation, true);
     }
 
     /**

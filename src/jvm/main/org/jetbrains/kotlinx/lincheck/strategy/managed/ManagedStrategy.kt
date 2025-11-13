@@ -985,7 +985,10 @@ internal abstract class ManagedStrategy(
         disableAnalysis()
     }
 
-    override fun beforeLock(codeLocation: Int): Unit = runInsideIgnoredSection {
+    override fun beforeLock(
+        threadDescriptor: ThreadDescriptor,
+        codeLocation: Int
+    ): Unit = runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
         newSwitchPoint(threadId, codeLocation)
 
@@ -1015,7 +1018,10 @@ internal abstract class ManagedStrategy(
      * Because of this additional switching we had to split this method into two,
      * as the `beforeEvent` method must be called right after the switch point is created.
      */
-    override fun lock(monitor: Any): Unit = runInsideIgnoredSection {
+    override fun lock(
+        threadDescriptor: ThreadDescriptor,
+        monitor: Any
+    ): Unit = runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
         // Try to acquire the monitor
         while (!monitorTracker.acquireMonitor(threadId, monitor)) {
@@ -1025,7 +1031,11 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    override fun unlock(monitor: Any, codeLocation: Int): Unit = runInsideIgnoredSection {
+    override fun unlock(
+        threadDescriptor: ThreadDescriptor,
+        monitor: Any,
+        codeLocation: Int
+    ): Unit = runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
         // We need to be extremely careful with the MONITOREXIT instruction,
         // as it can be put into a recursive "finally" block, releasing
@@ -1138,7 +1148,10 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    override fun beforeWait(codeLocation: Int): Unit = runInsideIgnoredSection {
+    override fun beforeWait(
+        threadDescriptor: ThreadDescriptor,
+        codeLocation: Int
+    ): Unit = runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
         newSwitchPoint(threadId, codeLocation)
 
@@ -1168,7 +1181,11 @@ internal abstract class ManagedStrategy(
      * Because of this additional switching we had to split this method into two,
      * as the `beforeEvent` method must be called right after the switch point is created.
      */
-    override fun wait(monitor: Any, withTimeout: Boolean): Unit = runInsideIgnoredSection {
+    override fun wait(
+        threadDescriptor: ThreadDescriptor,
+        monitor: Any,
+        withTimeout: Boolean
+    ): Unit = runInsideIgnoredSection {
         if (withTimeout) return // timeouts occur instantly
         // we check the interruption flag both before entering `wait` and after,
         // to ensure the monitor is acquired when `InterruptionException` is thrown
@@ -1183,7 +1200,12 @@ internal abstract class ManagedStrategy(
         throwIfInterrupted()
     }
 
-    override fun notify(monitor: Any, codeLocation: Int, notifyAll: Boolean): Unit = runInsideIgnoredSection {
+    override fun notify(
+        threadDescriptor: ThreadDescriptor,
+        monitor: Any,
+        codeLocation: Int,
+        notifyAll: Boolean
+    ): Unit = runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
         monitorTracker.notify(threadId, monitor, notifyAll = notifyAll)
 

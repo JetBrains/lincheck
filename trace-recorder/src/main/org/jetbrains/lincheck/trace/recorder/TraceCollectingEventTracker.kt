@@ -365,15 +365,15 @@ class TraceCollectingEventTracker(
         throw exception
     }
 
-    override fun beforeLock(codeLocation: Int) = runInsideIgnoredSection {
+    override fun beforeLock(threadDescriptor: ThreadDescriptor, codeLocation: Int) = runInsideIgnoredSection {
         Logger. error { "Trace Recorder mode doesn't support lock and monitor instrumentation" }
     }
 
-    override fun lock(monitor: Any) = runInsideIgnoredSection {
+    override fun lock(threadDescriptor: ThreadDescriptor, monitor: Any) = runInsideIgnoredSection {
         Logger. error { "Trace Recorder mode doesn't support lock and monitor instrumentation" }
     }
 
-    override fun unlock(monitor: Any, codeLocation: Int) = runInsideIgnoredSection {
+    override fun unlock(threadDescriptor: ThreadDescriptor, monitor: Any, codeLocation: Int) = runInsideIgnoredSection {
         Logger. error { "Trace Recorder mode doesn't support lock and monitor instrumentation" }
     }
 
@@ -389,15 +389,15 @@ class TraceCollectingEventTracker(
         Logger. error { "Trace Recorder mode doesn't support lock and monitor instrumentation" }
     }
 
-    override fun beforeWait(codeLocation: Int) = runInsideIgnoredSection {
+    override fun beforeWait(threadDescriptor: ThreadDescriptor, codeLocation: Int) = runInsideIgnoredSection {
         Logger. error { "Trace Recorder mode doesn't support lock and monitor instrumentation" }
     }
 
-    override fun wait(monitor: Any, withTimeout: Boolean) = runInsideIgnoredSection {
+    override fun wait(threadDescriptor: ThreadDescriptor, monitor: Any, withTimeout: Boolean) = runInsideIgnoredSection {
         Logger. error { "Trace Recorder mode doesn't support lock and monitor instrumentation" }
     }
 
-    override fun notify(monitor: Any, codeLocation: Int, notifyAll: Boolean) = runInsideIgnoredSection {
+    override fun notify(threadDescriptor: ThreadDescriptor, monitor: Any, codeLocation: Int, notifyAll: Boolean) = runInsideIgnoredSection {
         Logger. error { "Trace Recorder mode doesn't support lock and monitor instrumentation" }
     }
 
