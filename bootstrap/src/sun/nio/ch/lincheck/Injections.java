@@ -368,12 +368,14 @@ public class Injections {
         eventTracker.beforeReadArrayElement(descriptor, array, index, codeLocation);
     }
 
-    public static void afterLocalRead(int codeLocation, int variableId, Object value) {
-        getEventTracker().afterLocalRead(codeLocation, variableId, value);
+    public static void afterLocalRead(ThreadDescriptor descriptor, int codeLocation, int variableId, Object value) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        eventTracker.afterLocalRead(descriptor, codeLocation, variableId, value);
     }
 
-    public static void afterLocalWrite(int codeLocation, int variableId, Object value) {
-        getEventTracker().afterLocalWrite(codeLocation, variableId, value);
+    public static void afterLocalWrite(ThreadDescriptor descriptor, int codeLocation, int variableId, Object value) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        eventTracker.afterLocalWrite(descriptor, codeLocation, variableId, value);
     }
 
     /**

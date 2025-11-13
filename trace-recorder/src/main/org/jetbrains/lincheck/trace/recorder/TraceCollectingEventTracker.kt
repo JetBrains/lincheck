@@ -558,10 +558,13 @@ class TraceCollectingEventTracker(
 
     override fun afterWrite(threadDescriptor: ThreadDescriptor) = Unit
 
-    override fun afterLocalRead(codeLocation: Int, variableId: Int, value: Any?) = runInsideInjectedCode {
-        val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
+    override fun afterLocalRead(
+        threadDescriptor: ThreadDescriptor,
+        codeLocation: Int,
+        variableId: Int,
+        value: Any?
+    ) = runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
-
         val tracePoint = TRReadLocalVariableTracePoint(
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
@@ -571,10 +574,13 @@ class TraceCollectingEventTracker(
         strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
     }
 
-    override fun afterLocalWrite(codeLocation: Int, variableId: Int, value: Any?) = runInsideInjectedCode {
-        val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
+    override fun afterLocalWrite(
+        threadDescriptor: ThreadDescriptor,
+        codeLocation: Int,
+        variableId: Int,
+        value: Any?
+    ) = runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
-
         val tracePoint = TRWriteLocalVariableTracePoint(
             threadId = threadData.threadId,
             codeLocationId = codeLocation,

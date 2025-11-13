@@ -68,8 +68,8 @@ public interface EventTracker {
     void beforeWriteArrayElement(ThreadDescriptor descriptor, Object array, int index, Object value, int codeLocation);
     void afterWrite(ThreadDescriptor descriptor);
 
-    void afterLocalRead(int codeLocation, int variableId, Object value);
-    void afterLocalWrite(int codeLocation, int variableId, Object value);
+    void afterLocalRead(ThreadDescriptor descriptor, int codeLocation, int variableId, Object value);
+    void afterLocalWrite(ThreadDescriptor descriptor, int codeLocation, int variableId, Object value);
 
     Object onMethodCall(int codeLocation, int methodId, Object receiver, Object[] params);
     Object onMethodCallReturn(long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Object result);
