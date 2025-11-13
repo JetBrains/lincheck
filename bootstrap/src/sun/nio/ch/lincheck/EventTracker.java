@@ -71,15 +71,15 @@ public interface EventTracker {
     void afterLocalRead(ThreadDescriptor descriptor, int codeLocation, int variableId, Object value);
     void afterLocalWrite(ThreadDescriptor descriptor, int codeLocation, int variableId, Object value);
 
-    Object onMethodCall(int codeLocation, int methodId, Object receiver, Object[] params);
-    Object onMethodCallReturn(long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Object result);
-    Throwable onMethodCallException(long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Throwable t);
+    Object onMethodCall(ThreadDescriptor descriptor, int codeLocation, int methodId, Object receiver, Object[] params);
+    Object onMethodCallReturn(ThreadDescriptor descriptor, long descriptorId, Object detDescriptor, int methodId, Object receiver, Object[] params, Object result);
+    Throwable onMethodCallException(ThreadDescriptor descriptor, long descriptorId, Object detDescriptor, int methodId, Object receiver, Object[] params, Throwable t);
 
     void onInlineMethodCall(int codeLocation, int methodId, Object owner);
     void onInlineMethodCallReturn(int methodId);
     void onInlineMethodCallException(int methodId, Throwable t);
 
-    BootstrapResult<?> invokeDeterministicallyOrNull(long descriptorId, Object descriptor, Object receiver, Object[] params);
+    BootstrapResult<?> invokeDeterministicallyOrNull(ThreadDescriptor threadDescriptor, long descriptorId, Object descriptor, Object receiver, Object[] params);
 
     void onLoopIteration(int codeLocation, int loopId);
     void afterLoopExit(int codeLocation, int loopId, Throwable exception, boolean isReachableFromOutsideLoop);

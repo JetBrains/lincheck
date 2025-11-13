@@ -138,11 +138,12 @@ internal class MethodCallTransformer(
         ifNull(onDefaultMethodCallLabel) // If not deterministic call, we just call it regularly
 
         // STACK: <empty>
+        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
         loadLocal(deterministicCallIdLocal)
         loadLocal(deterministicMethodDescriptorLocal)
         pushReceiver(receiverLocal)
         loadLocal(argumentsArrayLocal)
-        // STACK: deterministicCallId, deterministicMethodDescriptor, receiver, parameters
+        // STACK: descriptor, deterministicCallId, deterministicMethodDescriptor, receiver, parameters
         invokeStatic(Injections::invokeDeterministicallyOrNull)
         // STACK: BootstrapResult
         val resultLocal = newLocal(getType(BootstrapResult::class.java))

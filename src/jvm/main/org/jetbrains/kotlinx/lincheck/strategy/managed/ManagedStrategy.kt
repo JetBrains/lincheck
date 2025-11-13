@@ -1581,6 +1581,7 @@ internal abstract class ManagedStrategy(
     }
 
     override fun onMethodCall(
+        threadDescriptor: ThreadDescriptor,
         codeLocation: Int,
         methodId: Int,
         receiver: Any?,
@@ -1693,6 +1694,7 @@ internal abstract class ManagedStrategy(
     }
 
     override fun onMethodCallReturn(
+        threadDescriptor: ThreadDescriptor,
         descriptorId: Long,
         deterministicMethodDescriptor: Any?,
         methodId: Int,
@@ -1767,6 +1769,7 @@ internal abstract class ManagedStrategy(
     }
 
     override fun onMethodCallException(
+        threadDescriptor: ThreadDescriptor,
         descriptorId: Long,
         deterministicMethodDescriptor: Any?,
         methodId: Int,
@@ -1887,6 +1890,7 @@ internal abstract class ManagedStrategy(
         else BootstrapResult.fromFailure(exceptionOrNull()!!)
 
     override fun invokeDeterministicallyOrNull(
+        threadDescriptor: ThreadDescriptor,
         descriptorId: Long,
         descriptor: Any?,
         receiver: Any?,
