@@ -25,17 +25,17 @@ public interface EventTracker {
     void onThreadJoin(Thread thread, boolean withTimeout);
     void registerRunningThread(Thread thread, ThreadDescriptor descriptor);
 
-    void beforeLock(int codeLocation);
-    void lock(Object monitor);
-    void unlock(Object monitor, int codeLocation);
+    void beforeLock(ThreadDescriptor descriptor, int codeLocation);
+    void lock(ThreadDescriptor descriptor, Object monitor);
+    void unlock(ThreadDescriptor descriptor, Object monitor, int codeLocation);
 
     void beforePark(int codeLocation);
     void park(int codeLocation);
     void unpark(Thread thread, int codeLocation);
 
-    void beforeWait(int codeLocation);
-    void wait(Object monitor, boolean withTimeout);
-    void notify(Object monitor, int codeLocation, boolean notifyAll);
+    void beforeWait(ThreadDescriptor descriptor, int codeLocation);
+    void wait(ThreadDescriptor descriptor, Object monitor, boolean withTimeout);
+    void notify(ThreadDescriptor descriptor, Object monitor, int codeLocation, boolean notifyAll);
 
     void beforeNewObjectCreation(ThreadDescriptor descriptor, String className);
     void afterNewObjectCreation(ThreadDescriptor descriptor, Object obj);
