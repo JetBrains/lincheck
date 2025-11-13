@@ -173,13 +173,27 @@ public class Injections {
         return descriptor.inAnalyzedCode();
     }
 
-    private static void registerRunningThread(Thread thread, EventTracker eventTracker) {
+    public static ThreadDescriptor registerThread(Thread thread, EventTracker eventTracker) {
         ThreadDescriptor descriptor = ThreadDescriptor.getThreadDescriptor(thread);
         if (descriptor == null) {
             descriptor = new ThreadDescriptor(thread);
             ThreadDescriptor.setThreadDescriptor(thread, descriptor);
         }
         descriptor.setEventTracker(eventTracker);
+        return descriptor;
+    }
+
+    public static void unregisterThread(Thread thread) {
+        ThreadDescriptor descriptor = ThreadDescriptor.getThreadDescriptor(thread);
+        if (descriptor == null) return;
+
+        // We only reset the event tracker but keep the thread in the global map,
+        // so later it can be re-registered if requested without the need to update the map.
+        descriptor.setEventTracker(null);
+    }
+
+    private static void registerRunningThread(Thread thread, EventTracker eventTracker) {
+        ThreadDescriptor descriptor = registerThread(thread, eventTracker);
         ThreadDescriptor.setCurrentThreadDescriptor(descriptor);
         eventTracker.registerRunningThread(thread, descriptor);
     }
