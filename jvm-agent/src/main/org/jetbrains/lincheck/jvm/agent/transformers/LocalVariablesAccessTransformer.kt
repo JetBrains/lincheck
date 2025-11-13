@@ -53,7 +53,7 @@ internal class LocalVariablesAccessTransformer(
             val livingLocalsCount = typeAnalyzer?.locals?.size ?: 0
             methodInfo.locals.variablesStartAt(label).forEach {
                 if (it.index < livingLocalsCount) {
-                    registerLocalVariableAccess(it, AccessType.WRITE)
+                    trackLocalVariableAccess(it, AccessType.WRITE)
                 }
             }
         }
@@ -69,10 +69,10 @@ internal class LocalVariablesAccessTransformer(
         }
         when {
             isLoadOpcode(opcode) && configuration.trackLocalVariableReads -> {
-                visitReadVarInsn(localVariableInfo, opcode, varIndex)
+                processReadVarInsn(localVariableInfo, opcode, varIndex)
             }
             isStoreOpcode(opcode) && configuration.trackLocalVariableWrites -> {
-                visitWriteVarInsn(localVariableInfo, opcode, varIndex)
+                processWriteVarInsn(localVariableInfo, opcode, varIndex)
             }
             else -> {
                 super.visitVarInsn(opcode, varIndex)
@@ -84,25 +84,20 @@ internal class LocalVariablesAccessTransformer(
         super.visitIincInsn(varIndex, increment)
         if (configuration.trackLocalVariableWrites) {
             getVariableInfo(varIndex)?.let {
-                registerLocalVariableAccess(it, AccessType.WRITE)
+                trackLocalVariableAccess(it, AccessType.WRITE)
             }
         }
     }
 
     @Suppress("UNUSED_PARAMETER")
-    private fun GeneratorAdapter.visitWriteVarInsn(localVariableInfo: LocalVariableInfo, opcode: Int, varIndex: Int) {
+    private fun GeneratorAdapter.processWriteVarInsn(localVariableInfo: LocalVariableInfo, opcode: Int, varIndex: Int) {
         super.visitVarInsn(opcode, varIndex)
-        invokeIfInAnalyzedCode(
-            original = {},
-            instrumented = {
-                // STACK: <empty>
-                registerLocalVariableAccess(localVariableInfo, AccessType.WRITE)
-                // STACK: <empty>
-            }
-        )
+        // STACK: <empty>
+        trackLocalVariableAccess(localVariableInfo, AccessType.WRITE)
+        // STACK: <empty>
     }
 
-    private fun GeneratorAdapter.visitReadVarInsn(localVariableInfo: LocalVariableInfo, opcode: Int, varIndex: Int) {
+    private fun GeneratorAdapter.processReadVarInsn(localVariableInfo: LocalVariableInfo, opcode: Int, varIndex: Int) {
         // Skip variable read if it is in an unknown line of code and variable is argument
         // It can be code inserted by compiler to check Null invariant
         if (!isKnownLineNumber() && varIndex < numberOfLocals) {
@@ -111,43 +106,32 @@ internal class LocalVariablesAccessTransformer(
         }
 
         super.visitVarInsn(opcode, varIndex)
-        invokeIfInAnalyzedCode(
-            original = {},
-            instrumented = {
-                // STACK: value
-                registerLocalVariableAccess(localVariableInfo, AccessType.READ)
-                // STACK: value
-            }
-        )
+        // STACK: value
+        trackLocalVariableAccess(localVariableInfo, AccessType.READ)
+        // STACK: value
     }
 
-    private fun GeneratorAdapter.registerLocalVariableAccess(variableInfo: LocalVariableInfo, accessType: AccessType) {
-        invokeIfInAnalyzedCode(
-            original = {},
-            // load the current value of stored in the local variable and call `afterLocalWrite` with it
-            instrumented = {
-                // STACK: <empty>
-                loadNewCodeLocationId()
-                val variableId = TRACE_CONTEXT.getOrCreateVariableId(variableInfo.name)
-                push(variableId)
-                // VerifyError with `loadLocal(..)`, here is a workaround
-                visitVarInsn(variableInfo.type.getVarInsnOpcode(), variableInfo.index)
-                box(variableInfo.type)
-                // STACK: codeLocation, variableId, boxedValue
-                when (accessType) {
-                    AccessType.READ -> {
-                        invokeStatic(Injections::afterLocalRead)
-                        // invokeBeforeEventIfPluginEnabled("read local")
-                        // STACK: <empty>
-                    }
-                    AccessType.WRITE -> {
-                        invokeStatic(Injections::afterLocalWrite)
-                        // invokeBeforeEventIfPluginEnabled("write local")
-                    }
-                }
-                // STACK: <empty>
+    // loads the current value stored in the local variable and calls `afterLocalRead`/`afterLocalWrite` with it
+    private fun GeneratorAdapter.trackLocalVariableAccess(variableInfo: LocalVariableInfo, accessType: AccessType) {
+        // STACK: <empty>
+        loadNewCodeLocationId()
+        val variableId = TRACE_CONTEXT.getOrCreateVariableId(variableInfo.name)
+        push(variableId)
+        // VerifyError with `loadLocal(..)`, here is a workaround
+        visitVarInsn(variableInfo.type.getVarInsnOpcode(), variableInfo.index)
+        box(variableInfo.type)
+        // STACK: codeLocation, variableId, boxedValue
+        when (accessType) {
+            AccessType.READ -> {
+                invokeStatic(Injections::afterLocalRead)
+                // invokeBeforeEventIfPluginEnabled("read local")
             }
-        )
+            AccessType.WRITE -> {
+                invokeStatic(Injections::afterLocalWrite)
+                // invokeBeforeEventIfPluginEnabled("write local")
+            }
+        }
+        // STACK: <empty>
     }
 
     private enum class AccessType { READ, WRITE }
