@@ -1235,7 +1235,12 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    override fun beforeReadField(obj: Any?, codeLocation: Int, fieldId: Int): Unit = runInsideIgnoredSection {
+    override fun beforeReadField(
+        threadDescriptor: ThreadDescriptor,
+        obj: Any?,
+        codeLocation: Int,
+        fieldId: Int
+    ): Unit = runInsideIgnoredSection {
         val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
         if (!fieldDescriptor.isStatic && obj == null) {
             return // ignore, `NullPointerException` will be thrown
@@ -1255,8 +1260,12 @@ internal abstract class ManagedStrategy(
         loopDetector.beforeReadField(obj)
     }
 
-    /** Returns <code>true</code> if a switch point is created. */
-    override fun beforeReadArrayElement(array: Any?, index: Int, codeLocation: Int): Unit = runInsideIgnoredSection {
+    override fun beforeReadArrayElement(
+        threadDescriptor: ThreadDescriptor,
+        array: Any?,
+        index: Int,
+        codeLocation: Int
+    ): Unit = runInsideIgnoredSection {
         if (array == null) return // ignore, `NullPointerException` will be thrown
         updateSnapshotOnArrayElementAccess(array, index)
         if (!shouldTrackArrayAccess(array)) {
@@ -1267,7 +1276,13 @@ internal abstract class ManagedStrategy(
         loopDetector.beforeReadArrayElement(array, index)
     }
 
-    override fun afterReadField(obj: Any?, codeLocation: Int, fieldId: Int, value: Any?) = runInsideIgnoredSection {
+    override fun afterReadField(
+        threadDescriptor: ThreadDescriptor,
+        obj: Any?,
+        codeLocation: Int,
+        fieldId: Int,
+        value: Any?
+    ) = runInsideIgnoredSection {
         val eventId = getNextEventId()
         val threadId = threadScheduler.getCurrentThreadId()
         val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
@@ -1295,7 +1310,13 @@ internal abstract class ManagedStrategy(
         loopDetector.afterRead(value)
     }
 
-    override fun afterReadArrayElement(array: Any?, index: Int, codeLocation: Int, value: Any?) = runInsideIgnoredSection {
+    override fun afterReadArrayElement(
+        threadDescriptor: ThreadDescriptor,
+        array: Any?,
+        index: Int,
+        codeLocation: Int,
+        value: Any?
+    ) = runInsideIgnoredSection {
         if (collectTrace) {
             val eventId = getNextEventId()
             val threadId = threadScheduler.getCurrentThreadId()
@@ -1319,7 +1340,13 @@ internal abstract class ManagedStrategy(
         loopDetector.afterRead(value)
     }
 
-    override fun beforeWriteField(obj: Any?, value: Any?, codeLocation: Int, fieldId: Int): Unit = runInsideIgnoredSection {
+    override fun beforeWriteField(
+        threadDescriptor: ThreadDescriptor,
+        obj: Any?,
+        value: Any?,
+        codeLocation: Int,
+        fieldId: Int
+    ): Unit = runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
         val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
         if (!fieldDescriptor.isStatic && obj == null) {
@@ -1354,7 +1381,13 @@ internal abstract class ManagedStrategy(
         loopDetector.beforeWriteField(obj, value)
     }
 
-    override fun beforeWriteArrayElement(array: Any?, index: Int, value: Any?, codeLocation: Int): Unit = runInsideIgnoredSection {
+    override fun beforeWriteArrayElement(
+        threadDescriptor: ThreadDescriptor,
+        array: Any?,
+        index: Int,
+        value: Any?,
+        codeLocation: Int
+    ): Unit = runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
         if (array == null) {
             return // ignore, `NullPointerException` will be thrown
@@ -1388,7 +1421,7 @@ internal abstract class ManagedStrategy(
         loopDetector.beforeWriteArrayElement(array, index, value)
     }
 
-    override fun afterWrite() {
+    override fun afterWrite(threadDescriptor: ThreadDescriptor) {
         if (collectTrace) {
             runInsideIgnoredSection {
                 traceCollector?.addStateRepresentation()
