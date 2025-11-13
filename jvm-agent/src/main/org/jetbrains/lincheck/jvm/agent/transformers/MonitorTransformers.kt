@@ -68,10 +68,9 @@ internal class MonitorTransformer(
                         val monitorLocal = newLocal(OBJECT_TYPE).also { storeLocal(it) }
                         // STACK: <empty>
                         invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
-                        // STACK: <empty>
-                        loadLocal(monitorLocal)
                         loadNewCodeLocationId()
-                        // STACK: descriptor, monitor, codeLocation
+                        loadLocal(monitorLocal)
+                        // STACK: descriptor, codeLocation, monitor
                         invokeStatic(Injections::unlock)
                         // STACK: <empty>
                         invokeBeforeEventIfPluginEnabled("unlock")
@@ -160,9 +159,9 @@ internal class SynchronizedMethodTransformer(
                 val monitorLocal = newLocal(OBJECT_TYPE).also { storeLocal(it) }
                 // STACK: <empty>
                 invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
-                loadLocal(monitorLocal)
                 loadNewCodeLocationId()
-                // STACK: descriptor, monitor, codeLocation
+                loadLocal(monitorLocal)
+                // STACK: descriptor, codeLocation, monitor
                 invokeStatic(Injections::unlock)
                 // STACK: <empty>
                 invokeBeforeEventIfPluginEnabled("unlock")
@@ -308,8 +307,8 @@ internal class WaitNotifyTransformer(
                         instrumented = {
                             val monitorLocal = newLocal(OBJECT_TYPE).also { storeLocal(it) }
                             invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
-                            loadLocal(monitorLocal)
                             loadNewCodeLocationId()
+                            loadLocal(monitorLocal)
                             invokeStatic(Injections::notify)
                             invokeBeforeEventIfPluginEnabled("notify")
                         }
@@ -324,8 +323,8 @@ internal class WaitNotifyTransformer(
                         instrumented = {
                             val monitorLocal = newLocal(OBJECT_TYPE).also { storeLocal(it) }
                             invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
-                            loadLocal(monitorLocal)
                             loadNewCodeLocationId()
+                            loadLocal(monitorLocal)
                             invokeStatic(Injections::notifyAll)
                             invokeBeforeEventIfPluginEnabled("notifyAll")
                         }

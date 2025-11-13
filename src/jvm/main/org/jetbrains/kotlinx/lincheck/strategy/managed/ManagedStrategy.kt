@@ -1044,8 +1044,8 @@ internal abstract class ManagedStrategy(
 
     override fun unlock(
         threadDescriptor: ThreadDescriptor,
+        codeLocation: Int,
         monitor: Any,
-        codeLocation: Int
     ): Unit = runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
         // We need to be extremely careful with the MONITOREXIT instruction,
@@ -1149,8 +1149,8 @@ internal abstract class ManagedStrategy(
 
     override fun unpark(
         threadDescriptor: ThreadDescriptor,
+        codeLocation: Int,
         thread: Thread,
-        codeLocation: Int
     ): Unit = runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
         val unparkedThreadId = threadScheduler.getThreadId(thread)
@@ -1223,8 +1223,8 @@ internal abstract class ManagedStrategy(
 
     override fun notify(
         threadDescriptor: ThreadDescriptor,
-        monitor: Any,
         codeLocation: Int,
+        monitor: Any,
         notifyAll: Boolean
     ): Unit = runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
@@ -1280,8 +1280,8 @@ internal abstract class ManagedStrategy(
 
     override fun beforeReadField(
         threadDescriptor: ThreadDescriptor,
-        obj: Any?,
         codeLocation: Int,
+        obj: Any?,
         fieldId: Int
     ): Unit = runInsideIgnoredSection {
         val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
@@ -1305,9 +1305,9 @@ internal abstract class ManagedStrategy(
 
     override fun beforeReadArrayElement(
         threadDescriptor: ThreadDescriptor,
+        codeLocation: Int,
         array: Any?,
         index: Int,
-        codeLocation: Int
     ): Unit = runInsideIgnoredSection {
         if (array == null) return // ignore, `NullPointerException` will be thrown
         updateSnapshotOnArrayElementAccess(array, index)
@@ -1321,8 +1321,8 @@ internal abstract class ManagedStrategy(
 
     override fun afterReadField(
         threadDescriptor: ThreadDescriptor,
-        obj: Any?,
         codeLocation: Int,
+        obj: Any?,
         fieldId: Int,
         value: Any?
     ) = runInsideIgnoredSection {
@@ -1355,9 +1355,9 @@ internal abstract class ManagedStrategy(
 
     override fun afterReadArrayElement(
         threadDescriptor: ThreadDescriptor,
+        codeLocation: Int,
         array: Any?,
         index: Int,
-        codeLocation: Int,
         value: Any?
     ) = runInsideIgnoredSection {
         if (collectTrace) {
@@ -1385,9 +1385,9 @@ internal abstract class ManagedStrategy(
 
     override fun beforeWriteField(
         threadDescriptor: ThreadDescriptor,
+        codeLocation: Int,
         obj: Any?,
         value: Any?,
-        codeLocation: Int,
         fieldId: Int
     ): Unit = runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
@@ -1426,10 +1426,10 @@ internal abstract class ManagedStrategy(
 
     override fun beforeWriteArrayElement(
         threadDescriptor: ThreadDescriptor,
+        codeLocation: Int,
         array: Any?,
         index: Int,
         value: Any?,
-        codeLocation: Int
     ): Unit = runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
         if (array == null) {

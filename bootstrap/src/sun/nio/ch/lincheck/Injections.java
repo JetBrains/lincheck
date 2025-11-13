@@ -489,9 +489,9 @@ public class Injections {
     /**
      * Called from instrumented code instead of the MONITOREXIT instruction.
      */
-    public static void unlock(ThreadDescriptor descriptor, Object monitor, int codeLocation) {
+    public static void unlock(ThreadDescriptor descriptor, int codeLocation, Object monitor) {
         EventTracker tracker = getEventTracker(descriptor);
-        tracker.unlock(descriptor, monitor, codeLocation);
+        tracker.unlock(descriptor, codeLocation, monitor);
     }
 
     /**
@@ -516,9 +516,9 @@ public class Injections {
     /**
      * Called from the instrumented code instead of `Unsafe.unpark`.
      */
-    public static void unpark(ThreadDescriptor descriptor, Thread thread, int codeLocation) {
+    public static void unpark(ThreadDescriptor descriptor, int codeLocation, Thread thread) {
         EventTracker tracker = getEventTracker(descriptor);
-        tracker.unpark(descriptor, thread, codeLocation);
+        tracker.unpark(descriptor, codeLocation, thread);
     }
 
     /**
@@ -555,17 +555,17 @@ public class Injections {
     /**
      * Called from the instrumented code instead of [Object.notify].
      */
-    public static void notify(ThreadDescriptor descriptor, Object monitor, int codeLocation) {
+    public static void notify(ThreadDescriptor descriptor, int codeLocation, Object monitor) {
         EventTracker tracker = getEventTracker(descriptor);
-        tracker.notify(descriptor, monitor, codeLocation, false);
+        tracker.notify(descriptor, codeLocation, monitor, false);
     }
 
     /**
      * Called from the instrumented code instead of [Object.notify].
      */
-    public static void notifyAll(ThreadDescriptor descriptor, Object monitor, int codeLocation) {
+    public static void notifyAll(ThreadDescriptor descriptor, int codeLocation, Object monitor) {
         EventTracker tracker = getEventTracker(descriptor);
-        tracker.notify(descriptor, monitor, codeLocation, true);
+        tracker.notify(descriptor, codeLocation, monitor, true);
     }
 
     /**
@@ -585,17 +585,17 @@ public class Injections {
     /**
      * Called from the instrumented code before each field read.
      */
-    public static void beforeReadField(ThreadDescriptor descriptor, Object obj, int codeLocation, int fieldId) {
+    public static void beforeReadField(ThreadDescriptor descriptor, int codeLocation, Object obj, int fieldId) {
         EventTracker eventTracker = getEventTracker(descriptor);
-        eventTracker.beforeReadField(descriptor, obj, codeLocation, fieldId);
+        eventTracker.beforeReadField(descriptor, codeLocation, obj, fieldId);
     }
 
     /**
      * Called from the instrumented code before any array cell read.
      */
-    public static void beforeReadArray(ThreadDescriptor descriptor, Object array, int index, int codeLocation) {
+    public static void beforeReadArray(ThreadDescriptor descriptor, int codeLocation, Object array, int index) {
         EventTracker eventTracker = getEventTracker(descriptor);
-        eventTracker.beforeReadArrayElement(descriptor, array, index, codeLocation);
+        eventTracker.beforeReadArrayElement(descriptor, codeLocation, array, index);
     }
 
     /**
@@ -617,33 +617,33 @@ public class Injections {
     /**
      * Called from the instrumented code after each field read (final field reads can be ignored here).
      */
-    public static void afterReadField(ThreadDescriptor descriptor, Object obj, int codeLocation, int fieldId, Object value) {
+    public static void afterReadField(ThreadDescriptor descriptor, int codeLocation, Object obj, int fieldId, Object value) {
         EventTracker eventTracker = getEventTracker(descriptor);
-        eventTracker.afterReadField(descriptor, obj, codeLocation, fieldId, value);
+        eventTracker.afterReadField(descriptor, codeLocation, obj, fieldId, value);
     }
 
     /**
      * Called from the instrumented code after each array read.
      */
-    public static void afterReadArray(ThreadDescriptor descriptor, Object array, int index, int codeLocation, Object value) {
+    public static void afterReadArray(ThreadDescriptor descriptor, int codeLocation, Object array, int index, Object value) {
         EventTracker eventTracker = getEventTracker(descriptor);
-        eventTracker.afterReadArrayElement(descriptor, array, index, codeLocation, value);
+        eventTracker.afterReadArrayElement(descriptor, codeLocation, array, index, value);
     }
 
     /**
      * Called from the instrumented code before each field write.
      */
-    public static void beforeWriteField(ThreadDescriptor descriptor, Object obj, Object value, int codeLocation, int fieldId) {
+    public static void beforeWriteField(ThreadDescriptor descriptor, int codeLocation, Object obj, Object value, int fieldId) {
         EventTracker eventTracker = getEventTracker(descriptor);
-        eventTracker.beforeWriteField(descriptor, obj, value, codeLocation, fieldId);
+        eventTracker.beforeWriteField(descriptor, codeLocation, obj, value, fieldId);
     }
 
     /**
      * Called from the instrumented code before any array cell write.
      */
-    public static void beforeWriteArray(ThreadDescriptor descriptor, Object array, int index, Object value, int codeLocation) {
+    public static void beforeWriteArray(ThreadDescriptor descriptor, int codeLocation, Object array, int index, Object value) {
         EventTracker eventTracker = getEventTracker(descriptor);
-        eventTracker.beforeWriteArrayElement(descriptor, array, index, value, codeLocation);
+        eventTracker.beforeWriteArrayElement(descriptor, codeLocation, array, index, value);
     }
 
     /**

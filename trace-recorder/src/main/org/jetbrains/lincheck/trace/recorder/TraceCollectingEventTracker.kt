@@ -353,7 +353,7 @@ class TraceCollectingEventTracker(
         Logger. error { "Trace Recorder mode doesn't support lock and monitor instrumentation" }
     }
 
-    override fun unlock(threadDescriptor: ThreadDescriptor, monitor: Any, codeLocation: Int) = runInsideIgnoredSection {
+    override fun unlock(threadDescriptor: ThreadDescriptor, codeLocation: Int, monitor: Any) = runInsideIgnoredSection {
         Logger. error { "Trace Recorder mode doesn't support lock and monitor instrumentation" }
     }
 
@@ -365,7 +365,7 @@ class TraceCollectingEventTracker(
         Logger. error { "Trace Recorder mode doesn't support lock and monitor instrumentation" }
     }
 
-    override fun unpark(threadDescriptor: ThreadDescriptor, thread: Thread, codeLocation: Int) = runInsideIgnoredSection {
+    override fun unpark(threadDescriptor: ThreadDescriptor, codeLocation: Int, thread: Thread) = runInsideIgnoredSection {
         Logger. error { "Trace Recorder mode doesn't support lock and monitor instrumentation" }
     }
 
@@ -377,7 +377,7 @@ class TraceCollectingEventTracker(
         Logger. error { "Trace Recorder mode doesn't support lock and monitor instrumentation" }
     }
 
-    override fun notify(threadDescriptor: ThreadDescriptor, monitor: Any, codeLocation: Int, notifyAll: Boolean) = runInsideIgnoredSection {
+    override fun notify(threadDescriptor: ThreadDescriptor, codeLocation: Int, monitor: Any, notifyAll: Boolean) = runInsideIgnoredSection {
         Logger. error { "Trace Recorder mode doesn't support lock and monitor instrumentation" }
     }
 
@@ -424,8 +424,8 @@ class TraceCollectingEventTracker(
 
     override fun beforeReadField(
         threadDescriptor: ThreadDescriptor,
-        obj: Any?,
         codeLocation: Int,
+        obj: Any?,
         fieldId: Int
     ): Unit = runInsideInjectedCode {
         val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
@@ -437,9 +437,9 @@ class TraceCollectingEventTracker(
 
     override fun beforeReadArrayElement(
         threadDescriptor: ThreadDescriptor,
+        codeLocation: Int,
         array: Any,
         index: Int,
-        codeLocation: Int
     ) = Unit
 
     // Needs to run inside ignored section
@@ -452,8 +452,8 @@ class TraceCollectingEventTracker(
     // and therefore all injected functions should run inside ignored section.
     override fun afterReadField(
         threadDescriptor: ThreadDescriptor,
-        obj: Any?,
         codeLocation: Int,
+        obj: Any?,
         fieldId: Int,
         value: Any?
     ) = runInsideInjectedCode {
@@ -479,9 +479,9 @@ class TraceCollectingEventTracker(
 
     override fun afterReadArrayElement(
         threadDescriptor: ThreadDescriptor,
+        codeLocation: Int,
         array: Any,
         index: Int,
-        codeLocation: Int,
         value: Any?
     ) = runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
@@ -498,9 +498,9 @@ class TraceCollectingEventTracker(
 
     override fun beforeWriteField(
         threadDescriptor: ThreadDescriptor,
+        codeLocation: Int,
         obj: Any?,
         value: Any?,
-        codeLocation: Int,
         fieldId: Int
     ): Unit = runInsideInjectedCode {
         val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
@@ -522,10 +522,10 @@ class TraceCollectingEventTracker(
 
     override fun beforeWriteArrayElement(
         threadDescriptor: ThreadDescriptor,
+        codeLocation: Int,
         array: Any,
         index: Int,
         value: Any?,
-        codeLocation: Int
     ): Unit = runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 

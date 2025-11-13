@@ -27,15 +27,15 @@ public interface EventTracker {
 
     void beforeLock(ThreadDescriptor descriptor, int codeLocation);
     void lock(ThreadDescriptor descriptor, Object monitor);
-    void unlock(ThreadDescriptor descriptor, Object monitor, int codeLocation);
+    void unlock(ThreadDescriptor descriptor, int codeLocation, Object monitor);
 
     void beforePark(ThreadDescriptor descriptor, int codeLocation);
     void park(ThreadDescriptor descriptor, int codeLocation);
-    void unpark(ThreadDescriptor descriptor, Thread thread, int codeLocation);
+    void unpark(ThreadDescriptor descriptor, int codeLocation, Thread thread);
 
     void beforeWait(ThreadDescriptor descriptor, int codeLocation);
     void wait(ThreadDescriptor descriptor, Object monitor, boolean withTimeout);
-    void notify(ThreadDescriptor descriptor, Object monitor, int codeLocation, boolean notifyAll);
+    void notify(ThreadDescriptor descriptor, int codeLocation, Object monitor, boolean notifyAll);
 
     void beforeNewObjectCreation(ThreadDescriptor descriptor, String className);
     void afterNewObjectCreation(ThreadDescriptor descriptor, Object obj);
@@ -59,13 +59,13 @@ public interface EventTracker {
 
     void updateSnapshotBeforeConstructorCall(Object[] objs);
 
-    void beforeReadField(ThreadDescriptor descriptor, Object obj, int codeLocation, int fieldId);
-    void beforeReadArrayElement(ThreadDescriptor descriptor, Object array, int index, int codeLocation);
-    void afterReadField(ThreadDescriptor descriptor, Object obj, int codeLocation, int fieldId, Object value);
-    void afterReadArrayElement(ThreadDescriptor descriptor, Object array, int index, int codeLocation, Object value);
+    void beforeReadField(ThreadDescriptor descriptor, int codeLocation, Object obj, int fieldId);
+    void beforeReadArrayElement(ThreadDescriptor descriptor, int codeLocation, Object array, int index);
+    void afterReadField(ThreadDescriptor descriptor, int codeLocation, Object obj, int fieldId, Object value);
+    void afterReadArrayElement(ThreadDescriptor descriptor, int codeLocation, Object array, int index, Object value);
 
-    void beforeWriteField(ThreadDescriptor descriptor, Object obj, Object value, int codeLocation, int fieldId);
-    void beforeWriteArrayElement(ThreadDescriptor descriptor, Object array, int index, Object value, int codeLocation);
+    void beforeWriteField(ThreadDescriptor descriptor, int codeLocation, Object obj, Object value, int fieldId);
+    void beforeWriteArrayElement(ThreadDescriptor descriptor, int codeLocation, Object array, int index, Object value);
     void afterWrite(ThreadDescriptor descriptor);
 
     void afterLocalRead(ThreadDescriptor descriptor, int codeLocation, int variableId, Object value);

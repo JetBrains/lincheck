@@ -75,9 +75,9 @@ internal class ParkingTransformer(
                         pop() // drop Unsafe object
                         // STACK: <empty>
                         invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
-                        loadLocal(threadLocal)
                         loadNewCodeLocationId()
-                        // STACK: descriptor, thread, codeLocation
+                        loadLocal(threadLocal)
+                        // STACK: descriptor, codeLocation, thread
                         invokeStatic(Injections::unpark)
                         // STACK: <empty>
                         invokeBeforeEventIfPluginEnabled("unpark")
