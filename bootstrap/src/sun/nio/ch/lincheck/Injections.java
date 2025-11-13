@@ -44,13 +44,20 @@ public class Injections {
      * Stores the selected event tracking mode.
      * Null indicates event tracking is disabled.
      */
-    public static volatile EventTrackingMode eventTrackingMode = null;
+    private static volatile EventTrackingMode eventTrackingMode = null;
 
     /**
      * Stores the global event tracker.
      * Stores `null` if the event tracking mode is not set to `GLOBAL`.
      */
     private static volatile EventTracker globalEventTracker = null;
+
+    /**
+     * Retrieves the current event tracking mode.
+     */
+    public static EventTrackingMode getEventTrackingMode() {
+        return eventTrackingMode;
+    }
 
     /**
      * Retrieves the global event tracker.

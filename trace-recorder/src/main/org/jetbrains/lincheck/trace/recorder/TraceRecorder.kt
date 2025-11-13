@@ -124,7 +124,7 @@ object TraceRecorder {
             }
         }
 
-        val mode = Injections.eventTrackingMode
+        val mode = Injections.getEventTrackingMode()
         if (mode == Injections.EventTrackingMode.GLOBAL) {
             Injections.disableGlobalEventTracking()
         } else if (mode == Injections.EventTrackingMode.THREAD_LOCAL) {
