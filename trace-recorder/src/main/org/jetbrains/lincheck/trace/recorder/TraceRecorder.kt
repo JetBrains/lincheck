@@ -93,7 +93,7 @@ object TraceRecorder {
         Logger.info { "Trace recorder has been stopped in thread \"${Thread.currentThread().name}\" (installCount=$startedCount)" }
 
         if (startedCount > 0) {
-            // Try to deregister itself as root descriptor if we started tracing
+            // Try to deregister itself as the root descriptor if we started tracing
             if (traceStarterThread == Thread.currentThread()) {
                 val descriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
                 ThreadDescriptor.unsetRootThread().ensure { it == descriptor }
@@ -119,7 +119,6 @@ object TraceRecorder {
         if (mode == Injections.EventTrackingMode.GLOBAL) {
             Injections.disableGlobalEventTracking()
         } else if (mode == Injections.EventTrackingMode.THREAD_LOCAL) {
-            ThreadDescriptor.unsetRootThread().ensure { it == descriptor }
             Injections.disableThreadLocalEventTracking()
         } else {
             throw IllegalStateException("Unexpected event tracking mode $mode")
