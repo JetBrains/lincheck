@@ -351,7 +351,7 @@ object LincheckJavaAgent {
 
     fun reportStatistics() {
         if (collectTransformationStatistics) {
-            LincheckClassFileTransformer.computeStatistics()?.printTo(System.err)
+            LincheckClassFileTransformer.computeStatistics()?.writeTo(Logger.logWriter)
             LincheckClassFileTransformer.resetStatistics()
         }
     }
