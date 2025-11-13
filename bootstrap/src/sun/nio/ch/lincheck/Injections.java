@@ -647,8 +647,9 @@ public class Injections {
      * @param receiver is `null` for public static methods.
      * @return Deterministic call descriptor or null.
      */
-    public static Object onMethodCall(int codeLocation, int methodId, Object receiver, Object[] params) {
-        return getEventTracker().onMethodCall(codeLocation, methodId, receiver, params);
+    public static Object onMethodCall(ThreadDescriptor descriptor, int codeLocation, int methodId, Object receiver, Object[] params) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        return eventTracker.onMethodCall(descriptor, codeLocation, methodId, receiver, params);
     }
 
     /**
@@ -659,8 +660,9 @@ public class Injections {
      * @param result The call result.
      * @return The potentially modified {@code result}.
      */
-    public static Object onMethodCallReturn(long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Object result) {
-        return getEventTracker().onMethodCallReturn(descriptorId, descriptor, methodId, receiver, params, result);
+    public static Object onMethodCallReturn(ThreadDescriptor threadDescriptor, long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Object result) {
+        EventTracker eventTracker = getEventTracker(threadDescriptor);
+        return eventTracker.onMethodCallReturn(threadDescriptor, descriptorId, descriptor, methodId, receiver, params, result);
     }
 
     /**
@@ -669,8 +671,9 @@ public class Injections {
      * @param descriptor Deterministic call descriptor or null.
      * @param descriptorId Deterministic call descriptor id when applicable, or any other value otherwise.
      */
-    public static void onMethodCallReturnVoid(long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params) {
-        getEventTracker().onMethodCallReturn(descriptorId, descriptor, methodId, receiver, params, VOID_RESULT);
+    public static void onMethodCallReturnVoid(ThreadDescriptor threadDescriptor, long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params) {
+        EventTracker eventTracker = getEventTracker(threadDescriptor);
+        eventTracker.onMethodCallReturn(threadDescriptor, descriptorId, descriptor, methodId, receiver, params, VOID_RESULT);
     }
 
     /**
@@ -681,8 +684,9 @@ public class Injections {
      * @param t Thrown exception.
      * @return The potentially modified {@code t}.
      */
-    public static Throwable onMethodCallException(long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Throwable t) {
-        return getEventTracker().onMethodCallException(descriptorId, descriptor, methodId, receiver, params, t);
+    public static Throwable onMethodCallException(ThreadDescriptor threadDescriptor, long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Throwable t) {
+        EventTracker eventTracker = getEventTracker(threadDescriptor);
+        return eventTracker.onMethodCallException(threadDescriptor, descriptorId, descriptor, methodId, receiver, params, t);
     }
 
     /**
@@ -696,8 +700,9 @@ public class Injections {
      * @return The result of the method invocation wrapped in a {@link BootstrapResult},
      * or {@code null} if the original method should be called.
      */
-    public static BootstrapResult<?> invokeDeterministicallyOrNull(long descriptorId, Object descriptor, Object receiver, Object[] params) {
-        return getEventTracker().invokeDeterministicallyOrNull(descriptorId, descriptor, receiver, params);
+    public static BootstrapResult<?> invokeDeterministicallyOrNull(ThreadDescriptor threadDescriptor, long descriptorId, Object descriptor, Object receiver, Object[] params) {
+        EventTracker eventTracker = getEventTracker(threadDescriptor);
+        return eventTracker.invokeDeterministicallyOrNull(threadDescriptor, descriptorId, descriptor, receiver, params);
     }
 
     /**

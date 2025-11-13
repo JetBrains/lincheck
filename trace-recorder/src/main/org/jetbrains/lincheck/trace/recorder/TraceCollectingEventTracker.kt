@@ -572,12 +572,12 @@ class TraceCollectingEventTracker(
     }
 
     override fun onMethodCall(
+        threadDescriptor: ThreadDescriptor,
         codeLocation: Int,
         methodId: Int,
         receiver: Any?,
         params: Array<Any?>
     ): Any? = runInsideInjectedCode<Any?> {
-        val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return null
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return null
         val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
 
@@ -609,6 +609,7 @@ class TraceCollectingEventTracker(
     }
 
     override fun onMethodCallReturn(
+        threadDescriptor: ThreadDescriptor,
         descriptorId: Long,
         deterministicMethodDescriptor: Any?,
         methodId: Int,
@@ -616,7 +617,6 @@ class TraceCollectingEventTracker(
         params: Array<Any?>,
         result: Any?
     ): Any? = runInsideInjectedCode(result) {
-        val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return result
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return result
         val thread = Thread.currentThread()
         val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
@@ -662,6 +662,7 @@ class TraceCollectingEventTracker(
     }
 
     override fun onMethodCallException(
+        threadDescriptor: ThreadDescriptor,
         descriptorId: Long,
         deterministicMethodDescriptor: Any?,
         methodId: Int,
@@ -669,7 +670,6 @@ class TraceCollectingEventTracker(
         params: Array<Any?>,
         t: Throwable
     ): Throwable = runInsideInjectedCode(t) {
-        val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return t
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return t
         val thread = Thread.currentThread()
         val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
@@ -841,6 +841,7 @@ class TraceCollectingEventTracker(
     }
 
     override fun invokeDeterministicallyOrNull(
+        threadDescriptor: ThreadDescriptor,
         descriptorId: Long,
         descriptor: Any?,
         receiver: Any?,
