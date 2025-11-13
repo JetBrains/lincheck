@@ -58,7 +58,8 @@ object TraceRecorder {
             className = className,
             methodName = methodName,
             traceDumpPath = traceFileName,
-            mode = parseOutputMode(format, formatOption),
+            // mode = parseOutputMode(format, formatOption),
+            mode = TraceCollectorMode.NULL,
             packTrace = pack
         )
         val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: ThreadDescriptor(Thread.currentThread()).also {
