@@ -132,8 +132,18 @@ private class FileStreamingThread(
 
     private val queue = object : ArrayBlockingQueue<Job>(1024) {
         override fun put(job: Job) {
-            @Suppress("ControlFlowWithEmptyBody")
-            while (!super.offer(job));
+            var isInterrupted = false
+            while (true) {
+                try {
+                    super.put(job)
+                    if (isInterrupted) {
+                        currentThread().interrupt()
+                    }
+                    return
+                } catch (_: InterruptedException) {
+                    isInterrupted = true
+                }
+            }
         }
     }
 
