@@ -130,7 +130,12 @@ private class FileStreamingThread(
     private var bufferSize = 1024
     private var buffer: ByteBuffer = ByteBuffer.allocate(INDEX_CELL_SIZE * bufferSize)
 
-    private val queue = ArrayBlockingQueue<Job>(1024)
+    private val queue = object : ArrayBlockingQueue<Job>(1024) {
+        override fun put(job: Job) {
+            @Suppress("ControlFlowWithEmptyBody")
+            while (!super.offer(job));
+        }
+    }
 
     init {
         name = "TR-Block-Writer"
