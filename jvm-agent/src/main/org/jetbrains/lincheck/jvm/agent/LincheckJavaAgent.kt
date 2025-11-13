@@ -345,9 +345,14 @@ object LincheckJavaAgent {
         retransformClasses(classes)
         // Clear the set of instrumented classes.
         instrumentedClasses.clear()
+        // Report statistics if requested.
+        reportStatistics()
+    }
 
+    fun reportStatistics() {
         if (collectTransformationStatistics) {
             LincheckClassFileTransformer.computeStatistics()?.printTo(System.err)
+            LincheckClassFileTransformer.resetStatistics()
         }
     }
 

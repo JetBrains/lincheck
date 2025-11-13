@@ -51,6 +51,7 @@ internal object TraceRecorderInjections {
         // This method should never throw an exception, or tracer state is undetermined
         try {
             TraceRecorder.finishTraceAndDumpResults()
+            LincheckJavaAgent.reportStatistics()
         } catch (t: Throwable) {
             Logger.error { "Cannot stop Trace Recorder: $t"}
         }

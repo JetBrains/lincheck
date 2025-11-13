@@ -140,6 +140,10 @@ class TransformationStatisticsTracker {
                 classes.map { it.transformationTimeNanos }.averageOrNull() ?: 0.0,
         )
     }
+
+    fun reset() {
+        classStats.clear()
+    }
 }
 
 private class ClassStatisticsTracker {

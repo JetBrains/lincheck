@@ -154,6 +154,10 @@ object LincheckClassFileTransformer : ClassFileTransformer {
     fun computeStatistics(): TransformationStatistics? =
         statsTracker?.computeStatistics()
 
+    fun resetStatistics() {
+        statsTracker?.reset()
+    }
+
     private fun getMethodsLocalVariables(
         classNode: ClassNode, profile: TransformationProfile,
     ): Map<String, MethodVariables> {
