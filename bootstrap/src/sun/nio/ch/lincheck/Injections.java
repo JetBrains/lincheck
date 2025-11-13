@@ -116,6 +116,9 @@ public class Injections {
      *
      * In GLOBAL mode will automatically register the currently running thread (if it is not yet registered),,
      * creating a new thread descriptor for it.
+     * <br>
+     *
+     * This is an INTERNAL method, do not expose it in public API!
      */
     private static EventTracker getEventTracker() {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
@@ -315,6 +318,11 @@ public class Injections {
 
     /**
      * Registers an already running thread for event tracking, creating a new thread descriptor for it.
+     * <br>
+     *
+     * This is an INTERNAL method, do not expose it in public API!
+     * This method is used only to register the currently running thread in GLOBAL mode,
+     * in case when this thread was started earlier than event tracking was enabled.
      *
      * @param eventTracker the event tracker to associate with the thread.
      * @return the thread descriptor associated with the given thread.
