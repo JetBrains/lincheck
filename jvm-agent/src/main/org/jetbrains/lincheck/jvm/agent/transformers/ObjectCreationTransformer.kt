@@ -78,6 +78,7 @@ internal class ObjectCreationTransformer(
                     val objectLocal = newLocal(OBJECT_TYPE)
                     copyLocal(objectLocal)
                     super.visitMethodInsn(opcode, owner, name, desc, itf)
+                    invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
                     loadLocal(objectLocal)
                     invokeStatic(Injections::afterNewObjectCreation)
                 }
@@ -102,6 +103,7 @@ internal class ObjectCreationTransformer(
                     // call the constructor
                     super.visitMethodInsn(opcode, owner, name, desc, itf)
                     // call the injected method
+                    invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
                     loadLocal(objectLocal)
                     invokeStatic(Injections::afterNewObjectCreation)
                 }
@@ -119,6 +121,9 @@ internal class ObjectCreationTransformer(
                 original = {},
                 instrumented = {
                     dup()
+                    val arrayLocal = newLocal(OBJECT_TYPE).also { storeLocal(it) }
+                    invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+                    loadLocal(arrayLocal)
                     invokeStatic(Injections::afterNewObjectCreation)
                 }
             )
@@ -130,6 +135,7 @@ internal class ObjectCreationTransformer(
             invokeIfInAnalyzedCode(
                 original = {},
                 instrumented = {
+                    invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
                     push(type.toCanonicalClassName())
                     invokeStatic(Injections::beforeNewObjectCreation)
                 }
@@ -142,6 +148,9 @@ internal class ObjectCreationTransformer(
                 original = {},
                 instrumented = {
                     dup()
+                    val arrayLocal = newLocal(OBJECT_TYPE).also { storeLocal(it) }
+                    invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+                    loadLocal(arrayLocal)
                     invokeStatic(Injections::afterNewObjectCreation)
                 }
             )
@@ -154,6 +163,9 @@ internal class ObjectCreationTransformer(
             original = {},
             instrumented = {
                 dup()
+                val arrayLocal = newLocal(OBJECT_TYPE).also { storeLocal(it) }
+                invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+                loadLocal(arrayLocal)
                 invokeStatic(Injections::afterNewObjectCreation)
             }
         )

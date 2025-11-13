@@ -719,15 +719,17 @@ public class Injections {
     /**
      * Called from the instrumented code before NEW instruction
      */
-    public static void beforeNewObjectCreation(String className) {
-        getEventTracker().beforeNewObjectCreation(className);
+    public static void beforeNewObjectCreation(ThreadDescriptor descriptor, String className) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        eventTracker.beforeNewObjectCreation(descriptor, className);
     }
 
     /**
      * Called from the instrumented code after any object is created
      */
-    public static void afterNewObjectCreation(Object obj) {
-        getEventTracker().afterNewObjectCreation(obj);
+    public static void afterNewObjectCreation(ThreadDescriptor descriptor, Object obj) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        eventTracker.afterNewObjectCreation(descriptor, obj);
     }
 
     /**

@@ -382,11 +382,14 @@ class TraceCollectingEventTracker(
         Logger. error { "Trace Recorder mode doesn't support lock and monitor instrumentation" }
     }
 
-    override fun beforeNewObjectCreation(className: String) = runInsideIgnoredSection {
+    override fun beforeNewObjectCreation(
+        threadDescriptor: ThreadDescriptor,
+        className: String
+    ) = runInsideIgnoredSection {
         LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
     }
 
-    override fun afterNewObjectCreation(obj: Any) = Unit
+    override fun afterNewObjectCreation(threadDescriptor: ThreadDescriptor, obj: Any) = Unit
 
     override fun getNextTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker): Long = runInsideIgnoredSection {
         Logger. error { "Trace Recorder mode doesn't support Trace Debugger-specific instrumentation" }
