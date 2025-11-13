@@ -1,0 +1,38 @@
+# Thread 1
+ImmutableListTest.subListOfBuilder() at :0
+  toImmutableList("abcxaxyz12"): SmallPersistentVector@1 at ImmutableListTest.kt:163
+    toPersistentList(toImmutableList ➜ "abcxaxyz12"): SmallPersistentVector@1 at extensions.kt:595
+      persistentListOf(): SmallPersistentVector@1 at extensions.kt:623
+        persistentVectorOf(): SmallPersistentVector@1 at extensions.kt:452
+          SmallPersistentVector.getEMPTY(): SmallPersistentVector@1 at Utils.kt:18
+      mutate = SmallPersistentVector@1 at extensions.kt:623
+      mutate.builder(): PersistentVectorBuilder@1 at extensions.kt:41
+      it = PersistentVectorBuilder@1 at extensions.kt:41
+      toCollection(toPersistentList ➜ "abcxaxyz12", it): PersistentVectorBuilder@1 at extensions.kt:623
+      PersistentVectorBuilder@1.build(): SmallPersistentVector@1 at extensions.kt:41
+  toPersistentList(SmallPersistentVector@1): SmallPersistentVector@1 at ImmutableListTest.kt:163
+  list = SmallPersistentVector@1 at ImmutableListTest.kt:163
+  list.builder(): PersistentVectorBuilder@1 at ImmutableListTest.kt:164
+  builder = PersistentVectorBuilder@1 at ImmutableListTest.kt:164
+  subList = null at ImmutableListTest.kt:168
+  builder.subList(2, 5): AbstractList.SubList@1 at ImmutableListTest.kt:168
+  subList = AbstractList.SubList@1 at ImmutableListTest.kt:168
+  builder.set(4, 'x'): 'a' at ImmutableListTest.kt:169
+  platform = TestPlatform.JVM at ImmutableListTest.kt:170
+  getCurrentPlatform(): TestPlatform.JVM at testUtils.kt:34
+  joinToString(subList, "", null, null, 0, null, null, 62, null): threw ConcurrentModificationException at ImmutableListTest.kt:171
+  createFailure(ConcurrentModificationException@1): Result.Failure@1 at ImmutableListTest.kt:171
+  Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ImmutableListTest.kt:171
+  checkResultIsFailure(ConcurrentModificationException.kclass, null, Result.Failure@1): ConcurrentModificationException@1 at ImmutableListTest.kt:171
+  builder.subList(2, 5): AbstractList.SubList@1 at ImmutableListTest.kt:176
+  subList = AbstractList.SubList@1 at ImmutableListTest.kt:176
+  joinToString(subList, "", null, null, 0, null, null, 62, null): "cxx" at ImmutableListTest.kt:177
+  assertEquals("cxx", "cxx", null, 4, null) at ImmutableListTest.kt:177
+  builder.set(4, 'b'): 'x' at ImmutableListTest.kt:178
+  joinToString(subList, "", null, null, 0, null, null, 62, null): "cxb" at ImmutableListTest.kt:179
+  assertEquals("cxb", "cxb", null, 4, null) at ImmutableListTest.kt:179
+  subList.remove(0): 'c' at ImmutableListTest.kt:180
+  joinToString(subList, "", null, null, 0, null, null, 62, null): "xb" at ImmutableListTest.kt:181
+  assertEquals("xb", "xb", null, 4, null) at ImmutableListTest.kt:181
+  joinToString(builder, "", null, null, 0, null, null, 62, null): "abxbxyz12" at ImmutableListTest.kt:182
+  assertEquals("abxbxyz12", "abxbxyz12", null, 4, null) at ImmutableListTest.kt:182

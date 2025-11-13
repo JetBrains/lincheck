@@ -8,8 +8,9 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.trace.recorder.test
+package org.jetbrains.trace.recorder.test.impl
 
+import org.jetbrains.trace.recorder.test.runner.AbstractTraceRecorderIntegrationTest
 import org.junit.Ignore
 import org.junit.Test
 import java.nio.file.Paths
@@ -20,10 +21,10 @@ class KotlinCoroutinesTraceRecorderIntegrationTest : AbstractTraceRecorderIntegr
     @Test
     @Ignore("Flaky test")
     fun `kotlinx_coroutines_ExecutorsTest testDefaultDispatcherToExecutor`() {
-        runGradleTest(
+        runTest(
             testClassName = "kotlinx.coroutines.ExecutorsTest",
             testMethodName = "testDefaultDispatcherToExecutor",
-            gradleCommands = listOf(
+            commands = listOf(
                 ":kotlinx-coroutines-core:jvmTest",
             )
         )

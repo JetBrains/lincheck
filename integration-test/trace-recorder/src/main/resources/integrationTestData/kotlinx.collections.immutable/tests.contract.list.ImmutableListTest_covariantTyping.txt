@@ -1,0 +1,23 @@
+# Thread 1
+ImmutableListTest.covariantTyping() at :0
+  persistentListOf(): SmallPersistentVector@1 at ImmutableListTest.kt:219
+    persistentVectorOf(): SmallPersistentVector@1 at extensions.kt:452
+      SmallPersistentVector.getEMPTY(): SmallPersistentVector@1 at Utils.kt:18
+  listNothing = SmallPersistentVector@1 at ImmutableListTest.kt:219
+  plus = SmallPersistentVector@1 at ImmutableListTest.kt:221
+  element = "x" at ImmutableListTest.kt:221
+  plus.add(element ➜ "x"): SmallPersistentVector@1 at extensions.kt:138
+  listS = SmallPersistentVector@1 at ImmutableListTest.kt:221
+  plus = SmallPersistentVector@1 at ImmutableListTest.kt:222
+  element = null at ImmutableListTest.kt:222
+  plus.add(element): SmallPersistentVector@1 at extensions.kt:138
+  listSN = SmallPersistentVector@1 at ImmutableListTest.kt:222
+  plus = SmallPersistentVector@1 at ImmutableListTest.kt:223
+  element = 1 at ImmutableListTest.kt:223
+  plus.add(element ➜ 1): SmallPersistentVector@1 at extensions.kt:138
+  listAny = SmallPersistentVector@1 at ImmutableListTest.kt:223
+  Object;@1[0] = "x" at ImmutableListTest.kt:225
+  Object;@1[1] = null at ImmutableListTest.kt:225
+  Object;@1[2] = 1 at ImmutableListTest.kt:225
+  listOf(Object;@1): Arrays.ArrayList@1 at ImmutableListTest.kt:225
+  assertEquals(Arrays.ArrayList@1, listAny, null, 4, null) at ImmutableListTest.kt:225

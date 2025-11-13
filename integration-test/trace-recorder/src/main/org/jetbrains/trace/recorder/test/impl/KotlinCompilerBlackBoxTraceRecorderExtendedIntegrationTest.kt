@@ -8,8 +8,13 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.trace.recorder.test
+package org.jetbrains.trace.recorder.test.impl
 
+import org.jetbrains.trace.recorder.test.runner.AbstractTraceRecorderIntegrationTest
+import org.jetbrains.trace.recorder.test.runner.ExtendedTraceRecorderTest
+import org.jetbrains.trace.recorder.test.runner.loadResourceText
+import org.jetbrains.trace.recorder.test.runner.parseJsonEntries
+import org.jetbrains.trace.recorder.test.runner.transformEntriesToArray
 import org.junit.Test
 import org.junit.experimental.categories.Category
 import org.junit.experimental.runners.Enclosed
@@ -20,7 +25,7 @@ import java.nio.file.Paths
 import kotlin.io.path.createTempFile
 
 @RunWith(Enclosed::class)
-class KotlinCompilerBlackBoxTraceRecorderIntegrationTest {
+class KotlinCompilerBlackBoxTraceRecorderExtendedIntegrationTest {
     @Category(ExtendedTraceRecorderTest::class)
     @RunWith(Parameterized::class)
     class Parametrized(
@@ -34,9 +39,16 @@ class KotlinCompilerBlackBoxTraceRecorderIntegrationTest {
         override val formatArgs: Map<String, String> = mapOf("format" to "binary", "formatOption" to "stream")
 
         @Test(timeout = 10 * 60 * 1000L)
-        fun runKotlinCompilerTest() = runKotlinCompilerTestImpl(
-            testClassName, testMethodName, gradleCommand, perEntryJvmArgs, perEntryCheckRepresentation
-        )
+        fun runKotlinCompilerTest() = withPermissions { permissions ->
+            val allJvmArgs = listOf("-Djava.security.policy==${permissions.absolutePath}") + perEntryJvmArgs
+            runTest(
+                testClassName = testClassName,
+                testMethodName = testMethodName,
+                extraJvmArgs = allJvmArgs,
+                commands = listOf(element = gradleCommand),
+                checkRepresentation = perEntryCheckRepresentation,
+            )
+        }
 
         companion object {
             @JvmStatic
@@ -44,31 +56,12 @@ class KotlinCompilerBlackBoxTraceRecorderIntegrationTest {
             fun data(): Collection<Array<Any>> {
                 val json = loadResourceText(
                     "/integrationTestData/kotlinCompilerTests.json",
-                    KotlinCompilerBlackBoxTraceRecorderIntegrationTest::class.java
+                    KotlinCompilerBlackBoxTraceRecorderExtendedIntegrationTest::class.java
                 )
                 val entries = parseJsonEntries(json)
                 return entries.transformEntriesToArray()
             }
         }
-    }
-}
-
-private fun AbstractTraceRecorderIntegrationTest.runKotlinCompilerTestImpl(
-    testClassName: String,
-    testMethodName: String,
-    gradleCommand: String,
-    jvmArgs: List<String>,
-    checkRepresentation: Boolean,
-) {
-    withPermissions { permissions ->
-        val allJvmArgs = listOf("-Djava.security.policy==${permissions.absolutePath}") + jvmArgs
-        runGradleTest(
-            testClassName = testClassName,
-            testMethodName = testMethodName,
-            extraJvmArgs = allJvmArgs,
-            gradleCommands = listOf(gradleCommand),
-            checkRepresentation = checkRepresentation,
-        )
     }
 }
 

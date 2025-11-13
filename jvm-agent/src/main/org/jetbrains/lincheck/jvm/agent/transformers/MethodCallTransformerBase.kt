@@ -203,6 +203,7 @@ internal abstract class MethodCallTransformerBase(
         className == "kotlin/jvm/internal/Intrinsics" ||
         className == "java/util/Objects" ||
         className == "java/lang/String" ||
+        className == "java/lang/Character" ||
         className == "java/lang/Boolean" ||
         className == "java/lang/Number" ||
         className == "java/lang/Long" ||
