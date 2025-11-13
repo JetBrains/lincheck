@@ -73,12 +73,9 @@ object TraceRecorder {
             mode = parseOutputMode(format, formatOption),
             packTrace = pack
         )
-        val descriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: ThreadDescriptor(Thread.currentThread()).also {
-            ThreadDescriptor.setCurrentThreadDescriptor(it)
-        }
+        val descriptor = ThreadDescriptor.getCurrentThreadDescriptor()
+            ?: Injections.registerCurrentThread(eventTracker)
         traceStarterThread = Thread.currentThread()
-        ThreadDescriptor.setCurrentThreadAsRoot(descriptor)
-        descriptor.eventTracker = eventTracker
 
         if (trackAllThreads) {
             Injections.enableGlobalEventTracking(eventTracker)

@@ -192,6 +192,13 @@ public class Injections {
         descriptor.setEventTracker(null);
     }
 
+    public static ThreadDescriptor registerCurrentThread(EventTracker eventTracker) {
+        Thread thread = Thread.currentThread();
+        ThreadDescriptor descriptor = registerThread(eventTracker, thread);
+        ThreadDescriptor.setCurrentThreadDescriptor(descriptor);
+        return descriptor;
+    }
+
     private static void registerRunningThread(EventTracker eventTracker, Thread thread) {
         ThreadDescriptor descriptor = registerThread(eventTracker, thread);
         ThreadDescriptor.setCurrentThreadDescriptor(descriptor);
