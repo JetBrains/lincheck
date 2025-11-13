@@ -31,12 +31,11 @@ public class Injections {
     // in already running threads. Field is non-null in case if all-threads tracking is enabled.
     public static volatile EventTracker globalEventTracker = null;
 
-    private static EventTracker getEventTracker() {
+    private static EventTracker getEventTracker(ThreadDescriptor descriptor, boolean registerRunningThread) {
         EventTrackingMode mode = eventTrackingMode;
-        ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (mode == EventTrackingMode.GLOBAL) {
             EventTracker eventTracker = globalEventTracker;
-            if (eventTracker != null && descriptor == null) {
+            if (eventTracker != null && descriptor == null && registerRunningThread) {
                 // Handle the case when all threads tracking was requested,
                 // and we need to self-register the currently running thread by creating a new descriptor for it.
                 registerRunningThread(Thread.currentThread(), eventTracker);
@@ -53,12 +52,21 @@ public class Injections {
         throw new IllegalStateException("Unexpected event tracking mode: " + mode);
     }
 
+    private static EventTracker getEventTracker(ThreadDescriptor descriptor) {
+        return getEventTracker(descriptor, true);
+    }
+
+    private static EventTracker getEventTracker() {
+        ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
+        return getEventTracker(descriptor);
+    }
+
     private static ThreadDescriptor getOrCreateCurrentThreadDescriptor() {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor != null) return descriptor;
 
         if (eventTrackingMode == EventTrackingMode.GLOBAL) {
-            getEventTracker(); // will trigger the registration of the current thread
+            getEventTracker(null, true); // will trigger registration of the current thread
             return ThreadDescriptor.getCurrentThreadDescriptor();
         }
 
@@ -187,14 +195,24 @@ public class Injections {
         // If thread is started return immediately, as in this case, JVM will throw an `IllegalThreadStateException`
         if (startingThread.getState() != Thread.State.NEW) return;
 
+        EventTracker eventTracker = getEventTracker();
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
-        if (descriptor == null) return;
-        EventTracker tracker = descriptor.getEventTracker();
+        if (eventTracker == null || descriptor == null) return;
+
+        /* We need to prepare a thread descriptor for the starting thread.
+         * We create it here and store it into the global thread descriptor map
+         * via `ThreadDescriptor.setThreadDescriptor`.
+         *
+         * Later, when the thread starts its execution and enters its `run()` method
+         * (see `beforeThreadRun` method below),
+         * it will retrieve its thread descriptor from the global map
+         * and save it as its own thread-local descriptor (for faster subsequent accesses).
+         */
 
         ThreadDescriptor startingThreadDescriptor = new ThreadDescriptor(startingThread);
-        startingThreadDescriptor.setEventTracker(tracker);
-        /*
-         * Method `setThreadDescriptor` calls methods of `ConcurrentHashMap` (instrumented class),
+        startingThreadDescriptor.setEventTracker(eventTracker);
+
+        /* Method `setThreadDescriptor` calls methods of `ConcurrentHashMap` (instrumented class),
          * and at this point the calling thread can have the event tracker set,
          * so we need to wrap the call into an ignored section.
          *
@@ -210,7 +228,8 @@ public class Injections {
          * End of the ignored section, the rest should be
          * wrapped into an ignored section by the event tracker itself, if necessary.
          */
-        tracker.beforeThreadStart(startingThread, startingThreadDescriptor);
+
+        eventTracker.beforeThreadStart(startingThread, startingThreadDescriptor);
     }
 
     /**
@@ -221,12 +240,18 @@ public class Injections {
         // TestThread is handled separately
         if (thread instanceof TestThread) return;
 
+        /* We need to retrieve the thread descriptor from the global map (if it was set)
+         * and store it into current threads' own thread-local variable (for faster subsequent accesses).
+         * If the thread descriptor was not set, we do nothing,
+         * as it means the currently running thread is not tracked.
+         */
         ThreadDescriptor descriptor = ThreadDescriptor.getThreadDescriptor(thread);
         if (descriptor == null) return;
 
         ThreadDescriptor.setCurrentThreadDescriptor(descriptor);
-        EventTracker tracker = descriptor.getEventTracker();
-        tracker.beforeThreadRun();
+
+        EventTracker eventTracker = getEventTracker(descriptor, false);
+        eventTracker.beforeThreadRun();
     }
 
     /**
@@ -238,11 +263,22 @@ public class Injections {
         // TestThread is handled separately
         if (thread instanceof TestThread) return;
 
+        /* Here it is fine to retrieve the thread descriptor from the current thread's thread-local variable.
+         *
+         * There are three cases, either:
+         * - the thread-local descriptor was already set by the `beforeThreadRun` method
+         *   in case when the thread was registered from the start;
+         *
+         * - the thread-local descriptor was already set by the `registerRunningThread` method
+         *   in case when the thread was registered on-the-fly in the middle of its execution;
+         *
+         * - the thread-local descriptor was not set, in which case we can just do nothing.
+         */
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) return;
-        EventTracker tracker = descriptor.getEventTracker();
 
-        tracker.afterThreadRunReturn();
+        EventTracker eventTracker = getEventTracker(descriptor, false);
+        eventTracker.afterThreadRunReturn();
     }
 
     /**
@@ -256,10 +292,13 @@ public class Injections {
         // TestThread is handled separately
         if (thread instanceof TestThread) return;
 
+        /* Here it is fine to retrieve the thread descriptor from the current thread's thread-local variable,
+         * for the same reason as in the `afterThreadRunReturn` method.
+         */
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) return;
-        EventTracker tracker = descriptor.getEventTracker();
 
+        EventTracker tracker = getEventTracker(descriptor, false);
         tracker.afterThreadRunException(exception);
     }
 
@@ -267,11 +306,10 @@ public class Injections {
      * Called from instrumented code instead of {@code Thread::join} method.
      */
     public static void onThreadJoin(Thread thread, boolean withTimeout) {
-        ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
-        if (descriptor == null) return;
-        EventTracker tracker = descriptor.getEventTracker();
+        EventTracker eventTracker = getEventTracker();
+        if (eventTracker == null) return;
 
-        tracker.onThreadJoin(thread, withTimeout);
+        eventTracker.onThreadJoin(thread, withTimeout);
     }
 
     /**
