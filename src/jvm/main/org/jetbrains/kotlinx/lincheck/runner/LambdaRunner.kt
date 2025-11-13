@@ -18,6 +18,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.kotlinx.lincheck.toLinCheckResult
 import org.jetbrains.kotlinx.lincheck.util.threadMapOf
+import sun.nio.ch.lincheck.ThreadDescriptor
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeoutException
 
@@ -69,12 +70,18 @@ internal class LambdaRunner(
         private fun onStart() {
             if (strategy !is ManagedStrategy) return
             strategy.beforePart(ExecutionPart.PARALLEL)
-            strategy.beforeThreadStart()
+            val descriptor = ThreadDescriptor.getCurrentThreadDescriptor()
+            if (descriptor != null) {
+                strategy.beforeThreadStart(descriptor)
+            }
         }
 
         private fun onFinish() {
             if (strategy !is ManagedStrategy) return
-            strategy.afterThreadFinish()
+            val descriptor = ThreadDescriptor.getCurrentThreadDescriptor()
+            if (descriptor != null) {
+                strategy.afterThreadFinish(descriptor)
+            }
         }
     }
 

@@ -675,16 +675,20 @@ internal abstract class ManagedStrategy(
         error("Lincheck managed strategy does not support tracking of threads, started before agent attach.")
     }
 
-    override fun beforeThreadFork(thread: Thread, descriptor: ThreadDescriptor): Unit = runInsideIgnoredSection {
+    override fun beforeThreadFork(
+        threadDescriptor: ThreadDescriptor,
+        startingThread: Thread,
+        startingThreadDescriptor: ThreadDescriptor
+    ): Unit = runInsideIgnoredSection {
         val currentThreadId = threadScheduler.getCurrentThreadId()
         // do not track threads forked from unregistered threads
         if (currentThreadId < 0) return
         // scenario threads are handled separately by the runner itself
-        if (thread is TestThread) return
-        registerThread(thread, descriptor)
+        if (startingThread is TestThread) return
+        registerThread(startingThread, startingThreadDescriptor)
     }
 
-    override fun beforeThreadStart() = runInsideIgnoredSection {
+    override fun beforeThreadStart(threadDescriptor: ThreadDescriptor) = runInsideIgnoredSection {
         val currentThreadId = threadScheduler.getCurrentThreadId()
         // do not track unregistered threads
         if (currentThreadId < 0) return
@@ -714,7 +718,7 @@ internal abstract class ManagedStrategy(
         enableAnalysis()
     }
 
-    override fun afterThreadFinish() = runInsideIgnoredSection {
+    override fun afterThreadFinish(threadDescriptor: ThreadDescriptor) = runInsideIgnoredSection {
         val currentThreadId = threadScheduler.getCurrentThreadId()
         // do not track unregistered threads
         if (currentThreadId < 0) return
@@ -735,7 +739,10 @@ internal abstract class ManagedStrategy(
      *
      * @param exception The exception that was thrown within the thread.
      */
-    override fun onThreadRunException(exception: Throwable) = runInsideIgnoredSection {
+    override fun onThreadRunException(
+        threadDescriptor: ThreadDescriptor,
+        exception: Throwable
+    ) = runInsideIgnoredSection {
         val currentThreadId = threadScheduler.getCurrentThreadId()
         // do not track unregistered threads
         if (currentThreadId < 0) return
@@ -758,7 +765,11 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    override fun threadJoin(thread: Thread?, withTimeout: Boolean) = runInsideIgnoredSection {
+    override fun threadJoin(
+        threadDescriptor: ThreadDescriptor,
+        thread: Thread?,
+        withTimeout: Boolean
+    ) = runInsideIgnoredSection {
         if (withTimeout) return // timeouts occur instantly
         val currentThreadId = threadScheduler.getCurrentThreadId()
         val joinThreadId = threadScheduler.getThreadId(thread!!)

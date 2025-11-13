@@ -299,18 +299,20 @@ class TraceCollectingEventTracker(
         }
     }
 
-    override fun beforeThreadFork(thread: Thread, descriptor: ThreadDescriptor) = runInsideInjectedCode {
-        ThreadDescriptor.getCurrentThreadDescriptor() ?: return
-        // Create new thread handle
+    override fun beforeThreadFork(
+        threadDescriptor: ThreadDescriptor,
+        startingThread: Thread,
+        startingThreadDescriptor: ThreadDescriptor
+    ) = runInsideInjectedCode {
+        // Create a new thread handle
         val forkedThreadData = ThreadData(threads.size)
-        val threadDescriptor = ThreadDescriptor.getThreadDescriptor(thread)
+        val threadDescriptor = ThreadDescriptor.getThreadDescriptor(startingThread)
         threadDescriptor.eventTrackerData = forkedThreadData
-        threads[thread] = forkedThreadData
+        threads[startingThread] = forkedThreadData
         // We are ready to use this
     }
 
-    override fun beforeThreadStart() = runInsideIgnoredSection {
-        val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
+    override fun beforeThreadStart(threadDescriptor: ThreadDescriptor) = runInsideIgnoredSection {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
         val thread = Thread.currentThread()
         // just like in `registerRunningThread` we first need to enable analysis
@@ -332,8 +334,7 @@ class TraceCollectingEventTracker(
         }
     }
 
-    override fun afterThreadFinish() = runInsideInjectedCode {
-        val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
+    override fun afterThreadFinish(threadDescriptor: ThreadDescriptor) = runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
         val thread = Thread.currentThread()
 
@@ -352,10 +353,12 @@ class TraceCollectingEventTracker(
         threadDescriptor.disableAnalysis()
     }
 
-    override fun threadJoin(thread: Thread?, withTimeout: Boolean) = Unit
+    override fun threadJoin(threadDescriptor: ThreadDescriptor, thread: Thread?, withTimeout: Boolean) = Unit
 
-    override fun onThreadRunException(exception: Throwable) = runInsideInjectedCode {
-        val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: throw exception
+    override fun onThreadRunException(
+        threadDescriptor: ThreadDescriptor,
+        exception: Throwable
+    ) = runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: throw exception
         // Don't pop, we need it
         val tracePoint = threadData.firstMethodCallTracePoint()!!

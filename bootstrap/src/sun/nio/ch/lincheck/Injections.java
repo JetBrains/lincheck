@@ -186,7 +186,7 @@ public class Injections {
          * End of the ignored section, the rest should be
          * wrapped into an ignored section by the event tracker itself, if necessary.
          */
-        tracker.beforeThreadFork(forkedThread, forkedThreadDescriptor);
+        tracker.beforeThreadFork(descriptor, forkedThread, forkedThreadDescriptor);
     }
 
     /**
@@ -202,7 +202,7 @@ public class Injections {
         }
         ThreadDescriptor.setCurrentThreadDescriptor(descriptor);
         EventTracker tracker = descriptor.getEventTracker();
-        tracker.beforeThreadStart();
+        tracker.beforeThreadStart(descriptor);
     }
 
     /**
@@ -215,7 +215,7 @@ public class Injections {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) return;
         EventTracker tracker = descriptor.getEventTracker();
-        tracker.afterThreadFinish();
+        tracker.afterThreadFinish(descriptor);
     }
 
     /**
@@ -230,7 +230,7 @@ public class Injections {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) return;
         EventTracker tracker = descriptor.getEventTracker();
-        tracker.onThreadRunException(exception);
+        tracker.onThreadRunException(descriptor, exception);
     }
 
     /**
@@ -239,8 +239,8 @@ public class Injections {
     public static void threadJoin(Thread thread, boolean withTimeout) {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) return;
-        EventTracker tracker = descriptor.getEventTracker();
-        tracker.threadJoin(thread, withTimeout);
+        EventTracker tracker = getEventTracker(descriptor);
+        tracker.threadJoin(descriptor, thread, withTimeout);
     }
 
     /**
