@@ -120,13 +120,12 @@ object TraceRecorder {
             Injections.disableGlobalEventTracking()
         } else if (mode == Injections.EventTrackingMode.THREAD_LOCAL) {
             Injections.disableThreadLocalEventTracking()
+            if (traceStarterThread == Thread.currentThread()) {
+                ThreadDescriptor.unsetRootThread().ensure { it == descriptor }
+                traceStarterThread = null
+            }
         } else {
             throw IllegalStateException("Unexpected event tracking mode $mode")
-        }
-
-        if (traceStarterThread == Thread.currentThread()) {
-            ThreadDescriptor.unsetRootThread().ensure { it == descriptor }
-            traceStarterThread = null
         }
 
         eventTracker?.finishAndDumpTrace()
