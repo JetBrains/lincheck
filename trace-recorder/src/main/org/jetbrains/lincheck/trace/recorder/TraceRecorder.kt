@@ -83,8 +83,8 @@ object TraceRecorder {
             Injections.enableThreadLocalEventTracking()
             ThreadDescriptor.setCurrentThreadAsRoot(descriptor)
         }
-        eventTracker!!.enableTrace()
 
+        eventTracker!!.enableTrace()
         descriptor.enableAnalysis()
     }
 
