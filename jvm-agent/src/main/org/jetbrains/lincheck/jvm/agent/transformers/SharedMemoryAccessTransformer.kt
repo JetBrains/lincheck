@@ -105,10 +105,10 @@ internal class SharedMemoryAccessTransformer(
 
         // STACK: <empty>
         invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
-        pushNull()
         val codeLocationId = loadNewCodeLocationId()
+        pushNull()
         push(fieldId)
-        // STACK: descriptor, null, codeLocation, fieldId
+        // STACK: descriptor, codeLocation, null, fieldId
         invokeStatic(Injections::beforeReadField)
         // STACK: <empty>
         super.visitFieldInsn(opcode, owner, fieldName, desc)
@@ -131,10 +131,10 @@ internal class SharedMemoryAccessTransformer(
         val ownerLocal = newLocal(getType("L$owner;")).also { copyLocal(it) }
 
         invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
-        loadLocal(ownerLocal)
         val codeLocationId = loadNewCodeLocationId(accessPath = ownerName)
+        loadLocal(ownerLocal)
         push(fieldId)
-        // STACK: descriptor, obj, codeLocation, fieldId
+        // STACK: descriptor, codeLocation, obj, fieldId
         invokeStatic(Injections::beforeReadField)
         // STACK: obj
         super.visitFieldInsn(opcode, owner, fieldName, desc)
@@ -158,12 +158,12 @@ internal class SharedMemoryAccessTransformer(
         // STACK: value
         loadLocal(valueLocal)
         invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+        loadNewCodeLocationId()
         pushNull()
         loadLocal(valueLocal)
         box(valueType)
-        loadNewCodeLocationId()
         push(fieldId)
-        // STACK: value, descriptor, null, value, codeLocation, fieldId
+        // STACK: value, descriptor, codeLocation, null, value, fieldId
         invokeStatic(Injections::beforeWriteField)
         // STACK: value
         invokeBeforeEventIfPluginEnabled("write static field")
@@ -188,12 +188,12 @@ internal class SharedMemoryAccessTransformer(
         val ownerName = ownerNameAnalyzer?.stack?.getStackElementAt(valueType.size)
 
         invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+        loadNewCodeLocationId(accessPath = ownerName)
         loadLocal(ownerLocal)
         loadLocal(valueLocal)
         box(valueType)
-        loadNewCodeLocationId(accessPath = ownerName)
         push(fieldId)
-        // STACK: descriptor, obj, value, codeLocation, fieldId
+        // STACK: descriptor, codeLocation, obj, value, fieldId
         invokeStatic(Injections::beforeWriteField)
         // STACK: <empty>
         invokeBeforeEventIfPluginEnabled("write field")
@@ -253,10 +253,10 @@ internal class SharedMemoryAccessTransformer(
 
         // STACK: <empty>
         invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+        val codeLocationId = loadNewCodeLocationId(accessPath = ownerName)
         loadLocal(arrayLocal)
         loadLocal(indexLocal)
-        val codeLocationId = loadNewCodeLocationId(accessPath = ownerName)
-        // STACK: descriptor, array, index, codeLocation
+        // STACK: descriptor, codeLocation, array, index
         invokeStatic(Injections::beforeReadArray)
         // STACK: <empty>
         loadLocal(arrayLocal)
@@ -281,12 +281,12 @@ internal class SharedMemoryAccessTransformer(
 
         // STACK: <empty>
         invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+        loadNewCodeLocationId(accessPath = ownerName)
         loadLocal(arrayLocal)
         loadLocal(indexLocal)
         loadLocal(valueLocal)
         box(arrayElementType)
-        loadNewCodeLocationId(accessPath = ownerName)
-        // STACK: descriptor, array, index, array, index
+        // STACK: descriptor, codeLocation, array, index, value
         invokeStatic(Injections::beforeWriteArray)
         invokeBeforeEventIfPluginEnabled("write array")
         // STACK: <empty>
@@ -305,16 +305,16 @@ internal class SharedMemoryAccessTransformer(
         val resultLocal = newLocal(valueType)
         copyLocal(resultLocal)
         invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+        push(codeLocationId)
         if (ownerLocal != null) {
             loadLocal(ownerLocal)
         } else {
             pushNull()
         }
-        push(codeLocationId)
         push(fieldId)
         loadLocal(resultLocal)
         box(valueType)
-        // STACK: value, descriptor, owner, codeLocation, fieldId, boxed value
+        // STACK: value, descriptor, codeLocation, owner, fieldId, boxed value
         invokeStatic(Injections::afterReadField)
         // STACK: value
     }
@@ -324,12 +324,12 @@ internal class SharedMemoryAccessTransformer(
         val resultLocal = newLocal(valueType)
         copyLocal(resultLocal)
         invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+        push(codeLocationId)
         loadLocal(arrayLocal)
         loadLocal(indexLocal)
-        push(codeLocationId)
         loadLocal(resultLocal)
         box(valueType)
-        // STACK: value, descriptor, array, index, codeLocation, boxed value
+        // STACK: value, descriptor, codeLocation, array, index, boxed value
         invokeStatic(Injections::afterReadArray)
         // STACK: value
     }
