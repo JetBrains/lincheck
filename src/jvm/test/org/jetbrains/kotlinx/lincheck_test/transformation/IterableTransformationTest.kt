@@ -9,16 +9,14 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.transformation
 
-import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTest
+import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.junit.Test
 
 /**
  * Tests that java.lang.Iterable is transformed and
  * iterator() method returns transformed java.util.Iterator
  */
-@ModelCheckingCTest(iterations = 1, actorsBefore = 1, actorsAfter = 1, actorsPerThread = 1)
 class IterableTransformationTest {
     private var sum = 0
 
@@ -31,8 +29,10 @@ class IterableTransformationTest {
     }
 
     @Test
-    fun test() {
-        @Suppress("DEPRECATION")
-        LinChecker.check(this::class.java)
-    }
+    fun test() = ModelCheckingOptions()
+        .iterations(1)
+        .actorsBefore(1)
+        .actorsAfter(1)
+        .actorsPerThread(1)
+        .check(this::class)
 }

@@ -9,15 +9,13 @@
  */
 package org.jetbrains.kotlinx.lincheck_test
 
-import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.lincheck.LincheckAssertionError
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
+import org.jetbrains.lincheck.datastructures.StressOptions
 import org.junit.Assert.*
 import org.junit.Test
 import java.util.concurrent.ThreadLocalRandom
 
-@StressCTest(iterations = 1, requireStateEquivalenceImplCheck = false, actorsBefore = 1, actorsAfter = 1, threads = 3)
 class AlmostEmptyScenarioTest {
     @Operation(runOnce = true)
     fun operation1() = ThreadLocalRandom.current().nextInt(5)
@@ -28,8 +26,12 @@ class AlmostEmptyScenarioTest {
     @Test
     fun test() {
         try {
-            @Suppress("DEPRECATION")
-            LinChecker.check(AlmostEmptyScenarioTest::class.java)
+            StressOptions()
+                .iterations(1)
+                .actorsBefore(1)
+                .actorsAfter(1)
+                .threads(3)
+                .check(this::class)
             fail("Should fail with LincheckAssertionError")
         } catch (e: LincheckAssertionError) {
             val failedScenario = e.failure.scenario

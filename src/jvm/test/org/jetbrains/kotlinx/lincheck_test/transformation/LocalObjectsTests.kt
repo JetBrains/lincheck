@@ -11,7 +11,6 @@ package org.jetbrains.kotlinx.lincheck_test.transformation
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTest
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
@@ -30,14 +29,6 @@ import kotlin.reflect.KFunction
  * this test fails by timeout since the number of
  * invocations is set to [Int.MAX_VALUE].
  */
-@ModelCheckingCTest(
-    actorsBefore = 0,
-    actorsAfter = 0,
-    actorsPerThread = 50,
-    invocationsPerIteration = Int.MAX_VALUE,
-    iterations = 50
-)
-
 class LocalObjectEliminationTest {
     @Before
     fun setUp() = assumeFalse(isInTraceDebuggerMode)
@@ -72,10 +63,13 @@ class LocalObjectEliminationTest {
     }
 
     @Test(timeout = 100_000)
-    fun test() {
-        @Suppress("DEPRECATION")
-        LinChecker.check(this::class.java)
-    }
+    fun test() = ModelCheckingOptions()
+        .actorsBefore(0)
+        .actorsAfter(0)
+        .actorsPerThread(50)
+        .invocationsPerIteration(Int.MAX_VALUE)
+        .iterations(50)
+        .check(this::class)
 
     private data class A(var value: Int, var any: Any, val array: IntArray)
 }
