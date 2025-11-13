@@ -80,7 +80,7 @@ object TraceRecorder {
         if (trackAllThreads) {
             Injections.enableGlobalEventTracking(eventTracker)
         } else {
-            Injections.enableEventTracking(Injections.EventTrackingMode.SINGLE_THREAD)
+            Injections.enableThreadLocalEventTracking()
             ThreadDescriptor.setCurrentThreadAsRoot(descriptor)
         }
         eventTracker!!.enableTrace()
@@ -105,7 +105,7 @@ object TraceRecorder {
             Logger.error { "Recording has been stopped more times than started: $startedCount (${Thread.currentThread().name})" }
             return
         }
-        // this method does not need 'runInsideIgnoredSection' because we do not call instrumented code
+        // this method does not need 'runInsideIgnoredSection' because we do not call instrumented code,
         // and we call `disableAnalysis` as a first action
         val descriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         Injections.disableGlobalThreadsTracking()
@@ -129,10 +129,10 @@ object TraceRecorder {
         val mode = Injections.eventTrackingMode
         if (mode == Injections.EventTrackingMode.GLOBAL) {
             Injections.disableGlobalEventTracking()
-        } else if (mode == Injections.EventTrackingMode.SINGLE_THREAD) {
+        } else if (mode == Injections.EventTrackingMode.THREAD_LOCAL) {
             ThreadDescriptor.unsetRootThread()
                 .ensure { it == descriptor }
-            Injections.disableGlobalEventTracking()
+            Injections.disableThreadLocalEventTracking()
         } else {
             throw IllegalStateException("Unexpected event tracking mode $mode")
         }

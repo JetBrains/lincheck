@@ -22,7 +22,6 @@ public class Injections {
     public enum EventTrackingMode {
         GLOBAL,
         THREAD_LOCAL,
-        SINGLE_THREAD,
     }
 
     public static volatile EventTrackingMode eventTrackingMode = null;
@@ -42,10 +41,7 @@ public class Injections {
             }
             return eventTracker;
         }
-        // both cases are handled by `ThreadDescriptor.getCurrentThreadDescriptor()`
-        if (mode == EventTrackingMode.THREAD_LOCAL ||
-            mode == EventTrackingMode.SINGLE_THREAD
-        ) {
+        if (mode == EventTrackingMode.THREAD_LOCAL) {
             return (descriptor != null) ? descriptor.getEventTracker() : null;
         }
 
@@ -73,7 +69,7 @@ public class Injections {
         return null;
     }
 
-    public static synchronized void enableEventTracking(EventTrackingMode mode, EventTracker eventTracker) {
+    private static synchronized void enableEventTracking(EventTrackingMode mode, EventTracker eventTracker) {
         if (eventTrackingMode != null) {
             throw new IllegalStateException("Event tracking is already enabled");
         }
@@ -83,16 +79,12 @@ public class Injections {
         eventTrackingMode = mode;
     }
 
-    public static synchronized void disableEventTracking() {
+    private static synchronized void disableEventTracking() {
         EventTrackingMode mode = eventTrackingMode;
         if (mode == EventTrackingMode.GLOBAL) {
             globalEventTracker = null;
         }
         eventTrackingMode = null;
-    }
-
-    public static void enableEventTracking(EventTrackingMode mode) {
-        enableEventTracking(mode, null);
     }
 
     /**
@@ -109,6 +101,17 @@ public class Injections {
     public static void disableGlobalEventTracking() {
         if (eventTrackingMode != EventTrackingMode.GLOBAL) {
             throw new IllegalStateException("Global event tracking is not enabled");
+        }
+        disableEventTracking();
+    }
+
+    public static void enableThreadLocalEventTracking() {
+        enableEventTracking(EventTrackingMode.THREAD_LOCAL, null);
+    }
+
+    public static void disableThreadLocalEventTracking() {
+        if (eventTrackingMode != EventTrackingMode.THREAD_LOCAL) {
+            throw new IllegalStateException("Thread local event tracking is not enabled");
         }
         disableEventTracking();
     }

@@ -126,11 +126,11 @@ internal inline fun withLincheckTestContext(
 ) {
     LINCHECK_TEST_LOCK.withLock {
         withLincheckJavaAgent(instrumentationMode) {
-            Injections.enableEventTracking(Injections.EventTrackingMode.THREAD_LOCAL)
+            Injections.enableThreadLocalEventTracking()
             try {
                 block()
             } finally {
-                Injections.disableEventTracking()
+                Injections.disableThreadLocalEventTracking()
             }
         }
     }
