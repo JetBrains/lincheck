@@ -277,22 +277,25 @@ public class Injections {
      *
      * Creates a trace point which is used in the subsequent [beforeEvent] method call.
      */
-    public static void beforePark(int codeLocation) {
-        getEventTracker().beforePark(codeLocation);
+    public static void beforePark(ThreadDescriptor descriptor, int codeLocation) {
+        EventTracker tracker = getEventTracker(descriptor);
+        tracker.beforePark(descriptor, codeLocation);
     }
 
     /**
      * Called from the instrumented code instead of `Unsafe.park`.
      */
-    public static void park(int codeLocation) {
-        getEventTracker().park(codeLocation);
+    public static void park(ThreadDescriptor descriptor, int codeLocation) {
+        EventTracker tracker = getEventTracker(descriptor);
+        tracker.park(descriptor, codeLocation);
     }
 
     /**
      * Called from the instrumented code instead of `Unsafe.unpark`.
      */
-    public static void unpark(Thread thread, int codeLocation) {
-        getEventTracker().unpark(thread, codeLocation);
+    public static void unpark(ThreadDescriptor descriptor, Thread thread, int codeLocation) {
+        EventTracker tracker = getEventTracker(descriptor);
+        tracker.unpark(descriptor, thread, codeLocation);
     }
 
     /**

@@ -377,15 +377,15 @@ class TraceCollectingEventTracker(
         Logger. error { "Trace Recorder mode doesn't support lock and monitor instrumentation" }
     }
 
-    override fun beforePark(codeLocation: Int) = runInsideIgnoredSection {
+    override fun beforePark(threadDescriptor: ThreadDescriptor, codeLocation: Int) = runInsideIgnoredSection {
         Logger. error { "Trace Recorder mode doesn't support lock and monitor instrumentation" }
     }
 
-    override fun park(codeLocation: Int) = runInsideIgnoredSection {
+    override fun park(threadDescriptor: ThreadDescriptor, codeLocation: Int) = runInsideIgnoredSection {
         Logger. error { "Trace Recorder mode doesn't support lock and monitor instrumentation" }
     }
 
-    override fun unpark(thread: Thread, codeLocation: Int) = runInsideIgnoredSection {
+    override fun unpark(threadDescriptor: ThreadDescriptor, thread: Thread, codeLocation: Int) = runInsideIgnoredSection {
         Logger. error { "Trace Recorder mode doesn't support lock and monitor instrumentation" }
     }
 

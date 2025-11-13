@@ -1061,7 +1061,10 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    override fun beforePark(codeLocation: Int): Unit = runInsideIgnoredSection {
+    override fun beforePark(
+        threadDescriptor: ThreadDescriptor,
+        codeLocation: Int
+    ): Unit = runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
         // Instead of fairly supporting the park/unpark semantics,
         // we simply add a new switch point here, thus, also
@@ -1094,7 +1097,10 @@ internal abstract class ManagedStrategy(
      * Because of this additional switching we had to split this method into two,
      * as the `beforeEvent` method must be called right after the switch point is created.
      */
-    override fun park(codeLocation: Int): Unit = runInsideIgnoredSection {
+    override fun park(
+        threadDescriptor: ThreadDescriptor,
+        codeLocation: Int
+    ): Unit = runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
         // Do not park and exit immediately if the thread's interrupted flag set.
         if (Thread.currentThread().isInterrupted) return
@@ -1130,7 +1136,11 @@ internal abstract class ManagedStrategy(
         return !(section != null && section.isSilent())
     }
 
-    override fun unpark(thread: Thread, codeLocation: Int): Unit = runInsideIgnoredSection {
+    override fun unpark(
+        threadDescriptor: ThreadDescriptor,
+        thread: Thread,
+        codeLocation: Int
+    ): Unit = runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
         val unparkedThreadId = threadScheduler.getThreadId(thread)
         parkingTracker.unpark(threadId, unparkedThreadId)

@@ -596,6 +596,7 @@ const val ASM_API = Opcodes.ASM9
 internal val OBJECT_ARRAY_TYPE = getType(Array<Any>::class.java)
 internal val STRING_TYPE = getType(String::class.java)
 internal val CLASS_TYPE = getType(Class::class.java)
+internal val THREAD_TYPE = getType(Thread::class.java)
 internal val THROWABLE_TYPE = getType(Throwable::class.java)
 
 internal val CLASS_FOR_NAME_METHOD = Method("forName", CLASS_TYPE, arrayOf(STRING_TYPE))
