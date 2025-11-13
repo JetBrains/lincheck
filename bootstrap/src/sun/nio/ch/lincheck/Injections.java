@@ -588,15 +588,17 @@ public class Injections {
     /**
      * Called from the instrumented code after each local variable read.
      */
-    public static void afterLocalRead(int codeLocation, int variableId, Object value) {
-        getEventTracker().afterLocalRead(codeLocation, variableId, value);
+    public static void afterLocalRead(ThreadDescriptor descriptor, int codeLocation, int variableId, Object value) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        eventTracker.afterLocalRead(descriptor, codeLocation, variableId, value);
     }
 
     /**
      * Called from the instrumented code after each local variable write.
      */
-    public static void afterLocalWrite(int codeLocation, int variableId, Object value) {
-        getEventTracker().afterLocalWrite(codeLocation, variableId, value);
+    public static void afterLocalWrite(ThreadDescriptor descriptor, int codeLocation, int variableId, Object value) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        eventTracker.afterLocalWrite(descriptor, codeLocation, variableId, value);
     }
 
     /**

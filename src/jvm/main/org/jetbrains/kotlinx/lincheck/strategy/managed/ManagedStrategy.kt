@@ -1429,9 +1429,9 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    override fun afterLocalRead(codeLocation: Int, variableId: Int, value: Any?) {}
+    override fun afterLocalRead(threadDescriptor: ThreadDescriptor, codeLocation: Int, variableId: Int, value: Any?) {}
 
-    override fun afterLocalWrite(codeLocation: Int, variableId: Int, value: Any?) {}
+    override fun afterLocalWrite(threadDescriptor: ThreadDescriptor, codeLocation: Int, variableId: Int, value: Any?) {}
 
     override fun beforeNewObjectCreation(className: String) = runInsideIgnoredSection {
         LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
