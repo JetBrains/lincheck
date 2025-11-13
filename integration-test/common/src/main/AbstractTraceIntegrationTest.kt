@@ -58,7 +58,7 @@ abstract class AbstractTraceIntegrationTest {
                         val jvmArgs = options.jvmArgs?.toMutableList() ?: mutableListOf()
                         jvmArgs.addAll(listOf(${extraJvmArgs.joinToString(", ") { "\"$it\"" }}))
                         jvmArgs.add("-javaagent:$pathToFatJar=$agentArgs")
-                        options.jvmArgs = jvmArgs
+                        options.jvmArgumentProviders.add(CommandLineArgumentProvider { jvmArgs })
                     }
                 }
             }

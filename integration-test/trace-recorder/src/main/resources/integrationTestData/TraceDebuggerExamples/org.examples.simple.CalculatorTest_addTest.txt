@@ -1,0 +1,7 @@
+# Thread 1
+CalculatorTest.addTest() at :0
+  this = CalculatorTest@1 at CalculatorTest.kt:0
+  calc.add(3, 4): 7 at CalculatorTest.kt:13
+  assertEquals(7, 7, null, 4, null) at CalculatorTest.kt:13
+  calc.subtract(3, 4): -1 at CalculatorTest.kt:14
+  assertEquals(-1, -1, null, 4, null) at CalculatorTest.kt:14
