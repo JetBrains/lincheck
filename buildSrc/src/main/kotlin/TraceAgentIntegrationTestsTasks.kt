@@ -27,7 +27,7 @@ private val projectsToTest = listOf(
     GithubProjectSnapshot(
         organization = "ivandev0",
         repositoryName = "TraceDebuggerExamples",
-        commitHash = "7d5d9b99ab1460f07dd77676ecb0a04969de76f7"
+        commitHash = "fdebb88833b14dad267aef5f5078fbc0fb621952"
     ),
     GithubProjectSnapshot(
         organization = "JetBrains",

@@ -28,7 +28,7 @@ class TraceDebuggerExamplesTraceRecorderIntegrationTest : AbstractTraceRecorderI
     @Test
     fun koverAddTest() {
         runGradleTest(
-            testClassName = "org.examples.simple.CalculatorTest",
+            testClassName = "org.examples.kover.CalculatorTest",
             testMethodName = "addTest",
             gradleCommands = listOf(":test-kover:test"),
         )
@@ -37,7 +37,7 @@ class TraceDebuggerExamplesTraceRecorderIntegrationTest : AbstractTraceRecorderI
     @Test
     fun koverIsEvenTest() {
         runGradleTest(
-            testClassName = "org.examples.simple.CalculatorTest",
+            testClassName = "org.examples.kover.CalculatorTest",
             testMethodName = "isEvenTest",
             gradleCommands = listOf(":test-kover:test"),
         )
