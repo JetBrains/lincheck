@@ -29,9 +29,9 @@ public interface EventTracker {
     void lock(ThreadDescriptor descriptor, Object monitor);
     void unlock(ThreadDescriptor descriptor, Object monitor, int codeLocation);
 
-    void beforePark(int codeLocation);
-    void park(int codeLocation);
-    void unpark(Thread thread, int codeLocation);
+    void beforePark(ThreadDescriptor descriptor, int codeLocation);
+    void park(ThreadDescriptor descriptor, int codeLocation);
+    void unpark(ThreadDescriptor descriptor, Thread thread, int codeLocation);
 
     void beforeWait(ThreadDescriptor descriptor, int codeLocation);
     void wait(ThreadDescriptor descriptor, Object monitor, boolean withTimeout);
