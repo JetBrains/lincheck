@@ -131,9 +131,9 @@ private class FileStreamingThread(
     private var buffer: ByteBuffer = ByteBuffer.allocate(INDEX_CELL_SIZE * bufferSize)
 
     /**
-     * We should finish all existing jobs before exiting even if the thread is interrupted.
+     * We should finish current `put` operation even if the thread is interrupted.
      */
-    private class UnconditionallyPuttingArrayBlockingQueue(capacity: Int) : ArrayBlockingQueue<Job>(capacity) {
+    private class TraceSerializationTaskQueue(capacity: Int) : ArrayBlockingQueue<Job>(capacity) {
         override fun put(job: Job) {
             var wasInterrupted = false
             while (true) {
@@ -152,7 +152,7 @@ private class FileStreamingThread(
         }
     }
 
-    private val queue = UnconditionallyPuttingArrayBlockingQueue(1024)
+    private val queue = TraceSerializationTaskQueue(1024)
 
     init {
         name = "TR-Block-Writer"
