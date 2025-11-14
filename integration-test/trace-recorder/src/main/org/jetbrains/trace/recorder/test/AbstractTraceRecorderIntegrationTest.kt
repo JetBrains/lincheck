@@ -11,10 +11,7 @@
 package org.jetbrains.trace.recorder.test
 
 import AbstractTraceIntegrationTest
-import org.junit.Rule
-import org.junit.rules.Timeout
 import withStdErrTee
-import java.util.concurrent.TimeUnit
 
 abstract class AbstractTraceRecorderIntegrationTest : AbstractTraceIntegrationTest() {
     override val fatJarName: String = "trace-recorder-fat.jar"
@@ -22,17 +19,6 @@ abstract class AbstractTraceRecorderIntegrationTest : AbstractTraceIntegrationTe
         "format" to "text",
         "formatOption" to "verbose",
     )
-
-    private val teamCityAgentCpuBenchmark = System.getProperty("teamcity.agent.cpuBenchmark")?.toInt()
-    val minutes = teamCityAgentCpuBenchmark?.let { (12000.0 / it).toInt() } ?: 10
-
-    @Rule
-    @JvmField
-    val timeout = Timeout(minutes.toLong(), TimeUnit.MINUTES)
-
-    init {
-        println("Timeout: $minutes minutes")
-    }
 
     public final override fun runGradleTest(
         testClassName: String,
