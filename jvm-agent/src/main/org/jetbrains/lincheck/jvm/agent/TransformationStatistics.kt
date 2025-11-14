@@ -66,18 +66,15 @@ fun TransformationStatistics.writeTo(writer: Writer) {
     writeln("Total transformed methods: $totalTransformedMethodsCount")
     writeln("Total transformation time: ${fmtTime(totalMs)} ms")
     writeln("Average transformation time per class: ${fmtTime(avgMs)} ms")
-
     writeln(
         "Average class size:\n" +
             "\tbefore: ${fmtByte(averageClassBytesSizeBefore)} B\n" +
-            "\tafter: ${fmtByte(averageClassBytesSizeAfter)} B\n" +
-            "\tdelta: ${fmtByte(avgClassDelta)} B"
+            "\tafter: ${fmtByte(averageClassBytesSizeAfter)} B"
     )
     writeln(
         "Average method instructions count:\n" +
             "\tbefore: ${fmtInsn(averageMethodInstructionsCountBefore)}\n" +
-            "\tafter: ${fmtInsn(averageMethodInstructionsCountAfter)}\n" +
-            "\tdelta: ${fmtInsn(avgInsnDelta)}"
+            "\tafter: ${fmtInsn(averageMethodInstructionsCountAfter)}\n"
     )
 
     writer.flush()
