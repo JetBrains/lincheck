@@ -34,7 +34,9 @@ class TransformationConfiguration(
     var trackConstructorCalls: Boolean = false,
     var trackInlineMethodCalls: Boolean = false,
 
-    var trackThreadsOperations: Boolean = false,
+    var trackThreadRun: Boolean = false,
+    var trackThreadStart: Boolean = false,
+    var trackThreadJoin: Boolean = false,
 
     var trackMonitorsOperations: Boolean = false,
     var trackWaitNotifyOperations: Boolean = false,
@@ -110,12 +112,25 @@ class TransformationConfiguration(
         get() =
             trackAllFieldsReads && trackArrayElementReads &&
             trackAllFieldsWrites && trackArrayElementWrites
-
         set(value) {
             trackAllFieldsReads = value
             trackArrayElementReads = value
             trackAllFieldsWrites = value
             trackArrayElementWrites = value
+        }
+
+    val trackThreadsOperations: Boolean
+        get() = trackThreadRun || trackThreadStart || trackThreadJoin
+
+    var trackAllThreadsOperations: Boolean
+        get() =
+            trackThreadRun &&
+            trackThreadStart &&
+            trackThreadJoin
+        set(value) {
+            trackThreadRun = value
+            trackThreadStart = value
+            trackThreadJoin = value
         }
 
     companion object {
@@ -235,7 +250,7 @@ object TraceRecorderDefaultTransformationProfile : TransformationProfile {
         // we only apply `ThreadTransformer` and skip all other transformations
         if (isThreadClass(className) || isThreadContainerThreadStartMethod(className, methodName)) {
             return config.apply {
-                trackThreadsOperations = true
+                trackThreadRun = true
             }
         }
 
@@ -261,7 +276,7 @@ object TraceRecorderDefaultTransformationProfile : TransformationProfile {
 
             trackLoops = true
 
-            trackThreadsOperations = true
+            trackThreadRun = true
         }
     }
 }
@@ -286,7 +301,7 @@ object TraceDebuggerDefaultTransformationProfile : TransformationProfile {
         // we only apply `ThreadTransformer` and skip all other transformations
         if (isThreadClass(className) || isThreadContainerThreadStartMethod(className, methodName)) {
             return config.apply {
-                trackThreadsOperations = true
+                trackAllThreadsOperations = true
             }
         }
 
@@ -314,7 +329,7 @@ object TraceDebuggerDefaultTransformationProfile : TransformationProfile {
             trackMethodCalls = true
             trackInlineMethodCalls = true
 
-            trackThreadsOperations = true
+            trackAllThreadsOperations = true
             trackAllSynchronizationOperations = true
 
             trackCoroutineSuspensions = true
@@ -343,7 +358,7 @@ object ModelCheckingDefaultTransformationProfile : TransformationProfile {
         // we only apply `ThreadTransformer` and skip all other transformations
         if (isThreadClass(className) || isThreadContainerThreadStartMethod(className, methodName)) {
             return config.apply {
-                trackThreadsOperations = true
+                trackAllThreadsOperations = true
             }
         }
 
@@ -374,7 +389,7 @@ object ModelCheckingDefaultTransformationProfile : TransformationProfile {
             trackMethodCalls = true
             trackInlineMethodCalls = true
 
-            trackThreadsOperations = true
+            trackAllThreadsOperations = true
             trackAllSynchronizationOperations = true
 
             // In model checking mode we track all hash code calls in the instrumented code

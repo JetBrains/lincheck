@@ -13,8 +13,8 @@ import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.LincheckAnalysisAbortedError
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.lincheck.util.ensure
+import sun.nio.ch.lincheck.Injections
 import sun.nio.ch.lincheck.TestThread
-import sun.nio.ch.lincheck.ThreadDescriptor
 import java.io.*
 
 /**
@@ -66,12 +66,7 @@ internal abstract class AbstractActiveThreadPoolRunner : Runner {
     protected fun setEventTracker() {
         val eventTracker = (strategy as? ManagedStrategy) ?: return
         executor.threads.forEachIndexed { i, thread ->
-            var descriptor = ThreadDescriptor.getThreadDescriptor(thread)
-            if (descriptor == null) {
-                descriptor = ThreadDescriptor(thread)
-                ThreadDescriptor.setThreadDescriptor(thread, descriptor)
-            }
-            descriptor.eventTracker = eventTracker
+            val descriptor = Injections.registerThread(eventTracker, thread)
             eventTracker.registerThread(thread, descriptor)
                 .ensure { threadId -> threadId == i }
         }
@@ -84,9 +79,7 @@ internal abstract class AbstractActiveThreadPoolRunner : Runner {
         if (!::strategy.isInitialized) return
         if (strategy !is ManagedStrategy) return
         for (thread in executor.threads) {
-            val descriptor = ThreadDescriptor.getThreadDescriptor(thread)
-                ?: continue
-            descriptor.eventTracker = null
+            Injections.unregisterThread(thread)
         }
     }
 

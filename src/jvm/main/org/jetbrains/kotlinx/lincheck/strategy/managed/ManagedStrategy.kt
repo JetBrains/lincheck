@@ -675,7 +675,7 @@ internal abstract class ManagedStrategy(
         error("Lincheck managed strategy does not support tracking of threads, started before agent attach.")
     }
 
-    override fun beforeThreadFork(thread: Thread, descriptor: ThreadDescriptor): Unit = runInsideIgnoredSection {
+    override fun beforeThreadStart(thread: Thread, descriptor: ThreadDescriptor): Unit = runInsideIgnoredSection {
         val currentThreadId = threadScheduler.getCurrentThreadId()
         // do not track threads forked from unregistered threads
         if (currentThreadId < 0) return
@@ -684,7 +684,7 @@ internal abstract class ManagedStrategy(
         registerThread(thread, descriptor)
     }
 
-    override fun beforeThreadStart() = runInsideIgnoredSection {
+    override fun beforeThreadRun() = runInsideIgnoredSection {
         val currentThreadId = threadScheduler.getCurrentThreadId()
         // do not track unregistered threads
         if (currentThreadId < 0) return
@@ -714,7 +714,7 @@ internal abstract class ManagedStrategy(
         enableAnalysis()
     }
 
-    override fun afterThreadFinish() = runInsideIgnoredSection {
+    override fun afterThreadRunReturn() = runInsideIgnoredSection {
         val currentThreadId = threadScheduler.getCurrentThreadId()
         // do not track unregistered threads
         if (currentThreadId < 0) return
@@ -735,7 +735,7 @@ internal abstract class ManagedStrategy(
      *
      * @param exception The exception that was thrown within the thread.
      */
-    override fun onThreadRunException(exception: Throwable) = runInsideIgnoredSection {
+    override fun afterThreadRunException(exception: Throwable) = runInsideIgnoredSection {
         val currentThreadId = threadScheduler.getCurrentThreadId()
         // do not track unregistered threads
         if (currentThreadId < 0) return
@@ -758,7 +758,7 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    override fun threadJoin(thread: Thread?, withTimeout: Boolean) = runInsideIgnoredSection {
+    override fun onThreadJoin(thread: Thread?, withTimeout: Boolean) = runInsideIgnoredSection {
         if (withTimeout) return // timeouts occur instantly
         val currentThreadId = threadScheduler.getCurrentThreadId()
         val joinThreadId = threadScheduler.getThreadId(thread!!)

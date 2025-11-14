@@ -14,7 +14,7 @@ ThreadsTest.daemonThreadTest() at :0
       inc.get(): 10 at ThreadsTest.kt:31
   field = "Complete Main thread" at ThreadsTest.kt:36
 # Thread 2 (Thread-3)
-ThreadsKt$thread$thread$1@1.run(): <unfinished method> at :0
+ThreadsKt$thread$thread$1.run(): <unfinished method> at :0
   block.invoke(): <unfinished method> at Thread.kt:30
     loop(11 iterations) at ThreadsTest.kt:21
       <iteration 1> at ThreadsTest.kt:21
