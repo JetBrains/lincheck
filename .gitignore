@@ -1,0 +1,33 @@
+#idea files
+.idea/
+*.iml
+*.ipr
+*.iws
+atlassian-ide-plugin.xml
+/out/
+
+# java
+*.class
+*.jar
+*.war
+*.ear
+
+#kotlin
+.kotlin
+
+#gradle
+.gradle
+/build/
+
+# Ignore Gradle GUI config
+gradle-app.setting
+
+# Cache of project
+.gradletasknamecache
+
+# common
+*~
+*.bak
+.DS_Store
+.DS_Store?
+._*
