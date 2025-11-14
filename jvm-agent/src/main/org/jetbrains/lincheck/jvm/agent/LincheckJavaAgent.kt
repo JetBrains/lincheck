@@ -23,6 +23,7 @@ import org.jetbrains.lincheck.util.Logger
 import org.jetbrains.lincheck.util.*
 import java.lang.instrument.Instrumentation
 import java.io.File
+import java.io.StringWriter
 import java.util.jar.JarFile
 import java.util.*
 
@@ -351,8 +352,13 @@ object LincheckJavaAgent {
 
     fun reportStatistics() {
         if (collectTransformationStatistics) {
-            LincheckClassFileTransformer.computeStatistics()?.writeTo(Logger.logWriter)
+            val writer = StringWriter()
+            LincheckClassFileTransformer.computeStatistics()?.writeTo(writer)
             LincheckClassFileTransformer.resetStatistics()
+
+            Logger.info { "Transformation statistics:\n" +
+                writer.toString().lines().joinToString("\n") { "\t$it" }
+            }
         }
     }
 
