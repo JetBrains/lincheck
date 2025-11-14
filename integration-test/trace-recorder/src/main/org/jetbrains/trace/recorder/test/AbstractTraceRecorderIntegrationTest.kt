@@ -24,7 +24,7 @@ abstract class AbstractTraceRecorderIntegrationTest : AbstractTraceIntegrationTe
     )
 
     private val teamCityAgentCpuBenchmark = System.getProperty("teamcity.agent.cpuBenchmark")?.toInt()
-    val minutes = teamCityAgentCpuBenchmark?.let { (12000.0 / it).toInt() } ?: 10_000
+    val minutes = teamCityAgentCpuBenchmark?.let { (12000.0 / it).toInt() } ?: 10
 
     @Rule
     @JvmField
