@@ -60,9 +60,8 @@ fun TransformationStatistics.writeTo(writer: Writer) {
     fun fmtByte(d: Double): String = String.format(Locale.US, "%.0f", d)
     fun fmtInsn(d: Double): String = String.format(Locale.US, "%.0f", d)
 
-    fun writeln(s: String) { writer.write("$s\n"); writer.flush() }
+    fun writeln(s: String) { writer.write("$s\n") }
 
-    writeln("==== Transformation statistics ====")
     writeln("Total transformed classes: $totalTransformedClassesCount")
     writeln("Total transformed methods: $totalTransformedMethodsCount")
     writeln("Total transformation time: ${fmtTime(totalMs)} ms")
@@ -80,6 +79,8 @@ fun TransformationStatistics.writeTo(writer: Writer) {
             "\tafter: ${fmtInsn(averageMethodInstructionsCountAfter)}\n" +
             "\tdelta: ${fmtInsn(avgInsnDelta)}"
     )
+
+    writer.flush()
 }
 
 /**
