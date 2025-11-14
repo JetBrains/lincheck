@@ -31,12 +31,12 @@ internal class ThreadTransformer(
     className: String,
     methodName: String,
     methodInfo: MethodInformation,
-    private val desc: String,
+    descriptor: String,
     access: Int,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
     val configuration: TransformationConfiguration,
-) : LincheckMethodVisitor(fileName, className, methodName, desc, access, methodInfo, adapter, methodVisitor)  {
+) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
 
     private val runMethodTryBlockStart: Label = adapter.newLabel()
     private val runMethodTryBlockEnd: Label = adapter.newLabel()
@@ -44,14 +44,14 @@ internal class ThreadTransformer(
 
     override fun visitCode() = adapter.run {
         super.visitCode()
-        if (configuration.trackThreadStart && isThreadStartMethod(methodName, desc)) {
+        if (configuration.trackThreadStart && isThreadStartMethod(methodName, descriptor)) {
             // STACK: <empty>
             loadThis()
             // STACK: forkedThread
             invokeStatic(Injections::beforeThreadStart)
             // STACK: <empty>
         }
-        if (configuration.trackThreadRun && isThreadRunMethod(methodName, desc)) {
+        if (configuration.trackThreadRun && isThreadRunMethod(methodName, descriptor)) {
             // STACK: <empty>
             visitTryCatchBlock(runMethodTryBlockStart, runMethodTryBlockEnd, runMethodCatchBlock, null)
             visitLabel(runMethodTryBlockStart)
@@ -63,7 +63,7 @@ internal class ThreadTransformer(
 
     override fun visitInsn(opcode: Int) = adapter.run {
         // TODO: this approach does not support thread interruptions and any other thrown exceptions
-        if (configuration.trackThreadRun && isThreadRunMethod(methodName, desc) && opcode == Opcodes.RETURN) {
+        if (configuration.trackThreadRun && isThreadRunMethod(methodName, descriptor) && opcode == Opcodes.RETURN) {
             // STACK: <empty>
             invokeStatic(Injections::afterThreadRunReturn)
         }
@@ -72,7 +72,7 @@ internal class ThreadTransformer(
 
     override fun visitMaxs(maxStack: Int, maxLocals: Int) = adapter.run {
         // we only need to handle `Thread::run()` method, exit early otherwise
-        if (!configuration.trackThreadRun || !isThreadRunMethod(methodName, desc)) {
+        if (!configuration.trackThreadRun || !isThreadRunMethod(methodName, descriptor)) {
             super.visitMaxs(maxStack, maxLocals)
             return
         }
