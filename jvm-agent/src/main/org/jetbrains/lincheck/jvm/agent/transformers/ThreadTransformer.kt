@@ -35,6 +35,7 @@ internal class ThreadTransformer(
     access: Int,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
+    val configuration: TransformationConfiguration,
 ) : LincheckMethodVisitor(fileName, className, methodName, desc, access, methodInfo, adapter, methodVisitor)  {
 
     private val runMethodTryBlockStart: Label = adapter.newLabel()
@@ -43,14 +44,14 @@ internal class ThreadTransformer(
 
     override fun visitCode() = adapter.run {
         super.visitCode()
-        if (isThreadStartMethod(methodName, desc)) {
+        if (configuration.trackThreadStart && isThreadStartMethod(methodName, desc)) {
             // STACK: <empty>
             loadThis()
             // STACK: forkedThread
             invokeStatic(Injections::beforeThreadStart)
             // STACK: <empty>
         }
-        if (isThreadRunMethod(methodName, desc)) {
+        if (configuration.trackThreadRun && isThreadRunMethod(methodName, desc)) {
             // STACK: <empty>
             visitTryCatchBlock(runMethodTryBlockStart, runMethodTryBlockEnd, runMethodCatchBlock, null)
             visitLabel(runMethodTryBlockStart)
@@ -62,7 +63,7 @@ internal class ThreadTransformer(
 
     override fun visitInsn(opcode: Int) = adapter.run {
         // TODO: this approach does not support thread interruptions and any other thrown exceptions
-        if (isThreadRunMethod(methodName, desc) && opcode == Opcodes.RETURN) {
+        if (configuration.trackThreadRun && isThreadRunMethod(methodName, desc) && opcode == Opcodes.RETURN) {
             // STACK: <empty>
             invokeStatic(Injections::afterThreadRunReturn)
         }
@@ -71,10 +72,11 @@ internal class ThreadTransformer(
 
     override fun visitMaxs(maxStack: Int, maxLocals: Int) = adapter.run {
         // we only need to handle `Thread::run()` method, exit early otherwise
-        if (!isThreadRunMethod(methodName, desc)) {
+        if (!configuration.trackThreadRun || !isThreadRunMethod(methodName, desc)) {
             super.visitMaxs(maxStack, maxLocals)
             return
         }
+
         visitLabel(runMethodTryBlockEnd)
         visitLabel(runMethodCatchBlock)
         // STACK: exception
@@ -92,7 +94,7 @@ internal class ThreadTransformer(
     }
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
-        if (isThreadJoinCall(owner, name, desc) &&
+        if (configuration.trackThreadJoin && isThreadJoinCall(owner, name, desc) &&
             // in some JDK implementations, `Thread` methods may themselves call `join`,
             // so we do not instrument `join` class inside the `Thread` class itself.
             !isThreadClass(className.toCanonicalClassName())
@@ -137,7 +139,7 @@ internal class ThreadTransformer(
         // but instead uses internal API `JavaLangAccess.start`.
         // To detect threads started in this way, we instrument this class
         // and inject the appropriate hook on calls to the `JavaLangAccess.start` method.
-        if (isJavaLangAccessThreadStartMethod(owner, name)) {
+        if (configuration.trackThreadStart && isJavaLangAccessThreadStartMethod(owner, name)) {
             // STACK: thread, threadContainer
             val threadContainerLocal = newLocal(OBJECT_TYPE)
             storeLocal(threadContainerLocal)
