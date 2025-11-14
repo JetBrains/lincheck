@@ -51,7 +51,7 @@ public class ThreadDescriptor {
     /**
      * The {@code EventTracker} for tracking events in the model checking mode.
      */
-    private WeakReference<EventTracker> eventTracker = new WeakReference<>(null);
+    private EventTracker eventTracker = null;
 
     /**
      * Holds additional event-tracker-specific data associated with the thread.
@@ -101,11 +101,11 @@ public class ThreadDescriptor {
     }
 
     public EventTracker getEventTracker() {
-        return eventTracker.get();
+        return eventTracker;
     }
 
     public void setEventTracker(EventTracker eventTracker) {
-        this.eventTracker = new WeakReference<>(eventTracker);
+        this.eventTracker = eventTracker;
     }
 
     public Object getEventTrackerData() {
