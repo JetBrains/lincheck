@@ -53,8 +53,12 @@ public class Injections {
         }
         descriptor.setEventTracker(globalEventTracker);
         ThreadDescriptor.setCurrentThreadDescriptor(descriptor);
-        globalEventTracker.registerRunningThread(t, descriptor);
+        globalEventTracker.registerRunningThread(descriptor, t);
         return descriptor;
+    }
+
+    public static EventTracker getEventTracker(ThreadDescriptor descriptor) {
+        return descriptor.getEventTracker();
     }
 
     public static EventTracker getEventTracker() {
@@ -182,7 +186,7 @@ public class Injections {
          * End of the ignored section, the rest should be
          * wrapped into an ignored section by the event tracker itself, if necessary.
          */
-        tracker.beforeThreadFork(forkedThread, forkedThreadDescriptor);
+        tracker.beforeThreadFork(descriptor, forkedThread, forkedThreadDescriptor);
     }
 
     /**
@@ -198,7 +202,7 @@ public class Injections {
         }
         ThreadDescriptor.setCurrentThreadDescriptor(descriptor);
         EventTracker tracker = descriptor.getEventTracker();
-        tracker.beforeThreadStart();
+        tracker.beforeThreadStart(descriptor);
     }
 
     /**
@@ -211,7 +215,7 @@ public class Injections {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) return;
         EventTracker tracker = descriptor.getEventTracker();
-        tracker.afterThreadFinish();
+        tracker.afterThreadFinish(descriptor);
     }
 
     /**
@@ -226,7 +230,7 @@ public class Injections {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) return;
         EventTracker tracker = descriptor.getEventTracker();
-        tracker.onThreadRunException(exception);
+        tracker.onThreadRunException(descriptor, exception);
     }
 
     /**
@@ -235,8 +239,8 @@ public class Injections {
     public static void threadJoin(Thread thread, boolean withTimeout) {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) return;
-        EventTracker tracker = descriptor.getEventTracker();
-        tracker.threadJoin(thread, withTimeout);
+        EventTracker tracker = getEventTracker(descriptor);
+        tracker.threadJoin(descriptor, thread, withTimeout);
     }
 
     /**
@@ -245,23 +249,26 @@ public class Injections {
      *
      * Creates a trace point which is used in the subsequent [beforeEvent] method call.
      */
-    public static void beforeLock(int codeLocation) {
-        getEventTracker().beforeLock(codeLocation);
+    public static void beforeLock(ThreadDescriptor descriptor, int codeLocation) {
+        EventTracker tracker = getEventTracker(descriptor);
+        tracker.beforeLock(descriptor, codeLocation);
     }
 
     /**
      * Called from instrumented code instead of the MONITORENTER instruction,
      * but after [beforeEvent] method call, if the plugin is enabled.
      */
-    public static void lock(Object monitor) {
-        getEventTracker().lock(monitor);
+    public static void lock(ThreadDescriptor descriptor, Object monitor) {
+        EventTracker tracker = getEventTracker(descriptor);
+        tracker.lock(descriptor, monitor);
     }
 
     /**
      * Called from instrumented code instead of the MONITOREXIT instruction.
      */
-    public static void unlock(Object monitor, int codeLocation) {
-        getEventTracker().unlock(monitor, codeLocation);
+    public static void unlock(ThreadDescriptor descriptor, int codeLocation, Object monitor) {
+        EventTracker tracker = getEventTracker(descriptor);
+        tracker.unlock(descriptor, codeLocation, monitor);
     }
 
     /**
@@ -270,22 +277,25 @@ public class Injections {
      *
      * Creates a trace point which is used in the subsequent [beforeEvent] method call.
      */
-    public static void beforePark(int codeLocation) {
-        getEventTracker().beforePark(codeLocation);
+    public static void beforePark(ThreadDescriptor descriptor, int codeLocation) {
+        EventTracker tracker = getEventTracker(descriptor);
+        tracker.beforePark(descriptor, codeLocation);
     }
 
     /**
      * Called from the instrumented code instead of `Unsafe.park`.
      */
-    public static void park(int codeLocation) {
-        getEventTracker().park(codeLocation);
+    public static void park(ThreadDescriptor descriptor, int codeLocation) {
+        EventTracker tracker = getEventTracker(descriptor);
+        tracker.park(descriptor, codeLocation);
     }
 
     /**
      * Called from the instrumented code instead of `Unsafe.unpark`.
      */
-    public static void unpark(Thread thread, int codeLocation) {
-        getEventTracker().unpark(thread, codeLocation);
+    public static void unpark(ThreadDescriptor descriptor, int codeLocation, Thread thread) {
+        EventTracker tracker = getEventTracker(descriptor);
+        tracker.unpark(descriptor, codeLocation, thread);
     }
 
     /**
@@ -294,16 +304,18 @@ public class Injections {
      *
      * Creates a trace point which is used in the subsequent [beforeEvent] method call.
      */
-    public static void beforeWait(int codeLocation) {
-        getEventTracker().beforeWait(codeLocation);
+    public static void beforeWait(ThreadDescriptor descriptor, int codeLocation) {
+        EventTracker tracker = getEventTracker(descriptor);
+        tracker.beforeWait(descriptor, codeLocation);
     }
 
     /**
      * Called from the instrumented code instead of [Object.wait],
      * but after [beforeEvent] method call, if the plugin is enabled.
      */
-    public static void wait(Object monitor) {
-        getEventTracker().wait(monitor, false);
+    public static void wait(ThreadDescriptor descriptor, Object monitor) {
+        EventTracker tracker = getEventTracker(descriptor);
+        tracker.wait(descriptor, monitor, false);
     }
 
 
@@ -311,23 +323,26 @@ public class Injections {
      * Called from the instrumented code instead of [Object.wait] with timeout,
      * but after [beforeEvent] method call, if the plugin is enabled.
      */
-    public static void waitWithTimeout(Object monitor) {
-        getEventTracker().wait(monitor, true);
+    public static void waitWithTimeout(ThreadDescriptor descriptor, Object monitor) {
+        EventTracker tracker = getEventTracker(descriptor);
+        tracker.wait(descriptor, monitor, true);
     }
 
 
     /**
      * Called from the instrumented code instead of [Object.notify].
      */
-    public static void notify(Object monitor, int codeLocation) {
-        getEventTracker().notify(monitor, codeLocation, false);
+    public static void notify(ThreadDescriptor descriptor, int codeLocation, Object monitor) {
+        EventTracker tracker = getEventTracker(descriptor);
+        tracker.notify(descriptor, codeLocation, monitor, false);
     }
 
     /**
      * Called from the instrumented code instead of [Object.notify].
      */
-    public static void notifyAll(Object monitor, int codeLocation) {
-        getEventTracker().notify(monitor, codeLocation, true);
+    public static void notifyAll(ThreadDescriptor descriptor, int codeLocation, Object monitor) {
+        EventTracker tracker = getEventTracker(descriptor);
+        tracker.notify(descriptor, codeLocation, monitor, true);
     }
 
     /**
@@ -349,8 +364,9 @@ public class Injections {
      *
      * @return whether the trace point was created
      */
-    public static void beforeReadField(Object obj, int codeLocation, int fieldId) {
-        getEventTracker().beforeReadField(obj, codeLocation, fieldId);
+    public static void beforeReadField(ThreadDescriptor descriptor, int codeLocation, Object obj, int fieldId) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        eventTracker.beforeReadField(descriptor, codeLocation, obj, fieldId);
     }
 
     /**
@@ -358,51 +374,59 @@ public class Injections {
      *
      * @return whether the trace point was created
      */
-    public static void beforeReadArray(Object array, int index, int codeLocation) {
-        getEventTracker().beforeReadArrayElement(array, index, codeLocation);
+    public static void beforeReadArray(ThreadDescriptor descriptor, int codeLocation, Object array, int index) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        eventTracker.beforeReadArrayElement(descriptor, codeLocation, array, index);
     }
 
-    public static void afterLocalRead(int codeLocation, int variableId, Object value) {
-        getEventTracker().afterLocalRead(codeLocation, variableId, value);
+    public static void afterLocalRead(ThreadDescriptor descriptor, int codeLocation, int variableId, Object value) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        eventTracker.afterLocalRead(descriptor, codeLocation, variableId, value);
     }
 
-    public static void afterLocalWrite(int codeLocation, int variableId, Object value) {
-        getEventTracker().afterLocalWrite(codeLocation, variableId, value);
+    public static void afterLocalWrite(ThreadDescriptor descriptor, int codeLocation, int variableId, Object value) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        eventTracker.afterLocalWrite(descriptor, codeLocation, variableId, value);
     }
 
     /**
      * Called from the instrumented code after each field read (final field reads can be ignored here).
      */
-    public static void afterReadField(Object obj, int codeLocation, int fieldId, Object value) {
-        getEventTracker().afterReadField(obj, codeLocation, fieldId, value);
+    public static void afterReadField(ThreadDescriptor descriptor, int codeLocation, Object obj, int fieldId, Object value) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        eventTracker.afterReadField(descriptor, codeLocation, obj, fieldId, value);
     }
 
     /**
      * Called from the instrumented code after each array read.
      */
-    public static void afterReadArray(Object array, int index, int codeLocation, Object value) {
-        getEventTracker().afterReadArrayElement(array, index, codeLocation, value);
+    public static void afterReadArray(ThreadDescriptor descriptor, int codeLocation, Object array, int index, Object value) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        eventTracker.afterReadArrayElement(descriptor, codeLocation, array, index, value);
     }
 
     /**
      * Called from the instrumented code before each field write.
      */
-    public static void beforeWriteField(Object obj, Object value, int codeLocation, int fieldId) {
-        getEventTracker().beforeWriteField(obj, value, codeLocation, fieldId);
+    public static void beforeWriteField(ThreadDescriptor descriptor, int codeLocation, Object obj, Object value, int fieldId) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        eventTracker.beforeWriteField(descriptor, codeLocation, obj, value, fieldId);
     }
 
     /**
      * Called from the instrumented code before any array cell write.
      */
-    public static void beforeWriteArray(Object array, int index, Object value, int codeLocation) {
-        getEventTracker().beforeWriteArrayElement(array, index, value, codeLocation);
+    public static void beforeWriteArray(ThreadDescriptor descriptor, int codeLocation, Object array, int index, Object value) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        eventTracker.beforeWriteArrayElement(descriptor, codeLocation, array, index, value);
     }
 
     /**
      * Called from the instrumented code before any write operation.
      */
-    public static void afterWrite() {
-        getEventTracker().afterWrite();
+    public static void afterWrite(ThreadDescriptor descriptor) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        eventTracker.afterWrite(descriptor);
     }
 
     /**
@@ -411,8 +435,9 @@ public class Injections {
      * @param receiver is `null` for public static methods.
      * @return Deterministic call descriptor or null.
      */
-    public static Object onMethodCall(int codeLocation, int methodId, Object receiver, Object[] params) {
-        return getEventTracker().onMethodCall(codeLocation, methodId, receiver, params);
+    public static Object onMethodCall(ThreadDescriptor descriptor, int codeLocation, int methodId, Object receiver, Object[] params) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        return eventTracker.onMethodCall(descriptor, codeLocation, methodId, receiver, params);
     }
 
     /**
@@ -423,8 +448,9 @@ public class Injections {
      * @param result The call result.
      * @return The potentially modified {@code result}.
      */
-    public static Object onMethodCallReturn(long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Object result) {
-        return getEventTracker().onMethodCallReturn(descriptorId, descriptor, methodId, receiver, params, result);
+    public static Object onMethodCallReturn(ThreadDescriptor threadDescriptor, long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Object result) {
+        EventTracker eventTracker = getEventTracker(threadDescriptor);
+        return eventTracker.onMethodCallReturn(threadDescriptor, descriptorId, descriptor, methodId, receiver, params, result);
     }
 
     /**
@@ -433,8 +459,9 @@ public class Injections {
      * @param descriptor Deterministic call descriptor or null.
      * @param descriptorId Deterministic call descriptor id when applicable, or any other value otherwise.
      */
-    public static void onMethodCallReturnVoid(long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params) {
-        getEventTracker().onMethodCallReturn(descriptorId, descriptor, methodId, receiver, params, VOID_RESULT);
+    public static void onMethodCallReturnVoid(ThreadDescriptor threadDescriptor, long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params) {
+        EventTracker eventTracker = getEventTracker(threadDescriptor);
+        eventTracker.onMethodCallReturn(threadDescriptor, descriptorId, descriptor, methodId, receiver, params, VOID_RESULT);
     }
 
     /**
@@ -445,8 +472,9 @@ public class Injections {
      * @param t Thrown exception.
      * @return The potentially modified {@code t}.
      */
-    public static Throwable onMethodCallException(long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Throwable t) {
-        return getEventTracker().onMethodCallException(descriptorId, descriptor, methodId, receiver, params, t);
+    public static Throwable onMethodCallException(ThreadDescriptor threadDescriptor, long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Throwable t) {
+        EventTracker eventTracker = getEventTracker(threadDescriptor);
+        return eventTracker.onMethodCallException(threadDescriptor, descriptorId, descriptor, methodId, receiver, params, t);
     }
 
     /**
@@ -460,8 +488,9 @@ public class Injections {
      * @return The result of the method invocation wrapped in a {@link BootstrapResult},
      * or {@code null} if the original method should be called.
      */
-    public static BootstrapResult<?> invokeDeterministicallyOrNull(long descriptorId, Object descriptor, Object receiver, Object[] params) {
-        return getEventTracker().invokeDeterministicallyOrNull(descriptorId, descriptor, receiver, params);
+    public static BootstrapResult<?> invokeDeterministicallyOrNull(ThreadDescriptor threadDescriptor, long descriptorId, Object descriptor, Object receiver, Object[] params) {
+        EventTracker eventTracker = getEventTracker(threadDescriptor);
+        return eventTracker.invokeDeterministicallyOrNull(threadDescriptor, descriptorId, descriptor, receiver, params);
     }
 
     /**
@@ -478,15 +507,17 @@ public class Injections {
     /**
      * Called from the instrumented code before NEW instruction
      */
-    public static void beforeNewObjectCreation(String className) {
-        getEventTracker().beforeNewObjectCreation(className);
+    public static void beforeNewObjectCreation(ThreadDescriptor descriptor, String className) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        eventTracker.beforeNewObjectCreation(descriptor, className);
     }
 
     /**
      * Called from the instrumented code after any object is created
      */
-    public static void afterNewObjectCreation(Object obj) {
-        getEventTracker().afterNewObjectCreation(obj);
+    public static void afterNewObjectCreation(ThreadDescriptor descriptor, Object obj) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        eventTracker.afterNewObjectCreation(descriptor, obj);
     }
 
     /**
@@ -623,29 +654,33 @@ public class Injections {
     /**
      * Called from the instrumented code before any kotlin inlined method call.
      */
-    public static void onInlineMethodCall(int methodId, int codeLocation, Object owner) {
-        getEventTracker().onInlineMethodCall(methodId, codeLocation, owner);
+    public static void onInlineMethodCall(ThreadDescriptor descriptor, int codeLocation, int methodId, Object owner) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        eventTracker.onInlineMethodCall(descriptor, codeLocation, methodId, owner);
     }
 
     /**
      * Called from the instrumented code after any kotlin inline method successful call, i.e., without any exception.
      */
-    public static void onInlineMethodCallReturn(int methodId) {
-        getEventTracker().onInlineMethodCallReturn(methodId);
+    public static void onInlineMethodCallReturn(ThreadDescriptor descriptor, int methodId) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        eventTracker.onInlineMethodCallReturn(descriptor, methodId);
     }
 
     /**
      * Called from the instrumented code after any kotlin inline method throws exception
      */
-    public static void onInlineMethodCallException(int methodId, Throwable t) {
-        getEventTracker().onInlineMethodCallException(methodId, t);
+    public static void onInlineMethodCallException(ThreadDescriptor descriptor, int methodId, Throwable t) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        eventTracker.onInlineMethodCallException(descriptor, methodId, t);
     }
 
     /**
      * Called at the beginning of every loop iteration (including the first one).
      */
-    public static void onLoopIteration(int codeLocation, int loopId) {
-        getEventTracker().onLoopIteration(codeLocation, loopId);
+    public static void onLoopIteration(ThreadDescriptor descriptor, int codeLocation, int loopId) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        eventTracker.onLoopIteration(descriptor, codeLocation, loopId);
     }
 
     /**
@@ -656,8 +691,9 @@ public class Injections {
      * @param isReachableFromOutsideLoop true if the handler can also be reached from outside the loop body;
      *   false if it is exclusive to the loop body.
      */
-    public static void afterLoopExit(int codeLocation, int loopId, Throwable exception, boolean isReachableFromOutsideLoop) {
-        getEventTracker().afterLoopExit(codeLocation, loopId, exception, isReachableFromOutsideLoop);
+    public static void afterLoopExit(ThreadDescriptor descriptor, int codeLocation, int loopId, Throwable exception, boolean isReachableFromOutsideLoop) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        eventTracker.afterLoopExit(descriptor, codeLocation, loopId, exception, isReachableFromOutsideLoop);
     }
 
     // == Methods required for the IDEA Plugin integration ==

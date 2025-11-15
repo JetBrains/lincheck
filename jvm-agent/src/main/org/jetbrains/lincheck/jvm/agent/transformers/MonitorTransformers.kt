@@ -14,6 +14,7 @@ import org.objectweb.asm.Label
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type.getType
 import org.objectweb.asm.commons.GeneratorAdapter
+import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import org.jetbrains.lincheck.jvm.agent.*
 import org.objectweb.asm.MethodVisitor
 import sun.nio.ch.lincheck.*
@@ -39,10 +40,22 @@ internal class MonitorTransformer(
                 invokeIfInAnalyzedCode(
                     original = { super.visitInsn(opcode) },
                     instrumented = {
+                        // STACK: monitor
+                        val monitorLocal = newLocal(OBJECT_TYPE).also { storeLocal(it) }
+                        // STACK: <empty>
+                        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+                        // STACK: descriptor
                         loadNewCodeLocationId()
+                        // STACK: descriptor, codeLocation
                         invokeStatic(Injections::beforeLock)
+                        // STACK: <empty>
                         invokeBeforeEventIfPluginEnabled("lock")
+                        // STACK: <empty>
+                        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+                        loadLocal(monitorLocal)
+                        // STACK: descriptor, monitor
                         invokeStatic(Injections::lock)
+                        // STACK: <empty>
                     }
                 )
             }
@@ -51,9 +64,17 @@ internal class MonitorTransformer(
                 invokeIfInAnalyzedCode(
                     original = { super.visitInsn(opcode) },
                     instrumented = {
+                        // STACK: monitor
+                        val monitorLocal = newLocal(OBJECT_TYPE).also { storeLocal(it) }
+                        // STACK: <empty>
+                        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
                         loadNewCodeLocationId()
+                        loadLocal(monitorLocal)
+                        // STACK: descriptor, codeLocation, monitor
                         invokeStatic(Injections::unlock)
+                        // STACK: <empty>
                         invokeBeforeEventIfPluginEnabled("unlock")
+                        // STACK: <empty>
                     }
                 )
             }
@@ -106,11 +127,21 @@ internal class SynchronizedMethodTransformer(
         invokeIfInAnalyzedCode(
             original = {},
             instrumented = {
-                loadSynchronizedMethodMonitorOwner()
+                // STACK: <empty>
+                invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+                // STACK: descriptor
+                dup()
+                // STACK: descriptor, descriptor
                 loadNewCodeLocationId()
+                // STACK: descriptor, descriptor, codeLocation
                 invokeStatic(Injections::beforeLock)
+                // STACK: descriptor
                 invokeBeforeEventIfPluginEnabled("lock")
+                // STACK: descriptor
+                loadSynchronizedMethodMonitorOwner()
+                // STACK: descriptor, monitor
                 invokeStatic(Injections::lock)
+                // STACK: <empty>
             }
         )
     }
@@ -120,12 +151,19 @@ internal class SynchronizedMethodTransformer(
         invokeIfInAnalyzedCode(
             original = {},
             instrumented = {
-                loadSynchronizedMethodMonitorOwner()
+                // STACK: <empty>
+                invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
                 loadNewCodeLocationId()
-                invokeStatic(Injections::unlock)
-                invokeBeforeEventIfPluginEnabled("unlock")
                 loadSynchronizedMethodMonitorOwner()
+                // STACK: descriptor, codeLocation, monitor
+                invokeStatic(Injections::unlock)
+                // STACK: <empty>
+                invokeBeforeEventIfPluginEnabled("unlock")
+                // STACK: <empty>
+                loadSynchronizedMethodMonitorOwner()
+                // STACK: monitor
                 monitorEnter()
+                // STACK: <empty>
             }
         )
         throwException()
@@ -139,12 +177,19 @@ internal class SynchronizedMethodTransformer(
                 invokeIfInAnalyzedCode(
                     original = {},
                     instrumented = {
-                        loadSynchronizedMethodMonitorOwner()
+                        // STACK: <empty>
+                        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
                         loadNewCodeLocationId()
-                        invokeStatic(Injections::unlock)
-                        invokeBeforeEventIfPluginEnabled("unlock")
                         loadSynchronizedMethodMonitorOwner()
+                        // STACK: descriptor, monitor, codeLocation
+                        invokeStatic(Injections::unlock)
+                        // STACK: <empty>
+                        invokeBeforeEventIfPluginEnabled("unlock")
+                        // STACK: <empty>
+                        loadSynchronizedMethodMonitorOwner()
+                        // STACK: monitor
                         monitorEnter()
+                        // STACK: <empty>
                     }
                 )
             }
@@ -193,9 +238,19 @@ internal class WaitNotifyTransformer(
                             super.visitMethodInsn(opcode, owner, name, desc, itf)
                         },
                         instrumented = {
+                            // STACK: monitor
+                            val monitorLocal = newLocal(OBJECT_TYPE).also { storeLocal(it) }
+                            // STACK: <empty>
+                            invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
                             loadNewCodeLocationId()
+                            // STACK: descriptor, codeLocation
                             invokeStatic(Injections::beforeWait)
+                            // STACK: <empty>
                             invokeBeforeEventIfPluginEnabled("wait")
+                            // STACK: <empty>
+                            invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+                            loadLocal(monitorLocal)
+                            // STACK: descriptor, monitor
                             invokeStatic(Injections::wait)
                         }
                     )
@@ -208,10 +263,22 @@ internal class WaitNotifyTransformer(
                         },
                         instrumented = {
                             pop2() // timeMillis
+
+                            // STACK: monitor
+                            val monitorLocal = newLocal(OBJECT_TYPE).also { storeLocal(it) }
+                            // STACK: <empty>
+                            invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
                             loadNewCodeLocationId()
+                            // STACK: descriptor, codeLocation
                             invokeStatic(Injections::beforeWait)
+                            // STACK: <empty>
                             invokeBeforeEventIfPluginEnabled("wait 1")
+                            // STACK: <empty>
+                            invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+                            loadLocal(monitorLocal)
+                            // STACK: descriptor, monitor
                             invokeStatic(Injections::waitWithTimeout)
+                            // STACK: <empty>
                         }
                     )
                 }
@@ -224,9 +291,20 @@ internal class WaitNotifyTransformer(
                         instrumented = {
                             pop() // timeNanos
                             pop2() // timeMillis
+
+                            // STACK: monitor
+                            val monitorLocal = newLocal(OBJECT_TYPE).also { storeLocal(it) }
+                            // STACK: <empty>
+                            invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
                             loadNewCodeLocationId()
+                            // STACK: descriptor, codeLocation
                             invokeStatic(Injections::beforeWait)
+                            // STACK: <empty>
                             invokeBeforeEventIfPluginEnabled("wait 2")
+                            // STACK: <empty>
+                            invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+                            loadLocal(monitorLocal)
+                            // STACK: descriptor, monitor
                             invokeStatic(Injections::waitWithTimeout)
                         }
                     )
@@ -238,9 +316,17 @@ internal class WaitNotifyTransformer(
                             super.visitMethodInsn(opcode, owner, name, desc, itf)
                         },
                         instrumented = {
+                            // STACK: monitor
+                            val monitorLocal = newLocal(OBJECT_TYPE).also { storeLocal(it) }
+                            // STACK: <empty>
+                            invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
                             loadNewCodeLocationId()
+                            loadLocal(monitorLocal)
+                            // STACK: descriptor, codeLocation, monitor
                             invokeStatic(Injections::notify)
+                            // STACK: <empty>
                             invokeBeforeEventIfPluginEnabled("notify")
+                            // STACK: <empty>
                         }
                     )
                 }
@@ -251,9 +337,17 @@ internal class WaitNotifyTransformer(
                             super.visitMethodInsn(opcode, owner, name, desc, itf)
                         },
                         instrumented = {
+                            // STACK: monitor
+                            val monitorLocal = newLocal(OBJECT_TYPE).also { storeLocal(it) }
+                            // STACK: <empty>
+                            invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
                             loadNewCodeLocationId()
+                            loadLocal(monitorLocal)
+                            // STACK: descriptor, codeLocation, monitor
                             invokeStatic(Injections::notifyAll)
+                            // STACK: <empty>
                             invokeBeforeEventIfPluginEnabled("notifyAll")
+                            // STACK: <empty>
                         }
                     )
                 }

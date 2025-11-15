@@ -13,6 +13,7 @@ package org.jetbrains.lincheck.jvm.agent.transformers
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.jetbrains.lincheck.jvm.agent.*
 import org.objectweb.asm.MethodVisitor
+import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import sun.nio.ch.lincheck.*
 import sun.misc.Unsafe
 
@@ -42,11 +43,22 @@ internal class ParkingTransformer(
                         pop2() // time
                         pop() // isAbsolute
                         pop() // Unsafe
-                        loadNewCodeLocationId()
+
+                        // Stack: <empty>
+                        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+                        // Stack: descriptor
                         dup()
+                        // Stack: descriptor, descriptor
+                        val codeLocationId = loadNewCodeLocationId()
+                        // Stack: descriptor, descriptor, codeLocation
                         invokeStatic(Injections::beforePark)
+                        // Stack: descriptor
                         invokeBeforeEventIfPluginEnabled("park")
+                        // Stack: descriptor
+                        push(codeLocationId)
+                        // Stack: descriptor, codeLocation
                         invokeStatic(Injections::park)
+                        // Stack: <empty>
                     }
                 )
             }
@@ -57,10 +69,19 @@ internal class ParkingTransformer(
                         super.visitMethodInsn(opcode, owner, name, desc, itf)
                     },
                     instrumented = {
+                        // STACK: unsafe, thread
+                        val threadLocal = newLocal(OBJECT_TYPE).also { storeLocal(it) }
+                        // STACK: unsafe
+                        pop() // drop Unsafe object
+                        // STACK: <empty>
+                        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
                         loadNewCodeLocationId()
+                        loadLocal(threadLocal)
+                        // STACK: descriptor, codeLocation, thread
                         invokeStatic(Injections::unpark)
-                        pop() // pop Unsafe object
+                        // STACK: <empty>
                         invokeBeforeEventIfPluginEnabled("unpark")
+                        // STACK: <empty>
                     }
                 )
             }

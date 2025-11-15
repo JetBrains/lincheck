@@ -138,6 +138,7 @@ fun leaveIgnoredSection() {
 
 /**
  * Executes a given block of code within an ignored section.
+ * If given [ThreadDescriptor] is null, invokes the block directly.
  *
  * NOTE: this method is intended to be used during runtime,
  * *not* during bytecode instrumentation in the [org.jetbrains.kotlinx.lincheck.transformation] package.
@@ -146,29 +147,43 @@ fun leaveIgnoredSection() {
  * @param block the code to execute within the ignored section.
  * @return result of the [block] invocation.
  */
-inline fun <R> runInsideIgnoredSection(block: () -> R): R {
-    val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: return block()
-    desc.enterIgnoredSection()
+inline fun <R> ThreadDescriptor?.runInsideIgnoredSection(block: () -> R): R {
+    if (this == null) return block()
+    this.enterIgnoredSection()
     try {
         return block()
     } finally {
-        desc.leaveIgnoredSection()
+        this.leaveIgnoredSection()
     }
 }
 
 /**
- * Executes a given block of code within an injected code under condition that analysis is enabled.
- * This method is used to account for the situation when the Main thread is finished and it wants
- * to logically "finish" all other threads which still record some events.
+ * Executes a given block of code within an ignored section,
+ * obtaining the [ThreadDescriptor] for the current thread.
+ * If the current thread is not untracked, invokes the block directly.
  *
- * NOTE: there are other overloads that have different return values. They are useful for some
- * [sun.nio.ch.lincheck.EventTracker] methods, which do not have return values or require a non-null result.
+ * @param block the code block to be executed.
+ * @return the result of the provided block execution.
+ */
+inline fun <R> runInsideIgnoredSection(block: () -> R): R {
+    val descriptor = ThreadDescriptor.getCurrentThreadDescriptor()
+    return descriptor.runInsideIgnoredSection(block)
+}
+
+/**
+ * Executes a given block of code within an injected code under condition that analysis is enabled.
+ * This method is used to account for the situation when the Main thread is finished,
+ * and it wants to logically "finish" all other threads that still record some events.
+ *
+ * NOTE: there are other overloads that have different return values.
+ * They are useful for some [sun.nio.ch.lincheck.EventTracker] methods,
+ * which do not have return values or require a non-null result.
  *
  * @param block the code to execute within the injected code.
  * @return result of the [block] invocation or `null` if the analysis is disabled for the current thread.
  */
-inline fun <R> runInsideInjectedCode(block: () -> R): R? {
-    val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: return null
+inline fun <R> ThreadDescriptor?.runInsideInjectedCode(block: () -> R): R? {
+    if (this == null) return null
 
     // General synchronization schema here is as follows:
     //   * This thread sets the flag, that it will now run some code from instrumentation (e.g. method from `EventTracker`)
@@ -179,7 +194,8 @@ inline fun <R> runInsideInjectedCode(block: () -> R): R? {
     //       until this thread leaves the injected code. Then we unset the flag and notify Main
     //       we are no longer updating any sensitive data structures and Main could treat this thread
     //       as "completed".
-    desc.enterInjectedCode()
+    this.enterInjectedCode()
+
     // `isAnalysisEnabled` flag is read twice:
     //   * first time in code inserted by the transformation method 'invokeIfInAnalyzedCode',
     //     which checks for `isAnalysisEnabled == true` and then invokes method of `Injections` which then will delegate to `EventTracker`
@@ -190,11 +206,12 @@ inline fun <R> runInsideInjectedCode(block: () -> R): R? {
     // So the general rule here is:
     //   * In current thread: first write `isInsideInjectedCode` then read `isAnalysisEnabled`
     //   * In Main thread: first write `isAnalysisEnabled` then read `isInsideInjectedCode`
-    if (!desc.isAnalysisEnabled) {
-        desc.leaveInjectedCode()
+    if (!this.isAnalysisEnabled) {
+        this.leaveInjectedCode()
         return null
     }
-    desc.enterIgnoredSection()
+
+    this.enterIgnoredSection()
     try {
         return block()
     } catch (e: Throwable) {
@@ -204,16 +221,16 @@ inline fun <R> runInsideInjectedCode(block: () -> R): R? {
         Logger.error(e)
         return null
     } finally {
-        desc.leaveIgnoredSection()
-        desc.leaveInjectedCode()
+        this.leaveIgnoredSection()
+        this.leaveInjectedCode()
     }
 }
 
-inline fun runInsideInjectedCode(block: () -> Unit) {
+inline fun ThreadDescriptor.runInsideInjectedCode(block: () -> Unit) {
     runInsideInjectedCode<Unit>(block)
 }
 
-inline fun <R> runInsideInjectedCode(default: R, block: () -> R): R {
+inline fun <R> ThreadDescriptor.runInsideInjectedCode(default: R, block: () -> R): R {
     return runInsideInjectedCode(block) ?: default
 }
 

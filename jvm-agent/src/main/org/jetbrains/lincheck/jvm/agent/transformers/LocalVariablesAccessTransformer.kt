@@ -127,13 +127,15 @@ internal class LocalVariablesAccessTransformer(
             // load the current value of stored in the local variable and call `afterLocalWrite` with it
             instrumented = {
                 // STACK: <empty>
+                // Push descriptor, then other args to match new Injections API
+                invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
                 loadNewCodeLocationId()
                 val variableId = TRACE_CONTEXT.getOrCreateVariableId(variableInfo.name)
                 push(variableId)
                 // VerifyError with `loadLocal(..)`, here is a workaround
                 visitVarInsn(variableInfo.type.getVarInsnOpcode(), variableInfo.index)
                 box(variableInfo.type)
-                // STACK: codeLocation, variableId, boxedValue
+                // STACK: descriptor, codeLocation, variableId, boxedValue
                 when (accessType) {
                     AccessType.READ -> {
                         invokeStatic(Injections::afterLocalRead)

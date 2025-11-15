@@ -21,8 +21,7 @@ import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.GeneratorAdapter
-import sun.nio.ch.lincheck.EventTracker
-import sun.nio.ch.lincheck.Injections
+import sun.nio.ch.lincheck.*
 
 /**
  * [InlineMethodCallTransformer] tracks method calls,
@@ -283,18 +282,21 @@ internal class InlineMethodCallTransformer(
         invokeIfInAnalyzedCode(
             original = {},
             instrumented = {
-                // Stack: <exception>
+                // STACK: exception
                 dup()
-                // Stack: <exception>, <exception>
+                // STACK: exception, exception
+                val exLocal = newLocal(THROWABLE_TYPE)
+                storeLocal(exLocal)
+                // STACK: exception
+                invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
                 push(methodId)
-                // Stack: <exception>, <exception>, <methodId>
-                swap()
-                // Stack: <exception>, <methodId>, <exception>
+                loadLocal(exLocal)
+                // STACK: exception, descriptor, methodId, exception
                 invokeStatic(Injections::onInlineMethodCallException)
-                // Stack: <exception>
+                // STACK: exception
             }
         )
-        // Stack: <exception>
+        // Stack: exception
         // Rethrow
         visitInsn(ATHROW)
 
@@ -307,8 +309,13 @@ internal class InlineMethodCallTransformer(
         methodId: Int,
         owner: LocalVariableInfo?,
     ) = adapter.run {
-        push(methodId)
+        // STACK: <empty>
+        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+        // STACK: descriptor
         loadNewCodeLocationId()
+        // STACK: descriptor, codeLocation
+        push(methodId)
+        // STACK: descriptor, codeLocation, methodId
         if (owner == null) {
             pushNull()
         } else {
@@ -316,12 +323,17 @@ internal class InlineMethodCallTransformer(
             visitVarInsn(owner.type.getOpcode(ILOAD), owner.index)
             box(owner.type)
         }
+        // STACK: descriptor, codeLocation, methodId, owner
         invokeStatic(Injections::onInlineMethodCall)
         invokeBeforeEventIfPluginEnabled("inline method call $inlineMethodName in $methodName")
+        // STACK: <empty>
     }
 
     private fun processInlineMethodReturn(methodId: Int)  = adapter.run {
+        // STACK: <empty>
+        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
         push(methodId)
+        // STACK: descriptor, methodId
         invokeStatic(Injections::onInlineMethodCallReturn)
     }
 

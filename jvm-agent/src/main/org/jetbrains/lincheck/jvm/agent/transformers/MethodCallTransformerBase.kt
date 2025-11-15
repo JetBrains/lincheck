@@ -95,12 +95,14 @@ internal abstract class MethodCallTransformerBase(
         argumentNames: List<AccessPath?>? = null,
     ) {
         // STACK: <empty>
+        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+        // STACK: descriptor
         loadNewCodeLocationId(accessPath = ownerName, argumentNames = argumentNames)
-        // STACK: codeLocation
+        // STACK: descriptor, codeLocation
         push(methodId)
         pushReceiver(receiverLocal)
         loadLocal(argumentsArrayLocal)
-        // STACK: codeLocation, methodId, receiver?, argumentsArray
+        // STACK: descriptor, codeLocation, methodId, receiver?, argumentsArray
         invokeStatic(Injections::onMethodCall)
         // STACK: deterministicCallDescriptor
         invokeBeforeEventIfPluginEnabled("method call ${this@MethodCallTransformerBase.methodName}")
@@ -119,6 +121,7 @@ internal abstract class MethodCallTransformerBase(
             (returnType == VOID_TYPE) -> null
             else -> newLocal(returnType).also { storeLocal(it) }
         }
+        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
         if (deterministicCallIdLocal != null) {
             loadLocal(deterministicCallIdLocal)
         } else {
@@ -136,7 +139,7 @@ internal abstract class MethodCallTransformerBase(
             loadLocal(it)
             box(returnType)
         }
-        // STACK: deterministicCallId, deterministicMethodDescriptor, methodId, receiver, arguments, result?
+        // STACK: descriptor, deterministicCallId, deterministicMethodDescriptor, methodId, receiver, arguments, result?
         when {
             returnType == VOID_TYPE -> invokeStatic(Injections::onMethodCallReturnVoid)
             else                    -> {
@@ -160,6 +163,7 @@ internal abstract class MethodCallTransformerBase(
         val exceptionLocal = newLocal(THROWABLE_TYPE)
         storeLocal(exceptionLocal)
         // STACK: <empty>
+        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
         if (deterministicCallIdLocal != null) {
             loadLocal(deterministicCallIdLocal)
         } else {
@@ -174,7 +178,7 @@ internal abstract class MethodCallTransformerBase(
         pushReceiver(receiverLocal)
         loadLocal(argumentsArrayLocal)
         loadLocal(exceptionLocal)
-        // STACK: deterministicCallId, deterministicMethodDescriptor, methodId, receiver, params, exception
+        // STACK: descriptor, deterministicCallId, deterministicMethodDescriptor, methodId, receiver, params, exception
         invokeStatic(Injections::onMethodCallException)
         // STACK: Throwable
         throwException()

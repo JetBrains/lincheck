@@ -15,7 +15,7 @@ import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.*
 import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.commons.GeneratorAdapter
-import sun.nio.ch.lincheck.Injections
+import sun.nio.ch.lincheck.*
 
 /**
  * LoopTransformer tracks loop start of every loop iteration and loop exit points.
@@ -88,9 +88,10 @@ internal class LoopTransformer(
                 original = {},
                 instrumented = {
                     // STACK: <empty>
+                    invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
                     loadNewCodeLocationId()
                     adapter.push(loopId)
-                    // STACK: codeLocation, loopId
+                    // STACK: descriptor, codeLocation, loopId
                     adapter.invokeStatic(Injections::onLoopIteration)
                     // STACK: <empty>
                 }
@@ -105,11 +106,12 @@ internal class LoopTransformer(
                     for (loopId in loopIds) {
                         val isReachableFromOutsideLoop = opcodesReachableFromOutsideLoops[nonPhonyIndex]?.contains(loopId) ?: true
                         // STACK: <empty>
+                        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
                         loadNewCodeLocationId()
                         adapter.push(loopId)
                         pushNull()
                         push(isReachableFromOutsideLoop)
-                        // STACK: codeLocation, loopId, null, isReachableFromOutsideLoop
+                        // STACK: descriptor, codeLocation, loopId, null, isReachableFromOutsideLoop
                         adapter.invokeStatic(Injections::afterLoopExit)
                         // STACK: <empty>
                     }
@@ -129,11 +131,12 @@ internal class LoopTransformer(
                     for (loopId in loopIds) {
                         val isReachableFromOutsideLoop = opcodesReachableFromOutsideLoops[nonPhonyIndex]?.contains(loopId) ?: true
                         // STACK: <empty>
+                        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
                         loadNewCodeLocationId()
                         push(loopId)
                         loadLocal(exceptionLocal)
                         push(isReachableFromOutsideLoop)
-                        // STACK: codeLocation, loopId, exception, isReachableFromOutsideLoop
+                        // STACK: descriptor, codeLocation, loopId, exception, isReachableFromOutsideLoop
                         invokeStatic(Injections::afterLoopExit)
                         // STACK: <empty>
                     }
