@@ -187,6 +187,13 @@ fun <T> List<T>.isSortedWith(comparator: Comparator<in T>): Boolean {
 }
 
 /**
+ * Returns the average value of the elements in the list, or `null` if the list is empty.
+ */
+fun List<Long>.averageOrNull(): Double? {
+    return if (isEmpty()) null else average()
+}
+
+/**
  * Checks if all elements in the iterable satisfy the given predicate when invoked with their index and value.
  *
  * @param predicate A predicate that accepts the index and element as parameters.

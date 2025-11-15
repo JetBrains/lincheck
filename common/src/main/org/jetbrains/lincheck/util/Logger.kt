@@ -15,9 +15,7 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 object Logger {
-    private val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss.SSS")
-
-    private val logFile: File? = System.getProperty("lincheck.logFile")?.let { fileName ->
+    val logFile: File? = System.getProperty("lincheck.logFile")?.let { fileName ->
         File(fileName).also { runCatching { initFile(it) }.getOrNull() }
     }
 
