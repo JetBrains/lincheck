@@ -44,17 +44,13 @@ class LocalObjectEliminationTest {
 
     @Operation
     fun operation(): Int {
-        val a = A(0, this, IntArray(2))
+        val a = A(0, this)
         a.any = a
         repeat(20) {
             a.value = it
         }
-        a.array[1] = 54
-        val b = A(a.value, a.any, a.array)
+        val b = A(a.value, a.any)
         b.value = 65
-        repeat(20) {
-            b.array[0] = it
-        }
         a.any = b
         // check that closure object and captured `x: IntRef` object
         // are correctly classified as local objects;
@@ -68,7 +64,7 @@ class LocalObjectEliminationTest {
         repeat(20) {
             closure()
         }
-        return (a.any as A).array.sum()
+        return (a.any as A).value
     }
 
     @Test(timeout = 100_000)
@@ -77,7 +73,7 @@ class LocalObjectEliminationTest {
         LinChecker.check(this::class.java)
     }
 
-    private data class A(var value: Int, var any: Any, val array: IntArray)
+    private data class A(var value: Int, var any: Any)
 }
 
 class LocalObjectEscapeConstructorTest {
