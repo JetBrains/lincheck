@@ -270,16 +270,14 @@ object TraceDebuggerDefaultTransformationProfile : TransformationProfile {
     override fun getMethodConfiguration(className: String, methodName: String, descriptor: String): TransformationConfiguration {
         val config = TransformationConfiguration()
 
-        // NOTE: `shouldWrapInIgnoredSection` should be before `shouldNotInstrument`,
-        //       otherwise we may incorrectly forget to add some ignored sections
-        //       and start tracking events in unexpected places
+        if (shouldNotInstrument(className, methodName, descriptor)) {
+            return config
+        }
+
         if (shouldWrapInIgnoredSection(className, methodName, descriptor)) {
             return config.apply {
                 wrapInIgnoredSection = true
             }
-        }
-        if (shouldNotInstrument(className, methodName, descriptor)) {
-            return config
         }
 
         // For `java.lang.Thread` class (and `ThreadContainer.start()` method),
@@ -327,16 +325,14 @@ object ModelCheckingDefaultTransformationProfile : TransformationProfile {
     override fun getMethodConfiguration(className: String, methodName: String, descriptor: String): TransformationConfiguration {
         val config = TransformationConfiguration()
 
-        // NOTE: `shouldWrapInIgnoredSection` should be before `shouldNotInstrument`,
-        //       otherwise we may incorrectly forget to add some ignored sections
-        //       and start tracking events in unexpected places
+        if (shouldNotInstrument(className, methodName, descriptor)) {
+            return config
+        }
+
         if (shouldWrapInIgnoredSection(className, methodName, descriptor)) {
             return config.apply {
                 wrapInIgnoredSection = true
             }
-        }
-        if (shouldNotInstrument(className, methodName, descriptor)) {
-            return config
         }
 
         // For `java.lang.Thread` class (and `ThreadContainer.start()` method),
@@ -424,8 +420,9 @@ private fun shouldWrapInIgnoredSection(className: String, methodName: String, de
 }
 
 private fun shouldNotInstrument(className: String, methodName: String, descriptor: String): Boolean {
-    // Do not instrument `ClassLoader` methods.
-    if (isClassLoaderClassName(className))
+    // Do not instrument `ClassLoader` methods, except `ClassLoader::loadClass(className)`
+    // the latter is wrapped into an ignored section - see `shouldWrapInIgnoredSection`.
+    if (isClassLoaderClassName(className) && !isLoadClassMethod(methodName, descriptor))
         return true
     // Instrumentation of `java.util.Arrays` class causes some subtle flaky bugs.
     // See details in https://github.com/JetBrains/lincheck/issues/717.
