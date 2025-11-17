@@ -28,7 +28,7 @@ fun printPostProcessedTrace(outputFileName: String?, inputFileName: String, verb
 
 fun printPostProcessedTrace(outputFileName: String?, reader: LazyTraceReader, verbose: Boolean) {
     val output = if (outputFileName == null) System.out else openNewFile(outputFileName)
-    printPostProcessedTrace(outputFileName, reader, verbose)
+    printPostProcessedTrace(output, reader, verbose)
 }
 
 fun printPostProcessedTrace(outputStream: OutputStream, reader: LazyTraceReader, verbose: Boolean) {
