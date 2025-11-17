@@ -108,8 +108,8 @@ class ValueHolderGen(randomProvider: RandomProvider, conf: String) : ParameterGe
 class SerializableJavaUtilParameterTest : AbstractLincheckTest() {
     @Before
     fun setUp() {
-        // https://github.com/JetBrains/lincheck/issues/499
-        assumeFalse(jdkVersion == JdkVersion.JDK_21 && isInTraceDebuggerMode)
+        // https://youtrack.jetbrains.com/issue/JBRes-5736
+        assumeFalse(jdkVersion == JdkVersion.JDK_21)
     }
     
     @Operation
