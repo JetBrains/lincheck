@@ -118,13 +118,14 @@ enum class InstrumentationStrategy {
      * When an excluded method is reached, tracing and instrumentation stops there.
      * Even if a few calls deeper an included method is reached (unless it was already instrumented).
      */
-    Lazy,
+    LAZY,
+
     /**
      * Eager transformation: instruments classes when they are loaded, 
      * regardless of whether they are reached by the execution.
      * Is the recommended strategy when working with inclusion filters.
      */
-    Eager
+    EAGER
 }
 
 /**
@@ -169,10 +170,10 @@ object LincheckJavaAgent {
      */
     private fun setInstrumentationStrategy() {
         instrumentationStrategy = when {
-            INSTRUMENT_ALL_CLASSES -> InstrumentationStrategy.Eager
-            TraceAgentParameters.getLazyTransformationEnabled() 
-                    && instrumentationMode.supportsLazyTransformation -> InstrumentationStrategy.Lazy
-            else -> InstrumentationStrategy.Eager
+            INSTRUMENT_ALL_CLASSES -> InstrumentationStrategy.EAGER
+            TraceAgentParameters.getLazyTransformationEnabled()
+                    && instrumentationMode.supportsLazyTransformation -> InstrumentationStrategy.LAZY
+            else -> InstrumentationStrategy.EAGER
         }
     }
 
@@ -204,7 +205,7 @@ object LincheckJavaAgent {
             // If an option to enable transformation of all classes is explicitly set,
             // then we re-transform all the classes
             // (this option is used for testing purposes).
-            instrumentationStrategy == InstrumentationStrategy.Eager -> {
+            instrumentationStrategy == InstrumentationStrategy.EAGER -> {
                 // Re-transform the already loaded classes.
                 // New classes will be transformed automatically.
                 retransformClasses(getLoadedClassesToInstrument())
@@ -312,7 +313,7 @@ object LincheckJavaAgent {
         // Remove the Lincheck transformer.
         instrumentation.removeTransformer(LincheckClassFileTransformer)
         // Collect the set of instrumented classes.
-        val classes = if (instrumentationStrategy == InstrumentationStrategy.Eager)
+        val classes = if (instrumentationStrategy == InstrumentationStrategy.EAGER)
             getLoadedClassesToInstrument()
         else
             getLoadedClassesToInstrument()
@@ -359,7 +360,7 @@ object LincheckJavaAgent {
      * @param className The name of the class to be transformed.
      */
     fun ensureClassHierarchyIsTransformed(className: String) {
-        if (instrumentationStrategy == InstrumentationStrategy.Eager) {
+        if (instrumentationStrategy == InstrumentationStrategy.EAGER) {
             ClassCache.forName(className)
             return
         }
@@ -376,7 +377,7 @@ object LincheckJavaAgent {
      * @param clazz The class to be transformed.
      */
     fun ensureClassHierarchyIsTransformed(clazz: Class<*>) {
-        if (instrumentationStrategy == InstrumentationStrategy.Eager) return
+        if (instrumentationStrategy == InstrumentationStrategy.EAGER) return
         if (clazz.name in instrumentedClasses) return // already instrumented
 
         if (shouldTransform(clazz, instrumentationMode)) {
@@ -410,7 +411,7 @@ object LincheckJavaAgent {
      * @param obj the object to be transformed.
      */
     fun ensureObjectIsTransformed(obj: Any) {
-        if (instrumentationStrategy == InstrumentationStrategy.Eager) return
+        if (instrumentationStrategy == InstrumentationStrategy.EAGER) return
         ensureObjectIsTransformed(obj, identityHashSetOf())
     }
 

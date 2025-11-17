@@ -62,7 +62,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         }
         // If lazy mode is used, transform classes lazily,
         // once they are used in the testing code.
-        if (instrumentationStrategy == InstrumentationStrategy.Lazy &&
+        if (instrumentationStrategy == InstrumentationStrategy.LAZY &&
             // do not re-transform already instrumented classes
             internalClassName.toCanonicalClassName() !in instrumentedClasses &&
             // always transform eagerly instrumented classes
