@@ -280,7 +280,10 @@ class AnalysisProfile(val analyzeStdLib: Boolean) {
             // Instrument `java.util.concurrent` classes, except atomics.
             if (className.startsWith("java.util.concurrent.") && className.contains("Atomic")) return false
             // Instrument `java.util` classes.
+
+            if (className == "java.util.Arrays") return false
             if (className.startsWith("java.util.")) return true
+
             if (isInTraceDebuggerMode) {
                 if (className.startsWith("java.io.")) return true
                 if (className.startsWith("java.nio.")) return true
