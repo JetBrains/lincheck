@@ -94,6 +94,16 @@ internal class LincheckClassVisitor(
         val adapter = GeneratorAdapter(mv, access, methodName, desc)
         mv = adapter
 
+        /*
+         * Instrumentation of `java.util.Arrays` class causes some subtle flaky bugs.
+         * See details in https://github.com/JetBrains/lincheck/issues/717.
+         */
+        if (isJavaUtilArraysClass(className.toCanonicalClassName())) {
+            // `java.util.Arrays` contains intrinsic methods --- we need to process them
+            mv = IntrinsicCandidateMethodFilter(className, methodName, desc, initialVisitor, mv)
+            return mv
+        }
+
         val config = profile.getMethodConfiguration(className.toCanonicalClassName(), methodName, desc)
         val chain = TransformerChain(
             config = config,
