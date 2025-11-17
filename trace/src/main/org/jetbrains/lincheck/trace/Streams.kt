@@ -84,14 +84,12 @@ internal class SeekableChannelBufferedInputStream(
 
         if (pos == bufferStartPosition + buffer.position()) return
 
-        if (pos < bufferStartPosition || pos >= bufferStartPosition + buffer.capacity()) {
-            buffer.clear()
-            // Mark as empty for reading
-            buffer.position(buffer.capacity())
-
+        if (pos < bufferStartPosition || pos >= bufferStartPosition + buffer.limit()) {
+            // It will trigger re-fill on next read(), as remaining() will return 0.
+            buffer.limit(0)
+            // Refill will start form given position
+            bufferStartPosition = pos
             channel.position(pos)
-            // To support call of [position()] right after this seek() without buffer reading
-            bufferStartPosition = pos - buffer.position()
         } else {
             buffer.position((pos - bufferStartPosition).toInt())
         }
