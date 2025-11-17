@@ -15,6 +15,7 @@ import org.jetbrains.lincheck.trace.TRACE_CONTEXT
 import org.jetbrains.lincheck.util.isTrackedIntrinsic
 import org.jetbrains.lincheck.jvm.agent.ASM_API
 import org.jetbrains.lincheck.jvm.agent.toCanonicalClassName
+import org.jetbrains.lincheck.util.Logger
 import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.MethodVisitor
 
@@ -36,6 +37,7 @@ internal class IntrinsicCandidateMethodFilter(
             TRACE_CONTEXT.getOrCreateMethodId(className.toCanonicalClassName(), methodName, Types.convertAsmMethodType(methodDesc))
         )
         if (methodDescriptor.isTrackedIntrinsic()) {
+            Logger.debug { "Method $className.$methodName is marked as intrinsic" }
             methodDescriptor.isIntrinsic = true
             delegate()
         }

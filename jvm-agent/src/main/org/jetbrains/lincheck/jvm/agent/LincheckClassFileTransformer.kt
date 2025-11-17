@@ -80,6 +80,13 @@ object LincheckClassFileTransformer : ClassFileTransformer {
     ): ByteArray = transformedClassesCache.computeIfAbsent(internalClassName.toCanonicalClassName()) {
         Logger.debug { "Transforming $internalClassName" }
 
+        if (isJavaUtilArraysClass(internalClassName.toCanonicalClassName())) {
+            val stackTrace = Thread.currentThread().stackTrace
+            Logger.debug { "Transforming java.util.Arrays !!!" +
+                stackTrace.joinToString(separator = "\n", prefix = "\n") { it.toString() }
+            }
+        }
+
         val reader = ClassReader(classBytes)
 
         // the following code is required for local variables access tracking
