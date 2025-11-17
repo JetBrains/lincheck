@@ -282,6 +282,8 @@ class AnalysisProfile(val analyzeStdLib: Boolean) {
             // Instrument `java.util` classes.
 
             if (className == "java.util.Arrays") return false
+            if (className == "java.util.ArrayList") return false
+
             if (className.startsWith("java.util.")) return true
 
             if (isInTraceDebuggerMode) {
