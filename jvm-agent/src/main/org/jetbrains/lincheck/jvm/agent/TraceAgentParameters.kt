@@ -198,7 +198,7 @@ object TraceAgentParameters {
      * Is true by default
      */
     @JvmStatic
-    fun getLazyTransformationEnabled(): Boolean = namedArgs[ARGUMENT_LAZY] != "false"
+    fun getLazyTransformationEnabled(): Boolean = (namedArgs[ARGUMENT_LAZY] != "false")
 
     private fun splitPatterns(value: String?): List<String> {
         if (value.isNullOrBlank()) return emptyList()

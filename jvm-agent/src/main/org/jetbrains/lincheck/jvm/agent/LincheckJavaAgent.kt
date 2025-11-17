@@ -163,17 +163,30 @@ object LincheckJavaAgent {
 
     /**
      * Decide transformation strategy for the current installation and store it into [instrumentationStrategy].
+     *
      * Rules:
-     * - If "instrument all classes" was requested (legacy property), use Eager.
-     * - Else if Trace Recorder java-agent provided the `lazy` argument, use Lazy (defaults to true).
-     * - Else use Lazy if [instrumentationMode] supports it, Eager otherwise.
+     * - If "instrument all classes" was requested, use `EAGER`.
+     * - Else if Trace Recorder java-agent provided the `lazy` argument, use `LAZY` (defaults to true).
+     * - Else use `LAZY` if [instrumentationMode] supports it, `EAGER` otherwise.
      */
     private fun setInstrumentationStrategy() {
         instrumentationStrategy = when {
             INSTRUMENT_ALL_CLASSES -> InstrumentationStrategy.EAGER
-            TraceAgentParameters.getLazyTransformationEnabled()
-                    && instrumentationMode.supportsLazyTransformation -> InstrumentationStrategy.LAZY
-            else -> InstrumentationStrategy.EAGER
+
+            (instrumentationMode == TRACE_RECORDING) || (instrumentationMode == TRACE_DEBUGGING) -> {
+                val lazyTransformationEnabled = TraceAgentParameters.getLazyTransformationEnabled()
+                if (lazyTransformationEnabled && instrumentationMode.supportsLazyTransformation)
+                    InstrumentationStrategy.LAZY
+                else
+                    InstrumentationStrategy.EAGER
+            }
+
+            else -> {
+                if (instrumentationMode.supportsLazyTransformation)
+                    InstrumentationStrategy.LAZY
+                else
+                    InstrumentationStrategy.EAGER
+            }
         }
     }
 
@@ -202,19 +215,18 @@ object LincheckJavaAgent {
         instrumentation.addTransformer(LincheckClassFileTransformer, true)
         // The transformation logic depends on the testing strategy.
         when {
-            // If an option to enable transformation of all classes is explicitly set,
-            // then we re-transform all the classes
-            // (this option is used for testing purposes).
-            instrumentationStrategy == InstrumentationStrategy.EAGER -> {
-                // Re-transform the already loaded classes.
-                // New classes will be transformed automatically.
-                retransformClasses(getLoadedClassesToInstrument())
-            }
-
-            // In the stress testing mode, Lincheck needs to track coroutine suspensions.
+            // In the stress testing mode, we use an additional optimization.
+            // In this mode, Lincheck needs to track only the coroutine suspensions.
             // As an optimization, we remember the set of loaded classes that actually
             // have suspension points, so later we can re-transform only those classes.
             instrumentationMode == STRESS -> {
+                // If `INSTRUMENT_ALL_CLASSES` is explicitly set ---
+                // disable the optimization and re-transform all classes
+                if (INSTRUMENT_ALL_CLASSES) {
+                    retransformClasses(getLoadedClassesToInstrument())
+                    return
+                }
+                // Perform optimized re-transformation.
                 check(instrumentedClasses.isEmpty())
                 val classes = getLoadedClassesToInstrument().filter {
                     val canonicalClassName = it.name
@@ -227,8 +239,14 @@ object LincheckJavaAgent {
                 instrumentedClasses.addAll(classes.map { it.name })
             }
 
+            // In EAGER mode, we re-transform all the classes that were already loaded before the agent installation.
+            // New classes will be transformed automatically.
+            instrumentationStrategy == InstrumentationStrategy.EAGER -> {
+                retransformClasses(getLoadedClassesToInstrument())
+            }
+
             // In a lazy transformation mode, Lincheck processes classes lazily, only when they are used.
-            instrumentationMode.supportsLazyTransformation -> {
+            instrumentationStrategy == InstrumentationStrategy.LAZY -> {
                 // Clear the set of instrumented classes in case something get wrong during `uninstall`.
                 // For instance, it is possible that Lincheck detects a deadlock, `uninstall` is called,
                 // but one of the "deadlocked" thread calls `ensureClassHierarchyIsTransformed` after that,
