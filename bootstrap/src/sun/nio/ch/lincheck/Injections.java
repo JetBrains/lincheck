@@ -458,10 +458,9 @@ public class Injections {
      * Called from instrumented code instead of {@code Thread::join} method.
      */
     public static void onThreadJoin(Thread thread, boolean withTimeout) {
+        EventTracker eventTracker = getEventTracker();
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
-        if (descriptor == null) return;
-        EventTracker eventTracker = getEventTracker(descriptor);
-        if (eventTracker == null) return;
+        if (eventTracker == null || descriptor == null) return;
 
         eventTracker.onThreadJoin(descriptor, thread, withTimeout);
     }
