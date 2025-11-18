@@ -11,12 +11,10 @@
 package org.jetbrains.trace.recorder.test.impl
 
 import org.jetbrains.trace.recorder.test.runner.AbstractTraceRecorderIntegrationTest
-import org.jetbrains.trace.recorder.test.runner.ExtendedTraceRecorderTest
 import org.jetbrains.trace.recorder.test.runner.loadResourceText
 import org.jetbrains.trace.recorder.test.runner.parseJsonEntries
 import org.jetbrains.trace.recorder.test.runner.transformEntriesToArray
 import org.junit.Test
-import org.junit.experimental.categories.Category
 import org.junit.experimental.runners.Enclosed
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -24,7 +22,6 @@ import java.nio.file.Paths
 
 @RunWith(Enclosed::class)
 class KotlinImmutableCollectionsTraceRecorderExtendedIntegrationTest {
-    @Category(ExtendedTraceRecorderTest::class)
     @RunWith(Parameterized::class)
     class Parametrized(
         private val testClassName: String,
