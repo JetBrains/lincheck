@@ -58,6 +58,9 @@ abstract class AbstractTraceIntegrationTest {
                         val jvmArgs = options.jvmArgs?.toMutableList() ?: mutableListOf()
                         jvmArgs.addAll(listOf(${extraJvmArgs.joinToString(", ") { "\"$it\"" }}))
                         jvmArgs.add("-javaagent:$pathToFatJar=$agentArgs")
+                        // We need to append our agent args the latest, so it comes
+                        // after any user-specified args (including other agents).
+                        // The only reliable way to do this is via `jvmArgumentProviders`
                         options.jvmArgumentProviders.add(CommandLineArgumentProvider { jvmArgs })
                     }
                 }
