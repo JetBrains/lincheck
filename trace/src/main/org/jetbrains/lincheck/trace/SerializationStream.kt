@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.trace
 
 import org.jetbrains.lincheck.descriptors.AccessPath
+import org.jetbrains.lincheck.util.Logger
 import java.io.OutputStream
 import java.nio.ByteBuffer
 import java.util.concurrent.ArrayBlockingQueue
@@ -132,6 +133,11 @@ private class FileStreamingThread(
 
     private val queue = ArrayBlockingQueue<Job>(1024)
 
+    val dataBytes: Long = pos.currentPosition
+
+    var indexBytes: Long = 0
+        private set
+
     init {
         name = "TR-Block-Writer"
 
@@ -140,6 +146,7 @@ private class FileStreamingThread(
 
         index.writeLong(INDEX_MAGIC)
         index.writeLong(TRACE_VERSION)
+        indexBytes += Long.SIZE_BYTES * 2
     }
 
     fun addBlock(writerId: Int, logicalBlockStart: Long, dataBlock: ByteBuffer, indexList: List<IndexCell>) {
@@ -193,6 +200,7 @@ private class FileStreamingThread(
             }
         }
         buffer.flip()
+        indexBytes += buffer.limit()
         index.write(buffer.array(), 0, buffer.limit())
         index.flush()
     }
@@ -204,8 +212,10 @@ private class FileStreamingThread(
         buffer.clear()
         buffer.putIndexCell(ObjectKind.EOF, -1, -1, -1)
         buffer.flip()
+        indexBytes += buffer.limit()
         index.write(buffer.array(), 0, buffer.limit())
         index.writeLong(INDEX_MAGIC)
+        indexBytes += Long.SIZE_BYTES
         index.close()
     }
 
@@ -260,6 +270,8 @@ class FileStreamingTraceCollecting(
         ioThread.start()
     }
 
+    private val points = AtomicInteger(0)
+
     private var seenClassDescriptors = AtomicBitmap()
     private var seenMethodDescriptors = AtomicBitmap()
     private var seenFieldDescriptors = AtomicBitmap()
@@ -310,6 +322,8 @@ class FileStreamingTraceCollecting(
         parent: TRContainerTracePoint?,
         created: TRTracePoint
     ) {
+        points.incrementAndGet()
+
         val writer = writers[Thread.currentThread()] ?: return
         try {
             writer.mark()
@@ -344,6 +358,10 @@ class FileStreamingTraceCollecting(
 
         // Flush all output & exit
         ioThread.exit()
+
+        Logger.info { "Collected ${points.get()} points" }
+        Logger.info { "Data size: ${ioThread.dataBytes} bytes" }
+        Logger.info { "Index size: ${ioThread.indexBytes} bytes" }
     }
 
     override fun isClassDescriptorSaved(id: Int): Boolean = seenClassDescriptors.isSet(id)

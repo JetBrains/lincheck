@@ -11,9 +11,11 @@
 package org.jetbrains.lincheck.trace
 
 import org.jetbrains.lincheck.descriptors.AccessPath
+import org.jetbrains.lincheck.util.Logger
 import java.io.DataOutput
 import java.io.DataOutputStream
 import java.io.OutputStream
+import java.util.concurrent.atomic.AtomicLong
 
 private class SimpleContextSavingState: ContextSavingState {
     private var seenClassDescriptors = BooleanArray(1024)
@@ -129,6 +131,8 @@ private class DirectTraceWriter(
     private var currentBlockStart: Long = 0 // with header
     private var currentDataStart: Long = 0 // after header
 
+    private var indexBytes: Long = 0
+
     override val currentDataPosition: Long get() = pos.currentPosition - currentDataStart
     override val writerId: Int get() = currentWriterId
 
@@ -138,12 +142,17 @@ private class DirectTraceWriter(
 
         index.writeLong(INDEX_MAGIC)
         index.writeLong(TRACE_VERSION)
+        indexBytes += Long.SIZE_BYTES * 2
     }
 
     override fun close() {
         super.close()
         index.writeLong(INDEX_MAGIC)
+        indexBytes += Long.SIZE_BYTES
         index.close()
+
+        Logger.info { "Data size: ${pos.currentPosition} bytes" }
+        Logger.info { "Index size: $indexBytes bytes" }
     }
 
     override fun writeIndexCell(kind: ObjectKind, id: Int, startPos: Long, endPos: Long) {
@@ -152,6 +161,7 @@ private class DirectTraceWriter(
         } else {
             index.writeIndexCell(kind, id, startPos + currentDataStart, endPos + currentDataStart)
         }
+        indexBytes += INDEX_CELL_SIZE
     }
 
     fun startNewRoot(id: Int) {
@@ -166,10 +176,13 @@ private class DirectTraceWriter(
         val endPos = pos.currentPosition
         dataOutput.writeKind(ObjectKind.BLOCK_END)
         index.writeIndexCell(ObjectKind.BLOCK_START, currentWriterId, currentBlockStart, endPos)
+        indexBytes += INDEX_CELL_SIZE
     }
 }
 
 class MemoryTraceCollecting(private val context: TraceContext): TraceCollectingStrategy {
+    val points = AtomicLong(0)
+
     override fun registerCurrentThread(threadId: Int) {
         context.setThreadName(threadId, Thread.currentThread().name)
     }
@@ -180,6 +193,7 @@ class MemoryTraceCollecting(private val context: TraceContext): TraceCollectingS
         parent: TRContainerTracePoint?,
         created: TRTracePoint
     ) {
+        points.incrementAndGet()
         parent?.addChild(created)
     }
 
@@ -189,7 +203,9 @@ class MemoryTraceCollecting(private val context: TraceContext): TraceCollectingS
      * Do nothing.
      * Trace collected in memory can be saved by external means, if needed.
      */
-    override fun traceEnded() {}
+    override fun traceEnded() {
+        Logger.info { "Collected ${points.get()} points" }
+    }
 }
 
 /**
