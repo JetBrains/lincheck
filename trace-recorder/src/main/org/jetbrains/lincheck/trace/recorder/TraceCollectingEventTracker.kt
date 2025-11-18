@@ -468,12 +468,10 @@ class TraceCollectingEventTracker(
     override fun afterReadField(obj: Any?, codeLocation: Int, fieldId: Int, value: Any?) = runInsideInjectedCode {
         val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
         if (fieldDescriptor.isStatic) {
-            if (value !== null && !value.isImmutable) {
-                LincheckJavaAgent.ensureClassHierarchyIsTransformed(value.javaClass)
-            }
             // NOTE: for static reads we never create trace points
             return
         }
+
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
@@ -590,9 +588,7 @@ class TraceCollectingEventTracker(
             return null
         }
 
-        if (receiver == null && methodSection < AnalysisSectionType.ATOMIC) {
-            LincheckJavaAgent.ensureClassHierarchyIsTransformed(methodDescriptor.className)
-        }
+        LincheckJavaAgent.ensureClassHierarchyIsTransformed(methodDescriptor.className)
 
         val tracePoint = TRMethodCallTracePoint(
             threadId = threadData.threadId,

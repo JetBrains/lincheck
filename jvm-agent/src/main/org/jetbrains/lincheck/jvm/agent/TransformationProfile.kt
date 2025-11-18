@@ -245,11 +245,13 @@ object TraceRecorderDefaultTransformationProfile : TransformationProfile {
         if (methodName == "<init>") {
             return config.apply {
                 trackObjectCreations = true
+                trackStaticFieldReads = true
             }
         }
 
         return config.apply {
             trackObjectCreations = true
+            trackStaticFieldReads = true
 
             trackLocalVariableWrites = true
             trackAllFieldsWrites = true
