@@ -26,7 +26,7 @@ import sun.nio.ch.lincheck.*
  *
  * Also, it tracks for the [Thread.join] method calls and injects corresponding handler methods.
  */
-internal class ThreadTransformer(
+internal class ThreadRunTransformer(
     fileName: String,
     className: String,
     methodName: String,
@@ -38,19 +38,15 @@ internal class ThreadTransformer(
     val configuration: TransformationConfiguration,
 ) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
 
+    // TODO: unify with `IgnoredSectionWrapperTransformer` ---
+    //  extract common logic of injecting code on method entry/exit.
+
     private val runMethodTryBlockStart: Label = adapter.newLabel()
     private val runMethodTryBlockEnd: Label = adapter.newLabel()
     private val runMethodCatchBlock: Label = adapter.newLabel()
 
     override fun visitCode() = adapter.run {
         super.visitCode()
-        if (configuration.trackThreadStart && isThreadStartMethod(methodName, descriptor)) {
-            // STACK: <empty>
-            loadThis()
-            // STACK: forkedThread
-            invokeStatic(Injections::beforeThreadStart)
-            // STACK: <empty>
-        }
         if (configuration.trackThreadRun && isThreadRunMethod(methodName, descriptor)) {
             // STACK: <empty>
             visitTryCatchBlock(runMethodTryBlockStart, runMethodTryBlockEnd, runMethodCatchBlock, null)
@@ -62,35 +58,63 @@ internal class ThreadTransformer(
     }
 
     override fun visitInsn(opcode: Int) = adapter.run {
-        // TODO: this approach does not support thread interruptions and any other thrown exceptions
         if (configuration.trackThreadRun && isThreadRunMethod(methodName, descriptor) && opcode == Opcodes.RETURN) {
             // STACK: <empty>
             invokeStatic(Injections::afterThreadRunReturn)
+            // STACK: <empty>
         }
         super.visitInsn(opcode)
     }
 
     override fun visitMaxs(maxStack: Int, maxLocals: Int) = adapter.run {
-        // we only need to handle `Thread::run()` method, exit early otherwise
-        if (!configuration.trackThreadRun || !isThreadRunMethod(methodName, descriptor)) {
-            super.visitMaxs(maxStack, maxLocals)
-            return
+        if (configuration.trackThreadRun && isThreadRunMethod(methodName, descriptor)) {
+            visitLabel(runMethodTryBlockEnd)
+            visitLabel(runMethodCatchBlock)
+            // STACK: exception
+            invokeStatic(Injections::afterThreadRunException)
+            // STACK: <empty>
+
+            // Notify that the thread has finished.
+            // TODO: currently does not work, because `ManagedStrategy::onThreadFinish`
+            //   assumes the thread finish injection is called under normal managed execution,
+            //   i.e., in non-aborted state
+            // invokeStatic(Injections::afterThreadFinish)
+
+            visitInsn(Opcodes.RETURN)
         }
 
-        visitLabel(runMethodTryBlockEnd)
-        visitLabel(runMethodCatchBlock)
-        // STACK: exception
-        invokeStatic(Injections::afterThreadRunException)
-        // STACK: <empty>
-
-        // Notify that the thread has finished.
-        // TODO: currently does not work, because `ManagedStrategy::onThreadFinish`
-        //   assumes the thread finish injection is called under normal managed execution,
-        //   i.e., in non-aborted state
-        // invokeStatic(Injections::afterThreadFinish)
-
-        visitInsn(Opcodes.RETURN)
         super.visitMaxs(maxStack, maxLocals)
+    }
+
+    private fun isThreadRunMethod(methodName: String, desc: String): Boolean =
+        methodName == "run" && desc == VOID_METHOD_DESCRIPTOR && isThreadSubClass(className.toCanonicalClassName())
+}
+
+internal class ThreadStartJoinTransformer(
+    fileName: String,
+    className: String,
+    methodName: String,
+    methodInfo: MethodInformation,
+    descriptor: String,
+    access: Int,
+    adapter: GeneratorAdapter,
+    methodVisitor: MethodVisitor,
+    val configuration: TransformationConfiguration,
+) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
+
+    override fun visitCode() = adapter.run {
+        super.visitCode()
+        // TODO: here we instrument `Thread::start` body itself (callee-site based instrumentation),
+        //  consider instead instrumenting `Thread.start()` calls (call-site based instrumentation).
+        //  This would be consistent with `Thread.join()` instrumentation,
+        //  and interacts better with the (call-site based) method calls instrumentation.
+        if (configuration.trackThreadStart && isThreadStartMethod(methodName, descriptor)) {
+            // STACK: <empty>
+            loadThis()
+            // STACK: startingThread
+            invokeStatic(Injections::beforeThreadStart)
+            // STACK: <empty>
+        }
     }
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
@@ -132,6 +156,7 @@ internal class ThreadTransformer(
             invokeStatic(Injections::onThreadJoin)
             // STACK: thread, millis?, nanos?
         }
+
         // In some newer versions of JDK, `ThreadPoolExecutor` uses
         // the internal `ThreadContainer` classes to manage threads in the pool;
         // This class, in turn, has the method `start`,
@@ -150,17 +175,15 @@ internal class ThreadTransformer(
             loadLocal(threadContainerLocal)
             // STACK: thread, threadContainer
         }
+
         super.visitMethodInsn(opcode, owner, name, desc, itf)
     }
 
     private fun isThreadStartMethod(methodName: String, desc: String): Boolean =
         methodName == "start" && desc == VOID_METHOD_DESCRIPTOR && isThreadSubClass(className.toCanonicalClassName())
-    
+
     private fun isJavaLangAccessThreadStartMethod(className: String, methodName: String): Boolean =
         methodName == "start" && isJavaLangAccessClass(className.toCanonicalClassName())
-
-    private fun isThreadRunMethod(methodName: String, desc: String): Boolean =
-        methodName == "run" && desc == VOID_METHOD_DESCRIPTOR && isThreadSubClass(className.toCanonicalClassName())
 
     // TODO: add support for thread joins with time limit
     private fun isThreadJoinCall(className: String, methodName: String, desc: String) =

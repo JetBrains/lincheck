@@ -148,7 +148,9 @@ internal fun TransformationConfiguration.shouldApplyVisitor(visitorClass: Class<
         MethodCallTransformerBase::class.java -> trackMethodCalls
         InlineMethodCallTransformer::class.java -> trackInlineMethodCalls
 
-        ThreadTransformer::class.java -> trackThreadsOperations
+        ThreadRunTransformer::class.java -> trackThreadRun
+        ThreadStartJoinTransformer::class.java -> trackThreadStart || trackThreadJoin
+
         MonitorTransformer::class.java -> trackMonitorsOperations
         WaitNotifyTransformer::class.java -> trackWaitNotifyOperations
         SynchronizedMethodTransformer::class.java -> trackSynchronizedBlocks
