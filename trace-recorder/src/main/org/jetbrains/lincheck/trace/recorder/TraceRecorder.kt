@@ -55,7 +55,6 @@ object TraceRecorder {
         format: String?,
         formatOption: String?,
         pack: Boolean,
-        trackAllThreads: Boolean
     ) {
         val startedCount = installCount.incrementAndGet()
         Logger.info { "Trace recorder has been started from $className::$methodName in thread \"${Thread.currentThread().name}\" (installCount=$startedCount)" }
@@ -77,12 +76,7 @@ object TraceRecorder {
         val descriptor = ThreadDescriptor.getCurrentThreadDescriptor()
             ?: Injections.registerCurrentThread(eventTracker)
 
-        if (trackAllThreads) {
-            Injections.enableGlobalEventTracking(eventTracker)
-        } else {
-            Injections.enableThreadLocalEventTracking()
-            ThreadDescriptor.setCurrentThreadAsRoot(descriptor)
-        }
+        Injections.enableGlobalEventTracking(eventTracker)
 
         eventTracker!!.enableTrace()
         descriptor.enableAnalysis()
@@ -118,12 +112,6 @@ object TraceRecorder {
         val mode = Injections.getEventTrackingMode()
         if (mode == Injections.EventTrackingMode.GLOBAL) {
             Injections.disableGlobalEventTracking()
-        } else if (mode == Injections.EventTrackingMode.THREAD_LOCAL) {
-            Injections.disableThreadLocalEventTracking()
-            if (traceStarterThread == Thread.currentThread()) {
-                ThreadDescriptor.unsetRootThread().ensure { it == descriptor }
-                traceStarterThread = null
-            }
         } else {
             throw IllegalStateException("Unexpected event tracking mode $mode")
         }
