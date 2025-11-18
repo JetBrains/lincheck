@@ -24,9 +24,9 @@ import java.lang.instrument.Instrumentation
 
 /**
  * Agent that is set as `premain` entry class for fat trace debugger jar archive.
- * This archive when attached to the jvm process expects also a `-Dlincheck.traceDebuggerMode=true` or
- * `-Dlincheck.traceRecorderMode=true` in order to enable trace debugging plugin or trace recorder functionality
- * accordingly.
+ * This archive when attached to the jvm process expects also an option
+ * `-Dlincheck.traceDebuggerMode=true` or `-Dlincheck.traceRecorderMode=true`
+ * in order to enable trace debugging plugin or trace recorder functionality accordingly.
  */
 internal object TraceRecorderAgent {
     const val ARGUMENT_FORMAT = "format"
