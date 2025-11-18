@@ -107,7 +107,8 @@ internal class SeekableChannelBufferedInputStream(
             read = channel.read(buffer)
             if (read < 0) return false
         }
-        buffer.rewind()
+        // Set limit = position, position = 0,
+        buffer.flip()
         return true
     }
 }
