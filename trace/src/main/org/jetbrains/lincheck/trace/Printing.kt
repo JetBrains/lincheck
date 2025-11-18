@@ -28,9 +28,13 @@ fun printPostProcessedTrace(outputFileName: String?, inputFileName: String, verb
 
 fun printPostProcessedTrace(outputFileName: String?, reader: LazyTraceReader, verbose: Boolean) {
     val output = if (outputFileName == null) System.out else openNewFile(outputFileName)
+    printPostProcessedTrace(output, reader, verbose)
+}
+
+fun printPostProcessedTrace(outputStream: OutputStream, reader: LazyTraceReader, verbose: Boolean) {
     val roots = reader.readRoots()
 
-    PrintStream(output.buffered(OUTPUT_BUFFER_SIZE)).use { output ->
+    PrintStream(outputStream.buffered(OUTPUT_BUFFER_SIZE)).use { output ->
         roots.forEachIndexed { i, root ->
             output.println(getThreadName(i, roots.size, reader.context))
             lazyPrintTRPoint(output, reader, root, 0, verbose)

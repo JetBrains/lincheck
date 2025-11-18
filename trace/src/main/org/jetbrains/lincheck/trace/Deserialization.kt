@@ -387,10 +387,10 @@ class LazyTraceReader private constructor(
                 }
             )
             if (tracepoints.isEmpty()) {
-                System.err.println("Thread $threadId doesn't write any tracepoints")
+                Logger.warn { "Thread $threadId doesn't write any tracepoints" }
             } else {
                 if (tracepoints.size > 1) {
-                    System.err.println("Thread $threadId wrote too many root tracepoints: ${tracepoints.size}")
+                    Logger.error { "Thread $threadId wrote too many root tracepoints: ${tracepoints.size}" }
                 }
                 roots[threadId] = tracepoints.first()
             }
@@ -490,10 +490,10 @@ class LazyTraceReader private constructor(
     private fun loadContext() {
         val index = input.indexStream
         if (index == null) {
-            System.err.println("TraceRecorder: No index file is given for $traceFileName: read whole data file to re-create context")
+            Logger.warn { "TraceRecorder: No index file is given for $traceFileName: read whole data file to re-create context" }
             loadContextWithoutIndex()
         } else if (!loadContextWithIndex()) {
-            System.err.println("TraceRecorder: Index file for $traceFileName is corrupted: read whole data file to re-create context")
+            Logger.warn { "TraceRecorder: Index file for $traceFileName is corrupted: read whole data file to re-create context" }
             context.clear()
             dataBlocks.clear()
             loadContextWithoutIndex()
@@ -575,7 +575,7 @@ class LazyTraceReader private constructor(
                     error("Wrong final index magic 0x${(magic.toString(16))}, expected ${TRACE_MAGIC.toString(16)}")
                 }
             } catch (t: IOException) {
-                System.err.println("TraceRecorder: Error reading index for $traceFileName: ${t.message}")
+                Logger.error { "TraceRecorder: Error reading index for $traceFileName: ${t.message}" }
                 return false
             }
         }
@@ -648,7 +648,7 @@ class LazyTraceReader private constructor(
         if (kind == ObjectKind.TRACEPOINT_FOOTER) {
             tracePoint.loadFooter(data)
         } else {
-            System.err.println("TraceRecorder: Unexpected object kind $kind when loading tracepoints")
+            Logger.error { "TraceRecorder: Unexpected object kind $kind when loading tracepoints" }
         }
 
         return tracePoint
@@ -853,7 +853,7 @@ private fun loadRecordedTrace(inp: InputStream, meta: TraceMetaInfo?): TraceWith
 
         roots.forEach {
             if (it.value.size > 1) {
-                System.err.println("TraceRecorder: Thread #${it.key} contains multiple top-level calls")
+                Logger.warn { "TraceRecorder: Thread #${it.key} contains multiple top-level calls" }
             }
         }
 
@@ -913,12 +913,12 @@ private fun loadAllObjectsDeep(
     codeLocs.restoreAllCodeLocations(context)
 
     if (!seenEOF) {
-        System.err.println("TraceRecorder: no EOF record at the end of the file")
+        Logger.warn {"TraceRecorder: no EOF record at the end of the file" }
     }
     // Check that all stacks are empty
     trees.forEach {
         if (!it.value.isEmpty()) {
-            System.err.println("TraceRecorder: Thread #${it.key} contains unfinished method calls")
+            Logger.warn { "TraceRecorder: Thread #${it.key} contains unfinished method calls" }
         }
     }
 }
@@ -951,7 +951,7 @@ private fun loadTracePointDeep(
             return false
         }
         else -> {
-            System.err.println("TraceRecorder: Unexpected object kind $kind when loading tracepoints")
+            Logger.error { "TraceRecorder: Unexpected object kind $kind when loading tracepoints" }
             return false
         }
     }
