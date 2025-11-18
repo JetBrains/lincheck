@@ -283,9 +283,13 @@ class TraceCollectingEventTracker(
         }
     }
 
-    override fun beforeThreadStart(thread: Thread, descriptor: ThreadDescriptor) {}
+    override fun beforeThreadStart(
+        threadDescriptor: ThreadDescriptor,
+        startingThread: Thread,
+        startingThreadDescriptor: ThreadDescriptor
+    ) {}
 
-    override fun onThreadJoin(thread: Thread?, withTimeout: Boolean) {}
+    override fun onThreadJoin(threadDescriptor: ThreadDescriptor, thread: Thread?, withTimeout: Boolean) {}
 
     override fun beforeThreadRun(threadDescriptor: ThreadDescriptor) = threadDescriptor.runInsideIgnoredSection {
         // Create new thread data

@@ -18,7 +18,7 @@ import java.lang.invoke.CallSite;
  */
 public interface EventTracker {
 
-    void beforeThreadStart(ThreadDescriptor descriptor, Thread thread, ThreadDescriptor descriptor);
+    void beforeThreadStart(ThreadDescriptor descriptor, Thread startingThread, ThreadDescriptor startingThreadDescriptor);
     void beforeThreadRun(ThreadDescriptor descriptor);
     void afterThreadRunReturn(ThreadDescriptor descriptor);
     void afterThreadRunException(ThreadDescriptor descriptor, Throwable exception);

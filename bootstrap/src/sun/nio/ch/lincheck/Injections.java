@@ -330,7 +330,7 @@ public class Injections {
     private static ThreadDescriptor registerRunningThread(EventTracker eventTracker, Thread thread) {
         ThreadDescriptor descriptor = registerThread(eventTracker, thread);
         ThreadDescriptor.setCurrentThreadDescriptor(descriptor);
-        eventTracker.registerRunningThread(thread, descriptor);
+        eventTracker.registerRunningThread(descriptor, thread);
         return descriptor;
     }
 
