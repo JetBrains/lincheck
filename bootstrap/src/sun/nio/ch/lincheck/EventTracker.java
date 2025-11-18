@@ -18,27 +18,27 @@ import java.lang.invoke.CallSite;
  */
 public interface EventTracker {
 
-    void beforeThreadStart(Thread thread, ThreadDescriptor descriptor);
-    void beforeThreadRun();
-    void afterThreadRunReturn();
-    void afterThreadRunException(Throwable exception);
-    void onThreadJoin(Thread thread, boolean withTimeout);
-    void registerRunningThread(Thread thread, ThreadDescriptor descriptor);
+    void beforeThreadStart(ThreadDescriptor descriptor, Thread startingThread, ThreadDescriptor startingThreadDescriptor);
+    void beforeThreadRun(ThreadDescriptor descriptor);
+    void afterThreadRunReturn(ThreadDescriptor descriptor);
+    void afterThreadRunException(ThreadDescriptor descriptor, Throwable exception);
+    void onThreadJoin(ThreadDescriptor descriptor, Thread thread, boolean withTimeout);
+    void registerRunningThread(ThreadDescriptor descriptor, Thread thread);
 
-    void beforeLock(int codeLocation);
-    void lock(Object monitor);
-    void unlock(Object monitor, int codeLocation);
+    void beforeLock(ThreadDescriptor descriptor, int codeLocation);
+    void lock(ThreadDescriptor descriptor, Object monitor);
+    void unlock(ThreadDescriptor descriptor, int codeLocation, Object monitor);
 
-    void beforePark(int codeLocation);
-    void park(int codeLocation);
-    void unpark(Thread thread, int codeLocation);
+    void beforePark(ThreadDescriptor descriptor, int codeLocation);
+    void park(ThreadDescriptor descriptor, int codeLocation);
+    void unpark(ThreadDescriptor descriptor, int codeLocation, Thread thread);
 
-    void beforeWait(int codeLocation);
-    void wait(Object monitor, boolean withTimeout);
-    void notify(Object monitor, int codeLocation, boolean notifyAll);
+    void beforeWait(ThreadDescriptor descriptor, int codeLocation);
+    void wait(ThreadDescriptor descriptor, Object monitor, boolean withTimeout);
+    void notify(ThreadDescriptor descriptor, int codeLocation, Object monitor, boolean notifyAll);
 
-    void beforeNewObjectCreation(String className);
-    void afterNewObjectCreation(Object obj);
+    void beforeNewObjectCreation(ThreadDescriptor descriptor, String className);
+    void afterNewObjectCreation(ThreadDescriptor descriptor, Object obj);
 
     long getNextTraceDebuggerEventTrackerId(TraceDebuggerTracker tracker);
     void advanceCurrentTraceDebuggerEventTrackerId(TraceDebuggerTracker tracker, long oldId);
@@ -59,30 +59,30 @@ public interface EventTracker {
 
     void updateSnapshotBeforeConstructorCall(Object[] objs);
 
-    void beforeReadField(Object obj, int codeLocation, int fieldId);
-    void beforeReadArrayElement(Object array, int index, int codeLocation);
-    void afterReadField(Object obj, int codeLocation, int fieldId, Object value);
-    void afterReadArrayElement(Object array, int index, int codeLocation, Object value);
+    void beforeReadField(ThreadDescriptor descriptor, int codeLocation, Object obj, int fieldId);
+    void beforeReadArrayElement(ThreadDescriptor descriptor, int codeLocation, Object array, int index);
+    void afterReadField(ThreadDescriptor descriptor, int codeLocation, Object obj, int fieldId, Object value);
+    void afterReadArrayElement(ThreadDescriptor descriptor, int codeLocation, Object array, int index, Object value);
 
-    void beforeWriteField(Object obj, Object value, int codeLocation, int fieldId);
-    void beforeWriteArrayElement(Object array, int index, Object value, int codeLocation);
-    void afterWrite();
+    void beforeWriteField(ThreadDescriptor descriptor, int codeLocation, Object obj, Object value, int fieldId);
+    void beforeWriteArrayElement(ThreadDescriptor descriptor, int codeLocation, Object array, int index, Object value);
+    void afterWrite(ThreadDescriptor descriptor);
 
-    void afterLocalRead(int codeLocation, int variableId, Object value);
-    void afterLocalWrite(int codeLocation, int variableId, Object value);
+    void afterLocalRead(ThreadDescriptor descriptor, int codeLocation, int variableId, Object value);
+    void afterLocalWrite(ThreadDescriptor descriptor, int codeLocation, int variableId, Object value);
 
-    Object onMethodCall(int codeLocation, int methodId, Object receiver, Object[] params);
-    Object onMethodCallReturn(long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Object result);
-    Throwable onMethodCallException(long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Throwable t);
+    Object onMethodCall(ThreadDescriptor descriptor, int codeLocation, int methodId, Object receiver, Object[] params);
+    Object onMethodCallReturn(ThreadDescriptor descriptor, long descriptorId, Object detDescriptor, int methodId, Object receiver, Object[] params, Object result);
+    Throwable onMethodCallException(ThreadDescriptor descriptor, long descriptorId, Object detDescriptor, int methodId, Object receiver, Object[] params, Throwable t);
 
-    void onInlineMethodCall(int codeLocation, int methodId, Object owner);
-    void onInlineMethodCallReturn(int methodId);
-    void onInlineMethodCallException(int methodId, Throwable t);
+    void onInlineMethodCall(ThreadDescriptor descriptor, int codeLocation, int methodId, Object owner);
+    void onInlineMethodCallReturn(ThreadDescriptor descriptor, int methodId);
+    void onInlineMethodCallException(ThreadDescriptor descriptor, int methodId, Throwable t);
 
-    BootstrapResult<?> invokeDeterministicallyOrNull(long descriptorId, Object descriptor, Object receiver, Object[] params);
+    BootstrapResult<?> invokeDeterministicallyOrNull(ThreadDescriptor threadDescriptor, long descriptorId, Object descriptor, Object receiver, Object[] params);
 
-    void onLoopIteration(int codeLocation, int loopId);
-    void afterLoopExit(int codeLocation, int loopId, Throwable exception, boolean isReachableFromOutsideLoop);
+    void onLoopIteration(ThreadDescriptor descriptor, int codeLocation, int loopId);
+    void afterLoopExit(ThreadDescriptor descriptor, int codeLocation, int loopId, Throwable exception, boolean isReachableFromOutsideLoop);
 
     InjectedRandom getThreadLocalRandom();
     int randomNextInt();

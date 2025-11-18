@@ -45,6 +45,7 @@ internal class ObjectCreationMinimalTransformer(
             invokeIfInAnalyzedCode(
                 original = {},
                 instrumented = {
+                    invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
                     push(type.toCanonicalClassName())
                     invokeStatic(Injections::beforeNewObjectCreation)
                 }
