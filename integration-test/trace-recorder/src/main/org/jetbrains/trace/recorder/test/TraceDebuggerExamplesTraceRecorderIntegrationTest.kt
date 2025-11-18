@@ -26,6 +26,24 @@ class TraceDebuggerExamplesTraceRecorderIntegrationTest : AbstractTraceRecorderI
     }
 
     @Test
+    fun koverAddTest() {
+        runGradleTest(
+            testClassName = "org.examples.kover.CalculatorTest",
+            testMethodName = "addTest",
+            gradleCommands = listOf(":test-kover:test"),
+        )
+    }
+
+    @Test
+    fun koverIsEvenTest() {
+        runGradleTest(
+            testClassName = "org.examples.kover.CalculatorTest",
+            testMethodName = "isEvenTest",
+            gradleCommands = listOf(":test-kover:test"),
+        )
+    }
+
+    @Test
     fun `org_examples_integration_bugs_LinkedHashSetTest putAnObjectWithoutDefinedHashCode`() {
         runGradleTest(
             testClassName = "org.examples.integration.bugs.LinkedHashSetTest",
