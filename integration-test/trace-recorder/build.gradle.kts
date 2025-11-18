@@ -20,6 +20,7 @@ sourceSets {
         val slf4jVersion: String by project
         val kotlinxSerializationVersion: String by project
 
+        implementation(kotlin("reflect"))
         implementation(project(":integration-test:common"))
         implementation("org.slf4j:slf4j-simple:$slf4jVersion")
         implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerializationVersion")
