@@ -10,6 +10,7 @@
 
 package org.jetbrains.lincheck.trace
 
+import org.jetbrains.lincheck.util.Logger
 import java.io.InputStream
 import java.io.PrintWriter
 import java.nio.file.Files
@@ -57,6 +58,7 @@ fun packRecordedTrace(baseFileName: String, metaInfo: TraceMetaInfo, deleteSourc
             Files.deleteIfExists(Path(dataName))
             Files.deleteIfExists(Path(indexName))
         }
+        Logger.info { "Packed trace size: ${Files.size(Path(outputName))} bytes" }
     } catch (e: Throwable) {
         Files.deleteIfExists(Path(outputName))
         throw e
