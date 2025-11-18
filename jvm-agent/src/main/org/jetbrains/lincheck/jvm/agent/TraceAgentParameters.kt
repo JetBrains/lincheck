@@ -42,14 +42,23 @@ import java.lang.reflect.Modifier
  *       Example: `exclude="org.example.internal.*;**.generated.*"`
  *
  * - lazyInstrumentation — boolean that can disable lazy transformation, it is true by default.
- *      Example: `lazyInstrumentation=false`
+ *       Example: `lazyInstrumentation=false`
  *      
  * - pack — boolean that enables zipping trace artifact files, it is false by default.
- *      Example: `pack=true`
+ *       Example: `pack=true`
  *
- * TraceRecorder agent-specific parameters:
- * - format — output format for trace recorder dumps (recorder-only). See `trace-recorder/TraceRecorderAgent.kt`.
- * - formatOption — extra options for the selected format (recorder-only). See `trace-recorder/TraceRecorderAgent.kt`.
+ * - format — output format for trace recorder dumps. Possible options are:
+ *       * `binary` --- serialized binary format;
+ *       * `text` --- text output;
+ *       * `null` --- discards recorded trace.
+ *       Example: `format=text`
+ *
+ * - formatOption — extra options for the selected format. Possible options are:
+ *       * for `binary`:
+ *           * `dump` --- keeps the whole trace in-memory and dumps it to the file at the end;
+ *           * `stream` --- writes the trace points incrementally during the execution;
+ *       * for `text`: `verbose` --- enables verbose output.
+ *       Example: `formatOption=dump`
  *
  * Quotation rules:
  * - Unquoted values may contain any character; use backslash to escape comma (,) and backslash (\\).

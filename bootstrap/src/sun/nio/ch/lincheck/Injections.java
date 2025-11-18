@@ -19,75 +19,190 @@ import java.lang.reflect.Constructor;
  */
 public class Injections {
 
-    // Special object to represent void method call result.
-    public static final Object VOID_RESULT = new Object();
-
-    // Agent passes the event tracker if it decides to start recording trace points
-    // in already running threads. Field is non-null in case if all-threads tracking is enabled.
-    public static volatile EventTracker globalEventTracker = null;
-
-    // Used in the verification phase to store a suspended continuation.
-    public static Object lastSuspendedCancellableContinuationDuringVerification = null;
+    /**
+     * Defines the available modes of event tracking.
+     * <br>
+     *
+     * GLOBAL:
+     *   In this mode, a single event tracker is stored in a global variable
+     *   and is shared between all threads.
+     *
+     * <br>
+     *
+     * THREAD_LOCAL:
+     *   In this mode, each thread has its own event tracker,
+     *   and different threads can have different event trackers.
+     *   When a new thread is started, it inherits the event tracker of its parent thread.
+     *   The event tracker can also be registered for the given thread manually.
+     */
+    public enum EventTrackingMode {
+        GLOBAL,
+        THREAD_LOCAL,
+    }
 
     /**
-     * In case if {@code globalEventTracker == null}, returns the current thread descriptor or {@code null}.
-     * </br></br>
-     * Otherwise, creates a new thread descriptor for the current thread. This thread is considered
-     * as the one not tracked from the start, so it is registered in the {@code globalEventTracker}
-     * by invoking {@code EventTracker.registerRunningThread}.
-     * Afterwards, the method returns the created thread descriptor.
+     * Stores the selected event tracking mode.
+     * Null indicates event tracking is disabled.
+     */
+    private static volatile EventTrackingMode eventTrackingMode = null;
+
+    /**
+     * Stores the global event tracker.
+     * Stores `null` if the event tracking mode is not set to `GLOBAL`.
+     */
+    private static volatile EventTracker globalEventTracker = null;
+
+    /**
+     * Retrieves the current event tracking mode.
+     */
+    public static EventTrackingMode getEventTrackingMode() {
+        return eventTrackingMode;
+    }
+
+    /**
+     * Retrieves the global event tracker.
+     */
+    public static EventTracker getGlobalEventTracker() {
+        return globalEventTracker;
+    }
+
+    /**
+     * Retrieves an instance of an event tracker based on the provided thread descriptor and
+     * current event tracking mode.
+     */
+    public static EventTracker getEventTracker(ThreadDescriptor descriptor) {
+        return getEventTracker(descriptor, false);
+    }
+
+    /**
+     * Retrieves the appropriate {@link EventTracker}
+     * based on the specified event tracking mode and the provided parameters.
+     * <br>
+     *
+     * - In GLOBAL mode, the global event tracker is returned.
+     *   In addition, if {@code registerRunningThread} flag is true
+     *   and the thread descriptor is not yet registered (and null is passed as descriptor),
+     *   registers the currently running thread, creating a new thread descriptor for it.
+     * <br>
+     *
+     * - In THREAD_LOCAL mode, the thread-local event tracker is returned.
+     *
+     * @param descriptor the thread descriptor for which the event tracker is requested.
+     * @param registerRunningThread indicates whether to register the currently running thread
+     *                              (applicable in GLOBAL mode only).
+     * @return the event tracker of `null` if event tracking is disabled or the current thread is not tracked.
+     */
+    private static EventTracker getEventTracker(ThreadDescriptor descriptor, boolean registerRunningThread) {
+        EventTrackingMode mode = eventTrackingMode;
+        if (mode == EventTrackingMode.GLOBAL) {
+            EventTracker eventTracker = globalEventTracker;
+            if (eventTracker != null && descriptor == null && registerRunningThread) {
+                // Handle the case when all threads tracking was requested,
+                // and we need to self-register the currently running thread by creating a new descriptor for it.
+                registerRunningThread(eventTracker, Thread.currentThread());
+            }
+            return eventTracker;
+        }
+        if (mode == EventTrackingMode.THREAD_LOCAL) {
+            return (descriptor != null) ? descriptor.getEventTracker() : null;
+        }
+
+        throw new IllegalStateException("Unexpected event tracking mode: " + mode);
+    }
+
+    /**
+     * Retrieves an event tracker instance for the current thread.
+     * <br>
+     *
+     * In GLOBAL mode will automatically register the currently running thread (if it is not yet registered),,
+     * creating a new thread descriptor for it.
+     * <br>
+     *
+     * This is an INTERNAL method, do not expose it in public API!
+     */
+    private static EventTracker getEventTracker() {
+        ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
+        return getEventTracker(descriptor, true);
+    }
+
+    /**
+     * Retrieves the current thread's descriptor if it exists;
+     * otherwise, if event tracking mode is GLOBAL, will automatically register the current thread,
+     * creating a new thread descriptor for it.
      */
     private static ThreadDescriptor getOrCreateCurrentThreadDescriptor() {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
-        if (descriptor != null || globalEventTracker == null) {
-            return descriptor;
-        }
-        // handle the case when all threads tracking was requested,
-        // and we need to self-register current running thread and create new descriptor for it,
-        // basically, here we have `globalEventTracker != null`
-        Thread t = Thread.currentThread();
-        descriptor = ThreadDescriptor.getThreadDescriptor(t);
-        if (descriptor == null) {
-            descriptor = new ThreadDescriptor(t);
-            ThreadDescriptor.setThreadDescriptor(t, descriptor);
-        }
-        descriptor.setEventTracker(globalEventTracker);
-        ThreadDescriptor.setCurrentThreadDescriptor(descriptor);
-        globalEventTracker.registerRunningThread(t, descriptor);
-        return descriptor;
-    }
+        if (descriptor != null) return descriptor;
 
-    public static EventTracker getEventTracker() {
-        ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
-        if (descriptor == null) {
-            throw new RuntimeException("No event tracker set by Lincheck");
+        if (eventTrackingMode == EventTrackingMode.GLOBAL) {
+            getEventTracker(null, true); // will trigger registration of the current thread
+            return ThreadDescriptor.getCurrentThreadDescriptor();
         }
-        return descriptor.getEventTracker();
-    }
 
-    public static void storeCancellableContinuation(Object cont) {
-        Thread t = Thread.currentThread();
-        if (t instanceof TestThread) {
-            ((TestThread) t).suspendedContinuation = cont;
-        } else {
-            // We are in the verification phase.
-            lastSuspendedCancellableContinuationDuringVerification = cont;
-        }
+        return null;
     }
 
     /**
-     * Enables tracking of all threads. Expects {@code eventTracker} to be the tracker
-     * which will be responsible for registering existing threads when they generate some trace point.
+     * Enables event tracking for the specified mode using the provided event tracker.
+     *
+     * @param mode The mode of event tracking to be enabled.
+     * @param eventTracker The event tracker instance.
+     *                     Should be non-null for GLOBAL mode, and null for THREAD_LOCAL mode.
+     * @throws IllegalStateException if event tracking is already enabled.
      */
-    public static void enableGlobalThreadsTracking(EventTracker eventTracker) {
-        globalEventTracker = eventTracker;
+    private static synchronized void enableEventTracking(EventTrackingMode mode, EventTracker eventTracker) {
+        if (eventTrackingMode != null) {
+            throw new IllegalStateException("Event tracking is already enabled");
+        }
+        if (mode == EventTrackingMode.GLOBAL) {
+            globalEventTracker = eventTracker;
+        }
+        eventTrackingMode = mode;
     }
 
     /**
-     * Disables tracking of all threads.
+     * Disables event tracking.
      */
-    public static void disableGlobalThreadsTracking() {
-        globalEventTracker = null;
+    private static synchronized void disableEventTracking() {
+        EventTrackingMode mode = eventTrackingMode;
+        if (mode == EventTrackingMode.GLOBAL) {
+            globalEventTracker = null;
+        }
+        eventTrackingMode = null;
+    }
+
+    /**
+     * Enables global event tracking.
+     */
+    public static void enableGlobalEventTracking(EventTracker eventTracker) {
+        enableEventTracking(EventTrackingMode.GLOBAL, eventTracker);
+    }
+
+    /**
+     * Disables global event tracking.
+     */
+    public static void disableGlobalEventTracking() {
+        if (eventTrackingMode != EventTrackingMode.GLOBAL) {
+            throw new IllegalStateException("Global event tracking is not enabled");
+        }
+        disableEventTracking();
+    }
+
+    /**
+     * Enables thread-local event tracking.
+     */
+    public static void enableThreadLocalEventTracking() {
+        enableEventTracking(EventTrackingMode.THREAD_LOCAL, null);
+    }
+
+    /**
+     * Disables thread-local event tracking.
+     */
+    public static void disableThreadLocalEventTracking() {
+        if (eventTrackingMode != EventTrackingMode.THREAD_LOCAL) {
+            throw new IllegalStateException("Thread local event tracking is not enabled");
+        }
+        disableEventTracking();
     }
 
     /**
@@ -114,7 +229,7 @@ public class Injections {
      *
      * <p>
      * Does not affect the current thread if it is untracked
-     * (e.g. not registered in the Lincheck strategy).
+     * (that is not registered in the Lincheck strategy).
      */
     public static void enterIgnoredSection() {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
@@ -124,10 +239,10 @@ public class Injections {
 
     /**
      * Leaves an ignored section for the current thread.
-     *
      * <p>
+     *
      * Does not affect the current thread if it is untracked
-     * (e.g. not registered in the Lincheck strategy).
+     * (that is not registered in the Lincheck strategy).
      */
     public static void leaveIgnoredSection() {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
@@ -141,32 +256,115 @@ public class Injections {
      * @return true if the current thread is inside an ignored section, false otherwise.
      */
     public static boolean inAnalyzedCode() {
-        // The tracking points for every existing thread are, basically, any of the events:
-        // field read/write, method call, etc. So to avoid inserting the call to each of the
-        // corresponding injection methods, `getOrCreateCurrentThreadDescriptor` is only called here:
-        // in the check which is invoked before each of the injection methods.
+        // Injections are wrapped into `if` statements with `inAnalyzedCode` checks.
+        // To trigger thread descriptors creation for a yet-untracked thread,
+        // we call the `getOrCreateCurrentThreadDescriptor` method
+        // (instead of just `getCurrentThreadDescriptor`).
         ThreadDescriptor descriptor = getOrCreateCurrentThreadDescriptor();
         if (descriptor == null) return false;
         return descriptor.inAnalyzedCode();
     }
 
     /**
-     * Current thread reports that it is going to start a new child thread {@code forkedThread}.
+     * Registers a thread for event tracking, creating a new thread descriptor if one does not already exist.
+     *
+     * @param eventTracker the event tracker to associate with the thread.
+     * @param thread the thread to register.
+     * @return the thread descriptor associated with the given thread.
      */
-    public static void beforeThreadFork(Thread forkedThread) {
-        // TestThread is handled separately
-        if (forkedThread instanceof TestThread) return;
-        // If thread is started return immediately, as in this case, JVM will throw an `IllegalThreadStateException`
-        if (forkedThread.getState() != Thread.State.NEW) return;
-        ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
+    public static ThreadDescriptor registerThread(EventTracker eventTracker, Thread thread) {
+        ThreadDescriptor descriptor = ThreadDescriptor.getThreadDescriptor(thread);
         if (descriptor == null) {
-            return;
+            descriptor = new ThreadDescriptor(thread);
+            ThreadDescriptor.setThreadDescriptor(thread, descriptor);
         }
-        EventTracker tracker = descriptor.getEventTracker();
-        ThreadDescriptor forkedThreadDescriptor = new ThreadDescriptor(forkedThread);
-        forkedThreadDescriptor.setEventTracker(tracker);
-        /*
-         * Method `setThreadDescriptor` calls methods of `ConcurrentHashMap` (instrumented class),
+        if (eventTrackingMode == EventTrackingMode.THREAD_LOCAL) {
+            descriptor.setEventTracker(eventTracker);
+        }
+        return descriptor;
+    }
+
+    /**
+     * Unregisters a thread from event tracking.
+     * <br>
+     *
+     * Only applicable in THREAD_LOCAL mode, in GLOBAL mode this is effectively a no-op.
+     * Because in GLOBAL mode all threads are tracked
+     * from the moment the tracking is enabled till the time it is disabled.
+     */
+    public static void unregisterThread(Thread thread) {
+        ThreadDescriptor descriptor = ThreadDescriptor.getThreadDescriptor(thread);
+        if (descriptor == null) return;
+
+        // We only reset the event tracker but keep the thread in the global map,
+        // so later it can be re-registered if requested without the need to update the map.
+        if (eventTrackingMode == EventTrackingMode.THREAD_LOCAL) {
+            descriptor.setEventTracker(null);
+        }
+    }
+
+    /**
+     * Registers the current thread for event tracking, creating a new thread descriptor if one does not already exist.
+     *
+     * @param eventTracker the event tracker to associate with the thread.
+     * @return the thread descriptor associated with the given thread.
+     */
+    public static ThreadDescriptor registerCurrentThread(EventTracker eventTracker) {
+        Thread thread = Thread.currentThread();
+        ThreadDescriptor descriptor = registerThread(eventTracker, thread);
+        ThreadDescriptor.setCurrentThreadDescriptor(descriptor);
+        return descriptor;
+    }
+
+    /**
+     * Registers an already running thread for event tracking, creating a new thread descriptor for it.
+     * <br>
+     *
+     * This is an INTERNAL method, do not expose it in public API!
+     * This method is used only to register the currently running thread in GLOBAL mode,
+     * in case when this thread was started earlier than event tracking was enabled.
+     *
+     * @param eventTracker the event tracker to associate with the thread.
+     * @return the thread descriptor associated with the given thread.
+     */
+    private static ThreadDescriptor registerRunningThread(EventTracker eventTracker, Thread thread) {
+        ThreadDescriptor descriptor = registerThread(eventTracker, thread);
+        ThreadDescriptor.setCurrentThreadDescriptor(descriptor);
+        eventTracker.registerRunningThread(thread, descriptor);
+        return descriptor;
+    }
+
+    /**
+     * Called from instrumented code before {@code Thread::start} method.
+     *
+     * @param startingThread the thread which is going to be started.
+     */
+    public static void beforeThreadStart(Thread startingThread) {
+        // TestThread is handled separately
+        if (startingThread instanceof TestThread) return;
+        // If thread is started return immediately, as in this case, JVM will throw an `IllegalThreadStateException`
+        if (startingThread.getState() != Thread.State.NEW) return;
+
+        EventTracker eventTracker = getEventTracker();
+        ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
+        if (eventTracker == null || descriptor == null) return;
+
+        /* We need to prepare a thread descriptor for the starting thread.
+         * We create it here and store it into the global thread descriptor map
+         * via `ThreadDescriptor.setThreadDescriptor`.
+         *
+         * Later, when the thread starts its execution and enters its `run()` method
+         * (see `beforeThreadRun` method below),
+         * it will retrieve its thread descriptor from the global map
+         * and save it as its own thread-local descriptor (for faster subsequent accesses).
+         */
+
+        ThreadDescriptor startingThreadDescriptor = new ThreadDescriptor(startingThread);
+        if (eventTrackingMode == EventTrackingMode.THREAD_LOCAL) {
+            startingThreadDescriptor.setEventTracker(eventTracker);
+        }
+
+        /* Method `setThreadDescriptor` calls methods of `ConcurrentHashMap` (instrumented class),
          * and at this point the calling thread can have the event tracker set,
          * so we need to wrap the call into an ignored section.
          *
@@ -176,67 +374,94 @@ public class Injections {
          *   (2) they do not call any instrumented methods themselves.
          */
         descriptor.enterIgnoredSection();
-        ThreadDescriptor.setThreadDescriptor(forkedThread, forkedThreadDescriptor);
+        ThreadDescriptor.setThreadDescriptor(startingThread, startingThreadDescriptor);
         descriptor.leaveIgnoredSection();
         /*
          * End of the ignored section, the rest should be
          * wrapped into an ignored section by the event tracker itself, if necessary.
          */
-        tracker.beforeThreadFork(forkedThread, forkedThreadDescriptor);
+
+        eventTracker.beforeThreadStart(startingThread, startingThreadDescriptor);
     }
 
     /**
-     * Current thread entered its {@code run} method.
+     * Called from instrumented code at the beginning of {@code Thread::run} method.
      */
-    public static void beforeThreadStart() {
+    public static void beforeThreadRun() {
         Thread thread = Thread.currentThread();
         // TestThread is handled separately
         if (thread instanceof TestThread) return;
+
+        /* We need to retrieve the thread descriptor from the global map (if it was set)
+         * and store it into current threads' own thread-local variable (for faster subsequent accesses).
+         * If the thread descriptor was not set, we do nothing,
+         * as it means the currently running thread is not tracked.
+         */
         ThreadDescriptor descriptor = ThreadDescriptor.getThreadDescriptor(thread);
-        if (descriptor == null) {
-            return;
-        }
+        if (descriptor == null) return;
+
         ThreadDescriptor.setCurrentThreadDescriptor(descriptor);
-        EventTracker tracker = descriptor.getEventTracker();
-        tracker.beforeThreadStart();
+
+        EventTracker eventTracker = getEventTracker(descriptor, false);
+        eventTracker.beforeThreadRun();
     }
 
     /**
-     * Current thread returned from its {@code run} method.
+     * Called from instrumented code at the end of {@code Thread::run} method,
+     * in case of normal exit method exit.
      */
-    public static void afterThreadFinish() {
+    public static void afterThreadRunReturn() {
         Thread thread = Thread.currentThread();
         // TestThread is handled separately
         if (thread instanceof TestThread) return;
+
+        /* Here it is fine to retrieve the thread descriptor from the current thread's thread-local variable.
+         *
+         * There are three cases, either:
+         * - the thread-local descriptor was already set by the `beforeThreadRun` method
+         *   in case when the thread was registered from the start;
+         *
+         * - the thread-local descriptor was already set by the `registerRunningThread` method
+         *   in case when the thread was registered on-the-fly in the middle of its execution;
+         *
+         * - the thread-local descriptor was not set, in which case we can just do nothing.
+         */
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) return;
-        EventTracker tracker = descriptor.getEventTracker();
-        tracker.afterThreadFinish();
+
+        EventTracker eventTracker = getEventTracker(descriptor, false);
+        eventTracker.afterThreadRunReturn();
     }
 
     /**
-     * Called from thread's {@code run} method failed with an exception.
+     * Called from instrumented code at the end of {@code Thread::run} method,
+     * in case of exceptional exit.
      *
      * @param exception the exception that was thrown in the thread.
      */
-    public static void onThreadRunException(Throwable exception) {
+    public static void afterThreadRunException(Throwable exception) {
         Thread thread = Thread.currentThread();
         // TestThread is handled separately
         if (thread instanceof TestThread) return;
+
+        /* Here it is fine to retrieve the thread descriptor from the current thread's thread-local variable,
+         * for the same reason as in the `afterThreadRunReturn` method.
+         */
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) return;
-        EventTracker tracker = descriptor.getEventTracker();
-        tracker.onThreadRunException(exception);
+
+        EventTracker tracker = getEventTracker(descriptor, false);
+        tracker.afterThreadRunException(exception);
     }
 
     /**
-     * Called from instrumented code instead of {@code thread.join()}.
+     * Called from instrumented code instead of {@code Thread::join} method.
      */
-    public static void threadJoin(Thread thread, boolean withTimeout) {
-        ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
-        if (descriptor == null) return;
-        EventTracker tracker = descriptor.getEventTracker();
-        tracker.threadJoin(thread, withTimeout);
+    public static void onThreadJoin(Thread thread, boolean withTimeout) {
+        EventTracker eventTracker = getEventTracker();
+        if (eventTracker == null) return;
+
+        eventTracker.onThreadJoin(thread, withTimeout);
     }
 
     /**
@@ -346,8 +571,6 @@ public class Injections {
 
     /**
      * Called from the instrumented code before each field read.
-     *
-     * @return whether the trace point was created
      */
     public static void beforeReadField(Object obj, int codeLocation, int fieldId) {
         getEventTracker().beforeReadField(obj, codeLocation, fieldId);
@@ -355,17 +578,21 @@ public class Injections {
 
     /**
      * Called from the instrumented code before any array cell read.
-     *
-     * @return whether the trace point was created
      */
     public static void beforeReadArray(Object array, int index, int codeLocation) {
         getEventTracker().beforeReadArrayElement(array, index, codeLocation);
     }
 
+    /**
+     * Called from the instrumented code after each local variable read.
+     */
     public static void afterLocalRead(int codeLocation, int variableId, Object value) {
         getEventTracker().afterLocalRead(codeLocation, variableId, value);
     }
 
+    /**
+     * Called from the instrumented code after each local variable write.
+     */
     public static void afterLocalWrite(int codeLocation, int variableId, Object value) {
         getEventTracker().afterLocalWrite(codeLocation, variableId, value);
     }
@@ -515,7 +742,7 @@ public class Injections {
      * the function sets the counter to the {@code newId}.
      * <p>
      * This function is typically used to account for some cached computations:
-     * on the first run the actual computation is performed and its result is cached,
+     * on the first run the actual computation is performed, and its result is cached,
      * and on subsequent runs the cached value is re-used.
      * One example of such a situation is the {@code invokedynamic} instruction.
      * <p>
@@ -660,6 +887,19 @@ public class Injections {
         getEventTracker().afterLoopExit(codeLocation, loopId, exception, isReachableFromOutsideLoop);
     }
 
+    // Used in the verification phase to store a suspended continuation.
+    public static Object lastSuspendedCancellableContinuationDuringVerification = null;
+
+    public static void storeCancellableContinuation(Object cont) {
+        Thread t = Thread.currentThread();
+        if (t instanceof TestThread) {
+            ((TestThread) t).suspendedContinuation = cont;
+        } else {
+            // We are in the verification phase.
+            lastSuspendedCancellableContinuationDuringVerification = cont;
+        }
+    }
+
     // == Methods required for the IDEA Plugin integration ==
 
     /**
@@ -777,4 +1017,9 @@ public class Injections {
         }
         return lookUpPrivateConstructor.newInstance(callerClass, -1);
     }
+
+    // == Utilities ==
+
+    // Special object to represent void method call result.
+    public static final Object VOID_RESULT = new Object();
 }

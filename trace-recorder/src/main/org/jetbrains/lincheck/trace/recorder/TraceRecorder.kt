@@ -11,7 +11,7 @@
 package org.jetbrains.lincheck.trace.recorder
 
 import org.jetbrains.lincheck.trace.INJECTIONS_VOID_OBJECT
-import org.jetbrains.lincheck.util.Logger
+import org.jetbrains.lincheck.util.*
 import sun.nio.ch.lincheck.Injections
 import sun.nio.ch.lincheck.ThreadDescriptor
 import java.util.concurrent.atomic.AtomicInteger
@@ -55,14 +55,13 @@ object TraceRecorder {
         format: String?,
         formatOption: String?,
         pack: Boolean,
-        trackAllThreads: Boolean
     ) {
         val startedCount = installCount.incrementAndGet()
         Logger.info { "Trace recorder has been started from $className::$methodName in thread \"${Thread.currentThread().name}\" (installCount=$startedCount)" }
-        if (startedCount > 1) {
-            return
-        }
-        // Set signal "void" object from Injections for better text output
+
+        if (startedCount > 1) return
+
+        // Set a signal "void" object from Injections for better text output
         INJECTIONS_VOID_OBJECT = Injections.VOID_RESULT
 
         // this method does not need 'runInsideIgnoredSection' because analysis is not enabled until its completion
@@ -73,29 +72,25 @@ object TraceRecorder {
             mode = parseOutputMode(format, formatOption),
             packTrace = pack
         )
-        val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: ThreadDescriptor(Thread.currentThread()).also {
-            ThreadDescriptor.setCurrentThreadDescriptor(it)
-        }
         traceStarterThread = Thread.currentThread()
-        desc.setAsRootDescriptor()
-        desc.eventTracker = eventTracker
+        val descriptor = ThreadDescriptor.getCurrentThreadDescriptor()
+            ?: Injections.registerCurrentThread(eventTracker)
+
+        Injections.enableGlobalEventTracking(eventTracker)
 
         eventTracker!!.enableTrace()
-        desc.enableAnalysis()
-        if (trackAllThreads) {
-            Injections.enableGlobalThreadsTracking(eventTracker)
-        }
+        descriptor.enableAnalysis()
     }
 
     fun finishTraceAndDumpResults() {
         val startedCount = installCount.decrementAndGet()
         Logger.info { "Trace recorder has been stopped in thread \"${Thread.currentThread().name}\" (installCount=$startedCount)" }
+
         if (startedCount > 0) {
-            Logger.debug { "Recording has been stopped less times than started: $startedCount (${Thread.currentThread().name})" }
-            // But try to de-register itself as root descriptor, if we started tracing
+            // Try to deregister itself as the root descriptor if we started tracing
             if (traceStarterThread == Thread.currentThread()) {
-                val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
-                desc.removeAsRootDescriptor()
+                val descriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
+                ThreadDescriptor.unsetRootThread().ensure { it == descriptor }
                 traceStarterThread = null
             }
             return
@@ -104,20 +99,24 @@ object TraceRecorder {
             Logger.error { "Recording has been stopped more times than started: $startedCount (${Thread.currentThread().name})" }
             return
         }
-        // this method does not need 'runInsideIgnoredSection' because we do not call instrumented code
-        // and 'eventTracker.finishAndDumpTrace()' is called after analysis is disabled
-        val desc = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
-        Injections.disableGlobalThreadsTracking()
-        if (traceStarterThread == Thread.currentThread()) {
-            desc.removeAsRootDescriptor()
-            traceStarterThread = null
+
+        // this method does not need 'runInsideIgnoredSection' because we do not call instrumented code,
+        // and we call `disableAnalysis` as a first action
+        val descriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
+        descriptor.disableAnalysis()
+
+        if (eventTracker != Injections.getEventTracker(descriptor)) {
+            Logger.warn { "Unexpected event tracker observed during trace finishing" }
         }
 
-        val currentTracker = desc.eventTracker
-        if (currentTracker == eventTracker) {
-            desc.disableAnalysis()
-            eventTracker?.finishAndDumpTrace()
-            eventTracker = null
+        val mode = Injections.getEventTrackingMode()
+        if (mode == Injections.EventTrackingMode.GLOBAL) {
+            Injections.disableGlobalEventTracking()
+        } else {
+            throw IllegalStateException("Unexpected event tracking mode $mode")
         }
+
+        eventTracker?.finishAndDumpTrace()
+        eventTracker = null
     }
 }

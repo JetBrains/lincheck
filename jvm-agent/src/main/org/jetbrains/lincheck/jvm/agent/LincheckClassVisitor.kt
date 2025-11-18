@@ -116,7 +116,10 @@ internal class LincheckClassVisitor(
 
         // ======== Threads ========
         chain.addTransformer { adapter, mv ->
-            ThreadTransformer(fileName, className, methodName, methodInfo, desc, access, adapter, mv)
+            ThreadRunTransformer(fileName, className, methodName, methodInfo, desc, access, adapter, mv, config)
+        }
+        chain.addTransformer { adapter, mv ->
+            ThreadStartJoinTransformer(fileName, className, methodName, methodInfo, desc, access, adapter, mv, config)
         }
 
         // ======== Method Calls ========

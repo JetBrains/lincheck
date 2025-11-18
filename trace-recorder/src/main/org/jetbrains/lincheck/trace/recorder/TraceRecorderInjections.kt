@@ -39,7 +39,6 @@ internal object TraceRecorderInjections {
             format = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FORMAT),
             formatOption = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FOPTION),
             pack = (TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_PACK) ?: "true").toBoolean(),
-            trackAllThreads = (TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_TRACK_ALL_THREADS) ?: "true").toBoolean(),
         )
     }
 
