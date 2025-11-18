@@ -21,10 +21,8 @@ import sun.nio.ch.lincheck.*
 
 
 /**
- * Instruments [Thread] class and its subclasses by making the thread
- * report itself on [Thread.start] and on finish of [Thread.run] to [EventTracker] instance.
- *
- * Also, it tracks for the [Thread.join] method calls and injects corresponding handler methods.
+ * [ThreadRunTransformer] tracks [Thread.run] method start and finish
+ * by instrumenting [Thread] class and its subclasses.
  */
 internal class ThreadRunTransformer(
     fileName: String,
@@ -90,6 +88,9 @@ internal class ThreadRunTransformer(
         methodName == "run" && desc == VOID_METHOD_DESCRIPTOR && isThreadSubClass(className.toCanonicalClassName())
 }
 
+/**
+ * [ThreadStartJoinTransformer] tracks [Thread.start] and [Thread.join] method invocations.
+ */
 internal class ThreadStartJoinTransformer(
     fileName: String,
     className: String,
