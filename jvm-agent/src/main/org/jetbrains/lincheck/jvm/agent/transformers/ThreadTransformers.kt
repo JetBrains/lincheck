@@ -45,7 +45,7 @@ internal class ThreadRunTransformer(
 
     override fun visitCode() = adapter.run {
         super.visitCode()
-        if (configuration.trackThreadRun && isThreadRunMethod(methodName, descriptor)) {
+        if (isThreadRunMethod(methodName, descriptor)) {
             // STACK: <empty>
             visitTryCatchBlock(runMethodTryBlockStart, runMethodTryBlockEnd, runMethodCatchBlock, null)
             visitLabel(runMethodTryBlockStart)
@@ -56,7 +56,7 @@ internal class ThreadRunTransformer(
     }
 
     override fun visitInsn(opcode: Int) = adapter.run {
-        if (configuration.trackThreadRun && isThreadRunMethod(methodName, descriptor) && opcode == Opcodes.RETURN) {
+        if (isThreadRunMethod(methodName, descriptor) && opcode == Opcodes.RETURN) {
             // STACK: <empty>
             invokeStatic(Injections::afterThreadRunReturn)
             // STACK: <empty>
@@ -65,7 +65,7 @@ internal class ThreadRunTransformer(
     }
 
     override fun visitMaxs(maxStack: Int, maxLocals: Int) = adapter.run {
-        if (configuration.trackThreadRun && isThreadRunMethod(methodName, descriptor)) {
+        if (isThreadRunMethod(methodName, descriptor)) {
             visitLabel(runMethodTryBlockEnd)
             visitLabel(runMethodCatchBlock)
             // STACK: exception
