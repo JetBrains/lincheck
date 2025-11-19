@@ -168,7 +168,7 @@ object LincheckJavaAgent {
      * - Else use Lazy if [instrumentationMode] supports it, Eager otherwise.
      */
     private fun setInstrumentationStrategy() {
-        instrumentationStrategy = InstrumentationStrategy.Eager
+        instrumentationStrategy = InstrumentationStrategy.Lazy
         // when {
         //     INSTRUMENT_ALL_CLASSES -> InstrumentationStrategy.Eager
         //     TraceAgentParameters.getLazyTransformationEnabled()
