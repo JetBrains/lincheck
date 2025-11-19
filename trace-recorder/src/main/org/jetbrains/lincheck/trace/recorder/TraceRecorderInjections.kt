@@ -13,6 +13,7 @@ package org.jetbrains.lincheck.trace.recorder
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent
+import org.jetbrains.lincheck.util.Logger
 
 internal object TraceRecorderInjections {
     // Method `stopTraceRecorderAndDumpTrace` is called in the finally block of the wrapped test:
@@ -27,7 +28,12 @@ internal object TraceRecorderInjections {
         // Must be first or classes will not be found
         LincheckJavaAgent.install(InstrumentationMode.TRACE_RECORDING)
         // Retransform classes for event tracking
-        LincheckJavaAgent.ensureClassHierarchyIsTransformed(TraceAgentParameters.classUnderTraceDebugging)
+        // It is Ok to don't find class here, maybe agent was added too broadly
+        try {
+            LincheckJavaAgent.ensureClassHierarchyIsTransformed(TraceAgentParameters.classUnderTraceDebugging)
+        } catch (_: ClassNotFoundException) {
+            Logger.warn { "Cannot transform requested class ${TraceAgentParameters.classUnderTraceDebugging}: Class not found" }
+        }
     }
 
     @JvmStatic
