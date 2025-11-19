@@ -11,11 +11,25 @@
 package org.jetbrains.trace.recorder.test.runner
 
 /**
- * Marker interface for JUnit 4 Categories to mark extended trace-recorder integration tests.
+ * Marker interface for JUnit 4 Categories to mark extended trace-recorder Kotlin Compiler integration tests.
  *
  * Usage:
  *
- *  @org.junit.experimental.categories.Category(ExtendedTraceRecorderTest::class)
- *  class MyExtendedTest : AbstractTraceRecorderIntegrationTest() { ... }
+ *  ```kotlin
+ *  @Category(KotlinCompilerTraceRecorderTest::class)
+ *  class MyKotlinCompilerTest : AbstractTraceRecorderIntegrationTest() { ... }
+ *  ```
  */
-interface ExtendedTraceRecorderTest
+interface KotlinCompilerTraceRecorderTest
+
+/**
+ * Marker interface for JUnit 4 Categories to mark extended trace-recorder Ktor integration tests.
+ *
+ * Usage:
+ *
+ *  ```kotlin
+ *  @Category(KtorCompilerTraceRecorderTest::class)
+ *  class MyKtorCompilerTest : AbstractTraceRecorderIntegrationTest() { ... }
+ *  ```
+ */
+interface KtorTraceRecorderTest
