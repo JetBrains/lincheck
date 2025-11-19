@@ -8,7 +8,7 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.trace.debugger.test
+package org.jetbrains.trace.debugger.test.runner
 
 import AbstractGradleTraceIntegrationTest
 import java.io.File
