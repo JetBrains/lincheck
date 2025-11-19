@@ -64,7 +64,8 @@ internal object FinalFields {
         // Fast-path, in case we already have information about this field.
         fields[fieldName]?.let { return it == FinalFields.FieldInfo.FINAL }
         // If we haven't processed this class yet, fall back to a slow-path, reading the class byte-code.
-        collectFieldInformation(internalClassName, fieldName, fields)
+        val fieldFound = collectFieldInformation(internalClassName, fieldName, fields)
+        if (!fieldFound) return false
         // Here we must have information about this field, as we scanned all the hierarchy of this class.
         val fieldInfo = fields[fieldName] ?: error("Internal error: can't find field with $fieldName in class $internalClassName")
         return fieldInfo == FinalFields.FieldInfo.FINAL
@@ -81,7 +82,7 @@ internal object FinalFields {
         fields: MutableMap<String, FieldInfo>
     ): Boolean {
         // Read the class from classLoader.
-        val classReader = getClassReader(internalClassName)
+        val classReader = getClassReader(internalClassName) ?: return false
         val visitor = FinalFieldsVisitor()
         // Scan class.
         classReader.accept(visitor, 0)
@@ -110,10 +111,10 @@ internal object FinalFields {
         return false
     }
 
-    private fun getClassReader(internalClassName: String): ClassReader {
+    private fun getClassReader(internalClassName: String): ClassReader? {
         val resource = "$internalClassName.class"
         val inputStream = ClassLoader.getSystemClassLoader().getResourceAsStream(resource)
-            ?: error("Cannot create ClassReader for type $internalClassName")
+            ?: return null
         return inputStream.use { ClassReader(inputStream) }
     }
 
