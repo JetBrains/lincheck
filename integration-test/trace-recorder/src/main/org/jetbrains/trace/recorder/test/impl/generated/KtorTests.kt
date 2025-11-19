@@ -12,7 +12,7 @@ import org.junit.experimental.categories.Category
   DO NOT MODIFY!
 */
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CharArrayBuilderTest_testAppendFewChars : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -28,7 +28,7 @@ class KtorTestsTraceRecorderIntegrationTest_CharArrayBuilderTest_testAppendFewCh
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CharArrayBuilderTest_testAppendManyChars : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -44,7 +44,7 @@ class KtorTestsTraceRecorderIntegrationTest_CharArrayBuilderTest_testAppendManyC
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CharArrayBuilderTest_testAppendSingleChar : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -60,7 +60,7 @@ class KtorTestsTraceRecorderIntegrationTest_CharArrayBuilderTest_testAppendSingl
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CharArrayBuilderTest_testAppendSubStrings : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -76,7 +76,7 @@ class KtorTestsTraceRecorderIntegrationTest_CharArrayBuilderTest_testAppendSubSt
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CharArrayBuilderTest_testSubString : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -92,7 +92,7 @@ class KtorTestsTraceRecorderIntegrationTest_CharArrayBuilderTest_testSubString :
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ChunkedTest_exceptionDuringWrite : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -108,7 +108,7 @@ class KtorTestsTraceRecorderIntegrationTest_ChunkedTest_exceptionDuringWrite : K
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ChunkedTest_longLoop : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -124,7 +124,7 @@ class KtorTestsTraceRecorderIntegrationTest_ChunkedTest_longLoop : KtorTraceReco
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ChunkedTest_testChunkedWithContentLength : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -140,7 +140,7 @@ class KtorTestsTraceRecorderIntegrationTest_ChunkedTest_testChunkedWithContentLe
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ChunkedTest_testContent : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -156,7 +156,7 @@ class KtorTestsTraceRecorderIntegrationTest_ChunkedTest_testContent : KtorTraceR
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ChunkedTest_testContentMixedLineEndings : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -172,7 +172,7 @@ class KtorTestsTraceRecorderIntegrationTest_ChunkedTest_testContentMixedLineEndi
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ChunkedTest_testContentMultipleChunks : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -188,7 +188,7 @@ class KtorTestsTraceRecorderIntegrationTest_ChunkedTest_testContentMultipleChunk
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ChunkedTest_testContentWithRcLineEnding : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -204,7 +204,7 @@ class KtorTestsTraceRecorderIntegrationTest_ChunkedTest_testContentWithRcLineEnd
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ChunkedTest_testEmpty : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -220,7 +220,7 @@ class KtorTestsTraceRecorderIntegrationTest_ChunkedTest_testEmpty : KtorTraceRec
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ChunkedTest_testEmptyNoCRLF : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -236,7 +236,7 @@ class KtorTestsTraceRecorderIntegrationTest_ChunkedTest_testEmptyNoCRLF : KtorTr
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ChunkedTest_testEmptyWithTrailing : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -252,7 +252,7 @@ class KtorTestsTraceRecorderIntegrationTest_ChunkedTest_testEmptyWithTrailing : 
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ChunkedTest_testEmptyWithoutCrLf : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -268,7 +268,7 @@ class KtorTestsTraceRecorderIntegrationTest_ChunkedTest_testEmptyWithoutCrLf : K
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ChunkedTest_testEncodeChunks : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -284,7 +284,7 @@ class KtorTestsTraceRecorderIntegrationTest_ChunkedTest_testEncodeChunks : KtorT
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ChunkedTest_testEncodeEmpty : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -300,7 +300,7 @@ class KtorTestsTraceRecorderIntegrationTest_ChunkedTest_testEncodeEmpty : KtorTr
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_HeaderParserTest_parseHeadersDelimitersInHeaderNameShouldBeProhibited : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -316,7 +316,7 @@ class KtorTestsTraceRecorderIntegrationTest_HeaderParserTest_parseHeadersDelimit
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_HeaderParserTest_parseHeadersEmptyHeaderNameShouldBeProhibited : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -332,7 +332,7 @@ class KtorTestsTraceRecorderIntegrationTest_HeaderParserTest_parseHeadersEmptyHe
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_HeaderParserTest_parseHeadersFoldingShouldBeProhibited : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -348,7 +348,7 @@ class KtorTestsTraceRecorderIntegrationTest_HeaderParserTest_parseHeadersFolding
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_HeaderParserTest_parseHeadersNoLeadingSpace : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -364,7 +364,7 @@ class KtorTestsTraceRecorderIntegrationTest_HeaderParserTest_parseHeadersNoLeadi
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_HeaderParserTest_parseHeadersNoLeadingSpaceWithTrailingSpaces : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -380,7 +380,7 @@ class KtorTestsTraceRecorderIntegrationTest_HeaderParserTest_parseHeadersNoLeadi
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_HeaderParserTest_parseHeadersSmokeTest : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -396,7 +396,7 @@ class KtorTestsTraceRecorderIntegrationTest_HeaderParserTest_parseHeadersSmokeTe
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_HeaderParserTest_parseHeadersSpaceAfterHeaderNameShouldBeProhibited : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -412,7 +412,7 @@ class KtorTestsTraceRecorderIntegrationTest_HeaderParserTest_parseHeadersSpaceAf
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_HeaderParserTest_parseHeadersSpacesInHeaderNameShouldBeProhibited : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -428,7 +428,7 @@ class KtorTestsTraceRecorderIntegrationTest_HeaderParserTest_parseHeadersSpacesI
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_HeaderParserTest_parseHeadersSpacesInHeaderNameShouldBeProhibitedFixed : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -444,7 +444,7 @@ class KtorTestsTraceRecorderIntegrationTest_HeaderParserTest_parseHeadersSpacesI
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_HeaderParserTest_parseHeadersWithEmptyValue : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -460,7 +460,7 @@ class KtorTestsTraceRecorderIntegrationTest_HeaderParserTest_parseHeadersWithEmp
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_HeaderParserTest_parseHeadersWithMultipleEmptyValues : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -476,7 +476,7 @@ class KtorTestsTraceRecorderIntegrationTest_HeaderParserTest_parseHeadersWithMul
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_HeaderParserTest_parseHeadersWithMultipleValuesSeparatedWithComma : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -492,7 +492,7 @@ class KtorTestsTraceRecorderIntegrationTest_HeaderParserTest_parseHeadersWithMul
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_HeaderParserTest_testParseCookieHeader : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -508,7 +508,7 @@ class KtorTestsTraceRecorderIntegrationTest_HeaderParserTest_testParseCookieHead
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class `KtorTestsTraceRecorderIntegrationTest_HeadersJvmTest_Host header with invalid '#' character` : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -524,7 +524,7 @@ class `KtorTestsTraceRecorderIntegrationTest_HeadersJvmTest_Host header with inv
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class `KtorTestsTraceRecorderIntegrationTest_HeadersJvmTest_Host header with invalid '@' character` : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -540,7 +540,7 @@ class `KtorTestsTraceRecorderIntegrationTest_HeadersJvmTest_Host header with inv
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class `KtorTestsTraceRecorderIntegrationTest_HeadersJvmTest_Host header with invalid character (question mark)` : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -556,7 +556,7 @@ class `KtorTestsTraceRecorderIntegrationTest_HeadersJvmTest_Host header with inv
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class `KtorTestsTraceRecorderIntegrationTest_HeadersJvmTest_Host header with invalid character (slash)` : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -572,7 +572,7 @@ class `KtorTestsTraceRecorderIntegrationTest_HeadersJvmTest_Host header with inv
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_HeadersJvmTest_alternativeLineSeparatorsBoth : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -588,7 +588,7 @@ class KtorTestsTraceRecorderIntegrationTest_HeadersJvmTest_alternativeLineSepara
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_HeadersJvmTest_alternativeLineSeparatorsFirst : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -604,7 +604,7 @@ class KtorTestsTraceRecorderIntegrationTest_HeadersJvmTest_alternativeLineSepara
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_HeadersJvmTest_alternativeLineSeparatorsSecond : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -620,7 +620,7 @@ class KtorTestsTraceRecorderIntegrationTest_HeadersJvmTest_alternativeLineSepara
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_HeadersJvmTest_extraSpacesLeading : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -636,7 +636,7 @@ class KtorTestsTraceRecorderIntegrationTest_HeadersJvmTest_extraSpacesLeading : 
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_HeadersJvmTest_extraSpacesMiddle : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -652,7 +652,7 @@ class KtorTestsTraceRecorderIntegrationTest_HeadersJvmTest_extraSpacesMiddle : K
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_HeadersJvmTest_extraSpacesMiddleBeforeColon : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -668,7 +668,7 @@ class KtorTestsTraceRecorderIntegrationTest_HeadersJvmTest_extraSpacesMiddleBefo
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_HeadersJvmTest_extraSpacesMiddleBeforeColonNoAfter : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -684,7 +684,7 @@ class KtorTestsTraceRecorderIntegrationTest_HeadersJvmTest_extraSpacesMiddleBefo
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_HeadersJvmTest_extraSpacesTrailing : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -700,7 +700,7 @@ class KtorTestsTraceRecorderIntegrationTest_HeadersJvmTest_extraSpacesTrailing :
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_HeadersJvmTest_smokeTest : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -716,7 +716,7 @@ class KtorTestsTraceRecorderIntegrationTest_HeadersJvmTest_smokeTest : KtorTrace
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_HeadersJvmTest_smokeTestUnicode : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -732,7 +732,7 @@ class KtorTestsTraceRecorderIntegrationTest_HeadersJvmTest_smokeTestUnicode : Kt
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_HeadersJvmTest_testBlankHeaderValue : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -748,7 +748,7 @@ class KtorTestsTraceRecorderIntegrationTest_HeadersJvmTest_testBlankHeaderValue 
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_HeadersJvmTest_testEmptyHeaderValue : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -764,7 +764,7 @@ class KtorTestsTraceRecorderIntegrationTest_HeadersJvmTest_testEmptyHeaderValue 
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_HeadersJvmTest_testExpectHttpBodyGet : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -780,7 +780,7 @@ class KtorTestsTraceRecorderIntegrationTest_HeadersJvmTest_testExpectHttpBodyGet
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CertificatesTest_generateCertificateWithCA_default : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -796,7 +796,7 @@ class KtorTestsTraceRecorderIntegrationTest_CertificatesTest_generateCertificate
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CertificatesTest_generateCertificateWithCA_keyTypeCA : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -812,7 +812,7 @@ class KtorTestsTraceRecorderIntegrationTest_CertificatesTest_generateCertificate
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CertificatesTest_generateCertificateWithCA_keyTypeClient : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -828,7 +828,7 @@ class KtorTestsTraceRecorderIntegrationTest_CertificatesTest_generateCertificate
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CertificatesTest_generateCertificate_alsoStoresTheCertificateWithCertSuffix : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -844,7 +844,7 @@ class KtorTestsTraceRecorderIntegrationTest_CertificatesTest_generateCertificate
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CertificatesTest_generateCertificate_customValues : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -860,7 +860,7 @@ class KtorTestsTraceRecorderIntegrationTest_CertificatesTest_generateCertificate
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CertificatesTest_generateCertificate_default : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -876,7 +876,7 @@ class KtorTestsTraceRecorderIntegrationTest_CertificatesTest_generateCertificate
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CertificatesTest_generateCertificate_keyTypeCA : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -892,7 +892,7 @@ class KtorTestsTraceRecorderIntegrationTest_CertificatesTest_generateCertificate
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CertificatesTest_generateCertificate_keyTypeClient : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -908,7 +908,7 @@ class KtorTestsTraceRecorderIntegrationTest_CertificatesTest_generateCertificate
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CertificatesTest_generateCertificate_onlyGeneratesOneAlias : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -924,7 +924,7 @@ class KtorTestsTraceRecorderIntegrationTest_CertificatesTest_generateCertificate
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CertificatesTest_generateCertificate_writeToFile : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -940,7 +940,7 @@ class KtorTestsTraceRecorderIntegrationTest_CertificatesTest_generateCertificate
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CertificatesTest_generateCertificate_writeToFile_customKeyAndJksPassword : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -956,7 +956,7 @@ class KtorTestsTraceRecorderIntegrationTest_CertificatesTest_generateCertificate
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CertificatesTest_generateCertificate_writeToFile_customKeyPassword : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -972,7 +972,7 @@ class KtorTestsTraceRecorderIntegrationTest_CertificatesTest_generateCertificate
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_KeyStoreBuilderTest_buildKeyStore_customAlgorithmAndKeySize : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -988,7 +988,7 @@ class KtorTestsTraceRecorderIntegrationTest_KeyStoreBuilderTest_buildKeyStore_cu
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_KeyStoreBuilderTest_buildKeyStore_customIpsAndDomains : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1004,7 +1004,7 @@ class KtorTestsTraceRecorderIntegrationTest_KeyStoreBuilderTest_buildKeyStore_cu
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_KeyStoreBuilderTest_buildKeyStore_customValidity : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1020,7 +1020,7 @@ class KtorTestsTraceRecorderIntegrationTest_KeyStoreBuilderTest_buildKeyStore_cu
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_KeyStoreBuilderTest_buildKeyStore_keyTypeCA : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1036,7 +1036,7 @@ class KtorTestsTraceRecorderIntegrationTest_KeyStoreBuilderTest_buildKeyStore_ke
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_KeyStoreBuilderTest_buildKeyStore_keyTypeClient : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1052,7 +1052,7 @@ class KtorTestsTraceRecorderIntegrationTest_KeyStoreBuilderTest_buildKeyStore_ke
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_KeyStoreBuilderTest_buildKeyStore_minimal : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1068,7 +1068,7 @@ class KtorTestsTraceRecorderIntegrationTest_KeyStoreBuilderTest_buildKeyStore_mi
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_HxAttributesTest_htmxAttributes : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1084,7 +1084,7 @@ class KtorTestsTraceRecorderIntegrationTest_HxAttributesTest_htmxAttributes : Kt
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_AuthHeaderParseTest_testBasicSchema : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1100,7 +1100,7 @@ class KtorTestsTraceRecorderIntegrationTest_AuthHeaderParseTest_testBasicSchema 
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_AuthHeaderParseTest_testMultipleParameters : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1116,7 +1116,7 @@ class KtorTestsTraceRecorderIntegrationTest_AuthHeaderParseTest_testMultiplePara
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_AuthHeaderParseTest_testParameter : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1132,7 +1132,7 @@ class KtorTestsTraceRecorderIntegrationTest_AuthHeaderParseTest_testParameter : 
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_AuthHeaderParseTest_testParametersWithoutSpace : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1148,7 +1148,7 @@ class KtorTestsTraceRecorderIntegrationTest_AuthHeaderParseTest_testParametersWi
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_AuthHeaderParseTest_testQuotedParameter : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1164,7 +1164,7 @@ class KtorTestsTraceRecorderIntegrationTest_AuthHeaderParseTest_testQuotedParame
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_AuthHeaderParseTest_testSingleParameterWithComma : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1180,7 +1180,7 @@ class KtorTestsTraceRecorderIntegrationTest_AuthHeaderParseTest_testSingleParame
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CodecTest_testAllReserved : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1196,7 +1196,7 @@ class KtorTestsTraceRecorderIntegrationTest_CodecTest_testAllReserved : KtorTrac
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CodecTest_testBasicEncodeDecode : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1212,7 +1212,7 @@ class KtorTestsTraceRecorderIntegrationTest_CodecTest_testBasicEncodeDecode : Kt
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CodecTest_testBasicEncodeDecodeURLPart : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1228,7 +1228,7 @@ class KtorTestsTraceRecorderIntegrationTest_CodecTest_testBasicEncodeDecodeURLPa
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CodecTest_testBrokenOrIncompleteHEX : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1244,7 +1244,7 @@ class KtorTestsTraceRecorderIntegrationTest_CodecTest_testBrokenOrIncompleteHEX 
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ByteChannelConcurrentTest_cannotSubscribeTwiceForContent : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1260,7 +1260,7 @@ class KtorTestsTraceRecorderIntegrationTest_ByteChannelConcurrentTest_cannotSubs
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class `KtorTestsTraceRecorderIntegrationTest_ClientCertificateRequestTest_request with specific authorities` : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1276,7 +1276,7 @@ class `KtorTestsTraceRecorderIntegrationTest_ClientCertificateRequestTest_reques
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CacheTest_testClose : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1292,7 +1292,7 @@ class KtorTestsTraceRecorderIntegrationTest_CacheTest_testClose : KtorTraceRecor
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CacheTest_testCloseMultithreaded : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1308,7 +1308,7 @@ class KtorTestsTraceRecorderIntegrationTest_CacheTest_testCloseMultithreaded : K
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CacheTest_testGet : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1324,7 +1324,7 @@ class KtorTestsTraceRecorderIntegrationTest_CacheTest_testGet : KtorTraceRecorde
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CacheTest_testWithoutCaching : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1340,7 +1340,7 @@ class KtorTestsTraceRecorderIntegrationTest_CacheTest_testWithoutCaching : KtorT
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_DeflaterReadChannelTest_testBiggerThan8k : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1356,7 +1356,7 @@ class KtorTestsTraceRecorderIntegrationTest_DeflaterReadChannelTest_testBiggerTh
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_DeflaterReadChannelTest_testFaultyGzippedBiggerThan8k : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1372,7 +1372,7 @@ class KtorTestsTraceRecorderIntegrationTest_DeflaterReadChannelTest_testFaultyGz
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ActorSelectorManagerTest_testSelectOnWrongInterest : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1388,7 +1388,7 @@ class KtorTestsTraceRecorderIntegrationTest_ActorSelectorManagerTest_testSelectO
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ActorSelectorManagerTest_testSelectableIsClosed : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1404,7 +1404,7 @@ class KtorTestsTraceRecorderIntegrationTest_ActorSelectorManagerTest_testSelecta
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ClientSocketTest_testConnect : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1420,7 +1420,7 @@ class KtorTestsTraceRecorderIntegrationTest_ClientSocketTest_testConnect : KtorT
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ClientSocketTest_testRead : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1436,7 +1436,7 @@ class KtorTestsTraceRecorderIntegrationTest_ClientSocketTest_testRead : KtorTrac
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ClientSocketTest_testReadParts : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1452,7 +1452,7 @@ class KtorTestsTraceRecorderIntegrationTest_ClientSocketTest_testReadParts : Kto
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ClientSocketTest_testSelfConnect : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1468,7 +1468,7 @@ class KtorTestsTraceRecorderIntegrationTest_ClientSocketTest_testSelfConnect : K
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ClientSocketTest_testWrite : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1484,7 +1484,7 @@ class KtorTestsTraceRecorderIntegrationTest_ClientSocketTest_testWrite : KtorTra
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_InetSocketAddressTest_testResolveAddress : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1500,7 +1500,7 @@ class KtorTestsTraceRecorderIntegrationTest_InetSocketAddressTest_testResolveAdd
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ServerSocketTest_testBindAndAccept : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1516,7 +1516,7 @@ class KtorTestsTraceRecorderIntegrationTest_ServerSocketTest_testBindAndAccept :
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ServerSocketTest_testRead : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1532,7 +1532,7 @@ class KtorTestsTraceRecorderIntegrationTest_ServerSocketTest_testRead : KtorTrac
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ServerSocketTest_testWrite : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1548,7 +1548,7 @@ class KtorTestsTraceRecorderIntegrationTest_ServerSocketTest_testWrite : KtorTra
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_TCPSocketTest_testAcceptErrorOnImmediateSocketClose : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1564,7 +1564,7 @@ class KtorTestsTraceRecorderIntegrationTest_TCPSocketTest_testAcceptErrorOnImmed
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_TCPSocketTest_testAcceptErrorOnSocketClose : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1580,7 +1580,7 @@ class KtorTestsTraceRecorderIntegrationTest_TCPSocketTest_testAcceptErrorOnSocke
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_TCPSocketTest_testAutoFlush : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1596,7 +1596,7 @@ class KtorTestsTraceRecorderIntegrationTest_TCPSocketTest_testAutoFlush : KtorTr
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_TCPSocketTest_testAwaitClosedDoesNotDeadLock : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1612,7 +1612,7 @@ class KtorTestsTraceRecorderIntegrationTest_TCPSocketTest_testAwaitClosedDoesNot
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_TCPSocketTest_testBindMultipleTimes : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1628,7 +1628,7 @@ class KtorTestsTraceRecorderIntegrationTest_TCPSocketTest_testBindMultipleTimes 
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_TCPSocketTest_testConnectToNonExistingSocket : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1644,7 +1644,7 @@ class KtorTestsTraceRecorderIntegrationTest_TCPSocketTest_testConnectToNonExisti
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_TCPSocketTest_testDisconnect : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1660,7 +1660,7 @@ class KtorTestsTraceRecorderIntegrationTest_TCPSocketTest_testDisconnect : KtorT
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_TCPSocketTest_testEcho : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1676,7 +1676,7 @@ class KtorTestsTraceRecorderIntegrationTest_TCPSocketTest_testEcho : KtorTraceRe
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_TCPSocketTest_testEchoByteArray : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1692,7 +1692,7 @@ class KtorTestsTraceRecorderIntegrationTest_TCPSocketTest_testEchoByteArray : Kt
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_TCPSocketTest_testReadFromCancelledSocket : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1708,7 +1708,7 @@ class KtorTestsTraceRecorderIntegrationTest_TCPSocketTest_testReadFromCancelledS
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_UDPSocketTest_testBroadcastFails : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1724,7 +1724,7 @@ class KtorTestsTraceRecorderIntegrationTest_UDPSocketTest_testBroadcastFails : K
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_UDPSocketTest_testBroadcastSuccessful : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1740,7 +1740,7 @@ class KtorTestsTraceRecorderIntegrationTest_UDPSocketTest_testBroadcastSuccessfu
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_UDPSocketTest_testClose : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1756,7 +1756,7 @@ class KtorTestsTraceRecorderIntegrationTest_UDPSocketTest_testClose : KtorTraceR
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_UDPSocketTest_testInvokeOnClose : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1772,7 +1772,7 @@ class KtorTestsTraceRecorderIntegrationTest_UDPSocketTest_testInvokeOnClose : Kt
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_UDPSocketTest_testOutgoingInvokeOnClose : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1788,7 +1788,7 @@ class KtorTestsTraceRecorderIntegrationTest_UDPSocketTest_testOutgoingInvokeOnCl
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_UDPSocketTest_testOutgoingInvokeOnCloseWithSocketClose : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1804,7 +1804,7 @@ class KtorTestsTraceRecorderIntegrationTest_UDPSocketTest_testOutgoingInvokeOnCl
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_UDPSocketTest_testOutgoingInvokeOnClosed : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1820,7 +1820,7 @@ class KtorTestsTraceRecorderIntegrationTest_UDPSocketTest_testOutgoingInvokeOnCl
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_UDPSocketTest_testSendReceive : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1836,7 +1836,7 @@ class KtorTestsTraceRecorderIntegrationTest_UDPSocketTest_testSendReceive : Ktor
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_UDPSocketTest_testSendReceiveLarge : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1852,7 +1852,7 @@ class KtorTestsTraceRecorderIntegrationTest_UDPSocketTest_testSendReceiveLarge :
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_UDPSocketTest_testUdpConnect : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1868,7 +1868,7 @@ class KtorTestsTraceRecorderIntegrationTest_UDPSocketTest_testUdpConnect : KtorT
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_UnixSocketTest_testEchoOverUnixSockets : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1884,7 +1884,7 @@ class KtorTestsTraceRecorderIntegrationTest_UnixSocketTest_testEchoOverUnixSocke
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_StartTimeoutTest_testTimeoutCancellation : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1900,7 +1900,7 @@ class KtorTestsTraceRecorderIntegrationTest_StartTimeoutTest_testTimeoutCancella
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_StartTimeoutTest_testTimeoutCancelsWhenParentScopeCancels : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1916,7 +1916,7 @@ class KtorTestsTraceRecorderIntegrationTest_StartTimeoutTest_testTimeoutCancelsW
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_StartTimeoutTest_testTimeoutDoesNotTriggerWhenStopped : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1932,7 +1932,7 @@ class KtorTestsTraceRecorderIntegrationTest_StartTimeoutTest_testTimeoutDoesNotT
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_StartTimeoutTest_testTimeoutInvocation : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1948,7 +1948,7 @@ class KtorTestsTraceRecorderIntegrationTest_StartTimeoutTest_testTimeoutInvocati
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_StartTimeoutTest_testTimeoutUpdateActivityTime : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1964,7 +1964,7 @@ class KtorTestsTraceRecorderIntegrationTest_StartTimeoutTest_testTimeoutUpdateAc
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class `KtorTestsTraceRecorderIntegrationTest_CIOClientCertTest_Server requesting Client Certificate from CIO Client` : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1980,7 +1980,7 @@ class `KtorTestsTraceRecorderIntegrationTest_CIOClientCertTest_Server requesting
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CIOConnectionPointTest_testLocalHostAndPort : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -1996,7 +1996,7 @@ class KtorTestsTraceRecorderIntegrationTest_CIOConnectionPointTest_testLocalHost
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CIOConnectionPointTest_testServerHostAndPort : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2012,7 +2012,7 @@ class KtorTestsTraceRecorderIntegrationTest_CIOConnectionPointTest_testServerHos
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CIOConnectionPointTest_testServerHostAndPortNoHeader : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2028,7 +2028,7 @@ class KtorTestsTraceRecorderIntegrationTest_CIOConnectionPointTest_testServerHos
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CIOConnectionTest_testShutdownGracePeriodWithConnector : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2044,7 +2044,7 @@ class KtorTestsTraceRecorderIntegrationTest_CIOConnectionTest_testShutdownGraceP
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CIOHttpClientTest_testHttpConnection : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2060,7 +2060,7 @@ class KtorTestsTraceRecorderIntegrationTest_CIOHttpClientTest_testHttpConnection
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CIOHttpClientTest_testHttpConnectionChunked : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2076,7 +2076,7 @@ class KtorTestsTraceRecorderIntegrationTest_CIOHttpClientTest_testHttpConnection
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CIOHttpServerTest_testChunkedResponse : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2092,7 +2092,7 @@ class KtorTestsTraceRecorderIntegrationTest_CIOHttpServerTest_testChunkedRespons
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CIOHttpServerTest_testExpectedContinue : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2108,7 +2108,7 @@ class KtorTestsTraceRecorderIntegrationTest_CIOHttpServerTest_testExpectedContin
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CIOHttpServerTest_testExpectedContinueConnection : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2124,7 +2124,7 @@ class KtorTestsTraceRecorderIntegrationTest_CIOHttpServerTest_testExpectedContin
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CIOHttpServerTest_testExpectedContinueExpectationFailed : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2140,7 +2140,7 @@ class KtorTestsTraceRecorderIntegrationTest_CIOHttpServerTest_testExpectedContin
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CIOHttpServerTest_testExpectedContinueRespondBeforeReadingBody : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2156,7 +2156,7 @@ class KtorTestsTraceRecorderIntegrationTest_CIOHttpServerTest_testExpectedContin
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CIOHttpServerTest_testExpectedIgnoreHTTP1_0 : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2172,7 +2172,7 @@ class KtorTestsTraceRecorderIntegrationTest_CIOHttpServerTest_testExpectedIgnore
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CIOHttpServerTest_testGracefulShutdown : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2188,7 +2188,7 @@ class KtorTestsTraceRecorderIntegrationTest_CIOHttpServerTest_testGracefulShutdo
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CIOHttpServerTest_testLotsOfHeaders : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2204,7 +2204,7 @@ class KtorTestsTraceRecorderIntegrationTest_CIOHttpServerTest_testLotsOfHeaders 
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CIOUnixSocketServerTest_testUnixSocketEcho : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2220,7 +2220,7 @@ class KtorTestsTraceRecorderIntegrationTest_CIOUnixSocketServerTest_testUnixSock
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_OkHttpEngineTests_testClose : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2236,7 +2236,7 @@ class KtorTestsTraceRecorderIntegrationTest_OkHttpEngineTests_testClose : KtorTr
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_OkHttpEngineTests_testThreadLeak : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2252,7 +2252,7 @@ class KtorTestsTraceRecorderIntegrationTest_OkHttpEngineTests_testThreadLeak : K
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_OkHttpEngineTests_testPreconfigured : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2268,7 +2268,7 @@ class KtorTestsTraceRecorderIntegrationTest_OkHttpEngineTests_testPreconfigured 
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_OkHttpEngineTests_testRequestAfterRecreate : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2284,7 +2284,7 @@ class KtorTestsTraceRecorderIntegrationTest_OkHttpEngineTests_testRequestAfterRe
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_io_ktor_client_engine_okhttp_RequestTests_testOneShotBodyStream : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2300,7 +2300,7 @@ class KtorTestsTraceRecorderIntegrationTest_io_ktor_client_engine_okhttp_Request
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_io_ktor_client_engine_okhttp_RequestTests_testOneShotBodyArray : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2316,7 +2316,7 @@ class KtorTestsTraceRecorderIntegrationTest_io_ktor_client_engine_okhttp_Request
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_io_ktor_client_engine_okhttp_RequestTests_testReusingRequestBuilderOnMultipleClients : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2332,7 +2332,7 @@ class KtorTestsTraceRecorderIntegrationTest_io_ktor_client_engine_okhttp_Request
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_io_ktor_client_engine_okhttp_RequestTests_testFormContentType : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2348,7 +2348,7 @@ class KtorTestsTraceRecorderIntegrationTest_io_ktor_client_engine_okhttp_Request
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_OkHttpHttpClientTest_testCancelSseRequestIncomingCollect : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2364,7 +2364,7 @@ class KtorTestsTraceRecorderIntegrationTest_OkHttpHttpClientTest_testCancelSseRe
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_OkHttpHttpClientTest_testCancelSseRequestWithDelay : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2380,7 +2380,7 @@ class KtorTestsTraceRecorderIntegrationTest_OkHttpHttpClientTest_testCancelSseRe
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_OkHttpHttpClientTest_testClientSSE : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2396,7 +2396,7 @@ class KtorTestsTraceRecorderIntegrationTest_OkHttpHttpClientTest_testClientSSE :
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_OkHttpHttpClientTest_testWithNoParentJob : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2412,7 +2412,7 @@ class KtorTestsTraceRecorderIntegrationTest_OkHttpHttpClientTest_testWithNoParen
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_OkHttpHttpClientTest_configCopiesOldPluginsAndInterceptors : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2428,7 +2428,7 @@ class KtorTestsTraceRecorderIntegrationTest_OkHttpHttpClientTest_configCopiesOld
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_OkHttpHttpClientTest_testOptionsRequest : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2444,7 +2444,7 @@ class KtorTestsTraceRecorderIntegrationTest_OkHttpHttpClientTest_testOptionsRequ
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class `KtorTestsTraceRecorderIntegrationTest_EmbeddedServerTest_checkUrlMatches returns true when pattern matches part of URL path` : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2460,7 +2460,7 @@ class `KtorTestsTraceRecorderIntegrationTest_EmbeddedServerTest_checkUrlMatches 
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class `KtorTestsTraceRecorderIntegrationTest_EmbeddedServerTest_checkUrlMatches returns false when pattern does not match URL path` : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2476,7 +2476,7 @@ class `KtorTestsTraceRecorderIntegrationTest_EmbeddedServerTest_checkUrlMatches 
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class `KtorTestsTraceRecorderIntegrationTest_EmbeddedServerTest_checkUrlMatches returns true when pattern matches URL path case insensitively` : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2492,7 +2492,7 @@ class `KtorTestsTraceRecorderIntegrationTest_EmbeddedServerTest_checkUrlMatches 
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class `KtorTestsTraceRecorderIntegrationTest_EmbeddedServerTest_checkUrlMatches returns false when URL path is null` : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2508,7 +2508,7 @@ class `KtorTestsTraceRecorderIntegrationTest_EmbeddedServerTest_checkUrlMatches 
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class `KtorTestsTraceRecorderIntegrationTest_EmbeddedServerTest_checkUrlMatches returns true when pattern matches root URL path` : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2524,7 +2524,7 @@ class `KtorTestsTraceRecorderIntegrationTest_EmbeddedServerTest_checkUrlMatches 
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_MultiPartDataTest_givenRequest_whenNoContentTypeHeaderPresent_thenUnsupportedMediaTypeException : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2540,7 +2540,7 @@ class KtorTestsTraceRecorderIntegrationTest_MultiPartDataTest_givenRequest_whenN
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_MultiPartDataTest_givenWrongContentType_whenProcessMultiPart_thenUnsupportedMediaTypeException : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2556,7 +2556,7 @@ class KtorTestsTraceRecorderIntegrationTest_MultiPartDataTest_givenWrongContentT
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_MultiPartDataTest_testUnsupportedMediaTypeStatusCode : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2572,7 +2572,7 @@ class KtorTestsTraceRecorderIntegrationTest_MultiPartDataTest_testUnsupportedMed
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_OkHttpWebsocketSessionTest_testOnFailure : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2588,7 +2588,7 @@ class KtorTestsTraceRecorderIntegrationTest_OkHttpWebsocketSessionTest_testOnFai
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_OkHttpWebsocketSessionTest_testWebSocketFactory : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2604,7 +2604,7 @@ class KtorTestsTraceRecorderIntegrationTest_OkHttpWebsocketSessionTest_testWebSo
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_OkHttpHttpsTest_testHttpsOverProxy : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2620,7 +2620,7 @@ class KtorTestsTraceRecorderIntegrationTest_OkHttpHttpsTest_testHttpsOverProxy :
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class `KtorTestsTraceRecorderIntegrationTest_OkHttpHttpsTest_test hostname is verified` : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2636,7 +2636,7 @@ class `KtorTestsTraceRecorderIntegrationTest_OkHttpHttpsTest_test hostname is ve
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_io_ktor_client_engine_apache_RequestProducerTest_testHeadersMerge : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2652,7 +2652,7 @@ class KtorTestsTraceRecorderIntegrationTest_io_ktor_client_engine_apache_Request
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_io_ktor_client_engine_apache_RequestProducerTest_testProducingByteArrayContent : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2668,7 +2668,7 @@ class KtorTestsTraceRecorderIntegrationTest_io_ktor_client_engine_apache_Request
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_io_ktor_client_engine_apache_RequestProducerTest_testProducingNoContent : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2684,7 +2684,7 @@ class KtorTestsTraceRecorderIntegrationTest_io_ktor_client_engine_apache_Request
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_io_ktor_client_engine_apache_RequestProducerTest_testProducingReadChannelContent : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2700,7 +2700,7 @@ class KtorTestsTraceRecorderIntegrationTest_io_ktor_client_engine_apache_Request
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_io_ktor_client_engine_apache_RequestProducerTest_testProducingWriteChannelContent : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2716,7 +2716,7 @@ class KtorTestsTraceRecorderIntegrationTest_io_ktor_client_engine_apache_Request
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_io_ktor_client_engine_apache_RequestProducerTest_expectToThrowIllegalStateExceptionIfHostCannotBeExtractedFromRequestURL : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2732,7 +2732,7 @@ class KtorTestsTraceRecorderIntegrationTest_io_ktor_client_engine_apache_Request
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ApacheHttpClientTest_testClientSSE : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2748,7 +2748,7 @@ class KtorTestsTraceRecorderIntegrationTest_ApacheHttpClientTest_testClientSSE :
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ApacheHttpClientTest_testWithNoParentJob : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2764,7 +2764,7 @@ class KtorTestsTraceRecorderIntegrationTest_ApacheHttpClientTest_testWithNoParen
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ApacheHttpClientTest_configCopiesOldPluginsAndInterceptors : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2780,7 +2780,7 @@ class KtorTestsTraceRecorderIntegrationTest_ApacheHttpClientTest_configCopiesOld
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ApacheHttpClientTest_testOptionsRequest : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2796,7 +2796,7 @@ class KtorTestsTraceRecorderIntegrationTest_ApacheHttpClientTest_testOptionsRequ
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ApacheHttpsTest_testHttpsOverProxy : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2812,7 +2812,7 @@ class KtorTestsTraceRecorderIntegrationTest_ApacheHttpsTest_testHttpsOverProxy :
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class `KtorTestsTraceRecorderIntegrationTest_ApacheHttpsTest_test hostname is verified` : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2828,7 +2828,7 @@ class `KtorTestsTraceRecorderIntegrationTest_ApacheHttpsTest_test hostname is ve
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_Apache5HttpClientTest_testClientSSE : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2844,7 +2844,7 @@ class KtorTestsTraceRecorderIntegrationTest_Apache5HttpClientTest_testClientSSE 
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_Apache5HttpClientTest_testWithNoParentJob : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2860,7 +2860,7 @@ class KtorTestsTraceRecorderIntegrationTest_Apache5HttpClientTest_testWithNoPare
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_Apache5HttpClientTest_configCopiesOldPluginsAndInterceptors : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2876,7 +2876,7 @@ class KtorTestsTraceRecorderIntegrationTest_Apache5HttpClientTest_configCopiesOl
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_Apache5HttpClientTest_testOptionsRequest : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2892,7 +2892,7 @@ class KtorTestsTraceRecorderIntegrationTest_Apache5HttpClientTest_testOptionsReq
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_Apache5HttpsTest_testHttpsOverProxy : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2908,7 +2908,7 @@ class KtorTestsTraceRecorderIntegrationTest_Apache5HttpsTest_testHttpsOverProxy 
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class `KtorTestsTraceRecorderIntegrationTest_Apache5HttpsTest_test hostname is verified` : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2924,7 +2924,7 @@ class `KtorTestsTraceRecorderIntegrationTest_Apache5HttpsTest_test hostname is v
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_JavaEngineTests_testProxy : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2940,7 +2940,7 @@ class KtorTestsTraceRecorderIntegrationTest_JavaEngineTests_testProxy : KtorTrac
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_JavaEngineTests_testRequestAfterRecreate : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2956,7 +2956,7 @@ class KtorTestsTraceRecorderIntegrationTest_JavaEngineTests_testRequestAfterRecr
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_JavaEngineTests_testSubsequentRequests : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2972,7 +2972,7 @@ class KtorTestsTraceRecorderIntegrationTest_JavaEngineTests_testSubsequentReques
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_JavaEngineTests_testProtocolVersion : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -2988,7 +2988,7 @@ class KtorTestsTraceRecorderIntegrationTest_JavaEngineTests_testProtocolVersion 
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_JavaEngineTests_infiniteConnectTimeout : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3004,7 +3004,7 @@ class KtorTestsTraceRecorderIntegrationTest_JavaEngineTests_infiniteConnectTimeo
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_JavaEngineTests_infiniteRequestTimeout : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3020,7 +3020,7 @@ class KtorTestsTraceRecorderIntegrationTest_JavaEngineTests_infiniteRequestTimeo
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_JavaEngineTests_usualConnectTimeout : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3036,7 +3036,7 @@ class KtorTestsTraceRecorderIntegrationTest_JavaEngineTests_usualConnectTimeout 
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_JavaEngineTests_usualRequestTimeout : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3052,7 +3052,7 @@ class KtorTestsTraceRecorderIntegrationTest_JavaEngineTests_usualRequestTimeout 
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_JavaEngineTests_isTimeoutInfiniteFunction : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3068,7 +3068,7 @@ class KtorTestsTraceRecorderIntegrationTest_JavaEngineTests_isTimeoutInfiniteFun
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_JavaClientTest_testClientSSE : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3084,7 +3084,7 @@ class KtorTestsTraceRecorderIntegrationTest_JavaClientTest_testClientSSE : KtorT
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_JavaClientTest_testWithNoParentJob : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3100,7 +3100,7 @@ class KtorTestsTraceRecorderIntegrationTest_JavaClientTest_testWithNoParentJob :
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_JavaClientTest_configCopiesOldPluginsAndInterceptors : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3116,7 +3116,7 @@ class KtorTestsTraceRecorderIntegrationTest_JavaClientTest_configCopiesOldPlugin
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_JavaClientTest_testOptionsRequest : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3132,7 +3132,7 @@ class KtorTestsTraceRecorderIntegrationTest_JavaClientTest_testOptionsRequest : 
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_JavaHttpsTest_testHttpsOverProxy : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3148,7 +3148,7 @@ class KtorTestsTraceRecorderIntegrationTest_JavaHttpsTest_testHttpsOverProxy : K
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class `KtorTestsTraceRecorderIntegrationTest_JavaHttpsTest_test hostname is verified` : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3164,7 +3164,7 @@ class `KtorTestsTraceRecorderIntegrationTest_JavaHttpsTest_test hostname is veri
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_io_ktor_client_engine_java_RequestTests_testReusingRequestBuilderOnMultipleClients : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3180,7 +3180,7 @@ class KtorTestsTraceRecorderIntegrationTest_io_ktor_client_engine_java_RequestTe
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_io_ktor_client_engine_java_RequestTests_testRequestBodyPosting : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3196,7 +3196,7 @@ class KtorTestsTraceRecorderIntegrationTest_io_ktor_client_engine_java_RequestTe
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ResponseConsumerTest_testConsumeContent : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3212,7 +3212,7 @@ class KtorTestsTraceRecorderIntegrationTest_ResponseConsumerTest_testConsumeCont
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_io_ktor_client_engine_java_RequestProducerTest_testHeadersMerge : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3228,7 +3228,7 @@ class KtorTestsTraceRecorderIntegrationTest_io_ktor_client_engine_java_RequestPr
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_io_ktor_client_engine_java_RequestProducerTest_testByteReadChannelWriter : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3244,7 +3244,7 @@ class KtorTestsTraceRecorderIntegrationTest_io_ktor_client_engine_java_RequestPr
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_UnixSocketTest_testUnixSocketClient : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3260,7 +3260,7 @@ class KtorTestsTraceRecorderIntegrationTest_UnixSocketTest_testUnixSocketClient 
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_UnixSocketTest_testUnixSocketClientWithDefaultRequest : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3276,7 +3276,7 @@ class KtorTestsTraceRecorderIntegrationTest_UnixSocketTest_testUnixSocketClientW
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_BuildersTest_testResolvingWsFunction : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3292,7 +3292,7 @@ class KtorTestsTraceRecorderIntegrationTest_BuildersTest_testResolvingWsFunction
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CIORequestTest_engineUsesRequestTimeoutFromItsConfiguration : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3308,7 +3308,7 @@ class KtorTestsTraceRecorderIntegrationTest_CIORequestTest_engineUsesRequestTime
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CIORequestTest_longHeadersTest : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3324,7 +3324,7 @@ class KtorTestsTraceRecorderIntegrationTest_CIORequestTest_longHeadersTest : Kto
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CIORequestTest_testParameterWithoutPath : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3340,7 +3340,7 @@ class KtorTestsTraceRecorderIntegrationTest_CIORequestTest_testParameterWithoutP
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CIORequestTest_testHangingTimeoutWithWrongUrl : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3356,7 +3356,7 @@ class KtorTestsTraceRecorderIntegrationTest_CIORequestTest_testHangingTimeoutWit
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CIORequestTest_testInetAddressRetrievedOnce : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3372,7 +3372,7 @@ class KtorTestsTraceRecorderIntegrationTest_CIORequestTest_testInetAddressRetrie
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ConnectErrorsTest_testConnectAfterConnectionErrors : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3388,7 +3388,7 @@ class KtorTestsTraceRecorderIntegrationTest_ConnectErrorsTest_testConnectAfterCo
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ConnectErrorsTest_testResponseWithNoLengthChunkedAndConnectionClosedWithHttp10 : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3404,7 +3404,7 @@ class KtorTestsTraceRecorderIntegrationTest_ConnectErrorsTest_testResponseWithNo
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ConnectErrorsTest_testResponseErrorWithNoLengthChunkedAndConnectionClosedWithHttp11 : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3420,7 +3420,7 @@ class KtorTestsTraceRecorderIntegrationTest_ConnectErrorsTest_testResponseErrorW
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ConnectErrorsTest_testResponseErrorWithInvalidChunkException : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3436,7 +3436,7 @@ class KtorTestsTraceRecorderIntegrationTest_ConnectErrorsTest_testResponseErrorW
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ConnectErrorsTest_testConnectionClosedBeforeReadingResponseStatusLine : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3452,7 +3452,7 @@ class KtorTestsTraceRecorderIntegrationTest_ConnectErrorsTest_testConnectionClos
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ConnectErrorsTest_testLateServerStart : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3468,7 +3468,7 @@ class KtorTestsTraceRecorderIntegrationTest_ConnectErrorsTest_testLateServerStar
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CIOHttpsTest_testHttpsOverProxy : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3484,7 +3484,7 @@ class KtorTestsTraceRecorderIntegrationTest_CIOHttpsTest_testHttpsOverProxy : Kt
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class `KtorTestsTraceRecorderIntegrationTest_CIOHttpsTest_test hostname is verified` : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3500,7 +3500,7 @@ class `KtorTestsTraceRecorderIntegrationTest_CIOHttpsTest_test hostname is verif
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CIOSpecificHttpsTest_hello : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3516,7 +3516,7 @@ class KtorTestsTraceRecorderIntegrationTest_CIOSpecificHttpsTest_hello : KtorTra
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CIOHttpClientTest_testClientSSE : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3532,7 +3532,7 @@ class KtorTestsTraceRecorderIntegrationTest_CIOHttpClientTest_testClientSSE : Kt
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CIOHttpClientTest_testWithNoParentJob : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3548,7 +3548,7 @@ class KtorTestsTraceRecorderIntegrationTest_CIOHttpClientTest_testWithNoParentJo
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CIOHttpClientTest_configCopiesOldPluginsAndInterceptors : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3564,7 +3564,7 @@ class KtorTestsTraceRecorderIntegrationTest_CIOHttpClientTest_configCopiesOldPlu
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_CIOHttpClientTest_testOptionsRequest : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3580,7 +3580,7 @@ class KtorTestsTraceRecorderIntegrationTest_CIOHttpClientTest_testOptionsRequest
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_HoconConfigTest_testKeysTopLevelHoconConfig : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3596,7 +3596,7 @@ class KtorTestsTraceRecorderIntegrationTest_HoconConfigTest_testKeysTopLevelHoco
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_HoconConfigTest_testKeysNestedHoconConfig : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3612,7 +3612,7 @@ class KtorTestsTraceRecorderIntegrationTest_HoconConfigTest_testKeysNestedHoconC
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_HoconConfigTest_testToMap : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3628,7 +3628,7 @@ class KtorTestsTraceRecorderIntegrationTest_HoconConfigTest_testToMap : KtorTrac
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_HoconConfigTest_readSerializableClass : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3644,7 +3644,7 @@ class KtorTestsTraceRecorderIntegrationTest_HoconConfigTest_readSerializableClas
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ConfigJvmTest_testLoadFromResources : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3660,7 +3660,7 @@ class KtorTestsTraceRecorderIntegrationTest_ConfigJvmTest_testLoadFromResources 
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ConfigJvmTest_testLoadYamlFromResources : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3676,7 +3676,7 @@ class KtorTestsTraceRecorderIntegrationTest_ConfigJvmTest_testLoadYamlFromResour
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ConfigJvmTest_testLoadFromFile : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3692,7 +3692,7 @@ class KtorTestsTraceRecorderIntegrationTest_ConfigJvmTest_testLoadFromFile : Kto
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class `KtorTestsTraceRecorderIntegrationTest_HoconDecoderTest_primitive types` : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3708,7 +3708,7 @@ class `KtorTestsTraceRecorderIntegrationTest_HoconDecoderTest_primitive types` :
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class `KtorTestsTraceRecorderIntegrationTest_HoconDecoderTest_nullable values` : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3724,7 +3724,7 @@ class `KtorTestsTraceRecorderIntegrationTest_HoconDecoderTest_nullable values` :
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class `KtorTestsTraceRecorderIntegrationTest_HoconDecoderTest_maps and type parameters` : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3740,7 +3740,7 @@ class `KtorTestsTraceRecorderIntegrationTest_HoconDecoderTest_maps and type para
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class `KtorTestsTraceRecorderIntegrationTest_HoconDecoderTest_collection types` : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3756,7 +3756,7 @@ class `KtorTestsTraceRecorderIntegrationTest_HoconDecoderTest_collection types` 
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class `KtorTestsTraceRecorderIntegrationTest_HoconDecoderTest_nested structures` : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3772,7 +3772,7 @@ class `KtorTestsTraceRecorderIntegrationTest_HoconDecoderTest_nested structures`
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class `KtorTestsTraceRecorderIntegrationTest_HoconDecoderTest_enum values` : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3788,7 +3788,7 @@ class `KtorTestsTraceRecorderIntegrationTest_HoconDecoderTest_enum values` : Kto
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_HoconDecoderTest_testDecodeMissingValues : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3804,7 +3804,7 @@ class KtorTestsTraceRecorderIntegrationTest_HoconDecoderTest_testDecodeMissingVa
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class `KtorTestsTraceRecorderIntegrationTest_HoconDecoderTest_invalid types` : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3820,7 +3820,7 @@ class `KtorTestsTraceRecorderIntegrationTest_HoconDecoderTest_invalid types` : K
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class `KtorTestsTraceRecorderIntegrationTest_HoconDecoderTest_default values` : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3836,7 +3836,7 @@ class `KtorTestsTraceRecorderIntegrationTest_HoconDecoderTest_default values` : 
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ShutDownUrlTest_testShutdownUrlRespondsWithGone : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3852,7 +3852,7 @@ class KtorTestsTraceRecorderIntegrationTest_ShutDownUrlTest_testShutdownUrlRespo
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ShutDownUrlTest_testShutdownUnderLoad : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -3868,7 +3868,7 @@ class KtorTestsTraceRecorderIntegrationTest_ShutDownUrlTest_testShutdownUnderLoa
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KtorTraceRecorderTest::class)
 class KtorTestsTraceRecorderIntegrationTest_ShutDownUrlTest_testExceptionHandlingDuringShutdown : KtorTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {

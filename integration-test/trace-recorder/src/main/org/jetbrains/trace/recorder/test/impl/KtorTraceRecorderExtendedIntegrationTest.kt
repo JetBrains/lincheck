@@ -20,5 +20,6 @@ abstract class KtorTraceRecorderJsonTests: AbstractJsonTraceRecorderIntegrationT
         resourcePath = "/integrationTestData/ktorTests.json",
         abstractTestClass = "KtorTraceRecorderJsonTests",
         packageName = "org.jetbrains.trace.recorder.test.impl.generated",
+        category = "KtorTraceRecorderTest",
     )
 }

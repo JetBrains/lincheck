@@ -27,7 +27,7 @@ abstract class KotlinCompilerTraceRecorderJsonTests : AbstractJsonTraceRecorderI
         resourcePath = "/integrationTestData/kotlinCompilerTests.json",
         abstractTestClass = "KotlinCompilerTraceRecorderJsonTests",
         packageName = "org.jetbrains.trace.recorder.test.impl.generated",
-        imports = listOf(),
+        category = "KotlinCompilerTraceRecorderTest",
     )
 }
 
