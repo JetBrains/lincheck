@@ -135,20 +135,8 @@ private class FileStreamingThread(
      */
     private class TraceSerializationTaskQueue(capacity: Int) : ArrayBlockingQueue<Job>(capacity) {
         override fun put(job: Job) {
-            var wasInterrupted = false
-            while (true) {
-                try {
-                    super.put(job)
-                    if (wasInterrupted) {
-                        // Restore the interrupt status that was consumed by put() loop above.
-                        currentThread().interrupt()
-                    }
-                    return
-                } catch (_: InterruptedException) {
-                    // Remember the interrupt and retry until we manage to enqueue the job.
-                    wasInterrupted = true
-                }
-            }
+            @Suppress("ControlFlowWithEmptyBody")
+            while (!offer(job));
         }
     }
 
