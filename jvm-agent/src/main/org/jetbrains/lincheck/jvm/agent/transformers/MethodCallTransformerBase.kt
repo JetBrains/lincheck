@@ -14,7 +14,7 @@ import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.descriptors.AccessPath
 import org.jetbrains.lincheck.descriptors.OwnerName
 import org.jetbrains.lincheck.util.isInLincheckPackage
-import org.jetbrains.lincheck.util.isInTraceRecorderMode
+import org.jetbrains.lincheck.util.isIntellijInstrumentationCoverageAgentClass
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.INVOKESTATIC
 import org.objectweb.asm.Type
@@ -204,6 +204,7 @@ internal abstract class MethodCallTransformerBase(
 
     protected fun isIgnoredMethod(className: String) =
         isInLincheckPackage(className.toCanonicalClassName()) ||
+        isIntellijInstrumentationCoverageAgentClass(className.toCanonicalClassName()) ||
         className == "kotlin/jvm/internal/Intrinsics" ||
         className == "java/util/Objects" ||
         className == "java/lang/String" ||

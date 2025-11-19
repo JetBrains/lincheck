@@ -74,6 +74,12 @@ fun isIntellijRuntimeCoverageAgentClass(className: String) =
     className.startsWith("com.intellij.rt.coverage")
 
 /**
+ * Checks if the given class name belongs to the IntelliJ runtime coverage instrumentation package.
+ */
+fun isIntellijInstrumentationCoverageAgentClass(className: String) =
+    className.startsWith("com.intellij.rt.coverage.instrumentation")
+
+/**
  * Checks if the given class name belongs to the IntelliJ runtime agents.
  */
 fun isIntellijRuntimeAgentClass(className: String) =
