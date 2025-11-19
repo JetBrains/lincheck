@@ -48,6 +48,7 @@ abstract class AbstractJsonTraceRecorderIntegrationTest(
             testCase: TestCase,
             abstractTestClass: String,
             timeoutMinutes: Long,
+            category: String?,
             useSimpleClassName: Boolean
         ): String {
             val formattedOriginalClassName = testCase.className
@@ -64,8 +65,9 @@ abstract class AbstractJsonTraceRecorderIntegrationTest(
                 return "$dollarPrefix\"$this\""
             }
 
-            return """
-                @Category(ExtendedTraceRecorderTest::class)
+            val categoryAnnotation = category?.let { "@Category($it::class)\n" } ?: ""
+
+            return categoryAnnotation + """
                 class $generatedTestClassName : $abstractTestClass() {
                     @Test(timeout = $timeoutMinutes * 60 * 1000L)
                     fun test() {
@@ -88,6 +90,7 @@ abstract class AbstractJsonTraceRecorderIntegrationTest(
             resourcePath: String,
             abstractTestClass: String,
             packageName: String,
+            category: String?,
             customImports: List<String>,
             timeoutMinutes: Long,
         ): String {
@@ -119,7 +122,7 @@ abstract class AbstractJsonTraceRecorderIntegrationTest(
                 """.trimIndent()
 
             val renderedTestCases = testCases.joinToString("\n\n") {
-                renderSingleTestCode(groupName, it, abstractTestClass, timeoutMinutes, !clashes.contains(it.className))
+                renderSingleTestCode(groupName, it, abstractTestClass, timeoutMinutes, category, !clashes.contains(it.className))
             }
 
             return "$beforeCustomImports${customImports.joinToString("\n")}\n\n$disclaimer\n\n$renderedTestCases\n"
@@ -132,11 +135,12 @@ sealed class TestGenerator(
     private val resourcePath: String,
     private val abstractTestClass: String,
     private val packageName: String,
-    private val imports: List<String> = listOf(),
+    private val category: String?,
+    private val customImports: List<String> = listOf(),
     private val timeoutMinutes: Long = 20,
 ) {
     fun generateString(): String = AbstractJsonTraceRecorderIntegrationTest.renderAllTestsCode(
-        groupName, resourcePath, abstractTestClass, packageName, imports, timeoutMinutes
+        groupName, resourcePath, abstractTestClass, packageName, category, customImports, timeoutMinutes
     )
 
     fun generateFile(path: Path) {

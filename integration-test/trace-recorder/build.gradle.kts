@@ -49,7 +49,8 @@ tasks {
 
         // Do not run extended tests in the basic task
         useJUnit {
-            excludeCategories("org.jetbrains.trace.recorder.test.ExtendedTraceRecorderTest")
+            excludeCategories("org.jetbrains.trace.recorder.test.KotlinCompilerTraceRecorderTest")
+            excludeCategories("org.jetbrains.trace.recorder.test.KtorTraceRecorderTest")
         }
 
         outputs.upToDateWhen { false } // Always run tests when called
@@ -57,7 +58,7 @@ tasks {
         dependsOn(copyTraceRecorderFatJar)
     }
 
-    val traceRecorderIntegrationTestExtended = register<Test>("traceRecorderIntegrationTestExtended") {
+    val traceRecorderIntegrationTestKotlinCompiler = register<Test>("traceRecorderIntegrationTestKotlinCompiler") {
         configureJvmTestCommon(project)
         group = "verification"
 
@@ -67,7 +68,25 @@ tasks {
 
         // Only run tests marked as extended
         useJUnit {
-            includeCategories("org.jetbrains.trace.recorder.test.ExtendedTraceRecorderTest")
+            includeCategories("org.jetbrains.trace.recorder.test.KotlinCompilerTraceRecorderTest")
+        }
+
+        outputs.upToDateWhen { false } // Always run tests when called
+        dependsOn(traceAgentIntegrationTestsPrerequisites)
+        dependsOn(copyTraceRecorderFatJar)
+    }
+
+    val traceRecorderIntegrationTestKtor = register<Test>("traceRecorderIntegrationTestKtor") {
+        configureJvmTestCommon(project)
+        group = "verification"
+
+        // Use the same source set as the basic integration tests
+        testClassesDirs = sourceSets["main"].output.classesDirs
+        classpath = sourceSets["main"].runtimeClasspath
+
+        // Only run tests marked as extended
+        useJUnit {
+            includeCategories("org.jetbrains.trace.recorder.test.KtorTraceRecorderTest")
         }
 
         outputs.upToDateWhen { false } // Always run tests when called
@@ -79,7 +98,10 @@ tasks {
         group = "verification"
 
         finalizedBy(traceRecorderIntegrationTest)
-        finalizedBy(traceRecorderIntegrationTestExtended)
-        traceRecorderIntegrationTestExtended.get().mustRunAfter(traceRecorderIntegrationTest)
+        finalizedBy(traceRecorderIntegrationTestKtor)
+        finalizedBy(traceRecorderIntegrationTestKotlinCompiler)
+
+        traceRecorderIntegrationTestKotlinCompiler.get().mustRunAfter(traceRecorderIntegrationTestKtor)
+        traceRecorderIntegrationTestKtor.get().mustRunAfter(traceRecorderIntegrationTest)
     }
 }

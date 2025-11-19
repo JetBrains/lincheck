@@ -11,7 +11,7 @@ import org.junit.experimental.categories.Category
   DO NOT MODIFY!
 */
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KotlinCompilerTraceRecorderTest::class)
 class KotlinCompilerTestsTraceRecorderIntegrationTest_FirLightTreeBlackBoxCodegenTestGenerated_testAllFilesPresentInBox : KotlinCompilerTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -27,7 +27,7 @@ class KotlinCompilerTestsTraceRecorderIntegrationTest_FirLightTreeBlackBoxCodege
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KotlinCompilerTraceRecorderTest::class)
 class KotlinCompilerTestsTraceRecorderIntegrationTest_FirLightTreeBlackBoxCodegenTestGenerated_CallableReference_Bound_Equals_testReflectionReference : KotlinCompilerTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -43,7 +43,7 @@ class KotlinCompilerTestsTraceRecorderIntegrationTest_FirLightTreeBlackBoxCodege
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KotlinCompilerTraceRecorderTest::class)
 class KotlinCompilerTestsTraceRecorderIntegrationTest_FirLightTreeBlackBoxCodegenTestGenerated_CallableReference_Bound_Equals_testReceiverInEquals : KotlinCompilerTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -59,7 +59,7 @@ class KotlinCompilerTestsTraceRecorderIntegrationTest_FirLightTreeBlackBoxCodege
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KotlinCompilerTraceRecorderTest::class)
 class KotlinCompilerTestsTraceRecorderIntegrationTest_FirLightTreeBlackBoxCodegenTestGenerated_CallableReference_Equality_testCapturedDefaults : KotlinCompilerTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -75,7 +75,7 @@ class KotlinCompilerTestsTraceRecorderIntegrationTest_FirLightTreeBlackBoxCodege
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KotlinCompilerTraceRecorderTest::class)
 class KotlinCompilerTestsTraceRecorderIntegrationTest_FirLightTreeBlackBoxCodegenTestGenerated_CallableReference_Equality_testExtensionReceiverVsDefault : KotlinCompilerTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -91,7 +91,7 @@ class KotlinCompilerTestsTraceRecorderIntegrationTest_FirLightTreeBlackBoxCodege
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KotlinCompilerTraceRecorderTest::class)
 class KotlinCompilerTestsTraceRecorderIntegrationTest_FirLightTreeBlackBoxCodegenTestGenerated_Initializers_Files_testSimple : KotlinCompilerTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -107,7 +107,7 @@ class KotlinCompilerTestsTraceRecorderIntegrationTest_FirLightTreeBlackBoxCodege
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KotlinCompilerTraceRecorderTest::class)
 class KotlinCompilerTestsTraceRecorderIntegrationTest_FirLightTreeBlackBoxCodegenTestGenerated_Initializers_Files_testSimpleMultiModule : KotlinCompilerTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -123,7 +123,7 @@ class KotlinCompilerTestsTraceRecorderIntegrationTest_FirLightTreeBlackBoxCodege
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KotlinCompilerTraceRecorderTest::class)
 class KotlinCompilerTestsTraceRecorderIntegrationTest_FirLightTreeBlackBoxCodegenTestGenerated_Inline_testDefaultArgs : KotlinCompilerTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -139,7 +139,7 @@ class KotlinCompilerTestsTraceRecorderIntegrationTest_FirLightTreeBlackBoxCodege
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KotlinCompilerTraceRecorderTest::class)
 class KotlinCompilerTestsTraceRecorderIntegrationTest_FirLightTreeBlackBoxCodegenTestGenerated_Inline_testCrossModuleTypeOf : KotlinCompilerTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -155,7 +155,7 @@ class KotlinCompilerTestsTraceRecorderIntegrationTest_FirLightTreeBlackBoxCodege
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KotlinCompilerTraceRecorderTest::class)
 class KotlinCompilerTestsTraceRecorderIntegrationTest_FirLightTreeBlackBoxCodegenTestGenerated_Coroutines_testAsync : KotlinCompilerTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -171,7 +171,7 @@ class KotlinCompilerTestsTraceRecorderIntegrationTest_FirLightTreeBlackBoxCodege
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KotlinCompilerTraceRecorderTest::class)
 class KotlinCompilerTestsTraceRecorderIntegrationTest_FirJsCodegenBoxTestGenerated_testAllFilesPresentInBox : KotlinCompilerTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -187,7 +187,7 @@ class KotlinCompilerTestsTraceRecorderIntegrationTest_FirJsCodegenBoxTestGenerat
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KotlinCompilerTraceRecorderTest::class)
 class KotlinCompilerTestsTraceRecorderIntegrationTest_FirJsCodegenBoxTestGenerated_Multiplatform_K2_Basic_testAnyMethodInExpect : KotlinCompilerTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -203,7 +203,7 @@ class KotlinCompilerTestsTraceRecorderIntegrationTest_FirJsCodegenBoxTestGenerat
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KotlinCompilerTraceRecorderTest::class)
 class KotlinCompilerTestsTraceRecorderIntegrationTest_FirJsCodegenBoxTestGenerated_Multiplatform_K2_Basic_testContextOnExpect : KotlinCompilerTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -219,7 +219,7 @@ class KotlinCompilerTestsTraceRecorderIntegrationTest_FirJsCodegenBoxTestGenerat
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KotlinCompilerTraceRecorderTest::class)
 class KotlinCompilerTestsTraceRecorderIntegrationTest_FirJsCodegenBoxTestGenerated_Controlflow_testBreak : KotlinCompilerTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -235,7 +235,7 @@ class KotlinCompilerTestsTraceRecorderIntegrationTest_FirJsCodegenBoxTestGenerat
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KotlinCompilerTraceRecorderTest::class)
 class KotlinCompilerTestsTraceRecorderIntegrationTest_FirJsCodegenBoxTestGenerated_Controlflow_testFor_loops : KotlinCompilerTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -251,7 +251,7 @@ class KotlinCompilerTestsTraceRecorderIntegrationTest_FirJsCodegenBoxTestGenerat
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KotlinCompilerTraceRecorderTest::class)
 class KotlinCompilerTestsTraceRecorderIntegrationTest_FirJsCodegenBoxTestGenerated_Multiplatform_K2_Annotations_testOptionalExpectation : KotlinCompilerTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -267,7 +267,7 @@ class KotlinCompilerTestsTraceRecorderIntegrationTest_FirJsCodegenBoxTestGenerat
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KotlinCompilerTraceRecorderTest::class)
 class KotlinCompilerTestsTraceRecorderIntegrationTest_FirJsCodegenBoxTestGenerated_Multiplatform_K2_Annotations_testExpectAnnotationCallInLibrary : KotlinCompilerTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -283,7 +283,7 @@ class KotlinCompilerTestsTraceRecorderIntegrationTest_FirJsCodegenBoxTestGenerat
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KotlinCompilerTraceRecorderTest::class)
 class KotlinCompilerTestsTraceRecorderIntegrationTest_FirJsCodegenBoxTestGenerated_Coroutines_testAsync : KotlinCompilerTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -299,7 +299,7 @@ class KotlinCompilerTestsTraceRecorderIntegrationTest_FirJsCodegenBoxTestGenerat
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KotlinCompilerTraceRecorderTest::class)
 class KotlinCompilerTestsTraceRecorderIntegrationTest_FirJsCodegenBoxTestGenerated_Coroutines_testAwait : KotlinCompilerTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -315,7 +315,7 @@ class KotlinCompilerTestsTraceRecorderIntegrationTest_FirJsCodegenBoxTestGenerat
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KotlinCompilerTraceRecorderTest::class)
 class KotlinCompilerTestsTraceRecorderIntegrationTest_FirJsCodegenBoxTestGenerated_ControlStructures_TryCatchInExpressions_testTryInsideTry : KotlinCompilerTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -331,7 +331,7 @@ class KotlinCompilerTestsTraceRecorderIntegrationTest_FirJsCodegenBoxTestGenerat
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KotlinCompilerTraceRecorderTest::class)
 class KotlinCompilerTestsTraceRecorderIntegrationTest_PhasedJvmDiagnosticLightTreeTestGenerated_Tests_Annotations_testWrongAnnotationTarget : KotlinCompilerTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -347,7 +347,7 @@ class KotlinCompilerTestsTraceRecorderIntegrationTest_PhasedJvmDiagnosticLightTr
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KotlinCompilerTraceRecorderTest::class)
 class KotlinCompilerTestsTraceRecorderIntegrationTest_PhasedJvmDiagnosticLightTreeTestGenerated_Tests_Annotations_testWrongAnnotationTargetAnnotationOrder : KotlinCompilerTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -363,7 +363,7 @@ class KotlinCompilerTestsTraceRecorderIntegrationTest_PhasedJvmDiagnosticLightTr
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KotlinCompilerTraceRecorderTest::class)
 class KotlinCompilerTestsTraceRecorderIntegrationTest_PhasedJvmDiagnosticLightTreeTestGenerated_Tests_Annotations_FunctionalTypes_testParameterName : KotlinCompilerTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -379,7 +379,7 @@ class KotlinCompilerTestsTraceRecorderIntegrationTest_PhasedJvmDiagnosticLightTr
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KotlinCompilerTraceRecorderTest::class)
 class KotlinCompilerTestsTraceRecorderIntegrationTest_PhasedJvmDiagnosticLightTreeTestGenerated_Tests_Annotations_FunctionalTypes_testParenthesizedAnnotations : KotlinCompilerTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -395,7 +395,7 @@ class KotlinCompilerTestsTraceRecorderIntegrationTest_PhasedJvmDiagnosticLightTr
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KotlinCompilerTraceRecorderTest::class)
 class KotlinCompilerTestsTraceRecorderIntegrationTest_PhasedJvmDiagnosticLightTreeTestGenerated_Tests_Annotations_Options_testAnnotationAsArg : KotlinCompilerTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -411,7 +411,7 @@ class KotlinCompilerTestsTraceRecorderIntegrationTest_PhasedJvmDiagnosticLightTr
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KotlinCompilerTraceRecorderTest::class)
 class KotlinCompilerTestsTraceRecorderIntegrationTest_PhasedJvmDiagnosticLightTreeTestGenerated_Tests_Annotations_Options_testAnnotationAsArgComplex : KotlinCompilerTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -427,7 +427,7 @@ class KotlinCompilerTestsTraceRecorderIntegrationTest_PhasedJvmDiagnosticLightTr
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KotlinCompilerTraceRecorderTest::class)
 class KotlinCompilerTestsTraceRecorderIntegrationTest_PhasedJvmDiagnosticLightTreeTestGenerated_Tests_Annotations_AnnotationParameterMustBeConstant_testCompareAndEquals : KotlinCompilerTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -443,7 +443,7 @@ class KotlinCompilerTestsTraceRecorderIntegrationTest_PhasedJvmDiagnosticLightTr
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KotlinCompilerTraceRecorderTest::class)
 class KotlinCompilerTestsTraceRecorderIntegrationTest_PhasedJvmDiagnosticLightTreeTestGenerated_Tests_Annotations_AnnotationParameterMustBeConstant_testStrings : KotlinCompilerTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -459,7 +459,7 @@ class KotlinCompilerTestsTraceRecorderIntegrationTest_PhasedJvmDiagnosticLightTr
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KotlinCompilerTraceRecorderTest::class)
 class KotlinCompilerTestsTraceRecorderIntegrationTest_PhasedJvmDiagnosticLightTreeTestGenerated_Tests_ControlFlowAnalysis_testAssignedInFinally : KotlinCompilerTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
@@ -475,7 +475,7 @@ class KotlinCompilerTestsTraceRecorderIntegrationTest_PhasedJvmDiagnosticLightTr
     }
 }
 
-@Category(ExtendedTraceRecorderTest::class)
+@Category(KotlinCompilerTraceRecorderTest::class)
 class KotlinCompilerTestsTraceRecorderIntegrationTest_FirWasmJsCodegenBoxTestGenerated_Annotations_testAnnotations0 : KotlinCompilerTraceRecorderJsonTests() {
     @Test(timeout = 20 * 60 * 1000L)
     fun test() {
