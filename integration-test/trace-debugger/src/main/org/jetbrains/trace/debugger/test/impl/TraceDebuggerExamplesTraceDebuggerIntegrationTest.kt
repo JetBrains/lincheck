@@ -8,8 +8,9 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.trace.debugger.test
+package org.jetbrains.trace.debugger.test.impl
 
+import org.jetbrains.trace.debugger.test.runner.AbstractTraceDebuggerIntegrationTest
 import org.junit.Ignore
 import org.junit.Test
 import java.nio.file.Paths
@@ -19,20 +20,20 @@ class TraceDebuggerExamplesTraceDebuggerIntegrationTest: AbstractTraceDebuggerIn
 
     @Test
     fun `org_examples_integration_bugs_LinkedHashSetTest putAnObjectWithoutDefinedHashCode`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.bugs.LinkedHashSetTest",
             testMethodName = "putAnObjectWithoutDefinedHashCode",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 
     @Ignore("`class.java.declaredMethods` call returns nondeterministic results")
     @Test
     fun `org_examples_integration_bugs_ReflectionTest sortMethods`() {
-        runGradleTest(
+        runTest(
             testClassName = "org.examples.integration.bugs.ReflectionTest",
             testMethodName = "sortMethods",
-            gradleCommands = listOf(":test"),
+            commands = listOf(":test"),
         )
     }
 }

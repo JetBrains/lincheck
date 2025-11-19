@@ -8,8 +8,9 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.trace.recorder.test
+package org.jetbrains.trace.recorder.test.impl
 
+import org.jetbrains.trace.recorder.test.runner.AbstractTraceRecorderIntegrationTest
 import org.junit.Test
 import java.nio.file.Paths
 
@@ -17,36 +18,11 @@ class KotlinImmutableCollectionsTraceRecorderIntegrationTest : AbstractTraceReco
     override val projectPath: String = Paths.get("build", "integrationTestProjects", "kotlinx.collections.immutable").toString()
 
     @Test
-    fun `tests_contract_list_ImmutableListTest empty`() {
-        runGradleTest(
-            testClassName = "tests.contract.list.ImmutableListTest",
-            testMethodName = "empty",
-            gradleCommands = listOf(
-                ":kotlinx-collections-immutable:cleanJvmTest",
-                ":kotlinx-collections-immutable:jvmTest",
-            )
-        )
-    }
-
-    @Test
-    fun `tests_contract_list_ImmutableListTest`() {
-        runGradleTests(
-            testClassNamePrefix = "tests.contract.list.ImmutableListTest",
-            gradleBuildCommands = listOf(":kotlinx-collections-immutable:compileTestKotlinJvm"),
-            gradleTestCommands = listOf(
-                ":kotlinx-collections-immutable:cleanJvmTest",
-                ":kotlinx-collections-immutable:jvmTest",
-            ),
-            checkRepresentation = false
-        )
-    }
-
-    @Test
     fun `tests_contract_list_ImmutableListTest empty with include filter`() {
-        runGradleTest(
+        runTest(
             testClassName = "tests.contract.list.ImmutableListTest",
             testMethodName = "empty",
-            gradleCommands = listOf(
+            commands = listOf(
                 ":kotlinx-collections-immutable:cleanJvmTest",
                 ":kotlinx-collections-immutable:jvmTest",
             ),
@@ -60,10 +36,10 @@ class KotlinImmutableCollectionsTraceRecorderIntegrationTest : AbstractTraceReco
 
     @Test
     fun `tests_contract_list_ImmutableListTest empty with exclude filter`() {
-        runGradleTest(
+        runTest(
             testClassName = "tests.contract.list.ImmutableListTest",
             testMethodName = "empty",
-            gradleCommands = listOf(
+            commands = listOf(
                 ":kotlinx-collections-immutable:cleanJvmTest",
                 ":kotlinx-collections-immutable:jvmTest",
             ),

@@ -8,7 +8,7 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.trace.recorder.test
+package org.jetbrains.trace.recorder.test.runner
 
 import java.io.InputStreamReader
 import java.nio.charset.StandardCharsets

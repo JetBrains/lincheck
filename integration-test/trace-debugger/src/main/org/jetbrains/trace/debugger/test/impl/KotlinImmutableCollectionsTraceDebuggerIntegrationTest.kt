@@ -8,8 +8,9 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.trace.debugger.test
+package org.jetbrains.trace.debugger.test.impl
 
+import org.jetbrains.trace.debugger.test.runner.AbstractTraceDebuggerIntegrationTest
 import org.junit.Ignore
 import org.junit.Test
 import java.nio.file.Paths
@@ -20,10 +21,10 @@ class KotlinImmutableCollectionsTraceDebuggerIntegrationTest: AbstractTraceDebug
     @Ignore
     @Test
     fun `tests_contract_list_GuavaImmutableListTest list`() {
-        runGradleTest(
+        runTest(
             testClassName = "tests.contract.list.GuavaImmutableListTest",
             testMethodName = "list",
-            gradleCommands = listOf(
+            commands = listOf(
                 ":kotlinx-collections-immutable:cleanJvmTest",
                 ":kotlinx-collections-immutable:jvmTest",
             )

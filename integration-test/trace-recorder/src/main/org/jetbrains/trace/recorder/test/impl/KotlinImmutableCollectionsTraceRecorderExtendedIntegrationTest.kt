@@ -8,8 +8,13 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.trace.recorder.test
+package org.jetbrains.trace.recorder.test.impl
 
+import org.jetbrains.trace.recorder.test.runner.AbstractTraceRecorderIntegrationTest
+import org.jetbrains.trace.recorder.test.runner.ExtendedTraceRecorderTest
+import org.jetbrains.trace.recorder.test.runner.loadResourceText
+import org.jetbrains.trace.recorder.test.runner.parseJsonEntries
+import org.jetbrains.trace.recorder.test.runner.transformEntriesToArray
 import org.junit.Test
 import org.junit.experimental.categories.Category
 import org.junit.experimental.runners.Enclosed
@@ -18,7 +23,7 @@ import org.junit.runners.Parameterized
 import java.nio.file.Paths
 
 @RunWith(Enclosed::class)
-class KtorTraceRecorderIntegrationTest {
+class KotlinImmutableCollectionsTraceRecorderExtendedIntegrationTest {
     @Category(ExtendedTraceRecorderTest::class)
     @RunWith(Parameterized::class)
     class Parametrized(
@@ -28,12 +33,15 @@ class KtorTraceRecorderIntegrationTest {
         private val perEntryJvmArgs: List<String>,
         private val perEntryCheckRepresentation: Boolean,
     ) : AbstractTraceRecorderIntegrationTest() {
-        override val projectPath: String = Paths.get("build", "integrationTestProjects", "ktor").toString()
-        override val formatArgs: Map<String, String> = mapOf("format" to "binary", "formatOption" to "stream")
+        override val projectPath: String = Paths.get("build", "integrationTestProjects", "kotlinx.collections.immutable").toString()
 
         @Test(timeout = 10 * 60 * 1000L)
-        fun runKtorTest() = runKtorTestImpl(
-            testClassName, testMethodName, gradleCommand, perEntryJvmArgs, perEntryCheckRepresentation
+        fun runKotlinImmutableCollectionsTest() = runTest(
+            testClassName = testClassName,
+            testMethodName = testMethodName,
+            commands = listOf(gradleCommand),
+            extraJvmArgs = perEntryJvmArgs,
+            checkRepresentation = perEntryCheckRepresentation,
         )
 
         companion object {
@@ -41,28 +49,12 @@ class KtorTraceRecorderIntegrationTest {
             @Parameterized.Parameters(name = "{index}: {0}::{1}")
             fun data(): Collection<Array<Any>> {
                 val json = loadResourceText(
-                    "/integrationTestData/ktorTests.json",
-                    KtorTraceRecorderIntegrationTest::class.java
+                    "/integrationTestData/kotlinxImmutableCollectionsTests.json",
+                    KotlinImmutableCollectionsTraceRecorderExtendedIntegrationTest::class.java
                 )
                 val entries = parseJsonEntries(json)
                 return entries.transformEntriesToArray()
             }
         }
     }
-}
-
-private fun AbstractTraceRecorderIntegrationTest.runKtorTestImpl(
-    testClassName: String,
-    testMethodName: String,
-    gradleCommand: String,
-    jvmArgs: List<String>,
-    checkRepresentation: Boolean,
-) {
-    runGradleTest(
-        testClassName = testClassName,
-        testMethodName = testMethodName,
-        gradleCommands = listOf(gradleCommand),
-        extraJvmArgs = jvmArgs,
-        checkRepresentation = checkRepresentation,
-    )
 }

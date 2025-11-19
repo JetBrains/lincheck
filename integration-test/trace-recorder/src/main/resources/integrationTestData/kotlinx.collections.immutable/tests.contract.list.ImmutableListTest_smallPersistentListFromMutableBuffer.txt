@@ -1,0 +1,118 @@
+# Thread 1
+ImmutableListTest.smallPersistentListFromMutableBuffer() at :0
+  new ArrayList(33): ArrayList@1 at ImmutableListTest.kt:121
+  loop(33 iterations) at ImmutableListTest.kt:121
+    <iteration 1> at ImmutableListTest.kt:121
+      it = 0 at fake.kt:1
+      ArrayList@1.add(0): true at ImmutableListTest.kt:121
+    <iteration 2> at ImmutableListTest.kt:121
+      it = 1 at fake.kt:1
+      ArrayList@1.add(1): true at ImmutableListTest.kt:121
+    <iteration 3> at ImmutableListTest.kt:121
+      it = 2 at fake.kt:1
+      ArrayList@1.add(2): true at ImmutableListTest.kt:121
+    <iteration 4> at ImmutableListTest.kt:121
+      it = 3 at fake.kt:1
+      ArrayList@1.add(3): true at ImmutableListTest.kt:121
+    <iteration 5> at ImmutableListTest.kt:121
+      it = 4 at fake.kt:1
+      ArrayList@1.add(4): true at ImmutableListTest.kt:121
+    <iteration 6> at ImmutableListTest.kt:121
+      it = 5 at fake.kt:1
+      ArrayList@1.add(5): true at ImmutableListTest.kt:121
+    <iteration 7> at ImmutableListTest.kt:121
+      it = 6 at fake.kt:1
+      ArrayList@1.add(6): true at ImmutableListTest.kt:121
+    <iteration 8> at ImmutableListTest.kt:121
+      it = 7 at fake.kt:1
+      ArrayList@1.add(7): true at ImmutableListTest.kt:121
+    <iteration 9> at ImmutableListTest.kt:121
+      it = 8 at fake.kt:1
+      ArrayList@1.add(8): true at ImmutableListTest.kt:121
+    <iteration 10> at ImmutableListTest.kt:121
+      it = 9 at fake.kt:1
+      ArrayList@1.add(9): true at ImmutableListTest.kt:121
+    <iteration 11> at ImmutableListTest.kt:121
+      it = 10 at fake.kt:1
+      ArrayList@1.add(10): true at ImmutableListTest.kt:121
+    <iteration 12> at ImmutableListTest.kt:121
+      it = 11 at fake.kt:1
+      ArrayList@1.add(11): true at ImmutableListTest.kt:121
+    <iteration 13> at ImmutableListTest.kt:121
+      it = 12 at fake.kt:1
+      ArrayList@1.add(12): true at ImmutableListTest.kt:121
+    <iteration 14> at ImmutableListTest.kt:121
+      it = 13 at fake.kt:1
+      ArrayList@1.add(13): true at ImmutableListTest.kt:121
+    <iteration 15> at ImmutableListTest.kt:121
+      it = 14 at fake.kt:1
+      ArrayList@1.add(14): true at ImmutableListTest.kt:121
+    <iteration 16> at ImmutableListTest.kt:121
+      it = 15 at fake.kt:1
+      ArrayList@1.add(15): true at ImmutableListTest.kt:121
+    <iteration 17> at ImmutableListTest.kt:121
+      it = 16 at fake.kt:1
+      ArrayList@1.add(16): true at ImmutableListTest.kt:121
+    <iteration 18> at ImmutableListTest.kt:121
+      it = 17 at fake.kt:1
+      ArrayList@1.add(17): true at ImmutableListTest.kt:121
+    <iteration 19> at ImmutableListTest.kt:121
+      it = 18 at fake.kt:1
+      ArrayList@1.add(18): true at ImmutableListTest.kt:121
+    <iteration 20> at ImmutableListTest.kt:121
+      it = 19 at fake.kt:1
+      ArrayList@1.add(19): true at ImmutableListTest.kt:121
+    <iteration 21> at ImmutableListTest.kt:121
+      it = 20 at fake.kt:1
+      ArrayList@1.add(20): true at ImmutableListTest.kt:121
+    <iteration 22> at ImmutableListTest.kt:121
+      it = 21 at fake.kt:1
+      ArrayList@1.add(21): true at ImmutableListTest.kt:121
+    <iteration 23> at ImmutableListTest.kt:121
+      it = 22 at fake.kt:1
+      ArrayList@1.add(22): true at ImmutableListTest.kt:121
+    <iteration 24> at ImmutableListTest.kt:121
+      it = 23 at fake.kt:1
+      ArrayList@1.add(23): true at ImmutableListTest.kt:121
+    <iteration 25> at ImmutableListTest.kt:121
+      it = 24 at fake.kt:1
+      ArrayList@1.add(24): true at ImmutableListTest.kt:121
+    <iteration 26> at ImmutableListTest.kt:121
+      it = 25 at fake.kt:1
+      ArrayList@1.add(25): true at ImmutableListTest.kt:121
+    <iteration 27> at ImmutableListTest.kt:121
+      it = 26 at fake.kt:1
+      ArrayList@1.add(26): true at ImmutableListTest.kt:121
+    <iteration 28> at ImmutableListTest.kt:121
+      it = 27 at fake.kt:1
+      ArrayList@1.add(27): true at ImmutableListTest.kt:121
+    <iteration 29> at ImmutableListTest.kt:121
+      it = 28 at fake.kt:1
+      ArrayList@1.add(28): true at ImmutableListTest.kt:121
+    <iteration 30> at ImmutableListTest.kt:121
+      it = 29 at fake.kt:1
+      ArrayList@1.add(29): true at ImmutableListTest.kt:121
+    <iteration 31> at ImmutableListTest.kt:121
+      it = 30 at fake.kt:1
+      ArrayList@1.add(30): true at ImmutableListTest.kt:121
+    <iteration 32> at ImmutableListTest.kt:121
+      it = 31 at fake.kt:1
+      ArrayList@1.add(31): true at ImmutableListTest.kt:121
+    <iteration 33> at ImmutableListTest.kt:121
+      it = 32 at fake.kt:1
+      ArrayList@1.add(32): true at ImmutableListTest.kt:121
+  list = ArrayList@1 at ImmutableListTest.kt:121
+  persistentListOf(): SmallPersistentVector@1 at ImmutableListTest.kt:122
+    persistentVectorOf(): SmallPersistentVector@1 at extensions.kt:452
+      SmallPersistentVector.getEMPTY(): SmallPersistentVector@1 at Utils.kt:18
+  mutate = SmallPersistentVector@1 at ImmutableListTest.kt:122
+  mutate.builder(): PersistentVectorBuilder@1 at extensions.kt:41
+  it = PersistentVectorBuilder@1 at extensions.kt:41
+  it.addAll(list): true at ImmutableListTest.kt:122
+  PersistentVectorBuilder@1.build(): PersistentVector@1 at extensions.kt:41
+  vector = PersistentVector@1 at ImmutableListTest.kt:122
+  getLastIndex(vector): 32 at ImmutableListTest.kt:123
+  vector.removeAt(32): SmallPersistentVector@1 at ImmutableListTest.kt:123
+  vector = SmallPersistentVector@1 at ImmutableListTest.kt:123
+  dropLast(list, 1): ArrayList@1 at ImmutableListTest.kt:124
+  assertEquals(ArrayList@1, vector, null, 4, null) at ImmutableListTest.kt:124
