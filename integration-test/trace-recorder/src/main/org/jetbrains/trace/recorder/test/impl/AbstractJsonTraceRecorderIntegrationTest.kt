@@ -14,6 +14,7 @@ import org.jetbrains.trace.recorder.test.runner.AbstractTraceRecorderIntegration
 import org.jetbrains.trace.recorder.test.runner.loadResourceText
 import org.jetbrains.trace.recorder.test.runner.parseJsonEntries
 import java.nio.file.Path
+import java.util.Locale
 import kotlin.io.path.writeText
 
 abstract class AbstractJsonTraceRecorderIntegrationTest(
@@ -46,21 +47,30 @@ abstract class AbstractJsonTraceRecorderIntegrationTest(
             }
         }
 
+        private fun makeClassName(pieces: List<String>) = pieces
+            .joinToString("_")
+            .replaceFirstChar { it.titlecase(Locale.ENGLISH) }
+            .replace('.', '_')
+            .replace(' ', '_')
+            .let { name ->
+                val isValidIdentifier = name.isNotEmpty() && name.drop(1).all { it.isJavaIdentifierPart() } &&
+                        name.first().isJavaIdentifierStart()
+                if (isValidIdentifier) name else "`$name`"
+            }
+
+        private fun String.toSimpleName() = substringAfterLast('.')
+
         fun renderSingleTestCode(
-            groupName: String,
             testCase: TestCase,
             abstractTestClass: String,
             timeoutMinutes: Long,
             category: String?,
-            useSimpleClassName: Boolean
+            classNamesToIgnore: Int,
         ): String {
-            val formattedOriginalClassName = testCase.className
-                .let { if (useSimpleClassName) it.substringAfterLast(".") else it.replace('.', '_') }
-                .replace('$', '_')
+            val formattedOriginalClassNamePieces = testCase.className.toSimpleName()
+                .split('$').drop(classNamesToIgnore)
 
-            val generatedTestClassName =
-                """${groupName}TraceRecorderIntegrationTest_${formattedOriginalClassName}_${testCase.methodName}"""
-                    .let { if (it.contains(' ')) "`$it`" else it }
+            val generatedTestClassName = makeClassName(formattedOriginalClassNamePieces + testCase.methodName)
 
             fun String.toLiteral(): String {
                 val dollarsCount = generateSequence("") { "$it$" }.takeWhile { it in this }.last().length
@@ -69,11 +79,12 @@ abstract class AbstractJsonTraceRecorderIntegrationTest(
             }
 
             val categoryAnnotation = category?.let { "@Category($it::class)\n" } ?: ""
+            val testName = makeClassName(testCase.className.toSimpleName().split('$') + testCase.methodName)
 
             return categoryAnnotation + """
                 class $generatedTestClassName : $abstractTestClass() {
                     @Test(timeout = $timeoutMinutes * 60 * 1000L)
-                    fun test() {
+                    fun $testName() {
                         test(
                             TestCase(
                                 className = ${testCase.className.toLiteral()},
@@ -88,6 +99,43 @@ abstract class AbstractJsonTraceRecorderIntegrationTest(
                 """.trimIndent()
         }
 
+        private fun renderTestGroup(
+            testCases: Collection<TestCase>,
+            abstractTestClass: String,
+            timeoutMinutes: Long,
+            category: String?,
+            outerClassNamesToIgnore: Int,
+        ): String {
+            fun TestCase.classNameSuffix(): String {
+                val parts = className.split('$')
+                return parts.drop(outerClassNamesToIgnore).joinToString("$")
+            }
+
+            val subGroups = testCases
+                .filter { it.classNameSuffix().isNotEmpty() }
+                .groupBy { it.classNameSuffix().substringBefore('$') }
+
+            val testCases = testCases.filter { it.classNameSuffix().isEmpty() }
+
+            val clashedSimpleClassNames = subGroups.keys.map { it.toSimpleName() }.groupBy { it }.filter { it.value.size > 1 }.keys
+
+            val subGroupResults = subGroups.mapValues { (className, cases) ->
+                val subResult =
+                    renderTestGroup(cases, abstractTestClass, timeoutMinutes, category, outerClassNamesToIgnore + 1)
+                val simpleClassName = className.substringAfterLast('.')
+                val classNameToUse = if (simpleClassName in clashedSimpleClassNames) className else simpleClassName
+                val categoryAnnotation = category?.let { "@Category($it::class)\n" } ?: ""
+                val innerClassBody = subResult.prependIndent(" ".repeat(4))
+                "@RunWith(Enclosed::class)\n${categoryAnnotation}class ${makeClassName(listOf(classNameToUse))} {\n$innerClassBody\n}"
+            }
+
+            val singleTestCases = testCases.map {
+                renderSingleTestCode(it, abstractTestClass, timeoutMinutes, category, outerClassNamesToIgnore)
+            }
+
+            return (singleTestCases + subGroupResults.values).joinToString("\n\n")
+        }
+
         fun renderAllTestsCode(
             groupName: String,
             resourcePath: String,
@@ -99,16 +147,8 @@ abstract class AbstractJsonTraceRecorderIntegrationTest(
         ): String {
             val testCases = getAllTestCases(resourcePath)
 
-            val clashes = testCases
-                .groupBy(
-                    keySelector = { it.className.substringAfterLast(".") to it.methodName },
-                    valueTransform = { it.className }
-                )
-                .filter { (_, cases) -> cases.size > 1 }
-                .values.flatten()
-
             val beforeCustomImports = """
-                @file:Suppress("ClassName")
+                @file:Suppress("ClassName", "FunctionName")
                 
                 package $packageName
                 
@@ -116,6 +156,8 @@ abstract class AbstractJsonTraceRecorderIntegrationTest(
                 import org.jetbrains.trace.recorder.test.runner.*
                 import org.junit.Test
                 import org.junit.experimental.categories.Category
+                import org.junit.experimental.runners.Enclosed
+                import org.junit.runner.RunWith
                 """.trimIndent()
 
             val disclaimer = """
@@ -125,11 +167,10 @@ abstract class AbstractJsonTraceRecorderIntegrationTest(
                 */
                 """.trimIndent()
 
-            val renderedTestCases = testCases.joinToString("\n\n") {
-                renderSingleTestCode(groupName, it, abstractTestClass, timeoutMinutes, category, !clashes.contains(it.className))
-            }
+            val renderedTestCases = renderTestGroup(testCases, abstractTestClass, timeoutMinutes, category, 0)
+                .prependIndent(" ".repeat(4))
 
-            return "$beforeCustomImports${customImports.joinToString("\n")}\n\n$disclaimer\n\n$renderedTestCases\n"
+            return "$beforeCustomImports${customImports.joinToString("\n")}\n\n$disclaimer\n\n@RunWith(Enclosed::class)\nclass $groupName {\n$renderedTestCases\n}\n"
         }
     }
 }
