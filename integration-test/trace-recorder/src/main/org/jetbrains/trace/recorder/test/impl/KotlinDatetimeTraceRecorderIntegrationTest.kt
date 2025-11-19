@@ -17,16 +17,15 @@ import java.nio.file.Paths
 class KotlinDatetimeTraceRecorderIntegrationTest : AbstractTraceRecorderIntegrationTest() {
     override val projectPath: String = Paths.get("build", "integrationTestProjects", "kotlinx-datetime").toString()
 
-    // This test is run without representation because it only checks
-    // that the test does not fail because of the turned-on kover agent.
+    // This test checks that the trace-recorder agent does not fail because of
+    // the turned-on kover agent and that all coverage instructions are filtered out.
     // See JBRes-6555 for details.
     @Test
     fun `kotlinx_datetime_test_ConvertersTest instant`() {
         runTest(
             testClassName = "kotlinx.datetime.test.ConvertersTest",
             testMethodName = "instant",
-            commands = listOf(":kotlinx-datetime:jvmTest"),
-            checkRepresentation = false,
+            commands = listOf(":kotlinx-datetime:jvmTest")
         )
     }
 }
