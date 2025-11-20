@@ -10,11 +10,12 @@
 
 package org.jetbrains.trace.recorder.test.runner
 
+import AbstractGradleTraceIntegrationTest
 import java.io.File
 import java.nio.file.Paths
 import kotlin.io.path.createTempFile
 
-abstract class KotlinCompilerTraceRecorderJsonTests : AbstractJsonTraceRecorderIntegrationTest() {
+abstract class KotlinCompilerTraceRecorderJsonTests : AbstractGradleTraceIntegrationTest() {
     override val projectPath = Paths.get("build", "integrationTestProjects", "kotlin").toString()
     override val formatArgs: Map<String, String> = mapOf("format" to "binary", "formatOption" to "stream")
 

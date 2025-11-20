@@ -10,10 +10,6 @@
 
 package org.jetbrains.trace.recorder.test.runner
 
-import AbstractGradleTraceIntegrationTest
-
-abstract class AbstractJsonTraceRecorderIntegrationTest() : AbstractGradleTraceIntegrationTest() {}
-
 data class TestCase(
     val className: String,
     val methodName: String,
