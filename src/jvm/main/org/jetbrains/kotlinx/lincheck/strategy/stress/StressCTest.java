@@ -24,6 +24,7 @@ import java.lang.annotation.*;
 /**
  * This annotation configures concurrent test using stress strategy.
  */
+@Deprecated
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 @Repeatable(StressCTest.StressCTests.class)
@@ -116,6 +117,7 @@ public @interface StressCTest {
     /**
      * Holder annotation for {@link StressCTest}.
      */
+    @Deprecated
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.TYPE)
     @Inherited

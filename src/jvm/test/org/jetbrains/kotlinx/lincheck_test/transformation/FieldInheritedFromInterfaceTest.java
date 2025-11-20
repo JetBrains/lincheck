@@ -10,19 +10,19 @@
 
 package org.jetbrains.kotlinx.lincheck_test.transformation;
 
-import org.jetbrains.kotlinx.lincheck.LinChecker;
+import org.jetbrains.lincheck.datastructures.ModelCheckingOptions;
 import org.jetbrains.lincheck.datastructures.Operation;
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTest;
 import org.junit.Test;
 
-@ModelCheckingCTest(iterations = 1)
 public class FieldInheritedFromInterfaceTest implements InterfaceWithField {
     @Operation
     public int get() { return INTERFACE_CONSTANT.getValue(); }
 
     @Test
     public void test() {
-        new LinChecker(FieldInheritedFromInterfaceTest.class, null).check();
+        new ModelCheckingOptions()
+            .iterations(1)
+            .check(FieldInheritedFromInterfaceTest.class);
     }
 }
 

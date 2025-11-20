@@ -10,14 +10,12 @@
 
 package org.jetbrains.kotlinx.lincheck_test;
 
-import org.jetbrains.kotlinx.lincheck.*;
 import org.jetbrains.lincheck.datastructures.Operation;
 import org.jetbrains.lincheck.datastructures.Param;
 import org.jetbrains.lincheck.datastructures.IntGen;
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest;
+import org.jetbrains.lincheck.datastructures.StressOptions;
 import org.junit.Test;
 
-@StressCTest(iterations = 5, actorsBefore = 0, actorsPerThread = 2, actorsAfter = 0)
 public class ResultAsParameterTest {
     private final Stack stack = new Stack();
     private Node lastPushNode = null;
@@ -42,7 +40,12 @@ public class ResultAsParameterTest {
 
     @Test
     public void test() {
-        LinChecker.check(ResultAsParameterTest.class);
+        new StressOptions()
+            .iterations(5)
+            .actorsBefore(0)
+            .actorsPerThread(2)
+            .actorsAfter(0)
+            .check(ResultAsParameterTest.class);
     }
 
     private static class Stack {

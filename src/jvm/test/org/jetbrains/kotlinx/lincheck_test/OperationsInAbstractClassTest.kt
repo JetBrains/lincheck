@@ -9,16 +9,16 @@
  */
 package org.jetbrains.kotlinx.lincheck_test
 
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+import org.jetbrains.lincheck.datastructures.StressOptions
 import org.jetbrains.lincheck.datastructures.Operation
 import org.junit.*
 
-@StressCTest(iterations = 1, minimizeFailedScenario = false)
 class OperationsInAbstractClassTest : AbstractTestClass() {
-    @Suppress("DEPRECATION")
     @Test
-    fun test(): Unit = LinChecker.check(this::class.java)
+    fun test(): Unit = StressOptions()
+        .iterations(1)
+        .minimizeFailedScenario(false)
+        .check(this::class)
 }
 
 open class AbstractTestClass {

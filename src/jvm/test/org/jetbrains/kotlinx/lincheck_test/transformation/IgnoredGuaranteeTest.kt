@@ -10,7 +10,6 @@
 package org.jetbrains.kotlinx.lincheck_test.transformation
 
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTest
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.datastructures.forClasses
 import org.junit.*
@@ -25,7 +24,6 @@ import org.junit.*
  * If the ignored method is not processed properly, this test fails
  * by timeout since the number of invocations is set to Int.MAX_VALUE.
  */
-@ModelCheckingCTest(actorsBefore = 0, actorsAfter = 0, actorsPerThread = 100, invocationsPerIteration = Int.MAX_VALUE, iterations = 50)
 class IgnoredGuaranteeTest {
     var value: Int = 0
 
@@ -38,13 +36,13 @@ class IgnoredGuaranteeTest {
 
     @Test(timeout = 100_000)
     fun test() {
-        val options = ModelCheckingOptions()
-                .actorsBefore(0)
-                .actorsAfter(0)
-                .actorsPerThread(100)
-                .iterations(1)
-                .invocationsPerIteration(Int.MAX_VALUE)
-                .addGuarantee(forClasses(this::class.java.name).methods("inc").ignore())
-        options.check(this::class.java)
+        ModelCheckingOptions()
+            .actorsBefore(0)
+            .actorsAfter(0)
+            .actorsPerThread(100)
+            .iterations(50)
+            .invocationsPerIteration(Int.MAX_VALUE)
+            .addGuarantee(forClasses(this::class.java.name).methods("inc").ignore())
+            .check(this::class)
     }
 }

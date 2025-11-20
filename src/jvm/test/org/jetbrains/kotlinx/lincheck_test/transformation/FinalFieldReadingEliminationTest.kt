@@ -9,9 +9,8 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.transformation
 
-import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTest
+import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.junit.Test
 import java.io.Serializable
 
@@ -22,7 +21,6 @@ import java.io.Serializable
  * Otherwise, this test fails by timeout since
  * the number of invocations is set to [Int.MAX_VALUE].
  */
-@ModelCheckingCTest(actorsBefore = 0, actorsAfter = 0, actorsPerThread = 50, invocationsPerIteration = Int.MAX_VALUE, iterations = 50, minimizeFailedScenario = false)
 class FinalFieldReadingEliminationTest {
     val primitiveValue: Int = 32
     val nonPrimitiveValue = ValueHolder(2)
@@ -35,8 +33,14 @@ class FinalFieldReadingEliminationTest {
 
     @Test(timeout = 100_000)
     fun test() {
-        @Suppress("DEPRECATION")
-        LinChecker.check(this::class.java)
+        val opts = ModelCheckingOptions()
+            .actorsBefore(0)
+            .actorsAfter(0)
+            .actorsPerThread(50)
+            .invocationsPerIteration(Int.MAX_VALUE)
+            .iterations(50)
+            .minimizeFailedScenario(false)
+        opts.check(this::class)
     }
 
     data class ValueHolder(val value: Int) : Serializable
