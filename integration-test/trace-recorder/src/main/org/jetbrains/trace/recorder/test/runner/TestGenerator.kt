@@ -10,7 +10,6 @@
 
 package org.jetbrains.trace.recorder.test.runner
 
-import org.jetbrains.trace.recorder.test.runner.AbstractJsonTraceRecorderIntegrationTest.TestCase
 import java.nio.file.Path
 import java.util.Locale
 import kotlin.io.path.writeText

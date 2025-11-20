@@ -11,20 +11,14 @@
 package org.jetbrains.trace.recorder.test.runner
 
 import AbstractGradleTraceIntegrationTest
-import java.util.Locale
 
-abstract class AbstractJsonTraceRecorderIntegrationTest(
-    override val projectPath: String,
-) : AbstractGradleTraceIntegrationTest() {
-    override val formatArgs: Map<String, String> = mapOf("format" to "binary", "formatOption" to "stream")
+abstract class AbstractJsonTraceRecorderIntegrationTest() : AbstractGradleTraceIntegrationTest() {}
 
-    data class TestCase(
-        val className: String,
-        val methodName: String,
-        val gradleCommand: String,
-        val jvmArgs: List<String>,
-        val checkRepresentation: Boolean,
-        val reasonForMuting: String? = null,
-    )
-}
-
+data class TestCase(
+    val className: String,
+    val methodName: String,
+    val gradleCommand: String,
+    val jvmArgs: List<String>,
+    val checkRepresentation: Boolean,
+    val reasonForMuting: String? = null,
+)

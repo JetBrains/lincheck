@@ -14,9 +14,10 @@ import java.io.File
 import java.nio.file.Paths
 import kotlin.io.path.createTempFile
 
-abstract class KotlinCompilerTraceRecorderJsonTests : AbstractJsonTraceRecorderIntegrationTest(
-    projectPath = Paths.get("build", "integrationTestProjects", "kotlin").toString(),
-) {
+abstract class KotlinCompilerTraceRecorderJsonTests : AbstractJsonTraceRecorderIntegrationTest() {
+    override val projectPath = Paths.get("build", "integrationTestProjects", "kotlin").toString()
+    override val formatArgs: Map<String, String> = mapOf("format" to "binary", "formatOption" to "stream")
+
     override fun runTestImpl(
         testClassName: String,
         testMethodName: String,

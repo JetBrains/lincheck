@@ -12,9 +12,8 @@ package org.jetbrains.trace.recorder.test.runner
 
 import java.nio.file.Paths
 
-abstract class KotlinImmutableCollectionsTraceRecorderJsonTests : AbstractJsonTraceRecorderIntegrationTest(
-    projectPath = Paths.get("build", "integrationTestProjects", "kotlinx.collections.immutable").toString(),
-) {
+abstract class KotlinImmutableCollectionsTraceRecorderJsonTests : AbstractJsonTraceRecorderIntegrationTest() {
+    override val projectPath = Paths.get("build", "integrationTestProjects", "kotlinx.collections.immutable").toString()
     override val formatArgs: Map<String, String> = mapOf("format" to "text", "formatOption" to "verbose",)
 
     companion object Companion : TestGenerator(
