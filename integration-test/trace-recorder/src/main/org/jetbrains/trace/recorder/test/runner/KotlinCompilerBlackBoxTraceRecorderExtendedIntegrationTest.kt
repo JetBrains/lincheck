@@ -18,6 +18,20 @@ abstract class KotlinCompilerTraceRecorderJsonTests : AbstractJsonTraceRecorderI
     projectPath = Paths.get("build", "integrationTestProjects", "kotlin").toString(),
     checkRepresentationByDefault = false,
 ) {
+    override fun runTestImpl(
+        testClassName: String,
+        testMethodName: String,
+        extraJvmArgs: List<String>,
+        extraAgentArgs: Map<String, String>,
+        commands: List<String>,
+        outputFile: File
+    ) {
+        withPermissions { permissions ->
+            val allJvmArgs = listOf("-Djava.security.policy==${permissions.absolutePath}") + extraJvmArgs
+            super.runTestImpl(testClassName, testMethodName, extraJvmArgs = allJvmArgs, extraAgentArgs, commands, outputFile)
+        }
+    }
+
     override fun test(testCase: TestCase) = withPermissions { permissions ->
         val allJvmArgs = listOf("-Djava.security.policy==${permissions.absolutePath}") + testCase.jvmArgs
         super.test(testCase.copy(jvmArgs = allJvmArgs))

@@ -20,14 +20,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.CharArrayBuilderTest",
-                        methodName = "testAppendFewChars",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.CharArrayBuilderTest",
+                    testMethodName = "testAppendFewChars",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -37,14 +35,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.CharArrayBuilderTest",
-                        methodName = "testAppendManyChars",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.CharArrayBuilderTest",
+                    testMethodName = "testAppendManyChars",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -54,14 +50,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.CharArrayBuilderTest",
-                        methodName = "testAppendSingleChar",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.CharArrayBuilderTest",
+                    testMethodName = "testAppendSingleChar",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -71,14 +65,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.CharArrayBuilderTest",
-                        methodName = "testAppendSubStrings",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.CharArrayBuilderTest",
+                    testMethodName = "testAppendSubStrings",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -88,14 +80,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.CharArrayBuilderTest",
-                        methodName = "testSubString",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.CharArrayBuilderTest",
+                    testMethodName = "testSubString",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -108,14 +98,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.ChunkedTest",
-                        methodName = "exceptionDuringWrite",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.ChunkedTest",
+                    testMethodName = "exceptionDuringWrite",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -125,14 +113,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.ChunkedTest",
-                        methodName = "longLoop",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.ChunkedTest",
+                    testMethodName = "longLoop",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -142,14 +128,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.ChunkedTest",
-                        methodName = "testChunkedWithContentLength",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.ChunkedTest",
+                    testMethodName = "testChunkedWithContentLength",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -159,14 +143,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.ChunkedTest",
-                        methodName = "testContent",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.ChunkedTest",
+                    testMethodName = "testContent",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -176,14 +158,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.ChunkedTest",
-                        methodName = "testContentMixedLineEndings",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.ChunkedTest",
+                    testMethodName = "testContentMixedLineEndings",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -193,14 +173,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.ChunkedTest",
-                        methodName = "testContentMultipleChunks",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.ChunkedTest",
+                    testMethodName = "testContentMultipleChunks",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -210,14 +188,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.ChunkedTest",
-                        methodName = "testContentWithRcLineEnding",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.ChunkedTest",
+                    testMethodName = "testContentWithRcLineEnding",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -227,14 +203,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.ChunkedTest",
-                        methodName = "testEmpty",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.ChunkedTest",
+                    testMethodName = "testEmpty",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -244,14 +218,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.ChunkedTest",
-                        methodName = "testEmptyNoCRLF",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.ChunkedTest",
+                    testMethodName = "testEmptyNoCRLF",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -261,14 +233,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.ChunkedTest",
-                        methodName = "testEmptyWithTrailing",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.ChunkedTest",
+                    testMethodName = "testEmptyWithTrailing",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -278,14 +248,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.ChunkedTest",
-                        methodName = "testEmptyWithoutCrLf",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.ChunkedTest",
+                    testMethodName = "testEmptyWithoutCrLf",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -295,14 +263,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.ChunkedTest",
-                        methodName = "testEncodeChunks",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.ChunkedTest",
+                    testMethodName = "testEncodeChunks",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -312,14 +278,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.ChunkedTest",
-                        methodName = "testEncodeEmpty",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.ChunkedTest",
+                    testMethodName = "testEncodeEmpty",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -332,14 +296,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.HeaderParserTest",
-                        methodName = "parseHeadersDelimitersInHeaderNameShouldBeProhibited",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
+                    testMethodName = "parseHeadersDelimitersInHeaderNameShouldBeProhibited",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -349,14 +311,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.HeaderParserTest",
-                        methodName = "parseHeadersEmptyHeaderNameShouldBeProhibited",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
+                    testMethodName = "parseHeadersEmptyHeaderNameShouldBeProhibited",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -366,14 +326,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.HeaderParserTest",
-                        methodName = "parseHeadersFoldingShouldBeProhibited",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
+                    testMethodName = "parseHeadersFoldingShouldBeProhibited",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -383,14 +341,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.HeaderParserTest",
-                        methodName = "parseHeadersNoLeadingSpace",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
+                    testMethodName = "parseHeadersNoLeadingSpace",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -400,14 +356,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.HeaderParserTest",
-                        methodName = "parseHeadersNoLeadingSpaceWithTrailingSpaces",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
+                    testMethodName = "parseHeadersNoLeadingSpaceWithTrailingSpaces",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -417,14 +371,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.HeaderParserTest",
-                        methodName = "parseHeadersSmokeTest",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
+                    testMethodName = "parseHeadersSmokeTest",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -434,14 +386,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.HeaderParserTest",
-                        methodName = "parseHeadersSpaceAfterHeaderNameShouldBeProhibited",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
+                    testMethodName = "parseHeadersSpaceAfterHeaderNameShouldBeProhibited",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -451,14 +401,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.HeaderParserTest",
-                        methodName = "parseHeadersSpacesInHeaderNameShouldBeProhibited",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
+                    testMethodName = "parseHeadersSpacesInHeaderNameShouldBeProhibited",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -468,14 +416,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.HeaderParserTest",
-                        methodName = "parseHeadersSpacesInHeaderNameShouldBeProhibitedFixed",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
+                    testMethodName = "parseHeadersSpacesInHeaderNameShouldBeProhibitedFixed",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -485,14 +431,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.HeaderParserTest",
-                        methodName = "parseHeadersWithEmptyValue",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
+                    testMethodName = "parseHeadersWithEmptyValue",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -502,14 +446,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.HeaderParserTest",
-                        methodName = "parseHeadersWithMultipleEmptyValues",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
+                    testMethodName = "parseHeadersWithMultipleEmptyValues",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -519,14 +461,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.HeaderParserTest",
-                        methodName = "parseHeadersWithMultipleValuesSeparatedWithComma",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
+                    testMethodName = "parseHeadersWithMultipleValuesSeparatedWithComma",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -536,14 +476,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.HeaderParserTest",
-                        methodName = "testParseCookieHeader",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
+                    testMethodName = "testParseCookieHeader",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -556,14 +494,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.HeadersJvmTest",
-                        methodName = "Host header with invalid '#' character",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
+                    testMethodName = "Host header with invalid '#' character",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -573,14 +509,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.HeadersJvmTest",
-                        methodName = "Host header with invalid '@' character",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
+                    testMethodName = "Host header with invalid '@' character",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -590,14 +524,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.HeadersJvmTest",
-                        methodName = "Host header with invalid character (question mark)",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
+                    testMethodName = "Host header with invalid character (question mark)",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -607,14 +539,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.HeadersJvmTest",
-                        methodName = "Host header with invalid character (slash)",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
+                    testMethodName = "Host header with invalid character (slash)",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -624,14 +554,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.HeadersJvmTest",
-                        methodName = "alternativeLineSeparatorsBoth",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
+                    testMethodName = "alternativeLineSeparatorsBoth",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -641,14 +569,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.HeadersJvmTest",
-                        methodName = "alternativeLineSeparatorsFirst",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
+                    testMethodName = "alternativeLineSeparatorsFirst",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -658,14 +584,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.HeadersJvmTest",
-                        methodName = "alternativeLineSeparatorsSecond",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
+                    testMethodName = "alternativeLineSeparatorsSecond",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -675,14 +599,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.HeadersJvmTest",
-                        methodName = "extraSpacesLeading",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
+                    testMethodName = "extraSpacesLeading",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -692,14 +614,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.HeadersJvmTest",
-                        methodName = "extraSpacesMiddle",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
+                    testMethodName = "extraSpacesMiddle",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -709,14 +629,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.HeadersJvmTest",
-                        methodName = "extraSpacesMiddleBeforeColon",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
+                    testMethodName = "extraSpacesMiddleBeforeColon",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -726,14 +644,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.HeadersJvmTest",
-                        methodName = "extraSpacesMiddleBeforeColonNoAfter",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
+                    testMethodName = "extraSpacesMiddleBeforeColonNoAfter",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -743,14 +659,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.HeadersJvmTest",
-                        methodName = "extraSpacesTrailing",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
+                    testMethodName = "extraSpacesTrailing",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -760,14 +674,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.HeadersJvmTest",
-                        methodName = "smokeTest",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
+                    testMethodName = "smokeTest",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -777,14 +689,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.HeadersJvmTest",
-                        methodName = "smokeTestUnicode",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
+                    testMethodName = "smokeTestUnicode",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -794,14 +704,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.HeadersJvmTest",
-                        methodName = "testBlankHeaderValue",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
+                    testMethodName = "testBlankHeaderValue",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -811,14 +719,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.HeadersJvmTest",
-                        methodName = "testEmptyHeaderValue",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
+                    testMethodName = "testEmptyHeaderValue",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -828,14 +734,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.cio.HeadersJvmTest",
-                        methodName = "testExpectHttpBodyGet",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
+                    testMethodName = "testExpectHttpBodyGet",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -848,14 +752,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.tls.certificates.CertificatesTest",
-                        methodName = "generateCertificateWithCA_default",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network-tls-certificates:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.tls.certificates.CertificatesTest",
+                    testMethodName = "generateCertificateWithCA_default",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network-tls-certificates:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -865,14 +767,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.tls.certificates.CertificatesTest",
-                        methodName = "generateCertificateWithCA_keyTypeCA",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network-tls-certificates:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.tls.certificates.CertificatesTest",
+                    testMethodName = "generateCertificateWithCA_keyTypeCA",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network-tls-certificates:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -882,14 +782,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.tls.certificates.CertificatesTest",
-                        methodName = "generateCertificateWithCA_keyTypeClient",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network-tls-certificates:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.tls.certificates.CertificatesTest",
+                    testMethodName = "generateCertificateWithCA_keyTypeClient",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network-tls-certificates:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -899,14 +797,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.tls.certificates.CertificatesTest",
-                        methodName = "generateCertificate_alsoStoresTheCertificateWithCertSuffix",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network-tls-certificates:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.tls.certificates.CertificatesTest",
+                    testMethodName = "generateCertificate_alsoStoresTheCertificateWithCertSuffix",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network-tls-certificates:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -916,14 +812,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.tls.certificates.CertificatesTest",
-                        methodName = "generateCertificate_customValues",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network-tls-certificates:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.tls.certificates.CertificatesTest",
+                    testMethodName = "generateCertificate_customValues",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network-tls-certificates:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -933,14 +827,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.tls.certificates.CertificatesTest",
-                        methodName = "generateCertificate_default",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network-tls-certificates:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.tls.certificates.CertificatesTest",
+                    testMethodName = "generateCertificate_default",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network-tls-certificates:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -950,14 +842,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.tls.certificates.CertificatesTest",
-                        methodName = "generateCertificate_keyTypeCA",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network-tls-certificates:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.tls.certificates.CertificatesTest",
+                    testMethodName = "generateCertificate_keyTypeCA",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network-tls-certificates:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -967,14 +857,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.tls.certificates.CertificatesTest",
-                        methodName = "generateCertificate_keyTypeClient",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network-tls-certificates:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.tls.certificates.CertificatesTest",
+                    testMethodName = "generateCertificate_keyTypeClient",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network-tls-certificates:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -984,14 +872,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.tls.certificates.CertificatesTest",
-                        methodName = "generateCertificate_onlyGeneratesOneAlias",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network-tls-certificates:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.tls.certificates.CertificatesTest",
+                    testMethodName = "generateCertificate_onlyGeneratesOneAlias",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network-tls-certificates:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1001,14 +887,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.tls.certificates.CertificatesTest",
-                        methodName = "generateCertificate_writeToFile",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network-tls-certificates:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.tls.certificates.CertificatesTest",
+                    testMethodName = "generateCertificate_writeToFile",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network-tls-certificates:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1018,14 +902,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.tls.certificates.CertificatesTest",
-                        methodName = "generateCertificate_writeToFile_customKeyAndJksPassword",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network-tls-certificates:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.tls.certificates.CertificatesTest",
+                    testMethodName = "generateCertificate_writeToFile_customKeyAndJksPassword",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network-tls-certificates:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1035,14 +917,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.tls.certificates.CertificatesTest",
-                        methodName = "generateCertificate_writeToFile_customKeyPassword",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network-tls-certificates:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.tls.certificates.CertificatesTest",
+                    testMethodName = "generateCertificate_writeToFile_customKeyPassword",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network-tls-certificates:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1055,14 +935,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.tls.certificates.KeyStoreBuilderTest",
-                        methodName = "buildKeyStore_customAlgorithmAndKeySize",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network-tls-certificates:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.tls.certificates.KeyStoreBuilderTest",
+                    testMethodName = "buildKeyStore_customAlgorithmAndKeySize",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network-tls-certificates:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1072,14 +950,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.tls.certificates.KeyStoreBuilderTest",
-                        methodName = "buildKeyStore_customIpsAndDomains",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network-tls-certificates:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.tls.certificates.KeyStoreBuilderTest",
+                    testMethodName = "buildKeyStore_customIpsAndDomains",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network-tls-certificates:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1089,14 +965,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.tls.certificates.KeyStoreBuilderTest",
-                        methodName = "buildKeyStore_customValidity",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network-tls-certificates:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.tls.certificates.KeyStoreBuilderTest",
+                    testMethodName = "buildKeyStore_customValidity",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network-tls-certificates:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1106,14 +980,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.tls.certificates.KeyStoreBuilderTest",
-                        methodName = "buildKeyStore_keyTypeCA",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network-tls-certificates:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.tls.certificates.KeyStoreBuilderTest",
+                    testMethodName = "buildKeyStore_keyTypeCA",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network-tls-certificates:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1123,14 +995,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.tls.certificates.KeyStoreBuilderTest",
-                        methodName = "buildKeyStore_keyTypeClient",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network-tls-certificates:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.tls.certificates.KeyStoreBuilderTest",
+                    testMethodName = "buildKeyStore_keyTypeClient",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network-tls-certificates:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1140,14 +1010,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.tls.certificates.KeyStoreBuilderTest",
-                        methodName = "buildKeyStore_minimal",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network-tls-certificates:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.tls.certificates.KeyStoreBuilderTest",
+                    testMethodName = "buildKeyStore_minimal",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network-tls-certificates:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1160,14 +1028,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.htmx.html.HxAttributesTest",
-                        methodName = "htmxAttributes",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-htmx-html:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.htmx.html.HxAttributesTest",
+                    testMethodName = "htmxAttributes",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-htmx-html:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1180,14 +1046,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.AuthHeaderParseTest",
-                        methodName = "testBasicSchema",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.AuthHeaderParseTest",
+                    testMethodName = "testBasicSchema",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1197,14 +1061,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.AuthHeaderParseTest",
-                        methodName = "testMultipleParameters",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.AuthHeaderParseTest",
+                    testMethodName = "testMultipleParameters",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1214,14 +1076,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.AuthHeaderParseTest",
-                        methodName = "testParameter",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.AuthHeaderParseTest",
+                    testMethodName = "testParameter",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1231,14 +1091,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.AuthHeaderParseTest",
-                        methodName = "testParametersWithoutSpace",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.AuthHeaderParseTest",
+                    testMethodName = "testParametersWithoutSpace",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1248,14 +1106,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.AuthHeaderParseTest",
-                        methodName = "testQuotedParameter",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.AuthHeaderParseTest",
+                    testMethodName = "testQuotedParameter",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1265,14 +1121,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.AuthHeaderParseTest",
-                        methodName = "testSingleParameterWithComma",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.AuthHeaderParseTest",
+                    testMethodName = "testSingleParameterWithComma",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1285,14 +1139,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.CodecTest",
-                        methodName = "testAllReserved",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.CodecTest",
+                    testMethodName = "testAllReserved",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1302,14 +1154,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.CodecTest",
-                        methodName = "testBasicEncodeDecode",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.CodecTest",
+                    testMethodName = "testBasicEncodeDecode",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1319,14 +1169,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.CodecTest",
-                        methodName = "testBasicEncodeDecodeURLPart",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.CodecTest",
+                    testMethodName = "testBasicEncodeDecodeURLPart",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1336,14 +1184,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.http.CodecTest",
-                        methodName = "testBrokenOrIncompleteHEX",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-http:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.http.CodecTest",
+                    testMethodName = "testBrokenOrIncompleteHEX",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-http:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1356,14 +1202,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "ByteChannelConcurrentTest",
-                        methodName = "cannotSubscribeTwiceForContent",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-io:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "ByteChannelConcurrentTest",
+                    testMethodName = "cannotSubscribeTwiceForContent",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-io:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1376,14 +1220,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.tls.ClientCertificateRequestTest",
-                        methodName = "request with specific authorities",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network-tls:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.tls.ClientCertificateRequestTest",
+                    testMethodName = "request with specific authorities",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network-tls:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1396,14 +1238,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.utils.CacheTest",
-                        methodName = "testClose",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-utils:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.utils.CacheTest",
+                    testMethodName = "testClose",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-utils:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1413,14 +1253,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.utils.CacheTest",
-                        methodName = "testCloseMultithreaded",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-utils:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.utils.CacheTest",
+                    testMethodName = "testCloseMultithreaded",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-utils:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1430,14 +1268,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.utils.CacheTest",
-                        methodName = "testGet",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-utils:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.utils.CacheTest",
+                    testMethodName = "testGet",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-utils:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1447,14 +1283,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.utils.CacheTest",
-                        methodName = "testWithoutCaching",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-utils:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.utils.CacheTest",
+                    testMethodName = "testWithoutCaching",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-utils:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1467,14 +1301,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.utils.DeflaterReadChannelTest",
-                        methodName = "testBiggerThan8k",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-utils:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.utils.DeflaterReadChannelTest",
+                    testMethodName = "testBiggerThan8k",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-utils:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1484,14 +1316,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.utils.DeflaterReadChannelTest",
-                        methodName = "testFaultyGzippedBiggerThan8k",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-utils:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.utils.DeflaterReadChannelTest",
+                    testMethodName = "testFaultyGzippedBiggerThan8k",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-utils:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1504,14 +1334,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.selector.ActorSelectorManagerTest",
-                        methodName = "testSelectOnWrongInterest",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.selector.ActorSelectorManagerTest",
+                    testMethodName = "testSelectOnWrongInterest",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1521,14 +1349,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.selector.ActorSelectorManagerTest",
-                        methodName = "testSelectableIsClosed",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.selector.ActorSelectorManagerTest",
+                    testMethodName = "testSelectableIsClosed",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1541,14 +1367,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.sockets.tests.ClientSocketTest",
-                        methodName = "testConnect",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.sockets.tests.ClientSocketTest",
+                    testMethodName = "testConnect",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1558,14 +1382,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.sockets.tests.ClientSocketTest",
-                        methodName = "testRead",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.sockets.tests.ClientSocketTest",
+                    testMethodName = "testRead",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1575,14 +1397,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.sockets.tests.ClientSocketTest",
-                        methodName = "testReadParts",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.sockets.tests.ClientSocketTest",
+                    testMethodName = "testReadParts",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1592,14 +1412,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.sockets.tests.ClientSocketTest",
-                        methodName = "testSelfConnect",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.sockets.tests.ClientSocketTest",
+                    testMethodName = "testSelfConnect",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1609,14 +1427,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.sockets.tests.ClientSocketTest",
-                        methodName = "testWrite",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.sockets.tests.ClientSocketTest",
+                    testMethodName = "testWrite",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1629,14 +1445,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.sockets.tests.InetSocketAddressTest",
-                        methodName = "testResolveAddress",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.sockets.tests.InetSocketAddressTest",
+                    testMethodName = "testResolveAddress",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1649,14 +1463,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.sockets.tests.ServerSocketTest",
-                        methodName = "testBindAndAccept",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.sockets.tests.ServerSocketTest",
+                    testMethodName = "testBindAndAccept",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1666,14 +1478,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.sockets.tests.ServerSocketTest",
-                        methodName = "testRead",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.sockets.tests.ServerSocketTest",
+                    testMethodName = "testRead",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1683,14 +1493,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.sockets.tests.ServerSocketTest",
-                        methodName = "testWrite",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.sockets.tests.ServerSocketTest",
+                    testMethodName = "testWrite",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1703,14 +1511,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.sockets.tests.TCPSocketTest",
-                        methodName = "testAcceptErrorOnImmediateSocketClose",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.sockets.tests.TCPSocketTest",
+                    testMethodName = "testAcceptErrorOnImmediateSocketClose",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1720,14 +1526,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.sockets.tests.TCPSocketTest",
-                        methodName = "testAcceptErrorOnSocketClose",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.sockets.tests.TCPSocketTest",
+                    testMethodName = "testAcceptErrorOnSocketClose",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1737,14 +1541,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.sockets.tests.TCPSocketTest",
-                        methodName = "testAutoFlush",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.sockets.tests.TCPSocketTest",
+                    testMethodName = "testAutoFlush",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1754,14 +1556,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.sockets.tests.TCPSocketTest",
-                        methodName = "testAwaitClosedDoesNotDeadLock",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.sockets.tests.TCPSocketTest",
+                    testMethodName = "testAwaitClosedDoesNotDeadLock",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1771,14 +1571,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.sockets.tests.TCPSocketTest",
-                        methodName = "testBindMultipleTimes",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.sockets.tests.TCPSocketTest",
+                    testMethodName = "testBindMultipleTimes",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1788,14 +1586,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.sockets.tests.TCPSocketTest",
-                        methodName = "testConnectToNonExistingSocket",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.sockets.tests.TCPSocketTest",
+                    testMethodName = "testConnectToNonExistingSocket",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1805,14 +1601,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.sockets.tests.TCPSocketTest",
-                        methodName = "testDisconnect",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.sockets.tests.TCPSocketTest",
+                    testMethodName = "testDisconnect",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1822,14 +1616,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.sockets.tests.TCPSocketTest",
-                        methodName = "testEcho",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.sockets.tests.TCPSocketTest",
+                    testMethodName = "testEcho",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1839,14 +1631,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.sockets.tests.TCPSocketTest",
-                        methodName = "testEchoByteArray",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.sockets.tests.TCPSocketTest",
+                    testMethodName = "testEchoByteArray",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1856,14 +1646,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.sockets.tests.TCPSocketTest",
-                        methodName = "testReadFromCancelledSocket",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.sockets.tests.TCPSocketTest",
+                    testMethodName = "testReadFromCancelledSocket",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1876,14 +1664,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.sockets.tests.UDPSocketTest",
-                        methodName = "testBroadcastFails",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.sockets.tests.UDPSocketTest",
+                    testMethodName = "testBroadcastFails",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1893,14 +1679,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.sockets.tests.UDPSocketTest",
-                        methodName = "testBroadcastSuccessful",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.sockets.tests.UDPSocketTest",
+                    testMethodName = "testBroadcastSuccessful",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1910,14 +1694,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.sockets.tests.UDPSocketTest",
-                        methodName = "testClose",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.sockets.tests.UDPSocketTest",
+                    testMethodName = "testClose",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1927,14 +1709,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.sockets.tests.UDPSocketTest",
-                        methodName = "testInvokeOnClose",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.sockets.tests.UDPSocketTest",
+                    testMethodName = "testInvokeOnClose",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1944,14 +1724,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.sockets.tests.UDPSocketTest",
-                        methodName = "testOutgoingInvokeOnClose",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.sockets.tests.UDPSocketTest",
+                    testMethodName = "testOutgoingInvokeOnClose",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1961,14 +1739,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.sockets.tests.UDPSocketTest",
-                        methodName = "testOutgoingInvokeOnCloseWithSocketClose",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.sockets.tests.UDPSocketTest",
+                    testMethodName = "testOutgoingInvokeOnCloseWithSocketClose",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1978,14 +1754,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.sockets.tests.UDPSocketTest",
-                        methodName = "testOutgoingInvokeOnClosed",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.sockets.tests.UDPSocketTest",
+                    testMethodName = "testOutgoingInvokeOnClosed",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -1995,14 +1769,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.sockets.tests.UDPSocketTest",
-                        methodName = "testSendReceive",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.sockets.tests.UDPSocketTest",
+                    testMethodName = "testSendReceive",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2012,14 +1784,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.sockets.tests.UDPSocketTest",
-                        methodName = "testSendReceiveLarge",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.sockets.tests.UDPSocketTest",
+                    testMethodName = "testSendReceiveLarge",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2029,14 +1799,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.sockets.tests.UDPSocketTest",
-                        methodName = "testUdpConnect",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.sockets.tests.UDPSocketTest",
+                    testMethodName = "testUdpConnect",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2049,14 +1817,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.sockets.tests.UnixSocketTest",
-                        methodName = "testEchoOverUnixSockets",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.sockets.tests.UnixSocketTest",
+                    testMethodName = "testEchoOverUnixSockets",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2069,14 +1835,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.util.StartTimeoutTest",
-                        methodName = "testTimeoutCancellation",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.util.StartTimeoutTest",
+                    testMethodName = "testTimeoutCancellation",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2086,14 +1850,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.util.StartTimeoutTest",
-                        methodName = "testTimeoutCancelsWhenParentScopeCancels",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.util.StartTimeoutTest",
+                    testMethodName = "testTimeoutCancelsWhenParentScopeCancels",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2103,14 +1865,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.util.StartTimeoutTest",
-                        methodName = "testTimeoutDoesNotTriggerWhenStopped",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.util.StartTimeoutTest",
+                    testMethodName = "testTimeoutDoesNotTriggerWhenStopped",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2120,14 +1880,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.util.StartTimeoutTest",
-                        methodName = "testTimeoutInvocation",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.util.StartTimeoutTest",
+                    testMethodName = "testTimeoutInvocation",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2137,14 +1895,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.network.util.StartTimeoutTest",
-                        methodName = "testTimeoutUpdateActivityTime",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-network:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.network.util.StartTimeoutTest",
+                    testMethodName = "testTimeoutUpdateActivityTime",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-network:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2157,14 +1913,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.server.cio.CIOClientCertTest",
-                        methodName = "Server requesting Client Certificate from CIO Client",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.server.cio.CIOClientCertTest",
+                    testMethodName = "Server requesting Client Certificate from CIO Client",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2177,14 +1931,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.server.cio.CIOConnectionPointTest",
-                        methodName = "testLocalHostAndPort",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.server.cio.CIOConnectionPointTest",
+                    testMethodName = "testLocalHostAndPort",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2194,14 +1946,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.server.cio.CIOConnectionPointTest",
-                        methodName = "testServerHostAndPort",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.server.cio.CIOConnectionPointTest",
+                    testMethodName = "testServerHostAndPort",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2211,14 +1961,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.server.cio.CIOConnectionPointTest",
-                        methodName = "testServerHostAndPortNoHeader",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.server.cio.CIOConnectionPointTest",
+                    testMethodName = "testServerHostAndPortNoHeader",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2231,14 +1979,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.server.cio.CIOConnectionTest",
-                        methodName = "testShutdownGracePeriodWithConnector",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.server.cio.CIOConnectionTest",
+                    testMethodName = "testShutdownGracePeriodWithConnector",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2251,14 +1997,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.server.cio.CIOHttpClientTest",
-                        methodName = "testHttpConnection",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.server.cio.CIOHttpClientTest",
+                    testMethodName = "testHttpConnection",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2268,14 +2012,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.server.cio.CIOHttpClientTest",
-                        methodName = "testHttpConnectionChunked",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.server.cio.CIOHttpClientTest",
+                    testMethodName = "testHttpConnectionChunked",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2288,14 +2030,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.server.cio.CIOHttpServerTest",
-                        methodName = "testChunkedResponse",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.server.cio.CIOHttpServerTest",
+                    testMethodName = "testChunkedResponse",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2305,14 +2045,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.server.cio.CIOHttpServerTest",
-                        methodName = "testExpectedContinue",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.server.cio.CIOHttpServerTest",
+                    testMethodName = "testExpectedContinue",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2322,14 +2060,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.server.cio.CIOHttpServerTest",
-                        methodName = "testExpectedContinueConnection",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.server.cio.CIOHttpServerTest",
+                    testMethodName = "testExpectedContinueConnection",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2339,14 +2075,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.server.cio.CIOHttpServerTest",
-                        methodName = "testExpectedContinueExpectationFailed",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.server.cio.CIOHttpServerTest",
+                    testMethodName = "testExpectedContinueExpectationFailed",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2356,14 +2090,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.server.cio.CIOHttpServerTest",
-                        methodName = "testExpectedContinueRespondBeforeReadingBody",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.server.cio.CIOHttpServerTest",
+                    testMethodName = "testExpectedContinueRespondBeforeReadingBody",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2373,14 +2105,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.server.cio.CIOHttpServerTest",
-                        methodName = "testExpectedIgnoreHTTP1_0",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.server.cio.CIOHttpServerTest",
+                    testMethodName = "testExpectedIgnoreHTTP1_0",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2390,14 +2120,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.server.cio.CIOHttpServerTest",
-                        methodName = "testGracefulShutdown",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.server.cio.CIOHttpServerTest",
+                    testMethodName = "testGracefulShutdown",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2407,14 +2135,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.server.cio.CIOHttpServerTest",
-                        methodName = "testLotsOfHeaders",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.server.cio.CIOHttpServerTest",
+                    testMethodName = "testLotsOfHeaders",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2427,14 +2153,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.server.cio.CIOUnixSocketServerTest",
-                        methodName = "testUnixSocketEcho",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.server.cio.CIOUnixSocketServerTest",
+                    testMethodName = "testUnixSocketEcho",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2447,14 +2171,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.okhttp.OkHttpEngineTests",
-                        methodName = "testClose",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-okhttp:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.okhttp.OkHttpEngineTests",
+                    testMethodName = "testClose",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-okhttp:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2464,14 +2186,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.okhttp.OkHttpEngineTests",
-                        methodName = "testThreadLeak",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-okhttp:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.okhttp.OkHttpEngineTests",
+                    testMethodName = "testThreadLeak",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-okhttp:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2481,14 +2201,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.okhttp.OkHttpEngineTests",
-                        methodName = "testPreconfigured",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-okhttp:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.okhttp.OkHttpEngineTests",
+                    testMethodName = "testPreconfigured",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-okhttp:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2498,14 +2216,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.okhttp.OkHttpEngineTests",
-                        methodName = "testRequestAfterRecreate",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-okhttp:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.okhttp.OkHttpEngineTests",
+                    testMethodName = "testRequestAfterRecreate",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-okhttp:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2518,14 +2234,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.okhttp.RequestTests",
-                        methodName = "testOneShotBodyStream",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-okhttp:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.okhttp.RequestTests",
+                    testMethodName = "testOneShotBodyStream",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-okhttp:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2535,14 +2249,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.okhttp.RequestTests",
-                        methodName = "testOneShotBodyArray",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-okhttp:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.okhttp.RequestTests",
+                    testMethodName = "testOneShotBodyArray",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-okhttp:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2552,14 +2264,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.okhttp.RequestTests",
-                        methodName = "testReusingRequestBuilderOnMultipleClients",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-okhttp:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.okhttp.RequestTests",
+                    testMethodName = "testReusingRequestBuilderOnMultipleClients",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-okhttp:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2569,14 +2279,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.okhttp.RequestTests",
-                        methodName = "testFormContentType",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-okhttp:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.okhttp.RequestTests",
+                    testMethodName = "testFormContentType",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-okhttp:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2589,14 +2297,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.okhttp.OkHttpHttpClientTest",
-                        methodName = "testCancelSseRequestIncomingCollect",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-okhttp:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.okhttp.OkHttpHttpClientTest",
+                    testMethodName = "testCancelSseRequestIncomingCollect",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-okhttp:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2606,14 +2312,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.okhttp.OkHttpHttpClientTest",
-                        methodName = "testCancelSseRequestWithDelay",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-okhttp:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.okhttp.OkHttpHttpClientTest",
+                    testMethodName = "testCancelSseRequestWithDelay",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-okhttp:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2623,14 +2327,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.okhttp.OkHttpHttpClientTest",
-                        methodName = "testClientSSE",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-okhttp:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.okhttp.OkHttpHttpClientTest",
+                    testMethodName = "testClientSSE",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-okhttp:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2640,14 +2342,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.okhttp.OkHttpHttpClientTest",
-                        methodName = "testWithNoParentJob",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-okhttp:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.okhttp.OkHttpHttpClientTest",
+                    testMethodName = "testWithNoParentJob",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-okhttp:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2657,14 +2357,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.okhttp.OkHttpHttpClientTest",
-                        methodName = "configCopiesOldPluginsAndInterceptors",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-okhttp:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.okhttp.OkHttpHttpClientTest",
+                    testMethodName = "configCopiesOldPluginsAndInterceptors",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-okhttp:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2674,14 +2372,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.okhttp.OkHttpHttpClientTest",
-                        methodName = "testOptionsRequest",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-okhttp:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.okhttp.OkHttpHttpClientTest",
+                    testMethodName = "testOptionsRequest",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-okhttp:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2694,14 +2390,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.server.engine.EmbeddedServerTest",
-                        methodName = "checkUrlMatches returns true when pattern matches part of URL path",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-core:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.server.engine.EmbeddedServerTest",
+                    testMethodName = "checkUrlMatches returns true when pattern matches part of URL path",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-core:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2711,14 +2405,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.server.engine.EmbeddedServerTest",
-                        methodName = "checkUrlMatches returns false when pattern does not match URL path",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-core:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.server.engine.EmbeddedServerTest",
+                    testMethodName = "checkUrlMatches returns false when pattern does not match URL path",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-core:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2728,14 +2420,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.server.engine.EmbeddedServerTest",
-                        methodName = "checkUrlMatches returns true when pattern matches URL path case insensitively",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-core:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.server.engine.EmbeddedServerTest",
+                    testMethodName = "checkUrlMatches returns true when pattern matches URL path case insensitively",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-core:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2745,14 +2435,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.server.engine.EmbeddedServerTest",
-                        methodName = "checkUrlMatches returns false when URL path is null",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-core:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.server.engine.EmbeddedServerTest",
+                    testMethodName = "checkUrlMatches returns false when URL path is null",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-core:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2762,14 +2450,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.server.engine.EmbeddedServerTest",
-                        methodName = "checkUrlMatches returns true when pattern matches root URL path",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-core:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.server.engine.EmbeddedServerTest",
+                    testMethodName = "checkUrlMatches returns true when pattern matches root URL path",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-core:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2782,14 +2468,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.server.engine.MultiPartDataTest",
-                        methodName = "givenRequest_whenNoContentTypeHeaderPresent_thenUnsupportedMediaTypeException",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-core:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.server.engine.MultiPartDataTest",
+                    testMethodName = "givenRequest_whenNoContentTypeHeaderPresent_thenUnsupportedMediaTypeException",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-core:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2799,14 +2483,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.server.engine.MultiPartDataTest",
-                        methodName = "givenWrongContentType_whenProcessMultiPart_thenUnsupportedMediaTypeException",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-core:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.server.engine.MultiPartDataTest",
+                    testMethodName = "givenWrongContentType_whenProcessMultiPart_thenUnsupportedMediaTypeException",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-core:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2816,14 +2498,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.server.engine.MultiPartDataTest",
-                        methodName = "testUnsupportedMediaTypeStatusCode",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-core:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.server.engine.MultiPartDataTest",
+                    testMethodName = "testUnsupportedMediaTypeStatusCode",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-core:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2836,14 +2516,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.okhttp.OkHttpWebsocketSessionTest",
-                        methodName = "testOnFailure",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-okhttp:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.okhttp.OkHttpWebsocketSessionTest",
+                    testMethodName = "testOnFailure",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-okhttp:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2853,14 +2531,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.okhttp.OkHttpWebsocketSessionTest",
-                        methodName = "testWebSocketFactory",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-okhttp:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.okhttp.OkHttpWebsocketSessionTest",
+                    testMethodName = "testWebSocketFactory",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-okhttp:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2873,14 +2549,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.okhttp.OkHttpHttpsTest",
-                        methodName = "testHttpsOverProxy",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-okhttp:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.okhttp.OkHttpHttpsTest",
+                    testMethodName = "testHttpsOverProxy",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-okhttp:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2890,14 +2564,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.okhttp.OkHttpHttpsTest",
-                        methodName = "test hostname is verified",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-okhttp:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.okhttp.OkHttpHttpsTest",
+                    testMethodName = "test hostname is verified",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-okhttp:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2910,14 +2582,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.apache.RequestProducerTest",
-                        methodName = "testHeadersMerge",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-apache:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.apache.RequestProducerTest",
+                    testMethodName = "testHeadersMerge",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-apache:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2927,14 +2597,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.apache.RequestProducerTest",
-                        methodName = "testProducingByteArrayContent",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-apache:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.apache.RequestProducerTest",
+                    testMethodName = "testProducingByteArrayContent",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-apache:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2944,14 +2612,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.apache.RequestProducerTest",
-                        methodName = "testProducingNoContent",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-apache:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.apache.RequestProducerTest",
+                    testMethodName = "testProducingNoContent",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-apache:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2961,14 +2627,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.apache.RequestProducerTest",
-                        methodName = "testProducingReadChannelContent",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-apache:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.apache.RequestProducerTest",
+                    testMethodName = "testProducingReadChannelContent",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-apache:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2978,14 +2642,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.apache.RequestProducerTest",
-                        methodName = "testProducingWriteChannelContent",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-apache:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.apache.RequestProducerTest",
+                    testMethodName = "testProducingWriteChannelContent",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-apache:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -2995,14 +2657,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.apache.RequestProducerTest",
-                        methodName = "expectToThrowIllegalStateExceptionIfHostCannotBeExtractedFromRequestURL",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-apache:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.apache.RequestProducerTest",
+                    testMethodName = "expectToThrowIllegalStateExceptionIfHostCannotBeExtractedFromRequestURL",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-apache:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3015,14 +2675,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.apache.ApacheHttpClientTest",
-                        methodName = "testClientSSE",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-apache:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.apache.ApacheHttpClientTest",
+                    testMethodName = "testClientSSE",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-apache:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3032,14 +2690,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.apache.ApacheHttpClientTest",
-                        methodName = "testWithNoParentJob",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-apache:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.apache.ApacheHttpClientTest",
+                    testMethodName = "testWithNoParentJob",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-apache:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3049,14 +2705,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.apache.ApacheHttpClientTest",
-                        methodName = "configCopiesOldPluginsAndInterceptors",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-apache:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.apache.ApacheHttpClientTest",
+                    testMethodName = "configCopiesOldPluginsAndInterceptors",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-apache:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3066,14 +2720,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.apache.ApacheHttpClientTest",
-                        methodName = "testOptionsRequest",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-apache:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.apache.ApacheHttpClientTest",
+                    testMethodName = "testOptionsRequest",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-apache:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3086,14 +2738,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.apache.ApacheHttpsTest",
-                        methodName = "testHttpsOverProxy",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-apache:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.apache.ApacheHttpsTest",
+                    testMethodName = "testHttpsOverProxy",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-apache:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3103,14 +2753,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.apache.ApacheHttpsTest",
-                        methodName = "test hostname is verified",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-apache:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.apache.ApacheHttpsTest",
+                    testMethodName = "test hostname is verified",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-apache:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3123,14 +2771,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.apache5.Apache5HttpClientTest",
-                        methodName = "testClientSSE",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-apache5:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.apache5.Apache5HttpClientTest",
+                    testMethodName = "testClientSSE",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-apache5:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3140,14 +2786,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.apache5.Apache5HttpClientTest",
-                        methodName = "testWithNoParentJob",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-apache5:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.apache5.Apache5HttpClientTest",
+                    testMethodName = "testWithNoParentJob",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-apache5:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3157,14 +2801,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.apache5.Apache5HttpClientTest",
-                        methodName = "configCopiesOldPluginsAndInterceptors",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-apache5:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.apache5.Apache5HttpClientTest",
+                    testMethodName = "configCopiesOldPluginsAndInterceptors",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-apache5:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3174,14 +2816,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.apache5.Apache5HttpClientTest",
-                        methodName = "testOptionsRequest",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-apache5:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.apache5.Apache5HttpClientTest",
+                    testMethodName = "testOptionsRequest",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-apache5:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3194,14 +2834,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.apache5.Apache5HttpsTest",
-                        methodName = "testHttpsOverProxy",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-apache5:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.apache5.Apache5HttpsTest",
+                    testMethodName = "testHttpsOverProxy",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-apache5:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3211,14 +2849,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.apache5.Apache5HttpsTest",
-                        methodName = "test hostname is verified",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-apache5:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.apache5.Apache5HttpsTest",
+                    testMethodName = "test hostname is verified",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-apache5:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3231,14 +2867,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.java.JavaEngineTests",
-                        methodName = "testProxy",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-java:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.java.JavaEngineTests",
+                    testMethodName = "testProxy",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-java:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3248,14 +2882,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.java.JavaEngineTests",
-                        methodName = "testRequestAfterRecreate",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-java:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.java.JavaEngineTests",
+                    testMethodName = "testRequestAfterRecreate",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-java:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3265,14 +2897,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.java.JavaEngineTests",
-                        methodName = "testSubsequentRequests",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-java:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.java.JavaEngineTests",
+                    testMethodName = "testSubsequentRequests",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-java:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3282,14 +2912,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.java.JavaEngineTests",
-                        methodName = "testProtocolVersion",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-java:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.java.JavaEngineTests",
+                    testMethodName = "testProtocolVersion",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-java:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3299,14 +2927,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.java.JavaEngineTests",
-                        methodName = "infiniteConnectTimeout",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-java:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.java.JavaEngineTests",
+                    testMethodName = "infiniteConnectTimeout",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-java:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3316,14 +2942,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.java.JavaEngineTests",
-                        methodName = "infiniteRequestTimeout",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-java:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.java.JavaEngineTests",
+                    testMethodName = "infiniteRequestTimeout",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-java:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3333,14 +2957,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.java.JavaEngineTests",
-                        methodName = "usualConnectTimeout",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-java:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.java.JavaEngineTests",
+                    testMethodName = "usualConnectTimeout",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-java:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3350,14 +2972,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.java.JavaEngineTests",
-                        methodName = "usualRequestTimeout",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-java:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.java.JavaEngineTests",
+                    testMethodName = "usualRequestTimeout",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-java:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3367,14 +2987,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.java.JavaEngineTests",
-                        methodName = "isTimeoutInfiniteFunction",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-java:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.java.JavaEngineTests",
+                    testMethodName = "isTimeoutInfiniteFunction",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-java:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3387,14 +3005,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.java.JavaClientTest",
-                        methodName = "testClientSSE",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-java:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.java.JavaClientTest",
+                    testMethodName = "testClientSSE",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-java:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3404,14 +3020,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.java.JavaClientTest",
-                        methodName = "testWithNoParentJob",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-java:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.java.JavaClientTest",
+                    testMethodName = "testWithNoParentJob",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-java:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3421,14 +3035,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.java.JavaClientTest",
-                        methodName = "configCopiesOldPluginsAndInterceptors",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-java:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.java.JavaClientTest",
+                    testMethodName = "configCopiesOldPluginsAndInterceptors",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-java:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3438,14 +3050,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.java.JavaClientTest",
-                        methodName = "testOptionsRequest",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-java:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.java.JavaClientTest",
+                    testMethodName = "testOptionsRequest",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-java:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3458,14 +3068,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.java.JavaHttpsTest",
-                        methodName = "testHttpsOverProxy",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-java:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.java.JavaHttpsTest",
+                    testMethodName = "testHttpsOverProxy",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-java:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3475,14 +3083,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.java.JavaHttpsTest",
-                        methodName = "test hostname is verified",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-java:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.java.JavaHttpsTest",
+                    testMethodName = "test hostname is verified",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-java:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3495,14 +3101,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.java.RequestTests",
-                        methodName = "testReusingRequestBuilderOnMultipleClients",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-java:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.java.RequestTests",
+                    testMethodName = "testReusingRequestBuilderOnMultipleClients",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-java:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3512,14 +3116,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.java.RequestTests",
-                        methodName = "testRequestBodyPosting",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-java:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.java.RequestTests",
+                    testMethodName = "testRequestBodyPosting",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-java:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3532,14 +3134,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.java.ResponseConsumerTest",
-                        methodName = "testConsumeContent",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-java:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.java.ResponseConsumerTest",
+                    testMethodName = "testConsumeContent",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-java:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3552,14 +3152,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.java.RequestProducerTest",
-                        methodName = "testHeadersMerge",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-java:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.java.RequestProducerTest",
+                    testMethodName = "testHeadersMerge",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-java:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3569,14 +3167,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.java.RequestProducerTest",
-                        methodName = "testByteReadChannelWriter",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-java:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.java.RequestProducerTest",
+                    testMethodName = "testByteReadChannelWriter",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-java:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3589,14 +3185,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.cio.UnixSocketTest",
-                        methodName = "testUnixSocketClient",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.cio.UnixSocketTest",
+                    testMethodName = "testUnixSocketClient",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3606,14 +3200,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.cio.UnixSocketTest",
-                        methodName = "testUnixSocketClientWithDefaultRequest",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.cio.UnixSocketTest",
+                    testMethodName = "testUnixSocketClientWithDefaultRequest",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3626,14 +3218,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.cio.BuildersTest",
-                        methodName = "testResolvingWsFunction",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.cio.BuildersTest",
+                    testMethodName = "testResolvingWsFunction",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3646,14 +3236,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.cio.CIORequestTest",
-                        methodName = "engineUsesRequestTimeoutFromItsConfiguration",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.cio.CIORequestTest",
+                    testMethodName = "engineUsesRequestTimeoutFromItsConfiguration",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3663,14 +3251,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.cio.CIORequestTest",
-                        methodName = "longHeadersTest",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.cio.CIORequestTest",
+                    testMethodName = "longHeadersTest",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3680,14 +3266,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.cio.CIORequestTest",
-                        methodName = "testParameterWithoutPath",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.cio.CIORequestTest",
+                    testMethodName = "testParameterWithoutPath",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3697,14 +3281,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.cio.CIORequestTest",
-                        methodName = "testHangingTimeoutWithWrongUrl",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.cio.CIORequestTest",
+                    testMethodName = "testHangingTimeoutWithWrongUrl",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3714,14 +3296,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.cio.CIORequestTest",
-                        methodName = "testInetAddressRetrievedOnce",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.cio.CIORequestTest",
+                    testMethodName = "testInetAddressRetrievedOnce",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3734,14 +3314,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.cio.ConnectErrorsTest",
-                        methodName = "testConnectAfterConnectionErrors",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.cio.ConnectErrorsTest",
+                    testMethodName = "testConnectAfterConnectionErrors",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3751,14 +3329,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.cio.ConnectErrorsTest",
-                        methodName = "testResponseWithNoLengthChunkedAndConnectionClosedWithHttp10",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.cio.ConnectErrorsTest",
+                    testMethodName = "testResponseWithNoLengthChunkedAndConnectionClosedWithHttp10",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3768,14 +3344,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.cio.ConnectErrorsTest",
-                        methodName = "testResponseErrorWithNoLengthChunkedAndConnectionClosedWithHttp11",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.cio.ConnectErrorsTest",
+                    testMethodName = "testResponseErrorWithNoLengthChunkedAndConnectionClosedWithHttp11",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3785,14 +3359,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.cio.ConnectErrorsTest",
-                        methodName = "testResponseErrorWithInvalidChunkException",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.cio.ConnectErrorsTest",
+                    testMethodName = "testResponseErrorWithInvalidChunkException",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3802,14 +3374,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.cio.ConnectErrorsTest",
-                        methodName = "testConnectionClosedBeforeReadingResponseStatusLine",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.cio.ConnectErrorsTest",
+                    testMethodName = "testConnectionClosedBeforeReadingResponseStatusLine",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3819,14 +3389,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.cio.ConnectErrorsTest",
-                        methodName = "testLateServerStart",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.cio.ConnectErrorsTest",
+                    testMethodName = "testLateServerStart",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3839,14 +3407,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.cio.CIOHttpsTest",
-                        methodName = "testHttpsOverProxy",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.cio.CIOHttpsTest",
+                    testMethodName = "testHttpsOverProxy",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3856,14 +3422,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.cio.CIOHttpsTest",
-                        methodName = "test hostname is verified",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.cio.CIOHttpsTest",
+                    testMethodName = "test hostname is verified",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3876,14 +3440,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.cio.CIOSpecificHttpsTest",
-                        methodName = "hello",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.cio.CIOSpecificHttpsTest",
+                    testMethodName = "hello",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3896,14 +3458,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.cio.CIOHttpClientTest",
-                        methodName = "testClientSSE",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.cio.CIOHttpClientTest",
+                    testMethodName = "testClientSSE",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3913,14 +3473,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.cio.CIOHttpClientTest",
-                        methodName = "testWithNoParentJob",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.cio.CIOHttpClientTest",
+                    testMethodName = "testWithNoParentJob",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3930,14 +3488,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.cio.CIOHttpClientTest",
-                        methodName = "configCopiesOldPluginsAndInterceptors",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.cio.CIOHttpClientTest",
+                    testMethodName = "configCopiesOldPluginsAndInterceptors",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3947,14 +3503,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.client.engine.cio.CIOHttpClientTest",
-                        methodName = "testOptionsRequest",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-client-cio:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.client.engine.cio.CIOHttpClientTest",
+                    testMethodName = "testOptionsRequest",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-client-cio:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3967,14 +3521,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.config.HoconConfigTest",
-                        methodName = "testKeysTopLevelHoconConfig",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-core:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.config.HoconConfigTest",
+                    testMethodName = "testKeysTopLevelHoconConfig",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-core:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -3984,14 +3536,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.config.HoconConfigTest",
-                        methodName = "testKeysNestedHoconConfig",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-core:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.config.HoconConfigTest",
+                    testMethodName = "testKeysNestedHoconConfig",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-core:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -4001,14 +3551,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.config.HoconConfigTest",
-                        methodName = "testToMap",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-core:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.config.HoconConfigTest",
+                    testMethodName = "testToMap",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-core:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -4018,14 +3566,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.config.HoconConfigTest",
-                        methodName = "readSerializableClass",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-core:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.config.HoconConfigTest",
+                    testMethodName = "readSerializableClass",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-core:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -4038,14 +3584,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.config.ConfigJvmTest",
-                        methodName = "testLoadFromResources",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-core:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.config.ConfigJvmTest",
+                    testMethodName = "testLoadFromResources",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-core:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -4055,14 +3599,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.config.ConfigJvmTest",
-                        methodName = "testLoadYamlFromResources",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-core:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.config.ConfigJvmTest",
+                    testMethodName = "testLoadYamlFromResources",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-core:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -4072,14 +3614,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.config.ConfigJvmTest",
-                        methodName = "testLoadFromFile",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-core:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.config.ConfigJvmTest",
+                    testMethodName = "testLoadFromFile",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-core:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -4092,14 +3632,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.config.HoconDecoderTest",
-                        methodName = "primitive types",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-core:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.config.HoconDecoderTest",
+                    testMethodName = "primitive types",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-core:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -4109,14 +3647,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.config.HoconDecoderTest",
-                        methodName = "nullable values",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-core:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.config.HoconDecoderTest",
+                    testMethodName = "nullable values",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-core:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -4126,14 +3662,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.config.HoconDecoderTest",
-                        methodName = "maps and type parameters",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-core:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.config.HoconDecoderTest",
+                    testMethodName = "maps and type parameters",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-core:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -4143,14 +3677,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.config.HoconDecoderTest",
-                        methodName = "collection types",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-core:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.config.HoconDecoderTest",
+                    testMethodName = "collection types",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-core:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -4160,14 +3692,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.config.HoconDecoderTest",
-                        methodName = "nested structures",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-core:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.config.HoconDecoderTest",
+                    testMethodName = "nested structures",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-core:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -4177,14 +3707,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.config.HoconDecoderTest",
-                        methodName = "enum values",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-core:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.config.HoconDecoderTest",
+                    testMethodName = "enum values",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-core:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -4194,14 +3722,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.config.HoconDecoderTest",
-                        methodName = "testDecodeMissingValues",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-core:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.config.HoconDecoderTest",
+                    testMethodName = "testDecodeMissingValues",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-core:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -4211,14 +3737,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.config.HoconDecoderTest",
-                        methodName = "invalid types",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-core:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.config.HoconDecoderTest",
+                    testMethodName = "invalid types",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-core:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -4228,14 +3752,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.tests.config.HoconDecoderTest",
-                        methodName = "default values",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-core:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.tests.config.HoconDecoderTest",
+                    testMethodName = "default values",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-core:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -4248,14 +3770,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.server.engine.ShutDownUrlTest",
-                        methodName = "testShutdownUrlRespondsWithGone",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-core:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.server.engine.ShutDownUrlTest",
+                    testMethodName = "testShutdownUrlRespondsWithGone",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-core:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -4265,14 +3785,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.server.engine.ShutDownUrlTest",
-                        methodName = "testShutdownUnderLoad",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-core:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.server.engine.ShutDownUrlTest",
+                    testMethodName = "testShutdownUnderLoad",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-core:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -4282,14 +3800,12 @@ class KtorTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "io.ktor.server.engine.ShutDownUrlTest",
-                        methodName = "testExceptionHandlingDuringShutdown",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":ktor-server-core:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "io.ktor.server.engine.ShutDownUrlTest",
+                    testMethodName = "testExceptionHandlingDuringShutdown",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":ktor-server-core:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }

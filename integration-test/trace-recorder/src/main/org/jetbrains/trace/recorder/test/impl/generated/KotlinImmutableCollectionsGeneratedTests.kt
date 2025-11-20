@@ -20,14 +20,12 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(10 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "tests.contract.list.ImmutableListTest",
-                        methodName = "empty",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":kotlinx-collections-immutable:jvmTest",
-                        checkRepresentation = true,
-                    )
+                runTest(
+                    testClassName = "tests.contract.list.ImmutableListTest",
+                    testMethodName = "empty",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                    checkRepresentation = true,
                 )
             }
         }
@@ -37,14 +35,12 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(10 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "tests.contract.list.ImmutableListTest",
-                        methodName = "ofElements",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":kotlinx-collections-immutable:jvmTest",
-                        checkRepresentation = true,
-                    )
+                runTest(
+                    testClassName = "tests.contract.list.ImmutableListTest",
+                    testMethodName = "ofElements",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                    checkRepresentation = true,
                 )
             }
         }
@@ -54,14 +50,12 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(10 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "tests.contract.list.ImmutableListTest",
-                        methodName = "toImmutable",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":kotlinx-collections-immutable:jvmTest",
-                        checkRepresentation = true,
-                    )
+                runTest(
+                    testClassName = "tests.contract.list.ImmutableListTest",
+                    testMethodName = "toImmutable",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                    checkRepresentation = true,
                 )
             }
         }
@@ -71,14 +65,12 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(10 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "tests.contract.list.ImmutableListTest",
-                        methodName = "emptyListToPersistentList",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":kotlinx-collections-immutable:jvmTest",
-                        checkRepresentation = true,
-                    )
+                runTest(
+                    testClassName = "tests.contract.list.ImmutableListTest",
+                    testMethodName = "emptyListToPersistentList",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                    checkRepresentation = true,
                 )
             }
         }
@@ -88,14 +80,12 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(10 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "tests.contract.list.ImmutableListTest",
-                        methodName = "addElements",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":kotlinx-collections-immutable:jvmTest",
-                        checkRepresentation = true,
-                    )
+                runTest(
+                    testClassName = "tests.contract.list.ImmutableListTest",
+                    testMethodName = "addElements",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                    checkRepresentation = true,
                 )
             }
         }
@@ -105,14 +95,12 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(10 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "tests.contract.list.ImmutableListTest",
-                        methodName = "replaceElements",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":kotlinx-collections-immutable:jvmTest",
-                        checkRepresentation = true,
-                    )
+                runTest(
+                    testClassName = "tests.contract.list.ImmutableListTest",
+                    testMethodName = "replaceElements",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                    checkRepresentation = true,
                 )
             }
         }
@@ -122,14 +110,12 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(10 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "tests.contract.list.ImmutableListTest",
-                        methodName = "smallPersistentListFromMutableBuffer",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":kotlinx-collections-immutable:jvmTest",
-                        checkRepresentation = true,
-                    )
+                runTest(
+                    testClassName = "tests.contract.list.ImmutableListTest",
+                    testMethodName = "smallPersistentListFromMutableBuffer",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                    checkRepresentation = true,
                 )
             }
         }
@@ -139,14 +125,12 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(10 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "tests.contract.list.ImmutableListTest",
-                        methodName = "subList",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":kotlinx-collections-immutable:jvmTest",
-                        checkRepresentation = true,
-                    )
+                runTest(
+                    testClassName = "tests.contract.list.ImmutableListTest",
+                    testMethodName = "subList",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                    checkRepresentation = true,
                 )
             }
         }
@@ -156,14 +140,12 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(10 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "tests.contract.list.ImmutableListTest",
-                        methodName = "subListOfBuilder",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":kotlinx-collections-immutable:jvmTest",
-                        checkRepresentation = true,
-                    )
+                runTest(
+                    testClassName = "tests.contract.list.ImmutableListTest",
+                    testMethodName = "subListOfBuilder",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                    checkRepresentation = true,
                 )
             }
         }
@@ -173,14 +155,12 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(10 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "tests.contract.list.ImmutableListTest",
-                        methodName = "noOperation",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":kotlinx-collections-immutable:jvmTest",
-                        checkRepresentation = true,
-                    )
+                runTest(
+                    testClassName = "tests.contract.list.ImmutableListTest",
+                    testMethodName = "noOperation",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                    checkRepresentation = true,
                 )
             }
         }
@@ -190,14 +170,12 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(10 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "tests.contract.list.ImmutableListTest",
-                        methodName = "covariantTyping",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":kotlinx-collections-immutable:jvmTest",
-                        checkRepresentation = true,
-                    )
+                runTest(
+                    testClassName = "tests.contract.list.ImmutableListTest",
+                    testMethodName = "covariantTyping",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                    checkRepresentation = true,
                 )
             }
         }
@@ -207,14 +185,12 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(10 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "tests.contract.list.ImmutableListTest",
-                        methodName = "builder",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":kotlinx-collections-immutable:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "tests.contract.list.ImmutableListTest",
+                    testMethodName = "builder",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -224,14 +200,12 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(10 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "tests.contract.list.ImmutableListTest",
-                        methodName = "persistentListFails",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":kotlinx-collections-immutable:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "tests.contract.list.ImmutableListTest",
+                    testMethodName = "persistentListFails",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -241,14 +215,12 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(10 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "tests.contract.list.ImmutableListTest",
-                        methodName = "removeElements",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":kotlinx-collections-immutable:jvmTest",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "tests.contract.list.ImmutableListTest",
+                    testMethodName = "removeElements",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                    checkRepresentation = false,
                 )
             }
         }

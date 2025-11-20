@@ -20,14 +20,12 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated",
-                        methodName = "testAllFilesPresentInBox",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":compiler:fir:fir2ir:test",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated",
+                    testMethodName = "testAllFilesPresentInBox",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":compiler:fir:fir2ir:test"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -43,14 +41,12 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                         @Test
                         @Timeout(20 * 60)
                         fun test() {
-                            test(
-                                TestCase(
-                                    className = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$CallableReference$Bound$Equals",
-                                    methodName = "testReflectionReference",
-                                    jvmArgs = listOf(),
-                                    gradleCommand = ":compiler:fir:fir2ir:test",
-                                    checkRepresentation = false,
-                                )
+                            runTest(
+                                testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$CallableReference$Bound$Equals",
+                                testMethodName = "testReflectionReference",
+                                extraJvmArgs = listOf(),
+                                commands = listOf(":compiler:fir:fir2ir:test"),
+                                checkRepresentation = false,
                             )
                         }
                     }
@@ -60,14 +56,12 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                         @Test
                         @Timeout(20 * 60)
                         fun test() {
-                            test(
-                                TestCase(
-                                    className = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$CallableReference$Bound$Equals",
-                                    methodName = "testReceiverInEquals",
-                                    jvmArgs = listOf(),
-                                    gradleCommand = ":compiler:fir:fir2ir:test",
-                                    checkRepresentation = false,
-                                )
+                            runTest(
+                                testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$CallableReference$Bound$Equals",
+                                testMethodName = "testReceiverInEquals",
+                                extraJvmArgs = listOf(),
+                                commands = listOf(":compiler:fir:fir2ir:test"),
+                                checkRepresentation = false,
                             )
                         }
                     }
@@ -81,14 +75,12 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                     @Test
                     @Timeout(20 * 60)
                     fun test() {
-                        test(
-                            TestCase(
-                                className = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$CallableReference$Equality",
-                                methodName = "testCapturedDefaults",
-                                jvmArgs = listOf(),
-                                gradleCommand = ":compiler:fir:fir2ir:test",
-                                checkRepresentation = false,
-                            )
+                        runTest(
+                            testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$CallableReference$Equality",
+                            testMethodName = "testCapturedDefaults",
+                            extraJvmArgs = listOf(),
+                            commands = listOf(":compiler:fir:fir2ir:test"),
+                            checkRepresentation = false,
                         )
                     }
                 }
@@ -98,14 +90,12 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                     @Test
                     @Timeout(20 * 60)
                     fun test() {
-                        test(
-                            TestCase(
-                                className = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$CallableReference$Equality",
-                                methodName = "testExtensionReceiverVsDefault",
-                                jvmArgs = listOf(),
-                                gradleCommand = ":compiler:fir:fir2ir:test",
-                                checkRepresentation = false,
-                            )
+                        runTest(
+                            testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$CallableReference$Equality",
+                            testMethodName = "testExtensionReceiverVsDefault",
+                            extraJvmArgs = listOf(),
+                            commands = listOf(":compiler:fir:fir2ir:test"),
+                            checkRepresentation = false,
                         )
                     }
                 }
@@ -121,14 +111,12 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                     @Test
                     @Timeout(20 * 60)
                     fun test() {
-                        test(
-                            TestCase(
-                                className = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$Initializers$Files",
-                                methodName = "testSimple",
-                                jvmArgs = listOf(),
-                                gradleCommand = ":compiler:fir:fir2ir:test",
-                                checkRepresentation = false,
-                            )
+                        runTest(
+                            testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$Initializers$Files",
+                            testMethodName = "testSimple",
+                            extraJvmArgs = listOf(),
+                            commands = listOf(":compiler:fir:fir2ir:test"),
+                            checkRepresentation = false,
                         )
                     }
                 }
@@ -138,14 +126,12 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                     @Test
                     @Timeout(20 * 60)
                     fun test() {
-                        test(
-                            TestCase(
-                                className = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$Initializers$Files",
-                                methodName = "testSimpleMultiModule",
-                                jvmArgs = listOf(),
-                                gradleCommand = ":compiler:fir:fir2ir:test",
-                                checkRepresentation = false,
-                            )
+                        runTest(
+                            testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$Initializers$Files",
+                            testMethodName = "testSimpleMultiModule",
+                            extraJvmArgs = listOf(),
+                            commands = listOf(":compiler:fir:fir2ir:test"),
+                            checkRepresentation = false,
                         )
                     }
                 }
@@ -159,14 +145,12 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                 @Test
                 @Timeout(20 * 60)
                 fun test() {
-                    test(
-                        TestCase(
-                            className = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$Inline",
-                            methodName = "testDefaultArgs",
-                            jvmArgs = listOf(),
-                            gradleCommand = ":compiler:fir:fir2ir:test",
-                            checkRepresentation = false,
-                        )
+                    runTest(
+                        testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$Inline",
+                        testMethodName = "testDefaultArgs",
+                        extraJvmArgs = listOf(),
+                        commands = listOf(":compiler:fir:fir2ir:test"),
+                        checkRepresentation = false,
                     )
                 }
             }
@@ -176,14 +160,12 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                 @Test
                 @Timeout(20 * 60)
                 fun test() {
-                    test(
-                        TestCase(
-                            className = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$Inline",
-                            methodName = "testCrossModuleTypeOf",
-                            jvmArgs = listOf(),
-                            gradleCommand = ":compiler:fir:fir2ir:test",
-                            checkRepresentation = false,
-                        )
+                    runTest(
+                        testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$Inline",
+                        testMethodName = "testCrossModuleTypeOf",
+                        extraJvmArgs = listOf(),
+                        commands = listOf(":compiler:fir:fir2ir:test"),
+                        checkRepresentation = false,
                     )
                 }
             }
@@ -196,14 +178,12 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                 @Test
                 @Timeout(20 * 60)
                 fun test() {
-                    test(
-                        TestCase(
-                            className = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$Coroutines",
-                            methodName = "testAsync",
-                            jvmArgs = listOf(),
-                            gradleCommand = ":compiler:fir:fir2ir:test",
-                            checkRepresentation = false,
-                        )
+                    runTest(
+                        testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$Coroutines",
+                        testMethodName = "testAsync",
+                        extraJvmArgs = listOf(),
+                        commands = listOf(":compiler:fir:fir2ir:test"),
+                        checkRepresentation = false,
                     )
                 }
             }
@@ -217,14 +197,12 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
             @Test
             @Timeout(20 * 60)
             fun test() {
-                test(
-                    TestCase(
-                        className = "org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated",
-                        methodName = "testAllFilesPresentInBox",
-                        jvmArgs = listOf(),
-                        gradleCommand = ":js:js.tests:test",
-                        checkRepresentation = false,
-                    )
+                runTest(
+                    testClassName = "org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated",
+                    testMethodName = "testAllFilesPresentInBox",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":js:js.tests:test"),
+                    checkRepresentation = false,
                 )
             }
         }
@@ -240,14 +218,12 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                         @Test
                         @Timeout(20 * 60)
                         fun test() {
-                            test(
-                                TestCase(
-                                    className = $$"org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Multiplatform$K2$Basic",
-                                    methodName = "testAnyMethodInExpect",
-                                    jvmArgs = listOf(),
-                                    gradleCommand = ":js:js.tests:test",
-                                    checkRepresentation = false,
-                                )
+                            runTest(
+                                testClassName = $$"org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Multiplatform$K2$Basic",
+                                testMethodName = "testAnyMethodInExpect",
+                                extraJvmArgs = listOf(),
+                                commands = listOf(":js:js.tests:test"),
+                                checkRepresentation = false,
                             )
                         }
                     }
@@ -257,14 +233,12 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                         @Test
                         @Timeout(20 * 60)
                         fun test() {
-                            test(
-                                TestCase(
-                                    className = $$"org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Multiplatform$K2$Basic",
-                                    methodName = "testContextOnExpect",
-                                    jvmArgs = listOf(),
-                                    gradleCommand = ":js:js.tests:test",
-                                    checkRepresentation = false,
-                                )
+                            runTest(
+                                testClassName = $$"org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Multiplatform$K2$Basic",
+                                testMethodName = "testContextOnExpect",
+                                extraJvmArgs = listOf(),
+                                commands = listOf(":js:js.tests:test"),
+                                checkRepresentation = false,
                             )
                         }
                     }
@@ -277,14 +251,12 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                         @Test
                         @Timeout(20 * 60)
                         fun test() {
-                            test(
-                                TestCase(
-                                    className = $$"org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Multiplatform$K2$Annotations",
-                                    methodName = "testOptionalExpectation",
-                                    jvmArgs = listOf(),
-                                    gradleCommand = ":js:js.tests:test",
-                                    checkRepresentation = false,
-                                )
+                            runTest(
+                                testClassName = $$"org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Multiplatform$K2$Annotations",
+                                testMethodName = "testOptionalExpectation",
+                                extraJvmArgs = listOf(),
+                                commands = listOf(":js:js.tests:test"),
+                                checkRepresentation = false,
                             )
                         }
                     }
@@ -294,14 +266,12 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                         @Test
                         @Timeout(20 * 60)
                         fun test() {
-                            test(
-                                TestCase(
-                                    className = $$"org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Multiplatform$K2$Annotations",
-                                    methodName = "testExpectAnnotationCallInLibrary",
-                                    jvmArgs = listOf(),
-                                    gradleCommand = ":js:js.tests:test",
-                                    checkRepresentation = false,
-                                )
+                            runTest(
+                                testClassName = $$"org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Multiplatform$K2$Annotations",
+                                testMethodName = "testExpectAnnotationCallInLibrary",
+                                extraJvmArgs = listOf(),
+                                commands = listOf(":js:js.tests:test"),
+                                checkRepresentation = false,
                             )
                         }
                     }
@@ -316,14 +286,12 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                 @Test
                 @Timeout(20 * 60)
                 fun test() {
-                    test(
-                        TestCase(
-                            className = $$"org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Controlflow",
-                            methodName = "testBreak",
-                            jvmArgs = listOf(),
-                            gradleCommand = ":js:js.tests:test",
-                            checkRepresentation = false,
-                        )
+                    runTest(
+                        testClassName = $$"org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Controlflow",
+                        testMethodName = "testBreak",
+                        extraJvmArgs = listOf(),
+                        commands = listOf(":js:js.tests:test"),
+                        checkRepresentation = false,
                     )
                 }
             }
@@ -333,14 +301,12 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                 @Test
                 @Timeout(20 * 60)
                 fun test() {
-                    test(
-                        TestCase(
-                            className = $$"org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Controlflow",
-                            methodName = "testFor_loops",
-                            jvmArgs = listOf(),
-                            gradleCommand = ":js:js.tests:test",
-                            checkRepresentation = false,
-                        )
+                    runTest(
+                        testClassName = $$"org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Controlflow",
+                        testMethodName = "testFor_loops",
+                        extraJvmArgs = listOf(),
+                        commands = listOf(":js:js.tests:test"),
+                        checkRepresentation = false,
                     )
                 }
             }
@@ -353,14 +319,12 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                 @Test
                 @Timeout(20 * 60)
                 fun test() {
-                    test(
-                        TestCase(
-                            className = $$"org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Coroutines",
-                            methodName = "testAsync",
-                            jvmArgs = listOf(),
-                            gradleCommand = ":js:js.tests:test",
-                            checkRepresentation = false,
-                        )
+                    runTest(
+                        testClassName = $$"org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Coroutines",
+                        testMethodName = "testAsync",
+                        extraJvmArgs = listOf(),
+                        commands = listOf(":js:js.tests:test"),
+                        checkRepresentation = false,
                     )
                 }
             }
@@ -370,14 +334,12 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                 @Test
                 @Timeout(20 * 60)
                 fun test() {
-                    test(
-                        TestCase(
-                            className = $$"org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Coroutines",
-                            methodName = "testAwait",
-                            jvmArgs = listOf(),
-                            gradleCommand = ":js:js.tests:test",
-                            checkRepresentation = false,
-                        )
+                    runTest(
+                        testClassName = $$"org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Coroutines",
+                        testMethodName = "testAwait",
+                        extraJvmArgs = listOf(),
+                        commands = listOf(":js:js.tests:test"),
+                        checkRepresentation = false,
                     )
                 }
             }
@@ -392,14 +354,12 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                     @Test
                     @Timeout(20 * 60)
                     fun test() {
-                        test(
-                            TestCase(
-                                className = $$"org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$ControlStructures$TryCatchInExpressions",
-                                methodName = "testTryInsideTry",
-                                jvmArgs = listOf(),
-                                gradleCommand = ":js:js.tests:test",
-                                checkRepresentation = false,
-                            )
+                        runTest(
+                            testClassName = $$"org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$ControlStructures$TryCatchInExpressions",
+                            testMethodName = "testTryInsideTry",
+                            extraJvmArgs = listOf(),
+                            commands = listOf(":js:js.tests:test"),
+                            checkRepresentation = false,
                         )
                     }
                 }
@@ -418,14 +378,12 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                     @Test
                     @Timeout(20 * 60)
                     fun test() {
-                        test(
-                            TestCase(
-                                className = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations",
-                                methodName = "testWrongAnnotationTarget",
-                                jvmArgs = listOf(),
-                                gradleCommand = ":compiler:fir:analysis-tests:test",
-                                checkRepresentation = false,
-                            )
+                        runTest(
+                            testClassName = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations",
+                            testMethodName = "testWrongAnnotationTarget",
+                            extraJvmArgs = listOf(),
+                            commands = listOf(":compiler:fir:analysis-tests:test"),
+                            checkRepresentation = false,
                         )
                     }
                 }
@@ -435,14 +393,12 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                     @Test
                     @Timeout(20 * 60)
                     fun test() {
-                        test(
-                            TestCase(
-                                className = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations",
-                                methodName = "testWrongAnnotationTargetAnnotationOrder",
-                                jvmArgs = listOf(),
-                                gradleCommand = ":compiler:fir:analysis-tests:test",
-                                checkRepresentation = false,
-                            )
+                        runTest(
+                            testClassName = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations",
+                            testMethodName = "testWrongAnnotationTargetAnnotationOrder",
+                            extraJvmArgs = listOf(),
+                            commands = listOf(":compiler:fir:analysis-tests:test"),
+                            checkRepresentation = false,
                         )
                     }
                 }
@@ -454,14 +410,12 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                         @Test
                         @Timeout(20 * 60)
                         fun test() {
-                            test(
-                                TestCase(
-                                    className = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations$FunctionalTypes",
-                                    methodName = "testParameterName",
-                                    jvmArgs = listOf(),
-                                    gradleCommand = ":compiler:fir:analysis-tests:test",
-                                    checkRepresentation = false,
-                                )
+                            runTest(
+                                testClassName = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations$FunctionalTypes",
+                                testMethodName = "testParameterName",
+                                extraJvmArgs = listOf(),
+                                commands = listOf(":compiler:fir:analysis-tests:test"),
+                                checkRepresentation = false,
                             )
                         }
                     }
@@ -471,14 +425,12 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                         @Test
                         @Timeout(20 * 60)
                         fun test() {
-                            test(
-                                TestCase(
-                                    className = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations$FunctionalTypes",
-                                    methodName = "testParenthesizedAnnotations",
-                                    jvmArgs = listOf(),
-                                    gradleCommand = ":compiler:fir:analysis-tests:test",
-                                    checkRepresentation = false,
-                                )
+                            runTest(
+                                testClassName = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations$FunctionalTypes",
+                                testMethodName = "testParenthesizedAnnotations",
+                                extraJvmArgs = listOf(),
+                                commands = listOf(":compiler:fir:analysis-tests:test"),
+                                checkRepresentation = false,
                             )
                         }
                     }
@@ -491,14 +443,12 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                         @Test
                         @Timeout(20 * 60)
                         fun test() {
-                            test(
-                                TestCase(
-                                    className = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations$Options",
-                                    methodName = "testAnnotationAsArg",
-                                    jvmArgs = listOf(),
-                                    gradleCommand = ":compiler:fir:analysis-tests:test",
-                                    checkRepresentation = false,
-                                )
+                            runTest(
+                                testClassName = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations$Options",
+                                testMethodName = "testAnnotationAsArg",
+                                extraJvmArgs = listOf(),
+                                commands = listOf(":compiler:fir:analysis-tests:test"),
+                                checkRepresentation = false,
                             )
                         }
                     }
@@ -508,14 +458,12 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                         @Test
                         @Timeout(20 * 60)
                         fun test() {
-                            test(
-                                TestCase(
-                                    className = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations$Options",
-                                    methodName = "testAnnotationAsArgComplex",
-                                    jvmArgs = listOf(),
-                                    gradleCommand = ":compiler:fir:analysis-tests:test",
-                                    checkRepresentation = false,
-                                )
+                            runTest(
+                                testClassName = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations$Options",
+                                testMethodName = "testAnnotationAsArgComplex",
+                                extraJvmArgs = listOf(),
+                                commands = listOf(":compiler:fir:analysis-tests:test"),
+                                checkRepresentation = false,
                             )
                         }
                     }
@@ -528,14 +476,12 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                         @Test
                         @Timeout(20 * 60)
                         fun test() {
-                            test(
-                                TestCase(
-                                    className = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations$AnnotationParameterMustBeConstant",
-                                    methodName = "testCompareAndEquals",
-                                    jvmArgs = listOf(),
-                                    gradleCommand = ":compiler:fir:analysis-tests:test",
-                                    checkRepresentation = false,
-                                )
+                            runTest(
+                                testClassName = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations$AnnotationParameterMustBeConstant",
+                                testMethodName = "testCompareAndEquals",
+                                extraJvmArgs = listOf(),
+                                commands = listOf(":compiler:fir:analysis-tests:test"),
+                                checkRepresentation = false,
                             )
                         }
                     }
@@ -545,14 +491,12 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                         @Test
                         @Timeout(20 * 60)
                         fun test() {
-                            test(
-                                TestCase(
-                                    className = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations$AnnotationParameterMustBeConstant",
-                                    methodName = "testStrings",
-                                    jvmArgs = listOf(),
-                                    gradleCommand = ":compiler:fir:analysis-tests:test",
-                                    checkRepresentation = false,
-                                )
+                            runTest(
+                                testClassName = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations$AnnotationParameterMustBeConstant",
+                                testMethodName = "testStrings",
+                                extraJvmArgs = listOf(),
+                                commands = listOf(":compiler:fir:analysis-tests:test"),
+                                checkRepresentation = false,
                             )
                         }
                     }
@@ -566,14 +510,12 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                     @Test
                     @Timeout(20 * 60)
                     fun test() {
-                        test(
-                            TestCase(
-                                className = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$ControlFlowAnalysis",
-                                methodName = "testAssignedInFinally",
-                                jvmArgs = listOf(),
-                                gradleCommand = ":compiler:fir:analysis-tests:test",
-                                checkRepresentation = false,
-                            )
+                        runTest(
+                            testClassName = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$ControlFlowAnalysis",
+                            testMethodName = "testAssignedInFinally",
+                            extraJvmArgs = listOf(),
+                            commands = listOf(":compiler:fir:analysis-tests:test"),
+                            checkRepresentation = false,
                         )
                     }
                 }
@@ -590,14 +532,12 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                 @Test
                 @Timeout(20 * 60)
                 fun test() {
-                    test(
-                        TestCase(
-                            className = $$"org.jetbrains.kotlin.wasm.test.FirWasmJsCodegenBoxTestGenerated$Annotations",
-                            methodName = "testAnnotations0",
-                            jvmArgs = listOf(),
-                            gradleCommand = ":wasm:wasm.tests:test",
-                            checkRepresentation = false,
-                        )
+                    runTest(
+                        testClassName = $$"org.jetbrains.kotlin.wasm.test.FirWasmJsCodegenBoxTestGenerated$Annotations",
+                        testMethodName = "testAnnotations0",
+                        extraJvmArgs = listOf(),
+                        commands = listOf(":wasm:wasm.tests:test"),
+                        checkRepresentation = false,
                     )
                 }
             }
