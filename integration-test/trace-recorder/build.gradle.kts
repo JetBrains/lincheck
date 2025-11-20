@@ -20,10 +20,15 @@ sourceSets {
         val slf4jVersion: String by project
         val kotlinxSerializationVersion: String by project
 
+        implementation(kotlin("reflect"))
         implementation(project(":integration-test:common"))
         implementation("org.slf4j:slf4j-simple:$slf4jVersion")
         implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerializationVersion")
     }
+}
+
+enum class TraceAgentIntegrationTestSuite {
+    Basic, KotlinCompiler, Ktor, All
 }
 
 tasks {
@@ -35,7 +40,17 @@ tasks {
 
     val copyTraceRecorderFatJar = copyTraceAgentFatJar(project(":trace-recorder"), "trace-recorder-fat.jar")
 
+    val integrationTestSuite: String? by project
+    val integrationTestSuiteType = when (integrationTestSuite?.lowercase()) {
+        "basic" -> TraceAgentIntegrationTestSuite.Basic
+        "kotlincompiler" -> TraceAgentIntegrationTestSuite.KotlinCompiler
+        "ktor" -> TraceAgentIntegrationTestSuite.Ktor
+        "all", null -> TraceAgentIntegrationTestSuite.All
+        else -> error("Unknown integration test suite type: $integrationTestSuite")
+    }
+
     val traceRecorderIntegrationTest = register<Test>("traceRecorderIntegrationTest") {
+        useJUnitPlatform()
         configureJvmTestCommon(project)
         group = "verification"
 
@@ -47,38 +62,18 @@ tasks {
         classpath = sourceSets["main"].runtimeClasspath
 
         // Do not run extended tests in the basic task
-        useJUnit {
-            excludeCategories("org.jetbrains.trace.recorder.test.runner.ExtendedTraceRecorderTest")
+        when (integrationTestSuiteType) {
+            TraceAgentIntegrationTestSuite.KotlinCompiler -> include("**/*KotlinCompilerTraceRecorderJsonIntegrationTests*")
+            TraceAgentIntegrationTestSuite.Ktor -> include("**/*KtorTraceRecorderJsonIntegrationTests*")
+            TraceAgentIntegrationTestSuite.All -> {}
+            TraceAgentIntegrationTestSuite.Basic -> exclude(
+                "**/*KotlinCompilerTraceRecorderJsonIntegrationTests*",
+                "**/*KtorTraceRecorderJsonIntegrationTests*"
+            )
         }
 
         outputs.upToDateWhen { false } // Always run tests when called
         dependsOn(traceAgentIntegrationTestsPrerequisites)
         dependsOn(copyTraceRecorderFatJar)
-    }
-
-    val traceRecorderIntegrationTestExtended = register<Test>("traceRecorderIntegrationTestExtended") {
-        configureJvmTestCommon(project)
-        group = "verification"
-
-        // Use the same source set as the basic integration tests
-        testClassesDirs = sourceSets["main"].output.classesDirs
-        classpath = sourceSets["main"].runtimeClasspath
-
-        // Only run tests marked as extended
-        useJUnit {
-            includeCategories("org.jetbrains.trace.recorder.test.runner.ExtendedTraceRecorderTest")
-        }
-
-        outputs.upToDateWhen { false } // Always run tests when called
-        dependsOn(traceAgentIntegrationTestsPrerequisites)
-        dependsOn(copyTraceRecorderFatJar)
-    }
-    
-    val traceRecorderIntegrationTestAll = register<Test>("traceRecorderIntegrationTestAll") {
-        group = "verification"
-
-        finalizedBy(traceRecorderIntegrationTest)
-        finalizedBy(traceRecorderIntegrationTestExtended)
-        traceRecorderIntegrationTestExtended.get().mustRunAfter(traceRecorderIntegrationTest)
     }
 }

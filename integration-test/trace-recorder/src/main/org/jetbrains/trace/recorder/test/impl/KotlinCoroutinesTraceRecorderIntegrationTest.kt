@@ -11,15 +11,15 @@
 package org.jetbrains.trace.recorder.test.impl
 
 import org.jetbrains.trace.recorder.test.runner.AbstractTraceRecorderIntegrationTest
-import org.junit.Ignore
-import org.junit.Test
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
 import java.nio.file.Paths
 
 class KotlinCoroutinesTraceRecorderIntegrationTest : AbstractTraceRecorderIntegrationTest() {
     override val projectPath: String = Paths.get("build", "integrationTestProjects", "kotlinx.coroutines").toString()
 
     @Test
-    @Ignore("Flaky test")
+    @Disabled("Flaky test")
     fun `kotlinx_coroutines_ExecutorsTest testDefaultDispatcherToExecutor`() {
         runTest(
             testClassName = "kotlinx.coroutines.ExecutorsTest",

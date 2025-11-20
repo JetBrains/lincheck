@@ -9,8 +9,8 @@
  */
 
 import org.jetbrains.kotlinx.lincheck_test.util.OVERWRITE_REPRESENTATION_TESTS_OUTPUT
-import org.junit.After
-import org.junit.Assert
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -33,7 +33,7 @@ abstract class AbstractTraceIntegrationTest {
 
     private val failOnErrorInStdErr: (String) -> Unit = {
         if (it.lines().any { line -> line.startsWith("[ERROR] ") }) {
-            Assert.fail("Error output in stderr:\n$it")
+            Assertions.fail("Error output in stderr:\n$it")
         }
     }
 
@@ -107,14 +107,14 @@ abstract class AbstractTraceIntegrationTest {
         if (checkRepresentation) { // otherwise we just want to make sure that tests do not fail
             val expectedOutput = getGoldenDataFileFor(testClassName, testMethodName, testNameSuffix)
             if (expectedOutput.exists()) {
-                Assert.assertEquals(expectedOutput.readText(), outputFile.readText())
+                Assertions.assertEquals(expectedOutput.readText(), outputFile.readText())
             } else {
                 if (OVERWRITE_REPRESENTATION_TESTS_OUTPUT) {
                     expectedOutput.parentFile.mkdirs()
                     copy(outputFile, expectedOutput)
-                    Assert.fail("The gold data file was created. Please rerun the test.")
+                    Assertions.fail("The gold data file was created. Please rerun the test.")
                 } else {
-                    Assert.fail(
+                    Assertions.fail(
                         "The gold data file was not found at '${expectedOutput.absolutePath}'. " +
                                 "Please rerun the test with \"overwriteRepresentationTestsOutput\" option enabled."
                     )
@@ -124,7 +124,7 @@ abstract class AbstractTraceIntegrationTest {
             fun checkNonEmptyNess(file: File, filePurpose: String = "output") {
                 val fileContainsContent = file.bufferedReader().lineSequence().any { it.isNotEmpty() }
                 if (!fileContainsContent) {
-                    Assert.fail("Empty $filePurpose file was produced by the test: $file.")
+                    Assertions.fail<Unit>("Empty $filePurpose file was produced by the test: $file.")
                 }
             }
 
@@ -134,7 +134,7 @@ abstract class AbstractTraceIntegrationTest {
                 if (packedOutputFile.exists()) {
                     checkNonEmptyNess(packedOutputFile)
                 } else {
-                    Assert.fail("No output was produced by the test.")
+                    Assertions.fail("No output was produced by the test.")
                 }
             }
         }
@@ -142,7 +142,7 @@ abstract class AbstractTraceIntegrationTest {
 
     private val taskQueue = ConcurrentLinkedQueue<() -> Unit>()
 
-    @After
+    @AfterEach
     fun tearDown() {
         while (true) {
             taskQueue.poll()?.invoke() ?: break

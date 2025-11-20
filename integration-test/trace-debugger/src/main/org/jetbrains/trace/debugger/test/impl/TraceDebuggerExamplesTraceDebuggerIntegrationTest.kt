@@ -11,8 +11,8 @@
 package org.jetbrains.trace.debugger.test.impl
 
 import org.jetbrains.trace.debugger.test.runner.AbstractTraceDebuggerIntegrationTest
-import org.junit.Ignore
-import org.junit.Test
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
 import java.nio.file.Paths
 
 class TraceDebuggerExamplesTraceDebuggerIntegrationTest: AbstractTraceDebuggerIntegrationTest() {
@@ -27,7 +27,7 @@ class TraceDebuggerExamplesTraceDebuggerIntegrationTest: AbstractTraceDebuggerIn
         )
     }
 
-    @Ignore("`class.java.declaredMethods` call returns nondeterministic results")
+    @Disabled("`class.java.declaredMethods` call returns nondeterministic results")
     @Test
     fun `org_examples_integration_bugs_ReflectionTest sortMethods`() {
         runTest(
