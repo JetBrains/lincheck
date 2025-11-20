@@ -10,9 +10,9 @@
 
 package org.jetbrains.trace.recorder.test.impl
 
-import org.junit.Assert
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.io.path.absolute
@@ -31,7 +31,7 @@ private val basePath: Path by lazy {
 
 private val testPath = basePath / "src" / "main" / "org" / "jetbrains" / "trace" / "recorder" / "test" / "impl" / "generated"
 
-private val TestGenerator.testFilePath: Path get() = testPath / "${groupName}.kt"
+private val TestGenerator.testFilePath: Path get() = testPath / "${groupName}GeneratedTests.kt"
 
 /**
  * Updates generated tests.
@@ -51,7 +51,7 @@ class TestGeneratedDataCorrectness {
         for (testClass in testClassGenerators) {
             val testFilePath = testClass.testFilePath.absolute()
             if (!testFilePath.exists()) {
-                Assert.fail("File $testFilePath does not exist")
+                Assertions.fail<Unit>("File $testFilePath does not exist")
             }
             val expected = testClass.generateString()
             val actual = testFilePath.readText()

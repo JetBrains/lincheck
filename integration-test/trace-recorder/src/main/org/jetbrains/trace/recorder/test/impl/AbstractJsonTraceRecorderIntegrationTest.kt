@@ -10,6 +10,7 @@
 
 package org.jetbrains.trace.recorder.test.impl
 
+import org.jetbrains.trace.recorder.test.impl.AbstractJsonTraceRecorderIntegrationTest.Companion.renderAllTestsCode
 import org.jetbrains.trace.recorder.test.runner.AbstractTraceRecorderIntegrationTest
 import org.jetbrains.trace.recorder.test.runner.loadResourceText
 import org.jetbrains.trace.recorder.test.runner.parseJsonEntries
@@ -19,6 +20,7 @@ import kotlin.io.path.writeText
 
 abstract class AbstractJsonTraceRecorderIntegrationTest(
     override val projectPath: String,
+    val checkRepresentationByDefault: Boolean,
 ) : AbstractTraceRecorderIntegrationTest() {
     override val formatArgs: Map<String, String> = mapOf("format" to "binary", "formatOption" to "stream")
 
@@ -27,7 +29,8 @@ abstract class AbstractJsonTraceRecorderIntegrationTest(
         val methodName: String,
         val gradleCommand: String,
         val jvmArgs: List<String>,
-        val checkRepresentation: Boolean,
+        val checkRepresentation: Boolean? = null,
+        val reasonForMuting: String? = null,
     )
 
     open fun test(testCase: TestCase) = runTest(
@@ -35,15 +38,24 @@ abstract class AbstractJsonTraceRecorderIntegrationTest(
         testMethodName = testCase.methodName,
         extraJvmArgs = testCase.jvmArgs,
         commands = listOf(testCase.gradleCommand),
-        checkRepresentation = testCase.checkRepresentation,
+        checkRepresentation = testCase.checkRepresentation ?: checkRepresentationByDefault,
     )
 
     companion object {
         fun getAllTestCases(resourcePath: String): Collection<TestCase> {
             val json = loadResourceText(resourcePath, this::class.java)
             val entries = parseJsonEntries(json)
-            return entries.flatMap { (className, gradleCommand, methods, jvmArgs, checkRepresentation) ->
-                methods.map { TestCase(className, it, gradleCommand, jvmArgs, checkRepresentation) }
+            return entries.flatMap { jsonEntry ->
+                jsonEntry.methods.map {
+                    TestCase(
+                        className = jsonEntry.className,
+                        methodName = it,
+                        gradleCommand = jsonEntry.gradleCommand,
+                        jvmArgs = jsonEntry.jvmArgs,
+                        checkRepresentation = jsonEntry.checkRepresentation,
+                        reasonForMuting = jsonEntry.reasonsForMuting[it]
+                    )
+                }
             }
         }
 
@@ -60,11 +72,10 @@ abstract class AbstractJsonTraceRecorderIntegrationTest(
 
         private fun String.toSimpleName() = substringAfterLast('.')
 
-        fun renderSingleTestCode(
+        private fun renderSingleTestCode(
             testCase: TestCase,
             abstractTestClass: String,
             timeoutMinutes: Long,
-            category: String?,
             classNamesToIgnore: Int,
         ): String {
             val formattedOriginalClassNamePieces = testCase.className.toSimpleName()
@@ -78,13 +89,14 @@ abstract class AbstractJsonTraceRecorderIntegrationTest(
                 return "$dollarPrefix\"$this\""
             }
 
-            val categoryAnnotation = category?.let { "@Category($it::class)\n" } ?: ""
-            val testName = makeClassName(testCase.className.toSimpleName().split('$') + testCase.methodName)
+            val disabledString = testCase.reasonForMuting?.let { "@Disabled(${it.toLiteral()})\n" } ?: ""
 
-            return categoryAnnotation + """
-                class $generatedTestClassName : $abstractTestClass() {
-                    @Test(timeout = $timeoutMinutes * 60 * 1000L)
-                    fun $testName() {
+            return disabledString + """
+                @Nested
+                inner class $generatedTestClassName : $abstractTestClass() {
+                    @Test
+                    @Timeout($timeoutMinutes * 60)
+                    fun test() {
                         test(
                             TestCase(
                                 className = ${testCase.className.toLiteral()},
@@ -103,7 +115,6 @@ abstract class AbstractJsonTraceRecorderIntegrationTest(
             testCases: Collection<TestCase>,
             abstractTestClass: String,
             timeoutMinutes: Long,
-            category: String?,
             outerClassNamesToIgnore: Int,
         ): String {
             fun TestCase.classNameSuffix(): String {
@@ -121,16 +132,15 @@ abstract class AbstractJsonTraceRecorderIntegrationTest(
 
             val subGroupResults = subGroups.mapValues { (className, cases) ->
                 val subResult =
-                    renderTestGroup(cases, abstractTestClass, timeoutMinutes, category, outerClassNamesToIgnore + 1)
+                    renderTestGroup(cases, abstractTestClass, timeoutMinutes, outerClassNamesToIgnore + 1)
                 val simpleClassName = className.substringAfterLast('.')
                 val classNameToUse = if (simpleClassName in clashedSimpleClassNames) className else simpleClassName
-                val categoryAnnotation = category?.let { "@Category($it::class)\n" } ?: ""
                 val innerClassBody = subResult.prependIndent(" ".repeat(4))
-                "@RunWith(Enclosed::class)\n${categoryAnnotation}class ${makeClassName(listOf(classNameToUse))} {\n$innerClassBody\n}"
+                "@Nested\ninner class ${makeClassName(listOf(classNameToUse))} {\n$innerClassBody\n}"
             }
 
             val singleTestCases = testCases.map {
-                renderSingleTestCode(it, abstractTestClass, timeoutMinutes, category, outerClassNamesToIgnore)
+                renderSingleTestCode(it, abstractTestClass, timeoutMinutes, outerClassNamesToIgnore)
             }
 
             return (singleTestCases + subGroupResults.values).joinToString("\n\n")
@@ -141,11 +151,12 @@ abstract class AbstractJsonTraceRecorderIntegrationTest(
             resourcePath: String,
             abstractTestClass: String,
             packageName: String,
-            category: String?,
             customImports: List<String>,
             timeoutMinutes: Long,
         ): String {
             val testCases = getAllTestCases(resourcePath)
+
+            val addIgnore = testCases.any { it.reasonForMuting != null }
 
             val beforeCustomImports = """
                 @file:Suppress("ClassName", "FunctionName")
@@ -153,12 +164,11 @@ abstract class AbstractJsonTraceRecorderIntegrationTest(
                 package $packageName
                 
                 import org.jetbrains.trace.recorder.test.impl.*
-                import org.jetbrains.trace.recorder.test.runner.*
-                import org.junit.Test
-                import org.junit.experimental.categories.Category
-                import org.junit.experimental.runners.Enclosed
-                import org.junit.runner.RunWith
-                """.trimIndent()
+                import org.junit.jupiter.api.Nested
+                import org.junit.jupiter.api.Test
+                import org.junit.jupiter.api.Timeout
+                """.trimIndent() +
+                    if (addIgnore) "\nimport org.junit.jupiter.api.Disabled" else ""
 
             val disclaimer = """
                 /*
@@ -167,10 +177,10 @@ abstract class AbstractJsonTraceRecorderIntegrationTest(
                 */
                 """.trimIndent()
 
-            val renderedTestCases = renderTestGroup(testCases, abstractTestClass, timeoutMinutes, category, 0)
+            val renderedTestCases = renderTestGroup(testCases, abstractTestClass, timeoutMinutes, 0)
                 .prependIndent(" ".repeat(4))
 
-            return "$beforeCustomImports${customImports.joinToString("\n")}\n\n$disclaimer\n\n@RunWith(Enclosed::class)\nclass $groupName {\n$renderedTestCases\n}\n"
+            return "$beforeCustomImports${customImports.joinToString("\n")}\n\n$disclaimer\n\nclass ${groupName}TraceRecorderJsonIntegrationTests {\n$renderedTestCases\n}\n"
         }
     }
 }
@@ -180,12 +190,11 @@ sealed class TestGenerator(
     private val resourcePath: String,
     private val abstractTestClass: String,
     private val packageName: String,
-    private val category: String?,
     private val customImports: List<String> = listOf(),
     private val timeoutMinutes: Long = 20,
 ) {
-    fun generateString(): String = AbstractJsonTraceRecorderIntegrationTest.renderAllTestsCode(
-        groupName, resourcePath, abstractTestClass, packageName, category, customImports, timeoutMinutes
+    fun generateString(): String = renderAllTestsCode(
+        groupName, resourcePath, abstractTestClass, packageName, customImports, timeoutMinutes
     )
 
     fun generateFile(path: Path) {

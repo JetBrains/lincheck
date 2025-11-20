@@ -11,7 +11,7 @@
 package org.jetbrains.trace.recorder.test.impl
 
 import org.jetbrains.trace.recorder.test.runner.AbstractTraceRecorderIntegrationTest
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import java.nio.file.Paths
 
 class TraceDebuggerExamplesTraceRecorderIntegrationTest : AbstractTraceRecorderIntegrationTest() {

@@ -14,12 +14,12 @@ import java.nio.file.Paths
 
 abstract class KtorTraceRecorderJsonTests: AbstractJsonTraceRecorderIntegrationTest(
     projectPath = Paths.get("build", "integrationTestProjects", "ktor").toString(),
+    checkRepresentationByDefault = false,
 ) {
     companion object Companion : TestGenerator(
-        groupName = "KtorTests",
+        groupName = "Ktor",
         resourcePath = "/integrationTestData/ktorTests.json",
         abstractTestClass = "KtorTraceRecorderJsonTests",
         packageName = "org.jetbrains.trace.recorder.test.impl.generated",
-        category = "KtorTraceRecorderTest",
     )
 }

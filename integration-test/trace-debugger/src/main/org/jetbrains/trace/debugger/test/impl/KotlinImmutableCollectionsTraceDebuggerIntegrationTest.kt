@@ -11,14 +11,14 @@
 package org.jetbrains.trace.debugger.test.impl
 
 import org.jetbrains.trace.debugger.test.runner.AbstractTraceDebuggerIntegrationTest
-import org.junit.Ignore
-import org.junit.Test
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
 import java.nio.file.Paths
 
 class KotlinImmutableCollectionsTraceDebuggerIntegrationTest: AbstractTraceDebuggerIntegrationTest() {
     override val projectPath: String = Paths.get("build", "integrationTestProjects", "kotlinx.collections.immutable").toString()
 
-    @Ignore
+    @Disabled
     @Test
     fun `tests_contract_list_GuavaImmutableListTest list`() {
         runTest(
