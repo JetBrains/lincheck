@@ -126,20 +126,48 @@ public class Injections {
     }
 
     /**
-     * Retrieves the current thread's descriptor if it exists;
-     * otherwise, if event tracking mode is GLOBAL, will automatically register the current thread,
+     * Retrieves the current thread's descriptor if it exists and the thread is in analyzed code.
+     * <br>
+     *
+     * If the event tracking mode is GLOBAL, will automatically register the current thread,
      * creating a new thread descriptor for it.
+     * <br>
+     *
+     * In general, this method SHOULD BE called from bytecode transformers when they
+     * prepare the thread descriptor argument for passing it as a first argument into injections methods.
+     * This procedure ensures that:
+     *   - the thread descriptor will be registered automatically if necessary in GLOBAL mode;
+     *   - if the code is not in analyzed code, the thread descriptor will be null,
+     *     ensuring that the event tracker obtained through this descriptor will also be null,
+     *     and thus the actual event tracking method will not be called.
+     *  <br>
+     *
+     *  Alternatively, injections can wrap the injected code into `if (inAnalyzedCode()) { ... }` statements,
+     *  using the `Injections::inAnalyzedCode()` method.
+     *  This method checks if the current thread is currently inside
+     *  an analyzed code, and if so, returns the current thread's descriptor,
+     *  also performing automatic registration of the thread if necessary in GLOBAL mode.
+     *  Inside the `then` branch of the conditional, it is fine to use simply
+     *  `ThreadDescriptor::getCurrentThreadDescriptor()` to prepare the thread descriptor argument,
+     *  because the thread will be registered at this point by the preceding `inAnalyzedCode()` method call.
      */
-    private static ThreadDescriptor getOrCreateCurrentThreadDescriptor() {
+    public static ThreadDescriptor getCurrentThreadDescriptorIfInAnalyzedCode() {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
-        if (descriptor != null) return descriptor;
 
-        if (eventTrackingMode == EventTrackingMode.GLOBAL) {
-            getEventTracker(null, true); // will trigger registration of the current thread
-            return ThreadDescriptor.getCurrentThreadDescriptor();
+        // Handle the case when global threads tracking was requested,
+        // and we need to self-register the currently running thread by creating a new descriptor for it.
+        if (descriptor == null && eventTrackingMode == EventTrackingMode.GLOBAL) {
+            EventTracker eventTracker = globalEventTracker;
+            if (eventTracker != null) {
+                descriptor = registerRunningThread(eventTracker, Thread.currentThread());
+            }
         }
 
-        return null;
+        // If the thread is not registered, or it is not in analyzed code, return null.
+        if (descriptor == null) return null;
+        if (!descriptor.inAnalyzedCode()) return null;
+
+        return descriptor;
     }
 
     /**
@@ -251,18 +279,17 @@ public class Injections {
     }
 
     /**
-     * Determines if the current thread is inside an ignored section.
+     * Determines if the current thread is inside an analyzed code.
      *
-     * @return true if the current thread is inside an ignored section, false otherwise.
+     * @return true if the current thread is inside analyzed code, false otherwise.
      */
     public static boolean inAnalyzedCode() {
-        // Injections are wrapped into `if` statements with `inAnalyzedCode` checks.
-        // To trigger thread descriptors creation for a yet-untracked thread,
-        // we call the `getOrCreateCurrentThreadDescriptor` method
-        // (instead of just `getCurrentThreadDescriptor`).
-        ThreadDescriptor descriptor = getOrCreateCurrentThreadDescriptor();
-        if (descriptor == null) return false;
-        return descriptor.inAnalyzedCode();
+        // Some injections are wrapped into `if` statements with `inAnalyzedCode` checks.
+        // Calling the `getCurrentThreadDescriptorIfInAnalyzedCode` method
+        // (instead of just `getCurrentThreadDescriptor`)
+        // will trigger thread descriptors creation for a yet-untracked thread.
+        ThreadDescriptor descriptor = getCurrentThreadDescriptorIfInAnalyzedCode();
+        return (descriptor != null);
     }
 
     /**
