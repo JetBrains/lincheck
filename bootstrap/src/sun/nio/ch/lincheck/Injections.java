@@ -71,32 +71,37 @@ public class Injections {
      * current event tracking mode.
      */
     public static EventTracker getEventTracker(ThreadDescriptor descriptor) {
-        return getEventTracker(descriptor, false);
+        EventTrackingMode mode = eventTrackingMode;
+        if (mode == EventTrackingMode.GLOBAL) {
+            return globalEventTracker;
+        }
+        if (mode == EventTrackingMode.THREAD_LOCAL) {
+            return (descriptor != null) ? descriptor.getEventTracker() : null;
+        }
+        return null;
     }
 
     /**
-     * Retrieves the appropriate {@link EventTracker}
-     * based on the specified event tracking mode and the provided parameters.
+     * Retrieves an event tracker instance for the current thread based on the current event tracking mode.
      * <br>
      *
      * - In GLOBAL mode, the global event tracker is returned.
-     *   In addition, if {@code registerRunningThread} flag is true
-     *   and the thread descriptor is not yet registered (and null is passed as descriptor),
-     *   registers the currently running thread, creating a new thread descriptor for it.
+     *   In addition, if the current thread is not yet registered,
+     *   registers the current thread, creating a new thread descriptor for it.
      * <br>
      *
      * - In THREAD_LOCAL mode, the thread-local event tracker is returned.
+     * <br>
      *
-     * @param descriptor the thread descriptor for which the event tracker is requested.
-     * @param registerRunningThread indicates whether to register the currently running thread
-     *                              (applicable in GLOBAL mode only).
-     * @return the event tracker of `null` if event tracking is disabled or the current thread is not tracked.
+     * This is an INTERNAL method, do not expose it in public API!
+     *
+     * @return the event tracker or `null` if event tracking is disabled or the current thread is not tracked.
      */
-    private static EventTracker getEventTracker(ThreadDescriptor descriptor, boolean registerRunningThread) {
+    private static EventTracker getEventTracker() {
         EventTrackingMode mode = eventTrackingMode;
         if (mode == EventTrackingMode.GLOBAL) {
             EventTracker eventTracker = globalEventTracker;
-            if (eventTracker != null && descriptor == null && registerRunningThread) {
+            if (eventTracker != null) {
                 // Handle the case when all threads tracking was requested,
                 // and we need to self-register the currently running thread by creating a new descriptor for it.
                 registerRunningThread(eventTracker, Thread.currentThread());
@@ -104,6 +109,7 @@ public class Injections {
             return eventTracker;
         }
         if (mode == EventTrackingMode.THREAD_LOCAL) {
+            ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
             return (descriptor != null) ? descriptor.getEventTracker() : null;
         }
 
@@ -111,35 +117,62 @@ public class Injections {
     }
 
     /**
-     * Retrieves an event tracker instance for the current thread.
+     * Retrieves the current thread's descriptor if it exists and the thread is in analyzed code.
      * <br>
      *
-     * In GLOBAL mode will automatically register the currently running thread (if it is not yet registered),,
+     * If the event tracking mode is GLOBAL, will automatically register the current thread,
      * creating a new thread descriptor for it.
      * <br>
      *
      * This is an INTERNAL method, do not expose it in public API!
+     *
+     * @return the event tracker or `null` if event tracking is disabled or the current thread is not tracked.
      */
-    private static EventTracker getEventTracker() {
+    private static ThreadDescriptor getOrRegisterCurrentThreadDescriptor() {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
-        return getEventTracker(descriptor, true);
+        // Handle the case when global threads tracking was requested,
+        // and we need to self-register the currently running thread by creating a new descriptor for it.
+        if (descriptor == null && eventTrackingMode == EventTrackingMode.GLOBAL) {
+            EventTracker eventTracker = globalEventTracker;
+            if (eventTracker != null) {
+                descriptor = registerRunningThread(eventTracker, Thread.currentThread());
+            }
+        }
+        return descriptor;
     }
 
     /**
-     * Retrieves the current thread's descriptor if it exists;
-     * otherwise, if event tracking mode is GLOBAL, will automatically register the current thread,
+     * Retrieves the current thread's descriptor if it exists and the thread is in analyzed code.
+     * <br>
+     *
+     * If the event tracking mode is GLOBAL, will automatically register the current thread,
      * creating a new thread descriptor for it.
+     * <br>
+     *
+     * In general, this method SHOULD BE called from bytecode transformers when they
+     * prepare the thread descriptor argument for passing it as a first argument into injections methods.
+     * This procedure ensures that:
+     *   - the thread descriptor will be registered automatically if necessary in GLOBAL mode;
+     *   - if the code is not in analyzed code, the thread descriptor will be null,
+     *     ensuring that the event tracker obtained through this descriptor will also be null,
+     *     and thus the actual event tracking method will not be called.
+     *  <br>
+     *
+     *  Alternatively, injections can wrap the injected code into `if (inAnalyzedCode()) { ... }` statements,
+     *  using the `Injections::inAnalyzedCode()` method.
+     *  This method checks if the current thread is currently inside
+     *  an analyzed code, and if so, returns the current thread's descriptor,
+     *  also performing automatic registration of the thread if necessary in GLOBAL mode.
+     *  Inside the `then` branch of the conditional, it is fine to use simply
+     *  `ThreadDescriptor::getCurrentThreadDescriptor()` to prepare the thread descriptor argument,
+     *  because the thread will be registered at this point by the preceding `inAnalyzedCode()` method call.
      */
-    private static ThreadDescriptor getOrCreateCurrentThreadDescriptor() {
-        ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
-        if (descriptor != null) return descriptor;
-
-        if (eventTrackingMode == EventTrackingMode.GLOBAL) {
-            getEventTracker(null, true); // will trigger registration of the current thread
-            return ThreadDescriptor.getCurrentThreadDescriptor();
-        }
-
-        return null;
+    public static ThreadDescriptor getCurrentThreadDescriptorIfInAnalyzedCode() {
+        ThreadDescriptor descriptor = getOrRegisterCurrentThreadDescriptor();
+        // If the thread is not registered, or it is not in analyzed code, return null.
+        if (descriptor == null) return null;
+        if (!descriptor.inAnalyzedCode()) return null;
+        return descriptor;
     }
 
     /**
@@ -251,18 +284,17 @@ public class Injections {
     }
 
     /**
-     * Determines if the current thread is inside an ignored section.
+     * Determines if the current thread is inside an analyzed code.
      *
-     * @return true if the current thread is inside an ignored section, false otherwise.
+     * @return true if the current thread is inside analyzed code, false otherwise.
      */
     public static boolean inAnalyzedCode() {
-        // Injections are wrapped into `if` statements with `inAnalyzedCode` checks.
-        // To trigger thread descriptors creation for a yet-untracked thread,
-        // we call the `getOrCreateCurrentThreadDescriptor` method
-        // (instead of just `getCurrentThreadDescriptor`).
-        ThreadDescriptor descriptor = getOrCreateCurrentThreadDescriptor();
-        if (descriptor == null) return false;
-        return descriptor.inAnalyzedCode();
+        // Some injections are wrapped into `if` statements with `inAnalyzedCode` checks.
+        // Calling the `getCurrentThreadDescriptorIfInAnalyzedCode` method
+        // (instead of just `getCurrentThreadDescriptor`)
+        // will trigger thread descriptors creation for a yet-untracked thread.
+        ThreadDescriptor descriptor = getCurrentThreadDescriptorIfInAnalyzedCode();
+        return (descriptor != null);
     }
 
     /**
@@ -345,8 +377,8 @@ public class Injections {
         // If thread is started return immediately, as in this case, JVM will throw an `IllegalThreadStateException`
         if (startingThread.getState() != Thread.State.NEW) return;
 
-        EventTracker eventTracker = getEventTracker();
-        ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
+        ThreadDescriptor descriptor = getCurrentThreadDescriptorIfInAnalyzedCode();
+        EventTracker eventTracker = getEventTracker(descriptor);
         if (eventTracker == null || descriptor == null) return;
 
         /* We need to prepare a thread descriptor for the starting thread.
@@ -399,10 +431,12 @@ public class Injections {
          */
         ThreadDescriptor descriptor = ThreadDescriptor.getThreadDescriptor(thread);
         if (descriptor == null) return;
-
+        // Store the thread descriptor into the current thread's thread-local variable.
         ThreadDescriptor.setCurrentThreadDescriptor(descriptor);
 
-        EventTracker eventTracker = getEventTracker(descriptor, false);
+        EventTracker eventTracker = getEventTracker(descriptor);
+        if (eventTracker == null) return;
+
         eventTracker.beforeThreadRun(descriptor);
     }
 
@@ -427,9 +461,9 @@ public class Injections {
          * - the thread-local descriptor was not set, in which case we can just do nothing.
          */
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
-        if (descriptor == null) return;
+        EventTracker eventTracker = getEventTracker(descriptor);
+        if (descriptor == null || eventTracker == null) return;
 
-        EventTracker eventTracker = getEventTracker(descriptor, false);
         eventTracker.afterThreadRunReturn(descriptor);
     }
 
@@ -448,18 +482,18 @@ public class Injections {
          * for the same reason as in the `afterThreadRunReturn` method.
          */
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
-        if (descriptor == null) return;
+        EventTracker eventTracker = getEventTracker(descriptor);
+        if (descriptor == null || eventTracker == null) return;
 
-        EventTracker tracker = getEventTracker(descriptor, false);
-        tracker.afterThreadRunException(descriptor, exception);
+        eventTracker.afterThreadRunException(descriptor, exception);
     }
 
     /**
      * Called from instrumented code instead of {@code Thread::join} method.
      */
     public static void onThreadJoin(Thread thread, boolean withTimeout) {
-        EventTracker eventTracker = getEventTracker();
-        ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
+        ThreadDescriptor descriptor = getCurrentThreadDescriptorIfInAnalyzedCode();
+        EventTracker eventTracker = getEventTracker(descriptor);
         if (eventTracker == null || descriptor == null) return;
 
         eventTracker.onThreadJoin(descriptor, thread, withTimeout);
@@ -586,6 +620,7 @@ public class Injections {
      */
     public static void beforeReadField(ThreadDescriptor descriptor, int codeLocation, Object obj, int fieldId) {
         EventTracker eventTracker = getEventTracker(descriptor);
+        if (descriptor == null || eventTracker == null) return;
         eventTracker.beforeReadField(descriptor, codeLocation, obj, fieldId);
     }
 
@@ -594,6 +629,7 @@ public class Injections {
      */
     public static void beforeReadArray(ThreadDescriptor descriptor, int codeLocation, Object array, int index) {
         EventTracker eventTracker = getEventTracker(descriptor);
+        if (descriptor == null || eventTracker == null) return;
         eventTracker.beforeReadArrayElement(descriptor, codeLocation, array, index);
     }
 
@@ -602,6 +638,7 @@ public class Injections {
      */
     public static void afterLocalRead(ThreadDescriptor descriptor, int codeLocation, int variableId, Object value) {
         EventTracker eventTracker = getEventTracker(descriptor);
+        if (descriptor == null || eventTracker == null) return;
         eventTracker.afterLocalRead(descriptor, codeLocation, variableId, value);
     }
 
@@ -610,6 +647,7 @@ public class Injections {
      */
     public static void afterLocalWrite(ThreadDescriptor descriptor, int codeLocation, int variableId, Object value) {
         EventTracker eventTracker = getEventTracker(descriptor);
+        if (descriptor == null || eventTracker == null) return;
         eventTracker.afterLocalWrite(descriptor, codeLocation, variableId, value);
     }
 
@@ -618,6 +656,7 @@ public class Injections {
      */
     public static void afterReadField(ThreadDescriptor descriptor, int codeLocation, Object obj, int fieldId, Object value) {
         EventTracker eventTracker = getEventTracker(descriptor);
+        if (descriptor == null || eventTracker == null) return;
         eventTracker.afterReadField(descriptor, codeLocation, obj, fieldId, value);
     }
 
@@ -626,6 +665,7 @@ public class Injections {
      */
     public static void afterReadArray(ThreadDescriptor descriptor, int codeLocation, Object array, int index, Object value) {
         EventTracker eventTracker = getEventTracker(descriptor);
+        if (descriptor == null || eventTracker == null) return;
         eventTracker.afterReadArrayElement(descriptor, codeLocation, array, index, value);
     }
 
@@ -634,6 +674,7 @@ public class Injections {
      */
     public static void beforeWriteField(ThreadDescriptor descriptor, int codeLocation, Object obj, Object value, int fieldId) {
         EventTracker eventTracker = getEventTracker(descriptor);
+        if (descriptor == null || eventTracker == null) return;
         eventTracker.beforeWriteField(descriptor, codeLocation, obj, value, fieldId);
     }
 
@@ -642,6 +683,7 @@ public class Injections {
      */
     public static void beforeWriteArray(ThreadDescriptor descriptor, int codeLocation, Object array, int index, Object value) {
         EventTracker eventTracker = getEventTracker(descriptor);
+        if (descriptor == null || eventTracker == null) return;
         eventTracker.beforeWriteArrayElement(descriptor, codeLocation, array, index, value);
     }
 
@@ -650,6 +692,7 @@ public class Injections {
      */
     public static void afterWrite(ThreadDescriptor descriptor) {
         EventTracker eventTracker = getEventTracker(descriptor);
+        if (descriptor == null || eventTracker == null) return;
         eventTracker.afterWrite(descriptor);
     }
 
@@ -661,6 +704,7 @@ public class Injections {
      */
     public static Object onMethodCall(ThreadDescriptor descriptor, int codeLocation, int methodId, Object receiver, Object[] params) {
         EventTracker eventTracker = getEventTracker(descriptor);
+        if (descriptor == null || eventTracker == null) return null;
         return eventTracker.onMethodCall(descriptor, codeLocation, methodId, receiver, params);
     }
 
@@ -674,6 +718,7 @@ public class Injections {
      */
     public static Object onMethodCallReturn(ThreadDescriptor threadDescriptor, long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Object result) {
         EventTracker eventTracker = getEventTracker(threadDescriptor);
+        if (eventTracker == null || threadDescriptor == null) return result;
         return eventTracker.onMethodCallReturn(threadDescriptor, descriptorId, descriptor, methodId, receiver, params, result);
     }
 
@@ -685,6 +730,7 @@ public class Injections {
      */
     public static void onMethodCallReturnVoid(ThreadDescriptor threadDescriptor, long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params) {
         EventTracker eventTracker = getEventTracker(threadDescriptor);
+        if (eventTracker == null || threadDescriptor == null) return;
         eventTracker.onMethodCallReturn(threadDescriptor, descriptorId, descriptor, methodId, receiver, params, VOID_RESULT);
     }
 
@@ -698,6 +744,7 @@ public class Injections {
      */
     public static Throwable onMethodCallException(ThreadDescriptor threadDescriptor, long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Throwable t) {
         EventTracker eventTracker = getEventTracker(threadDescriptor);
+        if (eventTracker == null || threadDescriptor == null) return t;
         return eventTracker.onMethodCallException(threadDescriptor, descriptorId, descriptor, methodId, receiver, params, t);
     }
 
@@ -904,6 +951,7 @@ public class Injections {
      */
     public static void onLoopIteration(ThreadDescriptor descriptor, int codeLocation, int loopId) {
         EventTracker eventTracker = getEventTracker(descriptor);
+        if (eventTracker == null || descriptor == null) return;
         eventTracker.onLoopIteration(descriptor, codeLocation, loopId);
     }
 
@@ -917,6 +965,7 @@ public class Injections {
      */
     public static void afterLoopExit(ThreadDescriptor descriptor, int codeLocation, int loopId, Throwable exception, boolean isReachableFromOutsideLoop) {
         EventTracker eventTracker = getEventTracker(descriptor);
+        if (eventTracker == null || descriptor == null) return;
         eventTracker.afterLoopExit(descriptor, codeLocation, loopId, exception, isReachableFromOutsideLoop);
     }
 
@@ -966,7 +1015,11 @@ public class Injections {
      * @return true if the {@link #beforeEvent} method should be invoked before the event, false otherwise
      */
     public static boolean shouldInvokeBeforeEvent() {
-        return getEventTracker().shouldInvokeBeforeEvent();
+        ThreadDescriptor descriptor = getCurrentThreadDescriptorIfInAnalyzedCode();
+        EventTracker eventTracker = getEventTracker(descriptor);
+        if (descriptor == null || eventTracker == null) return false;
+
+        return eventTracker.shouldInvokeBeforeEvent();
     }
 
     /**

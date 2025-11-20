@@ -52,44 +52,16 @@ internal class SharedMemoryAccessTransformer(
         }
         when (opcode) {
             GETSTATIC if configuration.trackStaticFieldReads -> {
-                invokeIfInAnalyzedCode(
-                    original = {
-                        super.visitFieldInsn(opcode, owner, fieldName, desc)
-                    },
-                    instrumented = {
-                        processStaticFieldGet(owner, fieldName, opcode, desc)
-                    }
-                )
+                processStaticFieldGet(owner, fieldName, opcode, desc)
             }
             GETFIELD if configuration.trackRegularFieldReads -> {
-                invokeIfInAnalyzedCode(
-                    original = {
-                        super.visitFieldInsn(opcode, owner, fieldName, desc)
-                    },
-                    instrumented = {
-                        processInstanceFieldGet(owner, fieldName, opcode, desc)
-                    }
-                )
+                processInstanceFieldGet(owner, fieldName, opcode, desc)
             }
             PUTSTATIC if configuration.trackStaticFieldWrites -> {
-                invokeIfInAnalyzedCode(
-                    original = {
-                        super.visitFieldInsn(opcode, owner, fieldName, desc)
-                    },
-                    instrumented = {
-                        processStaticFieldPut(desc, owner, fieldName, opcode)
-                    }
-                )
+                processStaticFieldPut(desc, owner, fieldName, opcode)
             }
             PUTFIELD if configuration.trackRegularFieldWrites -> {
-                invokeIfInAnalyzedCode(
-                    original = {
-                        super.visitFieldInsn(opcode, owner, fieldName, desc)
-                    },
-                    instrumented = {
-                        processInstanceFieldPut(desc, owner, fieldName, opcode)
-                    }
-                )
+                processInstanceFieldPut(desc, owner, fieldName, opcode)
             }
             else -> super.visitFieldInsn(opcode, owner, fieldName, desc)
         }
@@ -104,7 +76,7 @@ internal class SharedMemoryAccessTransformer(
         )
 
         // STACK: <empty>
-        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+        invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
         val codeLocationId = loadNewCodeLocationId()
         pushNull()
         push(fieldId)
@@ -130,7 +102,7 @@ internal class SharedMemoryAccessTransformer(
         val ownerName = ownerNameAnalyzer?.stack?.getStackElementAt(0)
         val ownerLocal = newLocal(getType("L$owner;")).also { copyLocal(it) }
 
-        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+        invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
         val codeLocationId = loadNewCodeLocationId(accessPath = ownerName)
         loadLocal(ownerLocal)
         push(fieldId)
@@ -155,9 +127,10 @@ internal class SharedMemoryAccessTransformer(
         )
         val valueLocal = newLocal(valueType).also { storeLocal(it) } // we cannot use DUP as long/double require DUP2
 
-        // STACK: value
+
         loadLocal(valueLocal)
-        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+        // STACK: value
+        invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
         loadNewCodeLocationId()
         pushNull()
         loadLocal(valueLocal)
@@ -170,7 +143,7 @@ internal class SharedMemoryAccessTransformer(
         // STACK: value
         super.visitFieldInsn(opcode, owner, fieldName, desc)
         // STACK: <empty>
-        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+        invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
         invokeStatic(Injections::afterWrite)
     }
 
@@ -187,7 +160,7 @@ internal class SharedMemoryAccessTransformer(
         val ownerLocal = newLocal(getType("L$owner;")).also { storeLocal(it) }
         val ownerName = ownerNameAnalyzer?.stack?.getStackElementAt(valueType.size)
 
-        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+        invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
         loadNewCodeLocationId(accessPath = ownerName)
         loadLocal(ownerLocal)
         loadLocal(valueLocal)
@@ -202,7 +175,7 @@ internal class SharedMemoryAccessTransformer(
         loadLocal(valueLocal)
         // STACK: obj, value
         super.visitFieldInsn(opcode, owner, fieldName, desc)
-        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+        invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
         invokeStatic(Injections::afterWrite)
     }
 
@@ -210,14 +183,7 @@ internal class SharedMemoryAccessTransformer(
         when (opcode) {
             AALOAD, LALOAD, FALOAD, DALOAD, IALOAD, BALOAD, CALOAD, SALOAD -> {
                 if (configuration.trackArrayElementReads) {
-                    invokeIfInAnalyzedCode(
-                        original = {
-                            super.visitInsn(opcode)
-                        },
-                        instrumented = {
-                            processArrayLoad(opcode)
-                        }
-                    )
+                    processArrayLoad(opcode)
                 } else {
                     super.visitInsn(opcode)
                 }
@@ -225,14 +191,7 @@ internal class SharedMemoryAccessTransformer(
 
             AASTORE, IASTORE, FASTORE, BASTORE, CASTORE, SASTORE, LASTORE, DASTORE -> {
                 if (configuration.trackArrayElementWrites) {
-                    invokeIfInAnalyzedCode(
-                        original = {
-                            super.visitInsn(opcode)
-                        },
-                        instrumented = {
-                            processArrayStore(opcode)
-                        }
-                    )
+                    processArrayStore(opcode)
                 } else {
                     super.visitInsn(opcode)
                 }
@@ -252,7 +211,7 @@ internal class SharedMemoryAccessTransformer(
         val ownerName = ownerNameAnalyzer?.stack?.getStackElementAt(1)
 
         // STACK: <empty>
-        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+        invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
         val codeLocationId = loadNewCodeLocationId(accessPath = ownerName)
         loadLocal(arrayLocal)
         loadLocal(indexLocal)
@@ -280,7 +239,7 @@ internal class SharedMemoryAccessTransformer(
         val arrayLocal = newLocal(getType("[$arrayElementType")).also { storeLocal(it) }
 
         // STACK: <empty>
-        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+        invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
         loadNewCodeLocationId(accessPath = ownerName)
         loadLocal(arrayLocal)
         loadLocal(indexLocal)
@@ -296,7 +255,7 @@ internal class SharedMemoryAccessTransformer(
         // STACK: array, index, value
         super.visitInsn(opcode)
         // STACK: <empty>
-        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+        invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
         invokeStatic(Injections::afterWrite)
     }
 
@@ -304,7 +263,7 @@ internal class SharedMemoryAccessTransformer(
         // STACK: value
         val resultLocal = newLocal(valueType)
         copyLocal(resultLocal)
-        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+        invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
         push(codeLocationId)
         if (ownerLocal != null) {
             loadLocal(ownerLocal)
@@ -323,7 +282,7 @@ internal class SharedMemoryAccessTransformer(
         // STACK: value
         val resultLocal = newLocal(valueType)
         copyLocal(resultLocal)
-        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+        invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
         push(codeLocationId)
         loadLocal(arrayLocal)
         loadLocal(indexLocal)
