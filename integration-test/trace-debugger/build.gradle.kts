@@ -30,6 +30,7 @@ tasks {
     val copyTraceDebuggerFatJar = copyTraceAgentFatJar(project(":trace-debugger"), "trace-debugger-fat.jar")
 
     val traceDebuggerIntegrationTest = register<Test>("traceDebuggerIntegrationTest") {
+        useJUnitPlatform()
         configureJvmTestCommon(project)
         group = "verification"
 

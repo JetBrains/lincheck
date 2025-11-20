@@ -27,6 +27,10 @@ sourceSets {
     }
 }
 
+enum class TraceAgentIntegrationTestSuite {
+    Basic, KotlinCompiler, Ktor, All
+}
+
 tasks {
     processResources {
         duplicatesStrategy = DuplicatesStrategy.INCLUDE
@@ -36,7 +40,17 @@ tasks {
 
     val copyTraceRecorderFatJar = copyTraceAgentFatJar(project(":trace-recorder"), "trace-recorder-fat.jar")
 
+    val integrationTestSuite: String? by project
+    val integrationTestSuiteType = when (integrationTestSuite?.lowercase()) {
+        "basic" -> TraceAgentIntegrationTestSuite.Basic
+        "kotlincompiler" -> TraceAgentIntegrationTestSuite.KotlinCompiler
+        "ktor" -> TraceAgentIntegrationTestSuite.Ktor
+        "all", null -> TraceAgentIntegrationTestSuite.All
+        else -> error("Unknown integration test suite type: $integrationTestSuite")
+    }
+
     val traceRecorderIntegrationTest = register<Test>("traceRecorderIntegrationTest") {
+        useJUnitPlatform()
         configureJvmTestCommon(project)
         group = "verification"
 
@@ -48,60 +62,18 @@ tasks {
         classpath = sourceSets["main"].runtimeClasspath
 
         // Do not run extended tests in the basic task
-        useJUnit {
-            excludeCategories("org.jetbrains.trace.recorder.test.runner.KotlinCompilerTraceRecorderTest")
-            excludeCategories("org.jetbrains.trace.recorder.test.runner.KtorTraceRecorderTest")
+        when (integrationTestSuiteType) {
+            TraceAgentIntegrationTestSuite.KotlinCompiler -> include("**/*KotlinCompilerTraceRecorderJsonIntegrationTests*")
+            TraceAgentIntegrationTestSuite.Ktor -> include("**/*KtorTraceRecorderJsonIntegrationTests*")
+            TraceAgentIntegrationTestSuite.All -> {}
+            TraceAgentIntegrationTestSuite.Basic -> exclude(
+                "**/*KotlinCompilerTraceRecorderJsonIntegrationTests*",
+                "**/*KtorTraceRecorderJsonIntegrationTests*"
+            )
         }
 
         outputs.upToDateWhen { false } // Always run tests when called
         dependsOn(traceAgentIntegrationTestsPrerequisites)
         dependsOn(copyTraceRecorderFatJar)
-    }
-
-    val traceRecorderIntegrationTestKotlinCompiler = register<Test>("traceRecorderIntegrationTestKotlinCompiler") {
-        configureJvmTestCommon(project)
-        group = "verification"
-
-        // Use the same source set as the basic integration tests
-        testClassesDirs = sourceSets["main"].output.classesDirs
-        classpath = sourceSets["main"].runtimeClasspath
-
-        // Only run tests marked as extended
-        useJUnit {
-            includeCategories("org.jetbrains.trace.recorder.test.runner.KotlinCompilerTraceRecorderTest")
-        }
-
-        outputs.upToDateWhen { false } // Always run tests when called
-        dependsOn(traceAgentIntegrationTestsPrerequisites)
-        dependsOn(copyTraceRecorderFatJar)
-    }
-
-    val traceRecorderIntegrationTestKtor = register<Test>("traceRecorderIntegrationTestKtor") {
-        configureJvmTestCommon(project)
-        group = "verification"
-
-        // Use the same source set as the basic integration tests
-        testClassesDirs = sourceSets["main"].output.classesDirs
-        classpath = sourceSets["main"].runtimeClasspath
-
-        // Only run tests marked as extended
-        useJUnit {
-            includeCategories("org.jetbrains.trace.recorder.test.runner.KtorTraceRecorderTest")
-        }
-
-        outputs.upToDateWhen { false } // Always run tests when called
-        dependsOn(traceAgentIntegrationTestsPrerequisites)
-        dependsOn(copyTraceRecorderFatJar)
-    }
-    
-    val traceRecorderIntegrationTestAll = register<Test>("traceRecorderIntegrationTestAll") {
-        group = "verification"
-
-        finalizedBy(traceRecorderIntegrationTest)
-        finalizedBy(traceRecorderIntegrationTestKtor)
-        finalizedBy(traceRecorderIntegrationTestKotlinCompiler)
-
-        traceRecorderIntegrationTestKotlinCompiler.get().mustRunAfter(traceRecorderIntegrationTestKtor)
-        traceRecorderIntegrationTestKtor.get().mustRunAfter(traceRecorderIntegrationTest)
     }
 }

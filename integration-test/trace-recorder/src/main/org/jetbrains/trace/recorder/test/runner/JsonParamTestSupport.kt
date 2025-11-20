@@ -27,6 +27,7 @@ data class JsonTestEntry(
     val methods: List<String>,
     val jvmArgs: List<String> = emptyList(),
     val checkRepresentation: Boolean = false,
+    val reasonsForMuting: Map<String, String> = emptyMap(),
 )
 
 internal fun loadResourceText(resourcePath: String, loader: Class<*>): String {
@@ -42,8 +43,3 @@ private val jsonParser = Json { ignoreUnknownKeys = true }
 internal fun parseJsonEntries(json: String): List<JsonTestEntry> {
     return jsonParser.decodeFromString(json)
 }
-
-internal fun List<JsonTestEntry>.transformEntriesToArray(): List<Array<Any>> =
-    flatMap { (className, gradleCommand, methods, jvmArgs, checkRepresentation) ->
-        methods.map { arrayOf(className, it, gradleCommand, jvmArgs, checkRepresentation) }
-    }

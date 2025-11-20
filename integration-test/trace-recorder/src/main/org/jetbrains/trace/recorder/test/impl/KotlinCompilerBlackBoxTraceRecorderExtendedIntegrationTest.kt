@@ -16,6 +16,7 @@ import kotlin.io.path.createTempFile
 
 abstract class KotlinCompilerTraceRecorderJsonTests : AbstractJsonTraceRecorderIntegrationTest(
     projectPath = Paths.get("build", "integrationTestProjects", "kotlin").toString(),
+    checkRepresentationByDefault = false,
 ) {
     override fun test(testCase: TestCase) = withPermissions { permissions ->
         val allJvmArgs = listOf("-Djava.security.policy==${permissions.absolutePath}") + testCase.jvmArgs
@@ -23,11 +24,10 @@ abstract class KotlinCompilerTraceRecorderJsonTests : AbstractJsonTraceRecorderI
     }
 
     companion object Companion : TestGenerator(
-        groupName = "KotlinCompilerTests",
+        groupName = "KotlinCompiler",
         resourcePath = "/integrationTestData/kotlinCompilerTests.json",
         abstractTestClass = "KotlinCompilerTraceRecorderJsonTests",
         packageName = "org.jetbrains.trace.recorder.test.impl.generated",
-        category = "KotlinCompilerTraceRecorderTest",
     )
 }
 
