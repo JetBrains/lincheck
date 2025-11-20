@@ -32,11 +32,6 @@ abstract class KotlinCompilerTraceRecorderJsonTests : AbstractJsonTraceRecorderI
         }
     }
 
-    override fun test(testCase: TestCase) = withPermissions { permissions ->
-        val allJvmArgs = listOf("-Djava.security.policy==${permissions.absolutePath}") + testCase.jvmArgs
-        super.test(testCase.copy(jvmArgs = allJvmArgs))
-    }
-
     companion object Companion : TestGenerator(
         groupName = "KotlinCompiler",
         resourcePath = "/integrationTestData/kotlinCompilerTests.json",

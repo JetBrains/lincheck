@@ -26,16 +26,8 @@ abstract class AbstractJsonTraceRecorderIntegrationTest(
         val methodName: String,
         val gradleCommand: String,
         val jvmArgs: List<String>,
-        val checkRepresentation: Boolean? = null,
+        val checkRepresentation: Boolean,
         val reasonForMuting: String? = null,
-    )
-
-    open fun test(testCase: TestCase) = runTest(
-        testClassName = testCase.className,
-        testMethodName = testCase.methodName,
-        extraJvmArgs = testCase.jvmArgs,
-        commands = listOf(testCase.gradleCommand),
-        checkRepresentation = testCase.checkRepresentation ?: checkRepresentationByDefault,
     )
 
     companion object {
@@ -99,7 +91,7 @@ abstract class AbstractJsonTraceRecorderIntegrationTest(
                             testMethodName = ${testCase.methodName.toLiteral()},
                             extraJvmArgs = listOf(${testCase.jvmArgs.joinToString { it.toLiteral() }}),
                             commands = listOf(${testCase.gradleCommand.toLiteral()}),
-                            checkRepresentation = ${testCase.checkRepresentation} ?: ${AbstractJsonTraceRecorderIntegrationTest::checkRepresentationByDefault.name},
+                            checkRepresentation = ${testCase.checkRepresentation},
                         )
                     }
                 }
