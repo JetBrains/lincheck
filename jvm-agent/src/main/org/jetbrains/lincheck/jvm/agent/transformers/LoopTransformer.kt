@@ -96,7 +96,8 @@ internal class LoopTransformer(
         // Inject `onLoopExit` on transitions from within the loop body to outside.
         normalExitSites[nonPhonyIndex]?.let { loopIds ->
             for (loopId in loopIds) {
-                val isReachableFromOutsideLoop = opcodesReachableFromOutsideLoops[nonPhonyIndex]?.contains(loopId) ?: true
+                val isReachableFromOutsideLoop = opcodesReachableFromOutsideLoops[nonPhonyIndex]
+                    ?.contains(loopId) ?: true
                 // STACK: <empty>
                 invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
                 loadNewCodeLocationId()
@@ -117,7 +118,8 @@ internal class LoopTransformer(
             val exceptionLocal = newLocal(THROWABLE_TYPE)
             storeLocal(exceptionLocal)
             for (loopId in loopIds) {
-                val isReachableFromOutsideLoop = opcodesReachableFromOutsideLoops[nonPhonyIndex]?.contains(loopId) ?: true
+                val isReachableFromOutsideLoop = opcodesReachableFromOutsideLoops[nonPhonyIndex]
+                    ?.contains(loopId) ?: true
                 // STACK: <empty>
                 invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
                 loadNewCodeLocationId()
@@ -216,7 +218,10 @@ private fun BasicBlockControlFlowGraph.computeReachabilityFromOutsideLoops(
     val cfg = this
     val result = mutableMapOf<InstructionIndex, MutableSet<Int>>()
     for (loop in loopInfo.loops) {
-        val exitBlocks = (loop.normalExits.asSequence().map { it.target } + loop.exceptionalExitHandlers.asSequence())
+        val exitBlocks = (
+            loop.normalExits.asSequence().map { it.target } +
+            loop.exceptionalExitHandlers.asSequence()
+        )
         for (exit in exitBlocks) {
             val idx = cfg.firstOpcodeIndexOf(exit) ?: continue
             result.updateInplace(insnIndexRemapping[idx], default = mutableSetOf()) {
