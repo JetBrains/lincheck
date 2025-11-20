@@ -14,12 +14,6 @@ import AbstractGradleTraceIntegrationTest
 import java.io.File
 
 abstract class AbstractTraceRecorderIntegrationTest : AbstractGradleTraceIntegrationTest() {
-    override val fatJarName: String = "trace-recorder-fat.jar"
-    open val formatArgs: Map<String, String> = mapOf(
-        "format" to "text",
-        "formatOption" to "verbose",
-    )
-
     override fun runTestImpl(
         testClassName: String,
         testMethodName: String,
@@ -31,12 +25,8 @@ abstract class AbstractTraceRecorderIntegrationTest : AbstractGradleTraceIntegra
         super.runTestImpl(
             testClassName,
             testMethodName,
-            extraJvmArgs + listOf(
-                "-Dlincheck.traceRecorderMode=true",
-                "-XX:+UnlockExperimentalVMOptions",
-                "-XX:hashCode=2",
-            ),
-            extraAgentArgs + formatArgs,
+            extraJvmArgs,
+            extraAgentArgs,
             commands,
             outputFile
         )
