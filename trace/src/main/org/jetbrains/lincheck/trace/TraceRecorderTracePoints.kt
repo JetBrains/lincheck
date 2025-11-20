@@ -730,6 +730,23 @@ private fun CharSequence.trimToString(): String {
     return if (string.length > MAX_TROBJECT_STRING_LENGTH) "${string.take(MAX_TROBJECT_STRING_LENGTH)}..." else string
 }
 
+private val WHITELIST_PACKAGES_FOR_TO_STRING = listOf(
+    // StringBuffer, StringBuilder
+    "java.lang.",
+    // CharBuffer
+    "java.nio.",
+    // Segment
+    "javax.swing.",
+    // Kotlin "wrappers"
+    "kotlin.text.",
+    "kotlin."
+)
+
+private fun classNameWhitelisted(obj: Any): Boolean {
+    val fullClassName = obj.javaClass.name
+    return WHITELIST_PACKAGES_FOR_TO_STRING.any { fullClassName.startsWith(it) }
+}
+
 fun TRObject(obj: Any): TRObject {
     val defaultTRObject = { TRObject(TRACE_CONTEXT.getOrCreateClassId(obj.javaClass.name), System.identityHashCode(obj), null) }
 
@@ -746,14 +763,19 @@ fun TRObject(obj: Any): TRObject {
             TR_OBJECT_P_STRING_BUILDER, System.identityHashCode(obj), obj.trimToString()
         )
 
-        is CharSequence -> runCatching { obj.trimToString() }.let {
+        // If user (traced) code contains CharSequence implementation, it is a bad idea to call it
+        // as there is no guarantee that this implementation doesn't have side effects.
+        // Guard by Java and Kotlin std lib packages
+        is CharSequence if (classNameWhitelisted(obj)) -> runCatching { obj.trimToString() }.let {
             // Some implementations of CharSequence might throw when `subSequence` is invoked at some unexpected moment,
             // like when this sequence is considered "destroyed" at this point
             if (it.isSuccess) TRObject(TR_OBJECT_P_STRING, 0, it.getOrThrow())
             else defaultTRObject()
         }
+
         is Unit -> TRObject(TR_OBJECT_P_UNIT, 0, obj)
         is Boolean -> TRObject(TR_OBJECT_P_BOOLEAN, 0, obj)
+
         // Render these types to strings for simplicity
         is Enum<*> -> TRObject(TR_OBJECT_P_RAW_STRING, 0, "${obj.javaClass.simpleName}.${obj.name}")
         is BigInteger -> TRObject(TR_OBJECT_P_RAW_STRING, 0, obj.toString())
