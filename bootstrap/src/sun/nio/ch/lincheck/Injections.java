@@ -1010,8 +1010,10 @@ public class Injections {
      * @return true if the {@link #beforeEvent} method should be invoked before the event, false otherwise
      */
     public static boolean shouldInvokeBeforeEvent() {
-        EventTracker eventTracker = getEventTrackerIfInAnalyzedCode();
-        if (eventTracker == null) return false;
+        ThreadDescriptor descriptor = getCurrentThreadDescriptorIfInAnalyzedCode();
+        EventTracker eventTracker = getEventTracker(descriptor);
+        if (descriptor == null || eventTracker == null) return false;
+
         return eventTracker.shouldInvokeBeforeEvent();
     }
 
