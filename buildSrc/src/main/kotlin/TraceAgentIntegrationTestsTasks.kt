@@ -44,10 +44,12 @@ private val projectsToTest = listOf(
         repositoryName = "kotlinx.coroutines",
         commitHash = "8062e9f6c21bc2672528c5e63dcff7e9057a0989"
     ),
+    // `kotlinx-datetime` is forked with decreased stress-test
+    // iterations number and deterministic random
     GithubProjectSnapshot(
-        organization = "Kotlin",
+        organization = "dmitrii-artuhov",
         repositoryName = "kotlinx-datetime",
-        commitHash = "deb897d7c6df11734d0468527cc7ebfc41679a94"
+        commitHash = "11246a8dd3051c3aeef70eb3d15173fd7183f549"
     ),
 )
 

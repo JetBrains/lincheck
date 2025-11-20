@@ -1,0 +1,196 @@
+# Thread 1
+ConvertersTest.instant() at :0
+  this = ConvertersTest@1 at ConvertersTest.kt:0
+  Random(42): XorWowRandom@1 at ConvertersTest.kt:33
+  random = XorWowRandom@1 at ConvertersTest.kt:33
+  loop(3 iterations) at ConvertersTest.kt:34
+    <iteration 1> at ConvertersTest.kt:34
+      it = 0 at ConvertersTest.kt:34
+      random.nextLong(1000000000000): 896688767008 at ConvertersTest.kt:35
+      seconds = 896688767008 at ConvertersTest.kt:35
+      random.nextInt(): -408207414 at ConvertersTest.kt:36
+      nanos = -408207414 at ConvertersTest.kt:36
+      ConvertersTest.instant$test(896688767008, nanos ➜ -408207414) at ConvertersTest.kt:37
+        seconds = 896688767008 at ConvertersTest.kt:0
+        nanosecond = -408207414 at ConvertersTest.kt:0
+        Instant.fromEpochSeconds(896688767008, -408207414): Instant@1 at ConvertersTest.kt:23
+        ktInstant = Instant@1 at ConvertersTest.kt:23
+        Instant.ofEpochSecond(896688767008, -408207414): Instant@1 at ConvertersTest.kt:24
+        jtInstant = Instant@1 at ConvertersTest.kt:24
+        toKotlinInstant(jtInstant): Instant@1 at ConvertersTest.kt:26
+          toKotlinInstant = Instant@1 at Converters.kt:0
+          new Instant(toKotlinInstant): Instant@1 at Converters.kt:16
+        assertEquals(ktInstant, Instant@1, null, 4, null) at ConvertersTest.kt:26
+          this = Instant@1 at Instant.kt:0
+          other = Instant@1 at Instant.kt:0
+        toJavaInstant(ktInstant): Instant@1 at ConvertersTest.kt:27
+          toJavaInstant = Instant@1 at Converters.kt:0
+          toJavaInstant.getValue$kotlinx_datetime(): Instant@1 at Converters.kt:11
+            this = Instant@1 at Instant.kt:0
+        assertEquals(jtInstant, Instant@1, null, 4, null) at ConvertersTest.kt:27
+        jtInstant.toString(): "+30384-12-08T05:03:27.591792586Z" at ConvertersTest.kt:29
+        p0 = "+30384-12-08T05:03:27.591792586Z" at fake.kt:1
+        Instant.Companion.parse$default(Instant.Companion, p0 ➜ "+30384-12-08T05:03:27.591792586Z", null, 2, null): Instant@1 at ConvertersTest.kt:29
+          DateTimeComponents.Formats.getISO_DATE_TIME_OFFSET(): DateTimeComponentsFormat@1 at Instant.kt:185
+          Instant.Companion@1.parse("+30384-12-08T05:03:27.591792586Z", DateTimeComponentsFormat@1): Instant@1 at Instant.kt:71
+            this = Instant.Companion@1 at Instant.kt:0
+            input = "+30384-12-08T05:03:27.591792586Z" at Instant.kt:0
+            format = DateTimeComponentsFormat@1 at Instant.kt:0
+            format.parse(input ➜ "+30384-12-08T05:03:27.591792586Z"): DateTimeComponents@1 at Instant.kt:79
+            DateTimeComponents@1.toInstantUsingOffset(): Instant@1 at Instant.kt:79
+              this = Instant.Companion@1 at Instant.kt:0
+              Instant.getMIN(): Instant@1 at Instant.kt:100
+              this = Instant@1 at Instant.kt:0
+              value.getEpochSecond(): -31557014167219200 at Instant.kt:28
+              this = Instant.Companion@1 at Instant.kt:0
+              Instant.getMAX(): Instant@1 at Instant.kt:101
+              this = Instant@1 at Instant.kt:0
+              value.getEpochSecond(): 31556889864403199 at Instant.kt:28
+              this = Instant.Companion@1 at Instant.kt:0
+              epochSeconds = 896688767007 at Instant.kt:0
+              nanosecondAdjustment = 591792586 at Instant.kt:0
+              fromEpochSeconds(896688767007, 591792586): Instant@1 at Instant.kt:95
+                this = Instant.Companion@1 at Instant.kt:0
+                epochSeconds = 896688767007 at Instant.kt:0
+                nanosecondAdjustment = 591792586 at Instant.kt:0
+                Instant.ofEpochSecond(896688767007, 591792586): Instant@1 at Instant.kt:88
+                new Instant(Instant@1): Instant@1 at Instant.kt:88
+        assertEquals(ktInstant, Instant@1, null, 4, null) at ConvertersTest.kt:29
+          this = Instant@1 at Instant.kt:0
+          other = Instant@1 at Instant.kt:0
+        ktInstant.toString(): "+30384-12-08T05:03:27.591792586Z" at ConvertersTest.kt:30
+          this = Instant@1 at Instant.kt:0
+          value.toString(): "+30384-12-08T05:03:27.591792586Z" at Instant.kt:60
+        p0 = "+30384-12-08T05:03:27.591792586Z" at fake.kt:1
+        Instant.parse(p0 ➜ "+30384-12-08T05:03:27.591792586Z"): Instant@1 at ConvertersTest.kt:30
+        assertEquals(jtInstant, Instant@1, null, 4, null) at ConvertersTest.kt:30
+    <iteration 2> at ConvertersTest.kt:34
+      it = 1 at ConvertersTest.kt:34
+      random.nextLong(1000000000000): 230457923733 at ConvertersTest.kt:35
+      seconds = 230457923733 at ConvertersTest.kt:35
+      random.nextInt(): 649964064 at ConvertersTest.kt:36
+      nanos = 649964064 at ConvertersTest.kt:36
+      ConvertersTest.instant$test(230457923733, nanos ➜ 649964064) at ConvertersTest.kt:37
+        seconds = 230457923733 at ConvertersTest.kt:0
+        nanosecond = 649964064 at ConvertersTest.kt:0
+        Instant.fromEpochSeconds(230457923733, 649964064): Instant@1 at ConvertersTest.kt:23
+          this = Instant.Companion@1 at Instant.kt:0
+          epochSeconds = 230457923733 at Instant.kt:0
+          nanosecondAdjustment = 649964064 at Instant.kt:0
+          Instant.ofEpochSecond(230457923733, 649964064): Instant@1 at Instant.kt:88
+          new Instant(Instant@1): Instant@1 at Instant.kt:88
+        ktInstant = Instant@1 at ConvertersTest.kt:23
+        Instant.ofEpochSecond(230457923733, 649964064): Instant@1 at ConvertersTest.kt:24
+        jtInstant = Instant@1 at ConvertersTest.kt:24
+        toKotlinInstant(jtInstant): Instant@1 at ConvertersTest.kt:26
+          toKotlinInstant = Instant@1 at Converters.kt:0
+          new Instant(toKotlinInstant): Instant@1 at Converters.kt:16
+        assertEquals(ktInstant, Instant@1, null, 4, null) at ConvertersTest.kt:26
+          this = Instant@1 at Instant.kt:0
+          other = Instant@1 at Instant.kt:0
+        toJavaInstant(ktInstant): Instant@1 at ConvertersTest.kt:27
+          toJavaInstant = Instant@1 at Converters.kt:0
+          toJavaInstant.getValue$kotlinx_datetime(): Instant@1 at Converters.kt:11
+            this = Instant@1 at Instant.kt:0
+        assertEquals(jtInstant, Instant@1, null, 4, null) at ConvertersTest.kt:27
+        jtInstant.toString(): "9272-12-02T01:55:33.649964064Z" at ConvertersTest.kt:29
+        p0 = "9272-12-02T01:55:33.649964064Z" at fake.kt:1
+        Instant.Companion.parse$default(Instant.Companion, p0 ➜ "9272-12-02T01:55:33.649964064Z", null, 2, null): Instant@1 at ConvertersTest.kt:29
+          DateTimeComponents.Formats.getISO_DATE_TIME_OFFSET(): DateTimeComponentsFormat@1 at Instant.kt:185
+          Instant.Companion@1.parse("9272-12-02T01:55:33.649964064Z", DateTimeComponentsFormat@1): Instant@1 at Instant.kt:71
+            this = Instant.Companion@1 at Instant.kt:0
+            input = "9272-12-02T01:55:33.649964064Z" at Instant.kt:0
+            format = DateTimeComponentsFormat@1 at Instant.kt:0
+            format.parse(input ➜ "9272-12-02T01:55:33.649964064Z"): DateTimeComponents@1 at Instant.kt:79
+            DateTimeComponents@1.toInstantUsingOffset(): Instant@1 at Instant.kt:79
+              this = Instant.Companion@1 at Instant.kt:0
+              Instant.getMIN(): Instant@1 at Instant.kt:100
+              this = Instant@1 at Instant.kt:0
+              value.getEpochSecond(): -31557014167219200 at Instant.kt:28
+              this = Instant.Companion@1 at Instant.kt:0
+              Instant.getMAX(): Instant@1 at Instant.kt:101
+              this = Instant@1 at Instant.kt:0
+              value.getEpochSecond(): 31556889864403199 at Instant.kt:28
+              this = Instant.Companion@1 at Instant.kt:0
+              epochSeconds = 230457923733 at Instant.kt:0
+              nanosecondAdjustment = 649964064 at Instant.kt:0
+              fromEpochSeconds(230457923733, 649964064): Instant@1 at Instant.kt:95
+                this = Instant.Companion@1 at Instant.kt:0
+                epochSeconds = 230457923733 at Instant.kt:0
+                nanosecondAdjustment = 649964064 at Instant.kt:0
+                Instant.ofEpochSecond(230457923733, 649964064): Instant@1 at Instant.kt:88
+                new Instant(Instant@1): Instant@1 at Instant.kt:88
+        assertEquals(ktInstant, Instant@1, null, 4, null) at ConvertersTest.kt:29
+          this = Instant@1 at Instant.kt:0
+          other = Instant@1 at Instant.kt:0
+        ktInstant.toString(): "9272-12-02T01:55:33.649964064Z" at ConvertersTest.kt:30
+          this = Instant@1 at Instant.kt:0
+          value.toString(): "9272-12-02T01:55:33.649964064Z" at Instant.kt:60
+        p0 = "9272-12-02T01:55:33.649964064Z" at fake.kt:1
+        Instant.parse(p0 ➜ "9272-12-02T01:55:33.649964064Z"): Instant@1 at ConvertersTest.kt:30
+        assertEquals(jtInstant, Instant@1, null, 4, null) at ConvertersTest.kt:30
+    <iteration 3> at ConvertersTest.kt:34
+      it = 2 at ConvertersTest.kt:34
+      random.nextLong(1000000000000): 823863846508 at ConvertersTest.kt:35
+      seconds = 823863846508 at ConvertersTest.kt:35
+      random.nextInt(): 788572539 at ConvertersTest.kt:36
+      nanos = 788572539 at ConvertersTest.kt:36
+      ConvertersTest.instant$test(823863846508, nanos ➜ 788572539) at ConvertersTest.kt:37
+        seconds = 823863846508 at ConvertersTest.kt:0
+        nanosecond = 788572539 at ConvertersTest.kt:0
+        Instant.fromEpochSeconds(823863846508, 788572539): Instant@1 at ConvertersTest.kt:23
+          this = Instant.Companion@1 at Instant.kt:0
+          epochSeconds = 823863846508 at Instant.kt:0
+          nanosecondAdjustment = 788572539 at Instant.kt:0
+          Instant.ofEpochSecond(823863846508, 788572539): Instant@1 at Instant.kt:88
+          new Instant(Instant@1): Instant@1 at Instant.kt:88
+        ktInstant = Instant@1 at ConvertersTest.kt:23
+        Instant.ofEpochSecond(823863846508, 788572539): Instant@1 at ConvertersTest.kt:24
+        jtInstant = Instant@1 at ConvertersTest.kt:24
+        toKotlinInstant(jtInstant): Instant@1 at ConvertersTest.kt:26
+          toKotlinInstant = Instant@1 at Converters.kt:0
+          new Instant(toKotlinInstant): Instant@1 at Converters.kt:16
+        assertEquals(ktInstant, Instant@1, null, 4, null) at ConvertersTest.kt:26
+          this = Instant@1 at Instant.kt:0
+          other = Instant@1 at Instant.kt:0
+        toJavaInstant(ktInstant): Instant@1 at ConvertersTest.kt:27
+          toJavaInstant = Instant@1 at Converters.kt:0
+          toJavaInstant.getValue$kotlinx_datetime(): Instant@1 at Converters.kt:11
+            this = Instant@1 at Instant.kt:0
+        assertEquals(jtInstant, Instant@1, null, 4, null) at ConvertersTest.kt:27
+        jtInstant.toString(): "+28077-03-16T04:28:28.788572539Z" at ConvertersTest.kt:29
+        p0 = "+28077-03-16T04:28:28.788572539Z" at fake.kt:1
+        Instant.Companion.parse$default(Instant.Companion, p0 ➜ "+28077-03-16T04:28:28.788572539Z", null, 2, null): Instant@1 at ConvertersTest.kt:29
+          DateTimeComponents.Formats.getISO_DATE_TIME_OFFSET(): DateTimeComponentsFormat@1 at Instant.kt:185
+          Instant.Companion@1.parse("+28077-03-16T04:28:28.788572539Z", DateTimeComponentsFormat@1): Instant@1 at Instant.kt:71
+            this = Instant.Companion@1 at Instant.kt:0
+            input = "+28077-03-16T04:28:28.788572539Z" at Instant.kt:0
+            format = DateTimeComponentsFormat@1 at Instant.kt:0
+            format.parse(input ➜ "+28077-03-16T04:28:28.788572539Z"): DateTimeComponents@1 at Instant.kt:79
+            DateTimeComponents@1.toInstantUsingOffset(): Instant@1 at Instant.kt:79
+              this = Instant.Companion@1 at Instant.kt:0
+              Instant.getMIN(): Instant@1 at Instant.kt:100
+              this = Instant@1 at Instant.kt:0
+              value.getEpochSecond(): -31557014167219200 at Instant.kt:28
+              this = Instant.Companion@1 at Instant.kt:0
+              Instant.getMAX(): Instant@1 at Instant.kt:101
+              this = Instant@1 at Instant.kt:0
+              value.getEpochSecond(): 31556889864403199 at Instant.kt:28
+              this = Instant.Companion@1 at Instant.kt:0
+              epochSeconds = 823863846508 at Instant.kt:0
+              nanosecondAdjustment = 788572539 at Instant.kt:0
+              fromEpochSeconds(823863846508, 788572539): Instant@1 at Instant.kt:95
+                this = Instant.Companion@1 at Instant.kt:0
+                epochSeconds = 823863846508 at Instant.kt:0
+                nanosecondAdjustment = 788572539 at Instant.kt:0
+                Instant.ofEpochSecond(823863846508, 788572539): Instant@1 at Instant.kt:88
+                new Instant(Instant@1): Instant@1 at Instant.kt:88
+        assertEquals(ktInstant, Instant@1, null, 4, null) at ConvertersTest.kt:29
+          this = Instant@1 at Instant.kt:0
+          other = Instant@1 at Instant.kt:0
+        ktInstant.toString(): "+28077-03-16T04:28:28.788572539Z" at ConvertersTest.kt:30
+          this = Instant@1 at Instant.kt:0
+          value.toString(): "+28077-03-16T04:28:28.788572539Z" at Instant.kt:60
+        p0 = "+28077-03-16T04:28:28.788572539Z" at fake.kt:1
+        Instant.parse(p0 ➜ "+28077-03-16T04:28:28.788572539Z"): Instant@1 at ConvertersTest.kt:30
+        assertEquals(jtInstant, Instant@1, null, 4, null) at ConvertersTest.kt:30

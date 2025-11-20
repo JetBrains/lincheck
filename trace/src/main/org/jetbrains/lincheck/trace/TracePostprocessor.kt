@@ -240,22 +240,32 @@ object CompressingPostprocessor : TracePostprocessor {
     }
 
     /**
-     * Removes accesses to local variable `__$coverage_local$__` inserted by intellij coverage agent (or kover plugin).
+     * Removes accesses to coverage instrumentation inserted by intellij coverage agent (or kover plugin).
      *
-     * The accesses might contain array writes and reads `__$coverage_local$__[idx] = value` and assignments
-     * `__$coverage_local$__ = array`.
+     * It includes removing of:
+     * - array accesses where an array might be any of `__$coverage_local$__`, `__$hits$__`
+     * - local variable accesses where local variable might be any of `__$coverage_local$__`, `__$hits$__`
+     * - (static) fields accesses where field might be any of `__$hits$__`, `__$traceMask$__`, `__$classData$__`
+     *
+     * @see <a href="https://github.com/JetBrains/intellij-coverage/tree/master/test-kotlin/test-sources/resources/bytecode/simple/branches">Intellij coverage instrumentation</a>
      */
     private fun TRTracePoint.removeCoverageInstructions(reader: LazyTraceReader): TRTracePoint? {
-        val coverageLocalVarName = $$"__$coverage_local$__"
-        if (this is TRArrayTracePoint) {
+        fun TRTracePoint.isCoverageArrayAccess(varNames: Set<String>) = this is TRArrayTracePoint && varNames.any {
             val ownerName = CodeLocations.accessPath(codeLocationId)
-            if (ownerName != null && ownerName.toString().contains(coverageLocalVarName)) {
-                return null
-            }
+            ownerName != null && ownerName.toString().contains(it)
         }
-        if (this is TRLocalVariableTracePoint) {
-            if (name == coverageLocalVarName) return null
-        }
+        fun TRTracePoint.isCoverageLocalVarAccess(varNames: Set<String>) = this is TRLocalVariableTracePoint && varNames.contains(name)
+        fun TRTracePoint.isCoverageFieldAccess(varNames: Set<String>) = this is TRFieldTracePoint && varNames.contains(name)
+
+        val coverageLocalVarNames = setOf($$"__$coverage_local$__", $$"__$hits$__" /* might be loaded via LDC */)
+        val coverageFieldNames = setOf($$"__$hits$__", $$"__$traceMask$__", $$"__$classData$__")
+
+        if (
+            isCoverageArrayAccess(coverageLocalVarNames + coverageFieldNames) ||
+            isCoverageLocalVarAccess(coverageLocalVarNames) ||
+            isCoverageFieldAccess(coverageFieldNames)
+        ) return null
+
         return this
     }
 
