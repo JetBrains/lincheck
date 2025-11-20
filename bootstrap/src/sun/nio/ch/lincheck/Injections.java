@@ -426,10 +426,12 @@ public class Injections {
          */
         ThreadDescriptor descriptor = ThreadDescriptor.getThreadDescriptor(thread);
         if (descriptor == null) return;
-
+        // Store the thread descriptor into the current thread's thread-local variable.
         ThreadDescriptor.setCurrentThreadDescriptor(descriptor);
 
         EventTracker eventTracker = getEventTracker(descriptor, false);
+        if (eventTracker == null) return;
+
         eventTracker.beforeThreadRun(descriptor);
     }
 
@@ -454,9 +456,9 @@ public class Injections {
          * - the thread-local descriptor was not set, in which case we can just do nothing.
          */
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
-        if (descriptor == null) return;
-
         EventTracker eventTracker = getEventTracker(descriptor, false);
+        if (descriptor == null || eventTracker == null) return;
+
         eventTracker.afterThreadRunReturn(descriptor);
     }
 
@@ -475,10 +477,10 @@ public class Injections {
          * for the same reason as in the `afterThreadRunReturn` method.
          */
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
-        if (descriptor == null) return;
+        EventTracker eventTracker = getEventTracker(descriptor, false);
+        if (descriptor == null || eventTracker == null) return;
 
-        EventTracker tracker = getEventTracker(descriptor, false);
-        tracker.afterThreadRunException(descriptor, exception);
+        eventTracker.afterThreadRunException(descriptor, exception);
     }
 
     /**
