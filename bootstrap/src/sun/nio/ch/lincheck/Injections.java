@@ -78,8 +78,7 @@ public class Injections {
         if (mode == EventTrackingMode.THREAD_LOCAL) {
             return (descriptor != null) ? descriptor.getEventTracker() : null;
         }
-
-        throw new IllegalStateException("Unexpected event tracking mode: " + mode);
+        return null;
     }
 
     /**
