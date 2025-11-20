@@ -8,12 +8,9 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.trace.recorder.test.impl
+package org.jetbrains.trace.recorder.test.runner
 
-import org.jetbrains.trace.recorder.test.impl.AbstractJsonTraceRecorderIntegrationTest.Companion.renderAllTestsCode
-import org.jetbrains.trace.recorder.test.runner.AbstractTraceRecorderIntegrationTest
-import org.jetbrains.trace.recorder.test.runner.loadResourceText
-import org.jetbrains.trace.recorder.test.runner.parseJsonEntries
+import org.jetbrains.trace.recorder.test.runner.AbstractJsonTraceRecorderIntegrationTest.Companion.renderAllTestsCode
 import java.nio.file.Path
 import java.util.Locale
 import kotlin.io.path.writeText
@@ -163,7 +160,7 @@ abstract class AbstractJsonTraceRecorderIntegrationTest(
                 
                 package $packageName
                 
-                import org.jetbrains.trace.recorder.test.impl.*
+                import org.jetbrains.trace.recorder.test.runner.*
                 import org.junit.jupiter.api.Nested
                 import org.junit.jupiter.api.Test
                 import org.junit.jupiter.api.Timeout

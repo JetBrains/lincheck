@@ -2,7 +2,7 @@
 
 package org.jetbrains.trace.recorder.test.impl.generated
 
-import org.jetbrains.trace.recorder.test.impl.*
+import org.jetbrains.trace.recorder.test.runner.*
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
