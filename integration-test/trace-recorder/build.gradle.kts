@@ -28,7 +28,7 @@ sourceSets {
 }
 
 enum class TraceAgentIntegrationTestSuite {
-    Basic, KotlinCompiler, Ktor, All
+    Basic, KotlinCompiler, Ktor, IJ, All
 }
 
 tasks {
@@ -45,6 +45,7 @@ tasks {
         "basic" -> TraceAgentIntegrationTestSuite.Basic
         "kotlincompiler" -> TraceAgentIntegrationTestSuite.KotlinCompiler
         "ktor" -> TraceAgentIntegrationTestSuite.Ktor
+        "ij" -> TraceAgentIntegrationTestSuite.IJ
         "all", null -> TraceAgentIntegrationTestSuite.All
         else -> error("Unknown integration test suite type: $integrationTestSuite")
     }
@@ -65,10 +66,12 @@ tasks {
         when (integrationTestSuiteType) {
             TraceAgentIntegrationTestSuite.KotlinCompiler -> include("**/*KotlinCompilerTraceRecorderJsonIntegrationTests*")
             TraceAgentIntegrationTestSuite.Ktor -> include("**/*KtorTraceRecorderJsonIntegrationTests*")
+            TraceAgentIntegrationTestSuite.IJ -> include("**/*IntellijTraceRecorderJsonIntegrationTest*")
             TraceAgentIntegrationTestSuite.All -> {}
             TraceAgentIntegrationTestSuite.Basic -> exclude(
                 "**/*KotlinCompilerTraceRecorderJsonIntegrationTests*",
-                "**/*KtorTraceRecorderJsonIntegrationTests*"
+                "**/*KtorTraceRecorderJsonIntegrationTests*",
+                "**/*IntellijTraceRecorderJsonIntegrationTest*",
             )
         }
 
