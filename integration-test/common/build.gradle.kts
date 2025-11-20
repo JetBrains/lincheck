@@ -26,7 +26,3 @@ sourceSets {
         implementation("org.gradle:gradle-tooling-api:${gradleToolingApiVersion}")
     }
 }
-
-tasks.test {
-    useJUnitPlatform()
-}

@@ -50,6 +50,7 @@ tasks {
     }
 
     val traceRecorderIntegrationTest = register<Test>("traceRecorderIntegrationTest") {
+        useJUnitPlatform()
         configureJvmTestCommon(project)
         group = "verification"
 
@@ -61,7 +62,6 @@ tasks {
         classpath = sourceSets["main"].runtimeClasspath
 
         // Do not run extended tests in the basic task
-        useJUnitPlatform()
         when (integrationTestSuiteType) {
             TraceAgentIntegrationTestSuite.KotlinCompiler -> include("**/*KotlinCompilerTraceRecorderJsonIntegrationTests*")
             TraceAgentIntegrationTestSuite.Ktor -> include("**/*KtorTraceRecorderJsonIntegrationTests*")
