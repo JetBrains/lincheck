@@ -14,7 +14,6 @@ import java.nio.file.Paths
 
 abstract class KotlinImmutableCollectionsTraceRecorderJsonTests : AbstractJsonTraceRecorderIntegrationTest(
     projectPath = Paths.get("build", "integrationTestProjects", "kotlinx.collections.immutable").toString(),
-    checkRepresentationByDefault = true,
 ) {
     override val formatArgs: Map<String, String> = mapOf("format" to "text", "formatOption" to "verbose",)
 

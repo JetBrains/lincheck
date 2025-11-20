@@ -14,7 +14,6 @@ import java.nio.file.Paths
 
 abstract class IntellijTraceRecorderJsonTest : AbstractJsonTraceRecorderIntegrationTest(
     projectPath = Paths.get("build", "integrationTestProjects", "intellij-community").toAbsolutePath().toString(),
-    checkRepresentationByDefault = false,
 ) {
     companion object Companion : TestGenerator(
         groupName = "IJ",

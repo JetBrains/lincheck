@@ -17,7 +17,6 @@ import kotlin.io.path.writeText
 
 abstract class AbstractJsonTraceRecorderIntegrationTest(
     override val projectPath: String,
-    val checkRepresentationByDefault: Boolean,
 ) : AbstractGradleTraceIntegrationTest() {
     override val formatArgs: Map<String, String> = mapOf("format" to "binary", "formatOption" to "stream")
 

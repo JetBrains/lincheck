@@ -16,7 +16,6 @@ import kotlin.io.path.createTempFile
 
 abstract class KotlinCompilerTraceRecorderJsonTests : AbstractJsonTraceRecorderIntegrationTest(
     projectPath = Paths.get("build", "integrationTestProjects", "kotlin").toString(),
-    checkRepresentationByDefault = false,
 ) {
     override fun runTestImpl(
         testClassName: String,
