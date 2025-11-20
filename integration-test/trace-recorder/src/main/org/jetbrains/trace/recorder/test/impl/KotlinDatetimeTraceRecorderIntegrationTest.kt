@@ -10,11 +10,11 @@
 
 package org.jetbrains.trace.recorder.test.impl
 
-import org.jetbrains.trace.recorder.test.runner.AbstractTraceRecorderIntegrationTest
+import AbstractGradleTraceIntegrationTest
 import org.junit.jupiter.api.Test
 import java.nio.file.Paths
 
-class KotlinDatetimeTraceRecorderIntegrationTest : AbstractTraceRecorderIntegrationTest() {
+class KotlinDatetimeTraceRecorderIntegrationTest : AbstractGradleTraceIntegrationTest() {
     override val projectPath: String = Paths.get("build", "integrationTestProjects", "kotlinx-datetime").toString()
 
     // This test checks that the trace-recorder agent does not fail because of

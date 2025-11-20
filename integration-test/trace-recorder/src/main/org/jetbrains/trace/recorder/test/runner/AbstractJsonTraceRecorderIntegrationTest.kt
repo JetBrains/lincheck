@@ -10,6 +10,7 @@
 
 package org.jetbrains.trace.recorder.test.runner
 
+import AbstractGradleTraceIntegrationTest
 import org.jetbrains.trace.recorder.test.runner.AbstractJsonTraceRecorderIntegrationTest.Companion.renderAllTestsCode
 import java.nio.file.Path
 import java.util.Locale
@@ -18,7 +19,7 @@ import kotlin.io.path.writeText
 abstract class AbstractJsonTraceRecorderIntegrationTest(
     override val projectPath: String,
     val checkRepresentationByDefault: Boolean,
-) : AbstractTraceRecorderIntegrationTest() {
+) : AbstractGradleTraceIntegrationTest() {
     override val formatArgs: Map<String, String> = mapOf("format" to "binary", "formatOption" to "stream")
 
     data class TestCase(
