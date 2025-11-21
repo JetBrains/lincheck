@@ -1,5 +1,5 @@
 # Thread 1
-ManglingTest.testCapture() at :0
+ManglingTest.testCapture() at ManglingTest.kt:86
   multi = 2 at ManglingTest.kt:86
   testCapture$multiply(multi ➜ 2, 3): 6 at ManglingTest.kt:91
   System.out.println(6) at ManglingTest.kt:91

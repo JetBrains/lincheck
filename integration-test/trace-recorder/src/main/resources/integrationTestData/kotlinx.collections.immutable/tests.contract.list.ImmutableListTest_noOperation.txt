@@ -1,5 +1,5 @@
 # Thread 1
-ImmutableListTest.noOperation() at :0
+ImmutableListTest.noOperation() at ImmutableListTest.kt:197
   persistentListOf(): SmallPersistentVector@1 at ImmutableListTest.kt:197
     persistentVectorOf(): SmallPersistentVector@1 at extensions.kt:452
       SmallPersistentVector.getEMPTY(): SmallPersistentVector@1 at Utils.kt:18

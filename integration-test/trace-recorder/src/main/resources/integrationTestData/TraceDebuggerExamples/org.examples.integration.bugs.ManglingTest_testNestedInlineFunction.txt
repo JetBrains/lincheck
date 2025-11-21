@@ -1,5 +1,5 @@
 # Thread 1
-ManglingTest.testNestedInlineFunction() at :0
+ManglingTest.testNestedInlineFunction() at ManglingTest.kt:123
   this_ = ManglingTest@1 at ManglingTest.kt:123
   x = 2 at ManglingTest.kt:123
   y = 3 at ManglingTest.kt:123

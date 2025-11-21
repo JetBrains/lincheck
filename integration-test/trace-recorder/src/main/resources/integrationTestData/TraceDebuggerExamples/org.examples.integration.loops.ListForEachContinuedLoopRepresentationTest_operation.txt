@@ -1,5 +1,5 @@
 # Thread 1
-ListForEachContinuedLoopRepresentationTest.operation() at :0
+ListForEachContinuedLoopRepresentationTest.operation() at ListForEachContinuedLoopRepresentationTest.kt:17
   escape = "START" at ListForEachContinuedLoopRepresentationTest.kt:17
   Integer;@1[0] = 1 at ListForEachContinuedLoopRepresentationTest.kt:18
   Integer;@1[1] = 2 at ListForEachContinuedLoopRepresentationTest.kt:18

@@ -1,5 +1,5 @@
 # Thread 1
-ManglingTest.testInlineClassInlineFunction() at :0
+ManglingTest.testInlineClassInlineFunction() at ManglingTest.kt:75
   this_ = ManglingTest@1 at ManglingTest.kt:75
   x = 2 at ManglingTest.kt:75
   y = 3 at ManglingTest.kt:75

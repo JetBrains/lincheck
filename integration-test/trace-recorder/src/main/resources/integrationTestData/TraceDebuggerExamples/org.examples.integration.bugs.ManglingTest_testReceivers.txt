@@ -1,5 +1,5 @@
 # Thread 1
-ManglingTest.testReceivers() at :0
+ManglingTest.testReceivers() at ManglingTest.kt:109
   ManglingTest.Wrapper.constructor-impl(1): 1 at ManglingTest.kt:109
   testReceivers$lambda$7 = 1 at ManglingTest.kt:109
   ManglingTest.Wrapper.constructor-impl(2): 2 at ManglingTest.kt:110

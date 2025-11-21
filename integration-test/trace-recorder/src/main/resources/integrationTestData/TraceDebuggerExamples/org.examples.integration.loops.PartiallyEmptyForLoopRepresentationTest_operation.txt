@@ -1,5 +1,5 @@
 # Thread 1
-PartiallyEmptyForLoopRepresentationTest.operation() at :0
+PartiallyEmptyForLoopRepresentationTest.operation() at PartiallyEmptyForLoopRepresentationTest.kt:16
   escape = "START" at PartiallyEmptyForLoopRepresentationTest.kt:16
   new StringBuilder(): StringBuilder@1("") at PartiallyEmptyForLoopRepresentationTest.kt:17
   builder = StringBuilder@1("") at PartiallyEmptyForLoopRepresentationTest.kt:17

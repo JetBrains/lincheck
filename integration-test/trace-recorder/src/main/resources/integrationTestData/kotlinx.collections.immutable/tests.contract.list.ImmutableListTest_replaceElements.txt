@@ -1,5 +1,5 @@
 # Thread 1
-ImmutableListTest.replaceElements() at :0
+ImmutableListTest.replaceElements() at ImmutableListTest.kt:91
   list = null at ImmutableListTest.kt:91
   toImmutableList("abcxaxab12"): SmallPersistentVector@1 at ImmutableListTest.kt:91
     toPersistentList(toImmutableList ➜ "abcxaxab12"): SmallPersistentVector@1 at extensions.kt:595

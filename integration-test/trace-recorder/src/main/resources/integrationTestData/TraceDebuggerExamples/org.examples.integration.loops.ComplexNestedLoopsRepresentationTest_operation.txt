@@ -1,5 +1,5 @@
 # Thread 1
-ComplexNestedLoopsRepresentationTest.operation() at :0
+ComplexNestedLoopsRepresentationTest.operation() at ComplexNestedLoopsRepresentationTest.kt:19
   escape = "START" at ComplexNestedLoopsRepresentationTest.kt:19
   i = 1 at ComplexNestedLoopsRepresentationTest.kt:21
   loop(2 iterations) at ComplexNestedLoopsRepresentationTest.kt:21

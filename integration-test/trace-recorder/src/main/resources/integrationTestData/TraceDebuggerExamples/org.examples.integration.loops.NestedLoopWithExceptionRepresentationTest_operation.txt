@@ -1,5 +1,5 @@
 # Thread 1
-NestedLoopWithExceptionRepresentationTest.operation() at :0
+NestedLoopWithExceptionRepresentationTest.operation() at NestedLoopWithExceptionRepresentationTest.kt:41
   escape = "START" at NestedLoopWithExceptionRepresentationTest.kt:41
   nestedLoopWithException(): threw RuntimeException at NestedLoopWithExceptionRepresentationTest.kt:43
     escape = "METHOD_START" at NestedLoopWithExceptionRepresentationTest.kt:26

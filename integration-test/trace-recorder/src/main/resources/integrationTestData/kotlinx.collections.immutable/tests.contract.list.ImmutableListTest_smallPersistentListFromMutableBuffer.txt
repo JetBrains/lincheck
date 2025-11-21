@@ -1,5 +1,5 @@
 # Thread 1
-ImmutableListTest.smallPersistentListFromMutableBuffer() at :0
+ImmutableListTest.smallPersistentListFromMutableBuffer() at ImmutableListTest.kt:121
   new ArrayList(33): ArrayList@1 at ImmutableListTest.kt:121
   loop(33 iterations) at ImmutableListTest.kt:121
     <iteration 1> at ImmutableListTest.kt:121

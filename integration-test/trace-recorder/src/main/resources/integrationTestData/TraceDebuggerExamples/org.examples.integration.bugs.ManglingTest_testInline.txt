@@ -1,5 +1,5 @@
 # Thread 1
-ManglingTest.testInline() at :0
+ManglingTest.testInline() at ManglingTest.kt:15
   this_ = ManglingTest@1 at ManglingTest.kt:15
   x = 2 at ManglingTest.kt:15
   y = 3 at ManglingTest.kt:15

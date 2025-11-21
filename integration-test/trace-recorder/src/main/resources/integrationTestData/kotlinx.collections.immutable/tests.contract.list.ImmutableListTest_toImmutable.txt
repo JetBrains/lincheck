@@ -1,5 +1,5 @@
 # Thread 1
-ImmutableListTest.toImmutable() at :0
+ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
   String;@1[0] = "a" at ImmutableListTest.kt:55
   String;@1[1] = "bar" at ImmutableListTest.kt:55
   String;@1[2] = "cat" at ImmutableListTest.kt:55

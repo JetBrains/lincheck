@@ -1,5 +1,5 @@
 # Thread 1
-ImmutableListTest.emptyListToPersistentList() at :0
+ImmutableListTest.emptyListToPersistentList() at ImmutableListTest.kt:72
   emptyList(): EmptyList@1 at ImmutableListTest.kt:72
   empty = EmptyList@1 at ImmutableListTest.kt:72
   toPersistentList(empty): SmallPersistentVector@1 at ImmutableListTest.kt:73

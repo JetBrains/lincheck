@@ -1,5 +1,5 @@
 # Thread 1
-NestedForLoopRepresentationTest.operation() at :0
+NestedForLoopRepresentationTest.operation() at NestedForLoopRepresentationTest.kt:17
   escape = "START" at NestedForLoopRepresentationTest.kt:17
   i = 1 at NestedForLoopRepresentationTest.kt:18
   loop(2 iterations) at NestedForLoopRepresentationTest.kt:18

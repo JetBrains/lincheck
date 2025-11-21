@@ -1,5 +1,7 @@
 # Thread 1 (Test worker)
-ExecutorsTest.testDefaultDispatcherToExecutor() at :0
+ExecutorsTest.testDefaultDispatcherToExecutor() at ExecutorsTest.kt:56
+  new CountDownLatch(1): CountDownLatch@1 at ExecutorsTest.kt:56
+  latch = CountDownLatch@1 at ExecutorsTest.kt:56
   Dispatchers.getDefault(): DefaultScheduler@1 at ExecutorsTest.kt:57
   asExecutor(DefaultScheduler@1): CoroutineScheduler@1 at ExecutorsTest.kt:57
     DefaultScheduler@1.getExecutor(): CoroutineScheduler@1 at Executors.kt:104
@@ -8,12 +10,15 @@ ExecutorsTest.testDefaultDispatcherToExecutor() at :0
 # Thread 2 (DefaultDispatcher-worker-1)
 CoroutineScheduler.Worker.run(): <unfinished method> at :0
   runWorker(): <unfinished method> at :0
-    executeTask(): <unfinished method> at :0
-      CoroutineScheduler.runSafely(): <unfinished method> at :0
-        TaskImpl.run(): <unfinished method> at :0
-          ExecutorsTest.testDefaultDispatcherToExecutor$lambda$3(): <unfinished method> at :0
-            checkThreadName("DefaultDispatcher") at ExecutorsTest.kt:58
-              Thread.currentThread(): CoroutineScheduler.Worker@1 at ExecutorsTest.kt:11
-              CoroutineScheduler.Worker@1.getName(): "DefaultDispatcher-worker-1" at ExecutorsTest.kt:11
-              startsWith$default(name ➜ "DefaultDispatcher-worker-1", prefix ➜ "DefaultDispatcher", false, 2, null): true at ExecutorsTest.kt:12
-            latch.countDown() at ExecutorsTest.kt:59
+  executeTask(): <unfinished method> at :0
+  CoroutineScheduler.runSafely(): <unfinished method> at :0
+  TaskImpl.run(): <unfinished method> at :0
+  ExecutorsTest.testDefaultDispatcherToExecutor$lambda$3(): <unfinished method> at :0
+    checkThreadName("DefaultDispatcher") at ExecutorsTest.kt:58
+      Thread.currentThread(): CoroutineScheduler.Worker@1 at ExecutorsTest.kt:11
+      CoroutineScheduler.Worker@1.getName(): "DefaultDispatcher-worker-1" at ExecutorsTest.kt:11
+      name = "DefaultDispatcher-worker-1" at ExecutorsTest.kt:11
+      startsWith(name ➜ "DefaultDispatcher-worker-1", prefix ➜ "DefaultDispatcher", false, 2, null): true at ExecutorsTest.kt:12
+      check = ExecutorsTest@1 at ExecutorsTest.kt:12
+      value = true at ExecutorsTest.kt:12
+    latch.countDown() at ExecutorsTest.kt:59

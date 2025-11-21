@@ -1,5 +1,5 @@
 # Thread 1
-SimpleDoWhileLoopRepresentationTest.operation() at :0
+SimpleDoWhileLoopRepresentationTest.operation() at SimpleDoWhileLoopRepresentationTest.kt:16
   escape = "START" at SimpleDoWhileLoopRepresentationTest.kt:16
   i = 2 at SimpleDoWhileLoopRepresentationTest.kt:17
   loop(2 iterations) at SimpleDoWhileLoopRepresentationTest.kt:19

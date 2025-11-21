@@ -1,5 +1,5 @@
 # Thread 1
-ImmutableListTest.covariantTyping() at :0
+ImmutableListTest.covariantTyping() at ImmutableListTest.kt:219
   persistentListOf(): SmallPersistentVector@1 at ImmutableListTest.kt:219
     persistentVectorOf(): SmallPersistentVector@1 at extensions.kt:452
       SmallPersistentVector.getEMPTY(): SmallPersistentVector@1 at Utils.kt:18

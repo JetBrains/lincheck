@@ -1,5 +1,5 @@
 # Thread 1
-SimpleForLoopRepresentationTest.operation() at :0
+SimpleForLoopRepresentationTest.operation() at SimpleForLoopRepresentationTest.kt:16
   escape = "START" at SimpleForLoopRepresentationTest.kt:16
   i = 1 at SimpleForLoopRepresentationTest.kt:17
   loop(2 iterations) at SimpleForLoopRepresentationTest.kt:17

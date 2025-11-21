@@ -1,5 +1,5 @@
 # Thread 1
-JavaWhileLoopRepresentationTest.operation() at :0
+JavaWhileLoopRepresentationTest.operation() at JavaWhileLoopRepresentationTest.java:17
   i = 1 at JavaWhileLoopRepresentationTest.java:17
   escape = "START" at JavaWhileLoopRepresentationTest.java:18
   loop(3 iterations) at JavaWhileLoopRepresentationTest.java:19

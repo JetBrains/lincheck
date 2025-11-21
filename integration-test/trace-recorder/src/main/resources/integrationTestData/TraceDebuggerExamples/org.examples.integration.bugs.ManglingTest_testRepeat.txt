@@ -1,5 +1,5 @@
 # Thread 1
-ManglingTest.testRepeat() at :0
+ManglingTest.testRepeat() at ManglingTest.kt:25
   loop(10 iterations) at ManglingTest.kt:25
     <iteration 1> at ManglingTest.kt:25
       it = 0 at ManglingTest.kt:25

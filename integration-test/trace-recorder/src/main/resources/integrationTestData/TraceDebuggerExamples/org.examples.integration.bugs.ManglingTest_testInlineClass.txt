@@ -1,5 +1,5 @@
 # Thread 1
-ManglingTest.testInlineClass() at :0
+ManglingTest.testInlineClass() at ManglingTest.kt:52
   sum(2, 3): 5 at ManglingTest.kt:52
     UInt.constructor-impl(5): 5 at ManglingTest.kt:48
   UInt.box-impl(5): UInt@1 at ManglingTest.kt:52

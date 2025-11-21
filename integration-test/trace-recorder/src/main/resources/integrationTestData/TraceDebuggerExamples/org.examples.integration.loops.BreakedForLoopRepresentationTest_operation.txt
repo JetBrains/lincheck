@@ -1,5 +1,5 @@
 # Thread 1
-BreakedForLoopRepresentationTest.operation() at :0
+BreakedForLoopRepresentationTest.operation() at BreakedForLoopRepresentationTest.kt:17
   escape = "START" at BreakedForLoopRepresentationTest.kt:17
   i = 1 at BreakedForLoopRepresentationTest.kt:18
   loop(4 iterations) at BreakedForLoopRepresentationTest.kt:18
