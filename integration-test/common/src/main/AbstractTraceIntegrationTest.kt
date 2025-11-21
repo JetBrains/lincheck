@@ -19,15 +19,18 @@ import java.util.concurrent.ConcurrentLinkedQueue
 
 abstract class AbstractTraceIntegrationTest {
     open val fatJarName: String = "trace-recorder-fat.jar"
+    
     open val formatArgs: Map<String, String> = mapOf(
         "format" to "text",
         "formatOption" to "verbose",
     )
+    
     open val defaultJvmArgs: List<String> = listOf(
         "-Dlincheck.traceRecorderMode=true",
         "-XX:+UnlockExperimentalVMOptions",
         "-XX:hashCode=2",
     )
+    
     abstract val projectPath: String
 
     protected val pathToFatJar: String
