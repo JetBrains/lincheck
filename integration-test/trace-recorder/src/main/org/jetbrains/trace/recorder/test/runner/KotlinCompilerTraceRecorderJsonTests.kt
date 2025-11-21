@@ -26,11 +26,9 @@ abstract class KotlinCompilerTraceRecorderJsonTests : AbstractGradleTraceIntegra
         extraAgentArgs: Map<String, String>,
         commands: List<String>,
         outputFile: File
-    ) {
-        withPermissions { permissions ->
-            val allJvmArgs = listOf("-Djava.security.policy==${permissions.absolutePath}") + extraJvmArgs
-            super.runTestImpl(testClassName, testMethodName, extraJvmArgs = allJvmArgs, extraAgentArgs, commands, outputFile)
-        }
+    ) = withPermissions { permissions ->
+        val allJvmArgs = listOf("-Djava.security.policy==${permissions.absolutePath}") + extraJvmArgs
+        super.runTestImpl(testClassName, testMethodName, extraJvmArgs = allJvmArgs, extraAgentArgs, commands, outputFile)
     }
 
     companion object Companion : TestGenerator(
