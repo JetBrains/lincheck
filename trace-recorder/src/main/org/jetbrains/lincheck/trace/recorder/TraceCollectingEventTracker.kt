@@ -200,7 +200,8 @@ class TraceCollectingEventTracker(
     private val methodName: String,
     private val traceDumpPath: String?,
     private val mode: TraceCollectorMode,
-    private val packTrace: Boolean
+    private val packTrace: Boolean,
+    private val codeLocationId: Int
 ) : EventTracker {
     // We don't want to re-create this object each time we need it
     private val analysisProfile: AnalysisProfile = AnalysisProfile(false)
@@ -899,7 +900,7 @@ class TraceCollectingEventTracker(
 
         val tracePoint = TRMethodCallTracePoint(
             threadId = threadData.threadId,
-            codeLocationId = UNKNOWN_CODE_LOCATION_ID,
+            codeLocationId = codeLocationId,
             methodId = TRACE_CONTEXT.getOrCreateMethodId(className, methodName, Types.MethodType(Types.VOID_TYPE)),
             obj = null,
             parameters = emptyList()

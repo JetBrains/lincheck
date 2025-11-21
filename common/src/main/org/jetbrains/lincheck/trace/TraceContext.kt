@@ -146,6 +146,19 @@ class TraceContext {
         return id
     }
 
+    fun updateCodeLocationLineNumber(id: Int, newLineNumber: Int) {
+        require(id < locations.size) { "Cannot update code location $id: only ${locations.size} locations is created" }
+        val oldLocation = locations[id] ?: return
+        val newStackTraceElement = StackTraceElement(
+            /* declaringClass = */ oldLocation.stackTraceElement.className,
+            /* methodName = */ oldLocation.stackTraceElement.methodName,
+            /* fileName = */ oldLocation.stackTraceElement.fileName,
+            /* lineNumber = */ newLineNumber
+        )
+        val newLocation = CodeLocation(newStackTraceElement, oldLocation.accessPath, oldLocation.argumentNames)
+        locations[id] = newLocation
+    }
+
     fun codeLocation(codeLocationId: Int): CodeLocation? =
         locations[codeLocationId]
 

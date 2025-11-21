@@ -23,9 +23,11 @@ import java.lang.instrument.ClassFileTransformer
 import java.security.ProtectionDomain
 
 typealias MethodVisitorProvider = (
+    className: String,
+    fileName: String,
     adapter: GeneratorAdapter,
     access: Int,
-    name: String,
+    methodName: String,
     descriptor: String
 ) -> MethodVisitor
 
@@ -77,6 +79,7 @@ private class TraceAgentClassVisitor(
     val methodTransformer: MethodVisitorProvider
 ): ClassVisitor(ASM_API, classVisitor) {
     private lateinit var className: String
+    private var fileName: String = ""
 
     override fun visit(
         version: Int,
@@ -88,6 +91,10 @@ private class TraceAgentClassVisitor(
     ) {
         super.visit(version, access, name, signature, superName, interfaces)
         className = name.toCanonicalClassName()
+    }
+
+    override fun visitSource(source: String?, debug: String?) {
+        fileName = source!!
     }
 
     override fun visitMethod(
@@ -106,7 +113,7 @@ private class TraceAgentClassVisitor(
         if (className == TraceAgentParameters.classUnderTraceDebugging &&
             methodName == TraceAgentParameters.methodUnderTraceDebugging &&
             isNotSynthetic) {
-            mv = methodTransformer(mv.newAdapter(), access, methodName, desc)
+            mv = methodTransformer(className, fileName,mv.newAdapter(), access, methodName, desc)
         }
 
         return mv

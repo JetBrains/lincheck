@@ -37,6 +37,8 @@ import org.objectweb.asm.commons.GeneratorAdapter
  * ```
  */
 internal class TraceDebuggerMethodTransformer(
+    className: String,
+    fileName: String,
     private val adapter: GeneratorAdapter,
     access: Int,
     name: String,
