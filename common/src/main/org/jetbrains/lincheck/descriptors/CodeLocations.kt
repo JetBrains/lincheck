@@ -60,21 +60,6 @@ object CodeLocations {
         TRACE_CONTEXT.newCodeLocation(stackTraceElement, accessPath, argumentNames)
 
     /**
-     * Replace stack trace element in already created location, which allows to update
-     * line number which isn't known at the moment of location creation
-     *
-     * @param id ID of existing code location
-     * @param newLineNumber new line number for this code location
-     */
-    @JvmStatic
-    @Synchronized
-    fun updateCodeLocationLineNumber(
-        id: Int,
-        newLineNumber: Int
-    ): Unit =
-        TRACE_CONTEXT.updateCodeLocationLineNumber(id, newLineNumber)
-
-    /**
      * Returns the [StackTraceElement] associated with the specified code location ID.
      *
      * @param codeLocationId ID of the code location.

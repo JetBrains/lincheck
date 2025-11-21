@@ -45,21 +45,10 @@ internal class TraceRecorderMethodTransformer(
     adapter: GeneratorAdapter,
     access: Int,
     methodName: String,
-    descriptor: String
+    descriptor: String,
+    private val firstLine: Int
 ): AdviceAdapter(ASM_API, adapter, access, methodName, descriptor) {
     private val startLabel: Label = Label()
-
-    private var lineNumber = 0
-    private var codeLocationId: Int = -1
-
-    override fun visitLineNumber(line: Int, start: Label?) {
-        super.visitLineNumber(line, start)
-        // Code location has been created without known line number, update line number
-        if (lineNumber == 0 && codeLocationId >= 0) {
-            CodeLocations.updateCodeLocationLineNumber(codeLocationId, line)
-        }
-        lineNumber = line
-    }
 
     override fun onMethodEnter() {
         super.onMethodEnter()
@@ -69,10 +58,10 @@ internal class TraceRecorderMethodTransformer(
             /* declaringClass = */ className.toInternalClassName(),
             /* methodName = */ name,
             /* fileName = */ fileName,
-            /* lineNumber = */ lineNumber
+            /* lineNumber = */ firstLine
         )
 
-        codeLocationId = CodeLocations.newCodeLocation(ste)
+        val codeLocationId = CodeLocations.newCodeLocation(ste)
         push(codeLocationId)
 
         invokeStatic(TraceRecorderInjections::startTraceRecorder)

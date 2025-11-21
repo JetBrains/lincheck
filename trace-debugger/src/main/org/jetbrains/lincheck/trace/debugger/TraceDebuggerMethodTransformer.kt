@@ -42,7 +42,8 @@ internal class TraceDebuggerMethodTransformer(
     private val adapter: GeneratorAdapter,
     access: Int,
     name: String,
-    descriptor: String
+    descriptor: String,
+    firstLine: Int
 ) : MethodVisitor(ASM_API, adapter) {
 
     /**
