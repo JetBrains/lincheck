@@ -84,15 +84,13 @@ sealed class TestGenerator(
                 inner class $generatedTestClassName : $abstractTestClass() {
                     @Test
                     @Timeout($timeoutMinutes * 60)
-                    fun test() {
-                        runTest(
-                            testClassName = ${testCase.className.toLiteral()},
-                            testMethodName = ${testCase.methodName.toLiteral()},
-                            extraJvmArgs = listOf(${testCase.jvmArgs.joinToString { it.toLiteral() }}),
-                            commands = listOf(${testCase.gradleCommand.toLiteral()}),
-                            checkRepresentation = ${testCase.checkRepresentation},
-                        )
-                    }
+                    fun test() = runTest(
+                        testClassName = ${testCase.className.toLiteral()},
+                        testMethodName = ${testCase.methodName.toLiteral()},
+                        extraJvmArgs = listOf(${testCase.jvmArgs.joinToString { it.toLiteral() }}),
+                        commands = listOf(${testCase.gradleCommand.toLiteral()}),
+                        checkRepresentation = ${testCase.checkRepresentation},
+                    )
                 }
                 """.trimIndent()
     }
