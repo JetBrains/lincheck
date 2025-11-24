@@ -795,9 +795,9 @@ class TraceCollectingEventTracker(
 
         if (!isReachableFromOutsideLoop) {
             if (currentLoopTracePoint == null) {
-                Logger.error { "Exit from loop $loopId outside of it" }
+                Logger.warn { "Exit from loop $loopId outside of it" }
             } else if (currentLoopTracePoint.loopId != loopId) {
-                Logger.error { "Unexpected loop exit: expected loopId ${currentLoopTracePoint.loopId}, but was $loopId" }
+                Logger.warn { "Unexpected loop exit: expected loopId ${currentLoopTracePoint.loopId}, but was $loopId" }
             }
         }
         if (currentLoopTracePoint?.loopId == loopId) {
