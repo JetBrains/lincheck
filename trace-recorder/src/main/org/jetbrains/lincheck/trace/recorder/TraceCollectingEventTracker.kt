@@ -378,14 +378,8 @@ class TraceCollectingEventTracker(
         Logger. error { "Trace Recorder mode doesn't support lock and monitor instrumentation" }
     }
 
-    override fun beforeNewObjectCreation(
-        threadDescriptor: ThreadDescriptor,
-        className: String
-    ) = runInsideIgnoredSection {
-        LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
-    }
-
-    override fun afterNewObjectCreation(threadDescriptor: ThreadDescriptor, obj: Any) = Unit
+    override fun beforeNewObjectCreation(threadDescriptor: ThreadDescriptor, className: String) {}
+    override fun afterNewObjectCreation(threadDescriptor: ThreadDescriptor, obj: Any) {}
 
     override fun getNextTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker): Long = runInsideIgnoredSection {
         Logger. error { "Trace Recorder mode doesn't support Trace Debugger-specific instrumentation" }
@@ -424,20 +418,14 @@ class TraceCollectingEventTracker(
         codeLocation: Int,
         obj: Any?,
         fieldId: Int
-    ): Unit = threadDescriptor.runInsideInjectedCode {
-        val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
-        if (fieldDescriptor.isStatic) {
-            LincheckJavaAgent.ensureClassHierarchyIsTransformed(fieldDescriptor.className)
-        }
-        return
-    }
+    ) {}
 
     override fun beforeReadArrayElement(
         threadDescriptor: ThreadDescriptor,
         codeLocation: Int,
         array: Any,
         index: Int,
-    ) = Unit
+    ) {}
 
     // Needs to run inside ignored section
     // as uninstrumented std lib code can be overshadowed by instrumented project code.
@@ -454,16 +442,7 @@ class TraceCollectingEventTracker(
         fieldId: Int,
         value: Any?
     ) = threadDescriptor.runInsideInjectedCode {
-        val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
-        if (fieldDescriptor.isStatic) {
-            if (value !== null && !value.isImmutable) {
-                LincheckJavaAgent.ensureClassHierarchyIsTransformed(value.javaClass)
-            }
-            // NOTE: for static reads we never create trace points
-            return
-        }
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
-
         val tracePoint = TRReadTracePoint(
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
@@ -586,10 +565,6 @@ class TraceCollectingEventTracker(
         if (methodSection == AnalysisSectionType.IGNORED) {
             threadData.enterAnalysisSection(methodSection)
             return null
-        }
-
-        if (receiver == null && methodSection < AnalysisSectionType.ATOMIC) {
-            LincheckJavaAgent.ensureClassHierarchyIsTransformed(methodDescriptor.className)
         }
 
         val parentTracepoint = threadData.currentTopTracePoint()

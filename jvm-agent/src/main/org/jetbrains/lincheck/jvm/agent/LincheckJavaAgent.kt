@@ -166,15 +166,18 @@ object LincheckJavaAgent {
      * Decide transformation strategy for the current installation and store it into [instrumentationStrategy].
      *
      * Rules:
+     * - For trace recorder always use `EAGER`.
      * - If "instrument all classes" was requested, use `EAGER`.
-     * - Else if Trace Recorder java-agent provided the `lazy` argument, use `LAZY` (defaults to true).
+     * - If trace debugger java-agent provided the `lazy` argument, use `LAZY` (defaults to true).
      * - Else use `LAZY` if [instrumentationMode] supports it, `EAGER` otherwise.
      */
     private fun setInstrumentationStrategy() {
         instrumentationStrategy = when {
+            (instrumentationMode == TRACE_RECORDING) -> InstrumentationStrategy.EAGER
+
             INSTRUMENT_ALL_CLASSES -> InstrumentationStrategy.EAGER
 
-            (instrumentationMode == TRACE_RECORDING) || (instrumentationMode == TRACE_DEBUGGING) -> {
+            (instrumentationMode == TRACE_DEBUGGING) -> {
                 val lazyTransformationEnabled = TraceAgentParameters.getLazyTransformationEnabled()
                 if (lazyTransformationEnabled && instrumentationMode.supportsLazyTransformation)
                     InstrumentationStrategy.LAZY

@@ -10,8 +10,6 @@
 
 package org.jetbrains.lincheck.jvm.agent
 
-import org.jetbrains.lincheck.jvm.agent.transformers.MethodCallMinimalTransformer
-import org.jetbrains.lincheck.jvm.agent.transformers.ObjectCreationMinimalTransformer
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.commons.*
@@ -134,7 +132,7 @@ internal class LincheckClassVisitor(
 
         // ======== Object Creation ========
         chain.addTransformer { adapter, mv ->
-            applyObjectCreationTransformer(methodName, desc, access, methodInfo, adapter, mv)
+            ObjectCreationTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
         }
 
         // ======== Invokedynamic ========
@@ -212,23 +210,6 @@ internal class LincheckClassVisitor(
             mv = IntrinsicCandidateMethodFilter(className, methodName, desc, initialVisitor, mv)
         }
 
-        return mv
-    }
-
-    private fun applyObjectCreationTransformer(
-        methodName: String,
-        desc: String,
-        access: Int,
-        methodInfo: MethodInformation,
-        adapter: GeneratorAdapter,
-        methodVisitor: MethodVisitor,
-    ): ObjectCreationTransformerBase {
-        var mv = methodVisitor
-        if (instrumentationMode == TRACE_RECORDING) {
-            mv = ObjectCreationMinimalTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
-        } else {
-            mv = ObjectCreationTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
-        }
         return mv
     }
 
