@@ -65,6 +65,8 @@ internal object FinalFields {
         fields[fieldName]?.let { return it == FinalFields.FieldInfo.FINAL }
         // If we haven't processed this class yet, fall back to a slow-path, reading the class byte-code.
         val fieldFound = collectFieldInformation(internalClassName, fieldName, fields)
+        // In case the reading of class byte-code failed, we can't say anything about this field.
+        // TODO JBRes-6558 Use `ClassNode` API to collect information about classes/methods/variables
         if (!fieldFound) return false
         // Here we must have information about this field, as we scanned all the hierarchy of this class.
         val fieldInfo = fields[fieldName] ?: error("Internal error: can't find field with $fieldName in class $internalClassName")
