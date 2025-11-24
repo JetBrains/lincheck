@@ -80,10 +80,17 @@ fun isIntellijInstrumentationCoverageAgentClass(className: String) =
     className.startsWith("com.intellij.rt.coverage.instrumentation")
 
 /**
+ * Checks if the given class name belongs to the JetBrains coverage package.
+ */
+fun isJetBrainsCoverageClass(className: String) =
+    className.startsWith("org.jetbrains.coverage")
+
+/**
  * Checks if the given class name belongs to the IntelliJ runtime agents.
  */
 fun isIntellijRuntimeAgentClass(className: String) =
-    isIntellijRuntimeDebuggerAgentClass(className) || isIntellijRuntimeCoverageAgentClass(className)
+    isIntellijRuntimeDebuggerAgentClass(className) ||
+    isIntellijRuntimeCoverageAgentClass(className)
 
 /**
  * Determines if a given class name represents a method handle related class,

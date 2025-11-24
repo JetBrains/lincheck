@@ -342,6 +342,8 @@ class AnalysisProfile(val analyzeStdLib: Boolean) {
         if (className == "kotlinx.coroutines.DebugKt") return false
         // We should never transform IntelliJ runtime classes (debugger and coverage agents).
         if (isIntellijRuntimeAgentClass(className)) return false
+        // We should never instrument the JetBrains coverage package classes (for instance, relocated ASM library).
+        if (isJetBrainsCoverageClass(className)) return false
         // We can also safely do not instrument some libraries for performance reasons.
         if (className.startsWith("com.esotericsoftware.kryo.")) return false
         if (className.startsWith("net.bytebuddy.")) return false
