@@ -1007,8 +1007,6 @@ class TraceCollectingEventTracker(
         startTime = System.currentTimeMillis()
 
         try {
-            val sb = StringBuilder()
-            val appendable = DefaultTRTextAppendable(sb)
             val roots = mutableListOf<TRTracePoint>()
 
             allThreads.sortBy { it.threadId }
