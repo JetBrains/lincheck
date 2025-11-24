@@ -28,7 +28,7 @@ abstract class AbstractTraceIntegrationTest {
     open val defaultJvmArgs: List<String> = listOf(
         "-Dlincheck.traceRecorderMode=true",
         "-XX:+UnlockExperimentalVMOptions",
-        "-XX:hashCode=2",
+        "-XX:hashCode=2", // This line is required to make hashCode deterministic. Mode "2" means "use constant as hash code".
     )
     
     abstract val projectPath: String
