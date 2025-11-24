@@ -50,9 +50,6 @@ data class TransformationStatistics(
 )
 
 fun TransformationStatistics.writeTo(writer: Writer) {
-    val avgClassDelta = averageClassBytesSizeAfter - averageClassBytesSizeBefore
-    val avgInsnDelta = averageMethodInstructionsCountAfter - averageMethodInstructionsCountBefore
-
     val totalMs = totalTransformationTimeNanos / 1_000_000.0
     val avgMs = averageTransformationTimeNanos / 1_000_000.0
 
