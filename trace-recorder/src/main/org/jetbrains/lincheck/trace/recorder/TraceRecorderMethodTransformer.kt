@@ -54,14 +54,14 @@ internal class TraceRecorderMethodTransformer(
         super.onMethodEnter()
         // Make code location
         // Line number may be unknown yet, update it later if needed
-        val ste = StackTraceElement(
+        val stackTraceElement = StackTraceElement(
             /* declaringClass = */ className.toInternalClassName(),
             /* methodName = */ name,
             /* fileName = */ fileName,
             /* lineNumber = */ firstLine
         )
 
-        val codeLocationId = CodeLocations.newCodeLocation(ste)
+        val codeLocationId = CodeLocations.newCodeLocation(stackTraceElement)
         push(codeLocationId)
 
         invokeStatic(TraceRecorderInjections::startTraceRecorder)
