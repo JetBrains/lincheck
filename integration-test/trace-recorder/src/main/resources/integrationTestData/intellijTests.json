@@ -1,7 +1,7 @@
 [
   {
     "class": "com.intellij.util.ArrayUtilTest",
-    "gradleCommand": ":kotlinx-collections-immutable:jvmTest",
+    "gradleCommand": "",
     "methods": [
       "testInsertString"
     ],

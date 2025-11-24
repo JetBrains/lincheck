@@ -23,7 +23,7 @@ class IJTraceRecorderJsonIntegrationTests {
                 testClassName = "com.intellij.util.ArrayUtilTest",
                 testMethodName = "testInsertString",
                 extraJvmArgs = listOf(),
-                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                commands = listOf(""),
                 checkRepresentation = true,
             )
         }
