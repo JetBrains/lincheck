@@ -24,6 +24,7 @@ internal class LincheckClassVisitor(
     private val classInformation: ClassInformation,
     private val instrumentationMode: InstrumentationMode,
     private val profile: TransformationProfile,
+    private val statsTracker: TransformationStatisticsTracker?,
 ) : ClassVisitor(ASM_API, classVisitor) {
     private var classVersion = 0
 
@@ -82,6 +83,10 @@ internal class LincheckClassVisitor(
             return mv
         } else {
             Logger.debug { "Transforming method $className.$methodName" }
+        }
+
+        if (statsTracker != null) {
+            mv = statsTracker.createStatisticsCollectingVisitor(className, methodName, desc, mv)
         }
 
         // in stress mode there are no complex transformations, so we do not need to handle try-catch blocks

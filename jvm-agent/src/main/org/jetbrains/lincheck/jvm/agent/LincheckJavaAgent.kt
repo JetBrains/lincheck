@@ -23,6 +23,7 @@ import org.jetbrains.lincheck.util.Logger
 import org.jetbrains.lincheck.util.*
 import java.lang.instrument.Instrumentation
 import java.io.File
+import java.io.StringWriter
 import java.util.jar.JarFile
 import java.util.*
 
@@ -345,6 +346,20 @@ object LincheckJavaAgent {
         retransformClasses(classes)
         // Clear the set of instrumented classes.
         instrumentedClasses.clear()
+        // Report statistics if requested.
+        reportStatistics()
+    }
+
+    fun reportStatistics() {
+        if (collectTransformationStatistics) {
+            val writer = StringWriter()
+            LincheckClassFileTransformer.computeStatistics()?.writeTo(writer)
+            LincheckClassFileTransformer.resetStatistics()
+
+            Logger.info { "Transformation statistics:\n" +
+                writer.toString().lines().joinToString("\n") { "\t$it" }
+            }
+        }
     }
 
     /**
@@ -484,3 +499,8 @@ internal val dumpTransformedSources by lazy {
     System.getProperty(DUMP_TRANSFORMED_SOURCES_PROPERTY, "false").toBoolean()
 }
 private const val DUMP_TRANSFORMED_SOURCES_PROPERTY = "lincheck.dumpTransformedSources"
+
+internal val collectTransformationStatistics by lazy {
+    System.getProperty(COLLECT_TRANSFORMATION_STATISTICS_PROPERTY, "false").toBoolean()
+}
+private const val COLLECT_TRANSFORMATION_STATISTICS_PROPERTY = "lincheck.collectTransformationStatistics"
