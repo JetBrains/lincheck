@@ -37,14 +37,19 @@ private class ThreadData(
         val iterations: MutableList<TRLoopIterationTracePoint>,
     )
 
+    var rootCall: TRMethodCallTracePoint? = null
+        private set
+
     private val stack: MutableList<StackFrame> = arrayListOf()
     private val analysisSectionStack: MutableList<AnalysisSectionType> = arrayListOf()
 
+    fun setRootCall(rootCall: TRMethodCallTracePoint) {
+        check(this.rootCall == null) { "Root call tracepoint can be set only once" }
+        this.rootCall = rootCall
+    }
+
     fun currentMethodCallTracePoint(): TRMethodCallTracePoint? =
         stack.lastOrNull()?.call
-
-    fun firstMethodCallTracePoint(): TRMethodCallTracePoint? =
-        stack.firstOrNull()?.call
 
     fun isCurrentMethodCallInline(): Boolean =
         stack.last().isInline
@@ -252,7 +257,7 @@ class TraceCollectingEventTracker(
         descriptor.enableAnalysis()
 
         fun appendMethodCall(obj: TRObject?, className: String, methodName: String, methodType: Types.MethodType, codeLocationId: Int, params: List<TRObject> = emptyList()) {
-            val parentTracePoint = threadData.firstMethodCallTracePoint()
+            val parentTracePoint = threadData.currentMethodCallTracePoint()
             val methodCall = TRMethodCallTracePoint(
                 threadId = threadData.threadId,
                 codeLocationId = codeLocationId,
@@ -263,6 +268,9 @@ class TraceCollectingEventTracker(
                 parentTracePoint = parentTracePoint
             )
             strategy.tracePointCreated(parentTracePoint, methodCall)
+            if (threadData.getStack().isEmpty()) {
+                threadData.setRootCall(methodCall)
+            }
             threadData.pushStackFrame(methodCall, thread, isInline = false)
         }
 
@@ -313,26 +321,14 @@ class TraceCollectingEventTracker(
                 parameters = emptyList()
             )
             strategy.tracePointCreated(null, tracePoint)
+            threadData.setRootCall(tracePoint)
             threadData.pushStackFrame(tracePoint, thread, isInline = false)
         }
     }
 
     override fun afterThreadRunReturn(threadDescriptor: ThreadDescriptor) = threadDescriptor.runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
-        val thread = Thread.currentThread()
-
-        // End all method calls, for which we did not track the method return,
-        // except for the very first one (`java.lang.Thread::run` method)
-        while (threadData.getStack().size > 1) {
-            val tracePoint = threadData.popStackFrame()
-            tracePoint.result = TR_OBJECT_UNTRACKED_METHOD_RESULT
-            strategy.completeContainerTracePoint(thread, tracePoint)
-        }
-        // Don't pop, we need it
-        val tracePoint = threadData.firstMethodCallTracePoint()!!
-        tracePoint.result = TR_OBJECT_VOID
-        strategy.completeContainerTracePoint(thread, tracePoint)
-        strategy.completeThread(thread)
+        completeInvokedMethodCalls(Thread.currentThread(), threadData) { _, tp -> tp.result = TR_OBJECT_UNTRACKED_METHOD_RESULT }
         threadDescriptor.disableAnalysis()
     }
 
@@ -341,10 +337,7 @@ class TraceCollectingEventTracker(
         exception: Throwable
     ) = threadDescriptor.runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: throw exception
-        // Don't pop, we need it
-        val tracePoint = threadData.firstMethodCallTracePoint()!!
-        tracePoint.setExceptionResult(exception)
-        strategy.completeContainerTracePoint(Thread.currentThread(), tracePoint)
+        completeInvokedMethodCalls(Thread.currentThread(), threadData) { _, tp -> tp.setExceptionResult(exception) }
         threadDescriptor.disableAnalysis()
         throw exception
     }
@@ -599,15 +592,16 @@ class TraceCollectingEventTracker(
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(methodDescriptor.className)
         }
 
+        val parentTracepoint = threadData.currentTopTracePoint()
         val tracePoint = TRMethodCallTracePoint(
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
             methodId = methodId,
             obj = TRObjectOrNull(receiver),
             parameters = params.map { TRObjectOrNull(it) },
-            parentTracePoint = threadData.firstMethodCallTracePoint()
+            parentTracePoint = parentTracepoint,
         )
-        strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
+        strategy.tracePointCreated(parentTracepoint, tracePoint)
         threadData.pushStackFrame(tracePoint, receiver, isInline = false)
         // if the method has certain guarantees, enter the corresponding section
         threadData.enterAnalysisSection(methodSection)
@@ -734,7 +728,7 @@ class TraceCollectingEventTracker(
             methodId = methodId,
             obj = TRObjectOrNull(owner),
             parameters = emptyList(),
-            parentTracePoint = threadData.firstMethodCallTracePoint()
+            parentTracePoint = threadData.currentTopTracePoint()
         )
         strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
         threadData.pushStackFrame(tracePoint, owner, isInline = true)
@@ -906,45 +900,87 @@ class TraceCollectingEventTracker(
         )
         strategy.registerCurrentThread(threadData.threadId)
         strategy.tracePointCreated(null,tracePoint)
+        threadData.setRootCall(tracePoint)
         threadData.pushStackFrame(tracePoint, null, isInline = false)
 
         startTime = System.currentTimeMillis()
     }
 
-    fun completeRunningThread(thread: Thread, threadDescriptor: ThreadDescriptor) {
+    /**
+     * Completes all method calls of the current thread via [onMethodCallCompletion] and empties the stack.
+     *
+     * @param loopsCompletionExpected when set to `false` will report an error if there were any loop tracepoints completed along the process.
+     */
+    private fun completeInvokedMethodCalls(
+        thread: Thread,
+        threadData: ThreadData,
+        loopsCompletionExpected: Boolean = true,
+        onMethodCallCompletion: (stackLevel: Int, tracePoint: TRMethodCallTracePoint) -> Unit
+    ) {
+        // End all method calls, for which we did not track the method return
+        while (threadData.getStack().isNotEmpty()) {
+            val hasLoops = threadData.currentLoopTracePoint() != null
+            while (threadData.currentLoopTracePoint() != null) {
+                exitCurrentLoop(thread, threadData)
+            }
+
+            val tracePoint = threadData.popStackFrame()
+            if (hasLoops && !loopsCompletionExpected) {
+                Logger.error { "Forced exit from method ${tracePoint.className}.${tracePoint.methodName} breaks loops." }
+            }
+
+            onMethodCallCompletion(threadData.getStack().size, tracePoint)
+            strategy.completeContainerTracePoint(thread, tracePoint)
+        }
+        strategy.completeThread(thread)
+    }
+
+    private fun completeRunningThread(thread: Thread, threadDescriptor: ThreadDescriptor) {
         require(!threadDescriptor.isAnalysisEnabled) { "When completing a Thread ${thread.name} (${thread.id}), its analysis is expected to be disabled" }
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
         // wait until that thread finishes whatever injected code it is executing right now
         spinner.spinWaitUntil { !threadDescriptor.isInsideInjectedCode }
         // now, we are sure that another thread has finished its injected code
         // and will not attempt to execute anything else, because we disabled analysis in it
-        val stack = threadData.getStack()
-        while (stack.isNotEmpty()) {
-            val frame = stack.last()
-            val tracePoint = frame.call
-            // complete all open loops with their last iterations
-            while (threadData.currentLoopTracePoint() != null) {
-                exitCurrentLoop(thread, threadData)
-            }
-            // complete the method call
-            tracePoint.result = TR_OBJECT_UNFINISHED_METHOD_RESULT
-            strategy.completeContainerTracePoint(thread, tracePoint)
-            // do not pop the last method call in order for 'text' tracing mode to work
-            // it is used for debugging in the `TRPlayground.kt` file
-            if (stack.size != 1) {
-                threadData.popStackFrame() // remove the current frame from the stack
-            } else {
-                // basically, the last `Thread.run()` call is preserved as a root node
-                // for 'text' tracing mode to work properly
-                break
-            }
+
+        // Skip this thread completely if it is finished "naturally" (i.e. by concurrent afterThreadRun[Return|Exit]).
+        // Early exit because we must skip `strategy.completeThread(thread)` for this thread too.
+        if (threadData.getStack().isEmpty()) return
+
+        completeInvokedMethodCalls(thread, threadData) { _, tp -> tp.result = TR_OBJECT_UNFINISHED_METHOD_RESULT }
+    }
+
+    private fun completeMainThread(thread: Thread, threadDescriptor: ThreadDescriptor) {
+        val threadData = threadDescriptor.eventTrackerData as? ThreadData?
+        if (threadData == null) {
+            Logger.error { "Main tracing thread ${thread.name} doesn't have event tracker data" }
+            return
         }
-        strategy.completeThread(thread)
+
+        if (threadData.getStack().isEmpty()) {
+            Logger.error { "Main tracing thread \"${thread.name}\" stack underflow" }
+            strategy.completeThread(thread)
+            return
+        }
+
+        val overflowStack = mutableListOf<String>()
+        completeInvokedMethodCalls(thread, threadData, loopsCompletionExpected = false) { stackLevel, tp ->
+            if (stackLevel != 0) {
+                overflowStack.add("${tp.className}.${tp.methodName}")
+            }
+            tp.result = if (stackLevel == 0) TR_OBJECT_VOID else TR_OBJECT_UNFINISHED_METHOD_RESULT
+        }
+
+        // Report error if stack was too deep
+        if (overflowStack.isNotEmpty()) {
+            Logger.error { "Main tracing thread \"${thread.name}\" stack overflow:\n" + overflowStack.joinToString("\n") }
+        }
     }
 
     fun finishAndDumpTrace() {
         // Finish existing threads, except for Main
         val mainThread = Thread.currentThread()
+
         threads
             .mapNotNull { (thread, _) ->
                 if (thread == mainThread) null
@@ -962,11 +998,10 @@ class TraceCollectingEventTracker(
                 completeRunningThread(thread, threadDescriptor)
             }
 
-        // Close this thread callstack
-        val threadData = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTrackerData as? ThreadData? ?: return
-        val tracePoint = threadData.currentMethodCallTracePoint()!!
-        tracePoint.result = TR_OBJECT_VOID
-        strategy.completeContainerTracePoint(Thread.currentThread(), tracePoint)
+
+        // Close this thread call stack (it must be 1 element, complain about problems otherwise)
+        completeMainThread(mainThread, ThreadDescriptor.getCurrentThreadDescriptor())
+
 
         val allThreads = mutableListOf<ThreadData>()
         allThreads.addAll(threads.values)
@@ -979,29 +1014,18 @@ class TraceCollectingEventTracker(
         startTime = System.currentTimeMillis()
 
         try {
-            val sb = StringBuilder()
-            val appendable = DefaultTRTextAppendable(sb)
             val roots = mutableListOf<TRTracePoint>()
 
             allThreads.sortBy { it.threadId }
-            allThreads.forEach { thread ->
-                val st = thread.getStack()
-                if (st.isEmpty()) {
-                    Logger.error { "Trace Recorder: Thread #${thread.threadId + 1} (\"${TRACE_CONTEXT.getThreadName(thread.threadId)}\"): Stack underflow, report bug" }
+            allThreads.forEach { threadData ->
+                val rootCall = threadData.rootCall
+                if (rootCall == null) {
+                    Logger.error { "Trace Recorder: Thread #${threadData.threadId + 1} (\"${TRACE_CONTEXT.getThreadName(threadData.threadId)}\"): No root call found" }
                 } else {
-                    if (st.size > 1) {
-                        Logger.error { "Trace Recorder: Thread ${thread.threadId + 1}: Stack is not empty, contains ${st.size} elements, report bug" }
-                        Logger.error { "Stack leftover:" }
-                        st.reversed().forEach {
-                            appendable.append("  ")
-                            it.call.toText(appendable)
-                            appendable.append("\n")
-                        }
-                        Logger.error { sb.toString() }
-                    }
-                    roots.add(st.first().call)
+                    roots.add(rootCall)
                 }
             }
+
             when (mode) {
                 TraceCollectorMode.BINARY_DUMP -> {
                     saveRecorderTrace(traceDumpPath!!, TRACE_CONTEXT, roots)

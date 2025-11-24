@@ -16,13 +16,6 @@ import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent
 import org.jetbrains.lincheck.util.Logger
 
 internal object TraceRecorderInjections {
-    // Method `stopTraceRecorderAndDumpTrace` is called in the finally block of the wrapped test:
-    // try { startTraceRecorder(); test() } finally { stopTraceRecorderAndDumpTrace() }
-    // and the way try-finally block is instrumented allows for double call of `stopTraceRecorderAndDumpTrace`
-    // in case if exception is thrown from it.
-    // We want to disallow that explicitly, and the simplest way to do that is to add a flag.
-    private var alreadyStopped: Boolean = false
-
     @JvmStatic
     fun prepareTraceRecorder() {
         // Must be first or classes will not be found
@@ -38,20 +31,28 @@ internal object TraceRecorderInjections {
 
     @JvmStatic
     fun startTraceRecorder(startingCodeLocationId: Int) {
-        TraceRecorder.installAndStartTrace(
-            className = TraceAgentParameters.classUnderTraceDebugging,
-            methodName = TraceAgentParameters.methodUnderTraceDebugging,
-            traceFileName = TraceAgentParameters.traceDumpFilePath,
-            format = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FORMAT),
-            formatOption = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FOPTION),
-            pack = (TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_PACK) ?: "true").toBoolean(),
-            startingCodeLocationId = startingCodeLocationId
-        )
+        try {
+            TraceRecorder.installAndStartTrace(
+                className = TraceAgentParameters.classUnderTraceDebugging,
+                methodName = TraceAgentParameters.methodUnderTraceDebugging,
+                traceFileName = TraceAgentParameters.traceDumpFilePath,
+                format = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FORMAT),
+                formatOption = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FOPTION),
+                pack = (TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_PACK) ?: "true").toBoolean(),
+                startingCodeLocationId = startingCodeLocationId
+            )
+        } catch (t: Throwable) {
+            Logger.error { "Cannot start Trace Recorder: $t"}
+        }
     }
 
     @JvmStatic
     fun stopTraceRecorderAndDumpTrace() {
-        if (alreadyStopped) return
-        TraceRecorder.finishTraceAndDumpResults()
+        // This method should never throw an exception, or tracer state is undetermined
+        try {
+            TraceRecorder.finishTraceAndDumpResults()
+        } catch (t: Throwable) {
+            Logger.error { "Cannot stop Trace Recorder: $t"}
+        }
     }
 }

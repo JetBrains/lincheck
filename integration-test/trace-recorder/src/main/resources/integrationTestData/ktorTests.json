@@ -319,10 +319,7 @@
       "testThreadLeak",
       "testPreconfigured",
       "testRequestAfterRecreate"
-    ],
-    "reasonsForMuting": {
-      "testRequestAfterRecreate": "https://youtrack.jetbrains.com/issue/JBRes-6637/Add-Kotlin-and-Ktor-integration-test-builds-into-the-Aggregated-one?preview=JBRes-6983"
-    }
+    ]
   },
   {
     "class": "io.ktor.client.engine.okhttp.RequestTests",
