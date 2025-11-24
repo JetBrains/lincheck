@@ -936,9 +936,8 @@ class TraceCollectingEventTracker(
         // now, we are sure that another thread has finished its injected code
         // and will not attempt to execute anything else, because we disabled analysis in it
 
-        // Skip thread completely if it is finished "naturally"
-        // Early exit because we must skip `strategy.completeThread(thread)`
-        // for this thread too.
+        // Skip this thread completely if it is finished "naturally" (i.e. by concurrent afterThreadRun[Return|Exit]).
+        // Early exit because we must skip `strategy.completeThread(thread)` for this thread too.
         if (threadData.getStack().isEmpty()) return
 
         completeInvokedMethodCalls(thread, threadData, reportLoops = false) { _, tp -> tp.result = TR_OBJECT_UNFINISHED_METHOD_RESULT }
@@ -993,7 +992,7 @@ class TraceCollectingEventTracker(
             }
 
 
-        // Close this thread call stack (it must be 1 element, complain about problems)
+        // Close this thread call stack (it must be 1 element, complain about problems otherwise)
         completeMainThread(mainThread, ThreadDescriptor.getCurrentThreadDescriptor())
 
 
