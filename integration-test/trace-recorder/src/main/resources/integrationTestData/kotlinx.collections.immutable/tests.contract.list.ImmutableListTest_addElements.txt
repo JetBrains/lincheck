@@ -3,25 +3,130 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
   persistentListOf(): SmallPersistentVector@1 at ImmutableListTest.kt:79
     persistentVectorOf(): SmallPersistentVector@1 at extensions.kt:452
       SmallPersistentVector.getEMPTY(): SmallPersistentVector@1 at Utils.kt:18
+        SmallPersistentVector.getEMPTY(): SmallPersistentVector@1 at SmallPersistentVector.kt:163
   list = SmallPersistentVector@1 at ImmutableListTest.kt:79
   list.add("x"): SmallPersistentVector@1 at ImmutableListTest.kt:80
+    size(): 0 at SmallPersistentVector.kt:29
+    size(): 0 at SmallPersistentVector.kt:30
+    Arrays.copyOf(buffer, 1): Object;@1 at SmallPersistentVector.kt:30
+    newBuffer = Object;@1 at SmallPersistentVector.kt:30
+    size(): 0 at SmallPersistentVector.kt:31
+    newBuffer[0] = "x" at SmallPersistentVector.kt:31
+    new SmallPersistentVector(newBuffer): SmallPersistentVector@1 at SmallPersistentVector.kt:32
   list = SmallPersistentVector@1 at ImmutableListTest.kt:80
   list.add(0, "a"): SmallPersistentVector@1 at ImmutableListTest.kt:81
+    size(): 1 at SmallPersistentVector.kt:99
+    ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ 0, 1) at SmallPersistentVector.kt:99
+    size(): 1 at SmallPersistentVector.kt:100
+    size(): 1 at SmallPersistentVector.kt:104
+    size(): 1 at SmallPersistentVector.kt:106
+    bufferOfSize(2): Object;@1 at SmallPersistentVector.kt:106
+    newBuffer = Object;@1 at SmallPersistentVector.kt:106
+    copyInto(buffer, newBuffer, 0, 0, index ➜ 0, 6, null): Object;@1 at SmallPersistentVector.kt:107
+    size(): 1 at SmallPersistentVector.kt:108
+    copyInto(buffer, newBuffer, 1, index ➜ 0, 1): Object;@1 at SmallPersistentVector.kt:108
+    newBuffer[0] = "a" at SmallPersistentVector.kt:109
+    new SmallPersistentVector(newBuffer): SmallPersistentVector@1 at SmallPersistentVector.kt:110
   list = SmallPersistentVector@1 at ImmutableListTest.kt:81
   list.addAll(list): SmallPersistentVector@1 at ImmutableListTest.kt:82
+    elements.isEmpty(): false at SmallPersistentVector.kt:39
+    size(): 2 at SmallPersistentVector.kt:40
+    elements.size(): 2 at SmallPersistentVector.kt:40
+    size(): 2 at SmallPersistentVector.kt:41
+    elements.size(): 2 at SmallPersistentVector.kt:41
+    Arrays.copyOf(buffer, 4): Object;@1 at SmallPersistentVector.kt:41
+    newBuffer = Object;@1 at SmallPersistentVector.kt:41
+    size(): 2 at SmallPersistentVector.kt:43
+    index = 2 at SmallPersistentVector.kt:43
+    elements.iterator(): BufferIterator@1 at SmallPersistentVector.kt:44
+      listIterator(): BufferIterator@1 at AbstractPersistentList.kt:60
+        listIterator(0): BufferIterator@1 at AbstractPersistentList.kt:64
+          size(): 2 at SmallPersistentVector.kt:143
+          ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ 0, 2) at SmallPersistentVector.kt:143
+          size(): 2 at SmallPersistentVector.kt:145
+          new BufferIterator(buffer, index ➜ 0, 2): BufferIterator@1 at SmallPersistentVector.kt:145
+    loop(3 iterations) at SmallPersistentVector.kt:44
+      <iteration 1> at SmallPersistentVector.kt:44
+        BufferIterator@1.hasNext(): true at SmallPersistentVector.kt:44
+        BufferIterator@1.next(): "a" at SmallPersistentVector.kt:44
+          hasNext(): true at BufferIterator.kt:14
+          getIndex(): 0 at BufferIterator.kt:17
+          setIndex(1) at BufferIterator.kt:17
+            index = 1 at AbstractListIterator.kt:8
+        element = "a" at SmallPersistentVector.kt:44
+        index = 3 at SmallPersistentVector.kt:45
+        newBuffer[2] = "a" at SmallPersistentVector.kt:45
+      <iteration 2> at SmallPersistentVector.kt:44
+        BufferIterator@1.hasNext(): true at SmallPersistentVector.kt:44
+        BufferIterator@1.next(): "x" at SmallPersistentVector.kt:44
+          hasNext(): true at BufferIterator.kt:14
+          getIndex(): 1 at BufferIterator.kt:17
+          setIndex(2) at BufferIterator.kt:17
+            index = 2 at AbstractListIterator.kt:8
+        element = "x" at SmallPersistentVector.kt:44
+        index = 4 at SmallPersistentVector.kt:45
+        newBuffer[3] = "x" at SmallPersistentVector.kt:45
+      <iteration 3> at SmallPersistentVector.kt:44
+        BufferIterator@1.hasNext(): false at SmallPersistentVector.kt:44
+    new SmallPersistentVector(newBuffer): SmallPersistentVector@1 at SmallPersistentVector.kt:47
   list = SmallPersistentVector@1 at ImmutableListTest.kt:82
   String;@1[0] = "b" at ImmutableListTest.kt:83
   String;@1[1] = "c" at ImmutableListTest.kt:83
   listOf(String;@1): Arrays.ArrayList@1 at ImmutableListTest.kt:83
   list.addAll(1, Arrays.ArrayList@1): SmallPersistentVector@1 at ImmutableListTest.kt:83
+    size(): 4 at SmallPersistentVector.kt:83
+    ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ 1, 4) at SmallPersistentVector.kt:83
+    c.isEmpty(): false at SmallPersistentVector.kt:84
+    size(): 4 at SmallPersistentVector.kt:85
+    c.size(): 2 at SmallPersistentVector.kt:85
+    size(): 4 at SmallPersistentVector.kt:86
+    c.size(): 2 at SmallPersistentVector.kt:86
+    bufferOfSize(6): Object;@1 at SmallPersistentVector.kt:86
+    newBuffer = Object;@1 at SmallPersistentVector.kt:86
+    copyInto(buffer, newBuffer, 0, 0, index ➜ 1, 6, null): Object;@1 at SmallPersistentVector.kt:87
+    c.size(): 2 at SmallPersistentVector.kt:88
+    size(): 4 at SmallPersistentVector.kt:88
+    copyInto(buffer, newBuffer, 3, index ➜ 1, 4): Object;@1 at SmallPersistentVector.kt:88
+    position = 1 at SmallPersistentVector.kt:89
+    c.iterator(): Arrays.ArrayItr@1 at SmallPersistentVector.kt:90
+    loop(3 iterations) at SmallPersistentVector.kt:90
+      <iteration 1> at SmallPersistentVector.kt:90
+        Arrays.ArrayItr@1.hasNext(): true at SmallPersistentVector.kt:90
+        Arrays.ArrayItr@1.next(): "b" at SmallPersistentVector.kt:90
+        element = "b" at SmallPersistentVector.kt:90
+        position = 2 at SmallPersistentVector.kt:91
+        newBuffer[1] = "b" at SmallPersistentVector.kt:91
+      <iteration 2> at SmallPersistentVector.kt:90
+        Arrays.ArrayItr@1.hasNext(): true at SmallPersistentVector.kt:90
+        Arrays.ArrayItr@1.next(): "c" at SmallPersistentVector.kt:90
+        element = "c" at SmallPersistentVector.kt:90
+        position = 3 at SmallPersistentVector.kt:91
+        newBuffer[2] = "c" at SmallPersistentVector.kt:91
+      <iteration 3> at SmallPersistentVector.kt:90
+        Arrays.ArrayItr@1.hasNext(): false at SmallPersistentVector.kt:90
+    new SmallPersistentVector(newBuffer): SmallPersistentVector@1 at SmallPersistentVector.kt:93
   list = SmallPersistentVector@1 at ImmutableListTest.kt:83
   plus = SmallPersistentVector@1 at ImmutableListTest.kt:84
   element = "y" at ImmutableListTest.kt:84
   plus.add(element ➜ "y"): SmallPersistentVector@1 at extensions.kt:138
+    size(): 6 at SmallPersistentVector.kt:29
+    size(): 6 at SmallPersistentVector.kt:30
+    Arrays.copyOf(buffer, 7): Object;@1 at SmallPersistentVector.kt:30
+    newBuffer = Object;@1 at SmallPersistentVector.kt:30
+    size(): 6 at SmallPersistentVector.kt:31
+    newBuffer[6] = "y" at SmallPersistentVector.kt:31
+    new SmallPersistentVector(newBuffer): SmallPersistentVector@1 at SmallPersistentVector.kt:32
   list = SmallPersistentVector@1 at ImmutableListTest.kt:84
   plus = SmallPersistentVector@1 at ImmutableListTest.kt:85
   element = "z" at ImmutableListTest.kt:85
   plus.add(element ➜ "z"): SmallPersistentVector@1 at extensions.kt:138
+    size(): 7 at SmallPersistentVector.kt:29
+    size(): 7 at SmallPersistentVector.kt:30
+    Arrays.copyOf(buffer, 8): Object;@1 at SmallPersistentVector.kt:30
+    newBuffer = Object;@1 at SmallPersistentVector.kt:30
+    size(): 7 at SmallPersistentVector.kt:31
+    newBuffer[7] = "z" at SmallPersistentVector.kt:31
+    new SmallPersistentVector(newBuffer): SmallPersistentVector@1 at SmallPersistentVector.kt:32
   list = SmallPersistentVector@1 at ImmutableListTest.kt:85
   String;@1[0] = "1" at ImmutableListTest.kt:86
   String;@1[1] = "2" at ImmutableListTest.kt:86
@@ -29,9 +134,51 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
   plus(list, ArraysKt___ArraysKt$asIterable$$inlined$Iterable$1@1): SmallPersistentVector@1 at ImmutableListTest.kt:86
     mutate = SmallPersistentVector@1 at extensions.kt:158
     mutate.builder(): PersistentVectorBuilder@1 at extensions.kt:41
+      new PersistentVectorBuilder(, null, buffer, 0): PersistentVectorBuilder@1 at SmallPersistentVector.kt:131
     it = PersistentVectorBuilder@1 at extensions.kt:41
     addAll(it, elements): true at extensions.kt:158
+      modCount = 1 at PersistentVectorBuilder.kt:118
+      tailSize(): 8 at PersistentVectorBuilder.kt:120
+        size(): 8 at PersistentVectorBuilder.kt:77
+        tailSize(8): 8 at PersistentVectorBuilder.kt:77
+      tailSize = 8 at PersistentVectorBuilder.kt:120
+      makeMutable(tail): Object;@1 at PersistentVectorBuilder.kt:122
+        isMutable(buffer): false at PersistentVectorBuilder.kt:91
+        mutableBuffer(): Object;@1 at PersistentVectorBuilder.kt:94
+          buffer = Object;@1 at PersistentVectorBuilder.kt:112
+          buffer[32] = MutabilityOwnership@1 at PersistentVectorBuilder.kt:113
+        coerceAtMost(buffer.length ➜ 8, 32): 8 at PersistentVectorBuilder.kt:94
+        copyInto(buffer, Object;@1, 0, 0, 8, 6, null): Object;@1 at PersistentVectorBuilder.kt:94
+      mutableTail = Object;@1 at PersistentVectorBuilder.kt:122
+      mutableTail[8] = "1" at PersistentVectorBuilder.kt:123
+      setTail(mutableTail) at PersistentVectorBuilder.kt:124
+        builtVector = null at PersistentVectorBuilder.kt:33
+        tail = Object;@1 at PersistentVectorBuilder.kt:34
+      size(): 8 at PersistentVectorBuilder.kt:125
+      size = 9 at PersistentVectorBuilder.kt:125
+      modCount = 2 at PersistentVectorBuilder.kt:118
+      tailSize(): 9 at PersistentVectorBuilder.kt:120
+        size(): 9 at PersistentVectorBuilder.kt:77
+        tailSize(9): 9 at PersistentVectorBuilder.kt:77
+      tailSize = 9 at PersistentVectorBuilder.kt:120
+      makeMutable(tail): Object;@1 at PersistentVectorBuilder.kt:122
+        isMutable(buffer): true at PersistentVectorBuilder.kt:91
+      mutableTail = Object;@1 at PersistentVectorBuilder.kt:122
+      mutableTail[9] = "2" at PersistentVectorBuilder.kt:123
+      setTail(mutableTail) at PersistentVectorBuilder.kt:124
+      size(): 9 at PersistentVectorBuilder.kt:125
+      size = 10 at PersistentVectorBuilder.kt:125
     PersistentVectorBuilder@1.build(): SmallPersistentVector@1 at extensions.kt:41
+      build$lambda$0 = PersistentVectorBuilder@1 at PersistentVectorBuilder.kt:44
+      root = null at PersistentVectorBuilder.kt:45
+      tail = Object;@1 at PersistentVectorBuilder.kt:46
+      new MutabilityOwnership(): MutabilityOwnership@1 at PersistentVectorBuilder.kt:47
+      build$lambda$0.ownership = MutabilityOwnership@1 at PersistentVectorBuilder.kt:47
+      build$lambda$0.size(): 10 at PersistentVectorBuilder.kt:52
+      Arrays.copyOf(tail, 10): Object;@1 at PersistentVectorBuilder.kt:52
+      new SmallPersistentVector(Object;@1): SmallPersistentVector@1 at PersistentVectorBuilder.kt:52
+      newlyBuiltVector = SmallPersistentVector@1 at PersistentVectorBuilder.kt:48
+      build$lambda$0.builtVector = SmallPersistentVector@1 at PersistentVectorBuilder.kt:57
   list = SmallPersistentVector@1 at ImmutableListTest.kt:86
   map = "abcxaxyz12" at ImmutableListTest.kt:87
   map.length(): 10 at _Strings.kt:975
@@ -115,6 +262,52 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
             prefix = "" at CollectionBehaviors.kt:96
             equalityBehavior.equals(objectName ➜ "") at CollectionBehaviors.kt:97
               assertEquals(expected, actual, message ➜ "") at ComparisonDSL.kt:18
+                listIterator(): BufferIterator@1 at AbstractPersistentList.kt:60
+                  listIterator(0): BufferIterator@1 at AbstractPersistentList.kt:64
+                    size(): 10 at SmallPersistentVector.kt:143
+                    ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ 0, 10) at SmallPersistentVector.kt:143
+                    size(): 10 at SmallPersistentVector.kt:145
+                    new BufferIterator(buffer, index ➜ 0, 10): BufferIterator@1 at SmallPersistentVector.kt:145
+                hasNext(): true at BufferIterator.kt:14
+                getIndex(): 0 at BufferIterator.kt:17
+                setIndex(1) at BufferIterator.kt:17
+                  index = 1 at AbstractListIterator.kt:8
+                hasNext(): true at BufferIterator.kt:14
+                getIndex(): 1 at BufferIterator.kt:17
+                setIndex(2) at BufferIterator.kt:17
+                  index = 2 at AbstractListIterator.kt:8
+                hasNext(): true at BufferIterator.kt:14
+                getIndex(): 2 at BufferIterator.kt:17
+                setIndex(3) at BufferIterator.kt:17
+                  index = 3 at AbstractListIterator.kt:8
+                hasNext(): true at BufferIterator.kt:14
+                getIndex(): 3 at BufferIterator.kt:17
+                setIndex(4) at BufferIterator.kt:17
+                  index = 4 at AbstractListIterator.kt:8
+                hasNext(): true at BufferIterator.kt:14
+                getIndex(): 4 at BufferIterator.kt:17
+                setIndex(5) at BufferIterator.kt:17
+                  index = 5 at AbstractListIterator.kt:8
+                hasNext(): true at BufferIterator.kt:14
+                getIndex(): 5 at BufferIterator.kt:17
+                setIndex(6) at BufferIterator.kt:17
+                  index = 6 at AbstractListIterator.kt:8
+                hasNext(): true at BufferIterator.kt:14
+                getIndex(): 6 at BufferIterator.kt:17
+                setIndex(7) at BufferIterator.kt:17
+                  index = 7 at AbstractListIterator.kt:8
+                hasNext(): true at BufferIterator.kt:14
+                getIndex(): 7 at BufferIterator.kt:17
+                setIndex(8) at BufferIterator.kt:17
+                  index = 8 at AbstractListIterator.kt:8
+                hasNext(): true at BufferIterator.kt:14
+                getIndex(): 8 at BufferIterator.kt:17
+                setIndex(9) at BufferIterator.kt:17
+                  index = 9 at AbstractListIterator.kt:8
+                hasNext(): true at BufferIterator.kt:14
+                getIndex(): 9 at BufferIterator.kt:17
+                setIndex(10) at BufferIterator.kt:17
+                  index = 10 at AbstractListIterator.kt:8
             new StringBuilder(): StringBuilder@1("") at CollectionBehaviors.kt:98
             StringBuilder@1("").append(prefix ➜ ""): StringBuilder@1("") at CollectionBehaviors.kt:98
             StringBuilder@1("").append("hashCode"): StringBuilder@1("hashCode") at CollectionBehaviors.kt:98
@@ -124,6 +317,52 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                 propertyEquals.hashCode(): -1958406064 at CollectionBehaviors.kt:98
               getter.invoke(actual): -1958406064 at ComparisonDSL.kt:21
                 propertyEquals.hashCode(): -1958406064 at CollectionBehaviors.kt:98
+                  listIterator(): BufferIterator@1 at AbstractPersistentList.kt:60
+                    listIterator(0): BufferIterator@1 at AbstractPersistentList.kt:64
+                      size(): 10 at SmallPersistentVector.kt:143
+                      ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ 0, 10) at SmallPersistentVector.kt:143
+                      size(): 10 at SmallPersistentVector.kt:145
+                      new BufferIterator(buffer, index ➜ 0, 10): BufferIterator@1 at SmallPersistentVector.kt:145
+                  hasNext(): true at BufferIterator.kt:14
+                  getIndex(): 0 at BufferIterator.kt:17
+                  setIndex(1) at BufferIterator.kt:17
+                    index = 1 at AbstractListIterator.kt:8
+                  hasNext(): true at BufferIterator.kt:14
+                  getIndex(): 1 at BufferIterator.kt:17
+                  setIndex(2) at BufferIterator.kt:17
+                    index = 2 at AbstractListIterator.kt:8
+                  hasNext(): true at BufferIterator.kt:14
+                  getIndex(): 2 at BufferIterator.kt:17
+                  setIndex(3) at BufferIterator.kt:17
+                    index = 3 at AbstractListIterator.kt:8
+                  hasNext(): true at BufferIterator.kt:14
+                  getIndex(): 3 at BufferIterator.kt:17
+                  setIndex(4) at BufferIterator.kt:17
+                    index = 4 at AbstractListIterator.kt:8
+                  hasNext(): true at BufferIterator.kt:14
+                  getIndex(): 4 at BufferIterator.kt:17
+                  setIndex(5) at BufferIterator.kt:17
+                    index = 5 at AbstractListIterator.kt:8
+                  hasNext(): true at BufferIterator.kt:14
+                  getIndex(): 5 at BufferIterator.kt:17
+                  setIndex(6) at BufferIterator.kt:17
+                    index = 6 at AbstractListIterator.kt:8
+                  hasNext(): true at BufferIterator.kt:14
+                  getIndex(): 6 at BufferIterator.kt:17
+                  setIndex(7) at BufferIterator.kt:17
+                    index = 7 at AbstractListIterator.kt:8
+                  hasNext(): true at BufferIterator.kt:14
+                  getIndex(): 7 at BufferIterator.kt:17
+                  setIndex(8) at BufferIterator.kt:17
+                    index = 8 at AbstractListIterator.kt:8
+                  hasNext(): true at BufferIterator.kt:14
+                  getIndex(): 8 at BufferIterator.kt:17
+                  setIndex(9) at BufferIterator.kt:17
+                    index = 9 at AbstractListIterator.kt:8
+                  hasNext(): true at BufferIterator.kt:14
+                  getIndex(): 9 at BufferIterator.kt:17
+                  setIndex(10) at BufferIterator.kt:17
+                    index = 10 at AbstractListIterator.kt:8
               assertEquals(-1958406064, -1958406064, message ➜ "hashCode") at ComparisonDSL.kt:21
             new StringBuilder(): StringBuilder@1("") at CollectionBehaviors.kt:100
             StringBuilder@1("").append(prefix ➜ ""): StringBuilder@1("") at CollectionBehaviors.kt:100
@@ -132,6 +371,52 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
             equalityBehavior.propertyEquals("toString", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:100
               getter.invoke(expected): "[a, b, c, x, a, x, y, z, 1, 2]" at ComparisonDSL.kt:21
               getter.invoke(actual): "[a, b, c, x, a, x, y, z, 1, 2]" at ComparisonDSL.kt:21
+                listIterator(): BufferIterator@1 at AbstractPersistentList.kt:60
+                  listIterator(0): BufferIterator@1 at AbstractPersistentList.kt:64
+                    size(): 10 at SmallPersistentVector.kt:143
+                    ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ 0, 10) at SmallPersistentVector.kt:143
+                    size(): 10 at SmallPersistentVector.kt:145
+                    new BufferIterator(buffer, index ➜ 0, 10): BufferIterator@1 at SmallPersistentVector.kt:145
+                hasNext(): true at BufferIterator.kt:14
+                getIndex(): 0 at BufferIterator.kt:17
+                setIndex(1) at BufferIterator.kt:17
+                  index = 1 at AbstractListIterator.kt:8
+                hasNext(): true at BufferIterator.kt:14
+                getIndex(): 1 at BufferIterator.kt:17
+                setIndex(2) at BufferIterator.kt:17
+                  index = 2 at AbstractListIterator.kt:8
+                hasNext(): true at BufferIterator.kt:14
+                getIndex(): 2 at BufferIterator.kt:17
+                setIndex(3) at BufferIterator.kt:17
+                  index = 3 at AbstractListIterator.kt:8
+                hasNext(): true at BufferIterator.kt:14
+                getIndex(): 3 at BufferIterator.kt:17
+                setIndex(4) at BufferIterator.kt:17
+                  index = 4 at AbstractListIterator.kt:8
+                hasNext(): true at BufferIterator.kt:14
+                getIndex(): 4 at BufferIterator.kt:17
+                setIndex(5) at BufferIterator.kt:17
+                  index = 5 at AbstractListIterator.kt:8
+                hasNext(): true at BufferIterator.kt:14
+                getIndex(): 5 at BufferIterator.kt:17
+                setIndex(6) at BufferIterator.kt:17
+                  index = 6 at AbstractListIterator.kt:8
+                hasNext(): true at BufferIterator.kt:14
+                getIndex(): 6 at BufferIterator.kt:17
+                setIndex(7) at BufferIterator.kt:17
+                  index = 7 at AbstractListIterator.kt:8
+                hasNext(): true at BufferIterator.kt:14
+                getIndex(): 7 at BufferIterator.kt:17
+                setIndex(8) at BufferIterator.kt:17
+                  index = 8 at AbstractListIterator.kt:8
+                hasNext(): true at BufferIterator.kt:14
+                getIndex(): 8 at BufferIterator.kt:17
+                setIndex(9) at BufferIterator.kt:17
+                  index = 9 at AbstractListIterator.kt:8
+                hasNext(): true at BufferIterator.kt:14
+                getIndex(): 9 at BufferIterator.kt:17
+                setIndex(10) at BufferIterator.kt:17
+                  index = 10 at AbstractListIterator.kt:8
               assertEquals("[a, b, c, x, a, x, y, z, 1, 2]", "[a, b, c, x, a, x, y, z, 1, 2]", message ➜ "toString") at ComparisonDSL.kt:21
           collectionBehavior(CompareContext@1, "", true) at CollectionBehaviors.kt:10
             new StringBuilder(): StringBuilder@1("") at CollectionBehaviors.kt:105
@@ -167,6 +452,8 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                 contains(propertyEquals, it): false at CollectionBehaviors.kt:109
               getter.invoke(actual): false at ComparisonDSL.kt:21
                 contains(propertyEquals, it): false at CollectionBehaviors.kt:109
+                  indexOf(element): -1 at AbstractPersistentList.kt:52
+                    indexOf(buffer, element): -1 at SmallPersistentVector.kt:135
               assertEquals(false, false, message ➜ "") at ComparisonDSL.kt:21
             CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:110
               getter.invoke(expected): true at ComparisonDSL.kt:21
@@ -174,19 +461,161 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                 contains(propertyEquals, "a"): true at CollectionBehaviors.kt:110
               getter.invoke(actual): true at ComparisonDSL.kt:21
                 firstOrNull(propertyEquals): "a" at CollectionBehaviors.kt:110
+                  size(): 10 at SmallPersistentVector.kt:150
+                  ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 0, 10) at SmallPersistentVector.kt:150
                 contains(propertyEquals, "a"): true at CollectionBehaviors.kt:110
+                  indexOf(element ➜ "a"): 0 at AbstractPersistentList.kt:52
+                    indexOf(buffer, element ➜ "a"): 0 at SmallPersistentVector.kt:135
               assertEquals(true, true, message ➜ "") at ComparisonDSL.kt:21
             CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:111
               getter.invoke(expected): true at ComparisonDSL.kt:21
                 propertyEquals.containsAll(propertyEquals): true at CollectionBehaviors.kt:111
               getter.invoke(actual): true at ComparisonDSL.kt:21
                 propertyEquals.containsAll(propertyEquals): true at CollectionBehaviors.kt:111
+                  all = SmallPersistentVector@1 at AbstractPersistentList.kt:56
+                  all.isEmpty(): false at _Collections.kt:1734
+                  all.iterator(): BufferIterator@1 at _Collections.kt:1735
+                    listIterator(): BufferIterator@1 at AbstractPersistentList.kt:60
+                      listIterator(0): BufferIterator@1 at AbstractPersistentList.kt:64
+                        size(): 10 at SmallPersistentVector.kt:143
+                        ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ 0, 10) at SmallPersistentVector.kt:143
+                        size(): 10 at SmallPersistentVector.kt:145
+                        new BufferIterator(buffer, index ➜ 0, 10): BufferIterator@1 at SmallPersistentVector.kt:145
+                  loop(11 iterations) at _Collections.kt:1735
+                    <iteration 1> at _Collections.kt:1735
+                      BufferIterator@1.hasNext(): true at _Collections.kt:1735
+                      BufferIterator@1.next(): "a" at _Collections.kt:1735
+                        hasNext(): true at BufferIterator.kt:14
+                        getIndex(): 0 at BufferIterator.kt:17
+                        setIndex(1) at BufferIterator.kt:17
+                          index = 1 at AbstractListIterator.kt:8
+                      element = "a" at _Collections.kt:1735
+                      it = "a" at _Collections.kt:1735
+                      contains(it ➜ "a"): true at AbstractPersistentList.kt:56
+                        indexOf(element ➜ "a"): 0 at AbstractPersistentList.kt:52
+                          indexOf(buffer, element ➜ "a"): 0 at SmallPersistentVector.kt:135
+                    <iteration 2> at _Collections.kt:1735
+                      BufferIterator@1.hasNext(): true at _Collections.kt:1735
+                      BufferIterator@1.next(): "b" at _Collections.kt:1735
+                        hasNext(): true at BufferIterator.kt:14
+                        getIndex(): 1 at BufferIterator.kt:17
+                        setIndex(2) at BufferIterator.kt:17
+                          index = 2 at AbstractListIterator.kt:8
+                      element = "b" at _Collections.kt:1735
+                      it = "b" at _Collections.kt:1735
+                      contains(it ➜ "b"): true at AbstractPersistentList.kt:56
+                        indexOf(element ➜ "b"): 1 at AbstractPersistentList.kt:52
+                          indexOf(buffer, element ➜ "b"): 1 at SmallPersistentVector.kt:135
+                    <iteration 3> at _Collections.kt:1735
+                      BufferIterator@1.hasNext(): true at _Collections.kt:1735
+                      BufferIterator@1.next(): "c" at _Collections.kt:1735
+                        hasNext(): true at BufferIterator.kt:14
+                        getIndex(): 2 at BufferIterator.kt:17
+                        setIndex(3) at BufferIterator.kt:17
+                          index = 3 at AbstractListIterator.kt:8
+                      element = "c" at _Collections.kt:1735
+                      it = "c" at _Collections.kt:1735
+                      contains(it ➜ "c"): true at AbstractPersistentList.kt:56
+                        indexOf(element ➜ "c"): 2 at AbstractPersistentList.kt:52
+                          indexOf(buffer, element ➜ "c"): 2 at SmallPersistentVector.kt:135
+                    <iteration 4> at _Collections.kt:1735
+                      BufferIterator@1.hasNext(): true at _Collections.kt:1735
+                      BufferIterator@1.next(): "x" at _Collections.kt:1735
+                        hasNext(): true at BufferIterator.kt:14
+                        getIndex(): 3 at BufferIterator.kt:17
+                        setIndex(4) at BufferIterator.kt:17
+                          index = 4 at AbstractListIterator.kt:8
+                      element = "x" at _Collections.kt:1735
+                      it = "x" at _Collections.kt:1735
+                      contains(it ➜ "x"): true at AbstractPersistentList.kt:56
+                        indexOf(element ➜ "x"): 3 at AbstractPersistentList.kt:52
+                          indexOf(buffer, element ➜ "x"): 3 at SmallPersistentVector.kt:135
+                    <iteration 5> at _Collections.kt:1735
+                      BufferIterator@1.hasNext(): true at _Collections.kt:1735
+                      BufferIterator@1.next(): "a" at _Collections.kt:1735
+                        hasNext(): true at BufferIterator.kt:14
+                        getIndex(): 4 at BufferIterator.kt:17
+                        setIndex(5) at BufferIterator.kt:17
+                          index = 5 at AbstractListIterator.kt:8
+                      element = "a" at _Collections.kt:1735
+                      it = "a" at _Collections.kt:1735
+                      contains(it ➜ "a"): true at AbstractPersistentList.kt:56
+                        indexOf(element ➜ "a"): 0 at AbstractPersistentList.kt:52
+                          indexOf(buffer, element ➜ "a"): 0 at SmallPersistentVector.kt:135
+                    <iteration 6> at _Collections.kt:1735
+                      BufferIterator@1.hasNext(): true at _Collections.kt:1735
+                      BufferIterator@1.next(): "x" at _Collections.kt:1735
+                        hasNext(): true at BufferIterator.kt:14
+                        getIndex(): 5 at BufferIterator.kt:17
+                        setIndex(6) at BufferIterator.kt:17
+                          index = 6 at AbstractListIterator.kt:8
+                      element = "x" at _Collections.kt:1735
+                      it = "x" at _Collections.kt:1735
+                      contains(it ➜ "x"): true at AbstractPersistentList.kt:56
+                        indexOf(element ➜ "x"): 3 at AbstractPersistentList.kt:52
+                          indexOf(buffer, element ➜ "x"): 3 at SmallPersistentVector.kt:135
+                    <iteration 7> at _Collections.kt:1735
+                      BufferIterator@1.hasNext(): true at _Collections.kt:1735
+                      BufferIterator@1.next(): "y" at _Collections.kt:1735
+                        hasNext(): true at BufferIterator.kt:14
+                        getIndex(): 6 at BufferIterator.kt:17
+                        setIndex(7) at BufferIterator.kt:17
+                          index = 7 at AbstractListIterator.kt:8
+                      element = "y" at _Collections.kt:1735
+                      it = "y" at _Collections.kt:1735
+                      contains(it ➜ "y"): true at AbstractPersistentList.kt:56
+                        indexOf(element ➜ "y"): 6 at AbstractPersistentList.kt:52
+                          indexOf(buffer, element ➜ "y"): 6 at SmallPersistentVector.kt:135
+                    <iteration 8> at _Collections.kt:1735
+                      BufferIterator@1.hasNext(): true at _Collections.kt:1735
+                      BufferIterator@1.next(): "z" at _Collections.kt:1735
+                        hasNext(): true at BufferIterator.kt:14
+                        getIndex(): 7 at BufferIterator.kt:17
+                        setIndex(8) at BufferIterator.kt:17
+                          index = 8 at AbstractListIterator.kt:8
+                      element = "z" at _Collections.kt:1735
+                      it = "z" at _Collections.kt:1735
+                      contains(it ➜ "z"): true at AbstractPersistentList.kt:56
+                        indexOf(element ➜ "z"): 7 at AbstractPersistentList.kt:52
+                          indexOf(buffer, element ➜ "z"): 7 at SmallPersistentVector.kt:135
+                    <iteration 9> at _Collections.kt:1735
+                      BufferIterator@1.hasNext(): true at _Collections.kt:1735
+                      BufferIterator@1.next(): "1" at _Collections.kt:1735
+                        hasNext(): true at BufferIterator.kt:14
+                        getIndex(): 8 at BufferIterator.kt:17
+                        setIndex(9) at BufferIterator.kt:17
+                          index = 9 at AbstractListIterator.kt:8
+                      element = "1" at _Collections.kt:1735
+                      it = "1" at _Collections.kt:1735
+                      contains(it ➜ "1"): true at AbstractPersistentList.kt:56
+                        indexOf(element ➜ "1"): 8 at AbstractPersistentList.kt:52
+                          indexOf(buffer, element ➜ "1"): 8 at SmallPersistentVector.kt:135
+                    <iteration 10> at _Collections.kt:1735
+                      BufferIterator@1.hasNext(): true at _Collections.kt:1735
+                      BufferIterator@1.next(): "2" at _Collections.kt:1735
+                        hasNext(): true at BufferIterator.kt:14
+                        getIndex(): 9 at BufferIterator.kt:17
+                        setIndex(10) at BufferIterator.kt:17
+                          index = 10 at AbstractListIterator.kt:8
+                      element = "2" at _Collections.kt:1735
+                      it = "2" at _Collections.kt:1735
+                      contains(it ➜ "2"): true at AbstractPersistentList.kt:56
+                        indexOf(element ➜ "2"): 9 at AbstractPersistentList.kt:52
+                          indexOf(buffer, element ➜ "2"): 9 at SmallPersistentVector.kt:135
+                    <iteration 11> at _Collections.kt:1735
+                      BufferIterator@1.hasNext(): false at _Collections.kt:1735
               assertEquals(true, true, message ➜ "") at ComparisonDSL.kt:21
             collectionBehavior.compareProperty(CollectionBehaviorsKt$$Lambda@1, CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:113
               getter.invoke(expected): ArrayList.Itr@1 at ComparisonDSL.kt:27
                 compareProperty.iterator(): ArrayList.Itr@1 at CollectionBehaviors.kt:113
               getter.invoke(actual): BufferIterator@1 at ComparisonDSL.kt:27
                 compareProperty.iterator(): BufferIterator@1 at CollectionBehaviors.kt:113
+                  listIterator(): BufferIterator@1 at AbstractPersistentList.kt:60
+                    listIterator(0): BufferIterator@1 at AbstractPersistentList.kt:64
+                      size(): 10 at SmallPersistentVector.kt:143
+                      ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ 0, 10) at SmallPersistentVector.kt:143
+                      size(): 10 at SmallPersistentVector.kt:145
+                      new BufferIterator(buffer, index ➜ 0, 10): BufferIterator@1 at SmallPersistentVector.kt:145
               compare(ArrayList.Itr@1, BufferIterator@1, block) at ComparisonDSL.kt:27
                 new CompareContext(expected, actual): CompareContext@1 at ComparisonDSL.kt:12
                 block.invoke(CompareContext@1): Unit at ComparisonDSL.kt:12
@@ -206,6 +635,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                             propertyEquals.next(): "a" at CollectionBehaviors.kt:58
                           getter.invoke(actual): "a" at ComparisonDSL.kt:21
                             propertyEquals.next(): "a" at CollectionBehaviors.kt:58
+                              hasNext(): true at BufferIterator.kt:14
+                              getIndex(): 0 at BufferIterator.kt:17
+                              setIndex(1) at BufferIterator.kt:17
+                                index = 1 at AbstractListIterator.kt:8
                           assertEquals("a", "a", message ➜ "") at ComparisonDSL.kt:21
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:59
                           getter.invoke(expected): true at ComparisonDSL.kt:21
@@ -221,6 +654,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                             propertyEquals.next(): "b" at CollectionBehaviors.kt:58
                           getter.invoke(actual): "b" at ComparisonDSL.kt:21
                             propertyEquals.next(): "b" at CollectionBehaviors.kt:58
+                              hasNext(): true at BufferIterator.kt:14
+                              getIndex(): 1 at BufferIterator.kt:17
+                              setIndex(2) at BufferIterator.kt:17
+                                index = 2 at AbstractListIterator.kt:8
                           assertEquals("b", "b", message ➜ "") at ComparisonDSL.kt:21
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:59
                           getter.invoke(expected): true at ComparisonDSL.kt:21
@@ -236,6 +673,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                             propertyEquals.next(): "c" at CollectionBehaviors.kt:58
                           getter.invoke(actual): "c" at ComparisonDSL.kt:21
                             propertyEquals.next(): "c" at CollectionBehaviors.kt:58
+                              hasNext(): true at BufferIterator.kt:14
+                              getIndex(): 2 at BufferIterator.kt:17
+                              setIndex(3) at BufferIterator.kt:17
+                                index = 3 at AbstractListIterator.kt:8
                           assertEquals("c", "c", message ➜ "") at ComparisonDSL.kt:21
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:59
                           getter.invoke(expected): true at ComparisonDSL.kt:21
@@ -251,6 +692,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                             propertyEquals.next(): "x" at CollectionBehaviors.kt:58
                           getter.invoke(actual): "x" at ComparisonDSL.kt:21
                             propertyEquals.next(): "x" at CollectionBehaviors.kt:58
+                              hasNext(): true at BufferIterator.kt:14
+                              getIndex(): 3 at BufferIterator.kt:17
+                              setIndex(4) at BufferIterator.kt:17
+                                index = 4 at AbstractListIterator.kt:8
                           assertEquals("x", "x", message ➜ "") at ComparisonDSL.kt:21
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:59
                           getter.invoke(expected): true at ComparisonDSL.kt:21
@@ -266,6 +711,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                             propertyEquals.next(): "a" at CollectionBehaviors.kt:58
                           getter.invoke(actual): "a" at ComparisonDSL.kt:21
                             propertyEquals.next(): "a" at CollectionBehaviors.kt:58
+                              hasNext(): true at BufferIterator.kt:14
+                              getIndex(): 4 at BufferIterator.kt:17
+                              setIndex(5) at BufferIterator.kt:17
+                                index = 5 at AbstractListIterator.kt:8
                           assertEquals("a", "a", message ➜ "") at ComparisonDSL.kt:21
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:59
                           getter.invoke(expected): true at ComparisonDSL.kt:21
@@ -281,6 +730,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                             propertyEquals.next(): "x" at CollectionBehaviors.kt:58
                           getter.invoke(actual): "x" at ComparisonDSL.kt:21
                             propertyEquals.next(): "x" at CollectionBehaviors.kt:58
+                              hasNext(): true at BufferIterator.kt:14
+                              getIndex(): 5 at BufferIterator.kt:17
+                              setIndex(6) at BufferIterator.kt:17
+                                index = 6 at AbstractListIterator.kt:8
                           assertEquals("x", "x", message ➜ "") at ComparisonDSL.kt:21
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:59
                           getter.invoke(expected): true at ComparisonDSL.kt:21
@@ -296,6 +749,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                             propertyEquals.next(): "y" at CollectionBehaviors.kt:58
                           getter.invoke(actual): "y" at ComparisonDSL.kt:21
                             propertyEquals.next(): "y" at CollectionBehaviors.kt:58
+                              hasNext(): true at BufferIterator.kt:14
+                              getIndex(): 6 at BufferIterator.kt:17
+                              setIndex(7) at BufferIterator.kt:17
+                                index = 7 at AbstractListIterator.kt:8
                           assertEquals("y", "y", message ➜ "") at ComparisonDSL.kt:21
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:59
                           getter.invoke(expected): true at ComparisonDSL.kt:21
@@ -311,6 +768,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                             propertyEquals.next(): "z" at CollectionBehaviors.kt:58
                           getter.invoke(actual): "z" at ComparisonDSL.kt:21
                             propertyEquals.next(): "z" at CollectionBehaviors.kt:58
+                              hasNext(): true at BufferIterator.kt:14
+                              getIndex(): 7 at BufferIterator.kt:17
+                              setIndex(8) at BufferIterator.kt:17
+                                index = 8 at AbstractListIterator.kt:8
                           assertEquals("z", "z", message ➜ "") at ComparisonDSL.kt:21
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:59
                           getter.invoke(expected): true at ComparisonDSL.kt:21
@@ -326,6 +787,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                             propertyEquals.next(): "1" at CollectionBehaviors.kt:58
                           getter.invoke(actual): "1" at ComparisonDSL.kt:21
                             propertyEquals.next(): "1" at CollectionBehaviors.kt:58
+                              hasNext(): true at BufferIterator.kt:14
+                              getIndex(): 8 at BufferIterator.kt:17
+                              setIndex(9) at BufferIterator.kt:17
+                                index = 9 at AbstractListIterator.kt:8
                           assertEquals("1", "1", message ➜ "") at ComparisonDSL.kt:21
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:59
                           getter.invoke(expected): true at ComparisonDSL.kt:21
@@ -341,6 +806,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                             propertyEquals.next(): "2" at CollectionBehaviors.kt:58
                           getter.invoke(actual): "2" at ComparisonDSL.kt:21
                             propertyEquals.next(): "2" at CollectionBehaviors.kt:58
+                              hasNext(): true at BufferIterator.kt:14
+                              getIndex(): 9 at BufferIterator.kt:17
+                              setIndex(10) at BufferIterator.kt:17
+                                index = 10 at AbstractListIterator.kt:8
                           assertEquals("2", "2", message ➜ "") at ComparisonDSL.kt:21
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:59
                           getter.invoke(expected): false at ComparisonDSL.kt:21
@@ -363,6 +832,8 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                         actual.invoke(): threw NoSuchElementException at ComparisonDSL.kt:32
                           getter.invoke(actual): threw NoSuchElementException at ComparisonDSL.kt:23
                             propertyFails.next(): threw NoSuchElementException at CollectionBehaviors.kt:61
+                              hasNext(): false at BufferIterator.kt:14
+                              new NoSuchElementException(): NoSuchElementException@1 at BufferIterator.kt:15
                         createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:32
                         Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
                         checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
@@ -376,6 +847,11 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
               compareProperty.listIterator(): ArrayList.ListItr@1 at CollectionBehaviors.kt:11
             getter.invoke(actual): BufferIterator@1 at ComparisonDSL.kt:27
               compareProperty.listIterator(): BufferIterator@1 at CollectionBehaviors.kt:11
+                listIterator(0): BufferIterator@1 at AbstractPersistentList.kt:64
+                  size(): 10 at SmallPersistentVector.kt:143
+                  ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ 0, 10) at SmallPersistentVector.kt:143
+                  size(): 10 at SmallPersistentVector.kt:145
+                  new BufferIterator(buffer, index ➜ 0, 10): BufferIterator@1 at SmallPersistentVector.kt:145
             compare(ArrayList.ListItr@1, BufferIterator@1, block) at ComparisonDSL.kt:27
               new CompareContext(expected, actual): CompareContext@1 at ComparisonDSL.kt:12
               block.invoke(CompareContext@1): Unit at ComparisonDSL.kt:12
@@ -414,6 +890,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.next(): "a" at CollectionBehaviors.kt:35
                         getter.invoke(actual): "a" at ComparisonDSL.kt:21
                           propertyEquals.next(): "a" at CollectionBehaviors.kt:35
+                            hasNext(): true at BufferIterator.kt:14
+                            getIndex(): 0 at BufferIterator.kt:17
+                            setIndex(1) at BufferIterator.kt:17
+                              index = 1 at AbstractListIterator.kt:8
                         assertEquals("a", "a", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:36
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -448,6 +928,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.next(): "b" at CollectionBehaviors.kt:35
                         getter.invoke(actual): "b" at ComparisonDSL.kt:21
                           propertyEquals.next(): "b" at CollectionBehaviors.kt:35
+                            hasNext(): true at BufferIterator.kt:14
+                            getIndex(): 1 at BufferIterator.kt:17
+                            setIndex(2) at BufferIterator.kt:17
+                              index = 2 at AbstractListIterator.kt:8
                         assertEquals("b", "b", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:36
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -482,6 +966,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.next(): "c" at CollectionBehaviors.kt:35
                         getter.invoke(actual): "c" at ComparisonDSL.kt:21
                           propertyEquals.next(): "c" at CollectionBehaviors.kt:35
+                            hasNext(): true at BufferIterator.kt:14
+                            getIndex(): 2 at BufferIterator.kt:17
+                            setIndex(3) at BufferIterator.kt:17
+                              index = 3 at AbstractListIterator.kt:8
                         assertEquals("c", "c", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:36
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -516,6 +1004,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.next(): "x" at CollectionBehaviors.kt:35
                         getter.invoke(actual): "x" at ComparisonDSL.kt:21
                           propertyEquals.next(): "x" at CollectionBehaviors.kt:35
+                            hasNext(): true at BufferIterator.kt:14
+                            getIndex(): 3 at BufferIterator.kt:17
+                            setIndex(4) at BufferIterator.kt:17
+                              index = 4 at AbstractListIterator.kt:8
                         assertEquals("x", "x", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:36
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -550,6 +1042,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.next(): "a" at CollectionBehaviors.kt:35
                         getter.invoke(actual): "a" at ComparisonDSL.kt:21
                           propertyEquals.next(): "a" at CollectionBehaviors.kt:35
+                            hasNext(): true at BufferIterator.kt:14
+                            getIndex(): 4 at BufferIterator.kt:17
+                            setIndex(5) at BufferIterator.kt:17
+                              index = 5 at AbstractListIterator.kt:8
                         assertEquals("a", "a", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:36
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -584,6 +1080,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.next(): "x" at CollectionBehaviors.kt:35
                         getter.invoke(actual): "x" at ComparisonDSL.kt:21
                           propertyEquals.next(): "x" at CollectionBehaviors.kt:35
+                            hasNext(): true at BufferIterator.kt:14
+                            getIndex(): 5 at BufferIterator.kt:17
+                            setIndex(6) at BufferIterator.kt:17
+                              index = 6 at AbstractListIterator.kt:8
                         assertEquals("x", "x", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:36
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -618,6 +1118,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.next(): "y" at CollectionBehaviors.kt:35
                         getter.invoke(actual): "y" at ComparisonDSL.kt:21
                           propertyEquals.next(): "y" at CollectionBehaviors.kt:35
+                            hasNext(): true at BufferIterator.kt:14
+                            getIndex(): 6 at BufferIterator.kt:17
+                            setIndex(7) at BufferIterator.kt:17
+                              index = 7 at AbstractListIterator.kt:8
                         assertEquals("y", "y", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:36
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -652,6 +1156,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.next(): "z" at CollectionBehaviors.kt:35
                         getter.invoke(actual): "z" at ComparisonDSL.kt:21
                           propertyEquals.next(): "z" at CollectionBehaviors.kt:35
+                            hasNext(): true at BufferIterator.kt:14
+                            getIndex(): 7 at BufferIterator.kt:17
+                            setIndex(8) at BufferIterator.kt:17
+                              index = 8 at AbstractListIterator.kt:8
                         assertEquals("z", "z", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:36
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -686,6 +1194,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.next(): "1" at CollectionBehaviors.kt:35
                         getter.invoke(actual): "1" at ComparisonDSL.kt:21
                           propertyEquals.next(): "1" at CollectionBehaviors.kt:35
+                            hasNext(): true at BufferIterator.kt:14
+                            getIndex(): 8 at BufferIterator.kt:17
+                            setIndex(9) at BufferIterator.kt:17
+                              index = 9 at AbstractListIterator.kt:8
                         assertEquals("1", "1", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:36
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -720,6 +1232,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.next(): "2" at CollectionBehaviors.kt:35
                         getter.invoke(actual): "2" at ComparisonDSL.kt:21
                           propertyEquals.next(): "2" at CollectionBehaviors.kt:35
+                            hasNext(): true at BufferIterator.kt:14
+                            getIndex(): 9 at BufferIterator.kt:17
+                            setIndex(10) at BufferIterator.kt:17
+                              index = 10 at AbstractListIterator.kt:8
                         assertEquals("2", "2", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:36
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -761,6 +1277,8 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                       actual.invoke(): threw NoSuchElementException at ComparisonDSL.kt:32
                         getter.invoke(actual): threw NoSuchElementException at ComparisonDSL.kt:23
                           propertyFails.next(): threw NoSuchElementException at CollectionBehaviors.kt:38
+                            hasNext(): false at BufferIterator.kt:14
+                            new NoSuchElementException(): NoSuchElementException@1 at BufferIterator.kt:15
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:32
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
@@ -778,6 +1296,11 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.previous(): "2" at CollectionBehaviors.kt:41
                         getter.invoke(actual): "2" at ComparisonDSL.kt:21
                           propertyEquals.previous(): "2" at CollectionBehaviors.kt:41
+                            hasPrevious(): true at BufferIterator.kt:21
+                            getIndex(): 10 at BufferIterator.kt:24
+                            setIndex(9) at BufferIterator.kt:24
+                              index = 9 at AbstractListIterator.kt:8
+                            getIndex(): 9 at BufferIterator.kt:24
                         assertEquals("2", "2", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -812,6 +1335,11 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.previous(): "1" at CollectionBehaviors.kt:41
                         getter.invoke(actual): "1" at ComparisonDSL.kt:21
                           propertyEquals.previous(): "1" at CollectionBehaviors.kt:41
+                            hasPrevious(): true at BufferIterator.kt:21
+                            getIndex(): 9 at BufferIterator.kt:24
+                            setIndex(8) at BufferIterator.kt:24
+                              index = 8 at AbstractListIterator.kt:8
+                            getIndex(): 8 at BufferIterator.kt:24
                         assertEquals("1", "1", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -846,6 +1374,11 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.previous(): "z" at CollectionBehaviors.kt:41
                         getter.invoke(actual): "z" at ComparisonDSL.kt:21
                           propertyEquals.previous(): "z" at CollectionBehaviors.kt:41
+                            hasPrevious(): true at BufferIterator.kt:21
+                            getIndex(): 8 at BufferIterator.kt:24
+                            setIndex(7) at BufferIterator.kt:24
+                              index = 7 at AbstractListIterator.kt:8
+                            getIndex(): 7 at BufferIterator.kt:24
                         assertEquals("z", "z", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -880,6 +1413,11 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.previous(): "y" at CollectionBehaviors.kt:41
                         getter.invoke(actual): "y" at ComparisonDSL.kt:21
                           propertyEquals.previous(): "y" at CollectionBehaviors.kt:41
+                            hasPrevious(): true at BufferIterator.kt:21
+                            getIndex(): 7 at BufferIterator.kt:24
+                            setIndex(6) at BufferIterator.kt:24
+                              index = 6 at AbstractListIterator.kt:8
+                            getIndex(): 6 at BufferIterator.kt:24
                         assertEquals("y", "y", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -914,6 +1452,11 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.previous(): "x" at CollectionBehaviors.kt:41
                         getter.invoke(actual): "x" at ComparisonDSL.kt:21
                           propertyEquals.previous(): "x" at CollectionBehaviors.kt:41
+                            hasPrevious(): true at BufferIterator.kt:21
+                            getIndex(): 6 at BufferIterator.kt:24
+                            setIndex(5) at BufferIterator.kt:24
+                              index = 5 at AbstractListIterator.kt:8
+                            getIndex(): 5 at BufferIterator.kt:24
                         assertEquals("x", "x", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -948,6 +1491,11 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.previous(): "a" at CollectionBehaviors.kt:41
                         getter.invoke(actual): "a" at ComparisonDSL.kt:21
                           propertyEquals.previous(): "a" at CollectionBehaviors.kt:41
+                            hasPrevious(): true at BufferIterator.kt:21
+                            getIndex(): 5 at BufferIterator.kt:24
+                            setIndex(4) at BufferIterator.kt:24
+                              index = 4 at AbstractListIterator.kt:8
+                            getIndex(): 4 at BufferIterator.kt:24
                         assertEquals("a", "a", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -982,6 +1530,11 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.previous(): "x" at CollectionBehaviors.kt:41
                         getter.invoke(actual): "x" at ComparisonDSL.kt:21
                           propertyEquals.previous(): "x" at CollectionBehaviors.kt:41
+                            hasPrevious(): true at BufferIterator.kt:21
+                            getIndex(): 4 at BufferIterator.kt:24
+                            setIndex(3) at BufferIterator.kt:24
+                              index = 3 at AbstractListIterator.kt:8
+                            getIndex(): 3 at BufferIterator.kt:24
                         assertEquals("x", "x", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -1016,6 +1569,11 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.previous(): "c" at CollectionBehaviors.kt:41
                         getter.invoke(actual): "c" at ComparisonDSL.kt:21
                           propertyEquals.previous(): "c" at CollectionBehaviors.kt:41
+                            hasPrevious(): true at BufferIterator.kt:21
+                            getIndex(): 3 at BufferIterator.kt:24
+                            setIndex(2) at BufferIterator.kt:24
+                              index = 2 at AbstractListIterator.kt:8
+                            getIndex(): 2 at BufferIterator.kt:24
                         assertEquals("c", "c", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -1050,6 +1608,11 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.previous(): "b" at CollectionBehaviors.kt:41
                         getter.invoke(actual): "b" at ComparisonDSL.kt:21
                           propertyEquals.previous(): "b" at CollectionBehaviors.kt:41
+                            hasPrevious(): true at BufferIterator.kt:21
+                            getIndex(): 2 at BufferIterator.kt:24
+                            setIndex(1) at BufferIterator.kt:24
+                              index = 1 at AbstractListIterator.kt:8
+                            getIndex(): 1 at BufferIterator.kt:24
                         assertEquals("b", "b", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -1084,6 +1647,11 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.previous(): "a" at CollectionBehaviors.kt:41
                         getter.invoke(actual): "a" at ComparisonDSL.kt:21
                           propertyEquals.previous(): "a" at CollectionBehaviors.kt:41
+                            hasPrevious(): true at BufferIterator.kt:21
+                            getIndex(): 1 at BufferIterator.kt:24
+                            setIndex(0) at BufferIterator.kt:24
+                              index = 0 at AbstractListIterator.kt:8
+                            getIndex(): 0 at BufferIterator.kt:24
                         assertEquals("a", "a", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -1125,6 +1693,8 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                       actual.invoke(): threw NoSuchElementException at ComparisonDSL.kt:32
                         getter.invoke(actual): threw NoSuchElementException at ComparisonDSL.kt:23
                           propertyFails.previous(): threw NoSuchElementException at CollectionBehaviors.kt:44
+                            hasPrevious(): false at BufferIterator.kt:21
+                            new NoSuchElementException(): NoSuchElementException@1 at BufferIterator.kt:22
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:32
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
@@ -1138,6 +1708,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
               compareProperty.listIterator(0): ArrayList.ListItr@1 at CollectionBehaviors.kt:12
             getter.invoke(actual): BufferIterator@1 at ComparisonDSL.kt:27
               compareProperty.listIterator(0): BufferIterator@1 at CollectionBehaviors.kt:12
+                size(): 10 at SmallPersistentVector.kt:143
+                ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ 0, 10) at SmallPersistentVector.kt:143
+                size(): 10 at SmallPersistentVector.kt:145
+                new BufferIterator(buffer, index ➜ 0, 10): BufferIterator@1 at SmallPersistentVector.kt:145
             compare(ArrayList.ListItr@1, BufferIterator@1, block) at ComparisonDSL.kt:27
               new CompareContext(expected, actual): CompareContext@1 at ComparisonDSL.kt:12
               block.invoke(CompareContext@1): Unit at ComparisonDSL.kt:12
@@ -1176,6 +1750,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.next(): "a" at CollectionBehaviors.kt:35
                         getter.invoke(actual): "a" at ComparisonDSL.kt:21
                           propertyEquals.next(): "a" at CollectionBehaviors.kt:35
+                            hasNext(): true at BufferIterator.kt:14
+                            getIndex(): 0 at BufferIterator.kt:17
+                            setIndex(1) at BufferIterator.kt:17
+                              index = 1 at AbstractListIterator.kt:8
                         assertEquals("a", "a", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:36
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -1210,6 +1788,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.next(): "b" at CollectionBehaviors.kt:35
                         getter.invoke(actual): "b" at ComparisonDSL.kt:21
                           propertyEquals.next(): "b" at CollectionBehaviors.kt:35
+                            hasNext(): true at BufferIterator.kt:14
+                            getIndex(): 1 at BufferIterator.kt:17
+                            setIndex(2) at BufferIterator.kt:17
+                              index = 2 at AbstractListIterator.kt:8
                         assertEquals("b", "b", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:36
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -1244,6 +1826,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.next(): "c" at CollectionBehaviors.kt:35
                         getter.invoke(actual): "c" at ComparisonDSL.kt:21
                           propertyEquals.next(): "c" at CollectionBehaviors.kt:35
+                            hasNext(): true at BufferIterator.kt:14
+                            getIndex(): 2 at BufferIterator.kt:17
+                            setIndex(3) at BufferIterator.kt:17
+                              index = 3 at AbstractListIterator.kt:8
                         assertEquals("c", "c", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:36
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -1278,6 +1864,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.next(): "x" at CollectionBehaviors.kt:35
                         getter.invoke(actual): "x" at ComparisonDSL.kt:21
                           propertyEquals.next(): "x" at CollectionBehaviors.kt:35
+                            hasNext(): true at BufferIterator.kt:14
+                            getIndex(): 3 at BufferIterator.kt:17
+                            setIndex(4) at BufferIterator.kt:17
+                              index = 4 at AbstractListIterator.kt:8
                         assertEquals("x", "x", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:36
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -1312,6 +1902,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.next(): "a" at CollectionBehaviors.kt:35
                         getter.invoke(actual): "a" at ComparisonDSL.kt:21
                           propertyEquals.next(): "a" at CollectionBehaviors.kt:35
+                            hasNext(): true at BufferIterator.kt:14
+                            getIndex(): 4 at BufferIterator.kt:17
+                            setIndex(5) at BufferIterator.kt:17
+                              index = 5 at AbstractListIterator.kt:8
                         assertEquals("a", "a", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:36
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -1346,6 +1940,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.next(): "x" at CollectionBehaviors.kt:35
                         getter.invoke(actual): "x" at ComparisonDSL.kt:21
                           propertyEquals.next(): "x" at CollectionBehaviors.kt:35
+                            hasNext(): true at BufferIterator.kt:14
+                            getIndex(): 5 at BufferIterator.kt:17
+                            setIndex(6) at BufferIterator.kt:17
+                              index = 6 at AbstractListIterator.kt:8
                         assertEquals("x", "x", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:36
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -1380,6 +1978,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.next(): "y" at CollectionBehaviors.kt:35
                         getter.invoke(actual): "y" at ComparisonDSL.kt:21
                           propertyEquals.next(): "y" at CollectionBehaviors.kt:35
+                            hasNext(): true at BufferIterator.kt:14
+                            getIndex(): 6 at BufferIterator.kt:17
+                            setIndex(7) at BufferIterator.kt:17
+                              index = 7 at AbstractListIterator.kt:8
                         assertEquals("y", "y", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:36
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -1414,6 +2016,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.next(): "z" at CollectionBehaviors.kt:35
                         getter.invoke(actual): "z" at ComparisonDSL.kt:21
                           propertyEquals.next(): "z" at CollectionBehaviors.kt:35
+                            hasNext(): true at BufferIterator.kt:14
+                            getIndex(): 7 at BufferIterator.kt:17
+                            setIndex(8) at BufferIterator.kt:17
+                              index = 8 at AbstractListIterator.kt:8
                         assertEquals("z", "z", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:36
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -1448,6 +2054,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.next(): "1" at CollectionBehaviors.kt:35
                         getter.invoke(actual): "1" at ComparisonDSL.kt:21
                           propertyEquals.next(): "1" at CollectionBehaviors.kt:35
+                            hasNext(): true at BufferIterator.kt:14
+                            getIndex(): 8 at BufferIterator.kt:17
+                            setIndex(9) at BufferIterator.kt:17
+                              index = 9 at AbstractListIterator.kt:8
                         assertEquals("1", "1", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:36
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -1482,6 +2092,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.next(): "2" at CollectionBehaviors.kt:35
                         getter.invoke(actual): "2" at ComparisonDSL.kt:21
                           propertyEquals.next(): "2" at CollectionBehaviors.kt:35
+                            hasNext(): true at BufferIterator.kt:14
+                            getIndex(): 9 at BufferIterator.kt:17
+                            setIndex(10) at BufferIterator.kt:17
+                              index = 10 at AbstractListIterator.kt:8
                         assertEquals("2", "2", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:36
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -1523,6 +2137,8 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                       actual.invoke(): threw NoSuchElementException at ComparisonDSL.kt:32
                         getter.invoke(actual): threw NoSuchElementException at ComparisonDSL.kt:23
                           propertyFails.next(): threw NoSuchElementException at CollectionBehaviors.kt:38
+                            hasNext(): false at BufferIterator.kt:14
+                            new NoSuchElementException(): NoSuchElementException@1 at BufferIterator.kt:15
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:32
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
@@ -1540,6 +2156,11 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.previous(): "2" at CollectionBehaviors.kt:41
                         getter.invoke(actual): "2" at ComparisonDSL.kt:21
                           propertyEquals.previous(): "2" at CollectionBehaviors.kt:41
+                            hasPrevious(): true at BufferIterator.kt:21
+                            getIndex(): 10 at BufferIterator.kt:24
+                            setIndex(9) at BufferIterator.kt:24
+                              index = 9 at AbstractListIterator.kt:8
+                            getIndex(): 9 at BufferIterator.kt:24
                         assertEquals("2", "2", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -1574,6 +2195,11 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.previous(): "1" at CollectionBehaviors.kt:41
                         getter.invoke(actual): "1" at ComparisonDSL.kt:21
                           propertyEquals.previous(): "1" at CollectionBehaviors.kt:41
+                            hasPrevious(): true at BufferIterator.kt:21
+                            getIndex(): 9 at BufferIterator.kt:24
+                            setIndex(8) at BufferIterator.kt:24
+                              index = 8 at AbstractListIterator.kt:8
+                            getIndex(): 8 at BufferIterator.kt:24
                         assertEquals("1", "1", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -1608,6 +2234,11 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.previous(): "z" at CollectionBehaviors.kt:41
                         getter.invoke(actual): "z" at ComparisonDSL.kt:21
                           propertyEquals.previous(): "z" at CollectionBehaviors.kt:41
+                            hasPrevious(): true at BufferIterator.kt:21
+                            getIndex(): 8 at BufferIterator.kt:24
+                            setIndex(7) at BufferIterator.kt:24
+                              index = 7 at AbstractListIterator.kt:8
+                            getIndex(): 7 at BufferIterator.kt:24
                         assertEquals("z", "z", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -1642,6 +2273,11 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.previous(): "y" at CollectionBehaviors.kt:41
                         getter.invoke(actual): "y" at ComparisonDSL.kt:21
                           propertyEquals.previous(): "y" at CollectionBehaviors.kt:41
+                            hasPrevious(): true at BufferIterator.kt:21
+                            getIndex(): 7 at BufferIterator.kt:24
+                            setIndex(6) at BufferIterator.kt:24
+                              index = 6 at AbstractListIterator.kt:8
+                            getIndex(): 6 at BufferIterator.kt:24
                         assertEquals("y", "y", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -1676,6 +2312,11 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.previous(): "x" at CollectionBehaviors.kt:41
                         getter.invoke(actual): "x" at ComparisonDSL.kt:21
                           propertyEquals.previous(): "x" at CollectionBehaviors.kt:41
+                            hasPrevious(): true at BufferIterator.kt:21
+                            getIndex(): 6 at BufferIterator.kt:24
+                            setIndex(5) at BufferIterator.kt:24
+                              index = 5 at AbstractListIterator.kt:8
+                            getIndex(): 5 at BufferIterator.kt:24
                         assertEquals("x", "x", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -1710,6 +2351,11 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.previous(): "a" at CollectionBehaviors.kt:41
                         getter.invoke(actual): "a" at ComparisonDSL.kt:21
                           propertyEquals.previous(): "a" at CollectionBehaviors.kt:41
+                            hasPrevious(): true at BufferIterator.kt:21
+                            getIndex(): 5 at BufferIterator.kt:24
+                            setIndex(4) at BufferIterator.kt:24
+                              index = 4 at AbstractListIterator.kt:8
+                            getIndex(): 4 at BufferIterator.kt:24
                         assertEquals("a", "a", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -1744,6 +2390,11 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.previous(): "x" at CollectionBehaviors.kt:41
                         getter.invoke(actual): "x" at ComparisonDSL.kt:21
                           propertyEquals.previous(): "x" at CollectionBehaviors.kt:41
+                            hasPrevious(): true at BufferIterator.kt:21
+                            getIndex(): 4 at BufferIterator.kt:24
+                            setIndex(3) at BufferIterator.kt:24
+                              index = 3 at AbstractListIterator.kt:8
+                            getIndex(): 3 at BufferIterator.kt:24
                         assertEquals("x", "x", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -1778,6 +2429,11 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.previous(): "c" at CollectionBehaviors.kt:41
                         getter.invoke(actual): "c" at ComparisonDSL.kt:21
                           propertyEquals.previous(): "c" at CollectionBehaviors.kt:41
+                            hasPrevious(): true at BufferIterator.kt:21
+                            getIndex(): 3 at BufferIterator.kt:24
+                            setIndex(2) at BufferIterator.kt:24
+                              index = 2 at AbstractListIterator.kt:8
+                            getIndex(): 2 at BufferIterator.kt:24
                         assertEquals("c", "c", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -1812,6 +2468,11 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.previous(): "b" at CollectionBehaviors.kt:41
                         getter.invoke(actual): "b" at ComparisonDSL.kt:21
                           propertyEquals.previous(): "b" at CollectionBehaviors.kt:41
+                            hasPrevious(): true at BufferIterator.kt:21
+                            getIndex(): 2 at BufferIterator.kt:24
+                            setIndex(1) at BufferIterator.kt:24
+                              index = 1 at AbstractListIterator.kt:8
+                            getIndex(): 1 at BufferIterator.kt:24
                         assertEquals("b", "b", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -1846,6 +2507,11 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.previous(): "a" at CollectionBehaviors.kt:41
                         getter.invoke(actual): "a" at ComparisonDSL.kt:21
                           propertyEquals.previous(): "a" at CollectionBehaviors.kt:41
+                            hasPrevious(): true at BufferIterator.kt:21
+                            getIndex(): 1 at BufferIterator.kt:24
+                            setIndex(0) at BufferIterator.kt:24
+                              index = 0 at AbstractListIterator.kt:8
+                            getIndex(): 0 at BufferIterator.kt:24
                         assertEquals("a", "a", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -1887,6 +2553,8 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                       actual.invoke(): threw NoSuchElementException at ComparisonDSL.kt:32
                         getter.invoke(actual): threw NoSuchElementException at ComparisonDSL.kt:23
                           propertyFails.previous(): threw NoSuchElementException at CollectionBehaviors.kt:44
+                            hasPrevious(): false at BufferIterator.kt:21
+                            new NoSuchElementException(): NoSuchElementException@1 at BufferIterator.kt:22
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:32
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
@@ -1902,6 +2570,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
             getter.invoke(actual): BufferIterator@1 at ComparisonDSL.kt:27
               compareProperty.size(): 10 at CollectionBehaviors.kt:13
               compareProperty.listIterator(5): BufferIterator@1 at CollectionBehaviors.kt:13
+                size(): 10 at SmallPersistentVector.kt:143
+                ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ 5, 10) at SmallPersistentVector.kt:143
+                size(): 10 at SmallPersistentVector.kt:145
+                new BufferIterator(buffer, index ➜ 5, 10): BufferIterator@1 at SmallPersistentVector.kt:145
             compare(ArrayList.ListItr@1, BufferIterator@1, block) at ComparisonDSL.kt:27
               new CompareContext(expected, actual): CompareContext@1 at ComparisonDSL.kt:12
               block.invoke(CompareContext@1): Unit at ComparisonDSL.kt:12
@@ -1940,6 +2612,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.next(): "x" at CollectionBehaviors.kt:35
                         getter.invoke(actual): "x" at ComparisonDSL.kt:21
                           propertyEquals.next(): "x" at CollectionBehaviors.kt:35
+                            hasNext(): true at BufferIterator.kt:14
+                            getIndex(): 5 at BufferIterator.kt:17
+                            setIndex(6) at BufferIterator.kt:17
+                              index = 6 at AbstractListIterator.kt:8
                         assertEquals("x", "x", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:36
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -1974,6 +2650,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.next(): "y" at CollectionBehaviors.kt:35
                         getter.invoke(actual): "y" at ComparisonDSL.kt:21
                           propertyEquals.next(): "y" at CollectionBehaviors.kt:35
+                            hasNext(): true at BufferIterator.kt:14
+                            getIndex(): 6 at BufferIterator.kt:17
+                            setIndex(7) at BufferIterator.kt:17
+                              index = 7 at AbstractListIterator.kt:8
                         assertEquals("y", "y", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:36
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -2008,6 +2688,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.next(): "z" at CollectionBehaviors.kt:35
                         getter.invoke(actual): "z" at ComparisonDSL.kt:21
                           propertyEquals.next(): "z" at CollectionBehaviors.kt:35
+                            hasNext(): true at BufferIterator.kt:14
+                            getIndex(): 7 at BufferIterator.kt:17
+                            setIndex(8) at BufferIterator.kt:17
+                              index = 8 at AbstractListIterator.kt:8
                         assertEquals("z", "z", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:36
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -2042,6 +2726,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.next(): "1" at CollectionBehaviors.kt:35
                         getter.invoke(actual): "1" at ComparisonDSL.kt:21
                           propertyEquals.next(): "1" at CollectionBehaviors.kt:35
+                            hasNext(): true at BufferIterator.kt:14
+                            getIndex(): 8 at BufferIterator.kt:17
+                            setIndex(9) at BufferIterator.kt:17
+                              index = 9 at AbstractListIterator.kt:8
                         assertEquals("1", "1", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:36
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -2076,6 +2764,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.next(): "2" at CollectionBehaviors.kt:35
                         getter.invoke(actual): "2" at ComparisonDSL.kt:21
                           propertyEquals.next(): "2" at CollectionBehaviors.kt:35
+                            hasNext(): true at BufferIterator.kt:14
+                            getIndex(): 9 at BufferIterator.kt:17
+                            setIndex(10) at BufferIterator.kt:17
+                              index = 10 at AbstractListIterator.kt:8
                         assertEquals("2", "2", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:36
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -2117,6 +2809,8 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                       actual.invoke(): threw NoSuchElementException at ComparisonDSL.kt:32
                         getter.invoke(actual): threw NoSuchElementException at ComparisonDSL.kt:23
                           propertyFails.next(): threw NoSuchElementException at CollectionBehaviors.kt:38
+                            hasNext(): false at BufferIterator.kt:14
+                            new NoSuchElementException(): NoSuchElementException@1 at BufferIterator.kt:15
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:32
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
@@ -2134,6 +2828,11 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.previous(): "2" at CollectionBehaviors.kt:41
                         getter.invoke(actual): "2" at ComparisonDSL.kt:21
                           propertyEquals.previous(): "2" at CollectionBehaviors.kt:41
+                            hasPrevious(): true at BufferIterator.kt:21
+                            getIndex(): 10 at BufferIterator.kt:24
+                            setIndex(9) at BufferIterator.kt:24
+                              index = 9 at AbstractListIterator.kt:8
+                            getIndex(): 9 at BufferIterator.kt:24
                         assertEquals("2", "2", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -2168,6 +2867,11 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.previous(): "1" at CollectionBehaviors.kt:41
                         getter.invoke(actual): "1" at ComparisonDSL.kt:21
                           propertyEquals.previous(): "1" at CollectionBehaviors.kt:41
+                            hasPrevious(): true at BufferIterator.kt:21
+                            getIndex(): 9 at BufferIterator.kt:24
+                            setIndex(8) at BufferIterator.kt:24
+                              index = 8 at AbstractListIterator.kt:8
+                            getIndex(): 8 at BufferIterator.kt:24
                         assertEquals("1", "1", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -2202,6 +2906,11 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.previous(): "z" at CollectionBehaviors.kt:41
                         getter.invoke(actual): "z" at ComparisonDSL.kt:21
                           propertyEquals.previous(): "z" at CollectionBehaviors.kt:41
+                            hasPrevious(): true at BufferIterator.kt:21
+                            getIndex(): 8 at BufferIterator.kt:24
+                            setIndex(7) at BufferIterator.kt:24
+                              index = 7 at AbstractListIterator.kt:8
+                            getIndex(): 7 at BufferIterator.kt:24
                         assertEquals("z", "z", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -2236,6 +2945,11 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.previous(): "y" at CollectionBehaviors.kt:41
                         getter.invoke(actual): "y" at ComparisonDSL.kt:21
                           propertyEquals.previous(): "y" at CollectionBehaviors.kt:41
+                            hasPrevious(): true at BufferIterator.kt:21
+                            getIndex(): 7 at BufferIterator.kt:24
+                            setIndex(6) at BufferIterator.kt:24
+                              index = 6 at AbstractListIterator.kt:8
+                            getIndex(): 6 at BufferIterator.kt:24
                         assertEquals("y", "y", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -2270,6 +2984,11 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.previous(): "x" at CollectionBehaviors.kt:41
                         getter.invoke(actual): "x" at ComparisonDSL.kt:21
                           propertyEquals.previous(): "x" at CollectionBehaviors.kt:41
+                            hasPrevious(): true at BufferIterator.kt:21
+                            getIndex(): 6 at BufferIterator.kt:24
+                            setIndex(5) at BufferIterator.kt:24
+                              index = 5 at AbstractListIterator.kt:8
+                            getIndex(): 5 at BufferIterator.kt:24
                         assertEquals("x", "x", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -2304,6 +3023,11 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.previous(): "a" at CollectionBehaviors.kt:41
                         getter.invoke(actual): "a" at ComparisonDSL.kt:21
                           propertyEquals.previous(): "a" at CollectionBehaviors.kt:41
+                            hasPrevious(): true at BufferIterator.kt:21
+                            getIndex(): 5 at BufferIterator.kt:24
+                            setIndex(4) at BufferIterator.kt:24
+                              index = 4 at AbstractListIterator.kt:8
+                            getIndex(): 4 at BufferIterator.kt:24
                         assertEquals("a", "a", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -2338,6 +3062,11 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.previous(): "x" at CollectionBehaviors.kt:41
                         getter.invoke(actual): "x" at ComparisonDSL.kt:21
                           propertyEquals.previous(): "x" at CollectionBehaviors.kt:41
+                            hasPrevious(): true at BufferIterator.kt:21
+                            getIndex(): 4 at BufferIterator.kt:24
+                            setIndex(3) at BufferIterator.kt:24
+                              index = 3 at AbstractListIterator.kt:8
+                            getIndex(): 3 at BufferIterator.kt:24
                         assertEquals("x", "x", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -2372,6 +3101,11 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.previous(): "c" at CollectionBehaviors.kt:41
                         getter.invoke(actual): "c" at ComparisonDSL.kt:21
                           propertyEquals.previous(): "c" at CollectionBehaviors.kt:41
+                            hasPrevious(): true at BufferIterator.kt:21
+                            getIndex(): 3 at BufferIterator.kt:24
+                            setIndex(2) at BufferIterator.kt:24
+                              index = 2 at AbstractListIterator.kt:8
+                            getIndex(): 2 at BufferIterator.kt:24
                         assertEquals("c", "c", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -2406,6 +3140,11 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.previous(): "b" at CollectionBehaviors.kt:41
                         getter.invoke(actual): "b" at ComparisonDSL.kt:21
                           propertyEquals.previous(): "b" at CollectionBehaviors.kt:41
+                            hasPrevious(): true at BufferIterator.kt:21
+                            getIndex(): 2 at BufferIterator.kt:24
+                            setIndex(1) at BufferIterator.kt:24
+                              index = 1 at AbstractListIterator.kt:8
+                            getIndex(): 1 at BufferIterator.kt:24
                         assertEquals("b", "b", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -2440,6 +3179,11 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                           propertyEquals.previous(): "a" at CollectionBehaviors.kt:41
                         getter.invoke(actual): "a" at ComparisonDSL.kt:21
                           propertyEquals.previous(): "a" at CollectionBehaviors.kt:41
+                            hasPrevious(): true at BufferIterator.kt:21
+                            getIndex(): 1 at BufferIterator.kt:24
+                            setIndex(0) at BufferIterator.kt:24
+                              index = 0 at AbstractListIterator.kt:8
+                            getIndex(): 0 at BufferIterator.kt:24
                         assertEquals("a", "a", message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -2481,6 +3225,8 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                       actual.invoke(): threw NoSuchElementException at ComparisonDSL.kt:32
                         getter.invoke(actual): threw NoSuchElementException at ComparisonDSL.kt:23
                           propertyFails.previous(): threw NoSuchElementException at CollectionBehaviors.kt:44
+                            hasPrevious(): false at BufferIterator.kt:21
+                            new NoSuchElementException(): NoSuchElementException@1 at BufferIterator.kt:22
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:32
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
@@ -2501,6 +3247,15 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
               actual.invoke(): threw IndexOutOfBoundsException at ComparisonDSL.kt:32
                 getter.invoke(actual): threw IndexOutOfBoundsException at ComparisonDSL.kt:23
                   propertyFails.listIterator(-1): threw IndexOutOfBoundsException at CollectionBehaviors.kt:15
+                    size(): 10 at SmallPersistentVector.kt:143
+                    ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ -1, 10): threw IndexOutOfBoundsException at SmallPersistentVector.kt:143
+                      new StringBuilder(): StringBuilder@1("") at ListImplementation.kt:22
+                      StringBuilder@1("").append("index: "): StringBuilder@1("index: ") at ListImplementation.kt:22
+                      StringBuilder@1("index: ").append(index ➜ -1): StringBuilder@1("index: -1") at ListImplementation.kt:22
+                      StringBuilder@1("index: -1").append(", size: "): StringBuilder@1("index: -1, size: ") at ListImplementation.kt:22
+                      StringBuilder@1("index: -1, size: ").append(size ➜ 10): StringBuilder@1("index: -1, size: 10") at ListImplementation.kt:22
+                      StringBuilder@1("index: -1, size: 10").toString(): "index: -1, size: 10" at ListImplementation.kt:22
+                      new IndexOutOfBoundsException("index: -1, size: 10"): IndexOutOfBoundsException@1 at ListImplementation.kt:22
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:32
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
@@ -2523,6 +3278,15 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                 getter.invoke(actual): threw IndexOutOfBoundsException at ComparisonDSL.kt:23
                   propertyFails.size(): 10 at CollectionBehaviors.kt:16
                   propertyFails.listIterator(11): threw IndexOutOfBoundsException at CollectionBehaviors.kt:16
+                    size(): 10 at SmallPersistentVector.kt:143
+                    ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ 11, 10): threw IndexOutOfBoundsException at SmallPersistentVector.kt:143
+                      new StringBuilder(): StringBuilder@1("") at ListImplementation.kt:22
+                      StringBuilder@1("").append("index: "): StringBuilder@1("index: ") at ListImplementation.kt:22
+                      StringBuilder@1("index: ").append(index ➜ 11): StringBuilder@1("index: 11") at ListImplementation.kt:22
+                      StringBuilder@1("index: 11").append(", size: "): StringBuilder@1("index: 11, size: ") at ListImplementation.kt:22
+                      StringBuilder@1("index: 11, size: ").append(size ➜ 10): StringBuilder@1("index: 11, size: 10") at ListImplementation.kt:22
+                      StringBuilder@1("index: 11, size: 10").toString(): "index: 11, size: 10" at ListImplementation.kt:22
+                      new IndexOutOfBoundsException("index: 11, size: 10"): IndexOutOfBoundsException@1 at ListImplementation.kt:22
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:32
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
@@ -2541,6 +3305,8 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                   propertyEquals.get(index ➜ 0): "a" at CollectionBehaviors.kt:19
                 getter.invoke(actual): "a" at ComparisonDSL.kt:21
                   propertyEquals.get(index ➜ 0): "a" at CollectionBehaviors.kt:19
+                    size(): 10 at SmallPersistentVector.kt:150
+                    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 0, 10) at SmallPersistentVector.kt:150
                 assertEquals("a", "a", message ➜ "") at ComparisonDSL.kt:21
               index = 1 at CollectionBehaviors.kt:18
             <iteration 2> at CollectionBehaviors.kt:18
@@ -2549,6 +3315,8 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                   propertyEquals.get(index ➜ 1): "b" at CollectionBehaviors.kt:19
                 getter.invoke(actual): "b" at ComparisonDSL.kt:21
                   propertyEquals.get(index ➜ 1): "b" at CollectionBehaviors.kt:19
+                    size(): 10 at SmallPersistentVector.kt:150
+                    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 1, 10) at SmallPersistentVector.kt:150
                 assertEquals("b", "b", message ➜ "") at ComparisonDSL.kt:21
               index = 2 at CollectionBehaviors.kt:18
             <iteration 3> at CollectionBehaviors.kt:18
@@ -2557,6 +3325,8 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                   propertyEquals.get(index ➜ 2): "c" at CollectionBehaviors.kt:19
                 getter.invoke(actual): "c" at ComparisonDSL.kt:21
                   propertyEquals.get(index ➜ 2): "c" at CollectionBehaviors.kt:19
+                    size(): 10 at SmallPersistentVector.kt:150
+                    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, 10) at SmallPersistentVector.kt:150
                 assertEquals("c", "c", message ➜ "") at ComparisonDSL.kt:21
               index = 3 at CollectionBehaviors.kt:18
             <iteration 4> at CollectionBehaviors.kt:18
@@ -2565,6 +3335,8 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                   propertyEquals.get(index ➜ 3): "x" at CollectionBehaviors.kt:19
                 getter.invoke(actual): "x" at ComparisonDSL.kt:21
                   propertyEquals.get(index ➜ 3): "x" at CollectionBehaviors.kt:19
+                    size(): 10 at SmallPersistentVector.kt:150
+                    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 3, 10) at SmallPersistentVector.kt:150
                 assertEquals("x", "x", message ➜ "") at ComparisonDSL.kt:21
               index = 4 at CollectionBehaviors.kt:18
             <iteration 5> at CollectionBehaviors.kt:18
@@ -2573,6 +3345,8 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                   propertyEquals.get(index ➜ 4): "a" at CollectionBehaviors.kt:19
                 getter.invoke(actual): "a" at ComparisonDSL.kt:21
                   propertyEquals.get(index ➜ 4): "a" at CollectionBehaviors.kt:19
+                    size(): 10 at SmallPersistentVector.kt:150
+                    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 4, 10) at SmallPersistentVector.kt:150
                 assertEquals("a", "a", message ➜ "") at ComparisonDSL.kt:21
               index = 5 at CollectionBehaviors.kt:18
             <iteration 6> at CollectionBehaviors.kt:18
@@ -2581,6 +3355,8 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                   propertyEquals.get(index ➜ 5): "x" at CollectionBehaviors.kt:19
                 getter.invoke(actual): "x" at ComparisonDSL.kt:21
                   propertyEquals.get(index ➜ 5): "x" at CollectionBehaviors.kt:19
+                    size(): 10 at SmallPersistentVector.kt:150
+                    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 5, 10) at SmallPersistentVector.kt:150
                 assertEquals("x", "x", message ➜ "") at ComparisonDSL.kt:21
               index = 6 at CollectionBehaviors.kt:18
             <iteration 7> at CollectionBehaviors.kt:18
@@ -2589,6 +3365,8 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                   propertyEquals.get(index ➜ 6): "y" at CollectionBehaviors.kt:19
                 getter.invoke(actual): "y" at ComparisonDSL.kt:21
                   propertyEquals.get(index ➜ 6): "y" at CollectionBehaviors.kt:19
+                    size(): 10 at SmallPersistentVector.kt:150
+                    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 6, 10) at SmallPersistentVector.kt:150
                 assertEquals("y", "y", message ➜ "") at ComparisonDSL.kt:21
               index = 7 at CollectionBehaviors.kt:18
             <iteration 8> at CollectionBehaviors.kt:18
@@ -2597,6 +3375,8 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                   propertyEquals.get(index ➜ 7): "z" at CollectionBehaviors.kt:19
                 getter.invoke(actual): "z" at ComparisonDSL.kt:21
                   propertyEquals.get(index ➜ 7): "z" at CollectionBehaviors.kt:19
+                    size(): 10 at SmallPersistentVector.kt:150
+                    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 7, 10) at SmallPersistentVector.kt:150
                 assertEquals("z", "z", message ➜ "") at ComparisonDSL.kt:21
               index = 8 at CollectionBehaviors.kt:18
             <iteration 9> at CollectionBehaviors.kt:18
@@ -2605,6 +3385,8 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                   propertyEquals.get(index ➜ 8): "1" at CollectionBehaviors.kt:19
                 getter.invoke(actual): "1" at ComparisonDSL.kt:21
                   propertyEquals.get(index ➜ 8): "1" at CollectionBehaviors.kt:19
+                    size(): 10 at SmallPersistentVector.kt:150
+                    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 8, 10) at SmallPersistentVector.kt:150
                 assertEquals("1", "1", message ➜ "") at ComparisonDSL.kt:21
               index = 9 at CollectionBehaviors.kt:18
             <iteration 10> at CollectionBehaviors.kt:18
@@ -2613,6 +3395,8 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                   propertyEquals.get(index ➜ 9): "2" at CollectionBehaviors.kt:19
                 getter.invoke(actual): "2" at ComparisonDSL.kt:21
                   propertyEquals.get(index ➜ 9): "2" at CollectionBehaviors.kt:19
+                    size(): 10 at SmallPersistentVector.kt:150
+                    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 9, 10) at SmallPersistentVector.kt:150
                 assertEquals("2", "2", message ➜ "") at ComparisonDSL.kt:21
               index = 10 at CollectionBehaviors.kt:18
           this_ = CompareContext@1 at CollectionBehaviors.kt:21
@@ -2631,13 +3415,24 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                 getter.invoke(actual): threw IndexOutOfBoundsException at ComparisonDSL.kt:25
                   propertyFailsWith.size(): 10 at CollectionBehaviors.kt:21
                   propertyFailsWith.get(10): threw IndexOutOfBoundsException at CollectionBehaviors.kt:21
+                    size(): 10 at SmallPersistentVector.kt:150
+                    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 10, 10): threw IndexOutOfBoundsException at SmallPersistentVector.kt:150
+                      new StringBuilder(): StringBuilder@1("") at ListImplementation.kt:15
+                      StringBuilder@1("").append("index: "): StringBuilder@1("index: ") at ListImplementation.kt:15
+                      StringBuilder@1("index: ").append(index ➜ 10): StringBuilder@1("index: 10") at ListImplementation.kt:15
+                      StringBuilder@1("index: 10").append(", size: "): StringBuilder@1("index: 10, size: ") at ListImplementation.kt:15
+                      StringBuilder@1("index: 10, size: ").append(size ➜ 10): StringBuilder@1("index: 10, size: 10") at ListImplementation.kt:15
+                      StringBuilder@1("index: 10, size: 10").toString(): "index: 10, size: 10" at ListImplementation.kt:15
+                      new IndexOutOfBoundsException("index: 10, size: 10"): IndexOutOfBoundsException@1 at ListImplementation.kt:15
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:32
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
               actualFail = IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
               exceptionPredicate.invoke(expectedFail): true at ComparisonDSL.kt:35
+                invoke(p1): true at ComparisonDSL.kt:24
               assertTrue(true, "expected fail") at ComparisonDSL.kt:35
               exceptionPredicate.invoke(actualFail): true at ComparisonDSL.kt:36
+                invoke(p1): true at ComparisonDSL.kt:24
               assertTrue(true, "actual fail") at ComparisonDSL.kt:36
           CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:23
             getter.invoke(expected): 0 at ComparisonDSL.kt:21
@@ -2645,7 +3440,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
               indexOf(propertyEquals, "a"): 0 at CollectionBehaviors.kt:23
             getter.invoke(actual): 0 at ComparisonDSL.kt:21
               getOrNull(propertyEquals, 0): "a" at CollectionBehaviors.kt:23
+                size(): 10 at SmallPersistentVector.kt:150
+                ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 0, 10) at SmallPersistentVector.kt:150
               indexOf(propertyEquals, "a"): 0 at CollectionBehaviors.kt:23
+                indexOf(buffer, element ➜ "a"): 0 at SmallPersistentVector.kt:135
             assertEquals(0, 0, message ➜ "") at ComparisonDSL.kt:21
           CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:24
             getter.invoke(expected): 4 at ComparisonDSL.kt:21
@@ -2653,7 +3451,10 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
               lastIndexOf(propertyEquals, "a"): 4 at CollectionBehaviors.kt:24
             getter.invoke(actual): 4 at ComparisonDSL.kt:21
               getOrNull(propertyEquals, 0): "a" at CollectionBehaviors.kt:24
+                size(): 10 at SmallPersistentVector.kt:150
+                ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 0, 10) at SmallPersistentVector.kt:150
               lastIndexOf(propertyEquals, "a"): 4 at CollectionBehaviors.kt:24
+                lastIndexOf(buffer, element ➜ "a"): 4 at SmallPersistentVector.kt:139
             assertEquals(4, 4, message ➜ "") at ComparisonDSL.kt:21
           listBehavior.propertyFails(CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:26
             assertFailEquals(CompareContext$$Lambda@1, CompareContext$$Lambda@1, null) at ComparisonDSL.kt:23
@@ -2669,6 +3470,19 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                 getter.invoke(actual): threw IndexOutOfBoundsException at ComparisonDSL.kt:23
                   propertyFails.size(): 10 at CollectionBehaviors.kt:26
                   propertyFails.subList(0, 11): threw IndexOutOfBoundsException at CollectionBehaviors.kt:26
+                    subList(fromIndex ➜ 0, toIndex ➜ 11): threw IndexOutOfBoundsException at AbstractPersistentList.kt:13
+                      PersistentList.DefaultImpls.subList(, fromIndex ➜ 0, toIndex ➜ 11): threw IndexOutOfBoundsException at AbstractPersistentList.kt:15
+                        ImmutableList.DefaultImpls.subList(, fromIndex ➜ 0, toIndex ➜ 11): threw IndexOutOfBoundsException at ImmutableList.kt:62
+                          new ImmutableList.SubList(, fromIndex ➜ 0, toIndex ➜ 11): threw IndexOutOfBoundsException at ImmutableList.kt:30
+                            new StringBuilder(): StringBuilder@1("") at ListImplementation.kt:29
+                            StringBuilder@1("").append("fromIndex: "): StringBuilder@1("fromIndex: ") at ListImplementation.kt:29
+                            StringBuilder@1("fromIndex: ").append(fromIndex ➜ 0): StringBuilder@1("fromIndex: 0") at ListImplementation.kt:29
+                            StringBuilder@1("fromIndex: 0").append(", toIndex: "): StringBuilder@1("fromIndex: 0, toIndex: ") at ListImplementation.kt:29
+                            StringBuilder@1("fromIndex: 0, toIndex: ").append(toIndex ➜ 11): StringBuilder@1("fromIndex: 0, toIndex: 11") at ListImplementation.kt:29
+                            StringBuilder@1("fromIndex: 0, toIndex: 11").append(", size: "): StringBuilder@1("fromIndex: 0, toIndex: 11, size: ") at ListImplementation.kt:29
+                            StringBuilder@1("fromIndex: 0, toIndex: 11, size: ").append(size ➜ 10): StringBuilder@1("fromIndex: 0, toIndex: 11, size: 10") at ListImplementation.kt:29
+                            StringBuilder@1("fromIndex: 0, toIndex: 11, size: 10").toString(): "fromIndex: 0, toIndex: 11, size: 10" at ListImplementation.kt:29
+                            new IndexOutOfBoundsException("fromIndex: 0, toIndex: 11, size: 10"): IndexOutOfBoundsException@1 at ListImplementation.kt:29
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:32
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
@@ -2689,6 +3503,19 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
               actual.invoke(): threw IndexOutOfBoundsException at ComparisonDSL.kt:32
                 getter.invoke(actual): threw IndexOutOfBoundsException at ComparisonDSL.kt:23
                   propertyFails.subList(-1, 0): threw IndexOutOfBoundsException at CollectionBehaviors.kt:27
+                    subList(fromIndex ➜ -1, toIndex ➜ 0): threw IndexOutOfBoundsException at AbstractPersistentList.kt:13
+                      PersistentList.DefaultImpls.subList(, fromIndex ➜ -1, toIndex ➜ 0): threw IndexOutOfBoundsException at AbstractPersistentList.kt:15
+                        ImmutableList.DefaultImpls.subList(, fromIndex ➜ -1, toIndex ➜ 0): threw IndexOutOfBoundsException at ImmutableList.kt:62
+                          new ImmutableList.SubList(, fromIndex ➜ -1, toIndex ➜ 0): threw IndexOutOfBoundsException at ImmutableList.kt:30
+                            new StringBuilder(): StringBuilder@1("") at ListImplementation.kt:29
+                            StringBuilder@1("").append("fromIndex: "): StringBuilder@1("fromIndex: ") at ListImplementation.kt:29
+                            StringBuilder@1("fromIndex: ").append(fromIndex ➜ -1): StringBuilder@1("fromIndex: -1") at ListImplementation.kt:29
+                            StringBuilder@1("fromIndex: -1").append(", toIndex: "): StringBuilder@1("fromIndex: -1, toIndex: ") at ListImplementation.kt:29
+                            StringBuilder@1("fromIndex: -1, toIndex: ").append(toIndex ➜ 0): StringBuilder@1("fromIndex: -1, toIndex: 0") at ListImplementation.kt:29
+                            StringBuilder@1("fromIndex: -1, toIndex: 0").append(", size: "): StringBuilder@1("fromIndex: -1, toIndex: 0, size: ") at ListImplementation.kt:29
+                            StringBuilder@1("fromIndex: -1, toIndex: 0, size: ").append(size ➜ 10): StringBuilder@1("fromIndex: -1, toIndex: 0, size: 10") at ListImplementation.kt:29
+                            StringBuilder@1("fromIndex: -1, toIndex: 0, size: 10").toString(): "fromIndex: -1, toIndex: 0, size: 10" at ListImplementation.kt:29
+                            new IndexOutOfBoundsException("fromIndex: -1, toIndex: 0, size: 10"): IndexOutOfBoundsException@1 at ListImplementation.kt:29
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:32
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
@@ -2704,4 +3531,48 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
             getter.invoke(actual): ImmutableList.SubList@1 at ComparisonDSL.kt:21
               propertyEquals.size(): 10 at CollectionBehaviors.kt:28
               propertyEquals.subList(0, 10): ImmutableList.SubList@1 at CollectionBehaviors.kt:28
+                subList(fromIndex ➜ 0, toIndex ➜ 10): ImmutableList.SubList@1 at AbstractPersistentList.kt:13
+                  PersistentList.DefaultImpls.subList(, fromIndex ➜ 0, toIndex ➜ 10): ImmutableList.SubList@1 at AbstractPersistentList.kt:15
+                    ImmutableList.DefaultImpls.subList(, fromIndex ➜ 0, toIndex ➜ 10): ImmutableList.SubList@1 at ImmutableList.kt:62
+                      new ImmutableList.SubList(, fromIndex ➜ 0, toIndex ➜ 10): ImmutableList.SubList@1 at ImmutableList.kt:30
             assertEquals(ArrayList.SubList@1, ImmutableList.SubList@1, message ➜ "") at ComparisonDSL.kt:21
+              ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 0, _size ➜ 10) at ImmutableList.kt:41
+              source.get(0): "a" at ImmutableList.kt:43
+                size(): 10 at SmallPersistentVector.kt:150
+                ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 0, 10) at SmallPersistentVector.kt:150
+              ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 1, _size ➜ 10) at ImmutableList.kt:41
+              source.get(1): "b" at ImmutableList.kt:43
+                size(): 10 at SmallPersistentVector.kt:150
+                ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 1, 10) at SmallPersistentVector.kt:150
+              ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, _size ➜ 10) at ImmutableList.kt:41
+              source.get(2): "c" at ImmutableList.kt:43
+                size(): 10 at SmallPersistentVector.kt:150
+                ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, 10) at SmallPersistentVector.kt:150
+              ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 3, _size ➜ 10) at ImmutableList.kt:41
+              source.get(3): "x" at ImmutableList.kt:43
+                size(): 10 at SmallPersistentVector.kt:150
+                ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 3, 10) at SmallPersistentVector.kt:150
+              ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 4, _size ➜ 10) at ImmutableList.kt:41
+              source.get(4): "a" at ImmutableList.kt:43
+                size(): 10 at SmallPersistentVector.kt:150
+                ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 4, 10) at SmallPersistentVector.kt:150
+              ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 5, _size ➜ 10) at ImmutableList.kt:41
+              source.get(5): "x" at ImmutableList.kt:43
+                size(): 10 at SmallPersistentVector.kt:150
+                ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 5, 10) at SmallPersistentVector.kt:150
+              ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 6, _size ➜ 10) at ImmutableList.kt:41
+              source.get(6): "y" at ImmutableList.kt:43
+                size(): 10 at SmallPersistentVector.kt:150
+                ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 6, 10) at SmallPersistentVector.kt:150
+              ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 7, _size ➜ 10) at ImmutableList.kt:41
+              source.get(7): "z" at ImmutableList.kt:43
+                size(): 10 at SmallPersistentVector.kt:150
+                ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 7, 10) at SmallPersistentVector.kt:150
+              ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 8, _size ➜ 10) at ImmutableList.kt:41
+              source.get(8): "1" at ImmutableList.kt:43
+                size(): 10 at SmallPersistentVector.kt:150
+                ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 8, 10) at SmallPersistentVector.kt:150
+              ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 9, _size ➜ 10) at ImmutableList.kt:41
+              source.get(9): "2" at ImmutableList.kt:43
+                size(): 10 at SmallPersistentVector.kt:150
+                ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 9, 10) at SmallPersistentVector.kt:150

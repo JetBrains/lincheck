@@ -5,19 +5,178 @@ ImmutableListTest.subListOfBuilder() at ImmutableListTest.kt:163
       persistentListOf(): SmallPersistentVector@1 at extensions.kt:623
         persistentVectorOf(): SmallPersistentVector@1 at extensions.kt:452
           SmallPersistentVector.getEMPTY(): SmallPersistentVector@1 at Utils.kt:18
+            SmallPersistentVector.getEMPTY(): SmallPersistentVector@1 at SmallPersistentVector.kt:163
       mutate = SmallPersistentVector@1 at extensions.kt:623
       mutate.builder(): PersistentVectorBuilder@1 at extensions.kt:41
+        new PersistentVectorBuilder(, null, buffer, 0): PersistentVectorBuilder@1 at SmallPersistentVector.kt:131
       it = PersistentVectorBuilder@1 at extensions.kt:41
       toCollection(toPersistentList ➜ "abcxaxyz12", it): PersistentVectorBuilder@1 at extensions.kt:623
+        modCount = 1 at PersistentVectorBuilder.kt:118
+        tailSize(): 0 at PersistentVectorBuilder.kt:120
+          size(): 0 at PersistentVectorBuilder.kt:77
+          tailSize(0): 0 at PersistentVectorBuilder.kt:77
+        tailSize = 0 at PersistentVectorBuilder.kt:120
+        makeMutable(tail): Object;@1 at PersistentVectorBuilder.kt:122
+          isMutable(buffer): false at PersistentVectorBuilder.kt:91
+          mutableBuffer(): Object;@1 at PersistentVectorBuilder.kt:94
+            buffer = Object;@1 at PersistentVectorBuilder.kt:112
+            buffer[32] = MutabilityOwnership@1 at PersistentVectorBuilder.kt:113
+          coerceAtMost(buffer.length ➜ 0, 32): 0 at PersistentVectorBuilder.kt:94
+          copyInto(buffer, Object;@1, 0, 0, 0, 6, null): Object;@1 at PersistentVectorBuilder.kt:94
+        mutableTail = Object;@1 at PersistentVectorBuilder.kt:122
+        mutableTail[0] = 'a' at PersistentVectorBuilder.kt:123
+        setTail(mutableTail) at PersistentVectorBuilder.kt:124
+          builtVector = null at PersistentVectorBuilder.kt:33
+          tail = Object;@1 at PersistentVectorBuilder.kt:34
+        size(): 0 at PersistentVectorBuilder.kt:125
+        size = 1 at PersistentVectorBuilder.kt:125
+        modCount = 2 at PersistentVectorBuilder.kt:118
+        tailSize(): 1 at PersistentVectorBuilder.kt:120
+          size(): 1 at PersistentVectorBuilder.kt:77
+          tailSize(1): 1 at PersistentVectorBuilder.kt:77
+        tailSize = 1 at PersistentVectorBuilder.kt:120
+        makeMutable(tail): Object;@1 at PersistentVectorBuilder.kt:122
+          isMutable(buffer): true at PersistentVectorBuilder.kt:91
+        mutableTail = Object;@1 at PersistentVectorBuilder.kt:122
+        mutableTail[1] = 'b' at PersistentVectorBuilder.kt:123
+        setTail(mutableTail) at PersistentVectorBuilder.kt:124
+        size(): 1 at PersistentVectorBuilder.kt:125
+        size = 2 at PersistentVectorBuilder.kt:125
+        modCount = 3 at PersistentVectorBuilder.kt:118
+        tailSize(): 2 at PersistentVectorBuilder.kt:120
+          size(): 2 at PersistentVectorBuilder.kt:77
+          tailSize(2): 2 at PersistentVectorBuilder.kt:77
+        tailSize = 2 at PersistentVectorBuilder.kt:120
+        makeMutable(tail): Object;@1 at PersistentVectorBuilder.kt:122
+          isMutable(buffer): true at PersistentVectorBuilder.kt:91
+        mutableTail = Object;@1 at PersistentVectorBuilder.kt:122
+        mutableTail[2] = 'c' at PersistentVectorBuilder.kt:123
+        setTail(mutableTail) at PersistentVectorBuilder.kt:124
+        size(): 2 at PersistentVectorBuilder.kt:125
+        size = 3 at PersistentVectorBuilder.kt:125
+        modCount = 4 at PersistentVectorBuilder.kt:118
+        tailSize(): 3 at PersistentVectorBuilder.kt:120
+          size(): 3 at PersistentVectorBuilder.kt:77
+          tailSize(3): 3 at PersistentVectorBuilder.kt:77
+        tailSize = 3 at PersistentVectorBuilder.kt:120
+        makeMutable(tail): Object;@1 at PersistentVectorBuilder.kt:122
+          isMutable(buffer): true at PersistentVectorBuilder.kt:91
+        mutableTail = Object;@1 at PersistentVectorBuilder.kt:122
+        mutableTail[3] = 'x' at PersistentVectorBuilder.kt:123
+        setTail(mutableTail) at PersistentVectorBuilder.kt:124
+        size(): 3 at PersistentVectorBuilder.kt:125
+        size = 4 at PersistentVectorBuilder.kt:125
+        modCount = 5 at PersistentVectorBuilder.kt:118
+        tailSize(): 4 at PersistentVectorBuilder.kt:120
+          size(): 4 at PersistentVectorBuilder.kt:77
+          tailSize(4): 4 at PersistentVectorBuilder.kt:77
+        tailSize = 4 at PersistentVectorBuilder.kt:120
+        makeMutable(tail): Object;@1 at PersistentVectorBuilder.kt:122
+          isMutable(buffer): true at PersistentVectorBuilder.kt:91
+        mutableTail = Object;@1 at PersistentVectorBuilder.kt:122
+        mutableTail[4] = 'a' at PersistentVectorBuilder.kt:123
+        setTail(mutableTail) at PersistentVectorBuilder.kt:124
+        size(): 4 at PersistentVectorBuilder.kt:125
+        size = 5 at PersistentVectorBuilder.kt:125
+        modCount = 6 at PersistentVectorBuilder.kt:118
+        tailSize(): 5 at PersistentVectorBuilder.kt:120
+          size(): 5 at PersistentVectorBuilder.kt:77
+          tailSize(5): 5 at PersistentVectorBuilder.kt:77
+        tailSize = 5 at PersistentVectorBuilder.kt:120
+        makeMutable(tail): Object;@1 at PersistentVectorBuilder.kt:122
+          isMutable(buffer): true at PersistentVectorBuilder.kt:91
+        mutableTail = Object;@1 at PersistentVectorBuilder.kt:122
+        mutableTail[5] = 'x' at PersistentVectorBuilder.kt:123
+        setTail(mutableTail) at PersistentVectorBuilder.kt:124
+        size(): 5 at PersistentVectorBuilder.kt:125
+        size = 6 at PersistentVectorBuilder.kt:125
+        modCount = 7 at PersistentVectorBuilder.kt:118
+        tailSize(): 6 at PersistentVectorBuilder.kt:120
+          size(): 6 at PersistentVectorBuilder.kt:77
+          tailSize(6): 6 at PersistentVectorBuilder.kt:77
+        tailSize = 6 at PersistentVectorBuilder.kt:120
+        makeMutable(tail): Object;@1 at PersistentVectorBuilder.kt:122
+          isMutable(buffer): true at PersistentVectorBuilder.kt:91
+        mutableTail = Object;@1 at PersistentVectorBuilder.kt:122
+        mutableTail[6] = 'y' at PersistentVectorBuilder.kt:123
+        setTail(mutableTail) at PersistentVectorBuilder.kt:124
+        size(): 6 at PersistentVectorBuilder.kt:125
+        size = 7 at PersistentVectorBuilder.kt:125
+        modCount = 8 at PersistentVectorBuilder.kt:118
+        tailSize(): 7 at PersistentVectorBuilder.kt:120
+          size(): 7 at PersistentVectorBuilder.kt:77
+          tailSize(7): 7 at PersistentVectorBuilder.kt:77
+        tailSize = 7 at PersistentVectorBuilder.kt:120
+        makeMutable(tail): Object;@1 at PersistentVectorBuilder.kt:122
+          isMutable(buffer): true at PersistentVectorBuilder.kt:91
+        mutableTail = Object;@1 at PersistentVectorBuilder.kt:122
+        mutableTail[7] = 'z' at PersistentVectorBuilder.kt:123
+        setTail(mutableTail) at PersistentVectorBuilder.kt:124
+        size(): 7 at PersistentVectorBuilder.kt:125
+        size = 8 at PersistentVectorBuilder.kt:125
+        modCount = 9 at PersistentVectorBuilder.kt:118
+        tailSize(): 8 at PersistentVectorBuilder.kt:120
+          size(): 8 at PersistentVectorBuilder.kt:77
+          tailSize(8): 8 at PersistentVectorBuilder.kt:77
+        tailSize = 8 at PersistentVectorBuilder.kt:120
+        makeMutable(tail): Object;@1 at PersistentVectorBuilder.kt:122
+          isMutable(buffer): true at PersistentVectorBuilder.kt:91
+        mutableTail = Object;@1 at PersistentVectorBuilder.kt:122
+        mutableTail[8] = '1' at PersistentVectorBuilder.kt:123
+        setTail(mutableTail) at PersistentVectorBuilder.kt:124
+        size(): 8 at PersistentVectorBuilder.kt:125
+        size = 9 at PersistentVectorBuilder.kt:125
+        modCount = 10 at PersistentVectorBuilder.kt:118
+        tailSize(): 9 at PersistentVectorBuilder.kt:120
+          size(): 9 at PersistentVectorBuilder.kt:77
+          tailSize(9): 9 at PersistentVectorBuilder.kt:77
+        tailSize = 9 at PersistentVectorBuilder.kt:120
+        makeMutable(tail): Object;@1 at PersistentVectorBuilder.kt:122
+          isMutable(buffer): true at PersistentVectorBuilder.kt:91
+        mutableTail = Object;@1 at PersistentVectorBuilder.kt:122
+        mutableTail[9] = '2' at PersistentVectorBuilder.kt:123
+        setTail(mutableTail) at PersistentVectorBuilder.kt:124
+        size(): 9 at PersistentVectorBuilder.kt:125
+        size = 10 at PersistentVectorBuilder.kt:125
       PersistentVectorBuilder@1.build(): SmallPersistentVector@1 at extensions.kt:41
+        build$lambda$0 = PersistentVectorBuilder@1 at PersistentVectorBuilder.kt:44
+        root = null at PersistentVectorBuilder.kt:45
+        tail = Object;@1 at PersistentVectorBuilder.kt:46
+        new MutabilityOwnership(): MutabilityOwnership@1 at PersistentVectorBuilder.kt:47
+        build$lambda$0.ownership = MutabilityOwnership@1 at PersistentVectorBuilder.kt:47
+        build$lambda$0.size(): 10 at PersistentVectorBuilder.kt:52
+        Arrays.copyOf(tail, 10): Object;@1 at PersistentVectorBuilder.kt:52
+        new SmallPersistentVector(Object;@1): SmallPersistentVector@1 at PersistentVectorBuilder.kt:52
+        newlyBuiltVector = SmallPersistentVector@1 at PersistentVectorBuilder.kt:48
+        build$lambda$0.builtVector = SmallPersistentVector@1 at PersistentVectorBuilder.kt:57
   toPersistentList(SmallPersistentVector@1): SmallPersistentVector@1 at ImmutableListTest.kt:163
   list = SmallPersistentVector@1 at ImmutableListTest.kt:163
   list.builder(): PersistentVectorBuilder@1 at ImmutableListTest.kt:164
+    new PersistentVectorBuilder(, null, buffer, 0): PersistentVectorBuilder@1 at SmallPersistentVector.kt:131
   builder = PersistentVectorBuilder@1 at ImmutableListTest.kt:164
   subList = null at ImmutableListTest.kt:168
   builder.subList(2, 5): AbstractList.SubList@1 at ImmutableListTest.kt:168
   subList = AbstractList.SubList@1 at ImmutableListTest.kt:168
   builder.set(4, 'x'): 'a' at ImmutableListTest.kt:169
+    size(): 10 at PersistentVectorBuilder.kt:936
+    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 4, 10) at PersistentVectorBuilder.kt:936
+    rootSize(): 0 at PersistentVectorBuilder.kt:937
+      size(): 10 at PersistentVectorBuilder.kt:63
+    makeMutable(tail): Object;@1 at PersistentVectorBuilder.kt:938
+      isMutable(buffer): false at PersistentVectorBuilder.kt:91
+      mutableBuffer(): Object;@1 at PersistentVectorBuilder.kt:94
+        buffer = Object;@1 at PersistentVectorBuilder.kt:112
+        buffer[32] = MutabilityOwnership@1 at PersistentVectorBuilder.kt:113
+      coerceAtMost(buffer.length ➜ 10, 32): 10 at PersistentVectorBuilder.kt:94
+      copyInto(buffer, Object;@1, 0, 0, 10, 6, null): Object;@1 at PersistentVectorBuilder.kt:94
+    mutableTail = Object;@1 at PersistentVectorBuilder.kt:938
+    modCount = 1 at PersistentVectorBuilder.kt:941
+    tailIndex = 4 at PersistentVectorBuilder.kt:943
+    oldElement = 'a' at PersistentVectorBuilder.kt:944
+    mutableTail[4] = 'x' at PersistentVectorBuilder.kt:945
+    setTail(mutableTail) at PersistentVectorBuilder.kt:946
+      builtVector = null at PersistentVectorBuilder.kt:33
+      tail = Object;@1 at PersistentVectorBuilder.kt:34
   platform = TestPlatform.JVM at ImmutableListTest.kt:170
   getCurrentPlatform(): TestPlatform.JVM at testUtils.kt:34
   joinToString(subList, "", null, null, 0, null, null, 62, null): threw ConcurrentModificationException at ImmutableListTest.kt:171
@@ -27,12 +186,240 @@ ImmutableListTest.subListOfBuilder() at ImmutableListTest.kt:163
   builder.subList(2, 5): AbstractList.SubList@1 at ImmutableListTest.kt:176
   subList = AbstractList.SubList@1 at ImmutableListTest.kt:176
   joinToString(subList, "", null, null, 0, null, null, 62, null): "cxx" at ImmutableListTest.kt:177
+    size(): 10 at PersistentVectorBuilder.kt:987
+    ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ 2, 10) at PersistentVectorBuilder.kt:987
+    new PersistentVectorMutableIterator(, index ➜ 2): PersistentVectorMutableIterator@1 at PersistentVectorBuilder.kt:988
+      builder.getRoot$kotlinx_collections_immutable(): null at PersistentVectorMutableIterator.kt:82
+      root = null at PersistentVectorMutableIterator.kt:82
+      trieIterator = null at PersistentVectorMutableIterator.kt:84
+    checkForComodification() at PersistentVectorMutableIterator.kt:58
+      builder.getModCount$kotlinx_collections_immutable(): 1 at PersistentVectorMutableIterator.kt:126
+    checkHasNext$kotlinx_collections_immutable() at PersistentVectorMutableIterator.kt:59
+      hasNext(): true at AbstractListIterator.kt:26
+    getIndex(): 2 at PersistentVectorMutableIterator.kt:61
+    lastIteratedIndex = 2 at PersistentVectorMutableIterator.kt:61
+    builder.getTail$kotlinx_collections_immutable(): Object;@1 at PersistentVectorMutableIterator.kt:64
+    getIndex(): 2 at PersistentVectorMutableIterator.kt:64
+    setIndex(3) at PersistentVectorMutableIterator.kt:64
+      index = 3 at AbstractListIterator.kt:8
+    checkForComodification() at PersistentVectorMutableIterator.kt:58
+      builder.getModCount$kotlinx_collections_immutable(): 1 at PersistentVectorMutableIterator.kt:126
+    checkHasNext$kotlinx_collections_immutable() at PersistentVectorMutableIterator.kt:59
+      hasNext(): true at AbstractListIterator.kt:26
+    getIndex(): 3 at PersistentVectorMutableIterator.kt:61
+    lastIteratedIndex = 3 at PersistentVectorMutableIterator.kt:61
+    builder.getTail$kotlinx_collections_immutable(): Object;@1 at PersistentVectorMutableIterator.kt:64
+    getIndex(): 3 at PersistentVectorMutableIterator.kt:64
+    setIndex(4) at PersistentVectorMutableIterator.kt:64
+      index = 4 at AbstractListIterator.kt:8
+    checkForComodification() at PersistentVectorMutableIterator.kt:58
+      builder.getModCount$kotlinx_collections_immutable(): 1 at PersistentVectorMutableIterator.kt:126
+    checkHasNext$kotlinx_collections_immutable() at PersistentVectorMutableIterator.kt:59
+      hasNext(): true at AbstractListIterator.kt:26
+    getIndex(): 4 at PersistentVectorMutableIterator.kt:61
+    lastIteratedIndex = 4 at PersistentVectorMutableIterator.kt:61
+    builder.getTail$kotlinx_collections_immutable(): Object;@1 at PersistentVectorMutableIterator.kt:64
+    getIndex(): 4 at PersistentVectorMutableIterator.kt:64
+    setIndex(5) at PersistentVectorMutableIterator.kt:64
+      index = 5 at AbstractListIterator.kt:8
   assertEquals("cxx", "cxx", null, 4, null) at ImmutableListTest.kt:177
   builder.set(4, 'b'): 'x' at ImmutableListTest.kt:178
+    size(): 10 at PersistentVectorBuilder.kt:936
+    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 4, 10) at PersistentVectorBuilder.kt:936
+    rootSize(): 0 at PersistentVectorBuilder.kt:937
+      size(): 10 at PersistentVectorBuilder.kt:63
+    makeMutable(tail): Object;@1 at PersistentVectorBuilder.kt:938
+      isMutable(buffer): true at PersistentVectorBuilder.kt:91
+    mutableTail = Object;@1 at PersistentVectorBuilder.kt:938
+    tailIndex = 4 at PersistentVectorBuilder.kt:943
+    oldElement = 'x' at PersistentVectorBuilder.kt:944
+    mutableTail[4] = 'b' at PersistentVectorBuilder.kt:945
+    setTail(mutableTail) at PersistentVectorBuilder.kt:946
   joinToString(subList, "", null, null, 0, null, null, 62, null): "cxb" at ImmutableListTest.kt:179
+    size(): 10 at PersistentVectorBuilder.kt:987
+    ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ 2, 10) at PersistentVectorBuilder.kt:987
+    new PersistentVectorMutableIterator(, index ➜ 2): PersistentVectorMutableIterator@1 at PersistentVectorBuilder.kt:988
+      builder.getRoot$kotlinx_collections_immutable(): null at PersistentVectorMutableIterator.kt:82
+      root = null at PersistentVectorMutableIterator.kt:82
+      trieIterator = null at PersistentVectorMutableIterator.kt:84
+    checkForComodification() at PersistentVectorMutableIterator.kt:58
+      builder.getModCount$kotlinx_collections_immutable(): 1 at PersistentVectorMutableIterator.kt:126
+    checkHasNext$kotlinx_collections_immutable() at PersistentVectorMutableIterator.kt:59
+      hasNext(): true at AbstractListIterator.kt:26
+    getIndex(): 2 at PersistentVectorMutableIterator.kt:61
+    lastIteratedIndex = 2 at PersistentVectorMutableIterator.kt:61
+    builder.getTail$kotlinx_collections_immutable(): Object;@1 at PersistentVectorMutableIterator.kt:64
+    getIndex(): 2 at PersistentVectorMutableIterator.kt:64
+    setIndex(3) at PersistentVectorMutableIterator.kt:64
+      index = 3 at AbstractListIterator.kt:8
+    checkForComodification() at PersistentVectorMutableIterator.kt:58
+      builder.getModCount$kotlinx_collections_immutable(): 1 at PersistentVectorMutableIterator.kt:126
+    checkHasNext$kotlinx_collections_immutable() at PersistentVectorMutableIterator.kt:59
+      hasNext(): true at AbstractListIterator.kt:26
+    getIndex(): 3 at PersistentVectorMutableIterator.kt:61
+    lastIteratedIndex = 3 at PersistentVectorMutableIterator.kt:61
+    builder.getTail$kotlinx_collections_immutable(): Object;@1 at PersistentVectorMutableIterator.kt:64
+    getIndex(): 3 at PersistentVectorMutableIterator.kt:64
+    setIndex(4) at PersistentVectorMutableIterator.kt:64
+      index = 4 at AbstractListIterator.kt:8
+    checkForComodification() at PersistentVectorMutableIterator.kt:58
+      builder.getModCount$kotlinx_collections_immutable(): 1 at PersistentVectorMutableIterator.kt:126
+    checkHasNext$kotlinx_collections_immutable() at PersistentVectorMutableIterator.kt:59
+      hasNext(): true at AbstractListIterator.kt:26
+    getIndex(): 4 at PersistentVectorMutableIterator.kt:61
+    lastIteratedIndex = 4 at PersistentVectorMutableIterator.kt:61
+    builder.getTail$kotlinx_collections_immutable(): Object;@1 at PersistentVectorMutableIterator.kt:64
+    getIndex(): 4 at PersistentVectorMutableIterator.kt:64
+    setIndex(5) at PersistentVectorMutableIterator.kt:64
+      index = 5 at AbstractListIterator.kt:8
   assertEquals("cxb", "cxb", null, 4, null) at ImmutableListTest.kt:179
   subList.remove(0): 'c' at ImmutableListTest.kt:180
+    size(): 10 at PersistentVectorBuilder.kt:552
+    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, 10) at PersistentVectorBuilder.kt:552
+    modCount = 2 at PersistentVectorBuilder.kt:554
+    rootSize(): 0 at PersistentVectorBuilder.kt:556
+      size(): 10 at PersistentVectorBuilder.kt:63
+    rootSize = 0 at PersistentVectorBuilder.kt:556
+    removeFromTailAt(root, rootSize ➜ 0, rootShift ➜ 0, 2): 'c' at PersistentVectorBuilder.kt:559
+      size(): 10 at PersistentVectorBuilder.kt:569
+      tailSize = 10 at PersistentVectorBuilder.kt:569
+      assert(true) at PersistentVectorBuilder.kt:570
+      removedElement = null at PersistentVectorBuilder.kt:572
+      removedElement = 'c' at PersistentVectorBuilder.kt:577
+      makeMutable(tail): Object;@1 at PersistentVectorBuilder.kt:578
+        isMutable(buffer): true at PersistentVectorBuilder.kt:91
+      copyInto(tail, Object;@1, index ➜ 2, 3, tailSize ➜ 10): Object;@1 at PersistentVectorBuilder.kt:578
+      mutableTail = Object;@1 at PersistentVectorBuilder.kt:578
+      mutableTail[9] = null at PersistentVectorBuilder.kt:579
+      setRoot(root) at PersistentVectorBuilder.kt:580
+      setTail(mutableTail) at PersistentVectorBuilder.kt:581
+      size = 9 at PersistentVectorBuilder.kt:582
+      rootShift = 0 at PersistentVectorBuilder.kt:583
   joinToString(subList, "", null, null, 0, null, null, 62, null): "xb" at ImmutableListTest.kt:181
+    size(): 9 at PersistentVectorBuilder.kt:987
+    ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ 2, 9) at PersistentVectorBuilder.kt:987
+    new PersistentVectorMutableIterator(, index ➜ 2): PersistentVectorMutableIterator@1 at PersistentVectorBuilder.kt:988
+      builder.getRoot$kotlinx_collections_immutable(): null at PersistentVectorMutableIterator.kt:82
+      root = null at PersistentVectorMutableIterator.kt:82
+      trieIterator = null at PersistentVectorMutableIterator.kt:84
+    checkForComodification() at PersistentVectorMutableIterator.kt:58
+      builder.getModCount$kotlinx_collections_immutable(): 2 at PersistentVectorMutableIterator.kt:126
+    checkHasNext$kotlinx_collections_immutable() at PersistentVectorMutableIterator.kt:59
+      hasNext(): true at AbstractListIterator.kt:26
+    getIndex(): 2 at PersistentVectorMutableIterator.kt:61
+    lastIteratedIndex = 2 at PersistentVectorMutableIterator.kt:61
+    builder.getTail$kotlinx_collections_immutable(): Object;@1 at PersistentVectorMutableIterator.kt:64
+    getIndex(): 2 at PersistentVectorMutableIterator.kt:64
+    setIndex(3) at PersistentVectorMutableIterator.kt:64
+      index = 3 at AbstractListIterator.kt:8
+    checkForComodification() at PersistentVectorMutableIterator.kt:58
+      builder.getModCount$kotlinx_collections_immutable(): 2 at PersistentVectorMutableIterator.kt:126
+    checkHasNext$kotlinx_collections_immutable() at PersistentVectorMutableIterator.kt:59
+      hasNext(): true at AbstractListIterator.kt:26
+    getIndex(): 3 at PersistentVectorMutableIterator.kt:61
+    lastIteratedIndex = 3 at PersistentVectorMutableIterator.kt:61
+    builder.getTail$kotlinx_collections_immutable(): Object;@1 at PersistentVectorMutableIterator.kt:64
+    getIndex(): 3 at PersistentVectorMutableIterator.kt:64
+    setIndex(4) at PersistentVectorMutableIterator.kt:64
+      index = 4 at AbstractListIterator.kt:8
   assertEquals("xb", "xb", null, 4, null) at ImmutableListTest.kt:181
   joinToString(builder, "", null, null, 0, null, null, 62, null): "abxbxyz12" at ImmutableListTest.kt:182
+    listIterator(): PersistentVectorMutableIterator@1 at PersistentVectorBuilder.kt:979
+      listIterator(0): PersistentVectorMutableIterator@1 at PersistentVectorBuilder.kt:983
+        size(): 9 at PersistentVectorBuilder.kt:987
+        ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ 0, 9) at PersistentVectorBuilder.kt:987
+        new PersistentVectorMutableIterator(, index ➜ 0): PersistentVectorMutableIterator@1 at PersistentVectorBuilder.kt:988
+          builder.getRoot$kotlinx_collections_immutable(): null at PersistentVectorMutableIterator.kt:82
+          root = null at PersistentVectorMutableIterator.kt:82
+          trieIterator = null at PersistentVectorMutableIterator.kt:84
+    checkForComodification() at PersistentVectorMutableIterator.kt:58
+      builder.getModCount$kotlinx_collections_immutable(): 2 at PersistentVectorMutableIterator.kt:126
+    checkHasNext$kotlinx_collections_immutable() at PersistentVectorMutableIterator.kt:59
+      hasNext(): true at AbstractListIterator.kt:26
+    getIndex(): 0 at PersistentVectorMutableIterator.kt:61
+    lastIteratedIndex = 0 at PersistentVectorMutableIterator.kt:61
+    builder.getTail$kotlinx_collections_immutable(): Object;@1 at PersistentVectorMutableIterator.kt:64
+    getIndex(): 0 at PersistentVectorMutableIterator.kt:64
+    setIndex(1) at PersistentVectorMutableIterator.kt:64
+      index = 1 at AbstractListIterator.kt:8
+    checkForComodification() at PersistentVectorMutableIterator.kt:58
+      builder.getModCount$kotlinx_collections_immutable(): 2 at PersistentVectorMutableIterator.kt:126
+    checkHasNext$kotlinx_collections_immutable() at PersistentVectorMutableIterator.kt:59
+      hasNext(): true at AbstractListIterator.kt:26
+    getIndex(): 1 at PersistentVectorMutableIterator.kt:61
+    lastIteratedIndex = 1 at PersistentVectorMutableIterator.kt:61
+    builder.getTail$kotlinx_collections_immutable(): Object;@1 at PersistentVectorMutableIterator.kt:64
+    getIndex(): 1 at PersistentVectorMutableIterator.kt:64
+    setIndex(2) at PersistentVectorMutableIterator.kt:64
+      index = 2 at AbstractListIterator.kt:8
+    checkForComodification() at PersistentVectorMutableIterator.kt:58
+      builder.getModCount$kotlinx_collections_immutable(): 2 at PersistentVectorMutableIterator.kt:126
+    checkHasNext$kotlinx_collections_immutable() at PersistentVectorMutableIterator.kt:59
+      hasNext(): true at AbstractListIterator.kt:26
+    getIndex(): 2 at PersistentVectorMutableIterator.kt:61
+    lastIteratedIndex = 2 at PersistentVectorMutableIterator.kt:61
+    builder.getTail$kotlinx_collections_immutable(): Object;@1 at PersistentVectorMutableIterator.kt:64
+    getIndex(): 2 at PersistentVectorMutableIterator.kt:64
+    setIndex(3) at PersistentVectorMutableIterator.kt:64
+      index = 3 at AbstractListIterator.kt:8
+    checkForComodification() at PersistentVectorMutableIterator.kt:58
+      builder.getModCount$kotlinx_collections_immutable(): 2 at PersistentVectorMutableIterator.kt:126
+    checkHasNext$kotlinx_collections_immutable() at PersistentVectorMutableIterator.kt:59
+      hasNext(): true at AbstractListIterator.kt:26
+    getIndex(): 3 at PersistentVectorMutableIterator.kt:61
+    lastIteratedIndex = 3 at PersistentVectorMutableIterator.kt:61
+    builder.getTail$kotlinx_collections_immutable(): Object;@1 at PersistentVectorMutableIterator.kt:64
+    getIndex(): 3 at PersistentVectorMutableIterator.kt:64
+    setIndex(4) at PersistentVectorMutableIterator.kt:64
+      index = 4 at AbstractListIterator.kt:8
+    checkForComodification() at PersistentVectorMutableIterator.kt:58
+      builder.getModCount$kotlinx_collections_immutable(): 2 at PersistentVectorMutableIterator.kt:126
+    checkHasNext$kotlinx_collections_immutable() at PersistentVectorMutableIterator.kt:59
+      hasNext(): true at AbstractListIterator.kt:26
+    getIndex(): 4 at PersistentVectorMutableIterator.kt:61
+    lastIteratedIndex = 4 at PersistentVectorMutableIterator.kt:61
+    builder.getTail$kotlinx_collections_immutable(): Object;@1 at PersistentVectorMutableIterator.kt:64
+    getIndex(): 4 at PersistentVectorMutableIterator.kt:64
+    setIndex(5) at PersistentVectorMutableIterator.kt:64
+      index = 5 at AbstractListIterator.kt:8
+    checkForComodification() at PersistentVectorMutableIterator.kt:58
+      builder.getModCount$kotlinx_collections_immutable(): 2 at PersistentVectorMutableIterator.kt:126
+    checkHasNext$kotlinx_collections_immutable() at PersistentVectorMutableIterator.kt:59
+      hasNext(): true at AbstractListIterator.kt:26
+    getIndex(): 5 at PersistentVectorMutableIterator.kt:61
+    lastIteratedIndex = 5 at PersistentVectorMutableIterator.kt:61
+    builder.getTail$kotlinx_collections_immutable(): Object;@1 at PersistentVectorMutableIterator.kt:64
+    getIndex(): 5 at PersistentVectorMutableIterator.kt:64
+    setIndex(6) at PersistentVectorMutableIterator.kt:64
+      index = 6 at AbstractListIterator.kt:8
+    checkForComodification() at PersistentVectorMutableIterator.kt:58
+      builder.getModCount$kotlinx_collections_immutable(): 2 at PersistentVectorMutableIterator.kt:126
+    checkHasNext$kotlinx_collections_immutable() at PersistentVectorMutableIterator.kt:59
+      hasNext(): true at AbstractListIterator.kt:26
+    getIndex(): 6 at PersistentVectorMutableIterator.kt:61
+    lastIteratedIndex = 6 at PersistentVectorMutableIterator.kt:61
+    builder.getTail$kotlinx_collections_immutable(): Object;@1 at PersistentVectorMutableIterator.kt:64
+    getIndex(): 6 at PersistentVectorMutableIterator.kt:64
+    setIndex(7) at PersistentVectorMutableIterator.kt:64
+      index = 7 at AbstractListIterator.kt:8
+    checkForComodification() at PersistentVectorMutableIterator.kt:58
+      builder.getModCount$kotlinx_collections_immutable(): 2 at PersistentVectorMutableIterator.kt:126
+    checkHasNext$kotlinx_collections_immutable() at PersistentVectorMutableIterator.kt:59
+      hasNext(): true at AbstractListIterator.kt:26
+    getIndex(): 7 at PersistentVectorMutableIterator.kt:61
+    lastIteratedIndex = 7 at PersistentVectorMutableIterator.kt:61
+    builder.getTail$kotlinx_collections_immutable(): Object;@1 at PersistentVectorMutableIterator.kt:64
+    getIndex(): 7 at PersistentVectorMutableIterator.kt:64
+    setIndex(8) at PersistentVectorMutableIterator.kt:64
+      index = 8 at AbstractListIterator.kt:8
+    checkForComodification() at PersistentVectorMutableIterator.kt:58
+      builder.getModCount$kotlinx_collections_immutable(): 2 at PersistentVectorMutableIterator.kt:126
+    checkHasNext$kotlinx_collections_immutable() at PersistentVectorMutableIterator.kt:59
+      hasNext(): true at AbstractListIterator.kt:26
+    getIndex(): 8 at PersistentVectorMutableIterator.kt:61
+    lastIteratedIndex = 8 at PersistentVectorMutableIterator.kt:61
+    builder.getTail$kotlinx_collections_immutable(): Object;@1 at PersistentVectorMutableIterator.kt:64
+    getIndex(): 8 at PersistentVectorMutableIterator.kt:64
+    setIndex(9) at PersistentVectorMutableIterator.kt:64
+      index = 9 at AbstractListIterator.kt:8
   assertEquals("abxbxyz12", "abxbxyz12", null, 4, null) at ImmutableListTest.kt:182

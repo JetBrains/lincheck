@@ -3,21 +3,60 @@ ImmutableListTest.covariantTyping() at ImmutableListTest.kt:219
   persistentListOf(): SmallPersistentVector@1 at ImmutableListTest.kt:219
     persistentVectorOf(): SmallPersistentVector@1 at extensions.kt:452
       SmallPersistentVector.getEMPTY(): SmallPersistentVector@1 at Utils.kt:18
+        SmallPersistentVector.getEMPTY(): SmallPersistentVector@1 at SmallPersistentVector.kt:163
   listNothing = SmallPersistentVector@1 at ImmutableListTest.kt:219
   plus = SmallPersistentVector@1 at ImmutableListTest.kt:221
   element = "x" at ImmutableListTest.kt:221
   plus.add(element ➜ "x"): SmallPersistentVector@1 at extensions.kt:138
+    size(): 0 at SmallPersistentVector.kt:29
+    size(): 0 at SmallPersistentVector.kt:30
+    Arrays.copyOf(buffer, 1): Object;@1 at SmallPersistentVector.kt:30
+    newBuffer = Object;@1 at SmallPersistentVector.kt:30
+    size(): 0 at SmallPersistentVector.kt:31
+    newBuffer[0] = "x" at SmallPersistentVector.kt:31
+    new SmallPersistentVector(newBuffer): SmallPersistentVector@1 at SmallPersistentVector.kt:32
   listS = SmallPersistentVector@1 at ImmutableListTest.kt:221
   plus = SmallPersistentVector@1 at ImmutableListTest.kt:222
   element = null at ImmutableListTest.kt:222
   plus.add(element): SmallPersistentVector@1 at extensions.kt:138
+    size(): 1 at SmallPersistentVector.kt:29
+    size(): 1 at SmallPersistentVector.kt:30
+    Arrays.copyOf(buffer, 2): Object;@1 at SmallPersistentVector.kt:30
+    newBuffer = Object;@1 at SmallPersistentVector.kt:30
+    size(): 1 at SmallPersistentVector.kt:31
+    newBuffer[1] = null at SmallPersistentVector.kt:31
+    new SmallPersistentVector(newBuffer): SmallPersistentVector@1 at SmallPersistentVector.kt:32
   listSN = SmallPersistentVector@1 at ImmutableListTest.kt:222
   plus = SmallPersistentVector@1 at ImmutableListTest.kt:223
   element = 1 at ImmutableListTest.kt:223
   plus.add(element ➜ 1): SmallPersistentVector@1 at extensions.kt:138
+    size(): 2 at SmallPersistentVector.kt:29
+    size(): 2 at SmallPersistentVector.kt:30
+    Arrays.copyOf(buffer, 3): Object;@1 at SmallPersistentVector.kt:30
+    newBuffer = Object;@1 at SmallPersistentVector.kt:30
+    size(): 2 at SmallPersistentVector.kt:31
+    newBuffer[2] = 1 at SmallPersistentVector.kt:31
+    new SmallPersistentVector(newBuffer): SmallPersistentVector@1 at SmallPersistentVector.kt:32
   listAny = SmallPersistentVector@1 at ImmutableListTest.kt:223
   Object;@1[0] = "x" at ImmutableListTest.kt:225
   Object;@1[1] = null at ImmutableListTest.kt:225
   Object;@1[2] = 1 at ImmutableListTest.kt:225
   listOf(Object;@1): Arrays.ArrayList@1 at ImmutableListTest.kt:225
   assertEquals(Arrays.ArrayList@1, listAny, null, 4, null) at ImmutableListTest.kt:225
+    listIterator(0): BufferIterator@1 at AbstractPersistentList.kt:64
+      size(): 3 at SmallPersistentVector.kt:143
+      ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ 0, 3) at SmallPersistentVector.kt:143
+      size(): 3 at SmallPersistentVector.kt:145
+      new BufferIterator(buffer, index ➜ 0, 3): BufferIterator@1 at SmallPersistentVector.kt:145
+    hasNext(): true at BufferIterator.kt:14
+    getIndex(): 0 at BufferIterator.kt:17
+    setIndex(1) at BufferIterator.kt:17
+      index = 1 at AbstractListIterator.kt:8
+    hasNext(): true at BufferIterator.kt:14
+    getIndex(): 1 at BufferIterator.kt:17
+    setIndex(2) at BufferIterator.kt:17
+      index = 2 at AbstractListIterator.kt:8
+    hasNext(): true at BufferIterator.kt:14
+    getIndex(): 2 at BufferIterator.kt:17
+    setIndex(3) at BufferIterator.kt:17
+      index = 3 at AbstractListIterator.kt:8

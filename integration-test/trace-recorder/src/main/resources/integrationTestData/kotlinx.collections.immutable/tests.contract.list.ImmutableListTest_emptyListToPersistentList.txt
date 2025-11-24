@@ -6,13 +6,17 @@ ImmutableListTest.emptyListToPersistentList() at ImmutableListTest.kt:72
     persistentListOf(): SmallPersistentVector@1 at extensions.kt:607
       persistentVectorOf(): SmallPersistentVector@1 at extensions.kt:452
         SmallPersistentVector.getEMPTY(): SmallPersistentVector@1 at Utils.kt:18
+          SmallPersistentVector.getEMPTY(): SmallPersistentVector@1 at SmallPersistentVector.kt:163
     plus(SmallPersistentVector@1, toPersistentList): SmallPersistentVector@1 at extensions.kt:607
       plus.addAll(elements): SmallPersistentVector@1 at extensions.kt:158
+        elements.isEmpty(): true at SmallPersistentVector.kt:39
   emptyPersistent = SmallPersistentVector@1 at ImmutableListTest.kt:73
   toPersistentList(empty): SmallPersistentVector@1 at ImmutableListTest.kt:75
     persistentListOf(): SmallPersistentVector@1 at extensions.kt:607
       persistentVectorOf(): SmallPersistentVector@1 at extensions.kt:452
         SmallPersistentVector.getEMPTY(): SmallPersistentVector@1 at Utils.kt:18
+          SmallPersistentVector.getEMPTY(): SmallPersistentVector@1 at SmallPersistentVector.kt:163
     plus(SmallPersistentVector@1, toPersistentList): SmallPersistentVector@1 at extensions.kt:607
       plus.addAll(elements): SmallPersistentVector@1 at extensions.kt:158
+        elements.isEmpty(): true at SmallPersistentVector.kt:39
   assertSame(emptyPersistent, SmallPersistentVector@1, null, 4, null) at ImmutableListTest.kt:75
