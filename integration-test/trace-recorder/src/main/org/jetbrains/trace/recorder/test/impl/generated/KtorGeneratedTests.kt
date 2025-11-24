@@ -19,75 +19,65 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestAppendFewChars : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.CharArrayBuilderTest",
-                    testMethodName = "testAppendFewChars",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.CharArrayBuilderTest",
+                testMethodName = "testAppendFewChars",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestAppendManyChars : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.CharArrayBuilderTest",
-                    testMethodName = "testAppendManyChars",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.CharArrayBuilderTest",
+                testMethodName = "testAppendManyChars",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestAppendSingleChar : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.CharArrayBuilderTest",
-                    testMethodName = "testAppendSingleChar",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.CharArrayBuilderTest",
+                testMethodName = "testAppendSingleChar",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestAppendSubStrings : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.CharArrayBuilderTest",
-                    testMethodName = "testAppendSubStrings",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.CharArrayBuilderTest",
+                testMethodName = "testAppendSubStrings",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestSubString : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.CharArrayBuilderTest",
-                    testMethodName = "testSubString",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.CharArrayBuilderTest",
+                testMethodName = "testSubString",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -97,195 +87,169 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class ExceptionDuringWrite : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.ChunkedTest",
-                    testMethodName = "exceptionDuringWrite",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.ChunkedTest",
+                testMethodName = "exceptionDuringWrite",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class LongLoop : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.ChunkedTest",
-                    testMethodName = "longLoop",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.ChunkedTest",
+                testMethodName = "longLoop",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestChunkedWithContentLength : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.ChunkedTest",
-                    testMethodName = "testChunkedWithContentLength",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.ChunkedTest",
+                testMethodName = "testChunkedWithContentLength",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestContent : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.ChunkedTest",
-                    testMethodName = "testContent",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.ChunkedTest",
+                testMethodName = "testContent",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestContentMixedLineEndings : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.ChunkedTest",
-                    testMethodName = "testContentMixedLineEndings",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.ChunkedTest",
+                testMethodName = "testContentMixedLineEndings",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestContentMultipleChunks : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.ChunkedTest",
-                    testMethodName = "testContentMultipleChunks",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.ChunkedTest",
+                testMethodName = "testContentMultipleChunks",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestContentWithRcLineEnding : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.ChunkedTest",
-                    testMethodName = "testContentWithRcLineEnding",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.ChunkedTest",
+                testMethodName = "testContentWithRcLineEnding",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestEmpty : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.ChunkedTest",
-                    testMethodName = "testEmpty",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.ChunkedTest",
+                testMethodName = "testEmpty",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestEmptyNoCRLF : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.ChunkedTest",
-                    testMethodName = "testEmptyNoCRLF",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.ChunkedTest",
+                testMethodName = "testEmptyNoCRLF",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestEmptyWithTrailing : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.ChunkedTest",
-                    testMethodName = "testEmptyWithTrailing",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.ChunkedTest",
+                testMethodName = "testEmptyWithTrailing",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestEmptyWithoutCrLf : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.ChunkedTest",
-                    testMethodName = "testEmptyWithoutCrLf",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.ChunkedTest",
+                testMethodName = "testEmptyWithoutCrLf",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestEncodeChunks : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.ChunkedTest",
-                    testMethodName = "testEncodeChunks",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.ChunkedTest",
+                testMethodName = "testEncodeChunks",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestEncodeEmpty : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.ChunkedTest",
-                    testMethodName = "testEncodeEmpty",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.ChunkedTest",
+                testMethodName = "testEncodeEmpty",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -295,195 +259,169 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class ParseHeadersDelimitersInHeaderNameShouldBeProhibited : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
-                    testMethodName = "parseHeadersDelimitersInHeaderNameShouldBeProhibited",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
+                testMethodName = "parseHeadersDelimitersInHeaderNameShouldBeProhibited",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class ParseHeadersEmptyHeaderNameShouldBeProhibited : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
-                    testMethodName = "parseHeadersEmptyHeaderNameShouldBeProhibited",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
+                testMethodName = "parseHeadersEmptyHeaderNameShouldBeProhibited",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class ParseHeadersFoldingShouldBeProhibited : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
-                    testMethodName = "parseHeadersFoldingShouldBeProhibited",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
+                testMethodName = "parseHeadersFoldingShouldBeProhibited",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class ParseHeadersNoLeadingSpace : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
-                    testMethodName = "parseHeadersNoLeadingSpace",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
+                testMethodName = "parseHeadersNoLeadingSpace",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class ParseHeadersNoLeadingSpaceWithTrailingSpaces : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
-                    testMethodName = "parseHeadersNoLeadingSpaceWithTrailingSpaces",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
+                testMethodName = "parseHeadersNoLeadingSpaceWithTrailingSpaces",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class ParseHeadersSmokeTest : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
-                    testMethodName = "parseHeadersSmokeTest",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
+                testMethodName = "parseHeadersSmokeTest",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class ParseHeadersSpaceAfterHeaderNameShouldBeProhibited : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
-                    testMethodName = "parseHeadersSpaceAfterHeaderNameShouldBeProhibited",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
+                testMethodName = "parseHeadersSpaceAfterHeaderNameShouldBeProhibited",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class ParseHeadersSpacesInHeaderNameShouldBeProhibited : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
-                    testMethodName = "parseHeadersSpacesInHeaderNameShouldBeProhibited",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
+                testMethodName = "parseHeadersSpacesInHeaderNameShouldBeProhibited",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class ParseHeadersSpacesInHeaderNameShouldBeProhibitedFixed : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
-                    testMethodName = "parseHeadersSpacesInHeaderNameShouldBeProhibitedFixed",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
+                testMethodName = "parseHeadersSpacesInHeaderNameShouldBeProhibitedFixed",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class ParseHeadersWithEmptyValue : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
-                    testMethodName = "parseHeadersWithEmptyValue",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
+                testMethodName = "parseHeadersWithEmptyValue",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class ParseHeadersWithMultipleEmptyValues : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
-                    testMethodName = "parseHeadersWithMultipleEmptyValues",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
+                testMethodName = "parseHeadersWithMultipleEmptyValues",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class ParseHeadersWithMultipleValuesSeparatedWithComma : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
-                    testMethodName = "parseHeadersWithMultipleValuesSeparatedWithComma",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
+                testMethodName = "parseHeadersWithMultipleValuesSeparatedWithComma",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestParseCookieHeader : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
-                    testMethodName = "testParseCookieHeader",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.HeaderParserTest",
+                testMethodName = "testParseCookieHeader",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -493,255 +431,221 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class `Host_header_with_invalid_'#'_character` : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
-                    testMethodName = "Host header with invalid '#' character",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
+                testMethodName = "Host header with invalid '#' character",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class `Host_header_with_invalid_'@'_character` : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
-                    testMethodName = "Host header with invalid '@' character",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
+                testMethodName = "Host header with invalid '@' character",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class `Host_header_with_invalid_character_(question_mark)` : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
-                    testMethodName = "Host header with invalid character (question mark)",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
+                testMethodName = "Host header with invalid character (question mark)",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class `Host_header_with_invalid_character_(slash)` : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
-                    testMethodName = "Host header with invalid character (slash)",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
+                testMethodName = "Host header with invalid character (slash)",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class AlternativeLineSeparatorsBoth : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
-                    testMethodName = "alternativeLineSeparatorsBoth",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
+                testMethodName = "alternativeLineSeparatorsBoth",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class AlternativeLineSeparatorsFirst : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
-                    testMethodName = "alternativeLineSeparatorsFirst",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
+                testMethodName = "alternativeLineSeparatorsFirst",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class AlternativeLineSeparatorsSecond : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
-                    testMethodName = "alternativeLineSeparatorsSecond",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
+                testMethodName = "alternativeLineSeparatorsSecond",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class ExtraSpacesLeading : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
-                    testMethodName = "extraSpacesLeading",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
+                testMethodName = "extraSpacesLeading",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class ExtraSpacesMiddle : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
-                    testMethodName = "extraSpacesMiddle",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
+                testMethodName = "extraSpacesMiddle",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class ExtraSpacesMiddleBeforeColon : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
-                    testMethodName = "extraSpacesMiddleBeforeColon",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
+                testMethodName = "extraSpacesMiddleBeforeColon",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class ExtraSpacesMiddleBeforeColonNoAfter : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
-                    testMethodName = "extraSpacesMiddleBeforeColonNoAfter",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
+                testMethodName = "extraSpacesMiddleBeforeColonNoAfter",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class ExtraSpacesTrailing : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
-                    testMethodName = "extraSpacesTrailing",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
+                testMethodName = "extraSpacesTrailing",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class SmokeTest : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
-                    testMethodName = "smokeTest",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
+                testMethodName = "smokeTest",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class SmokeTestUnicode : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
-                    testMethodName = "smokeTestUnicode",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
+                testMethodName = "smokeTestUnicode",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestBlankHeaderValue : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
-                    testMethodName = "testBlankHeaderValue",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
+                testMethodName = "testBlankHeaderValue",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestEmptyHeaderValue : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
-                    testMethodName = "testEmptyHeaderValue",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
+                testMethodName = "testEmptyHeaderValue",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestExpectHttpBodyGet : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
-                    testMethodName = "testExpectHttpBodyGet",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.cio.HeadersJvmTest",
+                testMethodName = "testExpectHttpBodyGet",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -751,180 +655,156 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class GenerateCertificateWithCA_default : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.tls.certificates.CertificatesTest",
-                    testMethodName = "generateCertificateWithCA_default",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network-tls-certificates:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.tls.certificates.CertificatesTest",
+                testMethodName = "generateCertificateWithCA_default",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network-tls-certificates:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class GenerateCertificateWithCA_keyTypeCA : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.tls.certificates.CertificatesTest",
-                    testMethodName = "generateCertificateWithCA_keyTypeCA",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network-tls-certificates:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.tls.certificates.CertificatesTest",
+                testMethodName = "generateCertificateWithCA_keyTypeCA",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network-tls-certificates:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class GenerateCertificateWithCA_keyTypeClient : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.tls.certificates.CertificatesTest",
-                    testMethodName = "generateCertificateWithCA_keyTypeClient",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network-tls-certificates:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.tls.certificates.CertificatesTest",
+                testMethodName = "generateCertificateWithCA_keyTypeClient",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network-tls-certificates:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class GenerateCertificate_alsoStoresTheCertificateWithCertSuffix : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.tls.certificates.CertificatesTest",
-                    testMethodName = "generateCertificate_alsoStoresTheCertificateWithCertSuffix",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network-tls-certificates:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.tls.certificates.CertificatesTest",
+                testMethodName = "generateCertificate_alsoStoresTheCertificateWithCertSuffix",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network-tls-certificates:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class GenerateCertificate_customValues : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.tls.certificates.CertificatesTest",
-                    testMethodName = "generateCertificate_customValues",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network-tls-certificates:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.tls.certificates.CertificatesTest",
+                testMethodName = "generateCertificate_customValues",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network-tls-certificates:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class GenerateCertificate_default : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.tls.certificates.CertificatesTest",
-                    testMethodName = "generateCertificate_default",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network-tls-certificates:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.tls.certificates.CertificatesTest",
+                testMethodName = "generateCertificate_default",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network-tls-certificates:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class GenerateCertificate_keyTypeCA : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.tls.certificates.CertificatesTest",
-                    testMethodName = "generateCertificate_keyTypeCA",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network-tls-certificates:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.tls.certificates.CertificatesTest",
+                testMethodName = "generateCertificate_keyTypeCA",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network-tls-certificates:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class GenerateCertificate_keyTypeClient : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.tls.certificates.CertificatesTest",
-                    testMethodName = "generateCertificate_keyTypeClient",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network-tls-certificates:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.tls.certificates.CertificatesTest",
+                testMethodName = "generateCertificate_keyTypeClient",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network-tls-certificates:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class GenerateCertificate_onlyGeneratesOneAlias : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.tls.certificates.CertificatesTest",
-                    testMethodName = "generateCertificate_onlyGeneratesOneAlias",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network-tls-certificates:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.tls.certificates.CertificatesTest",
+                testMethodName = "generateCertificate_onlyGeneratesOneAlias",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network-tls-certificates:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class GenerateCertificate_writeToFile : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.tls.certificates.CertificatesTest",
-                    testMethodName = "generateCertificate_writeToFile",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network-tls-certificates:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.tls.certificates.CertificatesTest",
+                testMethodName = "generateCertificate_writeToFile",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network-tls-certificates:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class GenerateCertificate_writeToFile_customKeyAndJksPassword : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.tls.certificates.CertificatesTest",
-                    testMethodName = "generateCertificate_writeToFile_customKeyAndJksPassword",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network-tls-certificates:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.tls.certificates.CertificatesTest",
+                testMethodName = "generateCertificate_writeToFile_customKeyAndJksPassword",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network-tls-certificates:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class GenerateCertificate_writeToFile_customKeyPassword : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.tls.certificates.CertificatesTest",
-                    testMethodName = "generateCertificate_writeToFile_customKeyPassword",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network-tls-certificates:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.tls.certificates.CertificatesTest",
+                testMethodName = "generateCertificate_writeToFile_customKeyPassword",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network-tls-certificates:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -934,90 +814,78 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class BuildKeyStore_customAlgorithmAndKeySize : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.tls.certificates.KeyStoreBuilderTest",
-                    testMethodName = "buildKeyStore_customAlgorithmAndKeySize",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network-tls-certificates:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.tls.certificates.KeyStoreBuilderTest",
+                testMethodName = "buildKeyStore_customAlgorithmAndKeySize",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network-tls-certificates:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class BuildKeyStore_customIpsAndDomains : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.tls.certificates.KeyStoreBuilderTest",
-                    testMethodName = "buildKeyStore_customIpsAndDomains",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network-tls-certificates:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.tls.certificates.KeyStoreBuilderTest",
+                testMethodName = "buildKeyStore_customIpsAndDomains",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network-tls-certificates:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class BuildKeyStore_customValidity : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.tls.certificates.KeyStoreBuilderTest",
-                    testMethodName = "buildKeyStore_customValidity",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network-tls-certificates:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.tls.certificates.KeyStoreBuilderTest",
+                testMethodName = "buildKeyStore_customValidity",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network-tls-certificates:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class BuildKeyStore_keyTypeCA : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.tls.certificates.KeyStoreBuilderTest",
-                    testMethodName = "buildKeyStore_keyTypeCA",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network-tls-certificates:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.tls.certificates.KeyStoreBuilderTest",
+                testMethodName = "buildKeyStore_keyTypeCA",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network-tls-certificates:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class BuildKeyStore_keyTypeClient : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.tls.certificates.KeyStoreBuilderTest",
-                    testMethodName = "buildKeyStore_keyTypeClient",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network-tls-certificates:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.tls.certificates.KeyStoreBuilderTest",
+                testMethodName = "buildKeyStore_keyTypeClient",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network-tls-certificates:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class BuildKeyStore_minimal : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.tls.certificates.KeyStoreBuilderTest",
-                    testMethodName = "buildKeyStore_minimal",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network-tls-certificates:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.tls.certificates.KeyStoreBuilderTest",
+                testMethodName = "buildKeyStore_minimal",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network-tls-certificates:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -1027,15 +895,13 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class HtmxAttributes : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.htmx.html.HxAttributesTest",
-                    testMethodName = "htmxAttributes",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-htmx-html:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.htmx.html.HxAttributesTest",
+                testMethodName = "htmxAttributes",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-htmx-html:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -1045,90 +911,78 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestBasicSchema : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.AuthHeaderParseTest",
-                    testMethodName = "testBasicSchema",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.AuthHeaderParseTest",
+                testMethodName = "testBasicSchema",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestMultipleParameters : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.AuthHeaderParseTest",
-                    testMethodName = "testMultipleParameters",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.AuthHeaderParseTest",
+                testMethodName = "testMultipleParameters",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestParameter : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.AuthHeaderParseTest",
-                    testMethodName = "testParameter",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.AuthHeaderParseTest",
+                testMethodName = "testParameter",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestParametersWithoutSpace : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.AuthHeaderParseTest",
-                    testMethodName = "testParametersWithoutSpace",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.AuthHeaderParseTest",
+                testMethodName = "testParametersWithoutSpace",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestQuotedParameter : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.AuthHeaderParseTest",
-                    testMethodName = "testQuotedParameter",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.AuthHeaderParseTest",
+                testMethodName = "testQuotedParameter",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestSingleParameterWithComma : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.AuthHeaderParseTest",
-                    testMethodName = "testSingleParameterWithComma",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.AuthHeaderParseTest",
+                testMethodName = "testSingleParameterWithComma",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -1138,60 +992,52 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestAllReserved : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.CodecTest",
-                    testMethodName = "testAllReserved",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.CodecTest",
+                testMethodName = "testAllReserved",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestBasicEncodeDecode : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.CodecTest",
-                    testMethodName = "testBasicEncodeDecode",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.CodecTest",
+                testMethodName = "testBasicEncodeDecode",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestBasicEncodeDecodeURLPart : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.CodecTest",
-                    testMethodName = "testBasicEncodeDecodeURLPart",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.CodecTest",
+                testMethodName = "testBasicEncodeDecodeURLPart",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestBrokenOrIncompleteHEX : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.http.CodecTest",
-                    testMethodName = "testBrokenOrIncompleteHEX",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-http:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.http.CodecTest",
+                testMethodName = "testBrokenOrIncompleteHEX",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-http:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -1201,15 +1047,13 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class CannotSubscribeTwiceForContent : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "ByteChannelConcurrentTest",
-                    testMethodName = "cannotSubscribeTwiceForContent",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-io:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "ByteChannelConcurrentTest",
+                testMethodName = "cannotSubscribeTwiceForContent",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-io:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -1219,15 +1063,13 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class Request_with_specific_authorities : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.tls.ClientCertificateRequestTest",
-                    testMethodName = "request with specific authorities",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network-tls:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.tls.ClientCertificateRequestTest",
+                testMethodName = "request with specific authorities",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network-tls:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -1237,60 +1079,52 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestClose : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.utils.CacheTest",
-                    testMethodName = "testClose",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-utils:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.utils.CacheTest",
+                testMethodName = "testClose",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-utils:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestCloseMultithreaded : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.utils.CacheTest",
-                    testMethodName = "testCloseMultithreaded",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-utils:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.utils.CacheTest",
+                testMethodName = "testCloseMultithreaded",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-utils:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestGet : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.utils.CacheTest",
-                    testMethodName = "testGet",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-utils:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.utils.CacheTest",
+                testMethodName = "testGet",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-utils:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestWithoutCaching : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.utils.CacheTest",
-                    testMethodName = "testWithoutCaching",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-utils:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.utils.CacheTest",
+                testMethodName = "testWithoutCaching",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-utils:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -1300,30 +1134,26 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestBiggerThan8k : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.utils.DeflaterReadChannelTest",
-                    testMethodName = "testBiggerThan8k",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-utils:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.utils.DeflaterReadChannelTest",
+                testMethodName = "testBiggerThan8k",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-utils:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestFaultyGzippedBiggerThan8k : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.utils.DeflaterReadChannelTest",
-                    testMethodName = "testFaultyGzippedBiggerThan8k",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-utils:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.utils.DeflaterReadChannelTest",
+                testMethodName = "testFaultyGzippedBiggerThan8k",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-utils:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -1333,30 +1163,26 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestSelectOnWrongInterest : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.selector.ActorSelectorManagerTest",
-                    testMethodName = "testSelectOnWrongInterest",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.selector.ActorSelectorManagerTest",
+                testMethodName = "testSelectOnWrongInterest",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestSelectableIsClosed : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.selector.ActorSelectorManagerTest",
-                    testMethodName = "testSelectableIsClosed",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.selector.ActorSelectorManagerTest",
+                testMethodName = "testSelectableIsClosed",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -1366,75 +1192,65 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestConnect : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.sockets.tests.ClientSocketTest",
-                    testMethodName = "testConnect",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.sockets.tests.ClientSocketTest",
+                testMethodName = "testConnect",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestRead : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.sockets.tests.ClientSocketTest",
-                    testMethodName = "testRead",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.sockets.tests.ClientSocketTest",
+                testMethodName = "testRead",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestReadParts : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.sockets.tests.ClientSocketTest",
-                    testMethodName = "testReadParts",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.sockets.tests.ClientSocketTest",
+                testMethodName = "testReadParts",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestSelfConnect : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.sockets.tests.ClientSocketTest",
-                    testMethodName = "testSelfConnect",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.sockets.tests.ClientSocketTest",
+                testMethodName = "testSelfConnect",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestWrite : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.sockets.tests.ClientSocketTest",
-                    testMethodName = "testWrite",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.sockets.tests.ClientSocketTest",
+                testMethodName = "testWrite",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -1444,15 +1260,13 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestResolveAddress : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.sockets.tests.InetSocketAddressTest",
-                    testMethodName = "testResolveAddress",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.sockets.tests.InetSocketAddressTest",
+                testMethodName = "testResolveAddress",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -1462,45 +1276,39 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestBindAndAccept : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.sockets.tests.ServerSocketTest",
-                    testMethodName = "testBindAndAccept",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.sockets.tests.ServerSocketTest",
+                testMethodName = "testBindAndAccept",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestRead : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.sockets.tests.ServerSocketTest",
-                    testMethodName = "testRead",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.sockets.tests.ServerSocketTest",
+                testMethodName = "testRead",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestWrite : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.sockets.tests.ServerSocketTest",
-                    testMethodName = "testWrite",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.sockets.tests.ServerSocketTest",
+                testMethodName = "testWrite",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -1510,150 +1318,130 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestAcceptErrorOnImmediateSocketClose : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.sockets.tests.TCPSocketTest",
-                    testMethodName = "testAcceptErrorOnImmediateSocketClose",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.sockets.tests.TCPSocketTest",
+                testMethodName = "testAcceptErrorOnImmediateSocketClose",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestAcceptErrorOnSocketClose : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.sockets.tests.TCPSocketTest",
-                    testMethodName = "testAcceptErrorOnSocketClose",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.sockets.tests.TCPSocketTest",
+                testMethodName = "testAcceptErrorOnSocketClose",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestAutoFlush : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.sockets.tests.TCPSocketTest",
-                    testMethodName = "testAutoFlush",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.sockets.tests.TCPSocketTest",
+                testMethodName = "testAutoFlush",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestAwaitClosedDoesNotDeadLock : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.sockets.tests.TCPSocketTest",
-                    testMethodName = "testAwaitClosedDoesNotDeadLock",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.sockets.tests.TCPSocketTest",
+                testMethodName = "testAwaitClosedDoesNotDeadLock",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestBindMultipleTimes : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.sockets.tests.TCPSocketTest",
-                    testMethodName = "testBindMultipleTimes",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.sockets.tests.TCPSocketTest",
+                testMethodName = "testBindMultipleTimes",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestConnectToNonExistingSocket : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.sockets.tests.TCPSocketTest",
-                    testMethodName = "testConnectToNonExistingSocket",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.sockets.tests.TCPSocketTest",
+                testMethodName = "testConnectToNonExistingSocket",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestDisconnect : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.sockets.tests.TCPSocketTest",
-                    testMethodName = "testDisconnect",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.sockets.tests.TCPSocketTest",
+                testMethodName = "testDisconnect",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestEcho : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.sockets.tests.TCPSocketTest",
-                    testMethodName = "testEcho",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.sockets.tests.TCPSocketTest",
+                testMethodName = "testEcho",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestEchoByteArray : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.sockets.tests.TCPSocketTest",
-                    testMethodName = "testEchoByteArray",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.sockets.tests.TCPSocketTest",
+                testMethodName = "testEchoByteArray",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestReadFromCancelledSocket : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.sockets.tests.TCPSocketTest",
-                    testMethodName = "testReadFromCancelledSocket",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.sockets.tests.TCPSocketTest",
+                testMethodName = "testReadFromCancelledSocket",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -1663,150 +1451,130 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestBroadcastFails : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.sockets.tests.UDPSocketTest",
-                    testMethodName = "testBroadcastFails",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.sockets.tests.UDPSocketTest",
+                testMethodName = "testBroadcastFails",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestBroadcastSuccessful : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.sockets.tests.UDPSocketTest",
-                    testMethodName = "testBroadcastSuccessful",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.sockets.tests.UDPSocketTest",
+                testMethodName = "testBroadcastSuccessful",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestClose : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.sockets.tests.UDPSocketTest",
-                    testMethodName = "testClose",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.sockets.tests.UDPSocketTest",
+                testMethodName = "testClose",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestInvokeOnClose : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.sockets.tests.UDPSocketTest",
-                    testMethodName = "testInvokeOnClose",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.sockets.tests.UDPSocketTest",
+                testMethodName = "testInvokeOnClose",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestOutgoingInvokeOnClose : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.sockets.tests.UDPSocketTest",
-                    testMethodName = "testOutgoingInvokeOnClose",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.sockets.tests.UDPSocketTest",
+                testMethodName = "testOutgoingInvokeOnClose",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestOutgoingInvokeOnCloseWithSocketClose : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.sockets.tests.UDPSocketTest",
-                    testMethodName = "testOutgoingInvokeOnCloseWithSocketClose",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.sockets.tests.UDPSocketTest",
+                testMethodName = "testOutgoingInvokeOnCloseWithSocketClose",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestOutgoingInvokeOnClosed : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.sockets.tests.UDPSocketTest",
-                    testMethodName = "testOutgoingInvokeOnClosed",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.sockets.tests.UDPSocketTest",
+                testMethodName = "testOutgoingInvokeOnClosed",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestSendReceive : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.sockets.tests.UDPSocketTest",
-                    testMethodName = "testSendReceive",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.sockets.tests.UDPSocketTest",
+                testMethodName = "testSendReceive",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestSendReceiveLarge : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.sockets.tests.UDPSocketTest",
-                    testMethodName = "testSendReceiveLarge",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.sockets.tests.UDPSocketTest",
+                testMethodName = "testSendReceiveLarge",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestUdpConnect : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.sockets.tests.UDPSocketTest",
-                    testMethodName = "testUdpConnect",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.sockets.tests.UDPSocketTest",
+                testMethodName = "testUdpConnect",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -1816,15 +1584,13 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestEchoOverUnixSockets : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.sockets.tests.UnixSocketTest",
-                    testMethodName = "testEchoOverUnixSockets",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.sockets.tests.UnixSocketTest",
+                testMethodName = "testEchoOverUnixSockets",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -1834,75 +1600,65 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestTimeoutCancellation : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.util.StartTimeoutTest",
-                    testMethodName = "testTimeoutCancellation",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.util.StartTimeoutTest",
+                testMethodName = "testTimeoutCancellation",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestTimeoutCancelsWhenParentScopeCancels : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.util.StartTimeoutTest",
-                    testMethodName = "testTimeoutCancelsWhenParentScopeCancels",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.util.StartTimeoutTest",
+                testMethodName = "testTimeoutCancelsWhenParentScopeCancels",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestTimeoutDoesNotTriggerWhenStopped : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.util.StartTimeoutTest",
-                    testMethodName = "testTimeoutDoesNotTriggerWhenStopped",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.util.StartTimeoutTest",
+                testMethodName = "testTimeoutDoesNotTriggerWhenStopped",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestTimeoutInvocation : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.util.StartTimeoutTest",
-                    testMethodName = "testTimeoutInvocation",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.util.StartTimeoutTest",
+                testMethodName = "testTimeoutInvocation",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestTimeoutUpdateActivityTime : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.network.util.StartTimeoutTest",
-                    testMethodName = "testTimeoutUpdateActivityTime",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-network:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.network.util.StartTimeoutTest",
+                testMethodName = "testTimeoutUpdateActivityTime",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-network:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -1912,15 +1668,13 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class Server_requesting_Client_Certificate_from_CIO_Client : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.server.cio.CIOClientCertTest",
-                    testMethodName = "Server requesting Client Certificate from CIO Client",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.server.cio.CIOClientCertTest",
+                testMethodName = "Server requesting Client Certificate from CIO Client",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -1930,45 +1684,39 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestLocalHostAndPort : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.server.cio.CIOConnectionPointTest",
-                    testMethodName = "testLocalHostAndPort",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.server.cio.CIOConnectionPointTest",
+                testMethodName = "testLocalHostAndPort",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestServerHostAndPort : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.server.cio.CIOConnectionPointTest",
-                    testMethodName = "testServerHostAndPort",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.server.cio.CIOConnectionPointTest",
+                testMethodName = "testServerHostAndPort",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestServerHostAndPortNoHeader : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.server.cio.CIOConnectionPointTest",
-                    testMethodName = "testServerHostAndPortNoHeader",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.server.cio.CIOConnectionPointTest",
+                testMethodName = "testServerHostAndPortNoHeader",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -1978,15 +1726,13 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestShutdownGracePeriodWithConnector : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.server.cio.CIOConnectionTest",
-                    testMethodName = "testShutdownGracePeriodWithConnector",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.server.cio.CIOConnectionTest",
+                testMethodName = "testShutdownGracePeriodWithConnector",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -1996,30 +1742,26 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestHttpConnection : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.server.cio.CIOHttpClientTest",
-                    testMethodName = "testHttpConnection",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.server.cio.CIOHttpClientTest",
+                testMethodName = "testHttpConnection",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestHttpConnectionChunked : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.server.cio.CIOHttpClientTest",
-                    testMethodName = "testHttpConnectionChunked",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.server.cio.CIOHttpClientTest",
+                testMethodName = "testHttpConnectionChunked",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -2029,120 +1771,104 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestChunkedResponse : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.server.cio.CIOHttpServerTest",
-                    testMethodName = "testChunkedResponse",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.server.cio.CIOHttpServerTest",
+                testMethodName = "testChunkedResponse",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestExpectedContinue : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.server.cio.CIOHttpServerTest",
-                    testMethodName = "testExpectedContinue",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.server.cio.CIOHttpServerTest",
+                testMethodName = "testExpectedContinue",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestExpectedContinueConnection : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.server.cio.CIOHttpServerTest",
-                    testMethodName = "testExpectedContinueConnection",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.server.cio.CIOHttpServerTest",
+                testMethodName = "testExpectedContinueConnection",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestExpectedContinueExpectationFailed : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.server.cio.CIOHttpServerTest",
-                    testMethodName = "testExpectedContinueExpectationFailed",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.server.cio.CIOHttpServerTest",
+                testMethodName = "testExpectedContinueExpectationFailed",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestExpectedContinueRespondBeforeReadingBody : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.server.cio.CIOHttpServerTest",
-                    testMethodName = "testExpectedContinueRespondBeforeReadingBody",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.server.cio.CIOHttpServerTest",
+                testMethodName = "testExpectedContinueRespondBeforeReadingBody",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestExpectedIgnoreHTTP1_0 : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.server.cio.CIOHttpServerTest",
-                    testMethodName = "testExpectedIgnoreHTTP1_0",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.server.cio.CIOHttpServerTest",
+                testMethodName = "testExpectedIgnoreHTTP1_0",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestGracefulShutdown : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.server.cio.CIOHttpServerTest",
-                    testMethodName = "testGracefulShutdown",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.server.cio.CIOHttpServerTest",
+                testMethodName = "testGracefulShutdown",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestLotsOfHeaders : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.server.cio.CIOHttpServerTest",
-                    testMethodName = "testLotsOfHeaders",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.server.cio.CIOHttpServerTest",
+                testMethodName = "testLotsOfHeaders",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -2152,15 +1878,13 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestUnixSocketEcho : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.server.cio.CIOUnixSocketServerTest",
-                    testMethodName = "testUnixSocketEcho",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.server.cio.CIOUnixSocketServerTest",
+                testMethodName = "testUnixSocketEcho",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -2170,60 +1894,52 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestClose : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.okhttp.OkHttpEngineTests",
-                    testMethodName = "testClose",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-okhttp:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.okhttp.OkHttpEngineTests",
+                testMethodName = "testClose",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-okhttp:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestThreadLeak : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.okhttp.OkHttpEngineTests",
-                    testMethodName = "testThreadLeak",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-okhttp:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.okhttp.OkHttpEngineTests",
+                testMethodName = "testThreadLeak",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-okhttp:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestPreconfigured : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.okhttp.OkHttpEngineTests",
-                    testMethodName = "testPreconfigured",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-okhttp:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.okhttp.OkHttpEngineTests",
+                testMethodName = "testPreconfigured",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-okhttp:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestRequestAfterRecreate : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.okhttp.OkHttpEngineTests",
-                    testMethodName = "testRequestAfterRecreate",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-okhttp:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.okhttp.OkHttpEngineTests",
+                testMethodName = "testRequestAfterRecreate",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-okhttp:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -2233,60 +1949,52 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestOneShotBodyStream : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.okhttp.RequestTests",
-                    testMethodName = "testOneShotBodyStream",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-okhttp:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.okhttp.RequestTests",
+                testMethodName = "testOneShotBodyStream",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-okhttp:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestOneShotBodyArray : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.okhttp.RequestTests",
-                    testMethodName = "testOneShotBodyArray",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-okhttp:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.okhttp.RequestTests",
+                testMethodName = "testOneShotBodyArray",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-okhttp:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestReusingRequestBuilderOnMultipleClients : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.okhttp.RequestTests",
-                    testMethodName = "testReusingRequestBuilderOnMultipleClients",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-okhttp:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.okhttp.RequestTests",
+                testMethodName = "testReusingRequestBuilderOnMultipleClients",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-okhttp:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestFormContentType : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.okhttp.RequestTests",
-                    testMethodName = "testFormContentType",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-okhttp:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.okhttp.RequestTests",
+                testMethodName = "testFormContentType",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-okhttp:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -2296,90 +2004,78 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestCancelSseRequestIncomingCollect : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.okhttp.OkHttpHttpClientTest",
-                    testMethodName = "testCancelSseRequestIncomingCollect",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-okhttp:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.okhttp.OkHttpHttpClientTest",
+                testMethodName = "testCancelSseRequestIncomingCollect",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-okhttp:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestCancelSseRequestWithDelay : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.okhttp.OkHttpHttpClientTest",
-                    testMethodName = "testCancelSseRequestWithDelay",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-okhttp:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.okhttp.OkHttpHttpClientTest",
+                testMethodName = "testCancelSseRequestWithDelay",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-okhttp:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestClientSSE : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.okhttp.OkHttpHttpClientTest",
-                    testMethodName = "testClientSSE",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-okhttp:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.okhttp.OkHttpHttpClientTest",
+                testMethodName = "testClientSSE",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-okhttp:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestWithNoParentJob : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.okhttp.OkHttpHttpClientTest",
-                    testMethodName = "testWithNoParentJob",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-okhttp:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.okhttp.OkHttpHttpClientTest",
+                testMethodName = "testWithNoParentJob",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-okhttp:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class ConfigCopiesOldPluginsAndInterceptors : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.okhttp.OkHttpHttpClientTest",
-                    testMethodName = "configCopiesOldPluginsAndInterceptors",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-okhttp:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.okhttp.OkHttpHttpClientTest",
+                testMethodName = "configCopiesOldPluginsAndInterceptors",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-okhttp:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestOptionsRequest : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.okhttp.OkHttpHttpClientTest",
-                    testMethodName = "testOptionsRequest",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-okhttp:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.okhttp.OkHttpHttpClientTest",
+                testMethodName = "testOptionsRequest",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-okhttp:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -2389,75 +2085,65 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class CheckUrlMatches_returns_true_when_pattern_matches_part_of_URL_path : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.server.engine.EmbeddedServerTest",
-                    testMethodName = "checkUrlMatches returns true when pattern matches part of URL path",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-core:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.server.engine.EmbeddedServerTest",
+                testMethodName = "checkUrlMatches returns true when pattern matches part of URL path",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-core:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class CheckUrlMatches_returns_false_when_pattern_does_not_match_URL_path : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.server.engine.EmbeddedServerTest",
-                    testMethodName = "checkUrlMatches returns false when pattern does not match URL path",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-core:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.server.engine.EmbeddedServerTest",
+                testMethodName = "checkUrlMatches returns false when pattern does not match URL path",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-core:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class CheckUrlMatches_returns_true_when_pattern_matches_URL_path_case_insensitively : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.server.engine.EmbeddedServerTest",
-                    testMethodName = "checkUrlMatches returns true when pattern matches URL path case insensitively",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-core:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.server.engine.EmbeddedServerTest",
+                testMethodName = "checkUrlMatches returns true when pattern matches URL path case insensitively",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-core:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class CheckUrlMatches_returns_false_when_URL_path_is_null : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.server.engine.EmbeddedServerTest",
-                    testMethodName = "checkUrlMatches returns false when URL path is null",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-core:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.server.engine.EmbeddedServerTest",
+                testMethodName = "checkUrlMatches returns false when URL path is null",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-core:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class CheckUrlMatches_returns_true_when_pattern_matches_root_URL_path : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.server.engine.EmbeddedServerTest",
-                    testMethodName = "checkUrlMatches returns true when pattern matches root URL path",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-core:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.server.engine.EmbeddedServerTest",
+                testMethodName = "checkUrlMatches returns true when pattern matches root URL path",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-core:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -2467,45 +2153,39 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class GivenRequest_whenNoContentTypeHeaderPresent_thenUnsupportedMediaTypeException : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.server.engine.MultiPartDataTest",
-                    testMethodName = "givenRequest_whenNoContentTypeHeaderPresent_thenUnsupportedMediaTypeException",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-core:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.server.engine.MultiPartDataTest",
+                testMethodName = "givenRequest_whenNoContentTypeHeaderPresent_thenUnsupportedMediaTypeException",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-core:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class GivenWrongContentType_whenProcessMultiPart_thenUnsupportedMediaTypeException : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.server.engine.MultiPartDataTest",
-                    testMethodName = "givenWrongContentType_whenProcessMultiPart_thenUnsupportedMediaTypeException",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-core:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.server.engine.MultiPartDataTest",
+                testMethodName = "givenWrongContentType_whenProcessMultiPart_thenUnsupportedMediaTypeException",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-core:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestUnsupportedMediaTypeStatusCode : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.server.engine.MultiPartDataTest",
-                    testMethodName = "testUnsupportedMediaTypeStatusCode",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-core:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.server.engine.MultiPartDataTest",
+                testMethodName = "testUnsupportedMediaTypeStatusCode",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-core:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -2515,30 +2195,26 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestOnFailure : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.okhttp.OkHttpWebsocketSessionTest",
-                    testMethodName = "testOnFailure",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-okhttp:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.okhttp.OkHttpWebsocketSessionTest",
+                testMethodName = "testOnFailure",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-okhttp:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestWebSocketFactory : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.okhttp.OkHttpWebsocketSessionTest",
-                    testMethodName = "testWebSocketFactory",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-okhttp:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.okhttp.OkHttpWebsocketSessionTest",
+                testMethodName = "testWebSocketFactory",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-okhttp:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -2548,30 +2224,26 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestHttpsOverProxy : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.okhttp.OkHttpHttpsTest",
-                    testMethodName = "testHttpsOverProxy",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-okhttp:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.okhttp.OkHttpHttpsTest",
+                testMethodName = "testHttpsOverProxy",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-okhttp:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class Test_hostname_is_verified : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.okhttp.OkHttpHttpsTest",
-                    testMethodName = "test hostname is verified",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-okhttp:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.okhttp.OkHttpHttpsTest",
+                testMethodName = "test hostname is verified",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-okhttp:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -2581,90 +2253,78 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestHeadersMerge : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.apache.RequestProducerTest",
-                    testMethodName = "testHeadersMerge",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-apache:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.apache.RequestProducerTest",
+                testMethodName = "testHeadersMerge",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-apache:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestProducingByteArrayContent : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.apache.RequestProducerTest",
-                    testMethodName = "testProducingByteArrayContent",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-apache:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.apache.RequestProducerTest",
+                testMethodName = "testProducingByteArrayContent",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-apache:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestProducingNoContent : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.apache.RequestProducerTest",
-                    testMethodName = "testProducingNoContent",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-apache:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.apache.RequestProducerTest",
+                testMethodName = "testProducingNoContent",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-apache:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestProducingReadChannelContent : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.apache.RequestProducerTest",
-                    testMethodName = "testProducingReadChannelContent",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-apache:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.apache.RequestProducerTest",
+                testMethodName = "testProducingReadChannelContent",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-apache:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestProducingWriteChannelContent : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.apache.RequestProducerTest",
-                    testMethodName = "testProducingWriteChannelContent",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-apache:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.apache.RequestProducerTest",
+                testMethodName = "testProducingWriteChannelContent",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-apache:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class ExpectToThrowIllegalStateExceptionIfHostCannotBeExtractedFromRequestURL : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.apache.RequestProducerTest",
-                    testMethodName = "expectToThrowIllegalStateExceptionIfHostCannotBeExtractedFromRequestURL",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-apache:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.apache.RequestProducerTest",
+                testMethodName = "expectToThrowIllegalStateExceptionIfHostCannotBeExtractedFromRequestURL",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-apache:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -2674,60 +2334,52 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestClientSSE : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.apache.ApacheHttpClientTest",
-                    testMethodName = "testClientSSE",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-apache:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.apache.ApacheHttpClientTest",
+                testMethodName = "testClientSSE",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-apache:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestWithNoParentJob : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.apache.ApacheHttpClientTest",
-                    testMethodName = "testWithNoParentJob",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-apache:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.apache.ApacheHttpClientTest",
+                testMethodName = "testWithNoParentJob",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-apache:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class ConfigCopiesOldPluginsAndInterceptors : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.apache.ApacheHttpClientTest",
-                    testMethodName = "configCopiesOldPluginsAndInterceptors",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-apache:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.apache.ApacheHttpClientTest",
+                testMethodName = "configCopiesOldPluginsAndInterceptors",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-apache:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestOptionsRequest : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.apache.ApacheHttpClientTest",
-                    testMethodName = "testOptionsRequest",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-apache:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.apache.ApacheHttpClientTest",
+                testMethodName = "testOptionsRequest",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-apache:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -2737,30 +2389,26 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestHttpsOverProxy : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.apache.ApacheHttpsTest",
-                    testMethodName = "testHttpsOverProxy",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-apache:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.apache.ApacheHttpsTest",
+                testMethodName = "testHttpsOverProxy",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-apache:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class Test_hostname_is_verified : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.apache.ApacheHttpsTest",
-                    testMethodName = "test hostname is verified",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-apache:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.apache.ApacheHttpsTest",
+                testMethodName = "test hostname is verified",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-apache:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -2770,60 +2418,52 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestClientSSE : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.apache5.Apache5HttpClientTest",
-                    testMethodName = "testClientSSE",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-apache5:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.apache5.Apache5HttpClientTest",
+                testMethodName = "testClientSSE",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-apache5:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestWithNoParentJob : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.apache5.Apache5HttpClientTest",
-                    testMethodName = "testWithNoParentJob",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-apache5:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.apache5.Apache5HttpClientTest",
+                testMethodName = "testWithNoParentJob",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-apache5:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class ConfigCopiesOldPluginsAndInterceptors : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.apache5.Apache5HttpClientTest",
-                    testMethodName = "configCopiesOldPluginsAndInterceptors",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-apache5:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.apache5.Apache5HttpClientTest",
+                testMethodName = "configCopiesOldPluginsAndInterceptors",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-apache5:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestOptionsRequest : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.apache5.Apache5HttpClientTest",
-                    testMethodName = "testOptionsRequest",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-apache5:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.apache5.Apache5HttpClientTest",
+                testMethodName = "testOptionsRequest",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-apache5:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -2833,30 +2473,26 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestHttpsOverProxy : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.apache5.Apache5HttpsTest",
-                    testMethodName = "testHttpsOverProxy",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-apache5:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.apache5.Apache5HttpsTest",
+                testMethodName = "testHttpsOverProxy",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-apache5:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class Test_hostname_is_verified : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.apache5.Apache5HttpsTest",
-                    testMethodName = "test hostname is verified",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-apache5:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.apache5.Apache5HttpsTest",
+                testMethodName = "test hostname is verified",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-apache5:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -2866,135 +2502,117 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestProxy : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.java.JavaEngineTests",
-                    testMethodName = "testProxy",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-java:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.java.JavaEngineTests",
+                testMethodName = "testProxy",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-java:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestRequestAfterRecreate : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.java.JavaEngineTests",
-                    testMethodName = "testRequestAfterRecreate",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-java:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.java.JavaEngineTests",
+                testMethodName = "testRequestAfterRecreate",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-java:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestSubsequentRequests : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.java.JavaEngineTests",
-                    testMethodName = "testSubsequentRequests",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-java:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.java.JavaEngineTests",
+                testMethodName = "testSubsequentRequests",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-java:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestProtocolVersion : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.java.JavaEngineTests",
-                    testMethodName = "testProtocolVersion",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-java:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.java.JavaEngineTests",
+                testMethodName = "testProtocolVersion",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-java:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class InfiniteConnectTimeout : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.java.JavaEngineTests",
-                    testMethodName = "infiniteConnectTimeout",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-java:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.java.JavaEngineTests",
+                testMethodName = "infiniteConnectTimeout",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-java:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class InfiniteRequestTimeout : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.java.JavaEngineTests",
-                    testMethodName = "infiniteRequestTimeout",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-java:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.java.JavaEngineTests",
+                testMethodName = "infiniteRequestTimeout",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-java:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class UsualConnectTimeout : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.java.JavaEngineTests",
-                    testMethodName = "usualConnectTimeout",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-java:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.java.JavaEngineTests",
+                testMethodName = "usualConnectTimeout",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-java:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class UsualRequestTimeout : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.java.JavaEngineTests",
-                    testMethodName = "usualRequestTimeout",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-java:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.java.JavaEngineTests",
+                testMethodName = "usualRequestTimeout",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-java:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class IsTimeoutInfiniteFunction : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.java.JavaEngineTests",
-                    testMethodName = "isTimeoutInfiniteFunction",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-java:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.java.JavaEngineTests",
+                testMethodName = "isTimeoutInfiniteFunction",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-java:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -3004,60 +2622,52 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestClientSSE : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.java.JavaClientTest",
-                    testMethodName = "testClientSSE",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-java:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.java.JavaClientTest",
+                testMethodName = "testClientSSE",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-java:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestWithNoParentJob : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.java.JavaClientTest",
-                    testMethodName = "testWithNoParentJob",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-java:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.java.JavaClientTest",
+                testMethodName = "testWithNoParentJob",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-java:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class ConfigCopiesOldPluginsAndInterceptors : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.java.JavaClientTest",
-                    testMethodName = "configCopiesOldPluginsAndInterceptors",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-java:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.java.JavaClientTest",
+                testMethodName = "configCopiesOldPluginsAndInterceptors",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-java:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestOptionsRequest : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.java.JavaClientTest",
-                    testMethodName = "testOptionsRequest",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-java:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.java.JavaClientTest",
+                testMethodName = "testOptionsRequest",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-java:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -3067,30 +2677,26 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestHttpsOverProxy : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.java.JavaHttpsTest",
-                    testMethodName = "testHttpsOverProxy",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-java:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.java.JavaHttpsTest",
+                testMethodName = "testHttpsOverProxy",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-java:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class Test_hostname_is_verified : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.java.JavaHttpsTest",
-                    testMethodName = "test hostname is verified",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-java:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.java.JavaHttpsTest",
+                testMethodName = "test hostname is verified",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-java:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -3100,30 +2706,26 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestReusingRequestBuilderOnMultipleClients : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.java.RequestTests",
-                    testMethodName = "testReusingRequestBuilderOnMultipleClients",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-java:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.java.RequestTests",
+                testMethodName = "testReusingRequestBuilderOnMultipleClients",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-java:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestRequestBodyPosting : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.java.RequestTests",
-                    testMethodName = "testRequestBodyPosting",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-java:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.java.RequestTests",
+                testMethodName = "testRequestBodyPosting",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-java:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -3133,15 +2735,13 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestConsumeContent : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.java.ResponseConsumerTest",
-                    testMethodName = "testConsumeContent",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-java:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.java.ResponseConsumerTest",
+                testMethodName = "testConsumeContent",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-java:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -3151,30 +2751,26 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestHeadersMerge : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.java.RequestProducerTest",
-                    testMethodName = "testHeadersMerge",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-java:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.java.RequestProducerTest",
+                testMethodName = "testHeadersMerge",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-java:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestByteReadChannelWriter : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.java.RequestProducerTest",
-                    testMethodName = "testByteReadChannelWriter",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-java:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.java.RequestProducerTest",
+                testMethodName = "testByteReadChannelWriter",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-java:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -3184,30 +2780,26 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestUnixSocketClient : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.cio.UnixSocketTest",
-                    testMethodName = "testUnixSocketClient",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.cio.UnixSocketTest",
+                testMethodName = "testUnixSocketClient",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestUnixSocketClientWithDefaultRequest : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.cio.UnixSocketTest",
-                    testMethodName = "testUnixSocketClientWithDefaultRequest",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.cio.UnixSocketTest",
+                testMethodName = "testUnixSocketClientWithDefaultRequest",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -3217,15 +2809,13 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestResolvingWsFunction : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.cio.BuildersTest",
-                    testMethodName = "testResolvingWsFunction",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.cio.BuildersTest",
+                testMethodName = "testResolvingWsFunction",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -3235,75 +2825,65 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class EngineUsesRequestTimeoutFromItsConfiguration : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.cio.CIORequestTest",
-                    testMethodName = "engineUsesRequestTimeoutFromItsConfiguration",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.cio.CIORequestTest",
+                testMethodName = "engineUsesRequestTimeoutFromItsConfiguration",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class LongHeadersTest : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.cio.CIORequestTest",
-                    testMethodName = "longHeadersTest",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.cio.CIORequestTest",
+                testMethodName = "longHeadersTest",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestParameterWithoutPath : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.cio.CIORequestTest",
-                    testMethodName = "testParameterWithoutPath",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.cio.CIORequestTest",
+                testMethodName = "testParameterWithoutPath",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestHangingTimeoutWithWrongUrl : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.cio.CIORequestTest",
-                    testMethodName = "testHangingTimeoutWithWrongUrl",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.cio.CIORequestTest",
+                testMethodName = "testHangingTimeoutWithWrongUrl",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestInetAddressRetrievedOnce : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.cio.CIORequestTest",
-                    testMethodName = "testInetAddressRetrievedOnce",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.cio.CIORequestTest",
+                testMethodName = "testInetAddressRetrievedOnce",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -3313,90 +2893,78 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestConnectAfterConnectionErrors : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.cio.ConnectErrorsTest",
-                    testMethodName = "testConnectAfterConnectionErrors",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.cio.ConnectErrorsTest",
+                testMethodName = "testConnectAfterConnectionErrors",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestResponseWithNoLengthChunkedAndConnectionClosedWithHttp10 : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.cio.ConnectErrorsTest",
-                    testMethodName = "testResponseWithNoLengthChunkedAndConnectionClosedWithHttp10",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.cio.ConnectErrorsTest",
+                testMethodName = "testResponseWithNoLengthChunkedAndConnectionClosedWithHttp10",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestResponseErrorWithNoLengthChunkedAndConnectionClosedWithHttp11 : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.cio.ConnectErrorsTest",
-                    testMethodName = "testResponseErrorWithNoLengthChunkedAndConnectionClosedWithHttp11",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.cio.ConnectErrorsTest",
+                testMethodName = "testResponseErrorWithNoLengthChunkedAndConnectionClosedWithHttp11",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestResponseErrorWithInvalidChunkException : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.cio.ConnectErrorsTest",
-                    testMethodName = "testResponseErrorWithInvalidChunkException",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.cio.ConnectErrorsTest",
+                testMethodName = "testResponseErrorWithInvalidChunkException",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestConnectionClosedBeforeReadingResponseStatusLine : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.cio.ConnectErrorsTest",
-                    testMethodName = "testConnectionClosedBeforeReadingResponseStatusLine",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.cio.ConnectErrorsTest",
+                testMethodName = "testConnectionClosedBeforeReadingResponseStatusLine",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestLateServerStart : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.cio.ConnectErrorsTest",
-                    testMethodName = "testLateServerStart",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.cio.ConnectErrorsTest",
+                testMethodName = "testLateServerStart",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -3406,30 +2974,26 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestHttpsOverProxy : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.cio.CIOHttpsTest",
-                    testMethodName = "testHttpsOverProxy",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.cio.CIOHttpsTest",
+                testMethodName = "testHttpsOverProxy",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class Test_hostname_is_verified : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.cio.CIOHttpsTest",
-                    testMethodName = "test hostname is verified",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.cio.CIOHttpsTest",
+                testMethodName = "test hostname is verified",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -3439,15 +3003,13 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class Hello : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.cio.CIOSpecificHttpsTest",
-                    testMethodName = "hello",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.cio.CIOSpecificHttpsTest",
+                testMethodName = "hello",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -3457,60 +3019,52 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestClientSSE : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.cio.CIOHttpClientTest",
-                    testMethodName = "testClientSSE",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.cio.CIOHttpClientTest",
+                testMethodName = "testClientSSE",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestWithNoParentJob : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.cio.CIOHttpClientTest",
-                    testMethodName = "testWithNoParentJob",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.cio.CIOHttpClientTest",
+                testMethodName = "testWithNoParentJob",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class ConfigCopiesOldPluginsAndInterceptors : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.cio.CIOHttpClientTest",
-                    testMethodName = "configCopiesOldPluginsAndInterceptors",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.cio.CIOHttpClientTest",
+                testMethodName = "configCopiesOldPluginsAndInterceptors",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestOptionsRequest : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.client.engine.cio.CIOHttpClientTest",
-                    testMethodName = "testOptionsRequest",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-client-cio:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.client.engine.cio.CIOHttpClientTest",
+                testMethodName = "testOptionsRequest",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-client-cio:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -3520,60 +3074,52 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestKeysTopLevelHoconConfig : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.config.HoconConfigTest",
-                    testMethodName = "testKeysTopLevelHoconConfig",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-core:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.config.HoconConfigTest",
+                testMethodName = "testKeysTopLevelHoconConfig",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-core:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestKeysNestedHoconConfig : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.config.HoconConfigTest",
-                    testMethodName = "testKeysNestedHoconConfig",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-core:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.config.HoconConfigTest",
+                testMethodName = "testKeysNestedHoconConfig",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-core:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestToMap : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.config.HoconConfigTest",
-                    testMethodName = "testToMap",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-core:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.config.HoconConfigTest",
+                testMethodName = "testToMap",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-core:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class ReadSerializableClass : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.config.HoconConfigTest",
-                    testMethodName = "readSerializableClass",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-core:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.config.HoconConfigTest",
+                testMethodName = "readSerializableClass",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-core:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -3583,45 +3129,39 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestLoadFromResources : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.config.ConfigJvmTest",
-                    testMethodName = "testLoadFromResources",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-core:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.config.ConfigJvmTest",
+                testMethodName = "testLoadFromResources",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-core:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestLoadYamlFromResources : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.config.ConfigJvmTest",
-                    testMethodName = "testLoadYamlFromResources",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-core:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.config.ConfigJvmTest",
+                testMethodName = "testLoadYamlFromResources",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-core:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestLoadFromFile : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.config.ConfigJvmTest",
-                    testMethodName = "testLoadFromFile",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-core:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.config.ConfigJvmTest",
+                testMethodName = "testLoadFromFile",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-core:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -3631,135 +3171,117 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class Primitive_types : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.config.HoconDecoderTest",
-                    testMethodName = "primitive types",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-core:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.config.HoconDecoderTest",
+                testMethodName = "primitive types",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-core:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class Nullable_values : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.config.HoconDecoderTest",
-                    testMethodName = "nullable values",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-core:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.config.HoconDecoderTest",
+                testMethodName = "nullable values",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-core:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class Maps_and_type_parameters : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.config.HoconDecoderTest",
-                    testMethodName = "maps and type parameters",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-core:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.config.HoconDecoderTest",
+                testMethodName = "maps and type parameters",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-core:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class Collection_types : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.config.HoconDecoderTest",
-                    testMethodName = "collection types",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-core:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.config.HoconDecoderTest",
+                testMethodName = "collection types",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-core:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class Nested_structures : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.config.HoconDecoderTest",
-                    testMethodName = "nested structures",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-core:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.config.HoconDecoderTest",
+                testMethodName = "nested structures",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-core:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class Enum_values : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.config.HoconDecoderTest",
-                    testMethodName = "enum values",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-core:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.config.HoconDecoderTest",
+                testMethodName = "enum values",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-core:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestDecodeMissingValues : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.config.HoconDecoderTest",
-                    testMethodName = "testDecodeMissingValues",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-core:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.config.HoconDecoderTest",
+                testMethodName = "testDecodeMissingValues",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-core:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class Invalid_types : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.config.HoconDecoderTest",
-                    testMethodName = "invalid types",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-core:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.config.HoconDecoderTest",
+                testMethodName = "invalid types",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-core:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class Default_values : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.tests.config.HoconDecoderTest",
-                    testMethodName = "default values",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-core:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.tests.config.HoconDecoderTest",
+                testMethodName = "default values",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-core:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
     
@@ -3769,45 +3291,39 @@ class KtorTraceRecorderJsonIntegrationTests {
         inner class TestShutdownUrlRespondsWithGone : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.server.engine.ShutDownUrlTest",
-                    testMethodName = "testShutdownUrlRespondsWithGone",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-core:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.server.engine.ShutDownUrlTest",
+                testMethodName = "testShutdownUrlRespondsWithGone",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-core:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestShutdownUnderLoad : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.server.engine.ShutDownUrlTest",
-                    testMethodName = "testShutdownUnderLoad",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-core:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.server.engine.ShutDownUrlTest",
+                testMethodName = "testShutdownUnderLoad",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-core:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class TestExceptionHandlingDuringShutdown : KtorTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "io.ktor.server.engine.ShutDownUrlTest",
-                    testMethodName = "testExceptionHandlingDuringShutdown",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":ktor-server-core:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "io.ktor.server.engine.ShutDownUrlTest",
+                testMethodName = "testExceptionHandlingDuringShutdown",
+                extraJvmArgs = listOf(),
+                commands = listOf(":ktor-server-core:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
 }

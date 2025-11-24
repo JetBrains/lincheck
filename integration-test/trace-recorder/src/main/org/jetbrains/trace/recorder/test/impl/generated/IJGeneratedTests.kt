@@ -19,15 +19,13 @@ class IJTraceRecorderJsonIntegrationTests {
         inner class TestInsertString : IntellijTraceRecorderJsonTest() {
             @Test
             @Timeout(20 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "com.intellij.util.ArrayUtilTest",
-                    testMethodName = "testInsertString",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":kotlinx-collections-immutable:jvmTest"),
-                    checkRepresentation = true,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "com.intellij.util.ArrayUtilTest",
+                testMethodName = "testInsertString",
+                extraJvmArgs = listOf(),
+                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                checkRepresentation = true,
+            )
         }
     }
 }

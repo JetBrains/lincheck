@@ -19,210 +19,182 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
         inner class Empty : KotlinImmutableCollectionsTraceRecorderJsonTests() {
             @Test
             @Timeout(10 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "tests.contract.list.ImmutableListTest",
-                    testMethodName = "empty",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":kotlinx-collections-immutable:jvmTest"),
-                    checkRepresentation = true,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "tests.contract.list.ImmutableListTest",
+                testMethodName = "empty",
+                extraJvmArgs = listOf(),
+                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                checkRepresentation = true,
+            )
         }
     
         @Nested
         inner class OfElements : KotlinImmutableCollectionsTraceRecorderJsonTests() {
             @Test
             @Timeout(10 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "tests.contract.list.ImmutableListTest",
-                    testMethodName = "ofElements",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":kotlinx-collections-immutable:jvmTest"),
-                    checkRepresentation = true,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "tests.contract.list.ImmutableListTest",
+                testMethodName = "ofElements",
+                extraJvmArgs = listOf(),
+                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                checkRepresentation = true,
+            )
         }
     
         @Nested
         inner class ToImmutable : KotlinImmutableCollectionsTraceRecorderJsonTests() {
             @Test
             @Timeout(10 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "tests.contract.list.ImmutableListTest",
-                    testMethodName = "toImmutable",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":kotlinx-collections-immutable:jvmTest"),
-                    checkRepresentation = true,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "tests.contract.list.ImmutableListTest",
+                testMethodName = "toImmutable",
+                extraJvmArgs = listOf(),
+                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                checkRepresentation = true,
+            )
         }
     
         @Nested
         inner class EmptyListToPersistentList : KotlinImmutableCollectionsTraceRecorderJsonTests() {
             @Test
             @Timeout(10 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "tests.contract.list.ImmutableListTest",
-                    testMethodName = "emptyListToPersistentList",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":kotlinx-collections-immutable:jvmTest"),
-                    checkRepresentation = true,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "tests.contract.list.ImmutableListTest",
+                testMethodName = "emptyListToPersistentList",
+                extraJvmArgs = listOf(),
+                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                checkRepresentation = true,
+            )
         }
     
         @Nested
         inner class AddElements : KotlinImmutableCollectionsTraceRecorderJsonTests() {
             @Test
             @Timeout(10 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "tests.contract.list.ImmutableListTest",
-                    testMethodName = "addElements",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":kotlinx-collections-immutable:jvmTest"),
-                    checkRepresentation = true,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "tests.contract.list.ImmutableListTest",
+                testMethodName = "addElements",
+                extraJvmArgs = listOf(),
+                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                checkRepresentation = true,
+            )
         }
     
         @Nested
         inner class ReplaceElements : KotlinImmutableCollectionsTraceRecorderJsonTests() {
             @Test
             @Timeout(10 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "tests.contract.list.ImmutableListTest",
-                    testMethodName = "replaceElements",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":kotlinx-collections-immutable:jvmTest"),
-                    checkRepresentation = true,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "tests.contract.list.ImmutableListTest",
+                testMethodName = "replaceElements",
+                extraJvmArgs = listOf(),
+                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                checkRepresentation = true,
+            )
         }
     
         @Nested
         inner class SmallPersistentListFromMutableBuffer : KotlinImmutableCollectionsTraceRecorderJsonTests() {
             @Test
             @Timeout(10 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "tests.contract.list.ImmutableListTest",
-                    testMethodName = "smallPersistentListFromMutableBuffer",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":kotlinx-collections-immutable:jvmTest"),
-                    checkRepresentation = true,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "tests.contract.list.ImmutableListTest",
+                testMethodName = "smallPersistentListFromMutableBuffer",
+                extraJvmArgs = listOf(),
+                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                checkRepresentation = true,
+            )
         }
     
         @Nested
         inner class SubList : KotlinImmutableCollectionsTraceRecorderJsonTests() {
             @Test
             @Timeout(10 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "tests.contract.list.ImmutableListTest",
-                    testMethodName = "subList",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":kotlinx-collections-immutable:jvmTest"),
-                    checkRepresentation = true,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "tests.contract.list.ImmutableListTest",
+                testMethodName = "subList",
+                extraJvmArgs = listOf(),
+                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                checkRepresentation = true,
+            )
         }
     
         @Nested
         inner class SubListOfBuilder : KotlinImmutableCollectionsTraceRecorderJsonTests() {
             @Test
             @Timeout(10 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "tests.contract.list.ImmutableListTest",
-                    testMethodName = "subListOfBuilder",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":kotlinx-collections-immutable:jvmTest"),
-                    checkRepresentation = true,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "tests.contract.list.ImmutableListTest",
+                testMethodName = "subListOfBuilder",
+                extraJvmArgs = listOf(),
+                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                checkRepresentation = true,
+            )
         }
     
         @Nested
         inner class NoOperation : KotlinImmutableCollectionsTraceRecorderJsonTests() {
             @Test
             @Timeout(10 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "tests.contract.list.ImmutableListTest",
-                    testMethodName = "noOperation",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":kotlinx-collections-immutable:jvmTest"),
-                    checkRepresentation = true,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "tests.contract.list.ImmutableListTest",
+                testMethodName = "noOperation",
+                extraJvmArgs = listOf(),
+                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                checkRepresentation = true,
+            )
         }
     
         @Nested
         inner class CovariantTyping : KotlinImmutableCollectionsTraceRecorderJsonTests() {
             @Test
             @Timeout(10 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "tests.contract.list.ImmutableListTest",
-                    testMethodName = "covariantTyping",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":kotlinx-collections-immutable:jvmTest"),
-                    checkRepresentation = true,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "tests.contract.list.ImmutableListTest",
+                testMethodName = "covariantTyping",
+                extraJvmArgs = listOf(),
+                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                checkRepresentation = true,
+            )
         }
     
         @Nested
         inner class Builder : KotlinImmutableCollectionsTraceRecorderJsonTests() {
             @Test
             @Timeout(10 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "tests.contract.list.ImmutableListTest",
-                    testMethodName = "builder",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":kotlinx-collections-immutable:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "tests.contract.list.ImmutableListTest",
+                testMethodName = "builder",
+                extraJvmArgs = listOf(),
+                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class PersistentListFails : KotlinImmutableCollectionsTraceRecorderJsonTests() {
             @Test
             @Timeout(10 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "tests.contract.list.ImmutableListTest",
-                    testMethodName = "persistentListFails",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":kotlinx-collections-immutable:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "tests.contract.list.ImmutableListTest",
+                testMethodName = "persistentListFails",
+                extraJvmArgs = listOf(),
+                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     
         @Nested
         inner class RemoveElements : KotlinImmutableCollectionsTraceRecorderJsonTests() {
             @Test
             @Timeout(10 * 60)
-            fun test() {
-                runTest(
-                    testClassName = "tests.contract.list.ImmutableListTest",
-                    testMethodName = "removeElements",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":kotlinx-collections-immutable:jvmTest"),
-                    checkRepresentation = false,
-                )
-            }
+            fun test() = runTest(
+                testClassName = "tests.contract.list.ImmutableListTest",
+                testMethodName = "removeElements",
+                extraJvmArgs = listOf(),
+                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                checkRepresentation = false,
+            )
         }
     }
 }
