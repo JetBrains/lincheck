@@ -48,7 +48,7 @@ internal object TraceRecorderInjections {
 
     @JvmStatic
     fun stopTraceRecorderAndDumpTrace() {
-        // This method never should throw execution, or tracer state is undetermined
+        // This method should never throw an exception, or tracer state is undetermined
         try {
             TraceRecorder.finishTraceAndDumpResults()
         } catch (t: Throwable) {
