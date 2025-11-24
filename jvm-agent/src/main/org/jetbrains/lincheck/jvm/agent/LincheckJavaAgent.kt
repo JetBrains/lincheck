@@ -368,6 +368,10 @@ object LincheckJavaAgent {
     /**
      * This function ensures that the whole hierarchy of the given class is transformed for Lincheck analysis.
      *
+     * This function is only relevant for `LAZY` instrumentation strategy because
+     * under `EAGER` strategy the classes are transformed simply at the class loading time.
+     * Thus, under `EAGER` mode this function does nothing and returns immediately.
+     *
      * For this function, under the term class hierarchy we assume the following set of classes:
      * - class itself;
      * - its superclasses;
@@ -389,17 +393,10 @@ object LincheckJavaAgent {
      *   https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-5.html#jvms-5.5
      * Also, naturally, this function should be called for the top-level class under analysis.
      *
-     *
-     * The function should be called from an ignored section of the analysis.
-     * If the INSTRUMENT_ALL_CLASSES flag is set to true, no transformation is performed.
-     *
      * @param className The name of the class to be transformed.
      */
     fun ensureClassHierarchyIsTransformed(className: String) {
-        if (instrumentationStrategy == InstrumentationStrategy.EAGER) {
-            ClassCache.forName(className)
-            return
-        }
+        if (instrumentationStrategy == InstrumentationStrategy.EAGER) return
         if (className in instrumentedClasses) return // already instrumented
 
         val clazz = ClassCache.forName(className)
@@ -440,6 +437,10 @@ object LincheckJavaAgent {
      * Ensures that the given object and all objects reachable from it are transformed for Lincheck analysis.
      * The function is called upon a test instance creation to ensure that
      * all the classes related to it are transformed.
+     *
+     * This function is only relevant for `LAZY` instrumentation strategy because
+     * under `EAGER` strategy the classes are transformed simply at the class loading time.
+     * Thus, under `EAGER` mode this function does nothing and returns immediately.
      *
      * The function should be called from an ignored section of the analysis.
      * If the INSTRUMENT_ALL_CLASSES flag is set to true, no transformation is performed.
