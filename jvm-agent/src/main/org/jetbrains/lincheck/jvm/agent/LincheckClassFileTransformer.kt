@@ -395,6 +395,9 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             if (className == "java.lang.Thread") return true
             if (className.startsWith("kotlin.concurrent.ThreadsKt")) return true
             if (className.startsWith("java.") || className.startsWith("kotlin.") || className.startsWith("jdk.")) return false
+            // there is a bug with instrumentation of android tools classes,
+            // see https://youtrack.jetbrains.com/issue/JBRes-7051
+            if (className.startsWith("com.android.tools.")) return false
         }
         if (isEagerlyInstrumentedClass(className)) return true
 
