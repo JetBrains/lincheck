@@ -1,5 +1,5 @@
 # Thread 1
-ListForEachBreakedLoopRepresentationTest.operation() at :0
+ListForEachBreakedLoopRepresentationTest.operation() at ListForEachBreakedLoopRepresentationTest.kt:17
   escape = "START" at ListForEachBreakedLoopRepresentationTest.kt:17
   Integer;@1[0] = 1 at ListForEachBreakedLoopRepresentationTest.kt:18
   Integer;@1[1] = 2 at ListForEachBreakedLoopRepresentationTest.kt:18

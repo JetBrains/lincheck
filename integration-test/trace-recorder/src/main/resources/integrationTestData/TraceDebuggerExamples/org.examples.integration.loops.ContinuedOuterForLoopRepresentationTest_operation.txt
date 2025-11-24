@@ -1,5 +1,5 @@
 # Thread 1
-ContinuedOuterForLoopRepresentationTest.operation() at :0
+ContinuedOuterForLoopRepresentationTest.operation() at ContinuedOuterForLoopRepresentationTest.kt:16
   escape = "START" at ContinuedOuterForLoopRepresentationTest.kt:16
   j = 1 at ContinuedOuterForLoopRepresentationTest.kt:17
   loop(3 iterations) at ContinuedOuterForLoopRepresentationTest.kt:17

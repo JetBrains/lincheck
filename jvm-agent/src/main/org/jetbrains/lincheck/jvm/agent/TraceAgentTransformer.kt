@@ -10,6 +10,7 @@
 
 package org.jetbrains.lincheck.jvm.agent
 
+import jdk.internal.org.objectweb.asm.ClassReader.SKIP_FRAMES
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.ClassWriter
@@ -19,14 +20,19 @@ import org.objectweb.asm.Opcodes.ACC_BRIDGE
 import org.objectweb.asm.Opcodes.ACC_NATIVE
 import org.objectweb.asm.Opcodes.ACC_SYNTHETIC
 import org.objectweb.asm.commons.GeneratorAdapter
+import org.objectweb.asm.tree.ClassNode
+import org.objectweb.asm.tree.LineNumberNode
 import java.lang.instrument.ClassFileTransformer
 import java.security.ProtectionDomain
 
 typealias MethodVisitorProvider = (
+    className: String,
+    fileName: String,
     adapter: GeneratorAdapter,
     access: Int,
-    name: String,
-    descriptor: String
+    methodName: String,
+    descriptor: String,
+    firstLine: Int
 ) -> MethodVisitor
 
 class TraceAgentTransformer(val methodTransformer: MethodVisitorProvider) : ClassFileTransformer {
@@ -56,10 +62,23 @@ class TraceAgentTransformer(val methodTransformer: MethodVisitorProvider) : Clas
         try {
             val bytes: ByteArray
             val reader = ClassReader(classBytes)
+
+            // Extract line numbers of starts of needed methods
+            val classNode = ClassNode()
+            reader.accept(classNode, SKIP_FRAMES)
+            val methodToLine = classNode.methods.map { method ->
+                method.instructions.forEach { instr ->
+                    if (instr is LineNumberNode) {
+                        return@map methodKey(method.name, method.desc) to instr.line
+                    }
+                }
+                return@map methodKey(method.name, method.desc) to 0
+            }.toMap()
+
             val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
 
             reader.accept(
-                TraceAgentClassVisitor(writer, methodTransformer),
+                TraceAgentClassVisitor(writer, methodTransformer, methodToLine),
                 ClassReader.SKIP_FRAMES
             )
             bytes = writer.toByteArray()
@@ -74,9 +93,11 @@ class TraceAgentTransformer(val methodTransformer: MethodVisitorProvider) : Clas
 
 private class TraceAgentClassVisitor(
     classVisitor: ClassVisitor,
-    val methodTransformer: MethodVisitorProvider
+    val methodTransformer: MethodVisitorProvider,
+    val methodToFirstLine: Map<String, Int>
 ): ClassVisitor(ASM_API, classVisitor) {
     private lateinit var className: String
+    private var fileName: String = ""
 
     override fun visit(
         version: Int,
@@ -88,6 +109,11 @@ private class TraceAgentClassVisitor(
     ) {
         super.visit(version, access, name, signature, superName, interfaces)
         className = name.toCanonicalClassName()
+    }
+
+    override fun visitSource(source: String?, debug: String?) {
+        super.visitSource(source, debug)
+        fileName = source!!
     }
 
     override fun visitMethod(
@@ -106,9 +132,20 @@ private class TraceAgentClassVisitor(
         if (className == TraceAgentParameters.classUnderTraceDebugging &&
             methodName == TraceAgentParameters.methodUnderTraceDebugging &&
             isNotSynthetic) {
-            mv = methodTransformer(mv.newAdapter(), access, methodName, desc)
+            val firstLine = methodToFirstLine[methodKey(methodName, desc)] ?: 0
+            mv = methodTransformer(
+                className,
+                fileName,
+                mv.newAdapter(),
+                access,
+                methodName,
+                desc,
+                firstLine
+            )
         }
 
         return mv
     }
 }
+
+private fun methodKey(methodName: String, methodDesc: String) = "$methodName|$methodDesc;"

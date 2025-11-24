@@ -1,5 +1,5 @@
 # Thread 1
-BreakedNestedRepeatLoopRepresentationTest.operation() at :0
+BreakedNestedRepeatLoopRepresentationTest.operation() at BreakedNestedRepeatLoopRepresentationTest.kt:16
   escape = "START" at BreakedNestedRepeatLoopRepresentationTest.kt:16
   j = 1 at BreakedNestedRepeatLoopRepresentationTest.kt:17
   loop(1 iterations) at BreakedNestedRepeatLoopRepresentationTest.kt:17

@@ -1,3 +1,3 @@
 # Thread 1
-ManglingTest.testInternalViaAccessor() at :0
+ManglingTest.testInternalViaAccessor() at ManglingTest.kt:118
   A.requiresAccessor() at ManglingTest.kt:118

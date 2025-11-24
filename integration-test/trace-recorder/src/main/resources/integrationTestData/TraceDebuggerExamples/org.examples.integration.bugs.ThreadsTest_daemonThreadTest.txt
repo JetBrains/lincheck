@@ -1,5 +1,5 @@
 # Thread 1 (Test worker)
-ThreadsTest.daemonThreadTest() at :0
+ThreadsTest.daemonThreadTest() at ThreadsTest.kt:18
   new AtomicInteger(0): AtomicInteger@1 at ThreadsTest.kt:18
   inc = AtomicInteger@1 at ThreadsTest.kt:18
   thread(true, false, null, null, -1, ThreadsTest$$Lambda@1): ThreadsKt$thread$thread$1@1 at ThreadsTest.kt:20

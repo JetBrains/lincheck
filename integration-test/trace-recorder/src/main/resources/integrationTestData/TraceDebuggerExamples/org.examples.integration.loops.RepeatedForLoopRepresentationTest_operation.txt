@@ -1,5 +1,5 @@
 # Thread 1
-RepeatedForLoopRepresentationTest.operation() at :0
+RepeatedForLoopRepresentationTest.operation() at RepeatedForLoopRepresentationTest.kt:16
   escape = "START" at RepeatedForLoopRepresentationTest.kt:16
   loop("Loop-A") at RepeatedForLoopRepresentationTest.kt:17
     escape = "Loop-A-START" at RepeatedForLoopRepresentationTest.kt:24

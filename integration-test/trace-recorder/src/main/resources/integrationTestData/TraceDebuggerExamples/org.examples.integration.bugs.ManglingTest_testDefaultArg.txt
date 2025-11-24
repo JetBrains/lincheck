@@ -1,5 +1,5 @@
 # Thread 1
-ManglingTest.testDefaultArg() at :0
+ManglingTest.testDefaultArg() at ManglingTest.kt:42
   defaultArg(3) at ManglingTest.kt:42
     System.out.println(x ➜ 3) at ManglingTest.kt:37
   defaultArg(4) at ManglingTest.kt:43

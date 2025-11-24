@@ -1,5 +1,5 @@
 # Thread 1
-ListContinuedForAndMapLoopRepresentationTest.operation() at :0
+ListContinuedForAndMapLoopRepresentationTest.operation() at ListContinuedForAndMapLoopRepresentationTest.kt:17
   escape = "START" at ListContinuedForAndMapLoopRepresentationTest.kt:17
   Integer;@1[0] = 1 at ListContinuedForAndMapLoopRepresentationTest.kt:18
   Integer;@1[1] = 2 at ListContinuedForAndMapLoopRepresentationTest.kt:18

@@ -10,8 +10,10 @@
 
 package org.jetbrains.lincheck.trace.recorder
 
+import org.jetbrains.lincheck.descriptors.CodeLocations
 import org.jetbrains.lincheck.jvm.agent.ASM_API
 import org.jetbrains.lincheck.jvm.agent.invokeStatic
+import org.jetbrains.lincheck.jvm.agent.toInternalClassName
 import org.objectweb.asm.Label
 import org.objectweb.asm.commons.AdviceAdapter
 import org.objectweb.asm.commons.GeneratorAdapter
@@ -38,15 +40,30 @@ import org.objectweb.asm.commons.GeneratorAdapter
  * ```
  */
 internal class TraceRecorderMethodTransformer(
+    val className: String,
+    val fileName: String,
     adapter: GeneratorAdapter,
     access: Int,
-    name: String,
-    descriptor: String
-): AdviceAdapter(ASM_API, adapter, access, name, descriptor) {
+    methodName: String,
+    descriptor: String,
+    private val firstLine: Int
+): AdviceAdapter(ASM_API, adapter, access, methodName, descriptor) {
     private val startLabel: Label = Label()
 
     override fun onMethodEnter() {
         super.onMethodEnter()
+        // Make code location
+        // Line number may be unknown yet, update it later if needed
+        val stackTraceElement = StackTraceElement(
+            /* declaringClass = */ className.toInternalClassName(),
+            /* methodName = */ name,
+            /* fileName = */ fileName,
+            /* lineNumber = */ firstLine
+        )
+
+        val codeLocationId = CodeLocations.newCodeLocation(stackTraceElement)
+        push(codeLocationId)
+
         invokeStatic(TraceRecorderInjections::startTraceRecorder)
         // Start the "try-finally" block here to add stop & dump in "finally"
         visitLabel(startLabel)

@@ -1,5 +1,5 @@
 # Thread 1
-ConvertersTest.instant() at :0
+ConvertersTest.instant() at ConvertersTest.kt:33
   this = ConvertersTest@1 at ConvertersTest.kt:0
   Random(42): XorWowRandom@1 at ConvertersTest.kt:33
   random = XorWowRandom@1 at ConvertersTest.kt:33

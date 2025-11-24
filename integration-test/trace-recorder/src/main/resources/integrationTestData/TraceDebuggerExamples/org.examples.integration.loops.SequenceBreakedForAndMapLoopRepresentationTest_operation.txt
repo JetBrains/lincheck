@@ -1,5 +1,5 @@
 # Thread 1
-SequenceBreakedForAndMapLoopRepresentationTest.operation() at :0
+SequenceBreakedForAndMapLoopRepresentationTest.operation() at SequenceBreakedForAndMapLoopRepresentationTest.kt:16
   escape = "START" at SequenceBreakedForAndMapLoopRepresentationTest.kt:16
   Integer;@1[0] = 1 at SequenceBreakedForAndMapLoopRepresentationTest.kt:17
   Integer;@1[1] = 2 at SequenceBreakedForAndMapLoopRepresentationTest.kt:17

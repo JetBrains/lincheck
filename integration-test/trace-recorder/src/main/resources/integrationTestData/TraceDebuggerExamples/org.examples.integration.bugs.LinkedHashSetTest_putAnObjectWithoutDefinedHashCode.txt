@@ -1,5 +1,5 @@
 # Thread 1
-LinkedHashSetTest.putAnObjectWithoutDefinedHashCode() at :0
+LinkedHashSetTest.putAnObjectWithoutDefinedHashCode() at LinkedHashSetTest.kt:10
   new LinkedHashSetTest.A(1): LinkedHashSetTest.A@1 at LinkedHashSetTest.kt:10
   LinkedHashSetTest.A;@1[0] = LinkedHashSetTest.A@1 at LinkedHashSetTest.kt:10
   linkedSetOf(LinkedHashSetTest.A;@1): LinkedHashSet@1 at LinkedHashSetTest.kt:10

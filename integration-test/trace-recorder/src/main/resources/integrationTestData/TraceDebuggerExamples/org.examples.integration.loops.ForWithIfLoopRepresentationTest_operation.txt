@@ -1,5 +1,5 @@
 # Thread 1
-ForWithIfLoopRepresentationTest.operation() at :0
+ForWithIfLoopRepresentationTest.operation() at ForWithIfLoopRepresentationTest.kt:27
   escape = "START" at ForWithIfLoopRepresentationTest.kt:27
   i = 0 at ForWithIfLoopRepresentationTest.kt:28
   total = 0 at ForWithIfLoopRepresentationTest.kt:29

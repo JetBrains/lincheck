@@ -1,5 +1,5 @@
 # Thread 1
-CalculatorTest.isEvenTest() at :0
+CalculatorTest.isEvenTest() at CalculatorTest.kt:19
   this = CalculatorTest@1 at CalculatorTest.kt:0
   calc.isEven(2): true at CalculatorTest.kt:19
   assertTrue(true, null, 2, null) at CalculatorTest.kt:19

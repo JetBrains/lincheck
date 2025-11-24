@@ -1,5 +1,5 @@
 # Thread 1
-ForLoopWithTryCatchFinallyRepresentationTest.operation() at :0
+ForLoopWithTryCatchFinallyRepresentationTest.operation() at ForLoopWithTryCatchFinallyRepresentationTest.kt:26
   escape = "START" at ForLoopWithTryCatchFinallyRepresentationTest.kt:26
   i = 1 at ForLoopWithTryCatchFinallyRepresentationTest.kt:27
   loop(3 iterations) at ForLoopWithTryCatchFinallyRepresentationTest.kt:27

@@ -55,6 +55,7 @@ object TraceRecorder {
         format: String?,
         formatOption: String?,
         pack: Boolean,
+        startingCodeLocationId: Int,
     ) {
         val startedCount = installCount.incrementAndGet()
         Logger.info { "Trace recorder has been started from $className::$methodName in thread \"${Thread.currentThread().name}\" (installCount=$startedCount)" }
@@ -70,7 +71,7 @@ object TraceRecorder {
             methodName = methodName,
             traceDumpPath = traceFileName,
             mode = parseOutputMode(format, formatOption),
-            packTrace = pack
+            packTrace = pack,
         )
         traceStarterThread = Thread.currentThread()
         val descriptor = ThreadDescriptor.getCurrentThreadDescriptor()
@@ -78,7 +79,7 @@ object TraceRecorder {
 
         Injections.enableGlobalEventTracking(eventTracker)
 
-        eventTracker!!.enableTrace()
+        eventTracker!!.enableTrace(startingCodeLocationId)
         descriptor.enableAnalysis()
     }
 

@@ -1,5 +1,5 @@
 # Thread 1
-EmptyForLoopRepresentationTest.operation() at :0
+EmptyForLoopRepresentationTest.operation() at EmptyForLoopRepresentationTest.kt:19
   escape = "START" at EmptyForLoopRepresentationTest.kt:19
   new StringBuilder(): StringBuilder@1("") at EmptyForLoopRepresentationTest.kt:20
   builder = StringBuilder@1("") at EmptyForLoopRepresentationTest.kt:20

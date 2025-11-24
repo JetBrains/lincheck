@@ -1,5 +1,5 @@
 # Thread 1
-ImmutableListTest.ofElements() at :0
+ImmutableListTest.ofElements() at ImmutableListTest.kt:46
   Object;@1[0] = "a" at ImmutableListTest.kt:46
   Object;@1[1] = "d" at ImmutableListTest.kt:46
   Object;@1[2] = 1 at ImmutableListTest.kt:46
