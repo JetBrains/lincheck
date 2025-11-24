@@ -328,7 +328,7 @@ class TraceCollectingEventTracker(
 
     override fun afterThreadRunReturn(threadDescriptor: ThreadDescriptor) = threadDescriptor.runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
-        completeInvokedMethodCalls(Thread.currentThread(), threadData, reportLoops = false) { _, tp -> tp.result = TR_OBJECT_UNTRACKED_METHOD_RESULT }
+        completeInvokedMethodCalls(Thread.currentThread(), threadData) { _, tp -> tp.result = TR_OBJECT_UNTRACKED_METHOD_RESULT }
         threadDescriptor.disableAnalysis()
     }
 
@@ -337,7 +337,7 @@ class TraceCollectingEventTracker(
         exception: Throwable
     ) = threadDescriptor.runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: throw exception
-        completeInvokedMethodCalls(Thread.currentThread(), threadData, reportLoops = false) { _, tp -> tp.setExceptionResult(exception) }
+        completeInvokedMethodCalls(Thread.currentThread(), threadData) { _, tp -> tp.setExceptionResult(exception) }
         threadDescriptor.disableAnalysis()
         throw exception
     }
@@ -907,10 +907,17 @@ class TraceCollectingEventTracker(
     }
 
     /**
-     * Completes all method calls of the current thread via [tracePointFinisher] and empties the stack.
+     * Completes all method calls of the current thread via [onMethodCallCompletion] and empties the stack.
+     *
+     * @param loopsCompletionExpected when set to `false` will report an error if there were any loop tracepoints completed along the process.
      */
-    private fun completeInvokedMethodCalls(thread: Thread, threadData: ThreadData, reportLoops: Boolean, tracePointFinisher: (stackLevel: Int, tracePoint: TRMethodCallTracePoint) -> Unit) {
-        // End all method calls, for which we did not track the method return,
+    private fun completeInvokedMethodCalls(
+        thread: Thread,
+        threadData: ThreadData,
+        loopsCompletionExpected: Boolean = true,
+        onMethodCallCompletion: (stackLevel: Int, tracePoint: TRMethodCallTracePoint) -> Unit
+    ) {
+        // End all method calls, for which we did not track the method return
         while (threadData.getStack().isNotEmpty()) {
             val hasLoops = threadData.currentLoopTracePoint() != null
             while (threadData.currentLoopTracePoint() != null) {
@@ -918,11 +925,11 @@ class TraceCollectingEventTracker(
             }
 
             val tracePoint = threadData.popStackFrame()
-            if (hasLoops && reportLoops) {
+            if (hasLoops && !loopsCompletionExpected) {
                 Logger.error { "Forced exit from method ${tracePoint.className}.${tracePoint.methodName} breaks loops." }
             }
 
-            tracePointFinisher(threadData.getStack().size, tracePoint)
+            onMethodCallCompletion(threadData.getStack().size, tracePoint)
             strategy.completeContainerTracePoint(thread, tracePoint)
         }
         strategy.completeThread(thread)
@@ -940,7 +947,7 @@ class TraceCollectingEventTracker(
         // Early exit because we must skip `strategy.completeThread(thread)` for this thread too.
         if (threadData.getStack().isEmpty()) return
 
-        completeInvokedMethodCalls(thread, threadData, reportLoops = false) { _, tp -> tp.result = TR_OBJECT_UNFINISHED_METHOD_RESULT }
+        completeInvokedMethodCalls(thread, threadData) { _, tp -> tp.result = TR_OBJECT_UNFINISHED_METHOD_RESULT }
     }
 
     private fun completeMainThread(thread: Thread, threadDescriptor: ThreadDescriptor) {
@@ -957,7 +964,7 @@ class TraceCollectingEventTracker(
         }
 
         val overflowStack = mutableListOf<String>()
-        completeInvokedMethodCalls(thread, threadData, reportLoops = true) { stackLevel, tp ->
+        completeInvokedMethodCalls(thread, threadData, loopsCompletionExpected = false) { stackLevel, tp ->
             if (stackLevel != 0) {
                 overflowStack.add("${tp.className}.${tp.methodName}")
             }
