@@ -15,7 +15,6 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentTransformer
 import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_EXCLUDE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_INCLUDE
-import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_LAZY
 import org.jetbrains.lincheck.jvm.agent.isInstrumentationInitialized
 import org.jetbrains.lincheck.jvm.agent.isTraceJavaAgentAttached
 import org.jetbrains.lincheck.util.isInTraceDebuggerMode
@@ -39,7 +38,6 @@ internal object TraceRecorderAgent {
         ARGUMENT_FOPTION,
         ARGUMENT_INCLUDE,
         ARGUMENT_EXCLUDE,
-        ARGUMENT_LAZY,
         ARGUMENT_PACK,
     )
 

@@ -177,14 +177,6 @@ object LincheckJavaAgent {
 
             INSTRUMENT_ALL_CLASSES -> InstrumentationStrategy.EAGER
 
-            (instrumentationMode == TRACE_DEBUGGING) -> {
-                val lazyTransformationEnabled = TraceAgentParameters.getLazyTransformationEnabled()
-                if (lazyTransformationEnabled && instrumentationMode.supportsLazyTransformation)
-                    InstrumentationStrategy.LAZY
-                else
-                    InstrumentationStrategy.EAGER
-            }
-
             else -> {
                 if (instrumentationMode.supportsLazyTransformation)
                     InstrumentationStrategy.LAZY
