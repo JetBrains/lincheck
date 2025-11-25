@@ -166,7 +166,11 @@
     "methods": [
       "testBiggerThan8k",
       "testFaultyGzippedBiggerThan8k"
-    ]
+    ],
+    "reasonsForMuting": {
+      "testBiggerThan8k": "https://youtrack.jetbrains.com/projects/JBRes/issues/JBRes-7064",
+      "testFaultyGzippedBiggerThan8k": "https://youtrack.jetbrains.com/projects/JBRes/issues/JBRes-7064"
+    }
   },
   {
     "class": "io.ktor.network.selector.ActorSelectorManagerTest",
@@ -296,7 +300,17 @@
       "testExpectedIgnoreHTTP1_0",
       "testGracefulShutdown",
       "testLotsOfHeaders"
-    ]
+    ],
+    "reasonsForMuting": {
+      "testChunkedResponse": "https://youtrack.jetbrains.com/projects/JBRes/issues/JBRes-7064",
+      "testExpectedContinue": "https://youtrack.jetbrains.com/projects/JBRes/issues/JBRes-7064",
+      "testExpectedContinueConnection": "https://youtrack.jetbrains.com/projects/JBRes/issues/JBRes-7064",
+      "testExpectedContinueExpectationFailed": "https://youtrack.jetbrains.com/projects/JBRes/issues/JBRes-7064",
+      "testExpectedContinueRespondBeforeReadingBody": "https://youtrack.jetbrains.com/projects/JBRes/issues/JBRes-7064",
+      "testExpectedIgnoreHTTP1_0": "https://youtrack.jetbrains.com/projects/JBRes/issues/JBRes-7064",
+      "testGracefulShutdown": "https://youtrack.jetbrains.com/projects/JBRes/issues/JBRes-7064",
+      "testLotsOfHeaders": "https://youtrack.jetbrains.com/projects/JBRes/issues/JBRes-7064"
+    }
   },
   {
     "class": "io.ktor.tests.server.cio.CIOUnixSocketServerTest",
@@ -417,7 +431,13 @@
       "testWithNoParentJob",
       "configCopiesOldPluginsAndInterceptors",
       "testOptionsRequest"
-    ]
+    ],
+    "reasonsForMuting": {
+      "testClientSSE": "https://youtrack.jetbrains.com/projects/JBRes/issues/JBRes-7064",
+      "testWithNoParentJob": "https://youtrack.jetbrains.com/projects/JBRes/issues/JBRes-7064",
+      "configCopiesOldPluginsAndInterceptors": "https://youtrack.jetbrains.com/projects/JBRes/issues/JBRes-7064",
+      "testOptionsRequest": "https://youtrack.jetbrains.com/projects/JBRes/issues/JBRes-7064"
+    }
   },
   {
     "class": "io.ktor.client.engine.apache5.Apache5HttpsTest",
@@ -425,7 +445,11 @@
     "methods": [
       "testHttpsOverProxy",
       "test hostname is verified"
-    ]
+    ],
+    "reasonsForMuting": {
+      "testHttpsOverProxy": "https://youtrack.jetbrains.com/projects/JBRes/issues/JBRes-7064",
+      "test hostname is verified": "https://youtrack.jetbrains.com/projects/JBRes/issues/JBRes-7064"
+    }
   },
   {
     "class": "io.ktor.client.engine.java.JavaEngineTests",
@@ -507,7 +531,14 @@
       "testParameterWithoutPath",
       "testHangingTimeoutWithWrongUrl",
       "testInetAddressRetrievedOnce"
-    ]
+    ],
+    "reasonsForMuting": {
+      "engineUsesRequestTimeoutFromItsConfiguration": "https://youtrack.jetbrains.com/issue/JBRes-7064",
+      "longHeadersTest": "https://youtrack.jetbrains.com/issue/JBRes-7064",
+      "testParameterWithoutPath": "https://youtrack.jetbrains.com/issue/JBRes-7064",
+      "testHangingTimeoutWithWrongUrl": "https://youtrack.jetbrains.com/issue/JBRes-7064",
+      "testInetAddressRetrievedOnce": "https://youtrack.jetbrains.com/issue/JBRes-7064"
+    }
   },
   {
     "class": "io.ktor.client.engine.cio.ConnectErrorsTest",
@@ -527,7 +558,11 @@
     "methods": [
       "testHttpsOverProxy",
       "test hostname is verified"
-    ]
+    ],
+    "reasonsForMuting": {
+      "testHttpsOverProxy": "https://youtrack.jetbrains.com/issue/JBRes-7064",
+      "test hostname is verified": "https://youtrack.jetbrains.com/issue/JBRes-7064"
+    }
   },
   {
     "class": "io.ktor.client.engine.cio.CIOSpecificHttpsTest",
