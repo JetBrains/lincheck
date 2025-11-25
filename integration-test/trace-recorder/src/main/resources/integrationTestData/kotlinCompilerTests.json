@@ -58,7 +58,11 @@
     "methods": [
       "testAnyMethodInExpect",
       "testContextOnExpect"
-    ]
+    ],
+    "reasonsForMuting": {
+      "testAnyMethodInExpect": "https://youtrack.jetbrains.com/issue/JBRes-7062",
+      "testContextOnExpect": "https://youtrack.jetbrains.com/issue/JBRes-7062"
+    }
   },
   {
     "class": "org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Controlflow",
@@ -66,7 +70,11 @@
     "methods": [
       "testBreak",
       "testFor_loops"
-    ]
+    ],
+    "reasonsForMuting": {
+      "testBreak": "https://youtrack.jetbrains.com/issue/JBRes-7062",
+      "testFor_loops": "https://youtrack.jetbrains.com/issue/JBRes-7062"
+    }
   },
   {
     "class": "org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Multiplatform$K2$Annotations",
@@ -74,7 +82,11 @@
     "methods": [
       "testOptionalExpectation",
       "testExpectAnnotationCallInLibrary"
-    ]
+    ],
+    "reasonsForMuting": {
+      "testOptionalExpectation": "https://youtrack.jetbrains.com/issue/JBRes-7062",
+      "testExpectAnnotationCallInLibrary": "https://youtrack.jetbrains.com/issue/JBRes-7062"
+    }
   },
   {
     "class": "org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Coroutines",
@@ -82,14 +94,20 @@
     "methods": [
       "testAsync",
       "testAwait"
-    ]
+    ],
+    "reasonsForMuting": {
+      "testAwait": "https://youtrack.jetbrains.com/issue/JBRes-7062"
+    }
   },
   {
     "class": "org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$ControlStructures$TryCatchInExpressions",
     "gradleCommand": ":js:js.tests:test",
     "methods": [
       "testTryInsideTry"
-    ]
+    ],
+    "reasonsForMuting": {
+      "testTryInsideTry": "https://youtrack.jetbrains.com/issue/JBRes-7062"
+    }
   },
   {
     "class": "org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations",
@@ -135,6 +153,9 @@
     "gradleCommand": ":wasm:wasm.tests:test",
     "methods": [
       "testAnnotations0"
-    ]
+    ],
+    "reasonsForMuting": {
+      "testAnnotations0": "https://youtrack.jetbrains.com/issue/JBRes-7062"
+    }
   }
 ]
