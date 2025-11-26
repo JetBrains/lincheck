@@ -66,12 +66,12 @@ tasks {
         when (integrationTestSuiteType) {
             TraceAgentIntegrationTestSuite.KotlinCompiler -> include("**/*KotlinCompilerTraceRecorderJsonIntegrationTests*")
             TraceAgentIntegrationTestSuite.Ktor -> include("**/*KtorTraceRecorderJsonIntegrationTests*")
-            TraceAgentIntegrationTestSuite.IJ -> include("**/*IntellijTraceRecorderJsonIntegrationTest*")
+            TraceAgentIntegrationTestSuite.IJ -> include("**/*IJTraceRecorderJsonIntegrationTests*")
             TraceAgentIntegrationTestSuite.All -> {}
             TraceAgentIntegrationTestSuite.Basic -> exclude(
                 "**/*KotlinCompilerTraceRecorderJsonIntegrationTests*",
                 "**/*KtorTraceRecorderJsonIntegrationTests*",
-                "**/*IntellijTraceRecorderJsonIntegrationTest*",
+                "**/*IJTraceRecorderJsonIntegrationTests*",
             )
         }
 
