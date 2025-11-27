@@ -10,17 +10,25 @@
 
 package org.jetbrains.trace.recorder.test.runner
 
+import AbstractGradleTraceIntegrationTest
 import java.io.File
 import java.nio.file.Paths
 import kotlin.io.path.createTempFile
 
-abstract class KotlinCompilerTraceRecorderJsonTests : AbstractJsonTraceRecorderIntegrationTest(
-    projectPath = Paths.get("build", "integrationTestProjects", "kotlin").toString(),
-    checkRepresentationByDefault = false,
-) {
-    override fun test(testCase: TestCase) = withPermissions { permissions ->
-        val allJvmArgs = listOf("-Djava.security.policy==${permissions.absolutePath}") + testCase.jvmArgs
-        super.test(testCase.copy(jvmArgs = allJvmArgs))
+abstract class KotlinCompilerTraceRecorderJsonTests : AbstractGradleTraceIntegrationTest() {
+    override val projectPath = Paths.get("build", "integrationTestProjects", "kotlin").toString()
+    override val formatArgs: Map<String, String> = mapOf("format" to "binary", "formatOption" to "stream")
+
+    override fun runTestImpl(
+        testClassName: String,
+        testMethodName: String,
+        extraJvmArgs: List<String>,
+        extraAgentArgs: Map<String, String>,
+        commands: List<String>,
+        outputFile: File
+    ) = withPermissions { permissions ->
+        val allJvmArgs = listOf("-Djava.security.policy==${permissions.absolutePath}") + extraJvmArgs
+        super.runTestImpl(testClassName, testMethodName, extraJvmArgs = allJvmArgs, extraAgentArgs, commands, outputFile)
     }
 
     companion object Companion : TestGenerator(

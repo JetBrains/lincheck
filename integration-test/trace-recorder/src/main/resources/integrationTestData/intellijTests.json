@@ -1,0 +1,10 @@
+[
+  {
+    "class": "com.intellij.util.ArrayUtilTest",
+    "gradleCommand": "",
+    "methods": [
+      "testInsertString"
+    ],
+    "checkRepresentation": true
+  }
+]

@@ -51,6 +51,11 @@ private val projectsToTest = listOf(
         repositoryName = "kotlinx-datetime",
         commitHash = "11246a8dd3051c3aeef70eb3d15173fd7183f549"
     ),
+    GithubProjectSnapshot(
+        organization = "ivandev0",
+        repositoryName = "intellij-community",
+        commitHash = "8f65df6d733acefffc32bbeb86538ffd45ca260a"
+    ),
 )
 
 lateinit var traceAgentIntegrationTestsPrerequisites: TaskProvider<Task>

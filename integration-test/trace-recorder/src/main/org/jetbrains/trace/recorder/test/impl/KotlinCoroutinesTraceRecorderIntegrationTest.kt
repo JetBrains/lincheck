@@ -10,12 +10,12 @@
 
 package org.jetbrains.trace.recorder.test.impl
 
-import org.jetbrains.trace.recorder.test.runner.AbstractTraceRecorderIntegrationTest
+import AbstractGradleTraceIntegrationTest
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.nio.file.Paths
 
-class KotlinCoroutinesTraceRecorderIntegrationTest : AbstractTraceRecorderIntegrationTest() {
+class KotlinCoroutinesTraceRecorderIntegrationTest : AbstractGradleTraceIntegrationTest() {
     override val projectPath: String = Paths.get("build", "integrationTestProjects", "kotlinx.coroutines").toString()
 
     @Test

@@ -10,11 +10,11 @@
 
 package org.jetbrains.trace.recorder.test.impl
 
-import org.jetbrains.trace.recorder.test.runner.AbstractTraceRecorderIntegrationTest
+import AbstractGradleTraceIntegrationTest
 import org.junit.jupiter.api.Test
 import java.nio.file.Paths
 
-class TraceDebuggerExamplesTraceRecorderIntegrationTest : AbstractTraceRecorderIntegrationTest() {
+class TraceDebuggerExamplesTraceRecorderIntegrationTest : AbstractGradleTraceIntegrationTest() {
     override val projectPath: String = Paths.get("build", "integrationTestProjects", "TraceDebuggerExamples").toString()
 
     @Test
