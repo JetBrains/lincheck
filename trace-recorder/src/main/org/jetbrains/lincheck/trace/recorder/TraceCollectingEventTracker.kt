@@ -378,14 +378,8 @@ class TraceCollectingEventTracker(
         Logger. error { "Trace Recorder mode doesn't support lock and monitor instrumentation" }
     }
 
-    override fun beforeNewObjectCreation(
-        threadDescriptor: ThreadDescriptor,
-        className: String
-    ) = runInsideIgnoredSection {
-        LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
-    }
-
-    override fun afterNewObjectCreation(threadDescriptor: ThreadDescriptor, obj: Any) = Unit
+    override fun beforeNewObjectCreation(threadDescriptor: ThreadDescriptor, className: String) {}
+    override fun afterNewObjectCreation(threadDescriptor: ThreadDescriptor, obj: Any) {}
 
     override fun getNextTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker): Long = runInsideIgnoredSection {
         Logger. error { "Trace Recorder mode doesn't support Trace Debugger-specific instrumentation" }
@@ -417,27 +411,21 @@ class TraceCollectingEventTracker(
         Logger. error { "Trace Recorder mode doesn't support invoke dynamic instrumentation" }
     }
 
-    override fun updateSnapshotBeforeConstructorCall(objs: Array<out Any?>) = Unit
+    override fun updateSnapshotBeforeConstructorCall(objs: Array<out Any?>) {}
 
     override fun beforeReadField(
         threadDescriptor: ThreadDescriptor,
         codeLocation: Int,
         obj: Any?,
         fieldId: Int
-    ): Unit = threadDescriptor.runInsideInjectedCode {
-        val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
-        if (fieldDescriptor.isStatic) {
-            LincheckJavaAgent.ensureClassHierarchyIsTransformed(fieldDescriptor.className)
-        }
-        return
-    }
+    ) {}
 
     override fun beforeReadArrayElement(
         threadDescriptor: ThreadDescriptor,
         codeLocation: Int,
         array: Any,
         index: Int,
-    ) = Unit
+    ) {}
 
     // Needs to run inside ignored section
     // as uninstrumented std lib code can be overshadowed by instrumented project code.
@@ -454,16 +442,7 @@ class TraceCollectingEventTracker(
         fieldId: Int,
         value: Any?
     ) = threadDescriptor.runInsideInjectedCode {
-        val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
-        if (fieldDescriptor.isStatic) {
-            if (value !== null && !value.isImmutable) {
-                LincheckJavaAgent.ensureClassHierarchyIsTransformed(value.javaClass)
-            }
-            // NOTE: for static reads we never create trace points
-            return
-        }
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
-
         val tracePoint = TRReadTracePoint(
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
@@ -536,7 +515,7 @@ class TraceCollectingEventTracker(
         strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
     }
 
-    override fun afterWrite(threadDescriptor: ThreadDescriptor) = Unit
+    override fun afterWrite(threadDescriptor: ThreadDescriptor) {}
 
     override fun afterLocalRead(
         threadDescriptor: ThreadDescriptor,
@@ -586,10 +565,6 @@ class TraceCollectingEventTracker(
         if (methodSection == AnalysisSectionType.IGNORED) {
             threadData.enterAnalysisSection(methodSection)
             return null
-        }
-
-        if (receiver == null && methodSection < AnalysisSectionType.ATOMIC) {
-            LincheckJavaAgent.ensureClassHierarchyIsTransformed(methodDescriptor.className)
         }
 
         val parentTracepoint = threadData.currentTopTracePoint()
@@ -820,9 +795,9 @@ class TraceCollectingEventTracker(
 
         if (!isReachableFromOutsideLoop) {
             if (currentLoopTracePoint == null) {
-                Logger.error { "Exit from loop $loopId outside of it" }
+                Logger.warn { "Exit from loop $loopId outside of it" }
             } else if (currentLoopTracePoint.loopId != loopId) {
-                Logger.error { "Unexpected loop exit: expected loopId ${currentLoopTracePoint.loopId}, but was $loopId" }
+                Logger.warn { "Unexpected loop exit: expected loopId ${currentLoopTracePoint.loopId}, but was $loopId" }
             }
         }
         if (currentLoopTracePoint?.loopId == loopId) {

@@ -3,17 +3,27 @@ ImmutableListTest.empty() at ImmutableListTest.kt:20
   persistentListOf(): SmallPersistentVector@1 at ImmutableListTest.kt:20
     persistentVectorOf(): SmallPersistentVector@1 at extensions.kt:452
       SmallPersistentVector.getEMPTY(): SmallPersistentVector@1 at Utils.kt:18
+        SmallPersistentVector.getEMPTY(): SmallPersistentVector@1 at SmallPersistentVector.kt:163
   empty1 = SmallPersistentVector@1 at ImmutableListTest.kt:20
   persistentListOf(): SmallPersistentVector@1 at ImmutableListTest.kt:21
     persistentVectorOf(): SmallPersistentVector@1 at extensions.kt:452
       SmallPersistentVector.getEMPTY(): SmallPersistentVector@1 at Utils.kt:18
+        SmallPersistentVector.getEMPTY(): SmallPersistentVector@1 at SmallPersistentVector.kt:163
   empty2 = SmallPersistentVector@1 at ImmutableListTest.kt:21
   assertEquals(empty1, empty2, null, 4, null) at ImmutableListTest.kt:22
   emptyList(): EmptyList@1 at ImmutableListTest.kt:23
   assertEquals(EmptyList@1, empty1, null, 4, null) at ImmutableListTest.kt:23
   assertTrue(true, null, 2, null) at ImmutableListTest.kt:24
   empty1.iterator(): BufferIterator@1 at ImmutableListTest.kt:26
+    listIterator(): BufferIterator@1 at AbstractPersistentList.kt:60
+      listIterator(0): BufferIterator@1 at AbstractPersistentList.kt:64
+        size(): 0 at SmallPersistentVector.kt:143
+        ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ 0, 0) at SmallPersistentVector.kt:143
+        size(): 0 at SmallPersistentVector.kt:145
+        new BufferIterator(buffer, index ➜ 0, 0): BufferIterator@1 at SmallPersistentVector.kt:145
   BufferIterator@1.next(): threw NoSuchElementException at ImmutableListTest.kt:26
+    hasNext(): false at BufferIterator.kt:14
+    new NoSuchElementException(): NoSuchElementException@1 at BufferIterator.kt:15
   createFailure(NoSuchElementException@1): Result.Failure@1 at ImmutableListTest.kt:26
   Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ImmutableListTest.kt:26
   checkResultIsFailure(NoSuchElementException.kclass, null, Result.Failure@1): NoSuchElementException@1 at ImmutableListTest.kt:26
@@ -41,6 +51,12 @@ ImmutableListTest.empty() at ImmutableListTest.kt:20
                 propertyEquals.hashCode(): 1 at CollectionBehaviors.kt:98
               getter.invoke(actual): 1 at ComparisonDSL.kt:21
                 propertyEquals.hashCode(): 1 at CollectionBehaviors.kt:98
+                  listIterator(): BufferIterator@1 at AbstractPersistentList.kt:60
+                    listIterator(0): BufferIterator@1 at AbstractPersistentList.kt:64
+                      size(): 0 at SmallPersistentVector.kt:143
+                      ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ 0, 0) at SmallPersistentVector.kt:143
+                      size(): 0 at SmallPersistentVector.kt:145
+                      new BufferIterator(buffer, index ➜ 0, 0): BufferIterator@1 at SmallPersistentVector.kt:145
               assertEquals(1, 1, message ➜ "hashCode") at ComparisonDSL.kt:21
             new StringBuilder(): StringBuilder@1("") at CollectionBehaviors.kt:100
             StringBuilder@1("").append(prefix ➜ ""): StringBuilder@1("") at CollectionBehaviors.kt:100
@@ -49,6 +65,12 @@ ImmutableListTest.empty() at ImmutableListTest.kt:20
             equalityBehavior.propertyEquals("toString", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:100
               getter.invoke(expected): "[]" at ComparisonDSL.kt:21
               getter.invoke(actual): "[]" at ComparisonDSL.kt:21
+                listIterator(): BufferIterator@1 at AbstractPersistentList.kt:60
+                  listIterator(0): BufferIterator@1 at AbstractPersistentList.kt:64
+                    size(): 0 at SmallPersistentVector.kt:143
+                    ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ 0, 0) at SmallPersistentVector.kt:143
+                    size(): 0 at SmallPersistentVector.kt:145
+                    new BufferIterator(buffer, index ➜ 0, 0): BufferIterator@1 at SmallPersistentVector.kt:145
               assertEquals("[]", "[]", message ➜ "toString") at ComparisonDSL.kt:21
           collectionBehavior(CompareContext@1, "", true) at CollectionBehaviors.kt:10
             new StringBuilder(): StringBuilder@1("") at CollectionBehaviors.kt:105
@@ -84,6 +106,8 @@ ImmutableListTest.empty() at ImmutableListTest.kt:20
                 contains(propertyEquals, it): false at CollectionBehaviors.kt:109
               getter.invoke(actual): false at ComparisonDSL.kt:21
                 contains(propertyEquals, it): false at CollectionBehaviors.kt:109
+                  indexOf(element): -1 at AbstractPersistentList.kt:52
+                    indexOf(buffer, element): -1 at SmallPersistentVector.kt:135
               assertEquals(false, false, message ➜ "") at ComparisonDSL.kt:21
             CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:110
               getter.invoke(expected): false at ComparisonDSL.kt:21
@@ -92,18 +116,28 @@ ImmutableListTest.empty() at ImmutableListTest.kt:20
               getter.invoke(actual): false at ComparisonDSL.kt:21
                 firstOrNull(propertyEquals): null at CollectionBehaviors.kt:110
                 contains(propertyEquals, null): false at CollectionBehaviors.kt:110
+                  indexOf(element): -1 at AbstractPersistentList.kt:52
+                    indexOf(buffer, element): -1 at SmallPersistentVector.kt:135
               assertEquals(false, false, message ➜ "") at ComparisonDSL.kt:21
             CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:111
               getter.invoke(expected): true at ComparisonDSL.kt:21
                 propertyEquals.containsAll(propertyEquals): true at CollectionBehaviors.kt:111
               getter.invoke(actual): true at ComparisonDSL.kt:21
                 propertyEquals.containsAll(propertyEquals): true at CollectionBehaviors.kt:111
+                  all = SmallPersistentVector@1 at AbstractPersistentList.kt:56
+                  all.isEmpty(): true at _Collections.kt:1734
               assertEquals(true, true, message ➜ "") at ComparisonDSL.kt:21
             collectionBehavior.compareProperty(CollectionBehaviorsKt$$Lambda@1, CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:113
               getter.invoke(expected): EmptyIterator@1 at ComparisonDSL.kt:27
                 compareProperty.iterator(): EmptyIterator@1 at CollectionBehaviors.kt:113
               getter.invoke(actual): BufferIterator@1 at ComparisonDSL.kt:27
                 compareProperty.iterator(): BufferIterator@1 at CollectionBehaviors.kt:113
+                  listIterator(): BufferIterator@1 at AbstractPersistentList.kt:60
+                    listIterator(0): BufferIterator@1 at AbstractPersistentList.kt:64
+                      size(): 0 at SmallPersistentVector.kt:143
+                      ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ 0, 0) at SmallPersistentVector.kt:143
+                      size(): 0 at SmallPersistentVector.kt:145
+                      new BufferIterator(buffer, index ➜ 0, 0): BufferIterator@1 at SmallPersistentVector.kt:145
               compare(EmptyIterator@1, BufferIterator@1, block) at ComparisonDSL.kt:27
                 new CompareContext(expected, actual): CompareContext@1 at ComparisonDSL.kt:12
                 block.invoke(CompareContext@1): Unit at ComparisonDSL.kt:12
@@ -130,6 +164,8 @@ ImmutableListTest.empty() at ImmutableListTest.kt:20
                         actual.invoke(): threw NoSuchElementException at ComparisonDSL.kt:32
                           getter.invoke(actual): threw NoSuchElementException at ComparisonDSL.kt:23
                             propertyFails.next(): threw NoSuchElementException at CollectionBehaviors.kt:61
+                              hasNext(): false at BufferIterator.kt:14
+                              new NoSuchElementException(): NoSuchElementException@1 at BufferIterator.kt:15
                         createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:32
                         Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
                         checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
@@ -143,6 +179,11 @@ ImmutableListTest.empty() at ImmutableListTest.kt:20
               compareProperty.listIterator(): EmptyIterator@1 at CollectionBehaviors.kt:11
             getter.invoke(actual): BufferIterator@1 at ComparisonDSL.kt:27
               compareProperty.listIterator(): BufferIterator@1 at CollectionBehaviors.kt:11
+                listIterator(0): BufferIterator@1 at AbstractPersistentList.kt:64
+                  size(): 0 at SmallPersistentVector.kt:143
+                  ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ 0, 0) at SmallPersistentVector.kt:143
+                  size(): 0 at SmallPersistentVector.kt:145
+                  new BufferIterator(buffer, index ➜ 0, 0): BufferIterator@1 at SmallPersistentVector.kt:145
             compare(EmptyIterator@1, BufferIterator@1, block) at ComparisonDSL.kt:27
               new CompareContext(expected, actual): CompareContext@1 at ComparisonDSL.kt:12
               block.invoke(CompareContext@1): Unit at ComparisonDSL.kt:12
@@ -188,6 +229,8 @@ ImmutableListTest.empty() at ImmutableListTest.kt:20
                       actual.invoke(): threw NoSuchElementException at ComparisonDSL.kt:32
                         getter.invoke(actual): threw NoSuchElementException at ComparisonDSL.kt:23
                           propertyFails.next(): threw NoSuchElementException at CollectionBehaviors.kt:38
+                            hasNext(): false at BufferIterator.kt:14
+                            new NoSuchElementException(): NoSuchElementException@1 at BufferIterator.kt:15
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:32
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
@@ -212,6 +255,8 @@ ImmutableListTest.empty() at ImmutableListTest.kt:20
                       actual.invoke(): threw NoSuchElementException at ComparisonDSL.kt:32
                         getter.invoke(actual): threw NoSuchElementException at ComparisonDSL.kt:23
                           propertyFails.previous(): threw NoSuchElementException at CollectionBehaviors.kt:44
+                            hasPrevious(): false at BufferIterator.kt:21
+                            new NoSuchElementException(): NoSuchElementException@1 at BufferIterator.kt:22
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:32
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
@@ -225,6 +270,10 @@ ImmutableListTest.empty() at ImmutableListTest.kt:20
               compareProperty.listIterator(0): EmptyIterator@1 at CollectionBehaviors.kt:12
             getter.invoke(actual): BufferIterator@1 at ComparisonDSL.kt:27
               compareProperty.listIterator(0): BufferIterator@1 at CollectionBehaviors.kt:12
+                size(): 0 at SmallPersistentVector.kt:143
+                ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ 0, 0) at SmallPersistentVector.kt:143
+                size(): 0 at SmallPersistentVector.kt:145
+                new BufferIterator(buffer, index ➜ 0, 0): BufferIterator@1 at SmallPersistentVector.kt:145
             compare(EmptyIterator@1, BufferIterator@1, block) at ComparisonDSL.kt:27
               new CompareContext(expected, actual): CompareContext@1 at ComparisonDSL.kt:12
               block.invoke(CompareContext@1): Unit at ComparisonDSL.kt:12
@@ -270,6 +319,8 @@ ImmutableListTest.empty() at ImmutableListTest.kt:20
                       actual.invoke(): threw NoSuchElementException at ComparisonDSL.kt:32
                         getter.invoke(actual): threw NoSuchElementException at ComparisonDSL.kt:23
                           propertyFails.next(): threw NoSuchElementException at CollectionBehaviors.kt:38
+                            hasNext(): false at BufferIterator.kt:14
+                            new NoSuchElementException(): NoSuchElementException@1 at BufferIterator.kt:15
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:32
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
@@ -294,6 +345,8 @@ ImmutableListTest.empty() at ImmutableListTest.kt:20
                       actual.invoke(): threw NoSuchElementException at ComparisonDSL.kt:32
                         getter.invoke(actual): threw NoSuchElementException at ComparisonDSL.kt:23
                           propertyFails.previous(): threw NoSuchElementException at CollectionBehaviors.kt:44
+                            hasPrevious(): false at BufferIterator.kt:21
+                            new NoSuchElementException(): NoSuchElementException@1 at BufferIterator.kt:22
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:32
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
@@ -309,6 +362,10 @@ ImmutableListTest.empty() at ImmutableListTest.kt:20
             getter.invoke(actual): BufferIterator@1 at ComparisonDSL.kt:27
               compareProperty.size(): 0 at CollectionBehaviors.kt:13
               compareProperty.listIterator(0): BufferIterator@1 at CollectionBehaviors.kt:13
+                size(): 0 at SmallPersistentVector.kt:143
+                ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ 0, 0) at SmallPersistentVector.kt:143
+                size(): 0 at SmallPersistentVector.kt:145
+                new BufferIterator(buffer, index ➜ 0, 0): BufferIterator@1 at SmallPersistentVector.kt:145
             compare(EmptyIterator@1, BufferIterator@1, block) at ComparisonDSL.kt:27
               new CompareContext(expected, actual): CompareContext@1 at ComparisonDSL.kt:12
               block.invoke(CompareContext@1): Unit at ComparisonDSL.kt:12
@@ -354,6 +411,8 @@ ImmutableListTest.empty() at ImmutableListTest.kt:20
                       actual.invoke(): threw NoSuchElementException at ComparisonDSL.kt:32
                         getter.invoke(actual): threw NoSuchElementException at ComparisonDSL.kt:23
                           propertyFails.next(): threw NoSuchElementException at CollectionBehaviors.kt:38
+                            hasNext(): false at BufferIterator.kt:14
+                            new NoSuchElementException(): NoSuchElementException@1 at BufferIterator.kt:15
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:32
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
@@ -378,6 +437,8 @@ ImmutableListTest.empty() at ImmutableListTest.kt:20
                       actual.invoke(): threw NoSuchElementException at ComparisonDSL.kt:32
                         getter.invoke(actual): threw NoSuchElementException at ComparisonDSL.kt:23
                           propertyFails.previous(): threw NoSuchElementException at CollectionBehaviors.kt:44
+                            hasPrevious(): false at BufferIterator.kt:21
+                            new NoSuchElementException(): NoSuchElementException@1 at BufferIterator.kt:22
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:32
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
@@ -398,6 +459,15 @@ ImmutableListTest.empty() at ImmutableListTest.kt:20
               actual.invoke(): threw IndexOutOfBoundsException at ComparisonDSL.kt:32
                 getter.invoke(actual): threw IndexOutOfBoundsException at ComparisonDSL.kt:23
                   propertyFails.listIterator(-1): threw IndexOutOfBoundsException at CollectionBehaviors.kt:15
+                    size(): 0 at SmallPersistentVector.kt:143
+                    ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ -1, 0): threw IndexOutOfBoundsException at SmallPersistentVector.kt:143
+                      new StringBuilder(): StringBuilder@1("") at ListImplementation.kt:22
+                      StringBuilder@1("").append("index: "): StringBuilder@1("index: ") at ListImplementation.kt:22
+                      StringBuilder@1("index: ").append(index ➜ -1): StringBuilder@1("index: -1") at ListImplementation.kt:22
+                      StringBuilder@1("index: -1").append(", size: "): StringBuilder@1("index: -1, size: ") at ListImplementation.kt:22
+                      StringBuilder@1("index: -1, size: ").append(size ➜ 0): StringBuilder@1("index: -1, size: 0") at ListImplementation.kt:22
+                      StringBuilder@1("index: -1, size: 0").toString(): "index: -1, size: 0" at ListImplementation.kt:22
+                      new IndexOutOfBoundsException("index: -1, size: 0"): IndexOutOfBoundsException@1 at ListImplementation.kt:22
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:32
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
@@ -420,6 +490,15 @@ ImmutableListTest.empty() at ImmutableListTest.kt:20
                 getter.invoke(actual): threw IndexOutOfBoundsException at ComparisonDSL.kt:23
                   propertyFails.size(): 0 at CollectionBehaviors.kt:16
                   propertyFails.listIterator(1): threw IndexOutOfBoundsException at CollectionBehaviors.kt:16
+                    size(): 0 at SmallPersistentVector.kt:143
+                    ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ 1, 0): threw IndexOutOfBoundsException at SmallPersistentVector.kt:143
+                      new StringBuilder(): StringBuilder@1("") at ListImplementation.kt:22
+                      StringBuilder@1("").append("index: "): StringBuilder@1("index: ") at ListImplementation.kt:22
+                      StringBuilder@1("index: ").append(index ➜ 1): StringBuilder@1("index: 1") at ListImplementation.kt:22
+                      StringBuilder@1("index: 1").append(", size: "): StringBuilder@1("index: 1, size: ") at ListImplementation.kt:22
+                      StringBuilder@1("index: 1, size: ").append(size ➜ 0): StringBuilder@1("index: 1, size: 0") at ListImplementation.kt:22
+                      StringBuilder@1("index: 1, size: 0").toString(): "index: 1, size: 0" at ListImplementation.kt:22
+                      new IndexOutOfBoundsException("index: 1, size: 0"): IndexOutOfBoundsException@1 at ListImplementation.kt:22
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:32
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
@@ -447,13 +526,24 @@ ImmutableListTest.empty() at ImmutableListTest.kt:20
                 getter.invoke(actual): threw IndexOutOfBoundsException at ComparisonDSL.kt:25
                   propertyFailsWith.size(): 0 at CollectionBehaviors.kt:21
                   propertyFailsWith.get(0): threw IndexOutOfBoundsException at CollectionBehaviors.kt:21
+                    size(): 0 at SmallPersistentVector.kt:150
+                    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 0, 0): threw IndexOutOfBoundsException at SmallPersistentVector.kt:150
+                      new StringBuilder(): StringBuilder@1("") at ListImplementation.kt:15
+                      StringBuilder@1("").append("index: "): StringBuilder@1("index: ") at ListImplementation.kt:15
+                      StringBuilder@1("index: ").append(index ➜ 0): StringBuilder@1("index: 0") at ListImplementation.kt:15
+                      StringBuilder@1("index: 0").append(", size: "): StringBuilder@1("index: 0, size: ") at ListImplementation.kt:15
+                      StringBuilder@1("index: 0, size: ").append(size ➜ 0): StringBuilder@1("index: 0, size: 0") at ListImplementation.kt:15
+                      StringBuilder@1("index: 0, size: 0").toString(): "index: 0, size: 0" at ListImplementation.kt:15
+                      new IndexOutOfBoundsException("index: 0, size: 0"): IndexOutOfBoundsException@1 at ListImplementation.kt:15
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:32
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
               actualFail = IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
               exceptionPredicate.invoke(expectedFail): true at ComparisonDSL.kt:35
+                invoke(p1): true at ComparisonDSL.kt:24
               assertTrue(true, "expected fail") at ComparisonDSL.kt:35
               exceptionPredicate.invoke(actualFail): true at ComparisonDSL.kt:36
+                invoke(p1): true at ComparisonDSL.kt:24
               assertTrue(true, "actual fail") at ComparisonDSL.kt:36
           CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:23
             getter.invoke(expected): -1 at ComparisonDSL.kt:21
@@ -462,6 +552,7 @@ ImmutableListTest.empty() at ImmutableListTest.kt:20
             getter.invoke(actual): -1 at ComparisonDSL.kt:21
               getOrNull(propertyEquals, 0): null at CollectionBehaviors.kt:23
               indexOf(propertyEquals, null): -1 at CollectionBehaviors.kt:23
+                indexOf(buffer, element): -1 at SmallPersistentVector.kt:135
             assertEquals(-1, -1, message ➜ "") at ComparisonDSL.kt:21
           CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:24
             getter.invoke(expected): -1 at ComparisonDSL.kt:21
@@ -470,6 +561,7 @@ ImmutableListTest.empty() at ImmutableListTest.kt:20
             getter.invoke(actual): -1 at ComparisonDSL.kt:21
               getOrNull(propertyEquals, 0): null at CollectionBehaviors.kt:24
               lastIndexOf(propertyEquals, null): -1 at CollectionBehaviors.kt:24
+                lastIndexOf(buffer, element): -1 at SmallPersistentVector.kt:139
             assertEquals(-1, -1, message ➜ "") at ComparisonDSL.kt:21
           listBehavior.propertyFails(CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:26
             assertFailEquals(CompareContext$$Lambda@1, CompareContext$$Lambda@1, null) at ComparisonDSL.kt:23
@@ -485,6 +577,19 @@ ImmutableListTest.empty() at ImmutableListTest.kt:20
                 getter.invoke(actual): threw IndexOutOfBoundsException at ComparisonDSL.kt:23
                   propertyFails.size(): 0 at CollectionBehaviors.kt:26
                   propertyFails.subList(0, 1): threw IndexOutOfBoundsException at CollectionBehaviors.kt:26
+                    subList(fromIndex ➜ 0, toIndex ➜ 1): threw IndexOutOfBoundsException at AbstractPersistentList.kt:13
+                      PersistentList.DefaultImpls.subList(, fromIndex ➜ 0, toIndex ➜ 1): threw IndexOutOfBoundsException at AbstractPersistentList.kt:15
+                        ImmutableList.DefaultImpls.subList(, fromIndex ➜ 0, toIndex ➜ 1): threw IndexOutOfBoundsException at ImmutableList.kt:62
+                          new ImmutableList.SubList(, fromIndex ➜ 0, toIndex ➜ 1): threw IndexOutOfBoundsException at ImmutableList.kt:30
+                            new StringBuilder(): StringBuilder@1("") at ListImplementation.kt:29
+                            StringBuilder@1("").append("fromIndex: "): StringBuilder@1("fromIndex: ") at ListImplementation.kt:29
+                            StringBuilder@1("fromIndex: ").append(fromIndex ➜ 0): StringBuilder@1("fromIndex: 0") at ListImplementation.kt:29
+                            StringBuilder@1("fromIndex: 0").append(", toIndex: "): StringBuilder@1("fromIndex: 0, toIndex: ") at ListImplementation.kt:29
+                            StringBuilder@1("fromIndex: 0, toIndex: ").append(toIndex ➜ 1): StringBuilder@1("fromIndex: 0, toIndex: 1") at ListImplementation.kt:29
+                            StringBuilder@1("fromIndex: 0, toIndex: 1").append(", size: "): StringBuilder@1("fromIndex: 0, toIndex: 1, size: ") at ListImplementation.kt:29
+                            StringBuilder@1("fromIndex: 0, toIndex: 1, size: ").append(size ➜ 0): StringBuilder@1("fromIndex: 0, toIndex: 1, size: 0") at ListImplementation.kt:29
+                            StringBuilder@1("fromIndex: 0, toIndex: 1, size: 0").toString(): "fromIndex: 0, toIndex: 1, size: 0" at ListImplementation.kt:29
+                            new IndexOutOfBoundsException("fromIndex: 0, toIndex: 1, size: 0"): IndexOutOfBoundsException@1 at ListImplementation.kt:29
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:32
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
@@ -505,6 +610,19 @@ ImmutableListTest.empty() at ImmutableListTest.kt:20
               actual.invoke(): threw IndexOutOfBoundsException at ComparisonDSL.kt:32
                 getter.invoke(actual): threw IndexOutOfBoundsException at ComparisonDSL.kt:23
                   propertyFails.subList(-1, 0): threw IndexOutOfBoundsException at CollectionBehaviors.kt:27
+                    subList(fromIndex ➜ -1, toIndex ➜ 0): threw IndexOutOfBoundsException at AbstractPersistentList.kt:13
+                      PersistentList.DefaultImpls.subList(, fromIndex ➜ -1, toIndex ➜ 0): threw IndexOutOfBoundsException at AbstractPersistentList.kt:15
+                        ImmutableList.DefaultImpls.subList(, fromIndex ➜ -1, toIndex ➜ 0): threw IndexOutOfBoundsException at ImmutableList.kt:62
+                          new ImmutableList.SubList(, fromIndex ➜ -1, toIndex ➜ 0): threw IndexOutOfBoundsException at ImmutableList.kt:30
+                            new StringBuilder(): StringBuilder@1("") at ListImplementation.kt:29
+                            StringBuilder@1("").append("fromIndex: "): StringBuilder@1("fromIndex: ") at ListImplementation.kt:29
+                            StringBuilder@1("fromIndex: ").append(fromIndex ➜ -1): StringBuilder@1("fromIndex: -1") at ListImplementation.kt:29
+                            StringBuilder@1("fromIndex: -1").append(", toIndex: "): StringBuilder@1("fromIndex: -1, toIndex: ") at ListImplementation.kt:29
+                            StringBuilder@1("fromIndex: -1, toIndex: ").append(toIndex ➜ 0): StringBuilder@1("fromIndex: -1, toIndex: 0") at ListImplementation.kt:29
+                            StringBuilder@1("fromIndex: -1, toIndex: 0").append(", size: "): StringBuilder@1("fromIndex: -1, toIndex: 0, size: ") at ListImplementation.kt:29
+                            StringBuilder@1("fromIndex: -1, toIndex: 0, size: ").append(size ➜ 0): StringBuilder@1("fromIndex: -1, toIndex: 0, size: 0") at ListImplementation.kt:29
+                            StringBuilder@1("fromIndex: -1, toIndex: 0, size: 0").toString(): "fromIndex: -1, toIndex: 0, size: 0" at ListImplementation.kt:29
+                            new IndexOutOfBoundsException("fromIndex: -1, toIndex: 0, size: 0"): IndexOutOfBoundsException@1 at ListImplementation.kt:29
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:32
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
@@ -520,4 +638,8 @@ ImmutableListTest.empty() at ImmutableListTest.kt:20
             getter.invoke(actual): ImmutableList.SubList@1 at ComparisonDSL.kt:21
               propertyEquals.size(): 0 at CollectionBehaviors.kt:28
               propertyEquals.subList(0, 0): ImmutableList.SubList@1 at CollectionBehaviors.kt:28
+                subList(fromIndex ➜ 0, toIndex ➜ 0): ImmutableList.SubList@1 at AbstractPersistentList.kt:13
+                  PersistentList.DefaultImpls.subList(, fromIndex ➜ 0, toIndex ➜ 0): ImmutableList.SubList@1 at AbstractPersistentList.kt:15
+                    ImmutableList.DefaultImpls.subList(, fromIndex ➜ 0, toIndex ➜ 0): ImmutableList.SubList@1 at ImmutableList.kt:62
+                      new ImmutableList.SubList(, fromIndex ➜ 0, toIndex ➜ 0): ImmutableList.SubList@1 at ImmutableList.kt:30
             assertEquals(EmptyList@1, ImmutableList.SubList@1, message ➜ "") at ComparisonDSL.kt:21

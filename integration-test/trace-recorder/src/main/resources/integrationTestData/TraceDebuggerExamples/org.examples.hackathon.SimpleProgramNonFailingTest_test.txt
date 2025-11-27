@@ -20,3 +20,5 @@ SimpleProgramNonFailingTest.test() at SimpleProgramNonFailingTest.kt:9
         i = 2 at SimpleProgramNonFailingTest.kt:21
   sum = 3 at SimpleProgramNonFailingTest.kt:10
   Assertions.assertEquals(6, sum ➜ 3): threw AssertionFailedError at SimpleProgramNonFailingTest.kt:12
+    new ValueWrapper(value ➜ 6): ValueWrapper@1 at ValueWrapper.java:61
+    new ValueWrapper(value ➜ 3): ValueWrapper@1 at ValueWrapper.java:61

@@ -105,14 +105,391 @@ ImmutableListTest.smallPersistentListFromMutableBuffer() at ImmutableListTest.kt
   persistentListOf(): SmallPersistentVector@1 at ImmutableListTest.kt:122
     persistentVectorOf(): SmallPersistentVector@1 at extensions.kt:452
       SmallPersistentVector.getEMPTY(): SmallPersistentVector@1 at Utils.kt:18
+        SmallPersistentVector.getEMPTY(): SmallPersistentVector@1 at SmallPersistentVector.kt:163
   mutate = SmallPersistentVector@1 at ImmutableListTest.kt:122
   mutate.builder(): PersistentVectorBuilder@1 at extensions.kt:41
+    new PersistentVectorBuilder(, null, buffer, 0): PersistentVectorBuilder@1 at SmallPersistentVector.kt:131
   it = PersistentVectorBuilder@1 at extensions.kt:41
   it.addAll(list): true at ImmutableListTest.kt:122
+    elements.isEmpty(): false at PersistentVectorBuilder.kt:174
+    modCount = 1 at PersistentVectorBuilder.kt:178
+    tailSize(): 0 at PersistentVectorBuilder.kt:180
+      size(): 0 at PersistentVectorBuilder.kt:77
+      tailSize(0): 0 at PersistentVectorBuilder.kt:77
+    tailSize = 0 at PersistentVectorBuilder.kt:180
+    elements.iterator(): ArrayList.Itr@1 at PersistentVectorBuilder.kt:181
+    elementsIterator = ArrayList.Itr@1 at PersistentVectorBuilder.kt:181
+    elements.size(): 33 at PersistentVectorBuilder.kt:183
+    elements.size(): 33 at PersistentVectorBuilder.kt:188
+    buffersSize = 1 at PersistentVectorBuilder.kt:188
+    buffers = Object;@1 at PersistentVectorBuilder.kt:189
+    makeMutable(tail): Object;@1 at PersistentVectorBuilder.kt:192
+      isMutable(buffer): false at PersistentVectorBuilder.kt:91
+      mutableBuffer(): Object;@1 at PersistentVectorBuilder.kt:94
+        buffer = Object;@1 at PersistentVectorBuilder.kt:112
+        buffer[32] = MutabilityOwnership@1 at PersistentVectorBuilder.kt:113
+      coerceAtMost(buffer.length ➜ 0, 32): 0 at PersistentVectorBuilder.kt:94
+      copyInto(buffer, Object;@1, 0, 0, 0, 6, null): Object;@1 at PersistentVectorBuilder.kt:94
+    copyToBuffer(Object;@1, tailSize ➜ 0, elementsIterator): Object;@1 at PersistentVectorBuilder.kt:192
+      index = 0 at PersistentVectorBuilder.kt:210
+      loop(32 iterations) at PersistentVectorBuilder.kt:211
+        <iteration 1> at PersistentVectorBuilder.kt:211
+          sourceIterator.hasNext(): true at PersistentVectorBuilder.kt:211
+          index = 1 at PersistentVectorBuilder.kt:212
+          sourceIterator.next(): 0 at PersistentVectorBuilder.kt:212
+          buffer[0] = 0 at PersistentVectorBuilder.kt:212
+        <iteration 2> at PersistentVectorBuilder.kt:211
+          sourceIterator.hasNext(): true at PersistentVectorBuilder.kt:211
+          index = 2 at PersistentVectorBuilder.kt:212
+          sourceIterator.next(): 1 at PersistentVectorBuilder.kt:212
+          buffer[1] = 1 at PersistentVectorBuilder.kt:212
+        <iteration 3> at PersistentVectorBuilder.kt:211
+          sourceIterator.hasNext(): true at PersistentVectorBuilder.kt:211
+          index = 3 at PersistentVectorBuilder.kt:212
+          sourceIterator.next(): 2 at PersistentVectorBuilder.kt:212
+          buffer[2] = 2 at PersistentVectorBuilder.kt:212
+        <iteration 4> at PersistentVectorBuilder.kt:211
+          sourceIterator.hasNext(): true at PersistentVectorBuilder.kt:211
+          index = 4 at PersistentVectorBuilder.kt:212
+          sourceIterator.next(): 3 at PersistentVectorBuilder.kt:212
+          buffer[3] = 3 at PersistentVectorBuilder.kt:212
+        <iteration 5> at PersistentVectorBuilder.kt:211
+          sourceIterator.hasNext(): true at PersistentVectorBuilder.kt:211
+          index = 5 at PersistentVectorBuilder.kt:212
+          sourceIterator.next(): 4 at PersistentVectorBuilder.kt:212
+          buffer[4] = 4 at PersistentVectorBuilder.kt:212
+        <iteration 6> at PersistentVectorBuilder.kt:211
+          sourceIterator.hasNext(): true at PersistentVectorBuilder.kt:211
+          index = 6 at PersistentVectorBuilder.kt:212
+          sourceIterator.next(): 5 at PersistentVectorBuilder.kt:212
+          buffer[5] = 5 at PersistentVectorBuilder.kt:212
+        <iteration 7> at PersistentVectorBuilder.kt:211
+          sourceIterator.hasNext(): true at PersistentVectorBuilder.kt:211
+          index = 7 at PersistentVectorBuilder.kt:212
+          sourceIterator.next(): 6 at PersistentVectorBuilder.kt:212
+          buffer[6] = 6 at PersistentVectorBuilder.kt:212
+        <iteration 8> at PersistentVectorBuilder.kt:211
+          sourceIterator.hasNext(): true at PersistentVectorBuilder.kt:211
+          index = 8 at PersistentVectorBuilder.kt:212
+          sourceIterator.next(): 7 at PersistentVectorBuilder.kt:212
+          buffer[7] = 7 at PersistentVectorBuilder.kt:212
+        <iteration 9> at PersistentVectorBuilder.kt:211
+          sourceIterator.hasNext(): true at PersistentVectorBuilder.kt:211
+          index = 9 at PersistentVectorBuilder.kt:212
+          sourceIterator.next(): 8 at PersistentVectorBuilder.kt:212
+          buffer[8] = 8 at PersistentVectorBuilder.kt:212
+        <iteration 10> at PersistentVectorBuilder.kt:211
+          sourceIterator.hasNext(): true at PersistentVectorBuilder.kt:211
+          index = 10 at PersistentVectorBuilder.kt:212
+          sourceIterator.next(): 9 at PersistentVectorBuilder.kt:212
+          buffer[9] = 9 at PersistentVectorBuilder.kt:212
+        <iteration 11> at PersistentVectorBuilder.kt:211
+          sourceIterator.hasNext(): true at PersistentVectorBuilder.kt:211
+          index = 11 at PersistentVectorBuilder.kt:212
+          sourceIterator.next(): 10 at PersistentVectorBuilder.kt:212
+          buffer[10] = 10 at PersistentVectorBuilder.kt:212
+        <iteration 12> at PersistentVectorBuilder.kt:211
+          sourceIterator.hasNext(): true at PersistentVectorBuilder.kt:211
+          index = 12 at PersistentVectorBuilder.kt:212
+          sourceIterator.next(): 11 at PersistentVectorBuilder.kt:212
+          buffer[11] = 11 at PersistentVectorBuilder.kt:212
+        <iteration 13> at PersistentVectorBuilder.kt:211
+          sourceIterator.hasNext(): true at PersistentVectorBuilder.kt:211
+          index = 13 at PersistentVectorBuilder.kt:212
+          sourceIterator.next(): 12 at PersistentVectorBuilder.kt:212
+          buffer[12] = 12 at PersistentVectorBuilder.kt:212
+        <iteration 14> at PersistentVectorBuilder.kt:211
+          sourceIterator.hasNext(): true at PersistentVectorBuilder.kt:211
+          index = 14 at PersistentVectorBuilder.kt:212
+          sourceIterator.next(): 13 at PersistentVectorBuilder.kt:212
+          buffer[13] = 13 at PersistentVectorBuilder.kt:212
+        <iteration 15> at PersistentVectorBuilder.kt:211
+          sourceIterator.hasNext(): true at PersistentVectorBuilder.kt:211
+          index = 15 at PersistentVectorBuilder.kt:212
+          sourceIterator.next(): 14 at PersistentVectorBuilder.kt:212
+          buffer[14] = 14 at PersistentVectorBuilder.kt:212
+        <iteration 16> at PersistentVectorBuilder.kt:211
+          sourceIterator.hasNext(): true at PersistentVectorBuilder.kt:211
+          index = 16 at PersistentVectorBuilder.kt:212
+          sourceIterator.next(): 15 at PersistentVectorBuilder.kt:212
+          buffer[15] = 15 at PersistentVectorBuilder.kt:212
+        <iteration 17> at PersistentVectorBuilder.kt:211
+          sourceIterator.hasNext(): true at PersistentVectorBuilder.kt:211
+          index = 17 at PersistentVectorBuilder.kt:212
+          sourceIterator.next(): 16 at PersistentVectorBuilder.kt:212
+          buffer[16] = 16 at PersistentVectorBuilder.kt:212
+        <iteration 18> at PersistentVectorBuilder.kt:211
+          sourceIterator.hasNext(): true at PersistentVectorBuilder.kt:211
+          index = 18 at PersistentVectorBuilder.kt:212
+          sourceIterator.next(): 17 at PersistentVectorBuilder.kt:212
+          buffer[17] = 17 at PersistentVectorBuilder.kt:212
+        <iteration 19> at PersistentVectorBuilder.kt:211
+          sourceIterator.hasNext(): true at PersistentVectorBuilder.kt:211
+          index = 19 at PersistentVectorBuilder.kt:212
+          sourceIterator.next(): 18 at PersistentVectorBuilder.kt:212
+          buffer[18] = 18 at PersistentVectorBuilder.kt:212
+        <iteration 20> at PersistentVectorBuilder.kt:211
+          sourceIterator.hasNext(): true at PersistentVectorBuilder.kt:211
+          index = 20 at PersistentVectorBuilder.kt:212
+          sourceIterator.next(): 19 at PersistentVectorBuilder.kt:212
+          buffer[19] = 19 at PersistentVectorBuilder.kt:212
+        <iteration 21> at PersistentVectorBuilder.kt:211
+          sourceIterator.hasNext(): true at PersistentVectorBuilder.kt:211
+          index = 21 at PersistentVectorBuilder.kt:212
+          sourceIterator.next(): 20 at PersistentVectorBuilder.kt:212
+          buffer[20] = 20 at PersistentVectorBuilder.kt:212
+        <iteration 22> at PersistentVectorBuilder.kt:211
+          sourceIterator.hasNext(): true at PersistentVectorBuilder.kt:211
+          index = 22 at PersistentVectorBuilder.kt:212
+          sourceIterator.next(): 21 at PersistentVectorBuilder.kt:212
+          buffer[21] = 21 at PersistentVectorBuilder.kt:212
+        <iteration 23> at PersistentVectorBuilder.kt:211
+          sourceIterator.hasNext(): true at PersistentVectorBuilder.kt:211
+          index = 23 at PersistentVectorBuilder.kt:212
+          sourceIterator.next(): 22 at PersistentVectorBuilder.kt:212
+          buffer[22] = 22 at PersistentVectorBuilder.kt:212
+        <iteration 24> at PersistentVectorBuilder.kt:211
+          sourceIterator.hasNext(): true at PersistentVectorBuilder.kt:211
+          index = 24 at PersistentVectorBuilder.kt:212
+          sourceIterator.next(): 23 at PersistentVectorBuilder.kt:212
+          buffer[23] = 23 at PersistentVectorBuilder.kt:212
+        <iteration 25> at PersistentVectorBuilder.kt:211
+          sourceIterator.hasNext(): true at PersistentVectorBuilder.kt:211
+          index = 25 at PersistentVectorBuilder.kt:212
+          sourceIterator.next(): 24 at PersistentVectorBuilder.kt:212
+          buffer[24] = 24 at PersistentVectorBuilder.kt:212
+        <iteration 26> at PersistentVectorBuilder.kt:211
+          sourceIterator.hasNext(): true at PersistentVectorBuilder.kt:211
+          index = 26 at PersistentVectorBuilder.kt:212
+          sourceIterator.next(): 25 at PersistentVectorBuilder.kt:212
+          buffer[25] = 25 at PersistentVectorBuilder.kt:212
+        <iteration 27> at PersistentVectorBuilder.kt:211
+          sourceIterator.hasNext(): true at PersistentVectorBuilder.kt:211
+          index = 27 at PersistentVectorBuilder.kt:212
+          sourceIterator.next(): 26 at PersistentVectorBuilder.kt:212
+          buffer[26] = 26 at PersistentVectorBuilder.kt:212
+        <iteration 28> at PersistentVectorBuilder.kt:211
+          sourceIterator.hasNext(): true at PersistentVectorBuilder.kt:211
+          index = 28 at PersistentVectorBuilder.kt:212
+          sourceIterator.next(): 27 at PersistentVectorBuilder.kt:212
+          buffer[27] = 27 at PersistentVectorBuilder.kt:212
+        <iteration 29> at PersistentVectorBuilder.kt:211
+          sourceIterator.hasNext(): true at PersistentVectorBuilder.kt:211
+          index = 29 at PersistentVectorBuilder.kt:212
+          sourceIterator.next(): 28 at PersistentVectorBuilder.kt:212
+          buffer[28] = 28 at PersistentVectorBuilder.kt:212
+        <iteration 30> at PersistentVectorBuilder.kt:211
+          sourceIterator.hasNext(): true at PersistentVectorBuilder.kt:211
+          index = 30 at PersistentVectorBuilder.kt:212
+          sourceIterator.next(): 29 at PersistentVectorBuilder.kt:212
+          buffer[29] = 29 at PersistentVectorBuilder.kt:212
+        <iteration 31> at PersistentVectorBuilder.kt:211
+          sourceIterator.hasNext(): true at PersistentVectorBuilder.kt:211
+          index = 31 at PersistentVectorBuilder.kt:212
+          sourceIterator.next(): 30 at PersistentVectorBuilder.kt:212
+          buffer[30] = 30 at PersistentVectorBuilder.kt:212
+        <iteration 32> at PersistentVectorBuilder.kt:211
+          sourceIterator.hasNext(): true at PersistentVectorBuilder.kt:211
+          index = 32 at PersistentVectorBuilder.kt:212
+          sourceIterator.next(): 31 at PersistentVectorBuilder.kt:212
+          buffer[31] = 31 at PersistentVectorBuilder.kt:212
+    buffers[0] = Object;@1 at PersistentVectorBuilder.kt:192
+    index = 1 at PersistentVectorBuilder.kt:194
+    rootSize(): 0 at PersistentVectorBuilder.kt:200
+      size(): 0 at PersistentVectorBuilder.kt:63
+    pushBuffersIncreasingHeightIfNeeded(root, 0, buffers): Object;@1 at PersistentVectorBuilder.kt:200
+      iterator(buffers): ArrayIterator@1 at PersistentVectorBuilder.kt:224
+      buffersIterator = ArrayIterator@1 at PersistentVectorBuilder.kt:224
+      pushBuffers(root, rootSize ➜ 0, rootShift ➜ 0, buffersIterator): Object;@1 at PersistentVectorBuilder.kt:229
+        buffersIterator.hasNext(): true at PersistentVectorBuilder.kt:255
+        buffersIterator.next(): Object;@1 at PersistentVectorBuilder.kt:259
+      mutableRoot = Object;@1 at PersistentVectorBuilder.kt:226
+      loop(1 iterations) at PersistentVectorBuilder.kt:237
+        <iteration 1> at PersistentVectorBuilder.kt:237
+          buffersIterator.hasNext(): false at PersistentVectorBuilder.kt:237
+    setRoot(Object;@1) at PersistentVectorBuilder.kt:200
+      builtVector = null at PersistentVectorBuilder.kt:25
+      root = Object;@1 at PersistentVectorBuilder.kt:26
+    mutableBuffer(): Object;@1 at PersistentVectorBuilder.kt:202
+      buffer = Object;@1 at PersistentVectorBuilder.kt:112
+      buffer[32] = MutabilityOwnership@1 at PersistentVectorBuilder.kt:113
+    copyToBuffer(Object;@1, 0, elementsIterator): Object;@1 at PersistentVectorBuilder.kt:202
+      index = 0 at PersistentVectorBuilder.kt:210
+      loop(2 iterations) at PersistentVectorBuilder.kt:211
+        <iteration 1> at PersistentVectorBuilder.kt:211
+          sourceIterator.hasNext(): true at PersistentVectorBuilder.kt:211
+          index = 1 at PersistentVectorBuilder.kt:212
+          sourceIterator.next(): 32 at PersistentVectorBuilder.kt:212
+          buffer[0] = 32 at PersistentVectorBuilder.kt:212
+        <iteration 2> at PersistentVectorBuilder.kt:211
+          sourceIterator.hasNext(): false at PersistentVectorBuilder.kt:211
+    setTail(Object;@1) at PersistentVectorBuilder.kt:202
+      builtVector = null at PersistentVectorBuilder.kt:33
+      tail = Object;@1 at PersistentVectorBuilder.kt:34
+    size(): 0 at PersistentVectorBuilder.kt:203
+    elements.size(): 33 at PersistentVectorBuilder.kt:203
+    size = 33 at PersistentVectorBuilder.kt:203
   PersistentVectorBuilder@1.build(): PersistentVector@1 at extensions.kt:41
+    build$lambda$0 = PersistentVectorBuilder@1 at PersistentVectorBuilder.kt:44
+    root = Object;@1 at PersistentVectorBuilder.kt:45
+    tail = Object;@1 at PersistentVectorBuilder.kt:46
+    new MutabilityOwnership(): MutabilityOwnership@1 at PersistentVectorBuilder.kt:47
+    build$lambda$0.ownership = MutabilityOwnership@1 at PersistentVectorBuilder.kt:47
+    build$lambda$0.size(): 33 at PersistentVectorBuilder.kt:55
+    new PersistentVector(root, tail, 33, build$lambda$0.rootShift ➜ 0): PersistentVector@1 at PersistentVectorBuilder.kt:55
+    newlyBuiltVector = PersistentVector@1 at PersistentVectorBuilder.kt:48
+    build$lambda$0.builtVector = PersistentVector@1 at PersistentVectorBuilder.kt:57
   vector = PersistentVector@1 at ImmutableListTest.kt:122
   getLastIndex(vector): 32 at ImmutableListTest.kt:123
   vector.removeAt(32): SmallPersistentVector@1 at ImmutableListTest.kt:123
+    size(): 33 at PersistentVector.kt:148
+    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 32, 33) at PersistentVector.kt:148
+    rootSize(): 32 at PersistentVector.kt:149
+      size(): 33 at PersistentVector.kt:34
+      rootSize(33): 32 at PersistentVector.kt:34
+    rootSize = 32 at PersistentVector.kt:149
+    removeFromTailAt(root, rootSize ➜ 32, rootShift ➜ 0, 0): SmallPersistentVector@1 at PersistentVector.kt:151
+      size(): 33 at PersistentVector.kt:158
+      tailSize = 1 at PersistentVector.kt:158
+      assert(true) at PersistentVector.kt:159
+      pullLastBufferFromRoot(root, rootSize ➜ 32, shift ➜ 0): SmallPersistentVector@1 at PersistentVector.kt:162
+        Arrays.copyOf(root, 32): Object;@1 at PersistentVector.kt:183
+        buffer = Object;@1 at PersistentVector.kt:183
+        new SmallPersistentVector(buffer): SmallPersistentVector@1 at PersistentVector.kt:184
   vector = SmallPersistentVector@1 at ImmutableListTest.kt:123
   dropLast(list, 1): ArrayList@1 at ImmutableListTest.kt:124
   assertEquals(ArrayList@1, vector, null, 4, null) at ImmutableListTest.kt:124
+    listIterator(): BufferIterator@1 at AbstractPersistentList.kt:60
+      listIterator(0): BufferIterator@1 at AbstractPersistentList.kt:64
+        size(): 32 at SmallPersistentVector.kt:143
+        ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ 0, 32) at SmallPersistentVector.kt:143
+        size(): 32 at SmallPersistentVector.kt:145
+        new BufferIterator(buffer, index ➜ 0, 32): BufferIterator@1 at SmallPersistentVector.kt:145
+    hasNext(): true at BufferIterator.kt:14
+    getIndex(): 0 at BufferIterator.kt:17
+    setIndex(1) at BufferIterator.kt:17
+      index = 1 at AbstractListIterator.kt:8
+    hasNext(): true at BufferIterator.kt:14
+    getIndex(): 1 at BufferIterator.kt:17
+    setIndex(2) at BufferIterator.kt:17
+      index = 2 at AbstractListIterator.kt:8
+    hasNext(): true at BufferIterator.kt:14
+    getIndex(): 2 at BufferIterator.kt:17
+    setIndex(3) at BufferIterator.kt:17
+      index = 3 at AbstractListIterator.kt:8
+    hasNext(): true at BufferIterator.kt:14
+    getIndex(): 3 at BufferIterator.kt:17
+    setIndex(4) at BufferIterator.kt:17
+      index = 4 at AbstractListIterator.kt:8
+    hasNext(): true at BufferIterator.kt:14
+    getIndex(): 4 at BufferIterator.kt:17
+    setIndex(5) at BufferIterator.kt:17
+      index = 5 at AbstractListIterator.kt:8
+    hasNext(): true at BufferIterator.kt:14
+    getIndex(): 5 at BufferIterator.kt:17
+    setIndex(6) at BufferIterator.kt:17
+      index = 6 at AbstractListIterator.kt:8
+    hasNext(): true at BufferIterator.kt:14
+    getIndex(): 6 at BufferIterator.kt:17
+    setIndex(7) at BufferIterator.kt:17
+      index = 7 at AbstractListIterator.kt:8
+    hasNext(): true at BufferIterator.kt:14
+    getIndex(): 7 at BufferIterator.kt:17
+    setIndex(8) at BufferIterator.kt:17
+      index = 8 at AbstractListIterator.kt:8
+    hasNext(): true at BufferIterator.kt:14
+    getIndex(): 8 at BufferIterator.kt:17
+    setIndex(9) at BufferIterator.kt:17
+      index = 9 at AbstractListIterator.kt:8
+    hasNext(): true at BufferIterator.kt:14
+    getIndex(): 9 at BufferIterator.kt:17
+    setIndex(10) at BufferIterator.kt:17
+      index = 10 at AbstractListIterator.kt:8
+    hasNext(): true at BufferIterator.kt:14
+    getIndex(): 10 at BufferIterator.kt:17
+    setIndex(11) at BufferIterator.kt:17
+      index = 11 at AbstractListIterator.kt:8
+    hasNext(): true at BufferIterator.kt:14
+    getIndex(): 11 at BufferIterator.kt:17
+    setIndex(12) at BufferIterator.kt:17
+      index = 12 at AbstractListIterator.kt:8
+    hasNext(): true at BufferIterator.kt:14
+    getIndex(): 12 at BufferIterator.kt:17
+    setIndex(13) at BufferIterator.kt:17
+      index = 13 at AbstractListIterator.kt:8
+    hasNext(): true at BufferIterator.kt:14
+    getIndex(): 13 at BufferIterator.kt:17
+    setIndex(14) at BufferIterator.kt:17
+      index = 14 at AbstractListIterator.kt:8
+    hasNext(): true at BufferIterator.kt:14
+    getIndex(): 14 at BufferIterator.kt:17
+    setIndex(15) at BufferIterator.kt:17
+      index = 15 at AbstractListIterator.kt:8
+    hasNext(): true at BufferIterator.kt:14
+    getIndex(): 15 at BufferIterator.kt:17
+    setIndex(16) at BufferIterator.kt:17
+      index = 16 at AbstractListIterator.kt:8
+    hasNext(): true at BufferIterator.kt:14
+    getIndex(): 16 at BufferIterator.kt:17
+    setIndex(17) at BufferIterator.kt:17
+      index = 17 at AbstractListIterator.kt:8
+    hasNext(): true at BufferIterator.kt:14
+    getIndex(): 17 at BufferIterator.kt:17
+    setIndex(18) at BufferIterator.kt:17
+      index = 18 at AbstractListIterator.kt:8
+    hasNext(): true at BufferIterator.kt:14
+    getIndex(): 18 at BufferIterator.kt:17
+    setIndex(19) at BufferIterator.kt:17
+      index = 19 at AbstractListIterator.kt:8
+    hasNext(): true at BufferIterator.kt:14
+    getIndex(): 19 at BufferIterator.kt:17
+    setIndex(20) at BufferIterator.kt:17
+      index = 20 at AbstractListIterator.kt:8
+    hasNext(): true at BufferIterator.kt:14
+    getIndex(): 20 at BufferIterator.kt:17
+    setIndex(21) at BufferIterator.kt:17
+      index = 21 at AbstractListIterator.kt:8
+    hasNext(): true at BufferIterator.kt:14
+    getIndex(): 21 at BufferIterator.kt:17
+    setIndex(22) at BufferIterator.kt:17
+      index = 22 at AbstractListIterator.kt:8
+    hasNext(): true at BufferIterator.kt:14
+    getIndex(): 22 at BufferIterator.kt:17
+    setIndex(23) at BufferIterator.kt:17
+      index = 23 at AbstractListIterator.kt:8
+    hasNext(): true at BufferIterator.kt:14
+    getIndex(): 23 at BufferIterator.kt:17
+    setIndex(24) at BufferIterator.kt:17
+      index = 24 at AbstractListIterator.kt:8
+    hasNext(): true at BufferIterator.kt:14
+    getIndex(): 24 at BufferIterator.kt:17
+    setIndex(25) at BufferIterator.kt:17
+      index = 25 at AbstractListIterator.kt:8
+    hasNext(): true at BufferIterator.kt:14
+    getIndex(): 25 at BufferIterator.kt:17
+    setIndex(26) at BufferIterator.kt:17
+      index = 26 at AbstractListIterator.kt:8
+    hasNext(): true at BufferIterator.kt:14
+    getIndex(): 26 at BufferIterator.kt:17
+    setIndex(27) at BufferIterator.kt:17
+      index = 27 at AbstractListIterator.kt:8
+    hasNext(): true at BufferIterator.kt:14
+    getIndex(): 27 at BufferIterator.kt:17
+    setIndex(28) at BufferIterator.kt:17
+      index = 28 at AbstractListIterator.kt:8
+    hasNext(): true at BufferIterator.kt:14
+    getIndex(): 28 at BufferIterator.kt:17
+    setIndex(29) at BufferIterator.kt:17
+      index = 29 at AbstractListIterator.kt:8
+    hasNext(): true at BufferIterator.kt:14
+    getIndex(): 29 at BufferIterator.kt:17
+    setIndex(30) at BufferIterator.kt:17
+      index = 30 at AbstractListIterator.kt:8
+    hasNext(): true at BufferIterator.kt:14
+    getIndex(): 30 at BufferIterator.kt:17
+    setIndex(31) at BufferIterator.kt:17
+      index = 31 at AbstractListIterator.kt:8
+    hasNext(): true at BufferIterator.kt:14
+    getIndex(): 31 at BufferIterator.kt:17
+    setIndex(32) at BufferIterator.kt:17
+      index = 32 at AbstractListIterator.kt:8

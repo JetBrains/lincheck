@@ -28,7 +28,6 @@ class KotlinImmutableCollectionsTraceRecorderIntegrationTest : AbstractGradleTra
             ),
             extraAgentArgs = mapOf(
                 "include" to "tests.contract.list.ImmutableListTest",
-                "lazyInstrumentation" to "false"
             ),
             testNameSuffix = "with_include_filter",
         )

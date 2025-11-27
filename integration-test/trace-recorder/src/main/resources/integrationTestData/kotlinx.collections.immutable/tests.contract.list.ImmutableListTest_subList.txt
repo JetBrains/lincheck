@@ -5,13 +5,155 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
       persistentListOf(): SmallPersistentVector@1 at extensions.kt:623
         persistentVectorOf(): SmallPersistentVector@1 at extensions.kt:452
           SmallPersistentVector.getEMPTY(): SmallPersistentVector@1 at Utils.kt:18
+            SmallPersistentVector.getEMPTY(): SmallPersistentVector@1 at SmallPersistentVector.kt:163
       mutate = SmallPersistentVector@1 at extensions.kt:623
       mutate.builder(): PersistentVectorBuilder@1 at extensions.kt:41
+        new PersistentVectorBuilder(, null, buffer, 0): PersistentVectorBuilder@1 at SmallPersistentVector.kt:131
       it = PersistentVectorBuilder@1 at extensions.kt:41
       toCollection(toPersistentList ➜ "abcxaxyz12", it): PersistentVectorBuilder@1 at extensions.kt:623
+        modCount = 1 at PersistentVectorBuilder.kt:118
+        tailSize(): 0 at PersistentVectorBuilder.kt:120
+          size(): 0 at PersistentVectorBuilder.kt:77
+          tailSize(0): 0 at PersistentVectorBuilder.kt:77
+        tailSize = 0 at PersistentVectorBuilder.kt:120
+        makeMutable(tail): Object;@1 at PersistentVectorBuilder.kt:122
+          isMutable(buffer): false at PersistentVectorBuilder.kt:91
+          mutableBuffer(): Object;@1 at PersistentVectorBuilder.kt:94
+            buffer = Object;@1 at PersistentVectorBuilder.kt:112
+            buffer[32] = MutabilityOwnership@1 at PersistentVectorBuilder.kt:113
+          coerceAtMost(buffer.length ➜ 0, 32): 0 at PersistentVectorBuilder.kt:94
+          copyInto(buffer, Object;@1, 0, 0, 0, 6, null): Object;@1 at PersistentVectorBuilder.kt:94
+        mutableTail = Object;@1 at PersistentVectorBuilder.kt:122
+        mutableTail[0] = 'a' at PersistentVectorBuilder.kt:123
+        setTail(mutableTail) at PersistentVectorBuilder.kt:124
+          builtVector = null at PersistentVectorBuilder.kt:33
+          tail = Object;@1 at PersistentVectorBuilder.kt:34
+        size(): 0 at PersistentVectorBuilder.kt:125
+        size = 1 at PersistentVectorBuilder.kt:125
+        modCount = 2 at PersistentVectorBuilder.kt:118
+        tailSize(): 1 at PersistentVectorBuilder.kt:120
+          size(): 1 at PersistentVectorBuilder.kt:77
+          tailSize(1): 1 at PersistentVectorBuilder.kt:77
+        tailSize = 1 at PersistentVectorBuilder.kt:120
+        makeMutable(tail): Object;@1 at PersistentVectorBuilder.kt:122
+          isMutable(buffer): true at PersistentVectorBuilder.kt:91
+        mutableTail = Object;@1 at PersistentVectorBuilder.kt:122
+        mutableTail[1] = 'b' at PersistentVectorBuilder.kt:123
+        setTail(mutableTail) at PersistentVectorBuilder.kt:124
+        size(): 1 at PersistentVectorBuilder.kt:125
+        size = 2 at PersistentVectorBuilder.kt:125
+        modCount = 3 at PersistentVectorBuilder.kt:118
+        tailSize(): 2 at PersistentVectorBuilder.kt:120
+          size(): 2 at PersistentVectorBuilder.kt:77
+          tailSize(2): 2 at PersistentVectorBuilder.kt:77
+        tailSize = 2 at PersistentVectorBuilder.kt:120
+        makeMutable(tail): Object;@1 at PersistentVectorBuilder.kt:122
+          isMutable(buffer): true at PersistentVectorBuilder.kt:91
+        mutableTail = Object;@1 at PersistentVectorBuilder.kt:122
+        mutableTail[2] = 'c' at PersistentVectorBuilder.kt:123
+        setTail(mutableTail) at PersistentVectorBuilder.kt:124
+        size(): 2 at PersistentVectorBuilder.kt:125
+        size = 3 at PersistentVectorBuilder.kt:125
+        modCount = 4 at PersistentVectorBuilder.kt:118
+        tailSize(): 3 at PersistentVectorBuilder.kt:120
+          size(): 3 at PersistentVectorBuilder.kt:77
+          tailSize(3): 3 at PersistentVectorBuilder.kt:77
+        tailSize = 3 at PersistentVectorBuilder.kt:120
+        makeMutable(tail): Object;@1 at PersistentVectorBuilder.kt:122
+          isMutable(buffer): true at PersistentVectorBuilder.kt:91
+        mutableTail = Object;@1 at PersistentVectorBuilder.kt:122
+        mutableTail[3] = 'x' at PersistentVectorBuilder.kt:123
+        setTail(mutableTail) at PersistentVectorBuilder.kt:124
+        size(): 3 at PersistentVectorBuilder.kt:125
+        size = 4 at PersistentVectorBuilder.kt:125
+        modCount = 5 at PersistentVectorBuilder.kt:118
+        tailSize(): 4 at PersistentVectorBuilder.kt:120
+          size(): 4 at PersistentVectorBuilder.kt:77
+          tailSize(4): 4 at PersistentVectorBuilder.kt:77
+        tailSize = 4 at PersistentVectorBuilder.kt:120
+        makeMutable(tail): Object;@1 at PersistentVectorBuilder.kt:122
+          isMutable(buffer): true at PersistentVectorBuilder.kt:91
+        mutableTail = Object;@1 at PersistentVectorBuilder.kt:122
+        mutableTail[4] = 'a' at PersistentVectorBuilder.kt:123
+        setTail(mutableTail) at PersistentVectorBuilder.kt:124
+        size(): 4 at PersistentVectorBuilder.kt:125
+        size = 5 at PersistentVectorBuilder.kt:125
+        modCount = 6 at PersistentVectorBuilder.kt:118
+        tailSize(): 5 at PersistentVectorBuilder.kt:120
+          size(): 5 at PersistentVectorBuilder.kt:77
+          tailSize(5): 5 at PersistentVectorBuilder.kt:77
+        tailSize = 5 at PersistentVectorBuilder.kt:120
+        makeMutable(tail): Object;@1 at PersistentVectorBuilder.kt:122
+          isMutable(buffer): true at PersistentVectorBuilder.kt:91
+        mutableTail = Object;@1 at PersistentVectorBuilder.kt:122
+        mutableTail[5] = 'x' at PersistentVectorBuilder.kt:123
+        setTail(mutableTail) at PersistentVectorBuilder.kt:124
+        size(): 5 at PersistentVectorBuilder.kt:125
+        size = 6 at PersistentVectorBuilder.kt:125
+        modCount = 7 at PersistentVectorBuilder.kt:118
+        tailSize(): 6 at PersistentVectorBuilder.kt:120
+          size(): 6 at PersistentVectorBuilder.kt:77
+          tailSize(6): 6 at PersistentVectorBuilder.kt:77
+        tailSize = 6 at PersistentVectorBuilder.kt:120
+        makeMutable(tail): Object;@1 at PersistentVectorBuilder.kt:122
+          isMutable(buffer): true at PersistentVectorBuilder.kt:91
+        mutableTail = Object;@1 at PersistentVectorBuilder.kt:122
+        mutableTail[6] = 'y' at PersistentVectorBuilder.kt:123
+        setTail(mutableTail) at PersistentVectorBuilder.kt:124
+        size(): 6 at PersistentVectorBuilder.kt:125
+        size = 7 at PersistentVectorBuilder.kt:125
+        modCount = 8 at PersistentVectorBuilder.kt:118
+        tailSize(): 7 at PersistentVectorBuilder.kt:120
+          size(): 7 at PersistentVectorBuilder.kt:77
+          tailSize(7): 7 at PersistentVectorBuilder.kt:77
+        tailSize = 7 at PersistentVectorBuilder.kt:120
+        makeMutable(tail): Object;@1 at PersistentVectorBuilder.kt:122
+          isMutable(buffer): true at PersistentVectorBuilder.kt:91
+        mutableTail = Object;@1 at PersistentVectorBuilder.kt:122
+        mutableTail[7] = 'z' at PersistentVectorBuilder.kt:123
+        setTail(mutableTail) at PersistentVectorBuilder.kt:124
+        size(): 7 at PersistentVectorBuilder.kt:125
+        size = 8 at PersistentVectorBuilder.kt:125
+        modCount = 9 at PersistentVectorBuilder.kt:118
+        tailSize(): 8 at PersistentVectorBuilder.kt:120
+          size(): 8 at PersistentVectorBuilder.kt:77
+          tailSize(8): 8 at PersistentVectorBuilder.kt:77
+        tailSize = 8 at PersistentVectorBuilder.kt:120
+        makeMutable(tail): Object;@1 at PersistentVectorBuilder.kt:122
+          isMutable(buffer): true at PersistentVectorBuilder.kt:91
+        mutableTail = Object;@1 at PersistentVectorBuilder.kt:122
+        mutableTail[8] = '1' at PersistentVectorBuilder.kt:123
+        setTail(mutableTail) at PersistentVectorBuilder.kt:124
+        size(): 8 at PersistentVectorBuilder.kt:125
+        size = 9 at PersistentVectorBuilder.kt:125
+        modCount = 10 at PersistentVectorBuilder.kt:118
+        tailSize(): 9 at PersistentVectorBuilder.kt:120
+          size(): 9 at PersistentVectorBuilder.kt:77
+          tailSize(9): 9 at PersistentVectorBuilder.kt:77
+        tailSize = 9 at PersistentVectorBuilder.kt:120
+        makeMutable(tail): Object;@1 at PersistentVectorBuilder.kt:122
+          isMutable(buffer): true at PersistentVectorBuilder.kt:91
+        mutableTail = Object;@1 at PersistentVectorBuilder.kt:122
+        mutableTail[9] = '2' at PersistentVectorBuilder.kt:123
+        setTail(mutableTail) at PersistentVectorBuilder.kt:124
+        size(): 9 at PersistentVectorBuilder.kt:125
+        size = 10 at PersistentVectorBuilder.kt:125
       PersistentVectorBuilder@1.build(): SmallPersistentVector@1 at extensions.kt:41
+        build$lambda$0 = PersistentVectorBuilder@1 at PersistentVectorBuilder.kt:44
+        root = null at PersistentVectorBuilder.kt:45
+        tail = Object;@1 at PersistentVectorBuilder.kt:46
+        new MutabilityOwnership(): MutabilityOwnership@1 at PersistentVectorBuilder.kt:47
+        build$lambda$0.ownership = MutabilityOwnership@1 at PersistentVectorBuilder.kt:47
+        build$lambda$0.size(): 10 at PersistentVectorBuilder.kt:52
+        Arrays.copyOf(tail, 10): Object;@1 at PersistentVectorBuilder.kt:52
+        new SmallPersistentVector(Object;@1): SmallPersistentVector@1 at PersistentVectorBuilder.kt:52
+        newlyBuiltVector = SmallPersistentVector@1 at PersistentVectorBuilder.kt:48
+        build$lambda$0.builtVector = SmallPersistentVector@1 at PersistentVectorBuilder.kt:57
   list = SmallPersistentVector@1 at ImmutableListTest.kt:128
   list.subList(2, 5): ImmutableList.SubList@1 at ImmutableListTest.kt:129
+    PersistentList.DefaultImpls.subList(, fromIndex ➜ 2, toIndex ➜ 5): ImmutableList.SubList@1 at AbstractPersistentList.kt:15
+      ImmutableList.DefaultImpls.subList(, fromIndex ➜ 2, toIndex ➜ 5): ImmutableList.SubList@1 at ImmutableList.kt:62
+        new ImmutableList.SubList(, fromIndex ➜ 2, toIndex ➜ 5): ImmutableList.SubList@1 at ImmutableList.kt:30
   subList = ImmutableList.SubList@1 at ImmutableListTest.kt:129
   Character;@1[0] = 'c' at ImmutableListTest.kt:130
   Character;@1[1] = 'x' at ImmutableListTest.kt:130
@@ -31,6 +173,18 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
             prefix = "" at CollectionBehaviors.kt:96
             equalityBehavior.equals(objectName ➜ "") at CollectionBehaviors.kt:97
               assertEquals(expected, actual, message ➜ "") at ComparisonDSL.kt:18
+                ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 0, _size ➜ 3) at ImmutableList.kt:41
+                source.get(2): 'c' at ImmutableList.kt:43
+                  size(): 10 at SmallPersistentVector.kt:150
+                  ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, 10) at SmallPersistentVector.kt:150
+                ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 1, _size ➜ 3) at ImmutableList.kt:41
+                source.get(3): 'x' at ImmutableList.kt:43
+                  size(): 10 at SmallPersistentVector.kt:150
+                  ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 3, 10) at SmallPersistentVector.kt:150
+                ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, _size ➜ 3) at ImmutableList.kt:41
+                source.get(4): 'a' at ImmutableList.kt:43
+                  size(): 10 at SmallPersistentVector.kt:150
+                  ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 4, 10) at SmallPersistentVector.kt:150
             new StringBuilder(): StringBuilder@1("") at CollectionBehaviors.kt:98
             StringBuilder@1("").append(prefix ➜ ""): StringBuilder@1("") at CollectionBehaviors.kt:98
             StringBuilder@1("").append("hashCode"): StringBuilder@1("hashCode") at CollectionBehaviors.kt:98
@@ -40,6 +194,18 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                 propertyEquals.hashCode(): 128747 at CollectionBehaviors.kt:98
               getter.invoke(actual): 128747 at ComparisonDSL.kt:21
                 propertyEquals.hashCode(): 128747 at CollectionBehaviors.kt:98
+                  ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 0, _size ➜ 3) at ImmutableList.kt:41
+                  source.get(2): 'c' at ImmutableList.kt:43
+                    size(): 10 at SmallPersistentVector.kt:150
+                    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, 10) at SmallPersistentVector.kt:150
+                  ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 1, _size ➜ 3) at ImmutableList.kt:41
+                  source.get(3): 'x' at ImmutableList.kt:43
+                    size(): 10 at SmallPersistentVector.kt:150
+                    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 3, 10) at SmallPersistentVector.kt:150
+                  ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, _size ➜ 3) at ImmutableList.kt:41
+                  source.get(4): 'a' at ImmutableList.kt:43
+                    size(): 10 at SmallPersistentVector.kt:150
+                    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 4, 10) at SmallPersistentVector.kt:150
               assertEquals(128747, 128747, message ➜ "hashCode") at ComparisonDSL.kt:21
             new StringBuilder(): StringBuilder@1("") at CollectionBehaviors.kt:100
             StringBuilder@1("").append(prefix ➜ ""): StringBuilder@1("") at CollectionBehaviors.kt:100
@@ -48,6 +214,18 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
             equalityBehavior.propertyEquals("toString", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:100
               getter.invoke(expected): "[c, x, a]" at ComparisonDSL.kt:21
               getter.invoke(actual): "[c, x, a]" at ComparisonDSL.kt:21
+                ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 0, _size ➜ 3) at ImmutableList.kt:41
+                source.get(2): 'c' at ImmutableList.kt:43
+                  size(): 10 at SmallPersistentVector.kt:150
+                  ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, 10) at SmallPersistentVector.kt:150
+                ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 1, _size ➜ 3) at ImmutableList.kt:41
+                source.get(3): 'x' at ImmutableList.kt:43
+                  size(): 10 at SmallPersistentVector.kt:150
+                  ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 3, 10) at SmallPersistentVector.kt:150
+                ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, _size ➜ 3) at ImmutableList.kt:41
+                source.get(4): 'a' at ImmutableList.kt:43
+                  size(): 10 at SmallPersistentVector.kt:150
+                  ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 4, 10) at SmallPersistentVector.kt:150
               assertEquals("[c, x, a]", "[c, x, a]", message ➜ "toString") at ComparisonDSL.kt:21
           collectionBehavior(CompareContext@1, "", true) at CollectionBehaviors.kt:10
             new StringBuilder(): StringBuilder@1("") at CollectionBehaviors.kt:105
@@ -83,6 +261,18 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                 contains(propertyEquals, it): false at CollectionBehaviors.kt:109
               getter.invoke(actual): false at ComparisonDSL.kt:21
                 contains(propertyEquals, it): false at CollectionBehaviors.kt:109
+                  ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 0, _size ➜ 3) at ImmutableList.kt:41
+                  source.get(2): 'c' at ImmutableList.kt:43
+                    size(): 10 at SmallPersistentVector.kt:150
+                    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, 10) at SmallPersistentVector.kt:150
+                  ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 1, _size ➜ 3) at ImmutableList.kt:41
+                  source.get(3): 'x' at ImmutableList.kt:43
+                    size(): 10 at SmallPersistentVector.kt:150
+                    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 3, 10) at SmallPersistentVector.kt:150
+                  ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, _size ➜ 3) at ImmutableList.kt:41
+                  source.get(4): 'a' at ImmutableList.kt:43
+                    size(): 10 at SmallPersistentVector.kt:150
+                    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 4, 10) at SmallPersistentVector.kt:150
               assertEquals(false, false, message ➜ "") at ComparisonDSL.kt:21
             CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:110
               getter.invoke(expected): true at ComparisonDSL.kt:21
@@ -90,13 +280,57 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                 contains(propertyEquals, 'c'): true at CollectionBehaviors.kt:110
               getter.invoke(actual): true at ComparisonDSL.kt:21
                 firstOrNull(propertyEquals): 'c' at CollectionBehaviors.kt:110
+                  ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 0, _size ➜ 3) at ImmutableList.kt:41
+                  source.get(2): 'c' at ImmutableList.kt:43
+                    size(): 10 at SmallPersistentVector.kt:150
+                    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, 10) at SmallPersistentVector.kt:150
                 contains(propertyEquals, 'c'): true at CollectionBehaviors.kt:110
+                  ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 0, _size ➜ 3) at ImmutableList.kt:41
+                  source.get(2): 'c' at ImmutableList.kt:43
+                    size(): 10 at SmallPersistentVector.kt:150
+                    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, 10) at SmallPersistentVector.kt:150
               assertEquals(true, true, message ➜ "") at ComparisonDSL.kt:21
             CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:111
               getter.invoke(expected): true at ComparisonDSL.kt:21
                 propertyEquals.containsAll(propertyEquals): true at CollectionBehaviors.kt:111
               getter.invoke(actual): true at ComparisonDSL.kt:21
                 propertyEquals.containsAll(propertyEquals): true at CollectionBehaviors.kt:111
+                  ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 0, _size ➜ 3) at ImmutableList.kt:41
+                  source.get(2): 'c' at ImmutableList.kt:43
+                    size(): 10 at SmallPersistentVector.kt:150
+                    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, 10) at SmallPersistentVector.kt:150
+                  ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 0, _size ➜ 3) at ImmutableList.kt:41
+                  source.get(2): 'c' at ImmutableList.kt:43
+                    size(): 10 at SmallPersistentVector.kt:150
+                    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, 10) at SmallPersistentVector.kt:150
+                  ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 1, _size ➜ 3) at ImmutableList.kt:41
+                  source.get(3): 'x' at ImmutableList.kt:43
+                    size(): 10 at SmallPersistentVector.kt:150
+                    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 3, 10) at SmallPersistentVector.kt:150
+                  ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 0, _size ➜ 3) at ImmutableList.kt:41
+                  source.get(2): 'c' at ImmutableList.kt:43
+                    size(): 10 at SmallPersistentVector.kt:150
+                    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, 10) at SmallPersistentVector.kt:150
+                  ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 1, _size ➜ 3) at ImmutableList.kt:41
+                  source.get(3): 'x' at ImmutableList.kt:43
+                    size(): 10 at SmallPersistentVector.kt:150
+                    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 3, 10) at SmallPersistentVector.kt:150
+                  ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, _size ➜ 3) at ImmutableList.kt:41
+                  source.get(4): 'a' at ImmutableList.kt:43
+                    size(): 10 at SmallPersistentVector.kt:150
+                    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 4, 10) at SmallPersistentVector.kt:150
+                  ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 0, _size ➜ 3) at ImmutableList.kt:41
+                  source.get(2): 'c' at ImmutableList.kt:43
+                    size(): 10 at SmallPersistentVector.kt:150
+                    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, 10) at SmallPersistentVector.kt:150
+                  ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 1, _size ➜ 3) at ImmutableList.kt:41
+                  source.get(3): 'x' at ImmutableList.kt:43
+                    size(): 10 at SmallPersistentVector.kt:150
+                    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 3, 10) at SmallPersistentVector.kt:150
+                  ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, _size ➜ 3) at ImmutableList.kt:41
+                  source.get(4): 'a' at ImmutableList.kt:43
+                    size(): 10 at SmallPersistentVector.kt:150
+                    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 4, 10) at SmallPersistentVector.kt:150
               assertEquals(true, true, message ➜ "") at ComparisonDSL.kt:21
             collectionBehavior.compareProperty(CollectionBehaviorsKt$$Lambda@1, CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:113
               getter.invoke(expected): Arrays.ArrayItr@1 at ComparisonDSL.kt:27
@@ -122,6 +356,10 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                             propertyEquals.next(): 'c' at CollectionBehaviors.kt:58
                           getter.invoke(actual): 'c' at ComparisonDSL.kt:21
                             propertyEquals.next(): 'c' at CollectionBehaviors.kt:58
+                              ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 0, _size ➜ 3) at ImmutableList.kt:41
+                              source.get(2): 'c' at ImmutableList.kt:43
+                                size(): 10 at SmallPersistentVector.kt:150
+                                ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, 10) at SmallPersistentVector.kt:150
                           assertEquals('c', 'c', message ➜ "") at ComparisonDSL.kt:21
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:59
                           getter.invoke(expected): true at ComparisonDSL.kt:21
@@ -137,6 +375,10 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                             propertyEquals.next(): 'x' at CollectionBehaviors.kt:58
                           getter.invoke(actual): 'x' at ComparisonDSL.kt:21
                             propertyEquals.next(): 'x' at CollectionBehaviors.kt:58
+                              ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 1, _size ➜ 3) at ImmutableList.kt:41
+                              source.get(3): 'x' at ImmutableList.kt:43
+                                size(): 10 at SmallPersistentVector.kt:150
+                                ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 3, 10) at SmallPersistentVector.kt:150
                           assertEquals('x', 'x', message ➜ "") at ComparisonDSL.kt:21
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:59
                           getter.invoke(expected): true at ComparisonDSL.kt:21
@@ -152,6 +394,10 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                             propertyEquals.next(): 'a' at CollectionBehaviors.kt:58
                           getter.invoke(actual): 'a' at ComparisonDSL.kt:21
                             propertyEquals.next(): 'a' at CollectionBehaviors.kt:58
+                              ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, _size ➜ 3) at ImmutableList.kt:41
+                              source.get(4): 'a' at ImmutableList.kt:43
+                                size(): 10 at SmallPersistentVector.kt:150
+                                ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 4, 10) at SmallPersistentVector.kt:150
                           assertEquals('a', 'a', message ➜ "") at ComparisonDSL.kt:21
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:59
                           getter.invoke(expected): false at ComparisonDSL.kt:21
@@ -225,6 +471,10 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                           propertyEquals.next(): 'c' at CollectionBehaviors.kt:35
                         getter.invoke(actual): 'c' at ComparisonDSL.kt:21
                           propertyEquals.next(): 'c' at CollectionBehaviors.kt:35
+                            ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 0, _size ➜ 3) at ImmutableList.kt:41
+                            source.get(2): 'c' at ImmutableList.kt:43
+                              size(): 10 at SmallPersistentVector.kt:150
+                              ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, 10) at SmallPersistentVector.kt:150
                         assertEquals('c', 'c', message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:36
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -259,6 +509,10 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                           propertyEquals.next(): 'x' at CollectionBehaviors.kt:35
                         getter.invoke(actual): 'x' at ComparisonDSL.kt:21
                           propertyEquals.next(): 'x' at CollectionBehaviors.kt:35
+                            ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 1, _size ➜ 3) at ImmutableList.kt:41
+                            source.get(3): 'x' at ImmutableList.kt:43
+                              size(): 10 at SmallPersistentVector.kt:150
+                              ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 3, 10) at SmallPersistentVector.kt:150
                         assertEquals('x', 'x', message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:36
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -293,6 +547,10 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                           propertyEquals.next(): 'a' at CollectionBehaviors.kt:35
                         getter.invoke(actual): 'a' at ComparisonDSL.kt:21
                           propertyEquals.next(): 'a' at CollectionBehaviors.kt:35
+                            ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, _size ➜ 3) at ImmutableList.kt:41
+                            source.get(4): 'a' at ImmutableList.kt:43
+                              size(): 10 at SmallPersistentVector.kt:150
+                              ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 4, 10) at SmallPersistentVector.kt:150
                         assertEquals('a', 'a', message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:36
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -351,6 +609,10 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                           propertyEquals.previous(): 'a' at CollectionBehaviors.kt:41
                         getter.invoke(actual): 'a' at ComparisonDSL.kt:21
                           propertyEquals.previous(): 'a' at CollectionBehaviors.kt:41
+                            ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, _size ➜ 3) at ImmutableList.kt:41
+                            source.get(4): 'a' at ImmutableList.kt:43
+                              size(): 10 at SmallPersistentVector.kt:150
+                              ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 4, 10) at SmallPersistentVector.kt:150
                         assertEquals('a', 'a', message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -385,6 +647,10 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                           propertyEquals.previous(): 'x' at CollectionBehaviors.kt:41
                         getter.invoke(actual): 'x' at ComparisonDSL.kt:21
                           propertyEquals.previous(): 'x' at CollectionBehaviors.kt:41
+                            ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 1, _size ➜ 3) at ImmutableList.kt:41
+                            source.get(3): 'x' at ImmutableList.kt:43
+                              size(): 10 at SmallPersistentVector.kt:150
+                              ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 3, 10) at SmallPersistentVector.kt:150
                         assertEquals('x', 'x', message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -419,6 +685,10 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                           propertyEquals.previous(): 'c' at CollectionBehaviors.kt:41
                         getter.invoke(actual): 'c' at ComparisonDSL.kt:21
                           propertyEquals.previous(): 'c' at CollectionBehaviors.kt:41
+                            ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 0, _size ➜ 3) at ImmutableList.kt:41
+                            source.get(2): 'c' at ImmutableList.kt:43
+                              size(): 10 at SmallPersistentVector.kt:150
+                              ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, 10) at SmallPersistentVector.kt:150
                         assertEquals('c', 'c', message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -511,6 +781,10 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                           propertyEquals.next(): 'c' at CollectionBehaviors.kt:35
                         getter.invoke(actual): 'c' at ComparisonDSL.kt:21
                           propertyEquals.next(): 'c' at CollectionBehaviors.kt:35
+                            ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 0, _size ➜ 3) at ImmutableList.kt:41
+                            source.get(2): 'c' at ImmutableList.kt:43
+                              size(): 10 at SmallPersistentVector.kt:150
+                              ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, 10) at SmallPersistentVector.kt:150
                         assertEquals('c', 'c', message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:36
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -545,6 +819,10 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                           propertyEquals.next(): 'x' at CollectionBehaviors.kt:35
                         getter.invoke(actual): 'x' at ComparisonDSL.kt:21
                           propertyEquals.next(): 'x' at CollectionBehaviors.kt:35
+                            ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 1, _size ➜ 3) at ImmutableList.kt:41
+                            source.get(3): 'x' at ImmutableList.kt:43
+                              size(): 10 at SmallPersistentVector.kt:150
+                              ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 3, 10) at SmallPersistentVector.kt:150
                         assertEquals('x', 'x', message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:36
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -579,6 +857,10 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                           propertyEquals.next(): 'a' at CollectionBehaviors.kt:35
                         getter.invoke(actual): 'a' at ComparisonDSL.kt:21
                           propertyEquals.next(): 'a' at CollectionBehaviors.kt:35
+                            ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, _size ➜ 3) at ImmutableList.kt:41
+                            source.get(4): 'a' at ImmutableList.kt:43
+                              size(): 10 at SmallPersistentVector.kt:150
+                              ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 4, 10) at SmallPersistentVector.kt:150
                         assertEquals('a', 'a', message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:36
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -637,6 +919,10 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                           propertyEquals.previous(): 'a' at CollectionBehaviors.kt:41
                         getter.invoke(actual): 'a' at ComparisonDSL.kt:21
                           propertyEquals.previous(): 'a' at CollectionBehaviors.kt:41
+                            ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, _size ➜ 3) at ImmutableList.kt:41
+                            source.get(4): 'a' at ImmutableList.kt:43
+                              size(): 10 at SmallPersistentVector.kt:150
+                              ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 4, 10) at SmallPersistentVector.kt:150
                         assertEquals('a', 'a', message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -671,6 +957,10 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                           propertyEquals.previous(): 'x' at CollectionBehaviors.kt:41
                         getter.invoke(actual): 'x' at ComparisonDSL.kt:21
                           propertyEquals.previous(): 'x' at CollectionBehaviors.kt:41
+                            ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 1, _size ➜ 3) at ImmutableList.kt:41
+                            source.get(3): 'x' at ImmutableList.kt:43
+                              size(): 10 at SmallPersistentVector.kt:150
+                              ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 3, 10) at SmallPersistentVector.kt:150
                         assertEquals('x', 'x', message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -705,6 +995,10 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                           propertyEquals.previous(): 'c' at CollectionBehaviors.kt:41
                         getter.invoke(actual): 'c' at ComparisonDSL.kt:21
                           propertyEquals.previous(): 'c' at CollectionBehaviors.kt:41
+                            ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 0, _size ➜ 3) at ImmutableList.kt:41
+                            source.get(2): 'c' at ImmutableList.kt:43
+                              size(): 10 at SmallPersistentVector.kt:150
+                              ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, 10) at SmallPersistentVector.kt:150
                         assertEquals('c', 'c', message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -799,6 +1093,10 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                           propertyEquals.next(): 'x' at CollectionBehaviors.kt:35
                         getter.invoke(actual): 'x' at ComparisonDSL.kt:21
                           propertyEquals.next(): 'x' at CollectionBehaviors.kt:35
+                            ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 1, _size ➜ 3) at ImmutableList.kt:41
+                            source.get(3): 'x' at ImmutableList.kt:43
+                              size(): 10 at SmallPersistentVector.kt:150
+                              ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 3, 10) at SmallPersistentVector.kt:150
                         assertEquals('x', 'x', message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:36
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -833,6 +1131,10 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                           propertyEquals.next(): 'a' at CollectionBehaviors.kt:35
                         getter.invoke(actual): 'a' at ComparisonDSL.kt:21
                           propertyEquals.next(): 'a' at CollectionBehaviors.kt:35
+                            ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, _size ➜ 3) at ImmutableList.kt:41
+                            source.get(4): 'a' at ImmutableList.kt:43
+                              size(): 10 at SmallPersistentVector.kt:150
+                              ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 4, 10) at SmallPersistentVector.kt:150
                         assertEquals('a', 'a', message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:36
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -891,6 +1193,10 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                           propertyEquals.previous(): 'a' at CollectionBehaviors.kt:41
                         getter.invoke(actual): 'a' at ComparisonDSL.kt:21
                           propertyEquals.previous(): 'a' at CollectionBehaviors.kt:41
+                            ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, _size ➜ 3) at ImmutableList.kt:41
+                            source.get(4): 'a' at ImmutableList.kt:43
+                              size(): 10 at SmallPersistentVector.kt:150
+                              ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 4, 10) at SmallPersistentVector.kt:150
                         assertEquals('a', 'a', message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -925,6 +1231,10 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                           propertyEquals.previous(): 'x' at CollectionBehaviors.kt:41
                         getter.invoke(actual): 'x' at ComparisonDSL.kt:21
                           propertyEquals.previous(): 'x' at CollectionBehaviors.kt:41
+                            ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 1, _size ➜ 3) at ImmutableList.kt:41
+                            source.get(3): 'x' at ImmutableList.kt:43
+                              size(): 10 at SmallPersistentVector.kt:150
+                              ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 3, 10) at SmallPersistentVector.kt:150
                         assertEquals('x', 'x', message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -959,6 +1269,10 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                           propertyEquals.previous(): 'c' at CollectionBehaviors.kt:41
                         getter.invoke(actual): 'c' at ComparisonDSL.kt:21
                           propertyEquals.previous(): 'c' at CollectionBehaviors.kt:41
+                            ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 0, _size ➜ 3) at ImmutableList.kt:41
+                            source.get(2): 'c' at ImmutableList.kt:43
+                              size(): 10 at SmallPersistentVector.kt:150
+                              ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, 10) at SmallPersistentVector.kt:150
                         assertEquals('c', 'c', message ➜ "") at ComparisonDSL.kt:21
                       listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:42
                         CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:48
@@ -1060,6 +1374,10 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                   propertyEquals.get(index ➜ 0): 'c' at CollectionBehaviors.kt:19
                 getter.invoke(actual): 'c' at ComparisonDSL.kt:21
                   propertyEquals.get(index ➜ 0): 'c' at CollectionBehaviors.kt:19
+                    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 0, _size ➜ 3) at ImmutableList.kt:41
+                    source.get(2): 'c' at ImmutableList.kt:43
+                      size(): 10 at SmallPersistentVector.kt:150
+                      ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, 10) at SmallPersistentVector.kt:150
                 assertEquals('c', 'c', message ➜ "") at ComparisonDSL.kt:21
               index = 1 at CollectionBehaviors.kt:18
             <iteration 2> at CollectionBehaviors.kt:18
@@ -1068,6 +1386,10 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                   propertyEquals.get(index ➜ 1): 'x' at CollectionBehaviors.kt:19
                 getter.invoke(actual): 'x' at ComparisonDSL.kt:21
                   propertyEquals.get(index ➜ 1): 'x' at CollectionBehaviors.kt:19
+                    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 1, _size ➜ 3) at ImmutableList.kt:41
+                    source.get(3): 'x' at ImmutableList.kt:43
+                      size(): 10 at SmallPersistentVector.kt:150
+                      ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 3, 10) at SmallPersistentVector.kt:150
                 assertEquals('x', 'x', message ➜ "") at ComparisonDSL.kt:21
               index = 2 at CollectionBehaviors.kt:18
             <iteration 3> at CollectionBehaviors.kt:18
@@ -1076,6 +1398,10 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                   propertyEquals.get(index ➜ 2): 'a' at CollectionBehaviors.kt:19
                 getter.invoke(actual): 'a' at ComparisonDSL.kt:21
                   propertyEquals.get(index ➜ 2): 'a' at CollectionBehaviors.kt:19
+                    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, _size ➜ 3) at ImmutableList.kt:41
+                    source.get(4): 'a' at ImmutableList.kt:43
+                      size(): 10 at SmallPersistentVector.kt:150
+                      ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 4, 10) at SmallPersistentVector.kt:150
                 assertEquals('a', 'a', message ➜ "") at ComparisonDSL.kt:21
               index = 3 at CollectionBehaviors.kt:18
           this_ = CompareContext@1 at CollectionBehaviors.kt:21
@@ -1094,13 +1420,23 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                 getter.invoke(actual): threw IndexOutOfBoundsException at ComparisonDSL.kt:25
                   propertyFailsWith.size(): 3 at CollectionBehaviors.kt:21
                   propertyFailsWith.get(3): threw IndexOutOfBoundsException at CollectionBehaviors.kt:21
+                    ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 3, _size ➜ 3): threw IndexOutOfBoundsException at ImmutableList.kt:41
+                      new StringBuilder(): StringBuilder@1("") at ListImplementation.kt:15
+                      StringBuilder@1("").append("index: "): StringBuilder@1("index: ") at ListImplementation.kt:15
+                      StringBuilder@1("index: ").append(index ➜ 3): StringBuilder@1("index: 3") at ListImplementation.kt:15
+                      StringBuilder@1("index: 3").append(", size: "): StringBuilder@1("index: 3, size: ") at ListImplementation.kt:15
+                      StringBuilder@1("index: 3, size: ").append(size ➜ 3): StringBuilder@1("index: 3, size: 3") at ListImplementation.kt:15
+                      StringBuilder@1("index: 3, size: 3").toString(): "index: 3, size: 3" at ListImplementation.kt:15
+                      new IndexOutOfBoundsException("index: 3, size: 3"): IndexOutOfBoundsException@1 at ListImplementation.kt:15
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:32
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
               actualFail = IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
               exceptionPredicate.invoke(expectedFail): true at ComparisonDSL.kt:35
+                invoke(p1): true at ComparisonDSL.kt:24
               assertTrue(true, "expected fail") at ComparisonDSL.kt:35
               exceptionPredicate.invoke(actualFail): true at ComparisonDSL.kt:36
+                invoke(p1): true at ComparisonDSL.kt:24
               assertTrue(true, "actual fail") at ComparisonDSL.kt:36
           CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:23
             getter.invoke(expected): 0 at ComparisonDSL.kt:21
@@ -1108,7 +1444,15 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
               indexOf(propertyEquals, 'c'): 0 at CollectionBehaviors.kt:23
             getter.invoke(actual): 0 at ComparisonDSL.kt:21
               getOrNull(propertyEquals, 0): 'c' at CollectionBehaviors.kt:23
+                ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 0, _size ➜ 3) at ImmutableList.kt:41
+                source.get(2): 'c' at ImmutableList.kt:43
+                  size(): 10 at SmallPersistentVector.kt:150
+                  ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, 10) at SmallPersistentVector.kt:150
               indexOf(propertyEquals, 'c'): 0 at CollectionBehaviors.kt:23
+                ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 0, _size ➜ 3) at ImmutableList.kt:41
+                source.get(2): 'c' at ImmutableList.kt:43
+                  size(): 10 at SmallPersistentVector.kt:150
+                  ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, 10) at SmallPersistentVector.kt:150
             assertEquals(0, 0, message ➜ "") at ComparisonDSL.kt:21
           CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:24
             getter.invoke(expected): 0 at ComparisonDSL.kt:21
@@ -1116,7 +1460,23 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
               lastIndexOf(propertyEquals, 'c'): 0 at CollectionBehaviors.kt:24
             getter.invoke(actual): 0 at ComparisonDSL.kt:21
               getOrNull(propertyEquals, 0): 'c' at CollectionBehaviors.kt:24
+                ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 0, _size ➜ 3) at ImmutableList.kt:41
+                source.get(2): 'c' at ImmutableList.kt:43
+                  size(): 10 at SmallPersistentVector.kt:150
+                  ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, 10) at SmallPersistentVector.kt:150
               lastIndexOf(propertyEquals, 'c'): 0 at CollectionBehaviors.kt:24
+                ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, _size ➜ 3) at ImmutableList.kt:41
+                source.get(4): 'a' at ImmutableList.kt:43
+                  size(): 10 at SmallPersistentVector.kt:150
+                  ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 4, 10) at SmallPersistentVector.kt:150
+                ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 1, _size ➜ 3) at ImmutableList.kt:41
+                source.get(3): 'x' at ImmutableList.kt:43
+                  size(): 10 at SmallPersistentVector.kt:150
+                  ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 3, 10) at SmallPersistentVector.kt:150
+                ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 0, _size ➜ 3) at ImmutableList.kt:41
+                source.get(2): 'c' at ImmutableList.kt:43
+                  size(): 10 at SmallPersistentVector.kt:150
+                  ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, 10) at SmallPersistentVector.kt:150
             assertEquals(0, 0, message ➜ "") at ComparisonDSL.kt:21
           listBehavior.propertyFails(CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:26
             assertFailEquals(CompareContext$$Lambda@1, CompareContext$$Lambda@1, null) at ComparisonDSL.kt:23
@@ -1132,6 +1492,17 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                 getter.invoke(actual): threw IndexOutOfBoundsException at ComparisonDSL.kt:23
                   propertyFails.size(): 3 at CollectionBehaviors.kt:26
                   propertyFails.subList(0, 4): threw IndexOutOfBoundsException at CollectionBehaviors.kt:26
+                    subList(fromIndex ➜ 0, toIndex ➜ 4): threw IndexOutOfBoundsException at ImmutableList.kt:32
+                      ListImplementation.checkRangeIndexes$kotlinx_collections_immutable(fromIndex ➜ 0, toIndex ➜ 4, _size ➜ 3): threw IndexOutOfBoundsException at ImmutableList.kt:49
+                        new StringBuilder(): StringBuilder@1("") at ListImplementation.kt:29
+                        StringBuilder@1("").append("fromIndex: "): StringBuilder@1("fromIndex: ") at ListImplementation.kt:29
+                        StringBuilder@1("fromIndex: ").append(fromIndex ➜ 0): StringBuilder@1("fromIndex: 0") at ListImplementation.kt:29
+                        StringBuilder@1("fromIndex: 0").append(", toIndex: "): StringBuilder@1("fromIndex: 0, toIndex: ") at ListImplementation.kt:29
+                        StringBuilder@1("fromIndex: 0, toIndex: ").append(toIndex ➜ 4): StringBuilder@1("fromIndex: 0, toIndex: 4") at ListImplementation.kt:29
+                        StringBuilder@1("fromIndex: 0, toIndex: 4").append(", size: "): StringBuilder@1("fromIndex: 0, toIndex: 4, size: ") at ListImplementation.kt:29
+                        StringBuilder@1("fromIndex: 0, toIndex: 4, size: ").append(size ➜ 3): StringBuilder@1("fromIndex: 0, toIndex: 4, size: 3") at ListImplementation.kt:29
+                        StringBuilder@1("fromIndex: 0, toIndex: 4, size: 3").toString(): "fromIndex: 0, toIndex: 4, size: 3" at ListImplementation.kt:29
+                        new IndexOutOfBoundsException("fromIndex: 0, toIndex: 4, size: 3"): IndexOutOfBoundsException@1 at ListImplementation.kt:29
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:32
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
@@ -1152,6 +1523,17 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
               actual.invoke(): threw IndexOutOfBoundsException at ComparisonDSL.kt:32
                 getter.invoke(actual): threw IndexOutOfBoundsException at ComparisonDSL.kt:23
                   propertyFails.subList(-1, 0): threw IndexOutOfBoundsException at CollectionBehaviors.kt:27
+                    subList(fromIndex ➜ -1, toIndex ➜ 0): threw IndexOutOfBoundsException at ImmutableList.kt:32
+                      ListImplementation.checkRangeIndexes$kotlinx_collections_immutable(fromIndex ➜ -1, toIndex ➜ 0, _size ➜ 3): threw IndexOutOfBoundsException at ImmutableList.kt:49
+                        new StringBuilder(): StringBuilder@1("") at ListImplementation.kt:29
+                        StringBuilder@1("").append("fromIndex: "): StringBuilder@1("fromIndex: ") at ListImplementation.kt:29
+                        StringBuilder@1("fromIndex: ").append(fromIndex ➜ -1): StringBuilder@1("fromIndex: -1") at ListImplementation.kt:29
+                        StringBuilder@1("fromIndex: -1").append(", toIndex: "): StringBuilder@1("fromIndex: -1, toIndex: ") at ListImplementation.kt:29
+                        StringBuilder@1("fromIndex: -1, toIndex: ").append(toIndex ➜ 0): StringBuilder@1("fromIndex: -1, toIndex: 0") at ListImplementation.kt:29
+                        StringBuilder@1("fromIndex: -1, toIndex: 0").append(", size: "): StringBuilder@1("fromIndex: -1, toIndex: 0, size: ") at ListImplementation.kt:29
+                        StringBuilder@1("fromIndex: -1, toIndex: 0, size: ").append(size ➜ 3): StringBuilder@1("fromIndex: -1, toIndex: 0, size: 3") at ListImplementation.kt:29
+                        StringBuilder@1("fromIndex: -1, toIndex: 0, size: 3").toString(): "fromIndex: -1, toIndex: 0, size: 3" at ListImplementation.kt:29
+                        new IndexOutOfBoundsException("fromIndex: -1, toIndex: 0, size: 3"): IndexOutOfBoundsException@1 at ListImplementation.kt:29
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:32
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
@@ -1167,13 +1549,52 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
             getter.invoke(actual): ImmutableList.SubList@1 at ComparisonDSL.kt:21
               propertyEquals.size(): 3 at CollectionBehaviors.kt:28
               propertyEquals.subList(0, 3): ImmutableList.SubList@1 at CollectionBehaviors.kt:28
+                subList(fromIndex ➜ 0, toIndex ➜ 3): ImmutableList.SubList@1 at ImmutableList.kt:32
+                  ListImplementation.checkRangeIndexes$kotlinx_collections_immutable(fromIndex ➜ 0, toIndex ➜ 3, _size ➜ 3) at ImmutableList.kt:49
+                  new ImmutableList.SubList(source, 2, 5): ImmutableList.SubList@1 at ImmutableList.kt:50
             assertEquals(AbstractList.RandomAccessSubList@1, ImmutableList.SubList@1, message ➜ "") at ComparisonDSL.kt:21
+              ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 0, _size ➜ 3) at ImmutableList.kt:41
+              source.get(2): 'c' at ImmutableList.kt:43
+                size(): 10 at SmallPersistentVector.kt:150
+                ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, 10) at SmallPersistentVector.kt:150
+              ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 1, _size ➜ 3) at ImmutableList.kt:41
+              source.get(3): 'x' at ImmutableList.kt:43
+                size(): 10 at SmallPersistentVector.kt:150
+                ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 3, 10) at SmallPersistentVector.kt:150
+              ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 2, _size ➜ 3) at ImmutableList.kt:41
+              source.get(4): 'a' at ImmutableList.kt:43
+                size(): 10 at SmallPersistentVector.kt:150
+                ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 4, 10) at SmallPersistentVector.kt:150
   list.subList(-1, 2): threw IndexOutOfBoundsException at ImmutableListTest.kt:132
+    PersistentList.DefaultImpls.subList(, fromIndex ➜ -1, toIndex ➜ 2): threw IndexOutOfBoundsException at AbstractPersistentList.kt:15
+      ImmutableList.DefaultImpls.subList(, fromIndex ➜ -1, toIndex ➜ 2): threw IndexOutOfBoundsException at ImmutableList.kt:62
+        new ImmutableList.SubList(, fromIndex ➜ -1, toIndex ➜ 2): threw IndexOutOfBoundsException at ImmutableList.kt:30
+          new StringBuilder(): StringBuilder@1("") at ListImplementation.kt:29
+          StringBuilder@1("").append("fromIndex: "): StringBuilder@1("fromIndex: ") at ListImplementation.kt:29
+          StringBuilder@1("fromIndex: ").append(fromIndex ➜ -1): StringBuilder@1("fromIndex: -1") at ListImplementation.kt:29
+          StringBuilder@1("fromIndex: -1").append(", toIndex: "): StringBuilder@1("fromIndex: -1, toIndex: ") at ListImplementation.kt:29
+          StringBuilder@1("fromIndex: -1, toIndex: ").append(toIndex ➜ 2): StringBuilder@1("fromIndex: -1, toIndex: 2") at ListImplementation.kt:29
+          StringBuilder@1("fromIndex: -1, toIndex: 2").append(", size: "): StringBuilder@1("fromIndex: -1, toIndex: 2, size: ") at ListImplementation.kt:29
+          StringBuilder@1("fromIndex: -1, toIndex: 2, size: ").append(size ➜ 10): StringBuilder@1("fromIndex: -1, toIndex: 2, size: 10") at ListImplementation.kt:29
+          StringBuilder@1("fromIndex: -1, toIndex: 2, size: 10").toString(): "fromIndex: -1, toIndex: 2, size: 10" at ListImplementation.kt:29
+          new IndexOutOfBoundsException("fromIndex: -1, toIndex: 2, size: 10"): IndexOutOfBoundsException@1 at ListImplementation.kt:29
   createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ImmutableListTest.kt:132
   Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ImmutableListTest.kt:132
   checkResultIsFailure(IndexOutOfBoundsException.kclass, null, Result.Failure@1): IndexOutOfBoundsException@1 at ImmutableListTest.kt:132
   list.size(): 10 at ImmutableListTest.kt:133
   list.subList(0, 11): threw IndexOutOfBoundsException at ImmutableListTest.kt:133
+    PersistentList.DefaultImpls.subList(, fromIndex ➜ 0, toIndex ➜ 11): threw IndexOutOfBoundsException at AbstractPersistentList.kt:15
+      ImmutableList.DefaultImpls.subList(, fromIndex ➜ 0, toIndex ➜ 11): threw IndexOutOfBoundsException at ImmutableList.kt:62
+        new ImmutableList.SubList(, fromIndex ➜ 0, toIndex ➜ 11): threw IndexOutOfBoundsException at ImmutableList.kt:30
+          new StringBuilder(): StringBuilder@1("") at ListImplementation.kt:29
+          StringBuilder@1("").append("fromIndex: "): StringBuilder@1("fromIndex: ") at ListImplementation.kt:29
+          StringBuilder@1("fromIndex: ").append(fromIndex ➜ 0): StringBuilder@1("fromIndex: 0") at ListImplementation.kt:29
+          StringBuilder@1("fromIndex: 0").append(", toIndex: "): StringBuilder@1("fromIndex: 0, toIndex: ") at ListImplementation.kt:29
+          StringBuilder@1("fromIndex: 0, toIndex: ").append(toIndex ➜ 11): StringBuilder@1("fromIndex: 0, toIndex: 11") at ListImplementation.kt:29
+          StringBuilder@1("fromIndex: 0, toIndex: 11").append(", size: "): StringBuilder@1("fromIndex: 0, toIndex: 11, size: ") at ListImplementation.kt:29
+          StringBuilder@1("fromIndex: 0, toIndex: 11, size: ").append(size ➜ 10): StringBuilder@1("fromIndex: 0, toIndex: 11, size: 10") at ListImplementation.kt:29
+          StringBuilder@1("fromIndex: 0, toIndex: 11, size: 10").toString(): "fromIndex: 0, toIndex: 11, size: 10" at ListImplementation.kt:29
+          new IndexOutOfBoundsException("fromIndex: 0, toIndex: 11, size: 10"): IndexOutOfBoundsException@1 at ListImplementation.kt:29
   createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ImmutableListTest.kt:133
   Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ImmutableListTest.kt:133
   checkResultIsFailure(IndexOutOfBoundsException.kclass, null, Result.Failure@1): IndexOutOfBoundsException@1 at ImmutableListTest.kt:133

@@ -122,7 +122,15 @@ abstract class AbstractTraceIntegrationTest {
         if (checkRepresentation) { // otherwise we just want to make sure that tests do not fail
             val expectedOutput = getGoldenDataFileFor(testClassName, testMethodName, testNameSuffix)
             if (expectedOutput.exists()) {
-                Assertions.assertEquals(expectedOutput.readText(), outputFile.readText())
+                val expected = expectedOutput.readText()
+                val actual = outputFile.readText()
+                if (OVERWRITE_REPRESENTATION_TESTS_OUTPUT) {
+                    if (expected != actual) {
+                        expectedOutput.writeText(actual)
+                    }
+                } else {
+                    Assertions.assertEquals(expected, actual)
+                }
             } else {
                 if (OVERWRITE_REPRESENTATION_TESTS_OUTPUT) {
                     expectedOutput.parentFile.mkdirs()

@@ -260,14 +260,10 @@ object TraceRecorderDefaultTransformationProfile : TransformationProfile {
         // with `VerificationError` due to leaking this problem,
         // see: https://github.com/JetBrains/lincheck/issues/424
         if (methodName == "<init>") {
-            return config.apply {
-                trackObjectCreations = true
-            }
+            return config
         }
 
         return config.apply {
-            trackObjectCreations = true
-
             trackLocalVariableWrites = true
             trackAllFieldsWrites = true
             trackArrayElementWrites = true

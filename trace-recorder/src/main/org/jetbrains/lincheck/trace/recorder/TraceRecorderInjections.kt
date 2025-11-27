@@ -20,13 +20,6 @@ internal object TraceRecorderInjections {
     fun prepareTraceRecorder() {
         // Must be first or classes will not be found
         LincheckJavaAgent.install(InstrumentationMode.TRACE_RECORDING)
-        // Retransform classes for event tracking
-        // It is Ok to don't find class here, maybe agent was added too broadly
-        try {
-            LincheckJavaAgent.ensureClassHierarchyIsTransformed(TraceAgentParameters.classUnderTraceDebugging)
-        } catch (_: ClassNotFoundException) {
-            Logger.warn { "Cannot transform requested class ${TraceAgentParameters.classUnderTraceDebugging}: Class not found" }
-        }
     }
 
     @JvmStatic
