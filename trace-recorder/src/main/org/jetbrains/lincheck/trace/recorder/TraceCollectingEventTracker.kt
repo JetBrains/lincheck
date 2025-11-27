@@ -411,7 +411,7 @@ class TraceCollectingEventTracker(
         Logger. error { "Trace Recorder mode doesn't support invoke dynamic instrumentation" }
     }
 
-    override fun updateSnapshotBeforeConstructorCall(objs: Array<out Any?>) = Unit
+    override fun updateSnapshotBeforeConstructorCall(objs: Array<out Any?>) {}
 
     override fun beforeReadField(
         threadDescriptor: ThreadDescriptor,
@@ -515,7 +515,7 @@ class TraceCollectingEventTracker(
         strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
     }
 
-    override fun afterWrite(threadDescriptor: ThreadDescriptor) = Unit
+    override fun afterWrite(threadDescriptor: ThreadDescriptor) {}
 
     override fun afterLocalRead(
         threadDescriptor: ThreadDescriptor,
