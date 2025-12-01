@@ -15,7 +15,10 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentTransformer
 import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_EXCLUDE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_EXCLUDE_DIR_PATHS
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FOPTION
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FORMAT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_INCLUDE
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_PACK
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_PROJECT_PATH
 import org.jetbrains.lincheck.jvm.agent.isInstrumentationInitialized
 import org.jetbrains.lincheck.jvm.agent.isTraceJavaAgentAttached
@@ -30,10 +33,6 @@ import java.lang.instrument.Instrumentation
  * in order to enable trace debugging plugin or trace recorder functionality accordingly.
  */
 internal object TraceRecorderAgent {
-    const val ARGUMENT_FORMAT = "format"
-    const val ARGUMENT_FOPTION = "formatOption"
-    const val ARGUMENT_PACK = "pack"
-
     // Allowed additional arguments
     private val ADDITIONAL_ARGS = listOf(
         ARGUMENT_FORMAT,

@@ -29,9 +29,9 @@ internal object TraceRecorderInjections {
                 className = TraceAgentParameters.classUnderTraceDebugging,
                 methodName = TraceAgentParameters.methodUnderTraceDebugging,
                 traceFileName = TraceAgentParameters.traceDumpFilePath,
-                format = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FORMAT),
-                formatOption = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FOPTION),
-                pack = (TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_PACK) ?: "true").toBoolean(),
+                format = TraceAgentParameters.getArg(TraceAgentParameters.ARGUMENT_FORMAT),
+                formatOption = TraceAgentParameters.getArg(TraceAgentParameters.ARGUMENT_FOPTION),
+                pack = (TraceAgentParameters.getArg(TraceAgentParameters.ARGUMENT_PACK) ?: "true").toBoolean(),
                 startingCodeLocationId = startingCodeLocationId
             )
         } catch (t: Throwable) {
