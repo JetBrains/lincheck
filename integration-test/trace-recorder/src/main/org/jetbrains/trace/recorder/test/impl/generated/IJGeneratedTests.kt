@@ -29,4 +29,84 @@ class IJTraceRecorderJsonIntegrationTests {
             )
         }
     }
+    
+    @Nested
+    inner class InlinePatternVariableTest {
+        @Nested
+        inner class TestInNestedCondition : IntellijTraceRecorderJsonTest() {
+            @Test
+            @Timeout(20 * 60)
+            fun test() = runTest(
+                testClassName = "com.intellij.java.refactoring.inline.InlinePatternVariableTest",
+                testMethodName = "testInNestedCondition",
+                extraJvmArgs = listOf(),
+                commands = listOf(""),
+                checkRepresentation = false,
+            )
+        }
+    }
+    
+    @Nested
+    inner class MultiReleaseDepTest {
+        @Nested
+        inner class TestOnDemandResolveIntoMultiReleaseJar : IntellijTraceRecorderJsonTest() {
+            @Test
+            @Timeout(20 * 60)
+            fun test() = runTest(
+                testClassName = "com.intellij.java.codeInsight.daemon.MultiReleaseDepTest",
+                testMethodName = "testOnDemandResolveIntoMultiReleaseJar",
+                extraJvmArgs = listOf(),
+                commands = listOf(""),
+                checkRepresentation = false,
+            )
+        }
+    }
+    
+    @Nested
+    inner class InlineMethodTest {
+        @Nested
+        inner class TestSplitIfAndCollapseBack : IntellijTraceRecorderJsonTest() {
+            @Test
+            @Timeout(20 * 60)
+            fun test() = runTest(
+                testClassName = "com.intellij.java.refactoring.inline.InlineMethodTest",
+                testMethodName = "testSplitIfAndCollapseBack",
+                extraJvmArgs = listOf(),
+                commands = listOf(""),
+                checkRepresentation = false,
+            )
+        }
+    }
+    
+    @Nested
+    inner class IgnoreResultOfCallInspectionTest {
+        @Nested
+        inner class TestIgnoreInTestContainers : IntellijTraceRecorderJsonTest() {
+            @Test
+            @Timeout(20 * 60)
+            fun test() = runTest(
+                testClassName = "com.siyeh.ig.bugs.IgnoreResultOfCallInspectionTest",
+                testMethodName = "testIgnoreInTestContainers",
+                extraJvmArgs = listOf(),
+                commands = listOf(""),
+                checkRepresentation = false,
+            )
+        }
+    }
+    
+    @Nested
+    inner class AccessCanBeTightenedInspectionTest {
+        @Nested
+        inner class TestImplicitClass : IntellijTraceRecorderJsonTest() {
+            @Test
+            @Timeout(20 * 60)
+            fun test() = runTest(
+                testClassName = "com.intellij.java.codeInspection.visibility.AccessCanBeTightenedInspectionTest",
+                testMethodName = "testImplicitClass",
+                extraJvmArgs = listOf(),
+                commands = listOf(""),
+                checkRepresentation = false,
+            )
+        }
+    }
 }

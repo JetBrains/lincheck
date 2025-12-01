@@ -6,5 +6,48 @@
       "testInsertString"
     ],
     "checkRepresentation": true
+  },
+  
+  
+  
+  {
+    "class": "com.intellij.java.refactoring.inline.InlinePatternVariableTest",
+    "gradleCommand": "",
+    "methods": [
+      "testInNestedCondition"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.java.codeInsight.daemon.MultiReleaseDepTest",
+    "gradleCommand": "",
+    "methods": [
+      "testOnDemandResolveIntoMultiReleaseJar"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.java.refactoring.inline.InlineMethodTest",
+    "gradleCommand": "",
+    "methods": [
+      "testSplitIfAndCollapseBack"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.siyeh.ig.bugs.IgnoreResultOfCallInspectionTest",
+    "gradleCommand": "",
+    "methods": [
+      "testIgnoreInTestContainers"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.java.codeInspection.visibility.AccessCanBeTightenedInspectionTest",
+    "gradleCommand": "",
+    "methods": [
+      "testImplicitClass"
+    ],
+    "checkRepresentation": false
   }
 ]
