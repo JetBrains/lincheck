@@ -19,7 +19,7 @@ import java.nio.file.attribute.BasicFileAttributes
 
 // ===== Project package discovery =====
 
-fun computeProjectPackages(root: Path): List<String> {
+fun computeProjectPackages(root: Path, excludeDirPaths: List<Path> = emptyList()): List<String> {
     val files = mutableListOf<Path>()
 
     // Directories to skip fully during traversal
@@ -27,12 +27,27 @@ fun computeProjectPackages(root: Path): List<String> {
         "build", "out", "node_modules", "target", "dist", "bin"
     )
 
+    // Normalize excludes: resolve relative paths against root, then normalize & toAbsolutePath
+    val normalizedExcludes: List<Path> = excludeDirPaths
+        .mapNotNull { p ->
+            try {
+                val resolved = if (p.isAbsolute) p else root.resolve(p)
+                resolved.toAbsolutePath().normalize()
+            } catch (_: Exception) { null }
+        }
+
     Files.walkFileTree(
         root,
         object : SimpleFileVisitor<Path>() {
             override fun preVisitDirectory(dir: Path, attrs: BasicFileAttributes): FileVisitResult {
                 val name = dir.fileName?.toString() ?: return FileVisitResult.CONTINUE
+                // Skip common build/hidden and user-provided excludes
                 if (name.startsWith('.') || name in skipDirNames) return FileVisitResult.SKIP_SUBTREE
+                val abs = try { dir.toAbsolutePath().normalize() } catch (_: Exception) { dir }
+                for (ex in normalizedExcludes) {
+                    // If this directory is the excluded dir or lies under it — skip the subtree
+                    if (abs == ex || abs.startsWith(ex)) return FileVisitResult.SKIP_SUBTREE
+                }
                 return FileVisitResult.CONTINUE
             }
 

@@ -14,7 +14,9 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.jvm.agent.TraceAgentTransformer
 import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_EXCLUDE
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_EXCLUDE_DIR_PATHS
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_INCLUDE
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_PROJECT_PATH
 import org.jetbrains.lincheck.jvm.agent.isInstrumentationInitialized
 import org.jetbrains.lincheck.jvm.agent.isTraceJavaAgentAttached
 import org.jetbrains.lincheck.util.isInTraceDebuggerMode
@@ -31,7 +33,6 @@ internal object TraceRecorderAgent {
     const val ARGUMENT_FORMAT = "format"
     const val ARGUMENT_FOPTION = "formatOption"
     const val ARGUMENT_PACK = "pack"
-    const val ARGUMENT_PROJECT_PATH = "projectPath"
 
     // Allowed additional arguments
     private val ADDITIONAL_ARGS = listOf(
@@ -41,6 +42,7 @@ internal object TraceRecorderAgent {
         ARGUMENT_EXCLUDE,
         ARGUMENT_PACK,
         ARGUMENT_PROJECT_PATH,
+        ARGUMENT_EXCLUDE_DIR_PATHS,
     )
 
     @JvmStatic
