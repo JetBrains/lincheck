@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.jvm.agent
 
 import jdk.internal.org.objectweb.asm.ClassReader.SKIP_FRAMES
+import org.jetbrains.lincheck.util.Logger
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.ClassWriter
@@ -85,7 +86,8 @@ class TraceAgentTransformer(val methodTransformer: MethodVisitorProvider) : Clas
 
             return bytes
         } catch (e: Throwable) {
-            System.err.println("Unable to transform '$internalClassName': $e")
+            Logger.error { "Unable to transform $internalClassName" }
+            Logger.error(e)
             return classBytes
         }
     }

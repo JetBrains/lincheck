@@ -833,13 +833,13 @@ class TraceCollectingEventTracker(
 
     override fun getThreadLocalRandom(): InjectedRandom  = runInsideIgnoredSection {
         val msg = "Trace Recorder mode doesn't support Random calls determinism"
-        System.err.println(msg)
+        Logger.error { msg }
         error(msg)
     }
 
     override fun randomNextInt(): Int = runInsideIgnoredSection {
         val msg = "Trace Recorder mode doesn't support Random calls determinism"
-        System.err.println(msg)
+        Logger.error { msg }
         error(msg)
     }
 
