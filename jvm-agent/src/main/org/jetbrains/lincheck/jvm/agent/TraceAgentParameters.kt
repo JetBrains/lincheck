@@ -59,6 +59,24 @@ import java.nio.file.Paths
  *       * for `text`: `verbose` --- enables verbose output.
  *       Example: `formatOption=dump`
  *
+ * - projectPath — absolute or relative path to a project root directory. When provided, the agent
+ *   traverses all Kotlin/Java source files under this directory, extracts their package names, and
+ *   builds include patterns from them. Files without a package declaration are ignored. The package
+ *   set is minimized to keep only top-most packages (subpackages are dropped), and each package is
+ *   suffixed with `.*`. These computed patterns are merged with user-provided `include` patterns
+ *   and are calculated during agent initialization.
+ *       Examples:
+ *       - `projectPath=/path/to/your/project`
+ *       - `projectPath=../my-project`
+ *
+ * - excludeDirPaths — semicolon-separated list of directory paths to be excluded from traversal
+ *   when `projectPath` is used. Paths can be absolute or relative to `projectPath`. These excludes
+ *   complement the default skips (hidden directories that start with a dot, and common build/output
+ *   folders like `build`, `out`, `node_modules`, `target`, `dist`, `bin`).
+ *       Examples:
+ *       - `excludeDirPaths="build;out;generated"`
+ *       - `excludeDirPaths="/abs/path/to/tools;some/module/build"`
+ *
  * Quotation rules:
  * - Unquoted values may contain any character; use backslash to escape comma (,) and backslash (\\).
  * - Values can be enclosed in double quotes ("...") to avoid escaping.
