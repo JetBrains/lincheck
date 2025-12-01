@@ -13,6 +13,7 @@ package org.jetbrains.lincheck.jvm.agent
 import org.jetbrains.lincheck.util.computeProjectPackages
 import org.junit.Assert
 import org.junit.Test
+import java.nio.file.Path
 import java.nio.file.Paths
 
 class ProjectPackagesTest {
@@ -47,8 +48,7 @@ class ProjectPackagesTest {
 
     @Test
     fun computeAllProjectPackagesFilteredDirs() {
-        val bootstrapDirPath = projectRoot.resolve("./bootstrap")
-        val patterns = computeProjectPackages(projectRoot, listOf(bootstrapDirPath))
+        val patterns = computeProjectPackages(projectRoot, listOf(Path.of("./bootstrap")))
         Assert.assertEquals(
             "Include patterns must contain discovered project packages without packages from 'bootstrap' folder",
             actual.filterNot { it == "sun.nio.ch.lincheck" },
