@@ -48,7 +48,7 @@ class ProjectPackagesTest {
 
     @Test
     fun computeAllProjectPackagesFilteredDirs() {
-        val patterns = computeProjectPackages(projectRoot, listOf(Path.of("./bootstrap")))
+        val patterns = computeProjectPackages(projectRoot, listOf(Paths.get("./bootstrap")))
         Assert.assertEquals(
             "Include patterns must contain discovered project packages without packages from 'bootstrap' folder",
             actual.filterNot { it == "sun.nio.ch.lincheck" },
