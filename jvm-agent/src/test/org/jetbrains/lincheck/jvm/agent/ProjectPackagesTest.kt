@@ -16,22 +16,17 @@ import org.junit.Test
 import java.nio.file.Paths
 
 class ProjectPackagesTest {
-    @Test
-    fun computesAllProjectPackages_minimized() {
-        val projectRoot = Paths.get("..").toAbsolutePath().normalize()
-
-        // Actual under test: compute packages using production helper
-        val actual = listOf(
-            "sun.nio.ch.lincheck", "org.jetbrains.lincheck", "org.jetbrains.kotlinx.lincheck",
-            "org.jetbrains.lincheck_test.gpmc", "org.jetbrains.lincheck_test.guide", "org.jetbrains.kotlinx.lincheck_test",
-            "org.jetbrains.trace.recorder.test.impl", "org.jetbrains.trace.recorder.test.runner", "org.jetbrains.lincheck_test.datastructures"
-        )
-
+    private val projectRoot = Paths.get("..").toAbsolutePath().normalize()
+    private val actual = listOf(
+        "sun.nio.ch.lincheck", "org.jetbrains.lincheck", "org.jetbrains.kotlinx.lincheck",
+        "org.jetbrains.lincheck_test.gpmc", "org.jetbrains.lincheck_test.guide", "org.jetbrains.kotlinx.lincheck_test",
+        "org.jetbrains.trace.recorder.test.impl", "org.jetbrains.trace.recorder.test.runner", "org.jetbrains.lincheck_test.datastructures"
+    ).also {
         // No package in the result should be a subpackage of another
         Assert.assertTrue(
             "Result must not contain subpackages of already included packages",
-            actual.none { p ->
-                actual.any { other ->
+            it.none { p ->
+                it.any { other ->
                     other != p && p.startsWith("$other.")
                 }
             }
@@ -40,11 +35,25 @@ class ProjectPackagesTest {
         // All packages follow identifier segments joined by dots
         Assert.assertTrue(
             "Every package must be a sequence of Java identifiers separated by dots",
-            actual.all { pkg -> isValidPackageName(pkg) }
+            it.all { pkg -> isValidPackageName(pkg) }
         )
+    }
 
+    @Test
+    fun computesAllProjectPackages() {
         val patterns = computeProjectPackages(projectRoot)
         Assert.assertEquals("Include patterns must contain discovered project packages", actual, patterns)
+    }
+
+    @Test
+    fun computeAllProjectPackagesFilteredDirs() {
+        val bootstrapDirPath = projectRoot.resolve("./bootstrap")
+        val patterns = computeProjectPackages(projectRoot, listOf(bootstrapDirPath))
+        Assert.assertEquals(
+            "Include patterns must contain discovered project packages without packages from 'bootstrap' folder",
+            actual.filterNot { it == "sun.nio.ch.lincheck" },
+            patterns
+        )
     }
 
     private fun isValidPackageName(name: String): Boolean {
