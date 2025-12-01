@@ -114,6 +114,7 @@ object TraceAgentParameters {
     const val ARGUMENT_INCLUDE = "include"
     const val ARGUMENT_EXCLUDE = "exclude"
     const val ARGUMENT_PROJECT_PATH = "projectPath"
+    const val ARGUMENT_EXCLUDE_DIR_PATHS = "excludeDirPaths"
     const val ARGUMENT_LINE_BREAKPOINT = "breakpoints"
     const val ARGUMENT_JMX_SERVER = "jmxServer"
     const val ARGUMENT_JMX_HOST = "jmxHost"
@@ -254,7 +255,8 @@ object TraceAgentParameters {
     fun computeProjectPackagesIfNeeded() {
         val root = namedArgs[ARGUMENT_PROJECT_PATH]?.takeIf { it.isNotBlank() } ?: return
         runCatching {
-            computedProjectIncludePatterns = computeProjectPackages(Paths.get(root)).map { "$it.*" }
+            val excludeDirs = splitPatterns(namedArgs[ARGUMENT_EXCLUDE_DIR_PATHS]).map { Paths.get(it) }
+            computedProjectIncludePatterns = computeProjectPackages(Paths.get(root), excludeDirs).map { "$it.*" }
         }.onFailure {
             Logger.warn { "Failed to compute project packages from path '$root': ${it.message}" }
         }

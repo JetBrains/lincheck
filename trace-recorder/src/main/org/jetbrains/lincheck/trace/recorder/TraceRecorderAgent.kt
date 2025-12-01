@@ -16,10 +16,12 @@ import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_LINE_BREAKPOINT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_EXCLUDE
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_EXCLUDE_DIR_PATHS
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_INCLUDE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_JMX_SERVER
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_JMX_HOST
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_JMX_PORT
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_PROJECT_PATH
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_RMI_PORT
 import org.jetbrains.lincheck.trace.recorder.jmx.TraceRecorderJmxServer
 import org.jetbrains.lincheck.trace.recorder.jmx.TraceRecorderJmxController
@@ -40,7 +42,6 @@ internal object TraceRecorderAgent {
     const val ARGUMENT_FORMAT = "format"
     const val ARGUMENT_FOPTION = "formatOption"
     const val ARGUMENT_PACK = "pack"
-    const val ARGUMENT_PROJECT_PATH = "projectPath"
 
     // Allowed additional arguments
     private val ADDITIONAL_ARGS = listOf(
@@ -50,6 +51,7 @@ internal object TraceRecorderAgent {
         ARGUMENT_EXCLUDE,
         ARGUMENT_PACK,
         ARGUMENT_PROJECT_PATH,
+        ARGUMENT_EXCLUDE_DIR_PATHS,
         ARGUMENT_LINE_BREAKPOINT,
         ARGUMENT_JMX_SERVER,
         ARGUMENT_JMX_HOST,
