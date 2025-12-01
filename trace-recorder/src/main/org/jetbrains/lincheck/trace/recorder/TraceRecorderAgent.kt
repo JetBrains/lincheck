@@ -40,6 +40,7 @@ internal object TraceRecorderAgent {
     const val ARGUMENT_FORMAT = "format"
     const val ARGUMENT_FOPTION = "formatOption"
     const val ARGUMENT_PACK = "pack"
+    const val ARGUMENT_PROJECT_PATH = "projectPath"
 
     // Allowed additional arguments
     private val ADDITIONAL_ARGS = listOf(
@@ -48,6 +49,7 @@ internal object TraceRecorderAgent {
         ARGUMENT_INCLUDE,
         ARGUMENT_EXCLUDE,
         ARGUMENT_PACK,
+        ARGUMENT_PROJECT_PATH,
         ARGUMENT_LINE_BREAKPOINT,
         ARGUMENT_JMX_SERVER,
         ARGUMENT_JMX_HOST,
@@ -60,6 +62,8 @@ internal object TraceRecorderAgent {
     fun premain(agentArgs: String?, inst: Instrumentation) {
         // parse and validate arguments and system properties
         parseArguments(agentArgs)
+        computeProjectPackagesIfRequested()
+
         validateTraceRecorderMode()
         if (!isInLiveDebuggerMode) {
             TraceAgentParameters.validateClassAndMethodArgumentsAreProvided()
@@ -81,6 +85,7 @@ internal object TraceRecorderAgent {
     fun agentmain(agentArgs: String?, inst: Instrumentation) {
         // parse and validate arguments and system properties
         parseArguments(agentArgs)
+        computeProjectPackagesIfRequested()
 
         val mode =  if (TraceAgentParameters.getLineBreakpoints().isEmpty()) TRACE_RECORDER_MODE_PROPERTY
                     else LIVE_DEBUGGER_MODE_PROPERTY
@@ -102,6 +107,12 @@ internal object TraceRecorderAgent {
     @JvmStatic
     private fun parseArguments(agentArgs: String?) {
         TraceAgentParameters.parseArgs(agentArgs, ADDITIONAL_ARGS)
+    }
+
+    @JvmStatic
+    private fun computeProjectPackagesIfRequested() {
+        // Pre-compute include patterns from project packages if requested
+        TraceAgentParameters.computeProjectPackagesIfNeeded()
     }
 
     @JvmStatic

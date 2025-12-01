@@ -12,9 +12,11 @@ package org.jetbrains.lincheck.jvm.agent
 
 import org.jetbrains.annotations.TestOnly
 import org.jetbrains.lincheck.util.Logger
+import org.jetbrains.lincheck.util.computeProjectPackages
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 import javax.management.remote.JMXServiceURL
+import java.nio.file.Paths
 
 /**
  * Parses and stores arguments passed to Lincheck JVM javaagents (trace-recorder and trace-debugger).
@@ -41,7 +43,7 @@ import javax.management.remote.JMXServiceURL
  *
  * - exclude — semicolon-separated list of exclude patterns (optional).
  *       Example: `exclude="org.example.internal.*;**.generated.*"`
- *       
+ *
  * - lineBreakpoints — semicolon-separated list of line breakpoints to capture snapshots from.
  *       This is functionality for the live debugger project.
  *
@@ -111,6 +113,7 @@ object TraceAgentParameters {
     const val ARGUMENT_OUTPUT = "output"
     const val ARGUMENT_INCLUDE = "include"
     const val ARGUMENT_EXCLUDE = "exclude"
+    const val ARGUMENT_PROJECT_PATH = "projectPath"
     const val ARGUMENT_LINE_BREAKPOINT = "breakpoints"
     const val ARGUMENT_JMX_SERVER = "jmxServer"
     const val ARGUMENT_JMX_HOST = "jmxHost"
@@ -151,6 +154,10 @@ object TraceAgentParameters {
 
     @JvmStatic
     private val namedArgs: MutableMap<String, String?> = mutableMapOf()
+
+    // Cached include patterns computed from projectPath argument, with "*" suffix
+    @JvmStatic
+    private var computedProjectIncludePatterns: List<String>? = null
 
     @JvmStatic
     fun parseArgs(args: String?, validAdditionalArgs: List<String>) {
@@ -239,6 +246,20 @@ object TraceAgentParameters {
         }
     }
 
+    /**
+     * Compute include patterns (consisting of source code packages) from the provided project path argument,
+     * if any, and cache them. This should be invoked during agent initialization.
+     */
+    @JvmStatic
+    fun computeProjectPackagesIfNeeded() {
+        val root = namedArgs[ARGUMENT_PROJECT_PATH]?.takeIf { it.isNotBlank() } ?: return
+        runCatching {
+            computedProjectIncludePatterns = computeProjectPackages(Paths.get(root)).map { "$it.*" }
+        }.onFailure {
+            Logger.warn { "Failed to compute project packages from path '$root': ${it.message}" }
+        }
+    }
+
     private fun setClassUnderTraceDebuggingToMethodOwner(
         startClass: String = classUnderTraceDebugging,
         method: String = methodUnderTraceDebugging,
@@ -269,10 +290,14 @@ object TraceAgentParameters {
 
     @JvmStatic
     fun getIncludePatterns(): List<String> = splitPatterns(namedArgs[ARGUMENT_INCLUDE])
+        .let { userPatterns ->
+            if (computedProjectIncludePatterns == null) userPatterns
+            else (userPatterns + computedProjectIncludePatterns!!).distinct()
+        }
 
     @JvmStatic
     fun getExcludePatterns(): List<String> = splitPatterns(namedArgs[ARGUMENT_EXCLUDE])
-    
+
     @JvmStatic
     fun getLineBreakpoints(): List<String> = splitPatterns(namedArgs[ARGUMENT_LINE_BREAKPOINT])
 
@@ -302,6 +327,7 @@ object TraceAgentParameters {
         methodUnderTraceDebugging = ""
         traceDumpFilePath = null
         namedArgs.clear()
+        computedProjectIncludePatterns = null
     }
 }
 
