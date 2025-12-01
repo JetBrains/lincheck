@@ -31,6 +31,7 @@ internal object TraceRecorderAgent {
     const val ARGUMENT_FORMAT = "format"
     const val ARGUMENT_FOPTION = "formatOption"
     const val ARGUMENT_PACK = "pack"
+    const val ARGUMENT_PROJECT_PATH = "projectPath"
 
     // Allowed additional arguments
     private val ADDITIONAL_ARGS = listOf(
@@ -39,6 +40,7 @@ internal object TraceRecorderAgent {
         ARGUMENT_INCLUDE,
         ARGUMENT_EXCLUDE,
         ARGUMENT_PACK,
+        ARGUMENT_PROJECT_PATH,
     )
 
     @JvmStatic
@@ -64,6 +66,8 @@ internal object TraceRecorderAgent {
             "Rerun with `-Dlincheck.traceDebuggerMode=true` or `-Dlincheck.traceRecorderMode=true` but not both."
         }
         TraceAgentParameters.parseArgs(agentArgs, ADDITIONAL_ARGS)
+        // Pre-compute include patterns from project packages if requested
+        TraceAgentParameters.computeProjectPackagesIfNeeded()
         LincheckJavaAgent.instrumentation = inst
         isTraceJavaAgentAttached = true
         isInstrumentationInitialized = true
