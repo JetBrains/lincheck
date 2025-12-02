@@ -16,6 +16,10 @@
     "methods": [
       "testInNestedCondition"
     ],
+    "traceShouldContain": [
+      "InlinePatternVariableTest.java",
+      "InNestedCondition.java"
+    ],
     "checkRepresentation": false
   },
   {
@@ -23,6 +27,9 @@
     "gradleCommand": "",
     "methods": [
       "testOnDemandResolveIntoMultiReleaseJar"
+    ],
+    "traceShouldContain": [
+      "JavaVersionBasedScope.java"
     ],
     "checkRepresentation": false
   },
@@ -32,6 +39,9 @@
     "methods": [
       "testSplitIfAndCollapseBack"
     ],
+    "traceShouldContain": [
+      "CodeBlockSurrounder.java"
+    ],
     "checkRepresentation": false
   },
   {
@@ -40,6 +50,9 @@
     "methods": [
       "testIgnoreInTestContainers"
     ],
+    "traceShouldContain": [
+      "IgnoreResultOfCallInspectionTest.java"
+    ],
     "checkRepresentation": false
   },
   {
@@ -47,6 +60,9 @@
     "gradleCommand": "",
     "methods": [
       "testImplicitClass"
+    ],
+    "traceShouldContain": [
+      "AccessCanBeTightenedInspection.java"
     ],
     "checkRepresentation": false
   }

@@ -26,6 +26,7 @@ class IJTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(""),
                 checkRepresentation = true,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -42,6 +43,7 @@ class IJTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(""),
                 checkRepresentation = false,
+                traceShouldContain = listOf("InlinePatternVariableTest.java", "InNestedCondition.java")
             )
         }
     }
@@ -58,6 +60,7 @@ class IJTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(""),
                 checkRepresentation = false,
+                traceShouldContain = listOf("JavaVersionBasedScope.java")
             )
         }
     }
@@ -74,6 +77,7 @@ class IJTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(""),
                 checkRepresentation = false,
+                traceShouldContain = listOf("CodeBlockSurrounder.java")
             )
         }
     }
@@ -90,6 +94,7 @@ class IJTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(""),
                 checkRepresentation = false,
+                traceShouldContain = listOf("IgnoreResultOfCallInspectionTest.java")
             )
         }
     }
@@ -106,6 +111,7 @@ class IJTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(""),
                 checkRepresentation = false,
+                traceShouldContain = listOf("AccessCanBeTightenedInspection.java")
             )
         }
     }
