@@ -28,6 +28,7 @@ data class JsonTestEntry(
     val jvmArgs: List<String> = emptyList(),
     val checkRepresentation: Boolean = false,
     val reasonsForMuting: Map<String, String> = emptyMap(),
+    val traceShouldContain: List<String> = emptyList(),
 )
 
 internal fun loadResourceText(resourcePath: String, loader: Class<*>): String {

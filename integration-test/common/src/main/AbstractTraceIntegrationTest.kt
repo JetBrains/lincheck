@@ -9,6 +9,10 @@
  */
 
 import org.jetbrains.kotlinx.lincheck_test.util.OVERWRITE_REPRESENTATION_TESTS_OUTPUT
+import org.jetbrains.lincheck.trace.LazyTraceReader
+import org.jetbrains.lincheck.trace.TRACE_CONTEXT
+import org.jetbrains.lincheck.trace.TRContainerTracePoint
+import org.jetbrains.lincheck.trace.TRTracePoint
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions
 import java.io.File
@@ -70,6 +74,7 @@ abstract class AbstractTraceIntegrationTest {
         checkRepresentation: Boolean = true,
         testNameSuffix: String? = null,
         onStdErrOutput: (String) -> Unit = failOnErrorInStdErr,
+        traceShouldContain: List<String> = emptyList(),
     ) {
         val (_, output) = withStdErrTee {
             runTestAndCompare(
@@ -80,6 +85,7 @@ abstract class AbstractTraceIntegrationTest {
                 commands,
                 checkRepresentation,
                 testNameSuffix,
+                traceShouldContain,
             )
         }
         onStdErrOutput(output)
@@ -94,6 +100,7 @@ abstract class AbstractTraceIntegrationTest {
         commands: List<String>,
         checkRepresentation: Boolean = true,
         testNameSuffix: String? = null,
+        traceShouldContain: List<String> = emptyList(),
     ) {
         val tmpFile = File.createTempFile(testClassName + "_" + testMethodName, "")
         val packedTraceFile = File("${tmpFile.absolutePath}.packedtrace")
@@ -107,7 +114,7 @@ abstract class AbstractTraceIntegrationTest {
 
         runTestImpl(testClassName, testMethodName, extraJvmArgs, extraAgentArgs, commands, tmpFile)
 
-        compareOutput(checkRepresentation, testClassName, testMethodName, testNameSuffix, tmpFile, packedTraceFile)
+        compareOutput(checkRepresentation, testClassName, testMethodName, testNameSuffix, tmpFile, packedTraceFile, traceShouldContain)
     }
 
     private fun compareOutput(
@@ -116,7 +123,8 @@ abstract class AbstractTraceIntegrationTest {
         testMethodName: String,
         testNameSuffix: String?,
         outputFile: File,
-        packedOutputFile: File
+        packedOutputFile: File,
+        traceShouldContain: List<String>
     ) {
         // TODO decide how to test: with gold data or run twice?
         if (checkRepresentation) { // otherwise we just want to make sure that tests do not fail
@@ -131,34 +139,50 @@ abstract class AbstractTraceIntegrationTest {
                 } else {
                     Assertions.assertEquals(expected, actual)
                 }
+            } else if (OVERWRITE_REPRESENTATION_TESTS_OUTPUT) {
+                expectedOutput.parentFile.mkdirs()
+                copy(outputFile, expectedOutput)
+                Assertions.fail("The gold data file was created. Please rerun the test.")
             } else {
-                if (OVERWRITE_REPRESENTATION_TESTS_OUTPUT) {
-                    expectedOutput.parentFile.mkdirs()
-                    copy(outputFile, expectedOutput)
-                    Assertions.fail("The gold data file was created. Please rerun the test.")
-                } else {
-                    Assertions.fail(
-                        "The gold data file was not found at '${expectedOutput.absolutePath}'. " +
-                                "Please rerun the test with \"overwriteRepresentationTestsOutput\" option enabled."
-                    )
-                }
+                Assertions.fail(
+                    "The gold data file was not found at '${expectedOutput.absolutePath}'. " +
+                            "Please rerun the test with \"overwriteRepresentationTestsOutput\" option enabled."
+                )
             }
         } else {
-            fun checkNonEmptyNess(file: File, filePurpose: String = "output") {
-                val fileContainsContent = file.bufferedReader().lineSequence().any { it.isNotEmpty() }
-                if (!fileContainsContent) {
-                    Assertions.fail<Unit>("Empty $filePurpose file was produced by the test: $file.")
-                }
+            val file = if (outputFile.exists()) outputFile 
+                else if (packedOutputFile.exists()) packedOutputFile
+                else  Assertions.fail("No output was produced by the test.")
+            
+            val fileContainsContent = file.bufferedReader().lineSequence().any { it.isNotEmpty() }
+            if (!fileContainsContent) {
+                Assertions.fail<Unit>("Empty output file was produced by the test: $file.")
             }
 
-            if (outputFile.exists()) {
-                checkNonEmptyNess(outputFile)
-            } else {
-                if (packedOutputFile.exists()) {
-                    checkNonEmptyNess(packedOutputFile)
-                } else {
-                    Assertions.fail("No output was produced by the test.")
+            if (traceShouldContain.isEmpty()) return
+
+            fun traceFind(reader: LazyTraceReader, node: TRTracePoint, query: String): Boolean {
+                val text = node.toText(true)
+                if (text.contains(query)) return true
+                if (node is TRContainerTracePoint && node.events.isNotEmpty()) {
+                    reader.loadAllChildren(node)
+                    val found = node.events.any { event ->
+                        if (event != null) traceFind(reader, event, query)
+                        else false
+                    }
+                    node.unloadAllChildren()
+                    return found
                 }
+                return false
+            }
+            
+            TRACE_CONTEXT.clear()
+            val reader = LazyTraceReader(file.absolutePath)
+            traceShouldContain.forEach { query ->
+                val success = reader.readRoots().any { root ->
+                    traceFind(reader, root, query)
+                }
+                if (!success) Assertions.fail("Did not find `$query` in trace")
             }
         }
     }

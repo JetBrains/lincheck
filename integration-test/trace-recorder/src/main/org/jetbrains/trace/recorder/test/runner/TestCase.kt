@@ -16,5 +16,6 @@ data class TestCase(
     val gradleCommand: String,
     val jvmArgs: List<String>,
     val checkRepresentation: Boolean,
+    val traceShouldContain: List<String> = emptyList(),
     val reasonForMuting: String? = null,
 )

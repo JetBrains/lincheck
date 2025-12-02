@@ -41,6 +41,7 @@ sealed class TestGenerator(
                     gradleCommand = jsonEntry.gradleCommand,
                     jvmArgs = jsonEntry.jvmArgs,
                     checkRepresentation = jsonEntry.checkRepresentation,
+                    traceShouldContain = jsonEntry.traceShouldContain,
                     reasonForMuting = jsonEntry.reasonsForMuting[it]
                 )
             }
@@ -90,6 +91,7 @@ sealed class TestGenerator(
                         extraJvmArgs = listOf(${testCase.jvmArgs.joinToString { it.toLiteral() }}),
                         commands = listOf(${testCase.gradleCommand.toLiteral()}),
                         checkRepresentation = ${testCase.checkRepresentation},
+                        traceShouldContain = listOf(${testCase.traceShouldContain.joinToString { it.toLiteral() }})
                     )
                 }
                 """.trimIndent()

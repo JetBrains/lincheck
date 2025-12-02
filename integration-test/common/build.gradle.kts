@@ -2,6 +2,10 @@ repositories {
     mavenCentral()
     maven { url = uri("https://repo.gradle.org/gradle/libs-releases/") }
 }
+dependencies {
+    implementation(project(":common"))
+    implementation(project(":trace"))
+}
 
 sourceSets {
     main {
