@@ -176,13 +176,20 @@ abstract class AbstractTraceIntegrationTest {
                 return false
             }
             
-            TRACE_CONTEXT.clear()
-            val reader = LazyTraceReader(file.absolutePath)
-            traceShouldContain.forEach { query ->
-                val success = reader.readRoots().any { root ->
-                    traceFind(reader, root, query)
+            try {
+                TRACE_CONTEXT.clear()
+                val reader = LazyTraceReader(file.absolutePath)
+                val roots = reader.readRoots()
+                traceShouldContain.forEach { query ->
+                    val success = roots.any { root ->
+                        traceFind(reader, root, query)
+                    }
+                    if (!success) Assertions.fail("Did not find `$query` in trace")
                 }
-                if (!success) Assertions.fail("Did not find `$query` in trace")
+            } catch (a: AssertionError) {
+                throw a
+            } catch (t: Throwable) {
+                throw RuntimeException("Failed during trace reading", t)
             }
         }
     }
