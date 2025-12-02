@@ -65,5 +65,118 @@
       "AccessCanBeTightenedInspection.java"
     ],
     "checkRepresentation": false
+  },
+
+
+
+  {
+    "class": "com.intellij.spring.boot.model.properties.SpringBootConfigurationPropertiesFromSourcesTest",
+    "gradleCommand": "",
+    "methods": [
+      "testDeprecatedConfigurationPropertyRecord"
+    ],
+    "traceShouldContain": [
+      "SpringBootConfigKeysCollector.kt"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.siyeh.ig.whileloop.WhileCanBeDoWhileInspectionTest",
+    "gradleCommand": "",
+    "methods": [
+      "testEmptyBlock"
+    ],
+    "traceShouldContain": [
+      "WhileCanBeDoWhileInspection.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.quarkus.hibernate.injection.QsPanacheQueriesTest",
+    "gradleCommand": "",
+    "methods": [
+      "testEntityParentClassFieldUsage"
+    ],
+    "traceShouldContain": [
+      "QsPanacheQueryPrefixSuffixBuilder.kt"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.spring.boot.application.properties.SpringBootApplicationPropertiesConstructorBinding22Test",
+    "gradleCommand": "",
+    "methods": [
+      "testSwappedPropertyMethodsCompletion"
+    ],
+    "traceShouldContain": [
+      "ConfigKeyPathBeanPropertyResolver.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.java.codeInsight.completion.NormalCompletionTest",
+    "gradleCommand": "",
+    "methods": [
+      "testNoSemicolonInForUpdate"
+    ],
+    "traceShouldContain": [
+      "JavaCompletionUtil.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.java.codeInspection.DataFlowInspectionTest",
+    "gradleCommand": "",
+    "methods": [
+      "testLiteralDoWhileConditionWithBreak"
+    ],
+    "traceShouldContain": [
+      "ConstantValueInspection.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.java.refactoring.RenameCollisionsTest",
+    "gradleCommand": "",
+    "methods": [
+      "testRenameSwitchToUnnamedJava21Preview"
+    ],
+    "traceShouldContain": [
+      "JavaUnresolvableLocalCollisionDetector.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.micronaut.oas.MnOasBodyConvertersTest",
+    "gradleCommand": "",
+    "methods": [
+      "testPostWithoutBodyAnnotation"
+    ],
+    "traceShouldContain": [
+      "MnOasRequestBodyProvider.kt"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.java.codeInsight.editorActions.JavaQuoteTest",
+    "gradleCommand": "",
+    "methods": [
+      "testTextBlockBeforeTemplate"
+    ],
+    "traceShouldContain": [
+      "JavaQuoteHandler.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.spring.boot.model.properties.jam.SpringBootConfigurationPropertiesTest",
+    "gradleCommand": "",
+    "methods": [
+      "testNullPrefixImplicitUsages"
+    ],
+    "traceShouldContain": [
+      "SpringBootConfigurationPropertyReferenceSearcher.java"
+    ],
+    "checkRepresentation": false
   }
 ]

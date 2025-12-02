@@ -115,4 +115,174 @@ class IJTraceRecorderJsonIntegrationTests {
             )
         }
     }
+    
+    @Nested
+    inner class SpringBootConfigurationPropertiesFromSourcesTest {
+        @Nested
+        inner class TestDeprecatedConfigurationPropertyRecord : IntellijTraceRecorderJsonTest() {
+            @Test
+            @Timeout(20 * 60)
+            fun test() = runTest(
+                testClassName = "com.intellij.spring.boot.model.properties.SpringBootConfigurationPropertiesFromSourcesTest",
+                testMethodName = "testDeprecatedConfigurationPropertyRecord",
+                extraJvmArgs = listOf(),
+                commands = listOf(""),
+                checkRepresentation = false,
+                traceShouldContain = listOf("SpringBootConfigKeysCollector.kt")
+            )
+        }
+    }
+    
+    @Nested
+    inner class WhileCanBeDoWhileInspectionTest {
+        @Nested
+        inner class TestEmptyBlock : IntellijTraceRecorderJsonTest() {
+            @Test
+            @Timeout(20 * 60)
+            fun test() = runTest(
+                testClassName = "com.siyeh.ig.whileloop.WhileCanBeDoWhileInspectionTest",
+                testMethodName = "testEmptyBlock",
+                extraJvmArgs = listOf(),
+                commands = listOf(""),
+                checkRepresentation = false,
+                traceShouldContain = listOf("WhileCanBeDoWhileInspection.java")
+            )
+        }
+    }
+    
+    @Nested
+    inner class QsPanacheQueriesTest {
+        @Nested
+        inner class TestEntityParentClassFieldUsage : IntellijTraceRecorderJsonTest() {
+            @Test
+            @Timeout(20 * 60)
+            fun test() = runTest(
+                testClassName = "com.intellij.quarkus.hibernate.injection.QsPanacheQueriesTest",
+                testMethodName = "testEntityParentClassFieldUsage",
+                extraJvmArgs = listOf(),
+                commands = listOf(""),
+                checkRepresentation = false,
+                traceShouldContain = listOf("QsPanacheQueryPrefixSuffixBuilder.kt")
+            )
+        }
+    }
+    
+    @Nested
+    inner class SpringBootApplicationPropertiesConstructorBinding22Test {
+        @Nested
+        inner class TestSwappedPropertyMethodsCompletion : IntellijTraceRecorderJsonTest() {
+            @Test
+            @Timeout(20 * 60)
+            fun test() = runTest(
+                testClassName = "com.intellij.spring.boot.application.properties.SpringBootApplicationPropertiesConstructorBinding22Test",
+                testMethodName = "testSwappedPropertyMethodsCompletion",
+                extraJvmArgs = listOf(),
+                commands = listOf(""),
+                checkRepresentation = false,
+                traceShouldContain = listOf("ConfigKeyPathBeanPropertyResolver.java")
+            )
+        }
+    }
+    
+    @Nested
+    inner class NormalCompletionTest {
+        @Nested
+        inner class TestNoSemicolonInForUpdate : IntellijTraceRecorderJsonTest() {
+            @Test
+            @Timeout(20 * 60)
+            fun test() = runTest(
+                testClassName = "com.intellij.java.codeInsight.completion.NormalCompletionTest",
+                testMethodName = "testNoSemicolonInForUpdate",
+                extraJvmArgs = listOf(),
+                commands = listOf(""),
+                checkRepresentation = false,
+                traceShouldContain = listOf("JavaCompletionUtil.java")
+            )
+        }
+    }
+    
+    @Nested
+    inner class DataFlowInspectionTest {
+        @Nested
+        inner class TestLiteralDoWhileConditionWithBreak : IntellijTraceRecorderJsonTest() {
+            @Test
+            @Timeout(20 * 60)
+            fun test() = runTest(
+                testClassName = "com.intellij.java.codeInspection.DataFlowInspectionTest",
+                testMethodName = "testLiteralDoWhileConditionWithBreak",
+                extraJvmArgs = listOf(),
+                commands = listOf(""),
+                checkRepresentation = false,
+                traceShouldContain = listOf("ConstantValueInspection.java")
+            )
+        }
+    }
+    
+    @Nested
+    inner class RenameCollisionsTest {
+        @Nested
+        inner class TestRenameSwitchToUnnamedJava21Preview : IntellijTraceRecorderJsonTest() {
+            @Test
+            @Timeout(20 * 60)
+            fun test() = runTest(
+                testClassName = "com.intellij.java.refactoring.RenameCollisionsTest",
+                testMethodName = "testRenameSwitchToUnnamedJava21Preview",
+                extraJvmArgs = listOf(),
+                commands = listOf(""),
+                checkRepresentation = false,
+                traceShouldContain = listOf("JavaUnresolvableLocalCollisionDetector.java")
+            )
+        }
+    }
+    
+    @Nested
+    inner class MnOasBodyConvertersTest {
+        @Nested
+        inner class TestPostWithoutBodyAnnotation : IntellijTraceRecorderJsonTest() {
+            @Test
+            @Timeout(20 * 60)
+            fun test() = runTest(
+                testClassName = "com.intellij.micronaut.oas.MnOasBodyConvertersTest",
+                testMethodName = "testPostWithoutBodyAnnotation",
+                extraJvmArgs = listOf(),
+                commands = listOf(""),
+                checkRepresentation = false,
+                traceShouldContain = listOf("MnOasRequestBodyProvider.kt")
+            )
+        }
+    }
+    
+    @Nested
+    inner class JavaQuoteTest {
+        @Nested
+        inner class TestTextBlockBeforeTemplate : IntellijTraceRecorderJsonTest() {
+            @Test
+            @Timeout(20 * 60)
+            fun test() = runTest(
+                testClassName = "com.intellij.java.codeInsight.editorActions.JavaQuoteTest",
+                testMethodName = "testTextBlockBeforeTemplate",
+                extraJvmArgs = listOf(),
+                commands = listOf(""),
+                checkRepresentation = false,
+                traceShouldContain = listOf("JavaQuoteHandler.java")
+            )
+        }
+    }
+    
+    @Nested
+    inner class SpringBootConfigurationPropertiesTest {
+        @Nested
+        inner class TestNullPrefixImplicitUsages : IntellijTraceRecorderJsonTest() {
+            @Test
+            @Timeout(20 * 60)
+            fun test() = runTest(
+                testClassName = "com.intellij.spring.boot.model.properties.jam.SpringBootConfigurationPropertiesTest",
+                testMethodName = "testNullPrefixImplicitUsages",
+                extraJvmArgs = listOf(),
+                commands = listOf(""),
+                checkRepresentation = false,
+                traceShouldContain = listOf("SpringBootConfigurationPropertyReferenceSearcher.java")
+            )
+        }
+    }
 }
