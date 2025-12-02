@@ -38,6 +38,7 @@ abstract class AbstractIntellijTraceIntegrationTest: AbstractTraceIntegrationTes
             "-Dintellij.build.test.trace.recorder.methodName=${testMethodName.escapeDollar()}",
             "-Dintellij.build.test.trace.recorder.traceDump=$pathToOutput",
             "-Dintellij.build.test.trace.recorder.agentJar=$pathToFatJar",
+            "-Dintellij.build.test.jvm.memory.options=-Xmx4g"
         )
         extraAgentArgs["format"]?.let { cmd.add("-Dintellij.build.test.trace.recorder.format=$it") }
         extraAgentArgs["formatOption"]?.let { cmd.add("-Dintellij.build.test.trace.recorder.formatOption=$it") }
