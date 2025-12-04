@@ -70,12 +70,6 @@ class InconsistentInvocationResult(
     val inconsistency: Inconsistency
 ) : InvocationResult()
 
-
-/**
- * Indicates that spin-cycle has been found for the first time and replay of current interleaving is required.
- */
-data object SpinCycleFoundAndReplayRequired: InvocationResult()
-
 fun InvocationResult.isAbortedInvocation(): Boolean =
     when (this) {
         is ManagedDeadlockInvocationResult,

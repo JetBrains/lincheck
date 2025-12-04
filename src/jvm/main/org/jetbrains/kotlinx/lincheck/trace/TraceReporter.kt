@@ -11,6 +11,8 @@ package org.jetbrains.kotlinx.lincheck.trace
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
+import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
 import org.jetbrains.lincheck.util.*
 import kotlin.math.max
 
