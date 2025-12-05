@@ -21,6 +21,7 @@ import org.jetbrains.lincheck.util.*
 import sun.nio.ch.lincheck.*
 import java.lang.invoke.CallSite
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 
 private class ThreadData(
     val threadId: Int
@@ -216,6 +217,12 @@ class TraceCollectingEventTracker(
     // only at the end
     private val threads = ConcurrentHashMap<Thread, ThreadData>()
 
+    // Assign unique, monotonically increasing ids to threads. Using threads.size for
+    // id assignment is racy: two threads starting concurrently can observe the same size
+    // and get identical ids, which corrupts the trace/index.
+    // Atomic counter guarantees uniqueness across threads.
+    private val nextThreadId = AtomicInteger(0)
+
     private val strategy: TraceCollectingStrategy
 
     // For proper completion of threads which are not tracked from the start of the agent,
@@ -246,8 +253,12 @@ class TraceCollectingEventTracker(
     }
 
     override fun registerRunningThread(descriptor: ThreadDescriptor, thread: Thread): Unit = runInsideIgnoredSection {
+        // must be outside of the `computeIfAbsent` call, because its body
+        // might be invoked multiple times due to concurrent invocations
+        // https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/ConcurrentMap.html#computeIfAbsent-K-java.util.function.Function-
+        val assignedThreadId = nextThreadId.getAndIncrement()
         val threadData = threads.computeIfAbsent(thread) {
-            val threadData = ThreadData(threads.size)
+            val threadData = ThreadData(assignedThreadId)
             ThreadDescriptor.getThreadDescriptor(thread).eventTrackerData = threadData
             threadData
         }
@@ -301,7 +312,7 @@ class TraceCollectingEventTracker(
 
     override fun beforeThreadRun(threadDescriptor: ThreadDescriptor) = threadDescriptor.runInsideIgnoredSection {
         // Create new thread data
-        val threadData = ThreadData(threads.size)
+        val threadData = ThreadData(nextThreadId.getAndIncrement())
         val thread = Thread.currentThread()
         // Register thread data
         threadDescriptor.eventTrackerData = threadData
@@ -862,7 +873,7 @@ class TraceCollectingEventTracker(
     fun enableTrace(startingCodeLocationId: Int) {
         // Start tracing in this thread
         val thread = Thread.currentThread()
-        val threadData = ThreadData(threads.size)
+        val threadData = ThreadData(nextThreadId.getAndIncrement())
         ThreadDescriptor.getCurrentThreadDescriptor().eventTrackerData = threadData
         threads[thread] = threadData
 
