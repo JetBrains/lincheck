@@ -7,9 +7,6 @@
     ],
     "checkRepresentation": true
   },
-  
-  
-  
   {
     "class": "com.intellij.java.refactoring.inline.InlinePatternVariableTest",
     "gradleCommand": "",
@@ -66,9 +63,6 @@
     ],
     "checkRepresentation": false
   },
-
-
-
   {
     "class": "com.siyeh.ig.whileloop.WhileCanBeDoWhileInspectionTest",
     "gradleCommand": "",
@@ -147,13 +141,13 @@
     "checkRepresentation": false
   },
   {
-    "class": "com.siyeh.ig.fixes.migration.IfCanBePatternSwitchFixTest",
+    "class": "com.intellij.java.codeInsight.daemon.LightPatternsHighlightingTest",
     "gradleCommand": "",
     "methods": [
-      "testNotDoubleCall"
+      "testForEachPatternExhaustiveness"
     ],
     "traceShouldContain": [
-      "EnhancedSwitchMigrationInspection.java"
+      "HighlightVisitorImpl.java"
     ],
     "checkRepresentation": false
   },
@@ -209,6 +203,127 @@
     ],
     "traceShouldContain": [
       "InheritanceUtil.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.java.codeInsight.daemon.JavaSwitchExpressionsHighlightingTest",
+    "gradleCommand": "",
+    "methods": [
+      "testEnhancedSwitchUnreachable"
+    ],
+    "traceShouldContain": [
+      "ControlFlowAnalyzer.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.java.codeInspection.DataFlowInspection8Test",
+    "gradleCommand": "",
+    "methods": [
+      "testParallelStreamThreadId"
+    ],
+    "traceShouldContain": [
+      "JavaDfaValueFactory.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.openapi.util.registry.RegistryTest",
+    "gradleCommand": "",
+    "methods": [
+      "ignoreUnknownRegistryValues"
+    ],
+    "traceShouldContain": [
+      "Registry.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.openapi.progress.RunBlockingCancellableTest",
+    "gradleCommand": "",
+    "methods": [
+      "with indicator non-cancellable context()"
+    ],
+    "traceShouldContain": [
+      "CoreProgressManager.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.java.refactoring.ReplaceConstructorWithFactoryTest",
+    "gradleCommand": "",
+    "methods": [
+      "testRecords"
+    ],
+    "traceShouldContain": [
+      "ReplaceConstructorWithFactoryAction.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.java.codeInsight.daemon.LightAdvLVTIHighlightingTest",
+    "gradleCommand": "",
+    "methods": [
+      "testIntersectionTypeMethodRef"
+    ],
+    "traceShouldContain": [
+      "PsiMethodReferenceUtil.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.lang.javascript.JSCompletionTest",
+    "gradleCommand": "",
+    "methods": [
+      "testCompletion"
+    ],
+    "traceShouldContain": [
+      "TypoTolerantMatcher.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.java.codeInsight.daemon.LightPatternsHighlightingTest",
+    "gradleCommand": "",
+    "methods": [
+      "testRecordPatternsInForEachJava20"
+    ],
+    "traceShouldContain": [
+      "HighlightVisitorImpl.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.siyeh.ig.fixes.migration.IfCanBePatternSwitchFixTest",
+    "gradleCommand": "",
+    "methods": [
+      "testNotDoubleCall"
+    ],
+    "traceShouldContain": [
+      "EnhancedSwitchMigrationInspection.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.java.codeInspection.NullableStuffInspectionTest",
+    "gradleCommand": "",
+    "methods": [
+      "testMismatchOnArrayElementTypeUse"
+    ],
+    "traceShouldContain": [
+      "NullableStuffInspectionBase.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.java.codeInspection.DataFlowInspection8Test",
+    "gradleCommand": "",
+    "methods": [
+      "testSpotBugsDefaultAnnotation"
+    ],
+    "traceShouldContain": [
+      "FindBugsAnnotationSupport.java"
     ],
     "checkRepresentation": false
   }

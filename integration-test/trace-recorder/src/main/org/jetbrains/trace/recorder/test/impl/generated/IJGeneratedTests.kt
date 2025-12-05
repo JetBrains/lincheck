@@ -26,7 +26,7 @@ class IJTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(""),
                 checkRepresentation = true,
-                traceShouldContain = listOf(),
+                traceShouldContain = listOf()
             )
         }
     }
@@ -233,18 +233,32 @@ class IJTraceRecorderJsonIntegrationTests {
     }
     
     @Nested
-    inner class IfCanBePatternSwitchFixTest {
+    inner class LightPatternsHighlightingTest {
         @Nested
-        inner class TestNotDoubleCall : IntellijTraceRecorderJsonTest() {
+        inner class TestForEachPatternExhaustiveness : IntellijTraceRecorderJsonTest() {
             @Test
             @Timeout(20 * 60)
             fun test() = runTest(
-                testClassName = "com.siyeh.ig.fixes.migration.IfCanBePatternSwitchFixTest",
-                testMethodName = "testNotDoubleCall",
+                testClassName = "com.intellij.java.codeInsight.daemon.LightPatternsHighlightingTest",
+                testMethodName = "testForEachPatternExhaustiveness",
                 extraJvmArgs = listOf(),
                 commands = listOf(""),
                 checkRepresentation = false,
-                traceShouldContain = listOf("EnhancedSwitchMigrationInspection.java")
+                traceShouldContain = listOf("HighlightVisitorImpl.java")
+            )
+        }
+    
+        @Nested
+        inner class TestRecordPatternsInForEachJava20 : IntellijTraceRecorderJsonTest() {
+            @Test
+            @Timeout(20 * 60)
+            fun test() = runTest(
+                testClassName = "com.intellij.java.codeInsight.daemon.LightPatternsHighlightingTest",
+                testMethodName = "testRecordPatternsInForEachJava20",
+                extraJvmArgs = listOf(),
+                commands = listOf(""),
+                checkRepresentation = false,
+                traceShouldContain = listOf("HighlightVisitorImpl.java")
             )
         }
     }
@@ -330,6 +344,173 @@ class IJTraceRecorderJsonIntegrationTests {
                 commands = listOf(""),
                 checkRepresentation = false,
                 traceShouldContain = listOf("InheritanceUtil.java")
+            )
+        }
+    }
+    
+    @Nested
+    inner class JavaSwitchExpressionsHighlightingTest {
+        @Nested
+        inner class TestEnhancedSwitchUnreachable : IntellijTraceRecorderJsonTest() {
+            @Test
+            @Timeout(20 * 60)
+            fun test() = runTest(
+                testClassName = "com.intellij.java.codeInsight.daemon.JavaSwitchExpressionsHighlightingTest",
+                testMethodName = "testEnhancedSwitchUnreachable",
+                extraJvmArgs = listOf(),
+                commands = listOf(""),
+                checkRepresentation = false,
+                traceShouldContain = listOf("ControlFlowAnalyzer.java")
+            )
+        }
+    }
+    
+    @Nested
+    inner class DataFlowInspection8Test {
+        @Nested
+        inner class TestParallelStreamThreadId : IntellijTraceRecorderJsonTest() {
+            @Test
+            @Timeout(20 * 60)
+            fun test() = runTest(
+                testClassName = "com.intellij.java.codeInspection.DataFlowInspection8Test",
+                testMethodName = "testParallelStreamThreadId",
+                extraJvmArgs = listOf(),
+                commands = listOf(""),
+                checkRepresentation = false,
+                traceShouldContain = listOf("JavaDfaValueFactory.java")
+            )
+        }
+    
+        @Nested
+        inner class TestSpotBugsDefaultAnnotation : IntellijTraceRecorderJsonTest() {
+            @Test
+            @Timeout(20 * 60)
+            fun test() = runTest(
+                testClassName = "com.intellij.java.codeInspection.DataFlowInspection8Test",
+                testMethodName = "testSpotBugsDefaultAnnotation",
+                extraJvmArgs = listOf(),
+                commands = listOf(""),
+                checkRepresentation = false,
+                traceShouldContain = listOf("FindBugsAnnotationSupport.java")
+            )
+        }
+    }
+    
+    @Nested
+    inner class RegistryTest {
+        @Nested
+        inner class IgnoreUnknownRegistryValues : IntellijTraceRecorderJsonTest() {
+            @Test
+            @Timeout(20 * 60)
+            fun test() = runTest(
+                testClassName = "com.intellij.openapi.util.registry.RegistryTest",
+                testMethodName = "ignoreUnknownRegistryValues",
+                extraJvmArgs = listOf(),
+                commands = listOf(""),
+                checkRepresentation = false,
+                traceShouldContain = listOf("Registry.java")
+            )
+        }
+    }
+    
+    @Nested
+    inner class RunBlockingCancellableTest {
+        @Nested
+        inner class `With_indicator_non-cancellable_context()` : IntellijTraceRecorderJsonTest() {
+            @Test
+            @Timeout(20 * 60)
+            fun test() = runTest(
+                testClassName = "com.intellij.openapi.progress.RunBlockingCancellableTest",
+                testMethodName = "with indicator non-cancellable context()",
+                extraJvmArgs = listOf(),
+                commands = listOf(""),
+                checkRepresentation = false,
+                traceShouldContain = listOf("CoreProgressManager.java")
+            )
+        }
+    }
+    
+    @Nested
+    inner class ReplaceConstructorWithFactoryTest {
+        @Nested
+        inner class TestRecords : IntellijTraceRecorderJsonTest() {
+            @Test
+            @Timeout(20 * 60)
+            fun test() = runTest(
+                testClassName = "com.intellij.java.refactoring.ReplaceConstructorWithFactoryTest",
+                testMethodName = "testRecords",
+                extraJvmArgs = listOf(),
+                commands = listOf(""),
+                checkRepresentation = false,
+                traceShouldContain = listOf("ReplaceConstructorWithFactoryAction.java")
+            )
+        }
+    }
+    
+    @Nested
+    inner class LightAdvLVTIHighlightingTest {
+        @Nested
+        inner class TestIntersectionTypeMethodRef : IntellijTraceRecorderJsonTest() {
+            @Test
+            @Timeout(20 * 60)
+            fun test() = runTest(
+                testClassName = "com.intellij.java.codeInsight.daemon.LightAdvLVTIHighlightingTest",
+                testMethodName = "testIntersectionTypeMethodRef",
+                extraJvmArgs = listOf(),
+                commands = listOf(""),
+                checkRepresentation = false,
+                traceShouldContain = listOf("PsiMethodReferenceUtil.java")
+            )
+        }
+    }
+    
+    @Nested
+    inner class JSCompletionTest {
+        @Nested
+        inner class TestCompletion : IntellijTraceRecorderJsonTest() {
+            @Test
+            @Timeout(20 * 60)
+            fun test() = runTest(
+                testClassName = "com.intellij.lang.javascript.JSCompletionTest",
+                testMethodName = "testCompletion",
+                extraJvmArgs = listOf(),
+                commands = listOf(""),
+                checkRepresentation = false,
+                traceShouldContain = listOf("TypoTolerantMatcher.java")
+            )
+        }
+    }
+    
+    @Nested
+    inner class IfCanBePatternSwitchFixTest {
+        @Nested
+        inner class TestNotDoubleCall : IntellijTraceRecorderJsonTest() {
+            @Test
+            @Timeout(20 * 60)
+            fun test() = runTest(
+                testClassName = "com.siyeh.ig.fixes.migration.IfCanBePatternSwitchFixTest",
+                testMethodName = "testNotDoubleCall",
+                extraJvmArgs = listOf(),
+                commands = listOf(""),
+                checkRepresentation = false,
+                traceShouldContain = listOf("EnhancedSwitchMigrationInspection.java")
+            )
+        }
+    }
+    
+    @Nested
+    inner class NullableStuffInspectionTest {
+        @Nested
+        inner class TestMismatchOnArrayElementTypeUse : IntellijTraceRecorderJsonTest() {
+            @Test
+            @Timeout(20 * 60)
+            fun test() = runTest(
+                testClassName = "com.intellij.java.codeInspection.NullableStuffInspectionTest",
+                testMethodName = "testMismatchOnArrayElementTypeUse",
+                extraJvmArgs = listOf(),
+                commands = listOf(""),
+                checkRepresentation = false,
+                traceShouldContain = listOf("NullableStuffInspectionBase.java")
             )
         }
     }
