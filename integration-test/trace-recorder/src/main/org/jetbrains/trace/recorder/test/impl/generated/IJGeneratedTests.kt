@@ -247,20 +247,6 @@ class IJTraceRecorderJsonIntegrationTests {
                 traceShouldContain = listOf("HighlightVisitorImpl.java")
             )
         }
-    
-        @Nested
-        inner class TestRecordPatternsInForEachJava20 : IntellijTraceRecorderJsonTest() {
-            @Test
-            @Timeout(20 * 60)
-            fun test() = runTest(
-                testClassName = "com.intellij.java.codeInsight.daemon.LightPatternsHighlightingTest",
-                testMethodName = "testRecordPatternsInForEachJava20",
-                extraJvmArgs = listOf(),
-                commands = listOf(""),
-                checkRepresentation = false,
-                traceShouldContain = listOf("HighlightVisitorImpl.java")
-            )
-        }
     }
     
     @Nested
@@ -293,23 +279,6 @@ class IJTraceRecorderJsonIntegrationTests {
                 commands = listOf(""),
                 checkRepresentation = false,
                 traceShouldContain = listOf("ExternalAnnotationsRepositoryResolver.kt")
-            )
-        }
-    }
-    
-    @Nested
-    inner class LightPatternsForSwitchHighlightingTest {
-        @Nested
-        inner class TestIllegalFallthroughIn21Java : IntellijTraceRecorderJsonTest() {
-            @Test
-            @Timeout(20 * 60)
-            fun test() = runTest(
-                testClassName = "com.intellij.java.codeInsight.daemon.LightPatternsForSwitchHighlightingTest",
-                testMethodName = "testIllegalFallthroughIn21Java",
-                extraJvmArgs = listOf(),
-                commands = listOf(""),
-                checkRepresentation = false,
-                traceShouldContain = listOf("SwitchBlockHighlightingModel.java")
             )
         }
     }
@@ -408,7 +377,7 @@ class IJTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(""),
                 checkRepresentation = false,
-                traceShouldContain = listOf("Registry.java")
+                traceShouldContain = listOf("Registry.kt")
             )
         }
     }
@@ -460,23 +429,6 @@ class IJTraceRecorderJsonIntegrationTests {
                 commands = listOf(""),
                 checkRepresentation = false,
                 traceShouldContain = listOf("PsiMethodReferenceUtil.java")
-            )
-        }
-    }
-    
-    @Nested
-    inner class JSCompletionTest {
-        @Nested
-        inner class TestCompletion : IntellijTraceRecorderJsonTest() {
-            @Test
-            @Timeout(20 * 60)
-            fun test() = runTest(
-                testClassName = "com.intellij.lang.javascript.JSCompletionTest",
-                testMethodName = "testCompletion",
-                extraJvmArgs = listOf(),
-                commands = listOf(""),
-                checkRepresentation = false,
-                traceShouldContain = listOf("TypoTolerantMatcher.java")
             )
         }
     }

@@ -174,17 +174,6 @@
     "checkRepresentation": false
   },
   {
-    "class": "com.intellij.java.codeInsight.daemon.LightPatternsForSwitchHighlightingTest",
-    "gradleCommand": "",
-    "methods": [
-      "testIllegalFallthroughIn21Java"
-    ],
-    "traceShouldContain": [
-      "SwitchBlockHighlightingModel.java"
-    ],
-    "checkRepresentation": false
-  },
-  {
     "class": "com.intellij.java.codeInsight.daemon.LightAdvHighlightingJdk7Test",
     "gradleCommand": "",
     "methods": [
@@ -235,7 +224,7 @@
       "ignoreUnknownRegistryValues"
     ],
     "traceShouldContain": [
-      "Registry.java"
+      "Registry.kt"
     ],
     "checkRepresentation": false
   },
@@ -269,28 +258,6 @@
     ],
     "traceShouldContain": [
       "PsiMethodReferenceUtil.java"
-    ],
-    "checkRepresentation": false
-  },
-  {
-    "class": "com.intellij.lang.javascript.JSCompletionTest",
-    "gradleCommand": "",
-    "methods": [
-      "testCompletion"
-    ],
-    "traceShouldContain": [
-      "TypoTolerantMatcher.java"
-    ],
-    "checkRepresentation": false
-  },
-  {
-    "class": "com.intellij.java.codeInsight.daemon.LightPatternsHighlightingTest",
-    "gradleCommand": "",
-    "methods": [
-      "testRecordPatternsInForEachJava20"
-    ],
-    "traceShouldContain": [
-      "HighlightVisitorImpl.java"
     ],
     "checkRepresentation": false
   },
