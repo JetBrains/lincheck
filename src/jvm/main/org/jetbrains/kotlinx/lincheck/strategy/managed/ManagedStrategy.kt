@@ -74,6 +74,9 @@ internal abstract class ManagedStrategy(
     internal val testInstance: Any?
         get() = (runner as? ExecutionScenarioRunner)?.testInstance
 
+    // Detector of loops or hangs (i.e. active locks).
+    internal val loopDetector: LoopDetector = BoundedLoopDetector(settings.hangingDetectionThreshold,settings.hangingDetectionThreshold, settings.hangingDetectionThreshold)
+
     // Current execution part, if defined by the runner, `PARALLEL` otherwise
     protected val currentExecutionPart: ExecutionPart
         get() = (runner as? ExecutionScenarioRunner)?.currentExecutionPart ?: PARALLEL
@@ -1650,6 +1653,15 @@ internal abstract class ManagedStrategy(
             threadScheduler.abortCurrentThread()
         }
 
+//        TODO: do something when we mark it as stuck, such as switching threads
+        val loopDecision = loopDetector.onMethodEnter(
+            threadDescriptor = threadDescriptor,
+            codeLocation = codeLocation,
+            methodId = methodId,
+            receiver = receiver,
+            params = params,
+        )
+
         val methodCallInfo = MethodCallInfo(
             ownerType = Types.ObjectType(methodDescriptor.className),
             methodSignature = methodDescriptor.methodSignature,
@@ -1763,6 +1775,14 @@ internal abstract class ManagedStrategy(
         }
         // if the method has certain guarantees, enter the corresponding section
         enterAnalysisSection(threadId, methodSection)
+
+        // TODO ????
+        if (loopDecision == LoopDetector.Decision.STUCK) {
+            onSwitchPoint(threadId)
+            switchCurrentThread(threadId, BlockingReason.LiveLocked)
+        }
+
+        return deterministicMethodDescriptor
     }
 
     override fun onMethodCallReturn(
@@ -1786,6 +1806,15 @@ internal abstract class ManagedStrategy(
         }
 
         val threadId = threadScheduler.getCurrentThreadId()
+
+        loopDetector.onMethodExit(
+            threadDescriptor = threadDescriptor,
+            methodId = methodId,
+            receiver = receiver,
+            params = params,
+            result = null,
+        )
+
         // check if the called method is an atomics API method
         // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
         val atomicMethodDescriptor = getAtomicMethodDescriptor(receiver, methodDescriptor.methodName)
@@ -1843,6 +1872,15 @@ internal abstract class ManagedStrategy(
         }
 
         val threadId = threadScheduler.getCurrentThreadId()
+
+        loopDetector.onMethodExit(
+            threadDescriptor = threadDescriptor,
+            methodId = methodId,
+            receiver = receiver,
+            params = params,
+            result = null,
+        )
+
         // check if the called method is an atomics API method
         // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
         val atomicMethodDescriptor = getAtomicMethodDescriptor(receiver, methodDescriptor.methodName)
@@ -1938,12 +1976,54 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    override fun onLoopIteration(threadDescriptor: ThreadDescriptor, codeLocation: Int, loopId: Int) {
-        error("Lincheck managed strategy does not support CFG-based loops tracking.")
+    // -- LOOPS --
+
+    private fun currentMethodInvocationId(threadId: Int): Int {
+        val stack = callStackTrace[threadId] ?: return -1
+        val top = stack.lastOrNull() ?: return -1
+        return top.methodInvocationId
     }
 
+    data class Loop(
+        val threadId: Int,
+        val loopId: Int,
+    )
+
+    private val activeLoops = mutableSetOf<Loop>()
+
+    override fun onLoopIteration(threadDescriptor: ThreadDescriptor, codeLocation: Int, loopId: Int): Unit =
+        runInsideIgnoredSection {
+            // if loop with loopId is called for first time, call beforeLoopEnter and then continue
+            val loop = activeLoops.find { it.threadId == threadScheduler.getCurrentThreadId() && it.loopId == loopId }
+            if (loop == null) {
+                loopDetector.beforeLoopEnter(threadDescriptor, codeLocation, loopId)
+                activeLoops.add(Loop(threadScheduler.getCurrentThreadId(), loopId))
+            }
+
+            val threadId = threadScheduler.getCurrentThreadId()
+            val methodInvocationId = currentMethodInvocationId(threadId)
+
+            val decision = loopDetector.onLoopIteration(threadDescriptor, codeLocation, loopId, methodInvocationId)
+
+            when(decision) {
+                LoopDetector.Decision.IDLE -> {}
+                LoopDetector.Decision.SWITCH_THREAD -> {
+                    onSwitchPoint(threadId)
+                    switchCurrentThread(threadId, BlockingReason.Waiting)
+                }
+
+                LoopDetector.Decision.STUCK -> {
+                    // What to do here? we are stuck in a loop, not really sure how to proceed
+                    onSwitchPoint(threadId)
+                    switchCurrentThread(threadId, BlockingReason.LiveLocked)
+                }
+            }
+        }
+
     override fun afterLoopExit(threadDescriptor: ThreadDescriptor, codeLocation: Int, loopId: Int, exception: Throwable?, isReachableFromOutsideLoop: Boolean) {
-        error("Lincheck managed strategy does not support CFG-based loops tracking.")
+        val threadId = threadScheduler.getCurrentThreadId()
+        val methodId = currentMethodInvocationId(threadId)
+        loopDetector.afterLoopExit(threadDescriptor, codeLocation, loopId, methodId)
     }
 
     override fun onThrow(threadDescriptor: ThreadDescriptor, codeLocation: Int, exception: Throwable) {
