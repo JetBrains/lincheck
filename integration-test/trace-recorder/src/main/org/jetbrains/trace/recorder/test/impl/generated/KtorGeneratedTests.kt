@@ -26,6 +26,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -39,6 +40,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -52,6 +54,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -65,6 +68,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -78,6 +82,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -94,6 +99,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -107,6 +113,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -120,6 +127,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -133,6 +141,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -146,6 +155,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -159,6 +169,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -172,6 +183,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -185,6 +197,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -198,6 +211,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -211,6 +225,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -224,6 +239,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -237,6 +253,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -250,6 +267,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -266,6 +284,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -279,6 +298,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -292,6 +312,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -305,6 +326,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -318,6 +340,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -331,6 +354,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -344,6 +368,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -357,6 +382,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -370,6 +396,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -383,6 +410,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -396,6 +424,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -409,6 +438,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -422,6 +452,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -438,6 +469,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -451,6 +483,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -464,6 +497,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -477,6 +511,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -490,6 +525,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -503,6 +539,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -516,6 +553,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -529,6 +567,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -542,6 +581,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -555,6 +595,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -568,6 +609,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -581,6 +623,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -594,6 +637,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -607,6 +651,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -620,6 +665,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -633,6 +679,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -646,6 +693,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -662,6 +710,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network-tls-certificates:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -675,6 +724,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network-tls-certificates:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -688,6 +738,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network-tls-certificates:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -701,6 +752,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network-tls-certificates:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -714,6 +766,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network-tls-certificates:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -727,6 +780,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network-tls-certificates:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -740,6 +794,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network-tls-certificates:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -753,6 +808,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network-tls-certificates:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -766,6 +822,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network-tls-certificates:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -779,6 +836,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network-tls-certificates:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -792,6 +850,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network-tls-certificates:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -805,6 +864,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network-tls-certificates:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -821,6 +881,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network-tls-certificates:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -834,6 +895,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network-tls-certificates:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -847,6 +909,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network-tls-certificates:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -860,6 +923,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network-tls-certificates:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -873,6 +937,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network-tls-certificates:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -886,6 +951,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network-tls-certificates:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -902,6 +968,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-htmx-html:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -918,6 +985,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -931,6 +999,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -944,6 +1013,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -957,6 +1027,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -970,6 +1041,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -983,6 +1055,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -999,6 +1072,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1012,6 +1086,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1025,6 +1100,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1038,6 +1114,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -1054,6 +1131,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-io:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -1070,6 +1148,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network-tls:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -1086,6 +1165,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-utils:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1099,6 +1179,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-utils:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1112,6 +1193,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-utils:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1125,6 +1207,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-utils:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -1141,6 +1224,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-utils:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1154,6 +1238,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-utils:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -1170,6 +1255,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1183,6 +1269,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -1199,6 +1286,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1212,6 +1300,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1225,6 +1314,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1238,6 +1328,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1251,6 +1342,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -1267,6 +1359,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -1283,6 +1376,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1296,6 +1390,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1309,6 +1404,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -1325,6 +1421,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1338,6 +1435,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1351,6 +1449,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1364,6 +1463,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1377,6 +1477,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1390,6 +1491,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1403,6 +1505,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1416,6 +1519,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1429,6 +1533,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1442,6 +1547,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -1458,6 +1564,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1471,6 +1578,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1484,6 +1592,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1497,6 +1606,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1510,6 +1620,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1523,6 +1634,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1536,6 +1648,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1549,6 +1662,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1562,6 +1676,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1575,6 +1690,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -1591,6 +1707,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -1607,6 +1724,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1620,6 +1738,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1633,6 +1752,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1646,6 +1766,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1659,6 +1780,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-network:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -1675,6 +1797,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -1691,6 +1814,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1704,6 +1828,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1717,6 +1842,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -1733,6 +1859,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -1749,6 +1876,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1762,6 +1890,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -1778,6 +1907,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1791,6 +1921,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1804,6 +1935,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1817,6 +1949,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1830,6 +1963,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1843,6 +1977,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1856,6 +1991,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1869,6 +2005,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -1885,6 +2022,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -1901,6 +2039,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-okhttp:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1914,6 +2053,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-okhttp:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1927,6 +2067,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-okhttp:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1940,6 +2081,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-okhttp:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -1956,6 +2098,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-okhttp:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1969,6 +2112,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-okhttp:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1982,6 +2126,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-okhttp:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -1995,6 +2140,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-okhttp:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -2011,6 +2157,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-okhttp:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2024,6 +2171,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-okhttp:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2037,6 +2185,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-okhttp:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2050,6 +2199,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-okhttp:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2063,6 +2213,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-okhttp:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2076,6 +2227,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-okhttp:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -2092,6 +2244,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-core:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2105,6 +2258,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-core:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2118,6 +2272,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-core:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2131,6 +2286,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-core:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2144,6 +2300,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-core:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -2160,6 +2317,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-core:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2173,6 +2331,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-core:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2186,6 +2345,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-core:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -2202,6 +2362,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-okhttp:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2215,6 +2376,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-okhttp:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -2231,6 +2393,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-okhttp:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2244,6 +2407,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-okhttp:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -2260,6 +2424,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-apache:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2273,6 +2438,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-apache:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2286,6 +2452,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-apache:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2299,6 +2466,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-apache:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2312,6 +2480,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-apache:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2325,6 +2494,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-apache:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -2341,6 +2511,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-apache:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2354,6 +2525,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-apache:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2367,6 +2539,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-apache:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2380,6 +2553,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-apache:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -2396,6 +2570,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-apache:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2409,6 +2584,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-apache:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -2425,6 +2601,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-apache5:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2438,6 +2615,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-apache5:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2451,6 +2629,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-apache5:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2464,6 +2643,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-apache5:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -2480,6 +2660,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-apache5:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2493,6 +2674,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-apache5:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -2509,6 +2691,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-java:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2522,6 +2705,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-java:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2535,6 +2719,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-java:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2548,6 +2733,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-java:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2561,6 +2747,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-java:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2574,6 +2761,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-java:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2587,6 +2775,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-java:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2600,6 +2789,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-java:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2613,6 +2803,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-java:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -2629,6 +2820,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-java:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2642,6 +2834,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-java:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2655,6 +2848,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-java:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2668,6 +2862,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-java:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -2684,6 +2879,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-java:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2697,6 +2893,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-java:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -2713,6 +2910,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-java:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2726,6 +2924,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-java:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -2742,6 +2941,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-java:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -2758,6 +2958,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-java:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2771,6 +2972,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-java:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -2787,6 +2989,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2800,6 +3003,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -2816,6 +3020,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -2832,6 +3037,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2845,6 +3051,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2858,6 +3065,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2871,6 +3079,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2884,6 +3093,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -2900,6 +3110,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2913,6 +3124,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2926,6 +3138,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2939,6 +3152,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2952,6 +3166,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2965,6 +3180,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -2981,6 +3197,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -2994,6 +3211,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -3010,6 +3228,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -3026,6 +3245,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -3039,6 +3259,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -3052,6 +3273,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -3065,6 +3287,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-client-cio:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -3081,6 +3304,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-core:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -3094,6 +3318,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-core:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -3107,6 +3332,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-core:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -3120,6 +3346,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-core:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -3136,6 +3363,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-core:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -3149,6 +3377,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-core:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -3162,6 +3391,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-core:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -3178,6 +3408,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-core:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -3191,6 +3422,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-core:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -3204,6 +3436,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-core:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -3217,6 +3450,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-core:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -3230,6 +3464,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-core:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -3243,6 +3478,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-core:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -3256,6 +3492,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-core:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -3269,6 +3506,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-core:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -3282,6 +3520,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-core:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }
@@ -3298,6 +3537,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-core:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -3311,6 +3551,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-core:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -3324,6 +3565,7 @@ class KtorTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-server-core:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }

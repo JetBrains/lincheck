@@ -26,6 +26,7 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":kotlinx-collections-immutable:jvmTest"),
                 checkRepresentation = true,
+                traceShouldContain = listOf()
             )
         }
     
@@ -39,6 +40,7 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":kotlinx-collections-immutable:jvmTest"),
                 checkRepresentation = true,
+                traceShouldContain = listOf()
             )
         }
     
@@ -52,6 +54,7 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":kotlinx-collections-immutable:jvmTest"),
                 checkRepresentation = true,
+                traceShouldContain = listOf()
             )
         }
     
@@ -65,6 +68,7 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":kotlinx-collections-immutable:jvmTest"),
                 checkRepresentation = true,
+                traceShouldContain = listOf()
             )
         }
     
@@ -78,6 +82,7 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":kotlinx-collections-immutable:jvmTest"),
                 checkRepresentation = true,
+                traceShouldContain = listOf()
             )
         }
     
@@ -91,6 +96,7 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":kotlinx-collections-immutable:jvmTest"),
                 checkRepresentation = true,
+                traceShouldContain = listOf()
             )
         }
     
@@ -104,6 +110,7 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":kotlinx-collections-immutable:jvmTest"),
                 checkRepresentation = true,
+                traceShouldContain = listOf()
             )
         }
     
@@ -117,6 +124,7 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":kotlinx-collections-immutable:jvmTest"),
                 checkRepresentation = true,
+                traceShouldContain = listOf()
             )
         }
     
@@ -130,6 +138,7 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":kotlinx-collections-immutable:jvmTest"),
                 checkRepresentation = true,
+                traceShouldContain = listOf()
             )
         }
     
@@ -143,6 +152,7 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":kotlinx-collections-immutable:jvmTest"),
                 checkRepresentation = true,
+                traceShouldContain = listOf()
             )
         }
     
@@ -156,6 +166,7 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":kotlinx-collections-immutable:jvmTest"),
                 checkRepresentation = true,
+                traceShouldContain = listOf()
             )
         }
     
@@ -169,6 +180,7 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":kotlinx-collections-immutable:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -182,6 +194,7 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":kotlinx-collections-immutable:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     
@@ -195,6 +208,7 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":kotlinx-collections-immutable:jvmTest"),
                 checkRepresentation = false,
+                traceShouldContain = listOf()
             )
         }
     }

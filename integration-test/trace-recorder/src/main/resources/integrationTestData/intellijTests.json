@@ -6,5 +6,292 @@
       "testInsertString"
     ],
     "checkRepresentation": true
+  },
+  {
+    "class": "com.intellij.java.refactoring.inline.InlinePatternVariableTest",
+    "gradleCommand": "",
+    "methods": [
+      "testInNestedCondition"
+    ],
+    "traceShouldContain": [
+      "InlinePatternVariableTest.java",
+      "InNestedCondition.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.java.codeInsight.daemon.MultiReleaseDepTest",
+    "gradleCommand": "",
+    "methods": [
+      "testOnDemandResolveIntoMultiReleaseJar"
+    ],
+    "traceShouldContain": [
+      "JavaVersionBasedScope.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.java.refactoring.inline.InlineMethodTest",
+    "gradleCommand": "",
+    "methods": [
+      "testSplitIfAndCollapseBack"
+    ],
+    "traceShouldContain": [
+      "CodeBlockSurrounder.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.siyeh.ig.bugs.IgnoreResultOfCallInspectionTest",
+    "gradleCommand": "",
+    "methods": [
+      "testIgnoreInTestContainers"
+    ],
+    "traceShouldContain": [
+      "IgnoreResultOfCallInspectionTest.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.java.codeInspection.visibility.AccessCanBeTightenedInspectionTest",
+    "gradleCommand": "",
+    "methods": [
+      "testImplicitClass"
+    ],
+    "traceShouldContain": [
+      "AccessCanBeTightenedInspection.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.siyeh.ig.whileloop.WhileCanBeDoWhileInspectionTest",
+    "gradleCommand": "",
+    "methods": [
+      "testEmptyBlock"
+    ],
+    "traceShouldContain": [
+      "WhileCanBeDoWhileInspection.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.java.codeInsight.completion.NormalCompletionTest",
+    "gradleCommand": "",
+    "methods": [
+      "testNoSemicolonInForUpdate"
+    ],
+    "traceShouldContain": [
+      "JavaCompletionUtil.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.java.codeInspection.DataFlowInspectionTest",
+    "gradleCommand": "",
+    "methods": [
+      "testLiteralDoWhileConditionWithBreak"
+    ],
+    "traceShouldContain": [
+      "ConstantValueInspection.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.java.refactoring.RenameCollisionsTest",
+    "gradleCommand": "",
+    "methods": [
+      "testRenameSwitchToUnnamedJava21Preview"
+    ],
+    "traceShouldContain": [
+      "JavaUnresolvableLocalCollisionDetector.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.java.codeInsight.editorActions.JavaQuoteTest",
+    "gradleCommand": "",
+    "methods": [
+      "testTextBlockBeforeTemplate"
+    ],
+    "traceShouldContain": [
+      "JavaQuoteHandler.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.codeInspection.tests.java.JavaObsoleteApiUsageInspectionTest",
+    "gradleCommand": "",
+    "methods": [
+      "test method reference"
+    ],
+    "traceShouldContain": [
+      "ObsoleteApiUsageInspection.kt"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.codeInspection.tests.java.JavaObsoleteApiUsageInspectionTest",
+    "gradleCommand": "",
+    "methods": [
+      "test generic reference"
+    ],
+    "traceShouldContain": [
+      "ObsoleteApiUsageInspection.kt"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.java.codeInsight.daemon.LightPatternsHighlightingTest",
+    "gradleCommand": "",
+    "methods": [
+      "testForEachPatternExhaustiveness"
+    ],
+    "traceShouldContain": [
+      "HighlightVisitorImpl.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.java.codeInsight.daemon.GenericsHighlightingTest",
+    "gradleCommand": "",
+    "methods": [
+      "testInvalidCastWithNestedGeneric"
+    ],
+    "traceShouldContain": [
+      "TypesDistinctProver.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.jarRepository.ExternalAnnotationsRepositoryResolverTest",
+    "gradleCommand": "",
+    "methods": [
+      "test RootSetChanged should not be triggered resolving same artifact"
+    ],
+    "traceShouldContain": [
+      "ExternalAnnotationsRepositoryResolver.kt"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.java.codeInsight.daemon.LightAdvHighlightingJdk7Test",
+    "gradleCommand": "",
+    "methods": [
+      "testMultiCatchRethrowConditional"
+    ],
+    "traceShouldContain": [
+      "GenericsUtil.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.siyeh.ig.bugs.InstanceofIncompatibleInterfaceInspectionTest",
+    "gradleCommand": "",
+    "methods": [
+      "testTooExpensiveToCheck"
+    ],
+    "traceShouldContain": [
+      "InheritanceUtil.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.java.codeInsight.daemon.JavaSwitchExpressionsHighlightingTest",
+    "gradleCommand": "",
+    "methods": [
+      "testEnhancedSwitchUnreachable"
+    ],
+    "traceShouldContain": [
+      "ControlFlowAnalyzer.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.java.codeInspection.DataFlowInspection8Test",
+    "gradleCommand": "",
+    "methods": [
+      "testParallelStreamThreadId"
+    ],
+    "traceShouldContain": [
+      "JavaDfaValueFactory.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.openapi.util.registry.RegistryTest",
+    "gradleCommand": "",
+    "methods": [
+      "ignoreUnknownRegistryValues"
+    ],
+    "traceShouldContain": [
+      "Registry.kt"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.openapi.progress.RunBlockingCancellableTest",
+    "gradleCommand": "",
+    "methods": [
+      "with indicator non-cancellable context()"
+    ],
+    "traceShouldContain": [
+      "CoreProgressManager.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.java.refactoring.ReplaceConstructorWithFactoryTest",
+    "gradleCommand": "",
+    "methods": [
+      "testRecords"
+    ],
+    "traceShouldContain": [
+      "ReplaceConstructorWithFactoryAction.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.java.codeInsight.daemon.LightAdvLVTIHighlightingTest",
+    "gradleCommand": "",
+    "methods": [
+      "testIntersectionTypeMethodRef"
+    ],
+    "traceShouldContain": [
+      "PsiMethodReferenceUtil.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.siyeh.ig.fixes.migration.IfCanBePatternSwitchFixTest",
+    "gradleCommand": "",
+    "methods": [
+      "testNotDoubleCall"
+    ],
+    "traceShouldContain": [
+      "EnhancedSwitchMigrationInspection.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.java.codeInspection.NullableStuffInspectionTest",
+    "gradleCommand": "",
+    "methods": [
+      "testMismatchOnArrayElementTypeUse"
+    ],
+    "traceShouldContain": [
+      "NullableStuffInspectionBase.java"
+    ],
+    "checkRepresentation": false
+  },
+  {
+    "class": "com.intellij.java.codeInspection.DataFlowInspection8Test",
+    "gradleCommand": "",
+    "methods": [
+      "testSpotBugsDefaultAnnotation"
+    ],
+    "traceShouldContain": [
+      "FindBugsAnnotationSupport.java"
+    ],
+    "checkRepresentation": false
   }
 ]

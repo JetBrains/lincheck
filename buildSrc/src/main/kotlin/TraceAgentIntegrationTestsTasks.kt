@@ -54,7 +54,7 @@ private val projectsToTest = listOf(
     GithubProjectSnapshot(
         organization = "ivandev0",
         repositoryName = "intellij-community",
-        commitHash = "8f65df6d733acefffc32bbeb86538ffd45ca260a"
+        commitHash = "f2d4ceabd39b9f162b1ec5bfe9d929ae549c5f00"
     ),
 )
 

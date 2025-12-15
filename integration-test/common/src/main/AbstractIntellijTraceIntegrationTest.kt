@@ -29,15 +29,22 @@ abstract class AbstractIntellijTraceIntegrationTest: AbstractTraceIntegrationTes
 
         // We need to escape it twice, as our argument parser will de-escape it when split into array
         val pathToOutput = outputFile.absolutePath.escape().escape()
-        ProcessBuilder(
-            "./tests.cmd",
-            "-Dintellij.build.test.patterns=${testClassName.escapeDollar()}",
-            "-Dintellij.build.test.trace.recorder.enabled=true",
-            "-Dintellij.build.test.trace.recorder.className=${testClassName.escapeDollar()}",
-            "-Dintellij.build.test.trace.recorder.methodName=${testMethodName.escapeDollar()}",
-            "-Dintellij.build.test.trace.recorder.traceDump=$pathToOutput",
-            "-Dintellij.build.test.trace.recorder.agentJar=$pathToFatJar"
-        ).directory(File(projectPath))
+        
+        val cmd = buildList {
+            add("./tests.cmd")
+            add("-Dintellij.build.test.patterns=${testClassName.escapeDollar()}")
+            add("-Dintellij.build.test.trace.recorder.enabled=true")
+            add("-Dintellij.build.test.trace.recorder.className=${testClassName.escapeDollar()}")
+            add("-Dintellij.build.test.trace.recorder.methodName=${testMethodName.escapeDollar()}")
+            add("-Dintellij.build.test.trace.recorder.traceDump=$pathToOutput")
+            add("-Dintellij.build.test.trace.recorder.agentJar=$pathToFatJar")
+            add("-Dintellij.build.test.jvm.memory.options=-Xmx4g")
+
+            extraAgentArgs["format"]?.let { add("-Dintellij.build.test.trace.recorder.format=$it") }
+            extraAgentArgs["formatOption"]?.let { add("-Dintellij.build.test.trace.recorder.formatOption=$it") }
+        }
+
+        ProcessBuilder(cmd).directory(File(projectPath))
             .inheritIO().start().waitFor()
     }
 }
