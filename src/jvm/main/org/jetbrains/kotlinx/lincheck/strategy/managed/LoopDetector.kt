@@ -93,6 +93,7 @@ class BoundedLoopDetector(
         val frame = stack.lastOrNull()?: return
 
         // Works for loops i guess.  But it should also work for recursive
+        // TODO can this approach support recursion tho?
         val loop = frame.loops.lastOrNull() ?: return
 
         loop.progressSignature = loop.progressSignature * 31 + variableId * 17 + valueHash
