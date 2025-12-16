@@ -23,4 +23,5 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
     implementation("org.jetbrains.dokka:dokka-gradle-plugin:$dokkaVersion")
     implementation("de.undercouch.download:de.undercouch.download.gradle.plugin:5.6.0")
+    implementation("com.gradleup.shadow:shadow-gradle-plugin:8.3.0")
 }
