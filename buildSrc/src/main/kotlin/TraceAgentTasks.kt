@@ -38,15 +38,15 @@ fun Project.registerTraceAgentTasks(fatJarName: String, fatJarTaskName: String, 
 
     
     val copyBootstrapJar = tasks.register<Copy>("copyBootstrapJar") {
-        dependsOn(":bootstrap:jar")
+        dependsOn(":bootstrapJar")
         from(file(
             listOf(boostrapBuildDir, "libs", "bootstrap.jar").joinToString(separator = File.separator)
         ))
-        println(processedBootstrapJarPath)
         into(file(processedBootstrapJarPath))
     }
     
-    // Hack to not unpack bootstrap.jar during shadow task.
+    // Hack to prevent unpacking bootstrap.jar during shadowing task.
+    // When relocation starts, it will unwrap the outer archive and extract the inner one without change
     val jarWrapper = tasks.register<Jar>("jarWrapper") {
         destinationDirectory.set(file(
             listOf(processedBootstrapJarPath).joinToString(separator = File.separator)
