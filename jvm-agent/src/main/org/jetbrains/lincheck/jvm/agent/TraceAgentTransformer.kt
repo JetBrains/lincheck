@@ -115,7 +115,7 @@ private class TraceAgentClassVisitor(
 
     override fun visitSource(source: String?, debug: String?) {
         super.visitSource(source, debug)
-        fileName = source!!
+        fileName = source ?: ""
     }
 
     override fun visitMethod(
