@@ -16,6 +16,106 @@ import org.junit.Assert.assertEquals
 class TreeTest {
 
     @Test
+    fun `forEach on tree with null root`() {
+        val tree = tree<Int> {}
+
+        val visited = mutableListOf<Int>()
+        tree.forEach { visited.add(it) }
+
+        assertEquals(listOf<Int>(), visited)
+    }
+
+    @Test
+    fun `forEach on single node tree`() {
+        val tree = tree {
+            node(42)
+        }
+
+        val visited = mutableListOf<Int>()
+        tree.forEach { visited.add(it) }
+
+        assertEquals(listOf(42), visited)
+    }
+
+    @Test
+    fun `forEach on data visits all nodes in depth-first order`() {
+        val tree = tree {
+            node(1) {
+                node(2) {
+                    node(4)
+                    node(5)
+                }
+                node(3) {
+                    node(6)
+                }
+            }
+        }
+
+        val visited = mutableListOf<Int>()
+        tree.forEach { visited.add(it) }
+
+        assertEquals(listOf(1, 2, 4, 5, 3, 6), visited)
+    }
+
+    @Test
+    fun `forEachNode with null root`() {
+        val tree = tree<String> {}
+
+        val nodes = mutableListOf<Tree.Node<String>>()
+        tree.forEachNode { node -> nodes.add(node) }
+
+        assertEquals(listOf<Tree.Node<String?>>(), nodes)
+    }
+
+    @Test
+    fun `forEachNode visits all nodes in depth-first order`() {
+        var a: Tree.Node<String>? = null
+        var b: Tree.Node<String>? = null
+        var c: Tree.Node<String>? = null
+        var d: Tree.Node<String>? = null
+        val tree = tree {
+            a = node("a") {
+                b = node("b") {
+                    c = node("c")
+                }
+                d = node("d")
+            }
+        }
+
+        val visited = mutableListOf<Tree.Node<String>>()
+        tree.forEachNode { node -> visited.add(node) }
+
+        assertEquals(listOf(a, b, c, d), visited)
+    }
+
+    @Test
+    fun `forEach on nodes provides correct parent-child relationships`() {
+        var a: Tree.Node<String>? = null
+        var b: Tree.Node<String>? = null
+        var c: Tree.Node<String>? = null
+        val tree = tree {
+            a = node("a") {
+                b = node("b")
+                c = node("c")
+            }
+        }
+
+        val childParentPairs = mutableListOf<Pair<Tree.Node<String>, Tree.Node<String>?>>()
+        tree.forEachNode { node ->
+            childParentPairs.add(node to node.parent)
+        }
+
+        assertEquals(
+            listOf(
+                a to null,
+                b to a,
+                c to a,
+            ),
+            childParentPairs
+        )
+    }
+
+    @Test
     fun `map on tree with null root`() {
         val tree = tree<Int> {}
 

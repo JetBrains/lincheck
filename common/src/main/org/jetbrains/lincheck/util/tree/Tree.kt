@@ -176,6 +176,28 @@ fun <T> tree(block: NodeBuilder<T>.() -> Unit): Tree<T> {
 
 
 // ========================================================
+//   ForEach
+// ========================================================
+
+fun <T> Tree<T>.forEach(action: (T) -> Unit) {
+    root?.forEach(action)
+}
+
+fun <T> Tree.Node<T>.forEach(action: (T) -> Unit) {
+    action(data)
+    children.forEach { it.forEach(action) }
+}
+
+fun <T> Tree<T>.forEachNode(action: (Tree.Node<T>) -> Unit) {
+    root?.forEachNode(action)
+}
+
+fun <T> Tree.Node<T>.forEachNode(action: (Tree.Node<T>) -> Unit) {
+    action(this)
+    children.forEach { it.forEachNode(action) }
+}
+
+// ========================================================
 //   Map
 // ========================================================
 
