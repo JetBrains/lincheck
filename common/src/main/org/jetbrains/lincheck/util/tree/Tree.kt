@@ -187,3 +187,17 @@ private fun <T, U> Tree.Node<T>.map(parent: Tree.Node<U>?, transform: (T) -> U):
         node.children.addAll(children.map { it.map(node, transform) })
     }
 }
+
+// ========================================================
+//   Transform
+// ========================================================
+
+fun <T> Tree<T>.transform(transform: (Tree.Node<T>) -> Tree.Node<T>): Tree<T> =
+    Tree(root?.transform(parent = null, transform))
+
+private fun <T> Tree.Node<T>.transform(parent: Tree.Node<T>?, transform: (Tree.Node<T>) -> Tree.Node<T>): NodeImpl<T> {
+    val transformedNode = transform(this)
+    return NodeImpl(transformedNode.data, parent).also { node ->
+        node.children.addAll(transformedNode.children.map { it.transform(node, transform) })
+    }
+}
