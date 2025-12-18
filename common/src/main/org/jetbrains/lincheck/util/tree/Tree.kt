@@ -130,3 +130,46 @@ private class NodeImpl<T>(override var data: T) : Tree.MutableNode<T> {
         return helper("", this)
     }
 }
+
+// ========================================================
+//   Tree and Node building DSL
+// ========================================================
+
+@DslMarker
+annotation class TreeDslMarker
+
+@TreeDslMarker
+class NodeBuilder<T>() {
+    private val _children = mutableListOf<Tree.Node<T>>()
+    val children: List<Tree.Node<T>> get() = _children
+
+    fun node(node: Tree.Node<T>): Tree.Node<T> {
+        _children.add(node)
+        return node
+    }
+
+    fun node(data: T, block: NodeBuilder<T>.() -> Unit = {}): Tree.Node<T> {
+        val builder = NodeBuilder<T>().apply(block)
+        return builder.buildImpl(data).also {
+            node -> _children.add(node)
+        }
+    }
+
+    fun build(data: T): Tree.Node<T> = buildImpl(data)
+
+    private fun buildImpl(data: T): NodeImpl<T> =
+        NodeImpl(data).also { node ->
+            node.children.addAll(_children)
+        }
+}
+
+fun <T> node(data: T, block: NodeBuilder<T>.() -> Unit): Tree.Node<T> {
+    val builder = NodeBuilder<T>().apply(block)
+    return builder.build(data)
+}
+
+fun <T> tree(block: NodeBuilder<T>.() -> Unit): Tree<T> {
+    val builder = NodeBuilder<T>().apply(block)
+    require(builder.children.size <= 1) { "Tree must have a single root node" }
+    return Tree(root = builder.children.firstOrNull())
+}
