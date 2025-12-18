@@ -946,4 +946,211 @@ class TreeTest {
 
         assertEquals(root, result)
     }
+
+    /**
+     * Squashes consecutive sibling nodes for which [relation] holds (on their data)
+     * into a single node, keeping the data of the first node in the run and
+     * concatenating the children of all merged siblings under it.
+     */
+    private fun Tree<Int>.squashRelated(relation: (Int, Int) -> Boolean): Tree<Int> =
+        squash<Int, Tree.MutableNode<Int>>(
+            create = { original ->
+                (node(original.data) {
+                    original.children.forEach { node(it.copy()) }
+                }) as Tree.MutableNode<Int>
+            },
+            append = { acc, sibling ->
+                sibling.children.forEach { acc.children.add(it.copy()) }
+            },
+            relation = { a, b -> relation(a.data, b.data) },
+        )
+
+    @Test
+    fun `squash on empty tree returns empty tree`() {
+        val tree = tree<Int> {}
+
+        val squashedTree = tree.squashRelated { a, b -> a == b }
+            .apply { validate() }
+
+        val expected = tree<Int> {}
+        assertEquals(expected, squashedTree)
+    }
+
+    @Test
+    fun `squash on single node tree returns same tree`() {
+        val tree = tree {
+            node(42)
+        }
+
+        val squashedTree = tree.squashRelated { a, b -> a == b }
+            .apply { validate() }
+
+        val expected = tree {
+            node(42)
+        }
+        assertEquals(expected, squashedTree)
+    }
+
+    @Test
+    fun `squash with relation never holding preserves tree`() {
+        val tree = tree {
+            node(1) {
+                node(2) {
+                    node(4)
+                    node(5)
+                }
+                node(3) {
+                    node(6)
+                }
+            }
+        }
+
+        val squashedTree = tree.squashRelated { _, _ -> false }
+            .apply { validate() }
+
+        val expected = tree {
+            node(1) {
+                node(2) {
+                    node(4)
+                    node(5)
+                }
+                node(3) {
+                    node(6)
+                }
+            }
+        }
+        assertEquals(expected, squashedTree)
+    }
+
+    @Test
+    fun `squash merges consecutive equal siblings concatenating their children`() {
+        val tree = tree {
+            node(1) {
+                node(2) {
+                    node(10)
+                }
+                node(2) {
+                    node(11)
+                }
+                node(3) {
+                    node(12)
+                }
+            }
+        }
+
+        val squashedTree = tree.squashRelated { a, b -> a == b }
+            .apply { validate() }
+
+        val expected = tree {
+            node(1) {
+                node(2) {
+                    node(10)
+                    node(11)
+                }
+                node(3) {
+                    node(12)
+                }
+            }
+        }
+        assertEquals(expected, squashedTree)
+    }
+
+    @Test
+    fun `squash merges only consecutive runs of equal siblings`() {
+        val tree = tree {
+            node(1) {
+                node(2) {
+                    node(10)
+                }
+                node(2) {
+                    node(11)
+                }
+                node(3) {
+                    node(12)
+                }
+                node(2) {
+                    node(13)
+                }
+            }
+        }
+
+        val squashedTree = tree.squashRelated { a, b -> a == b }
+            .apply { validate() }
+
+        val expected = tree {
+            node(1) {
+                node(2) {
+                    node(10)
+                    node(11)
+                }
+                node(3) {
+                    node(12)
+                }
+                node(2) {
+                    node(13)
+                }
+            }
+        }
+        assertEquals(expected, squashedTree)
+    }
+
+    @Test
+    fun `squash with relation always holding merges all siblings`() {
+        val tree = tree {
+            node(1) {
+                node(2)
+                node(3)
+                node(4)
+            }
+        }
+
+        val squashedTree = tree.squashRelated { _, _ -> true }
+            .apply { validate() }
+
+        val expected = tree {
+            node(1) {
+                node(2)
+            }
+        }
+        assertEquals(expected, squashedTree)
+    }
+
+    @Test
+    fun `squash merges siblings at multiple levels`() {
+        val tree = tree {
+            node(1) {
+                node(2) {
+                    node(5) {
+                        node(50)
+                    }
+                    node(5) {
+                        node(51)
+                    }
+                }
+                node(2) {
+                    node(6) {
+                        node(60)
+                    }
+                }
+            }
+        }
+
+        val squashedTree = tree.squashRelated { a, b -> a == b }
+            .apply { validate() }
+
+        val expected = tree {
+            node(1) {
+                node(2) {
+                    node(5) {
+                        node(50)
+                        node(51)
+                    }
+                    node(6) {
+                        node(60)
+                    }
+                }
+            }
+        }
+        assertEquals(expected, squashedTree)
+    }
 }

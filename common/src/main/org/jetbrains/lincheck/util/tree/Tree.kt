@@ -305,3 +305,53 @@ fun <T> Tree.Node<T>.lastLeaf(): Tree.Node<T>? {
     }
     return currentNode
 }
+
+// ========================================================
+//   Squash
+// ========================================================
+
+fun <T, N : Tree.Node<T>> Tree<T>.squash(
+    create: (Tree.Node<T>) -> N,
+    append: (N, Tree.Node<T>) -> Unit,
+    relation: (Tree.Node<T>, Tree.Node<T>) -> Boolean,
+): Tree<T> {
+    return Tree(root?.squash(parent = null, create, append, relation))
+}
+
+private fun <T, N : Tree.Node<T>> Tree.Node<T>.squash(
+    parent: Tree.Node<T>?,
+    create: (Tree.Node<T>) -> N,
+    append: (N, Tree.Node<T>) -> Unit,
+    relation: (Tree.Node<T>, Tree.Node<T>) -> Boolean,
+): NodeImpl<T> {
+    return NodeImpl(data, parent).also { node ->
+        val children = children.squash(create, append, relation).map {
+            it.squash(parent = node, create, append, relation)
+        }
+        node.children.addAll(children)
+    }
+}
+
+fun <T, N : Tree.Node<T>> List<Tree.Node<T>>.squash(
+    create: (Tree.Node<T>) -> N,
+    append: (N, Tree.Node<T>) -> Unit,
+    relation: (Tree.Node<T>, Tree.Node<T>) -> Boolean,
+): List<N> {
+    if (this.isEmpty()) return listOf()
+    if (this.size == 1) return listOf(create(this[0]))
+
+    val result = mutableListOf<N>()
+    var currentNode = create(this[0])
+    result.add(currentNode)
+
+    for (i in 1 .. this.lastIndex) {
+        if (relation(this[i - 1], this[i])) {
+            append(currentNode, this[i])
+        } else {
+            currentNode = create(this[i])
+            result.add(currentNode)
+        }
+    }
+
+    return result
+}
