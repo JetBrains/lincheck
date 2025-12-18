@@ -173,3 +173,17 @@ fun <T> tree(block: NodeBuilder<T>.() -> Unit): Tree<T> {
     require(builder.children.size <= 1) { "Tree must have a single root node" }
     return Tree(root = builder.children.firstOrNull())
 }
+
+
+// ========================================================
+//   Map
+// ========================================================
+
+fun <T, U> Tree<T>.map(transform: (T) -> U): Tree<U> =
+    Tree(root?.map(parent = null, transform))
+
+private fun <T, U> Tree.Node<T>.map(parent: Tree.Node<U>?, transform: (T) -> U): NodeImpl<U> {
+    return NodeImpl(transform(data), parent).also { node ->
+        node.children.addAll(children.map { it.map(node, transform) })
+    }
+}
