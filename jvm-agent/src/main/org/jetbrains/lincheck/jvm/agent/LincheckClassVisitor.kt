@@ -15,6 +15,7 @@ import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.commons.*
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.*
 import org.jetbrains.lincheck.jvm.agent.transformers.*
+import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.*
 
 internal class LincheckClassVisitor(
@@ -23,6 +24,7 @@ internal class LincheckClassVisitor(
     private val instrumentationMode: InstrumentationMode,
     private val profile: TransformationProfile,
     private val statsTracker: TransformationStatisticsTracker?,
+    private val context: TraceContext
 ) : ClassVisitor(ASM_API, classVisitor) {
     private var classVersion = 0
 
@@ -106,23 +108,23 @@ internal class LincheckClassVisitor(
 
         // ======== Ignored Sections ========
         chain.addTransformer { adapter, mv ->
-            IgnoredSectionWrapperTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+            IgnoredSectionWrapperTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv)
         }
 
         // ======== Coroutines ========
         chain.addTransformer { adapter, mv ->
-            CoroutineCancellabilitySupportTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+            CoroutineCancellabilitySupportTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv)
         }
         chain.addTransformer { adapter, mv ->
-            CoroutineDelaySupportTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+            CoroutineDelaySupportTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv)
         }
 
         // ======== Threads ========
         chain.addTransformer { adapter, mv ->
-            ThreadRunTransformer(fileName, className, methodName, methodInfo, desc, access, adapter, mv, config)
+            ThreadRunTransformer(fileName, className, methodName, methodInfo, context, desc, access, adapter, mv, config)
         }
         chain.addTransformer { adapter, mv ->
-            ThreadStartJoinTransformer(fileName, className, methodName, methodInfo, desc, access, adapter, mv, config)
+            ThreadStartJoinTransformer(fileName, className, methodName, methodInfo, context, desc, access, adapter, mv, config)
         }
 
         // ======== Method Calls ========
@@ -132,33 +134,33 @@ internal class LincheckClassVisitor(
 
         // ======== Object Creation ========
         chain.addTransformer { adapter, mv ->
-            ObjectCreationTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+            ObjectCreationTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv)
         }
 
         // ======== Invokedynamic ========
         chain.addTransformer { adapter, mv ->
-            DeterministicInvokeDynamicTransformer(fileName, className, methodName, desc, access, methodInfo, classVersion, adapter, mv)
+            DeterministicInvokeDynamicTransformer(fileName, className, methodName, desc, access, methodInfo, context, classVersion, adapter, mv)
         }
 
         // ======== Hash codes ========
         chain.addTransformer { adapter, mv ->
-            ConstantHashCodeTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+            ConstantHashCodeTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv)
         }
 
         // ======== Synchronization primitives ========
         if (isSynchronized) {
             chain.addTransformer { adapter, mv ->
-                SynchronizedMethodTransformer(fileName, className, methodName, desc, access, methodInfo, classVersion, adapter, mv)
+                SynchronizedMethodTransformer(fileName, className, methodName, desc, access, methodInfo, context, classVersion, adapter, mv)
             }
         }
         chain.addTransformer { adapter, mv ->
-            MonitorTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+            MonitorTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv)
         }
         chain.addTransformer { adapter, mv ->
-            WaitNotifyTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+            WaitNotifyTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv)
         }
         chain.addTransformer { adapter, mv ->
-            ParkingTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+            ParkingTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv)
         }
 
         // ======== Field, Array, and Local Variables accesses ========
@@ -166,12 +168,12 @@ internal class LincheckClassVisitor(
             applySharedMemoryAccessTransformer(methodName, desc, access, methodInfo, config, adapter, mv)
         }
         chain.addTransformer { adapter, mv ->
-            LocalVariablesAccessTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv, config)
+            LocalVariablesAccessTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv, config)
         }
 
         // ======== Inline Method Calls ========
         chain.addTransformer { adapter, mv ->
-            InlineMethodCallTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+            InlineMethodCallTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv)
         }
 
         // ======== Loops ========
@@ -185,12 +187,12 @@ internal class LincheckClassVisitor(
         //   But apparently this assumption is currently violated,
         //   and most likely we have some bug in one of the transformers.
         chain.addTransformer { adapter, mv ->
-            LoopTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv)
+            LoopTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv)
         }
 
         // ======== Analyzers ========
         chain.addTypeAnalyzerAdapter(access, className, methodName, desc)
-        chain.addOwnerNameAnalyzerAdapter(access, className, methodName, desc, methodInfo)
+        chain.addOwnerNameAnalyzerAdapter(access, className, methodName, desc, methodInfo, context)
 
         mv = chain.methodVisitors.last()
 
@@ -207,7 +209,7 @@ internal class LincheckClassVisitor(
 
         // Must appear last in the code, to completely hide intrinsic candidate methods from all transformers
         if (instrumentationMode == MODEL_CHECKING || instrumentationMode == TRACE_DEBUGGING) {
-            mv = IntrinsicCandidateMethodFilter(className, methodName, desc, initialVisitor, mv)
+            mv = IntrinsicCandidateMethodFilter(className, methodName, desc, initialVisitor, mv, context)
         }
 
         return mv
@@ -224,9 +226,9 @@ internal class LincheckClassVisitor(
     ): MethodCallTransformerBase {
         var mv = methodVisitor
         if (instrumentationMode == TRACE_RECORDING) {
-            mv = MethodCallMinimalTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv, configuration)
+            mv = MethodCallMinimalTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv, configuration)
         } else {
-            mv = MethodCallTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv, configuration)
+            mv = MethodCallTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv, configuration)
         }
         return mv
     }
@@ -245,11 +247,11 @@ internal class LincheckClassVisitor(
             // this transformer is required because currently the snapshot tracker
             // does not trace memory accesses inside constructors
             mv = ConstructorArgumentsSnapshotTrackerTransformer(
-                fileName, className, methodName, desc, access, methodInfo, adapter, mv,
+                fileName, className, methodName, desc, access, methodInfo, context, adapter, mv,
                 classVisitor::isInstanceOf
             )
         }
-        mv = SharedMemoryAccessTransformer(fileName, className, methodName, desc, access, methodInfo, adapter, mv, configuration)
+        mv = SharedMemoryAccessTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv, configuration)
         return mv
     }
 }

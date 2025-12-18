@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.trace.recorder
 
 import org.jetbrains.lincheck.trace.INJECTIONS_VOID_OBJECT
+import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.*
 import sun.nio.ch.lincheck.Injections
 import sun.nio.ch.lincheck.ThreadDescriptor
@@ -56,6 +57,7 @@ object TraceRecorder {
         formatOption: String?,
         pack: Boolean,
         startingCodeLocationId: Int,
+        context: TraceContext
     ) {
         val startedCount = installCount.incrementAndGet()
         Logger.info { "Trace recorder has been started from $className::$methodName in thread \"${Thread.currentThread().name}\" (installCount=$startedCount)" }
@@ -72,6 +74,7 @@ object TraceRecorder {
             traceDumpPath = traceFileName,
             mode = parseOutputMode(format, formatOption),
             packTrace = pack,
+            context = context,
         )
         traceStarterThread = Thread.currentThread()
         val descriptor = ThreadDescriptor.getCurrentThreadDescriptor()

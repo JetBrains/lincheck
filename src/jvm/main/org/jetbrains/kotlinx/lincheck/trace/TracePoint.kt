@@ -17,6 +17,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.LincheckAnalysisAbortedEr
 import org.jetbrains.kotlinx.lincheck.strategy.BlockingReason
 import org.jetbrains.kotlinx.lincheck.util.ThreadId
 import org.jetbrains.lincheck.descriptors.CodeLocations
+import org.jetbrains.lincheck.trace.TraceContext
 
 data class Trace(
     val trace: List<TracePoint>,
@@ -64,7 +65,7 @@ private val threadFunctionInfo = FunctionInfo(
  *
  * It is set only in case the plugin is enabled.
  */
-sealed class TracePoint(val eventId: Int, val iThread: Int, val actorId: Int) {
+sealed class TracePoint(val context: TraceContext, val eventId: Int, val iThread: Int, val actorId: Int) {
 
     internal abstract fun toStringImpl(withLocation: Boolean): String
     override fun toString(): String = toStringImpl(withLocation = true)
@@ -77,12 +78,13 @@ internal fun CallStackTrace.deepCopy(copiedObjects: HashMap<Any, Any>): CallStac
     map { it.deepCopy(copiedObjects) }
 
 internal class SwitchEventTracePoint(
+    context: TraceContext,
     eventId: Int,
     iThread: Int,
     actorId: Int,
     val reason: SwitchReason,
     callStackTrace: CallStackTrace
-) : TracePoint(eventId, iThread, actorId) {
+) : TracePoint(context, eventId, iThread, actorId) {
     // This field assignment creates a copy of current callStackTrace using .toList()
     // as CallStackTrace is a mutable list and can be changed after this trace point is created.
     internal var callStackTrace = callStackTrace.toList()
@@ -93,7 +95,7 @@ internal class SwitchEventTracePoint(
     }
     
     override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
-        SwitchEventTracePoint(eventId, iThread, actorId, reason, callStackTrace.deepCopy(copiedObjects))
+        SwitchEventTracePoint(context, eventId, iThread, actorId, reason, callStackTrace.deepCopy(copiedObjects))
     }
 }
 
@@ -104,17 +106,18 @@ internal class SwitchEventTracePoint(
  * the code location has.
  */
 internal abstract class CodeLocationTracePoint(
+    context: TraceContext,
     eventId: Int,
     iThread: Int,
     actorId: Int,
     codeLocation: Int
-) : TracePoint(eventId, iThread, actorId) {
-    var stackTraceElement = CodeLocations.stackTrace(codeLocation)
+) : TracePoint(context, eventId, iThread, actorId) {
+    var stackTraceElement = CodeLocations.stackTrace(context, codeLocation)
 
     var codeLocation = 0
         set(value) {
             field = value
-            stackTraceElement = CodeLocations.stackTrace(value)
+            stackTraceElement = CodeLocations.stackTrace(context, value)
         }
 
     init {
@@ -128,14 +131,15 @@ internal abstract class CodeLocationTracePoint(
 }
 
 internal class StateRepresentationTracePoint(
+    context: TraceContext,
     eventId: Int,
     iThread: Int,
     actorId: Int,
     val stateRepresentation: String
-) : TracePoint(eventId, iThread, actorId) {
+) : TracePoint(context, eventId, iThread, actorId) {
     override fun toStringImpl(withLocation: Boolean): String = "STATE: $stateRepresentation"
     override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
-        StateRepresentationTracePoint(eventId, iThread, actorId, stateRepresentation)
+        StateRepresentationTracePoint(context, eventId, iThread, actorId, stateRepresentation)
     }
 }
 
@@ -143,22 +147,24 @@ internal class StateRepresentationTracePoint(
  * This TracePoint is added only at the end of an execution when obstruction freedom is violated
  */
 internal class ObstructionFreedomViolationExecutionAbortTracePoint(
+    context: TraceContext,
     eventId: Int,
     iThread: Int,
     actorId: Int,
     callStackTrace: CallStackTrace
-): TracePoint(eventId, iThread, actorId) {
+): TracePoint(context, eventId, iThread, actorId) {
     // This field assignment creates a copy of current callStackTrace using .toList()
     // as CallStackTrace is a mutable list and can be changed after this trace point is created.
     internal var callStackTrace = callStackTrace.toList()
 
     override fun toStringImpl(withLocation: Boolean): String = "/* An active lock was detected */"
     override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
-        ObstructionFreedomViolationExecutionAbortTracePoint(eventId, iThread, actorId, callStackTrace.deepCopy(copiedObjects))
+        ObstructionFreedomViolationExecutionAbortTracePoint(context, eventId, iThread, actorId, callStackTrace.deepCopy(copiedObjects))
     }
 }
 
 internal class ReadTracePoint(
+    context: TraceContext,
     eventId: Int,
     iThread: Int,
     actorId: Int,
@@ -168,7 +174,7 @@ internal class ReadTracePoint(
     val isLocal: Boolean,
     private val valueRepresentation: String,
     val valueType: String,
-) : CodeLocationTracePoint(eventId, iThread, actorId, codeLocation) {
+) : CodeLocationTracePoint(context, eventId, iThread, actorId, codeLocation) {
 
     var fieldName = fieldName
         private set
@@ -188,11 +194,12 @@ internal class ReadTracePoint(
     }.toString()
 
     override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
-        ReadTracePoint(eventId, iThread, actorId, ownerRepresentation, fieldName, codeLocation, isLocal, valueRepresentation, valueType)
+        ReadTracePoint(context, eventId, iThread, actorId, ownerRepresentation, fieldName, codeLocation, isLocal, valueRepresentation, valueType)
     }
 }
 
 internal class WriteTracePoint(
+    context: TraceContext,
     eventId: Int,
     iThread: Int,
     actorId: Int,
@@ -200,7 +207,7 @@ internal class WriteTracePoint(
     fieldName: String,
     codeLocation: Int,
     val isLocal: Boolean,
-) : CodeLocationTracePoint(eventId, iThread, actorId, codeLocation) {
+) : CodeLocationTracePoint(context, eventId, iThread, actorId, codeLocation) {
     private lateinit var valueRepresentation: String
     lateinit var valueType: String
 
@@ -227,7 +234,7 @@ internal class WriteTracePoint(
     }
     
     override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
-        WriteTracePoint(eventId, iThread, actorId, ownerRepresentation, fieldName, codeLocation, isLocal)
+        WriteTracePoint(context, eventId, iThread, actorId, ownerRepresentation, fieldName, codeLocation, isLocal)
             .also {
                 it.valueType = valueType
                 if (::valueRepresentation.isInitialized) it.valueRepresentation = valueRepresentation
@@ -236,6 +243,7 @@ internal class WriteTracePoint(
 }
 
 internal class MethodCallTracePoint(
+    context: TraceContext,
     eventId: Int,
     iThread: Int,
     actorId: Int,
@@ -245,7 +253,7 @@ internal class MethodCallTracePoint(
     val isStatic: Boolean,
     var callType: CallType = CallType.NORMAL,
     val isSuspend: Boolean
-) : CodeLocationTracePoint(eventId, iThread, actorId, codeLocation) {
+) : CodeLocationTracePoint(context, eventId, iThread, actorId, codeLocation) {
     var returnedValue: ReturnedValueResult = ReturnedValueResult.NoValue
     var thrownException: Throwable? = null
     var parameters: List<String>? = null
@@ -318,7 +326,7 @@ internal class MethodCallTracePoint(
     }
 
     override fun deepCopy(copiedObjects: HashMap<Any, Any>): MethodCallTracePoint = copiedObjects.mapAndCast(this) {
-        MethodCallTracePoint(eventId, iThread, actorId, className, methodName, codeLocation, isStatic, callType, isSuspend)
+        MethodCallTracePoint(context, eventId, iThread, actorId, className, methodName, codeLocation, isStatic, callType, isSuspend)
             .also {
                 it.returnedValue = returnedValue
                 it.thrownException = thrownException
@@ -434,74 +442,80 @@ internal sealed class ReturnedValueResult() {
 }
 
 internal class MonitorEnterTracePoint(
+    context: TraceContext,
     eventId: Int,
     iThread: Int,
     actorId: Int,
     codeLocation: Int
-) : CodeLocationTracePoint(eventId, iThread, actorId, codeLocation) {
+) : CodeLocationTracePoint(context, eventId, iThread, actorId, codeLocation) {
     override fun toStringCompact(): String = "MONITORENTER"
     override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
-        MonitorEnterTracePoint(eventId, iThread, actorId, codeLocation)
+        MonitorEnterTracePoint(context, eventId, iThread, actorId, codeLocation)
     }
 }
 
 internal class MonitorExitTracePoint(
+    context: TraceContext,
     eventId: Int,
     iThread: Int,
     actorId: Int,
     codeLocation: Int
-) : CodeLocationTracePoint(eventId, iThread, actorId, codeLocation) {
+) : CodeLocationTracePoint(context, eventId, iThread, actorId, codeLocation) {
     override fun toStringCompact(): String = "MONITOREXIT"
     override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
-        MonitorExitTracePoint(eventId, iThread, actorId, codeLocation)
+        MonitorExitTracePoint(context, eventId, iThread, actorId, codeLocation)
     }
 }
 
 internal class WaitTracePoint(
+    context: TraceContext,
     eventId: Int,
     iThread: Int,
     actorId: Int,
     codeLocation: Int
-) : CodeLocationTracePoint(eventId, iThread, actorId, codeLocation) {
+) : CodeLocationTracePoint(context, eventId, iThread, actorId, codeLocation) {
     override fun toStringCompact(): String = "WAIT"
     override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
-        WaitTracePoint(eventId, iThread, actorId, codeLocation)
+        WaitTracePoint(context, eventId, iThread, actorId, codeLocation)
     }
 }
 
 internal class NotifyTracePoint(
+    context: TraceContext,
     eventId: Int,
     iThread: Int,
     actorId: Int,
     codeLocation: Int
-) : CodeLocationTracePoint(eventId, iThread, actorId, codeLocation) {
+) : CodeLocationTracePoint(context, eventId, iThread, actorId, codeLocation) {
     override fun toStringCompact(): String = "NOTIFY"
     override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
-        NotifyTracePoint(eventId, iThread, actorId, codeLocation)
+        NotifyTracePoint(context, eventId, iThread, actorId, codeLocation)
     }
 }
 
 internal class ParkTracePoint(
+    context: TraceContext,
     eventId: Int,
     iThread: Int,
     actorId: Int,
     codeLocation: Int
-) : CodeLocationTracePoint(eventId, iThread, actorId, codeLocation) {
+) : CodeLocationTracePoint(context, eventId, iThread, actorId, codeLocation) {
     override fun toStringCompact(): String = "PARK"
     override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
-        ParkTracePoint(eventId, iThread, actorId, codeLocation)
+        ParkTracePoint(context, eventId, iThread, actorId, codeLocation)
     }
 }
 
 internal class UnparkTracePoint(
+    context: TraceContext,
     eventId: Int,
     iThread: Int,
     actorId: Int,
     codeLocation: Int
-) : CodeLocationTracePoint(eventId, iThread, actorId, codeLocation) {
+) : CodeLocationTracePoint(context, eventId, iThread, actorId, codeLocation) {
     override fun toStringCompact(): String = "UNPARK"
     override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
-        UnparkTracePoint(eventId, iThread, actorId, codeLocation)
+        UnparkTracePoint(context, eventId, iThread, actorId, codeLocation)
     }
 }
 
@@ -514,10 +528,11 @@ internal fun TracePoint.isThreadJoin(): Boolean {
 }
 
 internal class CoroutineCancellationTracePoint(
+    context: TraceContext,
     eventId: Int,
     iThread: Int,
     actorId: Int,
-) : TracePoint(eventId, iThread, actorId) {
+) : TracePoint(context, eventId, iThread, actorId) {
     private lateinit var cancellationResult: CancellationResult
     private var exception: Throwable? = null
 
@@ -541,7 +556,7 @@ internal class CoroutineCancellationTracePoint(
     }
 
     override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
-        CoroutineCancellationTracePoint(eventId, iThread, actorId)
+        CoroutineCancellationTracePoint(context, eventId, iThread, actorId)
             .also {
                 if (::cancellationResult.isInitialized) it.cancellationResult = cancellationResult
                 it.exception = exception
@@ -553,42 +568,46 @@ internal class CoroutineCancellationTracePoint(
  * This trace point that is added to the trace between execution parts (init, parallel, post, validation).
  */
 internal class SectionDelimiterTracePoint(
+    context: TraceContext,
     eventId: Int,
     val executionPart: ExecutionPart
 ) : TracePoint(
+        context = context,
         eventId = eventId,
         iThread = 0,
         actorId = -1,
 ) {
     override fun toStringImpl(withLocation: Boolean): String = ""
     override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
-        SectionDelimiterTracePoint(eventId, executionPart)
+        SectionDelimiterTracePoint(context, eventId, executionPart)
     }
 }
 
 internal class SpinCycleStartTracePoint(
+    context: TraceContext,
     eventId: Int,
     iThread: Int,
     actorId: Int,
     callStackTrace: CallStackTrace
-): TracePoint(eventId, iThread, actorId) {
+): TracePoint(context, eventId, iThread, actorId) {
     // This field assignment creates a copy of current callStackTrace using .toList()
     // as CallStackTrace is a mutable list and can be changed after this trace point is created.
     internal var callStackTrace = callStackTrace.toList()
 
     override fun toStringImpl(withLocation: Boolean) =  "/* The following events repeat infinitely: */"
     override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) { 
-        SpinCycleStartTracePoint(eventId, iThread, actorId, callStackTrace.deepCopy(copiedObjects))
+        SpinCycleStartTracePoint(context, eventId, iThread, actorId, callStackTrace.deepCopy(copiedObjects))
     }
 }
 
 internal class MethodReturnTracePoint(
+    context: TraceContext,
     eventId: Int,
     internal val methodTracePoint: MethodCallTracePoint
-): TracePoint(eventId, methodTracePoint.iThread, methodTracePoint.actorId) {
+): TracePoint(context, eventId, methodTracePoint.iThread, methodTracePoint.actorId) {
     override fun toStringImpl(withLocation: Boolean) =  "This trace point is temporary, it should not appear in the logs; method: ${methodTracePoint.methodName}"
     override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
-        MethodReturnTracePoint(eventId, methodTracePoint)
+        MethodReturnTracePoint(context, eventId, methodTracePoint)
     }
 }
 

@@ -12,6 +12,7 @@ package org.jetbrains.lincheck.jvm.agent
 
 import org.jetbrains.lincheck.descriptors.AccessPath
 import org.jetbrains.lincheck.descriptors.CodeLocations
+import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.ideaPluginEnabled
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
@@ -25,6 +26,7 @@ internal open class LincheckMethodVisitor(
     protected val descriptor: String,
     protected val access: Int,
     protected val methodInfo: MethodInformation,
+    protected val context: TraceContext,
     val adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
 ) : MethodVisitor(ASM_API, methodVisitor) {
@@ -91,7 +93,7 @@ internal open class LincheckMethodVisitor(
                 /* fileName = */ fileName,
                 /* lineNumber = */ lineNumber)
         }
-        val codeLocationId = CodeLocations.newCodeLocation(stackTraceElement, accessPath, argumentNames)
+        val codeLocationId = CodeLocations.newCodeLocation(context, stackTraceElement, accessPath, argumentNames)
         push(codeLocationId)
         return codeLocationId
     }

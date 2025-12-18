@@ -35,6 +35,7 @@ private val EVENT_ID_GENERATOR = AtomicInteger(0)
 var INJECTIONS_VOID_OBJECT: Any? = null
 
 sealed class TRTracePoint(
+    internal val context: TraceContext,
     val codeLocationId: Int,
     val threadId: Int,
     val eventId: Int
@@ -53,7 +54,7 @@ sealed class TRTracePoint(
         out.writeCodeLocation(codeLocationId)
     }
 
-    val codeLocation: StackTraceElement get() = CodeLocations.stackTrace(codeLocationId)
+    val codeLocation: StackTraceElement get() = CodeLocations.stackTrace(context, codeLocationId)
 
     fun toText(verbose: Boolean): String {
         val sb = StringBuilder()
@@ -65,11 +66,12 @@ sealed class TRTracePoint(
 }
 
 sealed class TRContainerTracePoint(
+    context: TraceContext,
     threadId: Int,
     codeLocationId: Int,
     var parentTracePoint: TRContainerTracePoint? = null,
     eventId: Int
-) : TRTracePoint(codeLocationId, threadId, eventId) {
+) : TRTracePoint(context, codeLocationId, threadId, eventId) {
     protected var children: ChunkedList<TRTracePoint> = ChunkedList()
         private set
 
@@ -133,6 +135,7 @@ sealed class TRContainerTracePoint(
 }
 
 class TRMethodCallTracePoint(
+    context: TraceContext,
     threadId: Int,
     codeLocationId: Int,
     val methodId: Int,
@@ -141,18 +144,18 @@ class TRMethodCallTracePoint(
     val flags: Short = 0,
     parentTracePoint: TRContainerTracePoint? = null,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRContainerTracePoint(threadId, codeLocationId, parentTracePoint, eventId) {
+) : TRContainerTracePoint(context, threadId, codeLocationId, parentTracePoint, eventId) {
     var result: TRObject? = null
     var exceptionClassName: String? = null
 
     // TODO Make parametrized
-    val methodDescriptor: MethodDescriptor get() = TRACE_CONTEXT.getMethodDescriptor(methodId)
+    val methodDescriptor: MethodDescriptor get() = context.getMethodDescriptor(methodId)
     val classDescriptor: ClassDescriptor get() = methodDescriptor.classDescriptor
 
     // Shortcuts
     val className: String get() = methodDescriptor.className
     val methodName: String get() = methodDescriptor.methodName
-    val argumentNames: List<AccessPath?> get() = TRACE_CONTEXT.methodCallArgumentNames(codeLocationId) ?: emptyList()
+    val argumentNames: List<AccessPath?> get() = context.methodCallArgumentNames(codeLocationId) ?: emptyList()
     val argumentTypes: List<Types.Type> get() = methodDescriptor.argumentTypes
     val returnType: Types.Type get() = methodDescriptor.returnType
 
@@ -225,7 +228,7 @@ class TRMethodCallTracePoint(
     override fun loadFooter(inp: DataInput) {
         childrenAddresses.finishWrite()
 
-        result = inp.readTRObject()
+        result = inp.readTRObject(context)
         exceptionClassName = inp.readUTF()
         if (exceptionClassName?.isEmpty() ?: true) {
             exceptionClassName = null
@@ -240,17 +243,18 @@ class TRMethodCallTracePoint(
         // Flag which tells that the method was not tracked from its start and has some missing tracepoints
         const val INCOMPLETE_METHOD_FLAG: Int = 1
 
-        internal fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRMethodCallTracePoint {
+        internal fun load(context: TraceContext, inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRMethodCallTracePoint {
             val methodId = inp.readInt()
-            val obj = inp.readTRObject()
+            val obj = inp.readTRObject(context)
             val pcount = inp.readInt()
             val parameters = mutableListOf<TRObject?>()
             repeat(pcount) {
-                parameters.add(inp.readTRObject())
+                parameters.add(inp.readTRObject(context))
             }
             val flags = inp.readShort()
 
             val tracePoint = TRMethodCallTracePoint(
+                context = context,
                 threadId = threadId,
                 codeLocationId = codeLocationId,
                 methodId = methodId,
@@ -266,21 +270,23 @@ class TRMethodCallTracePoint(
 }
 
 class TRLoopTracePoint(
+    context: TraceContext,
     threadId: Int,
     codeLocationId: Int,
     val loopId: Int,
     parentTracePoint: TRContainerTracePoint? = null,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRContainerTracePoint(threadId, codeLocationId, parentTracePoint, eventId) {
+) : TRContainerTracePoint(context, threadId, codeLocationId, parentTracePoint, eventId) {
 
     internal constructor(
+        context: TraceContext,
         threadId: Int,
         codeLocationId: Int,
         loopId: Int,
         parentTracePoint: TRContainerTracePoint?,
         eventId: Int,
         iterations: Int
-    ) : this(threadId, codeLocationId, loopId, parentTracePoint, eventId) {
+    ) : this(context, threadId, codeLocationId, loopId, parentTracePoint, eventId) {
         this.iterations = iterations
     }
 
@@ -321,9 +327,10 @@ class TRLoopTracePoint(
 
     companion object {
 
-        internal fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRLoopTracePoint {
+        internal fun load(context: TraceContext, inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRLoopTracePoint {
             val loopId = inp.readInt()
             val tracePoint = TRLoopTracePoint(
+                context = context,
                 threadId = threadId,
                 codeLocationId = codeLocationId,
                 loopId = loopId,
@@ -335,13 +342,14 @@ class TRLoopTracePoint(
 }
 
 class TRLoopIterationTracePoint(
+    context: TraceContext,
     threadId: Int,
     codeLocationId: Int,
     val loopId: Int,
     val loopIteration: Int,
     parentTracePoint: TRContainerTracePoint? = null,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRContainerTracePoint(threadId, codeLocationId, parentTracePoint, eventId) {
+) : TRContainerTracePoint(context, threadId, codeLocationId, parentTracePoint, eventId) {
 
     override fun save(out: TraceWriter) {
         super.save(out)
@@ -369,11 +377,12 @@ class TRLoopIterationTracePoint(
 
     companion object {
 
-        internal fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRLoopIterationTracePoint {
+        internal fun load(context: TraceContext, inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRLoopIterationTracePoint {
             val loopId = inp.readInt()
             val loopIteration = inp.readInt()
 
             val tracePoint = TRLoopIterationTracePoint(
+                context = context,
                 threadId = threadId,
                 codeLocationId = codeLocationId,
                 loopId = loopId,
@@ -387,18 +396,19 @@ class TRLoopIterationTracePoint(
 }
 
 sealed class TRFieldTracePoint(
+    context: TraceContext,
     threadId: Int,
     codeLocationId: Int,
     val fieldId: Int,
     val obj: TRObject?,
     val value: TRObject?,
     eventId: Int
-) : TRTracePoint(codeLocationId, threadId, eventId) {
+) : TRTracePoint(context, codeLocationId, threadId, eventId) {
 
     internal abstract fun accessSymbol(): String
 
     // TODO Make parametrized
-    val fieldDescriptor: FieldDescriptor get() = TRACE_CONTEXT.getFieldDescriptor(fieldId)
+    val fieldDescriptor: FieldDescriptor get() = context.getFieldDescriptor(fieldId)
     val classDescriptor: ClassDescriptor get() = fieldDescriptor.classDescriptor
 
     // Shortcuts
@@ -428,24 +438,26 @@ sealed class TRFieldTracePoint(
 }
 
 class TRReadTracePoint(
+    context: TraceContext,
     threadId: Int,
     codeLocationId: Int,
     fieldId: Int,
     obj: TRObject?,
     value: TRObject?,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRFieldTracePoint(threadId, codeLocationId,  fieldId, obj, value, eventId) {
+) : TRFieldTracePoint(context, threadId, codeLocationId,  fieldId, obj, value, eventId) {
 
     override fun accessSymbol(): String = READ_ACCESS_SYMBOL
 
     internal companion object {
-        fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRReadTracePoint {
+        fun load(context: TraceContext, inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRReadTracePoint {
             return TRReadTracePoint(
+                context = context,
                 threadId = threadId,
                 codeLocationId = codeLocationId,
                 fieldId = inp.readInt(),
-                obj = inp.readTRObject(),
-                value = inp.readTRObject(),
+                obj = inp.readTRObject(context),
+                value = inp.readTRObject(context),
                 eventId = eventId,
             )
         }
@@ -453,24 +465,26 @@ class TRReadTracePoint(
 }
 
 class TRWriteTracePoint(
+    context: TraceContext,
     threadId: Int,
     codeLocationId: Int,
     fieldId: Int,
     obj: TRObject?,
     value: TRObject?,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRFieldTracePoint(threadId, codeLocationId,  fieldId, obj, value, eventId) {
+) : TRFieldTracePoint(context, threadId, codeLocationId,  fieldId, obj, value, eventId) {
 
     override fun accessSymbol(): String = WRITE_ACCESS_SYMBOL
 
     internal companion object {
-        fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRWriteTracePoint {
+        fun load(context: TraceContext, inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRWriteTracePoint {
             return TRWriteTracePoint(
+                context = context,
                 threadId = threadId,
                 codeLocationId = codeLocationId,
                 fieldId = inp.readInt(),
-                obj = inp.readTRObject(),
-                value = inp.readTRObject(),
+                obj = inp.readTRObject(context),
+                value = inp.readTRObject(context),
                 eventId = eventId,
             )
         }
@@ -478,17 +492,18 @@ class TRWriteTracePoint(
 }
 
 sealed class TRLocalVariableTracePoint(
+    context: TraceContext,
     threadId: Int,
     codeLocationId: Int,
     val localVariableId: Int,
     val value: TRObject?,
     eventId: Int
-) : TRTracePoint(codeLocationId, threadId, eventId) {
+) : TRTracePoint(context, codeLocationId, threadId, eventId) {
 
     internal abstract fun accessSymbol(): String
 
     // TODO Make parametrized
-    val variableDescriptor: VariableDescriptor get() = TRACE_CONTEXT.getVariableDescriptor(localVariableId)
+    val variableDescriptor: VariableDescriptor get() = context.getVariableDescriptor(localVariableId)
     val name: String get() = variableDescriptor.name
 
     override fun save(out: TraceWriter) {
@@ -510,22 +525,24 @@ sealed class TRLocalVariableTracePoint(
 }
 
 class TRReadLocalVariableTracePoint(
+    context: TraceContext,
     threadId: Int,
     codeLocationId: Int,
     localVariableId: Int,
     value: TRObject?,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRLocalVariableTracePoint(threadId, codeLocationId, localVariableId, value, eventId) {
+) : TRLocalVariableTracePoint(context, threadId, codeLocationId, localVariableId, value, eventId) {
 
     override fun accessSymbol(): String = READ_ACCESS_SYMBOL
 
     internal companion object {
-        fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRReadLocalVariableTracePoint {
+        fun load(context: TraceContext, inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRReadLocalVariableTracePoint {
             return TRReadLocalVariableTracePoint(
+                context = context,
                 threadId = threadId,
                 codeLocationId = codeLocationId,
                 localVariableId = inp.readInt(),
-                value = inp.readTRObject(),
+                value = inp.readTRObject(context),
                 eventId = eventId,
             )
         }
@@ -533,22 +550,24 @@ class TRReadLocalVariableTracePoint(
 }
 
 class TRWriteLocalVariableTracePoint(
+    context: TraceContext,
     threadId: Int,
     codeLocationId: Int,
     localVariableId: Int,
     value: TRObject?,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRLocalVariableTracePoint(threadId, codeLocationId, localVariableId, value, eventId) {
+) : TRLocalVariableTracePoint(context, threadId, codeLocationId, localVariableId, value, eventId) {
 
     override fun accessSymbol(): String = WRITE_ACCESS_SYMBOL
 
     internal companion object {
-        fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRWriteLocalVariableTracePoint {
+        fun load(context: TraceContext, inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRWriteLocalVariableTracePoint {
             return TRWriteLocalVariableTracePoint(
+                context = context,
                 threadId = threadId,
                 codeLocationId = codeLocationId,
                 localVariableId = inp.readInt(),
-                value = inp.readTRObject(),
+                value = inp.readTRObject(context),
                 eventId = eventId,
             )
         }
@@ -556,13 +575,14 @@ class TRWriteLocalVariableTracePoint(
 }
 
 sealed class TRArrayTracePoint(
+    context: TraceContext,
     threadId: Int,
     codeLocationId: Int,
     val array: TRObject,
     val index: Int,
     val value: TRObject?,
     eventId: Int
-) : TRTracePoint(codeLocationId, threadId, eventId) {
+) : TRTracePoint(context, codeLocationId, threadId, eventId) {
 
     internal abstract fun accessSymbol(): String
 
@@ -586,24 +606,26 @@ sealed class TRArrayTracePoint(
 }
 
 class TRReadArrayTracePoint(
+    context: TraceContext,
     threadId: Int,
     codeLocationId: Int,
     array: TRObject,
     index: Int,
     value: TRObject?,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRArrayTracePoint(threadId, codeLocationId, array, index, value, eventId) {
+) : TRArrayTracePoint(context, threadId, codeLocationId, array, index, value, eventId) {
 
     override fun accessSymbol(): String = READ_ACCESS_SYMBOL
 
     internal companion object {
-        fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRReadArrayTracePoint {
+        fun load(context: TraceContext, inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRReadArrayTracePoint {
             return TRReadArrayTracePoint(
+                context = context,
                 threadId = threadId,
                 codeLocationId = codeLocationId,
-                array = inp.readTRObject() ?: TR_OBJECT_NULL,
+                array = inp.readTRObject(context) ?: TR_OBJECT_NULL,
                 index = inp.readInt(),
-                value = inp.readTRObject(),
+                value = inp.readTRObject(context),
                 eventId = eventId,
             )
         }
@@ -611,24 +633,26 @@ class TRReadArrayTracePoint(
 }
 
 class TRWriteArrayTracePoint(
+    context: TraceContext,
     threadId: Int,
     codeLocationId: Int,
     array: TRObject,
     index: Int,
     value: TRObject?,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRArrayTracePoint(threadId, codeLocationId, array, index, value, eventId) {
+) : TRArrayTracePoint(context, threadId, codeLocationId, array, index, value, eventId) {
 
     override fun accessSymbol(): String = WRITE_ACCESS_SYMBOL
 
     internal companion object {
-        fun load(inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRWriteArrayTracePoint {
+        fun load(context: TraceContext, inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRWriteArrayTracePoint {
             return TRWriteArrayTracePoint(
+                context = context,
                 threadId = threadId,
                 codeLocationId = codeLocationId,
-                array = inp.readTRObject() ?: TR_OBJECT_NULL,
+                array = inp.readTRObject(context) ?: TR_OBJECT_NULL,
                 index = inp.readInt(),
-                value = inp.readTRObject(),
+                value = inp.readTRObject(context),
                 eventId = eventId,
             )
         }
@@ -638,12 +662,12 @@ class TRWriteArrayTracePoint(
 const val READ_ACCESS_SYMBOL  = "➜"
 const val WRITE_ACCESS_SYMBOL = "="
 
-fun loadTRTracePoint(inp: DataInput): TRTracePoint {
+fun loadTRTracePoint(context: TraceContext, inp: DataInput): TRTracePoint {
     val loader = getLoaderByClassId(inp.readByte())
     val codeLocationId = inp.readInt()
     val threadId = inp.readInt()
     val eventId = inp.readInt()
-    return loader(inp, codeLocationId, threadId, eventId)
+    return loader(context, inp, codeLocationId, threadId, eventId)
 }
 
 private fun String.escape() = this
@@ -653,16 +677,22 @@ private fun String.escape() = this
     .replace("\t", "\\t")
 
 @ConsistentCopyVisibility
-data class TRObject internal constructor (
+data class TRObject private constructor (
     internal val classNameId: Int,
     val identityHashCode: Int,
-    internal val primitiveValue: Any?
+    internal val primitiveValue: Any?,
+    val className: String
 ) {
     // TODO Make parametrized
-    val className: String get() = primitiveValue?.javaClass?.name ?: TRACE_CONTEXT.getClassDescriptor(classNameId).name
     val isPrimitive: Boolean get() = primitiveValue != null
     val isSpecial: Boolean get() = classNameId < 0
     val value: Any? get() = primitiveValue
+
+    internal constructor (classNameId: Int, identityHashCode: Int, primitiveValue: Any):
+            this(classNameId, identityHashCode, primitiveValue, primitiveValue.javaClass.name)
+
+    internal constructor(classNameId: Int, identityHashCode: Int, cd: ClassDescriptor):
+            this(classNameId, identityHashCode, null, cd.name)
 
     // TODO: Unify with code like `ObjectLabelFactory.adornedStringRepresentation` placed in hypothetical `core` module
     override fun toString(): String {
@@ -679,10 +709,8 @@ data class TRObject internal constructor (
                 is Unit -> "Unit"
                 else -> primitiveValue.toString()
             }
-        } else if (classNameId == TR_OBJECT_NULL_CLASSNAME) {
-            "null"
-        } else if (classNameId == TR_OBJECT_VOID_CLASSNAME) {
-            "void"
+        } else if (classNameId == TR_OBJECT_NULL_CLASSNAME || classNameId == TR_OBJECT_VOID_CLASSNAME) {
+            className // already set to either 'null' or 'void'
         } else {
             className.adornedClassNameRepresentation() + "@" + identityHashCode
         }
@@ -690,10 +718,10 @@ data class TRObject internal constructor (
 }
 
 const val TR_OBJECT_NULL_CLASSNAME = -1
-val TR_OBJECT_NULL = TRObject(TR_OBJECT_NULL_CLASSNAME, 0, null)
+val TR_OBJECT_NULL = TRObject(TR_OBJECT_NULL_CLASSNAME, 0, ClassDescriptor("null"))
 
 const val TR_OBJECT_VOID_CLASSNAME = -2
-val TR_OBJECT_VOID = TRObject(TR_OBJECT_VOID_CLASSNAME, 0, null)
+val TR_OBJECT_VOID = TRObject(TR_OBJECT_VOID_CLASSNAME, 0, ClassDescriptor("void"))
 
 const val UNFINISHED_METHOD_RESULT_SYMBOL = "<unfinished method>"
 const val UNTRACKED_METHOD_RESULT_SYMBOL = "<untracked result>"
@@ -715,12 +743,12 @@ const val TR_OBJECT_P_JAVA_CLASS = TR_OBJECT_P_BOOLEAN - 1
 const val TR_OBJECT_P_KOTLIN_CLASS = TR_OBJECT_P_JAVA_CLASS - 1
 const val TR_OBJECT_P_STRING_BUILDER = TR_OBJECT_P_KOTLIN_CLASS - 1
 
-fun TRObjectOrNull(obj: Any?): TRObject? =
-    obj?.let { TRObject(it) }
+fun TRObjectOrNull(context: TraceContext, obj: Any?): TRObject? =
+    obj?.let { TRObject(context, it) }
 
-fun TRObjectOrVoid(obj: Any?): TRObject? =
+fun TRObjectOrVoid(context: TraceContext, obj: Any?): TRObject? =
     if (obj === INJECTIONS_VOID_OBJECT) TR_OBJECT_VOID
-    else TRObjectOrNull(obj)
+    else TRObjectOrNull(context, obj)
 
 
 const val MAX_TROBJECT_STRING_LENGTH = 50
@@ -747,8 +775,11 @@ private fun classNameWhitelisted(obj: Any): Boolean {
     return WHITELIST_PACKAGES_FOR_TO_STRING.any { fullClassName.startsWith(it) }
 }
 
-fun TRObject(obj: Any): TRObject {
-    val defaultTRObject = { TRObject(TRACE_CONTEXT.getOrCreateClassId(obj.javaClass.name), System.identityHashCode(obj), null) }
+fun TRObject(context: TraceContext, obj: Any): TRObject {
+    val defaultTRObject = {
+        val classId = context.getOrCreateClassId(obj.javaClass.name)
+        TRObject(classId, System.identityHashCode(obj), context.getClassDescriptor(classId))
+    }
 
     return when (obj) {
         is Byte -> TRObject(TR_OBJECT_P_BYTE, 0, obj)
@@ -822,7 +853,7 @@ internal fun DataOutput.writeTRObject(value: TRObject?) {
     }
 }
 
-internal fun DataInput.readTRObject(): TRObject? {
+internal fun DataInput.readTRObject(context: TraceContext): TRObject? {
     return when (val classNameId = readInt()) {
         TR_OBJECT_NULL_CLASSNAME -> null
         TR_OBJECT_VOID_CLASSNAME -> TR_OBJECT_VOID
@@ -842,7 +873,7 @@ internal fun DataInput.readTRObject(): TRObject? {
         TR_OBJECT_P_STRING_BUILDER -> TRObject(classNameId, readInt(), readUTF())
         else -> {
             if (classNameId >= 0) {
-                TRObject(classNameId, readInt(), null)
+                TRObject(classNameId, readInt(), context.getClassDescriptor(classNameId))
             } else {
                 error("TRObject: Unknown Class Id $classNameId")
             }
@@ -850,7 +881,7 @@ internal fun DataInput.readTRObject(): TRObject? {
     }
 }
 
-private typealias TRLoader = (DataInput, Int, Int, Int) -> TRTracePoint
+private typealias TRLoader = (TraceContext, DataInput, Int, Int, Int) -> TRTracePoint
 
 private fun getClassId(point: TRTracePoint): Int {
     return when (point) {

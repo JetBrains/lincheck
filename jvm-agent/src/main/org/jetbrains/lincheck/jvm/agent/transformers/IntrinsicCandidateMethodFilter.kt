@@ -11,10 +11,10 @@
 package org.jetbrains.lincheck.jvm.agent.transformers
 
 import org.jetbrains.lincheck.descriptors.Types
-import org.jetbrains.lincheck.trace.TRACE_CONTEXT
 import org.jetbrains.lincheck.util.isTrackedIntrinsic
 import org.jetbrains.lincheck.jvm.agent.ASM_API
 import org.jetbrains.lincheck.jvm.agent.toCanonicalClassName
+import org.jetbrains.lincheck.trace.TraceContext
 import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.MethodVisitor
 
@@ -24,7 +24,8 @@ internal class IntrinsicCandidateMethodFilter(
     private val methodName: String,
     private val methodDesc: String,
     private val initialMethodVisitor: MethodVisitor,
-    methodVisitor: MethodVisitor
+    methodVisitor: MethodVisitor,
+    private val context: TraceContext
 ) : MethodVisitor(ASM_API, methodVisitor) {
 
     override fun visitCode() {
@@ -32,8 +33,8 @@ internal class IntrinsicCandidateMethodFilter(
         // here we manually specify intrinsic methods that could lead to error in lincheck analysis.
         // Also, some methods are intrinsified even though they do not have mentioned annotations
         // (such as Arrays.copyOf(...) methods).
-        val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(
-            TRACE_CONTEXT.getOrCreateMethodId(className.toCanonicalClassName(), methodName, Types.convertAsmMethodType(methodDesc))
+        val methodDescriptor = context.getMethodDescriptor(
+            context.getOrCreateMethodId(className.toCanonicalClassName(), methodName, Types.convertAsmMethodType(methodDesc))
         )
         if (methodDescriptor.isTrackedIntrinsic()) {
             methodDescriptor.isIntrinsic = true
@@ -43,8 +44,8 @@ internal class IntrinsicCandidateMethodFilter(
     }
 
     override fun visitAnnotation(desc: String, visible: Boolean): AnnotationVisitor? {
-        val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(
-            TRACE_CONTEXT.getOrCreateMethodId(className.toCanonicalClassName(), methodName, Types.convertAsmMethodType(methodDesc))
+        val methodDescriptor = context.getMethodDescriptor(
+            context.getOrCreateMethodId(className.toCanonicalClassName(), methodName, Types.convertAsmMethodType(methodDesc))
         )
         if (isIntrinsicCandidateAnnotation(desc)) {
             methodDescriptor.isIntrinsic = true

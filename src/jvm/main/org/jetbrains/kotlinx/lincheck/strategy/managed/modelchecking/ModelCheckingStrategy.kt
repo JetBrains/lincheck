@@ -15,6 +15,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.runner.LambdaRunner
 import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.*
 import java.lang.ref.WeakReference
 import java.lang.reflect.*
@@ -41,7 +42,8 @@ internal class ModelCheckingStrategy(
     settings: ManagedStrategySettings,
     // The flag to enable IntelliJ IDEA plugin mode
     inIdeaPluginReplayMode: Boolean = false,
-) : ManagedStrategy(runner, settings, inIdeaPluginReplayMode) {
+    context: TraceContext
+) : ManagedStrategy(runner, settings, inIdeaPluginReplayMode, context) {
     // The maximum number of thread switch choices that strategy should perform
     // (increases when all the interleavings with the current depth are studied).
     private var maxNumberOfSwitches = 0

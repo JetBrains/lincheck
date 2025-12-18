@@ -12,6 +12,7 @@ package org.jetbrains.lincheck.jvm.agent.transformers
 
 import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.*
+import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.commons.GeneratorAdapter
@@ -27,9 +28,10 @@ internal class LoopTransformer(
     descriptor: String,
     access: Int,
     methodInfo: MethodInformation,
+    context: TraceContext,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
-) : InstructionMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
+) : InstructionMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, context, adapter, methodVisitor) {
 
     // Retrieve loop sites planned from the precomputed basic-block CFG.
     private val loopInfo = methodInfo.basicControlFlowGraph?.loopInfo.ensureNotNull {

@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.jvm.agent.transformers
 
 import org.jetbrains.lincheck.jvm.agent.*
+import org.jetbrains.lincheck.trace.TraceContext
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.GeneratorAdapter
@@ -23,11 +24,12 @@ internal class ConstructorArgumentsSnapshotTrackerTransformer(
     descriptor: String,
     access: Int,
     methodInfo: MethodInformation,
+    context: TraceContext,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
     // `SafeClassWriter::isInstanceOf` method which checks the subclassing without loading the classes to VM
     private val isInstanceOf: (actualType: String, expectedSuperType: String) -> Boolean
-) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
+) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, context, adapter, methodVisitor) {
 
     /**
      * Searches for invocations of constructors `className::<init>(args)` and inserts bytecode

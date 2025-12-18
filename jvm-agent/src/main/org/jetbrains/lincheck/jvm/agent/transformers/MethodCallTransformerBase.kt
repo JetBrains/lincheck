@@ -13,6 +13,7 @@ package org.jetbrains.lincheck.jvm.agent.transformers
 import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.descriptors.AccessPath
 import org.jetbrains.lincheck.descriptors.OwnerName
+import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.isInLincheckPackage
 import org.jetbrains.lincheck.util.isIntellijInstrumentationCoverageAgentClass
 import org.objectweb.asm.MethodVisitor
@@ -33,10 +34,11 @@ internal abstract class MethodCallTransformerBase(
     descriptor: String,
     access: Int,
     methodInfo: MethodInformation,
+    context: TraceContext,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
     val configuration: TransformationConfiguration,
-) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
+) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, context, adapter, methodVisitor) {
 
     override val requiresOwnerNameAnalyzer: Boolean = true
 

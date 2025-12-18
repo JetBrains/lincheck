@@ -13,6 +13,7 @@ package org.jetbrains.lincheck.trace.debugger
 import org.jetbrains.lincheck.jvm.agent.ASM_API
 import org.jetbrains.lincheck.jvm.agent.ifStatement
 import org.jetbrains.lincheck.jvm.agent.invokeStatic
+import org.jetbrains.lincheck.trace.TraceContext
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.commons.GeneratorAdapter
 
@@ -37,6 +38,7 @@ import org.objectweb.asm.commons.GeneratorAdapter
  * ```
  */
 internal class TraceDebuggerMethodTransformer(
+    context: TraceContext,
     className: String,
     fileName: String,
     private val adapter: GeneratorAdapter,

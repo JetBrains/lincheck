@@ -10,13 +10,13 @@
 
 package org.jetbrains.lincheck.jvm.agent.transformers
 
-import org.jetbrains.lincheck.trace.TRACE_CONTEXT
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import org.jetbrains.lincheck.jvm.agent.*
+import org.jetbrains.lincheck.trace.TraceContext
 import org.objectweb.asm.MethodVisitor
 import sun.nio.ch.lincheck.*
 
@@ -31,10 +31,11 @@ internal class SharedMemoryAccessTransformer(
     descriptor: String,
     access: Int,
     methodInfo: MethodInformation,
+    context: TraceContext,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
     val configuration: TransformationConfiguration,
-) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
+) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, context, adapter, methodVisitor) {
 
     override val requiresTypeAnalyzer: Boolean = true
     override val requiresOwnerNameAnalyzer: Boolean = true
@@ -68,7 +69,7 @@ internal class SharedMemoryAccessTransformer(
     }
 
     private fun GeneratorAdapter.processStaticFieldGet(owner: String, fieldName: String, opcode: Int, desc: String) {
-        val fieldId = TRACE_CONTEXT.getOrCreateFieldId(
+        val fieldId = context.getOrCreateFieldId(
             className = owner.toCanonicalClassName(),
             fieldName = fieldName,
             isStatic = true,
@@ -92,7 +93,7 @@ internal class SharedMemoryAccessTransformer(
     }
 
     private fun GeneratorAdapter.processInstanceFieldGet(owner: String, fieldName: String, opcode: Int, desc: String) {
-        val fieldId = TRACE_CONTEXT.getOrCreateFieldId(
+        val fieldId = context.getOrCreateFieldId(
             className = owner.toCanonicalClassName(),
             fieldName = fieldName,
             isStatic = false,
@@ -119,7 +120,7 @@ internal class SharedMemoryAccessTransformer(
 
     private fun GeneratorAdapter.processStaticFieldPut(desc: String, owner: String, fieldName: String, opcode: Int) {
         val valueType = getType(desc)
-        val fieldId = TRACE_CONTEXT.getOrCreateFieldId(
+        val fieldId = context.getOrCreateFieldId(
             className = owner.toCanonicalClassName(),
             fieldName = fieldName,
             isStatic = true,
@@ -150,7 +151,7 @@ internal class SharedMemoryAccessTransformer(
     private fun GeneratorAdapter.processInstanceFieldPut(desc: String, owner: String, fieldName: String, opcode: Int) {
         // STACK: obj, value
         val valueType = getType(desc)
-        val fieldId = TRACE_CONTEXT.getOrCreateFieldId(
+        val fieldId = context.getOrCreateFieldId(
             className = owner.toCanonicalClassName(),
             fieldName = fieldName,
             isStatic = false,

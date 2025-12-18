@@ -16,6 +16,7 @@ import org.objectweb.asm.Type.getType
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import org.jetbrains.lincheck.jvm.agent.*
+import org.jetbrains.lincheck.trace.TraceContext
 import org.objectweb.asm.MethodVisitor
 import sun.nio.ch.lincheck.*
 
@@ -30,9 +31,10 @@ internal class MonitorTransformer(
     descriptor: String,
     access: Int,
     methodInfo: MethodInformation,
+    context: TraceContext,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
-) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
+) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, context, adapter, methodVisitor) {
 
     override fun visitInsn(opcode: Int) = adapter.run {
         when (opcode) {
@@ -104,10 +106,11 @@ internal class SynchronizedMethodTransformer(
     descriptor: String,
     access: Int,
     methodInfo: MethodInformation,
+    context: TraceContext,
     private val classVersion: Int,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
-) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
+) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, context, adapter, methodVisitor) {
 
     private val isStatic: Boolean = (access and ACC_STATIC != 0)
 
@@ -225,9 +228,10 @@ internal class WaitNotifyTransformer(
     descriptor: String,
     access: Int,
     methodInfo: MethodInformation,
+    context: TraceContext,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
-) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
+) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, context, adapter, methodVisitor) {
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
         if (opcode == INVOKEVIRTUAL) {

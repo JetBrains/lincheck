@@ -12,7 +12,7 @@ package org.jetbrains.lincheck.jvm.agent.transformers
 
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.jvm.agent.*
-import org.jetbrains.lincheck.trace.TRACE_CONTEXT
+import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.trace.isThisAccess
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
@@ -39,10 +39,11 @@ internal class MethodCallMinimalTransformer(
     descriptor: String,
     access: Int,
     methodInfo: MethodInformation,
+    context: TraceContext,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
     configuration: TransformationConfiguration,
-) : MethodCallTransformerBase(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor, configuration) {
+) : MethodCallTransformerBase(fileName, className, methodName, descriptor, access, methodInfo, context, adapter, methodVisitor, configuration) {
 
     override fun processMethodCall(desc: String, opcode: Int, owner: String, name: String, itf: Boolean) = adapter.run {
         val isConstructorCall = (name == "<init>")
@@ -78,7 +79,7 @@ internal class MethodCallMinimalTransformer(
             else -> null
         }
         val sanitizedMethodName = sanitizeMethodName(owner, name, InstrumentationMode.TRACE_RECORDING)
-        val methodId = TRACE_CONTEXT.getOrCreateMethodId(owner.toCanonicalClassName(), sanitizedMethodName, Types.convertAsmMethodType(desc))
+        val methodId = context.getOrCreateMethodId(owner.toCanonicalClassName(), sanitizedMethodName, Types.convertAsmMethodType(desc))
 
         val threadDescriptorLocal = newLocal(OBJECT_TYPE).also {
             invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)

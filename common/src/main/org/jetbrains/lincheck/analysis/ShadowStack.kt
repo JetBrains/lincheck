@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.analysis
 
 import org.jetbrains.lincheck.descriptors.*
+import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.*
 
 /**
@@ -25,7 +26,7 @@ class ShadowStackFrame(val instance: Any?) {
 fun ShadowStackFrame.isCurrentStackFrameReceiver(obj: Any): Boolean =
     (obj === instance)
 
-fun ShadowStackFrame.findCurrentReceiverFieldReferringTo(obj: Any): FieldAccessLocation? {
+fun ShadowStackFrame.findCurrentReceiverFieldReferringTo(context: TraceContext, obj: Any): FieldAccessLocation? {
     val field = instance?.findInstanceFieldReferringTo(obj)
-    return field?.toAccessLocation()
+    return field?.toAccessLocation(context)
 }

@@ -12,6 +12,7 @@ package org.jetbrains.lincheck.util
 
 import org.jetbrains.lincheck.descriptors.FieldDescriptor
 import org.jetbrains.lincheck.descriptors.toDescriptor
+import org.jetbrains.lincheck.trace.TraceContext
 import java.util.concurrent.ConcurrentHashMap
 import java.lang.reflect.Modifier
 import java.lang.reflect.Field
@@ -182,16 +183,16 @@ private val fieldDescriptorByOffsetCache = ConcurrentHashMap<Pair<Class<*>, Long
 private val DESCRIPTOR_NOT_FOUND = Any() // cannot store `null` in the cache.
 
 @Suppress("DEPRECATION")
-fun findFieldNameByOffsetViaUnsafe(targetType: Class<*>, offset: Long): String? =
-    findFieldDescriptorByOffsetViaUnsafe(targetType, offset)?.fieldName
+fun findFieldNameByOffsetViaUnsafe(context: TraceContext, targetType: Class<*>, offset: Long): String? =
+    findFieldDescriptorByOffsetViaUnsafe(context, targetType, offset)?.fieldName
 
 @Suppress("DEPRECATION")
-fun findFieldDescriptorByOffsetViaUnsafe(targetType: Class<*>, offset: Long): FieldDescriptor? =
+fun findFieldDescriptorByOffsetViaUnsafe(context: TraceContext, targetType: Class<*>, offset: Long): FieldDescriptor? =
     fieldDescriptorByOffsetCache.getOrPut(targetType to offset) {
-        findFieldNameByOffsetViaUnsafeImpl(targetType, offset) ?: DESCRIPTOR_NOT_FOUND
+        findFieldNameByOffsetViaUnsafeImpl(context, targetType, offset) ?: DESCRIPTOR_NOT_FOUND
     }.let { if (it === DESCRIPTOR_NOT_FOUND) null else (it as FieldDescriptor) }
 
-private fun findFieldNameByOffsetViaUnsafeImpl(targetType: Class<*>, offset: Long): FieldDescriptor? {
+private fun findFieldNameByOffsetViaUnsafeImpl(context: TraceContext, targetType: Class<*>, offset: Long): FieldDescriptor? {
     for (field in targetType.allDeclaredFieldWithSuperclasses) {
         try {
             if (Modifier.isNative(field.modifiers)) continue
@@ -200,7 +201,7 @@ private fun findFieldNameByOffsetViaUnsafeImpl(targetType: Class<*>, offset: Lon
             } else {
                 UnsafeHolder.UNSAFE.objectFieldOffset(field)
             }
-            if (fieldOffset == offset) return field.toDescriptor()
+            if (fieldOffset == offset) return field.toDescriptor(context)
         } catch (t: Throwable) {
             t.printStackTrace()
         }

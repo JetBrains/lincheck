@@ -10,7 +10,7 @@
 
 package org.jetbrains.lincheck.descriptors
 
-import org.jetbrains.lincheck.trace.TRACE_CONTEXT
+import org.jetbrains.lincheck.trace.TraceContext
 import java.util.Objects
 
 class CodeLocation(
@@ -42,6 +42,9 @@ class CodeLocation(
  * This trace includes a list of all shared memory events that occurred during the execution of the program,
  * along with their corresponding code locations. To minimize overhead, Lincheck assigns unique IDs to all
  * code locations it analyses, and stores more detailed information necessary for trace generation in this object.
+ *
+ * [CodeLocations] object is used as a thread-safe wrapper over a `context` parameter, that each method
+ * accepts.
  */
 object CodeLocations {
     /**
@@ -53,11 +56,12 @@ object CodeLocations {
     @JvmStatic
     @Synchronized
     fun newCodeLocation(
+        context: TraceContext,
         stackTraceElement: StackTraceElement,
         accessPath: AccessPath? = null,
         argumentNames: List<AccessPath?>? = null,
     ): Int =
-        TRACE_CONTEXT.newCodeLocation(stackTraceElement, accessPath, argumentNames)
+        context.newCodeLocation(stackTraceElement, accessPath, argumentNames)
 
     /**
      * Returns the [StackTraceElement] associated with the specified code location ID.
@@ -67,9 +71,9 @@ object CodeLocations {
      */
     @JvmStatic
     @Synchronized
-    fun stackTrace(codeLocationId: Int): StackTraceElement = TRACE_CONTEXT.stackTrace(codeLocationId)
+    fun stackTrace(context: TraceContext, codeLocationId: Int): StackTraceElement = context.stackTrace(codeLocationId)
 
     @JvmStatic
     @Synchronized
-    fun accessPath(codeLocationId: Int): AccessPath? = TRACE_CONTEXT.accessPath(codeLocationId)
+    fun accessPath(context: TraceContext, codeLocationId: Int): AccessPath? = context.accessPath(codeLocationId)
 }
