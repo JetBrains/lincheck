@@ -415,4 +415,382 @@ class TreeTest {
         }
         assertEquals(expected, transformedTree)
     }
+
+    @Test
+    fun `find on empty tree returns null`() {
+        val tree = tree<Int> {}
+
+        val result = tree.find { it == 42 }
+
+        assertEquals(null, result)
+    }
+
+    @Test
+    fun `find on single-node tree with match returns data`() {
+        val tree = tree {
+            node(42)
+        }
+
+        val result = tree.find { it == 42 }
+
+        assertEquals(42, result)
+    }
+
+    @Test
+    fun `find on single-node tree with no match returns null`() {
+        val tree = tree {
+            node(1)
+        }
+
+        val result = tree.find { it == 42 }
+
+        assertEquals(null, result)
+    }
+
+    @Test
+    fun `find on larger tree with multiple occurrences returns match`() {
+        val tree = tree {
+            node(1) {
+                node(2) {
+                    node(5)
+                    node(6)
+                }
+                node(3) {
+                    node(5)
+                    node(7)
+                }
+                node(4) {
+                    node(5)
+                }
+            }
+        }
+
+        val result = tree.find { it == 5 }
+
+        assertEquals(5, result)
+    }
+
+    @Test
+    fun `find on larger tree with no occurrences returns null`() {
+        val tree = tree {
+            node(1) {
+                node(2) {
+                    node(3)
+                    node(4)
+                }
+                node(5) {
+                    node(6)
+                    node(7)
+                }
+            }
+        }
+
+        val result = tree.find { it == 42 }
+
+        assertEquals(null, result)
+    }
+
+    @Test
+    fun `findNode on empty tree returns null`() {
+        val tree = tree<Int> {}
+
+        val result = tree.findNode { it.data == 42 }
+
+        assertEquals(null, result)
+    }
+
+    @Test
+    fun `findNode on single-node tree with match returns node`() {
+        var target: Tree.Node<Int>? = null
+        val tree = tree {
+            target = node(42)
+        }
+
+        val result = tree.findNode { it.data == 42 }
+
+        assertEquals(target, result)
+    }
+
+    @Test
+    fun `findNode on single-node tree with no match returns null`() {
+        val tree = tree {
+            node(1)
+        }
+
+        val result = tree.findNode { it.data == 42 }
+
+        assertEquals(null, result)
+    }
+
+    @Test
+    fun `findNode on larger tree with multiple occurrences returns first match`() {
+        var first: Tree.Node<Int>? = null
+        var second: Tree.Node<Int>? = null
+        var third: Tree.Node<Int>? = null
+        val tree = tree {
+            node(1) {
+                node(2) {
+                    first = node(5)
+                    node(6)
+                }
+                node(3) {
+                    second = node(5)
+                    node(7)
+                }
+                node(4) {
+                    third = node(5)
+                }
+            }
+        }
+
+        val result = tree.findNode { it.data == 5 }
+
+        assertEquals(first, result)
+    }
+
+    @Test
+    fun `findNode on larger tree with no occurrences returns null`() {
+        val tree = tree {
+            node(1) {
+                node(2) {
+                    node(3)
+                    node(4)
+                }
+                node(5) {
+                    node(6)
+                    node(7)
+                }
+            }
+        }
+
+        val result = tree.findNode { it.data == 42 }
+
+        assertEquals(null, result)
+    }
+
+    @Test
+    fun `findNode when root matches and deeper node also matches returns root`() {
+        var root: Tree.Node<Int>? = null
+        var deeper: Tree.Node<Int>? = null
+        val tree = tree {
+            root = node(5) {
+                node(2) {
+                    deeper = node(5)
+                    node(6)
+                }
+                node(3)
+            }
+        }
+
+        val result = tree.findNode { it.data == 5 }
+
+        assertEquals(root, result)
+    }
+
+    @Test
+    fun `findNode when root matches and no deeper node matches returns root`() {
+        var root: Tree.Node<Int>? = null
+        val tree = tree {
+            root = node(5) {
+                node(2) {
+                    node(3)
+                    node(6)
+                }
+                node(7)
+            }
+        }
+
+        val result = tree.findNode { it.data == 5 }
+
+        assertEquals(root, result)
+    }
+
+    @Test
+    fun `findLast on empty tree returns null`() {
+        val tree = tree<Int> {}
+
+        val result = tree.findLast { it == 42 }
+
+        assertEquals(null, result)
+    }
+
+    @Test
+    fun `findLast on single-node tree with match returns data`() {
+        val tree = tree {
+            node(42)
+        }
+
+        val result = tree.findLast { it == 42 }
+
+        assertEquals(42, result)
+    }
+
+    @Test
+    fun `findLast on single-node tree with no match returns null`() {
+        val tree = tree {
+            node(1)
+        }
+
+        val result = tree.findLast { it == 42 }
+
+        assertEquals(null, result)
+    }
+
+    @Test
+    fun `findLast on larger tree with multiple occurrences returns match`() {
+        val tree = tree {
+            node(1) {
+                node(2) {
+                    node(5)
+                    node(6)
+                }
+                node(3) {
+                    node(5)
+                    node(7)
+                }
+                node(4) {
+                    node(5)
+                }
+            }
+        }
+
+        val result = tree.findLast { it == 5 }
+
+        assertEquals(5, result)
+    }
+
+    @Test
+    fun `findLast on larger tree with no occurrences returns null`() {
+        val tree = tree {
+            node(1) {
+                node(2) {
+                    node(3)
+                    node(4)
+                }
+                node(5) {
+                    node(6)
+                    node(7)
+                }
+            }
+        }
+
+        val result = tree.findLast { it == 42 }
+
+        assertEquals(null, result)
+    }
+
+    @Test
+    fun `findLastNode on empty tree returns null`() {
+        val tree = tree<Int> {}
+
+        val result = tree.findLastNode { it.data == 42 }
+
+        assertEquals(null, result)
+    }
+
+    @Test
+    fun `findLastNode on single-node tree with match returns node`() {
+        var target: Tree.Node<Int>? = null
+        val tree = tree {
+            target = node(42)
+        }
+
+        val result = tree.findLastNode { it.data == 42 }
+
+        assertEquals(target, result)
+    }
+
+    @Test
+    fun `findLastNode on single-node tree with no match returns null`() {
+        val tree = tree {
+            node(1)
+        }
+
+        val result = tree.findLastNode { it.data == 42 }
+
+        assertEquals(null, result)
+    }
+
+    @Test
+    fun `findLastNode on larger tree with multiple occurrences returns last match`() {
+        var first: Tree.Node<Int>? = null
+        var second: Tree.Node<Int>? = null
+        var third: Tree.Node<Int>? = null
+        val tree = tree {
+            node(1) {
+                node(2) {
+                    first = node(5)
+                    node(6)
+                }
+                node(3) {
+                    second = node(5)
+                    node(7)
+                }
+                node(4) {
+                    third = node(5)
+                }
+            }
+        }
+
+        val result = tree.findLastNode { it.data == 5 }
+
+        assertEquals(third, result)
+    }
+
+    @Test
+    fun `findLastNode on larger tree with no occurrences returns null`() {
+        val tree = tree {
+            node(1) {
+                node(2) {
+                    node(3)
+                    node(4)
+                }
+                node(5) {
+                    node(6)
+                    node(7)
+                }
+            }
+        }
+
+        val result = tree.findLastNode { it.data == 42 }
+
+        assertEquals(null, result)
+    }
+
+    @Test
+    fun `findLastNode when root matches and deeper node also matches returns deeper node`() {
+        var root: Tree.Node<Int>? = null
+        var deeper: Tree.Node<Int>? = null
+        val tree = tree {
+            root = node(5) {
+                node(2) {
+                    deeper = node(5)
+                    node(6)
+                }
+                node(3)
+            }
+        }
+
+        val result = tree.findLastNode { it.data == 5 }
+
+        assertEquals(deeper, result)
+    }
+
+    @Test
+    fun `findLastNode when root matches and no deeper node matches returns root`() {
+        var root: Tree.Node<Int>? = null
+        val tree = tree {
+            root = node(5) {
+                node(2) {
+                    node(3)
+                    node(6)
+                }
+                node(7)
+            }
+        }
+
+        val result = tree.findLastNode { it.data == 5 }
+
+        assertEquals(root, result)
+    }
 }

@@ -98,6 +98,30 @@ fun <T> List<T>.indexOfLast(from: Int, predicate: (T) -> Boolean): Int {
 }
 
 /**
+  * Returns the last non-null value produced by [transform] function being applied to elements of this collection in iteration order,
+  * or `null` if no non-null value was produced.
+ */
+inline fun <T, R : Any> Iterable<T>.lastNotNullOfOrNull(transform: (T) -> R?): R? {
+    for (element in reversed()) {
+        val transformed = transform(element)
+        if (transformed != null) return transformed
+    }
+    return null
+}
+
+/**
+  * Returns the last non-null value produced by [transform] function being applied to elements of this list in iteration order,
+  * or `null` if no non-null value was produced.
+ */
+inline fun <T, R : Any> List<T>.lastNotNullOfOrNull(transform: (T) -> R?): R? {
+    for (i in lastIndex downTo 0) {
+        val transformed = transform(get(i))
+        if (transformed != null) return transformed
+    }
+    return null
+}
+
+/**
  * Returns the first non-null transformed element.
  *
  * @param transform a transformation function.

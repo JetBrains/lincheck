@@ -10,7 +10,8 @@
 
 package org.jetbrains.lincheck.util.tree
 
-import org.jetbrains.lincheck.util.ObservableList
+import org.jetbrains.lincheck.util.*
+import org.jetbrains.lincheck.util.collections.*
 
 // ========================================================
 //   Tree and Node interfaces and basic utils
@@ -222,4 +223,48 @@ private fun <T> Tree.Node<T>.transform(parent: Tree.Node<T>?, transform: (Tree.N
     return NodeImpl(transformedNode.data, parent).also { node ->
         node.children.addAll(transformedNode.children.map { it.transform(node, transform) })
     }
+}
+
+// ========================================================
+//   Find
+// ========================================================
+
+fun <T> Tree<T>.find(predicate: (T) -> Boolean): T? {
+    return root?.find(predicate)
+}
+
+fun <T> Tree.Node<T>.find(predicate: (T) -> Boolean): T? {
+    if (predicate(data)) return data
+    return children.firstNotNullOfOrNull { it.find(predicate) }
+}
+
+fun <T> Tree<T>.findNode(predicate: (Tree.Node<T>) -> Boolean): Tree.Node<T>? {
+    return root?.findNode(predicate)
+}
+
+fun <T> Tree.Node<T>.findNode(predicate: (Tree.Node<T>) -> Boolean): Tree.Node<T>? {
+    if (predicate(this)) return this
+    return children.firstNotNullOfOrNull { it.findNode(predicate) }
+}
+
+fun <T> Tree<T>.findLast(predicate: (T) -> Boolean): T? {
+    return root?.findLast(predicate)
+}
+
+fun <T> Tree.Node<T>.findLast(predicate: (T) -> Boolean): T? {
+    val found = children.lastNotNullOfOrNull { it.findLast(predicate) }
+    if (found != null) return found
+    if (predicate(data)) return data
+    return null
+}
+
+fun <T> Tree<T>.findLastNode(predicate: (Tree.Node<T>) -> Boolean): Tree.Node<T>? {
+    return root?.findLastNode(predicate)
+}
+
+fun <T> Tree.Node<T>.findLastNode(predicate: (Tree.Node<T>) -> Boolean): Tree.Node<T>? {
+    val found = children.lastNotNullOfOrNull { it.findLastNode(predicate) }
+    if (found != null) return found
+    if (predicate(this)) return this
+    return null
 }
