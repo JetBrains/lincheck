@@ -548,7 +548,7 @@ class LazyTraceReader private constructor(
                             ObjectKind.FIELD_DESCRIPTOR -> loadFieldDescriptor(data, context, true)
                             ObjectKind.VARIABLE_DESCRIPTOR -> loadVariableDescriptor(data, context, true)
                             ObjectKind.STRING -> loadString(data, codeLocs, true)
-                            ObjectKind.ACCESS_PATH -> loadAccessPath(data, context, codeLocs, true)
+                            ObjectKind.ACCESS_PATH -> loadAccessPath(data, codeLocs, true)
                             ObjectKind.CODE_LOCATION -> loadCodeLocation(data, codeLocs, true)
                             ObjectKind.BLOCK_START -> {
                                 val list = dataBlocks.computeIfAbsent(id) { mutableListOf() }
@@ -973,7 +973,7 @@ private fun loadObjects(
             ObjectKind.FIELD_DESCRIPTOR -> loadFieldDescriptor(input, context, restore)
             ObjectKind.VARIABLE_DESCRIPTOR -> loadVariableDescriptor(input, context, restore)
             ObjectKind.STRING -> loadString(input, codeLocs, restore)
-            ObjectKind.ACCESS_PATH -> loadAccessPath(input, context, codeLocs, restore)
+            ObjectKind.ACCESS_PATH -> loadAccessPath(input, codeLocs, restore)
             ObjectKind.CODE_LOCATION -> loadCodeLocation(input, codeLocs, restore)
             // Tracepoint reader returns "true" if a read is complete and "false" if it encountered the end of the block
             ObjectKind.TRACEPOINT -> if (!tracePointReader(input, context, codeLocs)) return ObjectKind.BLOCK_END
@@ -1063,7 +1063,6 @@ private fun loadString(
 
 private fun loadAccessPath(
     input: DataInput,
-    context: TraceContext,
     codeLocs: CodeLocationsContext,
     restore: Boolean
 ): Int {
