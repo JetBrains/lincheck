@@ -103,7 +103,11 @@ internal class MethodCallTransformer(
         }
 
         val resultInterceptorLocal = newLocal(OBJECT_TYPE).also {
-            invokeStatic(Injections::createResultInterceptor)
+            if(configuration.interceptMethodCallResults) {
+                invokeStatic(Injections::createResultInterceptor)
+            } else {
+                pushNull()
+            }
             storeLocal(it)
         }
 

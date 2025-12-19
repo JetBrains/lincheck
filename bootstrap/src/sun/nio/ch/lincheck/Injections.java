@@ -740,13 +740,6 @@ public class Injections {
         eventTracker.onMethodCallException(threadDescriptor, methodId, receiver, params, exception, interceptor);
     }
 
-    /**
-     * Retrieves a value from the provided BootstrapResult object or throws an exception if the result contains it.
-     *
-     * @param result the BootstrapResult object from which the value is to be retrieved
-     * @return the value contained in the BootstrapResult object
-     * @throws Throwable if the result contains it
-     */
     public static Object getFromOrThrow(BootstrapResult<?> result) throws Throwable {
         return result.getOrThrow();
     }
@@ -755,14 +748,21 @@ public class Injections {
         return new ResultInterceptor();
     }
 
-    public static boolean isResultIntercepted(ResultInterceptor resultInterceptor) {
-        if (resultInterceptor.isResultIntercepted()) {
-            System.out.println("INTERCEPTED");
-            System.out.println(resultInterceptor.getInterceptedResult());
+    public static boolean isResultOrExceptionIntercepted(ResultInterceptor resultInterceptor) throws Exception {
+        // No result intercepted if there is no result interceptor in the first place
+        if (resultInterceptor == null) {
+            return false;
         }
         return resultInterceptor.isResultIntercepted() || resultInterceptor.isExceptionIntercepted();
     }
 
+    /**
+     * Retrieves a value from the provided ResultInterceptor object or throws an exception if the result contains it.
+     *
+     * @param resultInterceptor the ResultInterceptor object from which the value is to be retrieved. Assumes that it is not null
+     * @return the value contained in the BootstrapResult object
+     * @throws Throwable if the result contains it
+     */
     public static Object getResultOrThrow(ResultInterceptor resultInterceptor) throws Throwable {
         if(resultInterceptor.isExceptionIntercepted()) {
             throw resultInterceptor.getInterceptedException();

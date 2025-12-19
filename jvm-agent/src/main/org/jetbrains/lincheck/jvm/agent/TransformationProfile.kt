@@ -31,6 +31,7 @@ class TransformationConfiguration(
     var trackArrayElementWrites: Boolean = false,
 
     var trackMethodCalls: Boolean = false,
+    var interceptMethodCallResults: Boolean = false,
     var trackConstructorCalls: Boolean = false,
     var trackInlineMethodCalls: Boolean = false,
 
@@ -269,6 +270,7 @@ object TraceRecorderDefaultTransformationProfile : TransformationProfile {
             trackArrayElementWrites = true
 
             trackMethodCalls = true
+            interceptMethodCallResults = true
             trackConstructorCalls = true
             trackInlineMethodCalls = false
 
@@ -325,6 +327,7 @@ object TraceDebuggerDefaultTransformationProfile : TransformationProfile {
             trackAllSharedMemoryAccesses = true
 
             trackMethodCalls = true
+            interceptMethodCallResults = true
             trackInlineMethodCalls = true
 
             trackAllThreadsOperations = true
@@ -385,6 +388,7 @@ object ModelCheckingDefaultTransformationProfile : TransformationProfile {
             trackAllSharedMemoryAccesses = true
 
             trackMethodCalls = true
+            interceptMethodCallResults = true
             trackInlineMethodCalls = true
 
             trackAllThreadsOperations = true
