@@ -68,8 +68,8 @@ data class TraceMetaInfo private constructor(
     val methodName: String,
     val startTime: Long,
     val isDiff: Boolean = false,
-    val leftMetaInfo: TraceMetaInfo? = null,
-    val rightMetaInfo: TraceMetaInfo? = null
+    val leftTraceMetaInfo: TraceMetaInfo? = null,
+    val rightTraceMetaInfo: TraceMetaInfo? = null
 ) {
     var endTime: Long = -1
         private set

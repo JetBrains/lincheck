@@ -11,5 +11,5 @@
 package org.jetbrains.lincheck.trace
 
 fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName: String) {
-    TODO()
+    // TODO
 }

@@ -27,9 +27,7 @@ import java.io.DataInput
 import java.io.DataOutput
 import java.math.BigDecimal
 import java.math.BigInteger
-import java.util.EnumSet
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.experimental.or
 import kotlin.reflect.KClass
 
 private val EVENT_ID_GENERATOR = AtomicInteger(0)
@@ -41,7 +39,7 @@ var INJECTIONS_VOID_OBJECT: Any? = null
  */
 enum class DiffStatus {
     /**
-     * Trace is not diff at all, or this tracepoint is identical in two traces.
+     * TThis tracepoint is identical in two traces.
      */
     COMMON,
 
@@ -56,9 +54,11 @@ enum class DiffStatus {
     ADDED,
 
     /**
-     * This is call tracepoint, and it has the same method in both traces but differs in arguments values.
+     * Tracepoint was edited.
+     *
+     * For example, fi it is a method called tracepoint, it has the same method in both traces but differs in arguments values.
      */
-    ARGS_DIFFERENCE,
+    EDITED,
 }
 
 sealed class TRTracePoint(
@@ -67,14 +67,17 @@ sealed class TRTracePoint(
     val threadId: Int,
     val eventId: Int
 ) {
-    internal var diffStatusField: DiffStatus? = null
-        set(value)  {
+    /**
+     * Diff status of this trace point.
+     *
+     * `null` means tracepoint doesn't belong to diff, and is part of simple trace.
+     */
+    var diffStatus: DiffStatus? = null
+        internal set(value)  {
+            require(value != null)  { "Diff status cannot be set to null"}
             check(field == null) { "Diff status can be changed only once" }
             field = value
         }
-
-    val diffStatus: DiffStatus
-        get() = diffStatusField ?: DiffStatus.COMMON
 
     internal open fun save(out: TraceWriter) {
         saveReferences(out)
@@ -84,7 +87,7 @@ sealed class TRTracePoint(
         out.writeInt(codeLocationId)
         out.writeInt(threadId)
         out.writeInt(eventId)
-        out.writeDiffStatus(diffStatusField)
+        out.writeDiffStatus(diffStatus)
     }
 
     internal open fun saveReferences(out: TraceWriter) {
@@ -723,7 +726,7 @@ fun loadTRTracePoint(context: TraceContext, inp: DataInput): TRTracePoint {
     val threadId = inp.readInt()
     val eventId = inp.readInt()
     val diffStatus = inp.readDiffStatus()
-    return loader(context, inp, codeLocationId, threadId, eventId).also { if (diffStatus != null) it.diffStatusField = diffStatus }
+    return loader(context, inp, codeLocationId, threadId, eventId).also { if (diffStatus != null) it.diffStatus = diffStatus }
 }
 
 private fun String.escape() = this
