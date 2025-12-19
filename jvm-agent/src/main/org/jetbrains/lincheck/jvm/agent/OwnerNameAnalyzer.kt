@@ -497,7 +497,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
 
             Opcodes.ARRAYLENGTH -> {
                 val arrayName = pop()
-                val arrayLengthAccess = ArrayLengthAccessLocation(context)
+                val arrayLengthAccess = ObjectFieldAccessLocation.createArrayLengthLocation(context)
                 if (arrayName != null) {
                     push(arrayName + arrayLengthAccess)
                 } else {
