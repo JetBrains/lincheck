@@ -396,7 +396,7 @@ class TraceCollectingEventTracker(
 
     override fun getNextTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker): Long = runInsideIgnoredSection {
         Logger. error { "Trace Recorder mode doesn't support Trace Debugger-specific instrumentation" }
-        0L
+        return 0L
     }
 
     override fun advanceCurrentTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker, oldId: Long) =
@@ -411,7 +411,7 @@ class TraceCollectingEventTracker(
         bootstrapMethodArguments: Array<out Any?>
     ): CallSite? = runInsideIgnoredSection {
         Logger. error { "Trace Recorder mode doesn't support invoke dynamic instrumentation" }
-        null
+        return null
     }
 
     override fun cacheInvokeDynamicCallSite(
@@ -868,7 +868,7 @@ class TraceCollectingEventTracker(
 
     override fun shouldInvokeBeforeEvent(): Boolean = runInsideIgnoredSection {
         Logger. error { "Trace Recorder mode doesn't support IDEA Plugin integration" }
-        false
+        return false
     }
 
     override fun beforeEvent(eventId: Int, type: String) = runInsideIgnoredSection {
@@ -877,7 +877,7 @@ class TraceCollectingEventTracker(
 
     override fun getCurrentEventId(): Int = runInsideIgnoredSection {
         Logger. error { "Trace Recorder mode doesn't support IDEA Plugin integration" }
-        -1
+        return -1
     }
 
     private var startTime = System.currentTimeMillis()
