@@ -27,12 +27,39 @@ import java.io.DataInput
 import java.io.DataOutput
 import java.math.BigDecimal
 import java.math.BigInteger
+import java.util.EnumSet
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.experimental.or
 import kotlin.reflect.KClass
 
 private val EVENT_ID_GENERATOR = AtomicInteger(0)
 
 var INJECTIONS_VOID_OBJECT: Any? = null
+
+/**
+ * Describes status of tracepoint in trace diff
+ */
+enum class DiffStatus {
+    /**
+     * Trace is not diff at all, or this tracepoint is identical in two traces.
+     */
+    COMMON,
+
+    /**
+     * This tracepoint was found in the first, but not in the second trace, when diff was created.
+     */
+    REMOVED,
+
+    /**
+     * This tracepoint was not found in the first, but found in the second trace, when diff was created.
+     */
+    ADDED,
+
+    /**
+     * This is call tracepoint, and it has the same method in both traces but differs in arguments values.
+     */
+    ARGS_DIFFERENCE,
+}
 
 sealed class TRTracePoint(
     internal val context: TraceContext,
@@ -40,6 +67,15 @@ sealed class TRTracePoint(
     val threadId: Int,
     val eventId: Int
 ) {
+    internal var diffStatusField: DiffStatus? = null
+        set(value)  {
+            check(field == null) { "Diff status can be changed only once" }
+            field = value
+        }
+
+    val diffStatus: DiffStatus
+        get() = diffStatusField ?: DiffStatus.COMMON
+
     internal open fun save(out: TraceWriter) {
         saveReferences(out)
 
@@ -48,6 +84,7 @@ sealed class TRTracePoint(
         out.writeInt(codeLocationId)
         out.writeInt(threadId)
         out.writeInt(eventId)
+        out.writeDiffStatus(diffStatusField)
     }
 
     internal open fun saveReferences(out: TraceWriter) {
@@ -141,10 +178,12 @@ class TRMethodCallTracePoint(
     val methodId: Int,
     val obj: TRObject?,
     val parameters: List<TRObject?>,
-    val flags: Short = 0,
+    flags: Short = 0,
     parentTracePoint: TRContainerTracePoint? = null,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
 ) : TRContainerTracePoint(context, threadId, codeLocationId, parentTracePoint, eventId) {
+    var flags: Short = flags
+        private set
     var result: TRObject? = null
     var exceptionClassName: String? = null
 
@@ -158,6 +197,20 @@ class TRMethodCallTracePoint(
     val argumentNames: List<AccessPath?> get() = context.methodCallArgumentNames(codeLocationId) ?: emptyList()
     val argumentTypes: List<Types.Type> get() = methodDescriptor.argumentTypes
     val returnType: Types.Type get() = methodDescriptor.returnType
+
+    var hasAddedChildren: Boolean
+        get() = flags.toInt() and HAS_ADDED_CHILDREN_FLAG != 0
+        set(value) {
+            if (!value) return
+            flags = (flags.toInt() or HAS_ADDED_CHILDREN_FLAG).toShort()
+        }
+
+    var hasRemovedChildren: Boolean
+        get() = flags.toInt() and HAS_REMOVED_CHILDREN_FLAG != 0
+        set(value) {
+            if (!value) return
+            flags = (flags.toInt() or HAS_REMOVED_CHILDREN_FLAG).toShort()
+        }
 
     fun isStatic(): Boolean = obj == null
 
@@ -240,8 +293,12 @@ class TRMethodCallTracePoint(
     }
 
     companion object {
-        // Flag which tells that the method was not tracked from its start and has some missing tracepoints
+        // Flag that tells that the method was not tracked from its start and has some missing tracepoints
         const val INCOMPLETE_METHOD_FLAG: Int = 1
+        // Flag that tells that method call has child(ren) with [DiffStatus.ADDED] diff status
+        const val HAS_ADDED_CHILDREN_FLAG: Int = 2
+        // Flag that tells that method call has child(ren) with [DiffStatus.REMOVED] diff status
+        const val HAS_REMOVED_CHILDREN_FLAG: Int = 4
 
         internal fun load(context: TraceContext, inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRMethodCallTracePoint {
             val methodId = inp.readInt()
@@ -253,7 +310,7 @@ class TRMethodCallTracePoint(
             }
             val flags = inp.readShort()
 
-            val tracePoint = TRMethodCallTracePoint(
+            return TRMethodCallTracePoint(
                 context = context,
                 threadId = threadId,
                 codeLocationId = codeLocationId,
@@ -263,8 +320,6 @@ class TRMethodCallTracePoint(
                 flags = flags,
                 eventId = eventId,
             )
-
-            return tracePoint
         }
     }
 }
@@ -667,7 +722,8 @@ fun loadTRTracePoint(context: TraceContext, inp: DataInput): TRTracePoint {
     val codeLocationId = inp.readInt()
     val threadId = inp.readInt()
     val eventId = inp.readInt()
-    return loader(context, inp, codeLocationId, threadId, eventId)
+    val diffStatus = inp.readDiffStatus()
+    return loader(context, inp, codeLocationId, threadId, eventId).also { if (diffStatus != null) it.diffStatusField = diffStatus }
 }
 
 private fun String.escape() = this

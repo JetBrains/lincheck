@@ -338,6 +338,20 @@ class LazyTraceReader private constructor(
 
     val metaInfo: TraceMetaInfo? get() = input.metaInfo
 
+    val isDiff: Boolean get() = input.metaInfo?.isDiff ?: false
+
+    val leftMetaInfo: TraceMetaInfo?
+        get() {
+            check(isDiff) { "Cannot provide left trace meta info if trace is not a diff" }
+            return input.metaInfo?.leftMetaInfo
+        }
+
+    val rightMetaInfo: TraceMetaInfo?
+        get() {
+            check(isDiff) { "Cannot provide right trace meta info if trace is not a diff" }
+            return input.metaInfo?.rightMetaInfo
+        }
+
     private val dataStream: SeekableInputStream
     private val data: SeekableDataInput
     private val dataBlocks = mutableMapOf<Int, MutableList<DataBlock>>()
