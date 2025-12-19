@@ -115,27 +115,13 @@ internal class MethodCallTransformer(
                 // Stack <empty>
                 ifStatement(
                     condition =  {
-                        loadLocal(resultInterceptorLocal)
-                        // Stack <resultInterceptor>
-                        invokeStatic(Injections::isResultIntercepted)
-                        // Stack <empty>
+                        isMethodIntecepted(resultInterceptorLocal)
                     },
                     thenClause = {
-                        // Stack <empty>
-                        loadLocal(resultInterceptorLocal)
-                        // Stack <resultInterceptor>
-                        invokeStatic(Injections::getResultOrThrow)
-                        // Stack <result>
-                        if (returnType == VOID_TYPE) pop() else unbox(returnType)
-                        // Stack <result?>
+                        getInterceptedValue(resultInterceptorLocal, returnType)
                     },
                     elseClause = {
-                        // Stack <empty>
-                        receiverLocal?.let { loadLocal(it) }
-                        loadLocals(argumentLocals)
-                        // STACK: receiver?, arguments
-                        mv.visitMethodInsn(opcode, owner, name, desc, itf)
-                        // Stack <result?>
+                        runMethodNormally(receiverLocal, argumentLocals, opcode, owner, name, desc, itf)
                     },
                 )
                 // STACK: result?
@@ -252,6 +238,36 @@ internal class MethodCallTransformer(
         invokeStatic(Injections::onMethodCallException)
         // STACK: <empty>
     }
+
+    protected fun GeneratorAdapter.isMethodIntecepted(resultInterceptorLocal: Int) {
+        // Stack <empty>
+        loadLocal(resultInterceptorLocal)
+        // Stack <resultInterceptor>
+        invokeStatic(Injections::isResultOrExceptionIntercepted)
+        // Stack <empty>
+    }
+
+    protected fun GeneratorAdapter.getInterceptedValue(resultInterceptorLocal: Int, returnType: Type) {
+            // Stack <empty>
+            loadLocal(resultInterceptorLocal)
+            // Stack <resultInterceptor>
+            invokeStatic(Injections::getResultOrThrow)
+            // Stack <result>
+            if (returnType == VOID_TYPE) pop() else unbox(returnType)
+            // Stack <result?>
+    }
+
+    protected fun GeneratorAdapter.runMethodNormally(receiverLocal: Int?, argumentLocals: IntArray, opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
+        // Stack <empty>
+        receiverLocal?.let { loadLocal(it) }
+        loadLocals(argumentLocals)
+        // STACK: receiver?, arguments
+        mv.visitMethodInsn(opcode, owner, name, desc, itf)
+        // Stack <result?>
+
+    }
+
+
 
     protected fun getOwnerName(desc: String, opcode: Int): AccessPath? {
         val stack = ownerNameAnalyzer?.stack ?: return null
