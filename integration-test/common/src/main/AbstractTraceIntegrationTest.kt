@@ -10,7 +10,6 @@
 
 import org.jetbrains.kotlinx.lincheck_test.util.OVERWRITE_REPRESENTATION_TESTS_OUTPUT
 import org.jetbrains.lincheck.trace.LazyTraceReader
-import org.jetbrains.lincheck.trace.TRACE_CONTEXT
 import org.jetbrains.lincheck.trace.TRContainerTracePoint
 import org.jetbrains.lincheck.trace.TRTracePoint
 import org.junit.jupiter.api.AfterEach
@@ -177,7 +176,6 @@ abstract class AbstractTraceIntegrationTest {
             }
             
             try {
-                TRACE_CONTEXT.clear()
                 val reader = LazyTraceReader(file.absolutePath)
                 val roots = reader.readRoots()
                 traceShouldContain.forEach { query ->
