@@ -419,7 +419,7 @@ class TraceCollectingEventTracker(
         descriptor: String,
         bootstrapMethodData: Injections.HandlePojo,
         bootstrapMethodArguments: Array<out Any?>,
-        callSite: CallSite
+        callSite: CallSite,
     ) = runInsideIgnoredSection {
         Logger. error { "Trace Recorder mode doesn't support invoke dynamic instrumentation" }
     }
@@ -430,7 +430,8 @@ class TraceCollectingEventTracker(
         threadDescriptor: ThreadDescriptor,
         codeLocation: Int,
         obj: Any?,
-        fieldId: Int
+        fieldId: Int,
+        typeDescriptor: String,
     ) {}
 
     override fun beforeReadArrayElement(
@@ -438,6 +439,7 @@ class TraceCollectingEventTracker(
         codeLocation: Int,
         array: Any,
         index: Int,
+        typeDescriptor: String,
     ) {}
 
     // Needs to run inside ignored section
