@@ -67,6 +67,8 @@ internal class ModelCheckingStrategy(
         if (isInTraceDebuggerMode) BaseObjectTracker() else LocalObjectManager()
     }
 
+    override val memoryTracker: MemoryTracker? = null
+
     // Tracker of the monitors' operations.
     override val monitorTracker: MonitorTracker = ModelCheckingMonitorTracker()
 

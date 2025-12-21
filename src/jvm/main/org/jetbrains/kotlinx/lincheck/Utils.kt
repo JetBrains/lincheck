@@ -174,6 +174,10 @@ fun <T> kotlin.Result<T>.cancelledByLincheck() = exceptionOrNull() === cancellat
 
 private val cancellationByLincheckException = Exception("Cancelled by lincheck")
 
+
+internal val String.canonicalClassName get() = this.replace('/', '.')
+
+
 internal val Throwable.text: String get() {
     val writer = StringWriter()
     printStackTrace(PrintWriter(writer))

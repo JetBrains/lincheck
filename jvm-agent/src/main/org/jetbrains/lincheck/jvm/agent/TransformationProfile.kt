@@ -50,6 +50,9 @@ class TransformationConfiguration(
 
     var interceptInvokeDynamic: Boolean = false,
 
+    // TODO: Figure out where to set this to true
+    var interceptReadResults: Boolean = false,
+
     var trackCoroutineSuspensions: Boolean = false,
     var interceptCoroutineDelays: Boolean = false,
 
