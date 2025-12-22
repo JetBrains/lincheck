@@ -19,6 +19,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.trace.Trace
 //import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import sun.nio.ch.lincheck.TestThread
 import java.lang.reflect.*
@@ -127,9 +128,9 @@ internal class EventStructureStrategy(
     }
 
     // TODO: temporarily disable trace collection for event structure strategy
-    override fun tryCollectTrace(result: InvocationResult): Trace? {
+    override fun tryCollectTrace(result: InvocationResult): Pair<Trace?, InvocationResult> {
         // return super.tryCollectTrace(result)
-        return null
+        return null to result
     }
 
     class Stats {
