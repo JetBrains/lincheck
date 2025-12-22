@@ -270,7 +270,6 @@ object TraceRecorderDefaultTransformationProfile : TransformationProfile {
             trackArrayElementWrites = true
 
             trackMethodCalls = true
-            interceptMethodCallResults = true
             trackConstructorCalls = true
             trackInlineMethodCalls = false
 
@@ -327,8 +326,8 @@ object TraceDebuggerDefaultTransformationProfile : TransformationProfile {
             trackAllSharedMemoryAccesses = true
 
             trackMethodCalls = true
-            interceptMethodCallResults = true
             trackInlineMethodCalls = true
+            interceptMethodCallResults = true
 
             trackAllThreadsOperations = true
             trackAllSynchronizationOperations = true
@@ -388,8 +387,8 @@ object ModelCheckingDefaultTransformationProfile : TransformationProfile {
             trackAllSharedMemoryAccesses = true
 
             trackMethodCalls = true
-            interceptMethodCallResults = true
             trackInlineMethodCalls = true
+            interceptMethodCallResults = true
 
             trackAllThreadsOperations = true
             trackAllSynchronizationOperations = true
