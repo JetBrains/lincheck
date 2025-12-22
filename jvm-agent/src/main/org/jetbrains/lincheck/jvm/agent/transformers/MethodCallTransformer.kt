@@ -102,6 +102,10 @@ internal class MethodCallTransformer(
             storeLocal(it)
         }
 
+        // creates and pushes onto the stack a result interceptor object
+        // to allow event tracker to intercept method call if it wishes,
+        // if configuration disables method result interception,
+        // does not create an object and pushes `null` instead
         val resultInterceptorLocal = newLocal(OBJECT_TYPE).also {
             if(configuration.interceptMethodCallResults) {
                 invokeStatic(Injections::createResultInterceptor)
@@ -112,20 +116,29 @@ internal class MethodCallTransformer(
         }
 
         // STACK: <empty>
-        processMethodCallEnter(methodId, receiverLocal, argumentsArrayLocal, ownerName, argumentNames, threadDescriptorLocal, resultInterceptorLocal)
+        processMethodCallEnter(
+            methodId,
+            receiverLocal,
+            argumentsArrayLocal,
+            ownerName,
+            argumentNames,
+            threadDescriptorLocal,
+            resultInterceptorLocal
+        )
         // STACK: <empty>
+
         tryCatchFinally(
             tryBlock = {
                 // Stack <empty>
                 ifStatement(
                     condition =  {
-                        isMethodIntecepted(resultInterceptorLocal)
+                        isMethodIntercepted(resultInterceptorLocal)
                     },
                     thenClause = {
-                        getInterceptedValue(resultInterceptorLocal, returnType)
+                        getOrThrowInterceptedResult(resultInterceptorLocal, returnType)
                     },
                     elseClause = {
-                        runMethodNormally(receiverLocal, argumentLocals, opcode, owner, name, desc, itf)
+                        runMethod(opcode, owner, name, desc, itf, receiverLocal, argumentLocals)
                     },
                 )
                 // STACK: result?
@@ -156,7 +169,7 @@ internal class MethodCallTransformer(
         )
     }
 
-    protected fun GeneratorAdapter.processMethodCallEnter(
+    private fun GeneratorAdapter.processMethodCallEnter(
         methodId: Int,
         receiverLocal: Int?,
         argumentsArrayLocal: Int,
@@ -174,7 +187,6 @@ internal class MethodCallTransformer(
         pushReceiver(receiverLocal)
         loadLocal(argumentsArrayLocal)
         loadLocal(resultInterceptorLocal)
-//        pushNull() // result interceptor
 
         // STACK: descriptor, codeLocation, methodId, receiver?, argumentsArray, interceptor?
         invokeStatic(Injections::onMethodCall)
@@ -182,7 +194,7 @@ internal class MethodCallTransformer(
         invokeBeforeEventIfPluginEnabled("method call ${this@MethodCallTransformer.methodName}")
     }
 
-    protected fun GeneratorAdapter.processMethodCallReturn(
+    private fun GeneratorAdapter.processMethodCallReturn(
         returnType: Type,
         methodId: Int,
         receiverLocal: Int?,
@@ -220,7 +232,7 @@ internal class MethodCallTransformer(
         // STACK: result?
     }
 
-    protected fun GeneratorAdapter.processMethodCallException(
+    private fun GeneratorAdapter.processMethodCallException(
         methodId: Int,
         receiverLocal: Int?,
         argumentsArrayLocal: Int,
@@ -243,44 +255,49 @@ internal class MethodCallTransformer(
         // STACK: <empty>
     }
 
-    protected fun GeneratorAdapter.isMethodIntecepted(resultInterceptorLocal: Int) {
-        // Stack <empty>
+    private fun GeneratorAdapter.isMethodIntercepted(resultInterceptorLocal: Int) {
+        // STACK: <empty>
         loadLocal(resultInterceptorLocal)
-        // Stack <resultInterceptor>
+        // STACK: resultInterceptor
         invokeStatic(Injections::isResultOrExceptionIntercepted)
-        // Stack <empty>
+        // STACK: empty
     }
 
-    protected fun GeneratorAdapter.getInterceptedValue(resultInterceptorLocal: Int, returnType: Type) {
-            // Stack <empty>
+    private fun GeneratorAdapter.getOrThrowInterceptedResult(resultInterceptorLocal: Int, returnType: Type) {
+            // STACK: <empty>
             loadLocal(resultInterceptorLocal)
-            // Stack <resultInterceptor>
-            invokeStatic(Injections::getResultOrThrow)
-            // Stack <result>
+            // STACK: resultInterceptor
+            invokeStatic(Injections::getOrThrowInterceptedResult)
+            // STACK: result
             if (returnType == VOID_TYPE) pop() else unbox(returnType)
-            // Stack <result?>
+            // STACK: result?
     }
 
-    protected fun GeneratorAdapter.runMethodNormally(receiverLocal: Int?, argumentLocals: IntArray, opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
-        // Stack <empty>
+    private fun GeneratorAdapter.runMethod(
+        opcode: Int,
+        owner: String,
+        name: String,
+        desc: String,
+        itf: Boolean,
+        receiverLocal: Int?,
+        argumentLocals: IntArray,
+    ) {
+        // STACK: <empty>
         receiverLocal?.let { loadLocal(it) }
         loadLocals(argumentLocals)
         // STACK: receiver?, arguments
         mv.visitMethodInsn(opcode, owner, name, desc, itf)
-        // Stack <result?>
-
+        // STACK: result?
     }
 
-
-
-    protected fun getOwnerName(desc: String, opcode: Int): AccessPath? {
+    private fun getOwnerName(desc: String, opcode: Int): AccessPath? {
         val stack = ownerNameAnalyzer?.stack ?: return null
         if (opcode == INVOKESTATIC) return null
         val position = getArgumentTypes(desc).sumOf { it.size }
         return stack.getStackElementAt(position)
     }
 
-    protected fun getArgumentNames(desc: String, opcode: Int): List<AccessPath?>? {
+    private fun getArgumentNames(desc: String, opcode: Int): List<AccessPath?>? {
         val stack = ownerNameAnalyzer?.stack ?: return null
         var position = 0
         val argumentTypes = getArgumentTypes(desc)
@@ -291,7 +308,7 @@ internal class MethodCallTransformer(
         }.reversed()
     }
 
-    protected fun GeneratorAdapter.pushReceiver(receiverLocal: Int?) {
+    private fun GeneratorAdapter.pushReceiver(receiverLocal: Int?) {
         // STACK: <empty>
         if (receiverLocal != null) {
             loadLocal(receiverLocal)
@@ -302,7 +319,7 @@ internal class MethodCallTransformer(
     }
 
     @Suppress("UNUSED_PARAMETER")
-    protected fun shouldTrackMethodCall(className: String, methodName: String, descriptor: String): Boolean {
+    private fun shouldTrackMethodCall(className: String, methodName: String, descriptor: String): Boolean {
         // TODO: do not ignore <init>
         if (methodName == "<init>" && !configuration.trackConstructorCalls) return false
         if (isIgnoredClass(className)) return false
@@ -341,7 +358,7 @@ internal class MethodCallTransformer(
         return className == "java/util/concurrent/ThreadLocalRandom" && methodName == "current"
     }
 
-    protected fun sanitizeMethodName(
+    private fun sanitizeMethodName(
         owner: String, originalName: String, instrumentationMode: InstrumentationMode
     ): String {
         fun callRecursive(originalName: String) = sanitizeMethodName(owner, originalName, instrumentationMode)

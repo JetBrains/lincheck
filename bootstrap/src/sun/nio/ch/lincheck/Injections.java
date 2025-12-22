@@ -723,9 +723,7 @@ public class Injections {
      * Called from the instrumented code after any method that returns void successful call, i.e., without any exception.
      */
     public static void onMethodCallReturnVoid(ThreadDescriptor threadDescriptor, int methodId, Object receiver, Object[] params, ResultInterceptor interceptor) {
-        EventTracker eventTracker = getEventTracker(threadDescriptor);
-        if (eventTracker == null || threadDescriptor == null) return;
-        eventTracker.onMethodCallReturn(threadDescriptor, methodId, receiver, params, VOID_RESULT, interceptor);
+        onMethodCallReturn(threadDescriptor, methodId, receiver, params, VOID_RESULT, interceptor);
     }
 
     /**
@@ -740,19 +738,13 @@ public class Injections {
         eventTracker.onMethodCallException(threadDescriptor, methodId, receiver, params, exception, interceptor);
     }
 
-    public static Object getFromOrThrow(BootstrapResult<?> result) throws Throwable {
-        return result.getOrThrow();
-    }
-
-    public static ResultInterceptor createResultInterceptor() throws Exception {
+    public static ResultInterceptor createResultInterceptor() {
         return new ResultInterceptor();
     }
 
-    public static boolean isResultOrExceptionIntercepted(ResultInterceptor resultInterceptor) throws Exception {
+    public static boolean isResultOrExceptionIntercepted(ResultInterceptor resultInterceptor) {
         // No result intercepted if there is no result interceptor in the first place
-        if (resultInterceptor == null) {
-            return false;
-        }
+        if (resultInterceptor == null) return false;
         return resultInterceptor.isResultIntercepted() || resultInterceptor.isExceptionIntercepted();
     }
 
@@ -763,8 +755,8 @@ public class Injections {
      * @return the value contained in the BootstrapResult object
      * @throws Throwable if the result contains it
      */
-    public static Object getResultOrThrow(ResultInterceptor resultInterceptor) throws Throwable {
-        if(resultInterceptor.isExceptionIntercepted()) {
+    public static Object getOrThrowInterceptedResult(ResultInterceptor resultInterceptor) throws Throwable {
+        if (resultInterceptor.isExceptionIntercepted()) {
             throw resultInterceptor.getInterceptedException();
         }
         return resultInterceptor.getInterceptedResult();
