@@ -143,7 +143,7 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
         if (tracePoint.isStatic() && tracePoint.isCalledFromDefiningClass()) {
             return this
         }
-        val ownerName = CodeLocations.accessPath(tracePoint.codeLocationId)
+        val ownerName = CodeLocations.accessPath(tracePoint.context, tracePoint.codeLocationId)
         if (ownerName != null) {
             ownerName.filterThisAccesses().takeIf { !it.isEmpty() }?.let {
                 if (it.isObjectInstanceAccess()) {
@@ -227,7 +227,7 @@ object DefaultTRMethodCallTracePointPrinter: AbstractTRMethodCallTracePointPrint
 
     fun TRAppendable.append(tracePoint: TRMethodCallTracePoint): TRAppendable {
         appendTracePoint(tracePoint)
-        append(tracePoint.codeLocationId, verbose)
+        append(tracePoint, verbose)
         return this
     }
 }
@@ -246,7 +246,7 @@ abstract class AbstractTRLoopTracePointPrinter {
 object DefaultTRLoopTracePointPrinter: AbstractTRLoopTracePointPrinter() {
     fun TRAppendable.append(tracePoint: TRLoopTracePoint): TRAppendable {
         appendTracePoint(tracePoint)
-        append(tracePoint.codeLocationId, verbose)
+        append(tracePoint, verbose)
         return this
     }
 }
@@ -265,7 +265,7 @@ abstract class AbstractTRLoopIterationTracePointPrinter {
 object DefaultTRLoopIterationTracePointPrinter: AbstractTRLoopIterationTracePointPrinter() {
     fun TRAppendable.append(tracePoint: TRLoopIterationTracePoint): TRAppendable {
         appendTracePoint(tracePoint)
-        append(tracePoint.codeLocationId, verbose)
+        append(tracePoint, verbose)
         return this
     }
 }
@@ -283,7 +283,7 @@ abstract class AbstractTRFieldTracePointPrinter {
     }
 
     protected fun TRAppendable.appendOwner(tracePoint: TRFieldTracePoint): TRAppendable {
-        val ownerName = CodeLocations.accessPath(tracePoint.codeLocationId)
+        val ownerName = CodeLocations.accessPath(tracePoint.context, tracePoint.codeLocationId)
         val appendDot = {
             // When lambda captures a local variable, it is wrapped into the `*Ref` class,
             // which stored primitive value in the ` element ` field. We hide such field accesses:
@@ -323,7 +323,7 @@ object DefaultTRFieldTracePointPrinter: AbstractTRFieldTracePointPrinter() {
 
     fun TRAppendable.append(tracePoint: TRFieldTracePoint): TRAppendable {
         appendTracePoint(tracePoint)
-        append(tracePoint.codeLocationId, verbose)
+        append(tracePoint, verbose)
         return this
     }
 }
@@ -345,7 +345,7 @@ object DefaultTRLocalVariableTracePointPrinter: AbstractTRLocalVariableTracePoin
 
     fun TRAppendable.append(tracePoint: TRLocalVariableTracePoint): TRAppendable {
         appendTracePoint(tracePoint)
-        append(tracePoint.codeLocationId, verbose)
+        append(tracePoint, verbose)
         return this
     }
 }
@@ -366,7 +366,7 @@ abstract class AbstractTRArrayTracePointPrinter {
 
     // TODO: DR-356 `ArrayElementByIndexAccessLocation` and `ArrayElementByNameAccessLocation` do not appear in trace
     protected fun TRAppendable.appendOwner(tracePoint: TRArrayTracePoint): TRAppendable {
-        val ownerName = CodeLocations.accessPath(tracePoint.codeLocationId)
+        val ownerName = CodeLocations.accessPath(tracePoint.context, tracePoint.codeLocationId)
         if (ownerName != null) {
             ownerName.filterThisAccesses().takeIf { !it.isEmpty() }?.let {
                 appendAccessPath(it)
@@ -382,14 +382,14 @@ object DefaultTRArrayTracePointPrinter: AbstractTRArrayTracePointPrinter() {
 
     fun TRAppendable.append(tracePoint: TRArrayTracePoint): TRAppendable {
         appendTracePoint(tracePoint)
-        append(tracePoint.codeLocationId, verbose)
+        append(tracePoint, verbose)
         return this
     }
 }
 
-internal fun <V: TRAppendable> V.append(codeLocationId: Int, verbose: Boolean): V {
+internal fun <V: TRAppendable> V.append(tracePoint: TRTracePoint, verbose: Boolean): V {
     if (!verbose) return this
-    val cl = CodeLocations.stackTrace(codeLocationId)
+    val cl = CodeLocations.stackTrace(tracePoint.context, tracePoint.codeLocationId)
     append(" at ").append(cl.fileName).append(":").append(cl.lineNumber.toString())
     return this
 }

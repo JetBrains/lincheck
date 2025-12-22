@@ -323,9 +323,6 @@ in full available depth.
 
  Beware that this data structure can consume a humongous amount of memory.
 
- Now returned context is global `TRACE_CONTEXT`, but it will change in the future
-to allow loading multiple traces in once.
-
 #### Lazy.
  Lazy loader (class `LazyTraceReader`) requires file name and optional index `InputStream`
 as arguments. It cannot use any `InputStream` for data input as it needs effective
@@ -362,9 +359,7 @@ for the future.
 reference objects are rather small (typically several `Int`s), it is not worth 
 having special skipping code, it will not be faster than load.
  
- Instance of lazy loader contains a reference to context used to load data, but, again,
-for now it is global `TRACE_CONTEXT` and using another instance of lazy or eager loader will
-invalidate old one. It will change in the future.
+ Instance of lazy loader instatiates a new context used to load data.
 
 ### Printing a tree of trace points.
  Tree of trace points can be pretty-printed to any print stream with help

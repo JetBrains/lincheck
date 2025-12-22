@@ -12,6 +12,7 @@ package org.jetbrains.lincheck.jvm.agent.transformers
 
 import sun.nio.ch.lincheck.Injections
 import org.jetbrains.lincheck.jvm.agent.*
+import org.jetbrains.lincheck.trace.TraceContext
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Label
@@ -24,9 +25,10 @@ internal class IgnoredSectionWrapperTransformer(
     descriptor: String,
     access: Int,
     methodInfo: MethodInformation,
+    context: TraceContext,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
-) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
+) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, context, adapter, methodVisitor) {
 
     private val tryBlock: Label = adapter.newLabel()
     private val catchBlock: Label = adapter.newLabel()

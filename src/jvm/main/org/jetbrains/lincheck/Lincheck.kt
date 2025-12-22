@@ -9,9 +9,7 @@
  */
 package org.jetbrains.lincheck
 
-import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.ExceptionResult
-import org.jetbrains.lincheck.datastructures.createVerifier
 import org.jetbrains.kotlinx.lincheck.runPluginReplay
 import org.jetbrains.lincheck.util.ideaPluginEnabled
 import org.jetbrains.lincheck.datastructures.CTestConfiguration
@@ -28,6 +26,7 @@ import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent.ensureObjectIsTransfor
 import org.jetbrains.lincheck.jvm.agent.withLincheckJavaAgent
 import org.jetbrains.lincheck.datastructures.ManagedCTestConfiguration
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
+import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent
 import sun.nio.ch.lincheck.Injections
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
@@ -94,7 +93,7 @@ object Lincheck {
 
     private fun ManagedCTestConfiguration.createStrategy(block: Runnable): ManagedStrategy {
         val runner = LambdaRunner(timeoutMs = timeoutMs, block)
-        return ModelCheckingStrategy(runner, createSettings(), inIdeaPluginReplayMode).also {
+        return ModelCheckingStrategy(runner, createSettings(), inIdeaPluginReplayMode, LincheckJavaAgent.context).also {
             runner.initializeStrategy(it)
         }
     }

@@ -10,7 +10,6 @@
 
 package org.jetbrains.lincheck.descriptors
 
-import org.jetbrains.lincheck.trace.TRACE_CONTEXT
 import org.jetbrains.lincheck.trace.TraceContext
 import java.lang.reflect.Modifier
 import java.lang.reflect.Field
@@ -53,7 +52,7 @@ data class FieldDescriptor(
     val className: String get() = classDescriptor.name
 }
 
-fun Field.toDescriptor() = TRACE_CONTEXT.getFieldDescriptor(
+fun Field.toDescriptor(context: TraceContext) = context.getFieldDescriptor(
     className = this.declaringClass.name,
     fieldName = this.name,
     isStatic = Modifier.isStatic(this.modifiers),

@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.jvm.agent.transformers
 
 import org.jetbrains.lincheck.jvm.agent.*
+import org.jetbrains.lincheck.trace.TraceContext
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
@@ -29,12 +30,13 @@ internal class ThreadRunTransformer(
     className: String,
     methodName: String,
     methodInfo: MethodInformation,
+    context: TraceContext,
     descriptor: String,
     access: Int,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
     val configuration: TransformationConfiguration,
-) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
+) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, context, adapter, methodVisitor) {
 
     // TODO: unify with `IgnoredSectionWrapperTransformer` ---
     //  extract common logic of injecting code on method entry/exit.
@@ -96,12 +98,13 @@ internal class ThreadStartJoinTransformer(
     className: String,
     methodName: String,
     methodInfo: MethodInformation,
+    context: TraceContext,
     descriptor: String,
     access: Int,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
     val configuration: TransformationConfiguration,
-) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
+) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, context, adapter, methodVisitor) {
 
     override fun visitCode() = adapter.run {
         super.visitCode()

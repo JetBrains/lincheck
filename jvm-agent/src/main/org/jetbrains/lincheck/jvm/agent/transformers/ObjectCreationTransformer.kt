@@ -12,6 +12,7 @@ package org.jetbrains.lincheck.jvm.agent.transformers
 
 import sun.nio.ch.lincheck.*
 import org.jetbrains.lincheck.jvm.agent.*
+import org.jetbrains.lincheck.trace.TraceContext
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
@@ -29,9 +30,10 @@ internal class ObjectCreationTransformer(
     descriptor: String,
     access: Int,
     methodInfo: MethodInformation,
+    context: TraceContext,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
-) : ObjectCreationTransformerBase(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
+) : ObjectCreationTransformerBase(fileName, className, methodName, descriptor, access, methodInfo, context, adapter, methodVisitor) {
 
     /* To track object creation, this transformer inserts `Injections::afterNewObjectCreation` calls
      * after an object is allocated and initialized.

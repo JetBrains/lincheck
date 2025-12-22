@@ -24,6 +24,7 @@ import java.nio.file.Files
 import java.nio.file.StandardOpenOption
 import kotlin.io.path.Path
 import org.jetbrains.lincheck.descriptors.CodeLocation
+import org.jetbrains.lincheck.descriptors.CodeLocations
 import org.jetbrains.lincheck.descriptors.LocalVariableAccessLocation
 import org.jetbrains.lincheck.descriptors.ObjectFieldAccessLocation
 import org.jetbrains.lincheck.descriptors.StaticFieldAccessLocation
@@ -332,8 +333,8 @@ class LazyTraceReader private constructor(
             tracePoint = readTracePointWithChildAddresses()
         )
 
-    // TODO: Create new
-    val context: TraceContext = TRACE_CONTEXT
+    // Context is a per-reader entity to isolate traces
+    val context: TraceContext = TraceContext()
 
     val metaInfo: TraceMetaInfo? get() = input.metaInfo
 
@@ -547,7 +548,7 @@ class LazyTraceReader private constructor(
                             ObjectKind.FIELD_DESCRIPTOR -> loadFieldDescriptor(data, context, true)
                             ObjectKind.VARIABLE_DESCRIPTOR -> loadVariableDescriptor(data, context, true)
                             ObjectKind.STRING -> loadString(data, codeLocs, true)
-                            ObjectKind.ACCESS_PATH -> loadAccessPath(data, context, codeLocs, true)
+                            ObjectKind.ACCESS_PATH -> loadAccessPath(data, codeLocs, true)
                             ObjectKind.CODE_LOCATION -> loadCodeLocation(data, codeLocs, true)
                             ObjectKind.BLOCK_START -> {
                                 val list = dataBlocks.computeIfAbsent(id) { mutableListOf() }
@@ -583,7 +584,6 @@ class LazyTraceReader private constructor(
     }
 
     private fun loadContextWithoutIndex() {
-        val context = TRACE_CONTEXT
         // Two Longs is header
         data.seek((Long.SIZE_BYTES * 2).toLong())
         loadAllObjectsDeep(
@@ -628,7 +628,7 @@ class LazyTraceReader private constructor(
 
     private fun readTracePointShallow(): TRTracePoint {
         // Load tracepoint itself
-        val tracePoint = loadTRTracePoint(data)
+        val tracePoint = loadTRTracePoint(context, data)
         if (tracePoint !is TRContainerTracePoint) {
             return tracePoint
         }
@@ -656,7 +656,7 @@ class LazyTraceReader private constructor(
 
     private fun readTracePointWithChildAddresses(): TRTracePoint {
         // Load tracepoint itself
-        val tracePoint = loadTRTracePoint(data)
+        val tracePoint = loadTRTracePoint(context, data)
         if (tracePoint !is TRContainerTracePoint) {
             return tracePoint
         }
@@ -829,8 +829,8 @@ private fun loadRecordedTrace(inp: InputStream, meta: TraceMetaInfo?): TraceWith
     DataInputStream(inp.buffered(INPUT_BUFFER_SIZE)).use { input ->
         checkDataHeader(input)
 
-        // TODO: Create empty fresh context
-        val context = TRACE_CONTEXT
+        // Create an isolated fresh context for this load
+        val context = TraceContext()
         val roots = mutableMapOf<Int, MutableList<TRTracePoint>>()
 
         loadAllObjectsDeep(
@@ -931,7 +931,7 @@ private fun loadTracePointDeep(
     consumer: TracepointConsumer
 ): Boolean {
     // Load tracepoint itself
-    val tracePoint = loadTRTracePoint(input)
+    val tracePoint = loadTRTracePoint(context, input)
     consumer.tracePointRead(tree.lastOrNull(), tracePoint)
     if (tracePoint !is TRContainerTracePoint) {
         return true
@@ -973,7 +973,7 @@ private fun loadObjects(
             ObjectKind.FIELD_DESCRIPTOR -> loadFieldDescriptor(input, context, restore)
             ObjectKind.VARIABLE_DESCRIPTOR -> loadVariableDescriptor(input, context, restore)
             ObjectKind.STRING -> loadString(input, codeLocs, restore)
-            ObjectKind.ACCESS_PATH -> loadAccessPath(input, context, codeLocs, restore)
+            ObjectKind.ACCESS_PATH -> loadAccessPath(input, codeLocs, restore)
             ObjectKind.CODE_LOCATION -> loadCodeLocation(input, codeLocs, restore)
             // Tracepoint reader returns "true" if a read is complete and "false" if it encountered the end of the block
             ObjectKind.TRACEPOINT -> if (!tracePointReader(input, context, codeLocs)) return ObjectKind.BLOCK_END
@@ -1063,7 +1063,6 @@ private fun loadString(
 
 private fun loadAccessPath(
     input: DataInput,
-    context: TraceContext,
     codeLocs: CodeLocationsContext,
     restore: Boolean
 ): Int {

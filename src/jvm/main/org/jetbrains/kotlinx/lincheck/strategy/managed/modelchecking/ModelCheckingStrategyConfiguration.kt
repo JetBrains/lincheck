@@ -25,6 +25,7 @@ import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.TRACE_DEBUGGING
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.MODEL_CHECKING
 import org.jetbrains.lincheck.datastructures.getTimeOutMs
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
+import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent
 import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import java.lang.reflect.Method
 
@@ -118,7 +119,7 @@ class ModelCheckingCTestConfiguration(
             timeoutMs = getTimeOutMs(inIdeaPluginReplayMode, timeoutMs),
             useClocks = UseClocks.ALWAYS
         )
-        return ModelCheckingStrategy(runner, createSettings(), inIdeaPluginReplayMode).also {
+        return ModelCheckingStrategy(runner, createSettings(), inIdeaPluginReplayMode, LincheckJavaAgent.context).also {
             runner.initializeStrategy(it)
         }
     }

@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.jvm.agent
 
 import jdk.internal.org.objectweb.asm.ClassReader.SKIP_FRAMES
+import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.Logger
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
@@ -27,6 +28,7 @@ import java.lang.instrument.ClassFileTransformer
 import java.security.ProtectionDomain
 
 typealias MethodVisitorProvider = (
+    context: TraceContext,
     className: String,
     fileName: String,
     adapter: GeneratorAdapter,
@@ -36,7 +38,10 @@ typealias MethodVisitorProvider = (
     firstLine: Int
 ) -> MethodVisitor
 
-class TraceAgentTransformer(val methodTransformer: MethodVisitorProvider) : ClassFileTransformer {
+class TraceAgentTransformer(
+    val context: TraceContext,
+    val methodTransformer: MethodVisitorProvider,
+) : ClassFileTransformer {
     override fun transform(
         loader: ClassLoader?,
         internalClassName: String?,
@@ -79,7 +84,7 @@ class TraceAgentTransformer(val methodTransformer: MethodVisitorProvider) : Clas
             val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
 
             reader.accept(
-                TraceAgentClassVisitor(writer, methodTransformer, methodToLine),
+                TraceAgentClassVisitor(writer, context, methodTransformer, methodToLine),
                 ClassReader.SKIP_FRAMES
             )
             bytes = writer.toByteArray()
@@ -95,6 +100,7 @@ class TraceAgentTransformer(val methodTransformer: MethodVisitorProvider) : Clas
 
 private class TraceAgentClassVisitor(
     classVisitor: ClassVisitor,
+    val context: TraceContext,
     val methodTransformer: MethodVisitorProvider,
     val methodToFirstLine: Map<String, Int>
 ): ClassVisitor(ASM_API, classVisitor) {
@@ -136,6 +142,7 @@ private class TraceAgentClassVisitor(
             isNotSynthetic) {
             val firstLine = methodToFirstLine[methodKey(methodName, desc)] ?: 0
             mv = methodTransformer(
+                context,
                 className,
                 fileName,
                 mv.newAdapter(),

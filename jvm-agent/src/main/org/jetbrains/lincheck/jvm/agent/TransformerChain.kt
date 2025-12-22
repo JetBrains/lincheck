@@ -10,6 +10,7 @@
 
 package org.jetbrains.lincheck.jvm.agent
 
+import org.jetbrains.lincheck.trace.TraceContext
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.commons.AnalyzerAdapter
 import org.objectweb.asm.commons.GeneratorAdapter
@@ -47,13 +48,13 @@ internal class TransformerChain(
         }
     }
 
-    fun addOwnerNameAnalyzerAdapter(access: Int, className: String, methodName: String, desc: String, methodInfo: MethodInformation) {
+    fun addOwnerNameAnalyzerAdapter(access: Int, className: String, methodName: String, desc: String, methodInfo: MethodInformation, context: TraceContext) {
         val requiresOwnerNameAnalyzer = methodVisitors.any {
             it is LincheckMethodVisitor && it.requiresOwnerNameAnalyzer
         }
         if (requiresOwnerNameAnalyzer) {
             val analyzer = addTransformer { _, mv ->
-                OwnerNameAnalyzerAdapter(className, access, methodName, desc, mv, methodInfo.locals)
+                OwnerNameAnalyzerAdapter(className, access, methodName, desc, mv, methodInfo.locals, context)
             }
             for (visitor in methodVisitors) {
                 if (visitor is LincheckMethodVisitor && visitor.requiresOwnerNameAnalyzer) {

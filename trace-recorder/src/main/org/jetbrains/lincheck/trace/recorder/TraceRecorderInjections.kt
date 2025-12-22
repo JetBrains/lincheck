@@ -32,7 +32,8 @@ internal object TraceRecorderInjections {
                 format = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FORMAT),
                 formatOption = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FOPTION),
                 pack = (TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_PACK) ?: "true").toBoolean(),
-                startingCodeLocationId = startingCodeLocationId
+                startingCodeLocationId = startingCodeLocationId,
+                context = LincheckJavaAgent.context
             )
         } catch (t: Throwable) {
             Logger.error { "Cannot start Trace Recorder: $t"}

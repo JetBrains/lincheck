@@ -14,6 +14,7 @@ import org.jetbrains.lincheck.descriptors.CodeLocations
 import org.jetbrains.lincheck.jvm.agent.ASM_API
 import org.jetbrains.lincheck.jvm.agent.invokeStatic
 import org.jetbrains.lincheck.jvm.agent.toInternalClassName
+import org.jetbrains.lincheck.trace.TraceContext
 import org.objectweb.asm.Label
 import org.objectweb.asm.commons.AdviceAdapter
 import org.objectweb.asm.commons.GeneratorAdapter
@@ -40,6 +41,7 @@ import org.objectweb.asm.commons.GeneratorAdapter
  * ```
  */
 internal class TraceRecorderMethodTransformer(
+    val context: TraceContext,
     val className: String,
     val fileName: String,
     adapter: GeneratorAdapter,
@@ -61,7 +63,7 @@ internal class TraceRecorderMethodTransformer(
             /* lineNumber = */ firstLine
         )
 
-        val codeLocationId = CodeLocations.newCodeLocation(stackTraceElement)
+        val codeLocationId = CodeLocations.newCodeLocation(context, stackTraceElement)
         push(codeLocationId)
 
         invokeStatic(TraceRecorderInjections::startTraceRecorder)

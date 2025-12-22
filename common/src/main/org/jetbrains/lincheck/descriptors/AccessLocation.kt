@@ -48,6 +48,24 @@ data class ObjectFieldAccessLocation(
             "Object field access location must be constructed with non-static field descriptor"
         }
     }
+
+    companion object {
+        fun createArrayLengthLocation(context: TraceContext) = ObjectFieldAccessLocation(
+            context.getFieldDescriptor(
+                /* NOTE: `java.lang.Array` does not actually exist in Java.
+                 *   We added it here to handle `.length` accesses uniformly with regular instance field accesses,
+                 *   and to avoid introducing special sub-class only for `.length` accesses.
+                 *
+                 * TODO: be careful on descriptors and Java reflection bridge APIs.
+                 *   This design decision can backfire, so we might want to re-visit it in the future.
+                 */
+                className = "java.lang.Array",
+                fieldName = "length",
+                isStatic = false,
+                isFinal = true,
+            )
+        )
+    }
 }
 
 data class ArrayElementByIndexAccessLocation(
@@ -57,22 +75,6 @@ data class ArrayElementByIndexAccessLocation(
 data class ArrayElementByNameAccessLocation(
     val indexAccessPath: AccessPath
 ) : ArrayAccessLocation()
-
-val ArrayLengthAccessLocation = ObjectFieldAccessLocation(
-    TRACE_CONTEXT.getFieldDescriptor(
-        /* NOTE: `java.lang.Array` does not actually exist in Java.
-         *   We added it here to handle `.length` accesses uniformly with regular instance field accesses,
-         *   and to avoid introducing special sub-class only for `.length` accesses.
-         *
-         * TODO: be careful on descriptors and Java reflection bridge APIs.
-         *   This design decision can backfire, so we might want to re-visit it in the future.
-         */
-        className = "java.lang.Array",
-        fieldName = "length",
-        isStatic = false,
-        isFinal = true,
-    )
-)
 
 class AccessPath(val locations: List<AccessLocation>) {
 
@@ -148,16 +150,16 @@ fun AccessPath.isEmpty(): Boolean = locations.isEmpty()
 
 typealias OwnerName = AccessPath
 
-fun Field.toAccessLocation(): FieldAccessLocation {
+fun Field.toAccessLocation(context: TraceContext): FieldAccessLocation {
     val className = declaringClass.name
     val fieldName = name
     val isStatic = Modifier.isStatic(modifiers)
     val isFinal = Modifier.isFinal(modifiers)
-    val descriptorId = TRACE_CONTEXT.getOrCreateFieldId(className, fieldName,
+    val descriptorId = context.getOrCreateFieldId(className, fieldName,
         isStatic = isStatic,
         isFinal = isFinal,
     )
-    val descriptor = TRACE_CONTEXT.getFieldDescriptor(descriptorId)
+    val descriptor = context.getFieldDescriptor(descriptorId)
     return if (Modifier.isStatic(modifiers)) {
         StaticFieldAccessLocation(descriptor)
     } else {

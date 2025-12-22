@@ -69,7 +69,7 @@ internal object TraceRecorderAgent {
         isInstrumentationInitialized = true
         // We are in Trace Recorder mode (by exclusion)
         // This adds turn-on and turn-off of tracing to the method in question
-        LincheckJavaAgent.instrumentation.addTransformer(TraceAgentTransformer(::TraceRecorderMethodTransformer), true)
+        LincheckJavaAgent.instrumentation.addTransformer(TraceAgentTransformer(LincheckJavaAgent.context, ::TraceRecorderMethodTransformer), true)
         // This prepares instrumentation of all future classes
         TraceRecorderInjections.prepareTraceRecorder()
     }

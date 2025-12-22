@@ -220,8 +220,6 @@ fun saveRecorderTrace(baseFileName: String, context: TraceContext, rootCallsPerT
     )
 
 fun saveRecorderTrace(data: OutputStream, index: OutputStream, context: TraceContext, rootCallsPerThread: List<TRTracePoint>) {
-    check(context == TRACE_CONTEXT) { "Now only global TRACE_CONTEXT is supported" }
-
     DirectTraceWriter(data, index, context).use { tw ->
         rootCallsPerThread.forEachIndexed { id, root ->
             tw.startNewRoot(id)

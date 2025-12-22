@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.jvm.agent
 
 import net.bytebuddy.agent.ByteBuddyAgent
+import org.jetbrains.lincheck.descriptors.CodeLocations
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.*
 import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent.install
 import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent.instrumentation
@@ -19,6 +20,7 @@ import org.jetbrains.lincheck.jvm.agent.LincheckClassFileTransformer.isEagerlyIn
 import org.jetbrains.lincheck.jvm.agent.LincheckClassFileTransformer.shouldTransform
 import org.jetbrains.lincheck.jvm.agent.LincheckClassFileTransformer.transformedClassesCache
 import org.jetbrains.lincheck.jvm.agent.transformers.coroutineCallingClasses
+import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.Logger
 import org.jetbrains.lincheck.util.*
 import java.lang.instrument.Instrumentation
@@ -190,6 +192,11 @@ object LincheckJavaAgent {
      * Names (canonical) of the classes that were instrumented since the last agent installation.
      */
     val instrumentedClasses = HashSet<String>()
+
+    /**
+     * Trace context for the current agent run.
+     */
+    val context = TraceContext()
 
     /**
      * Adds [LincheckClassFileTransformer] to this JVM instance.

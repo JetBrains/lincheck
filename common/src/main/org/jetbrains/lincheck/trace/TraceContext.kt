@@ -10,17 +10,17 @@
 
 package org.jetbrains.lincheck.trace
 
+import com.sun.org.apache.bcel.internal.classfile.Code
 import org.jetbrains.lincheck.descriptors.AccessPath
 import org.jetbrains.lincheck.descriptors.ClassDescriptor
 import org.jetbrains.lincheck.descriptors.CodeLocation
+import org.jetbrains.lincheck.descriptors.CodeLocations
 import org.jetbrains.lincheck.descriptors.FieldDescriptor
 import org.jetbrains.lincheck.descriptors.MethodDescriptor
 import org.jetbrains.lincheck.descriptors.MethodSignature
 import org.jetbrains.lincheck.descriptors.VariableDescriptor
 import org.jetbrains.lincheck.descriptors.Types
 import java.util.concurrent.ConcurrentHashMap
-
-val TRACE_CONTEXT: TraceContext = TraceContext()
 
 const val UNKNOWN_CODE_LOCATION_ID = -1
 // This method type corresponds to the following method descriptor '(V)V'

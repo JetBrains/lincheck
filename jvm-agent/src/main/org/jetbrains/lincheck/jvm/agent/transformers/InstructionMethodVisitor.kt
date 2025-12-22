@@ -14,6 +14,7 @@ package org.jetbrains.lincheck.jvm.agent.transformers
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.ControlFlowGraph
 import org.jetbrains.lincheck.jvm.agent.LincheckMethodVisitor
 import org.jetbrains.lincheck.jvm.agent.MethodInformation
+import org.jetbrains.lincheck.trace.TraceContext
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.tree.InsnList
 import org.objectweb.asm.*
@@ -31,9 +32,10 @@ internal abstract class InstructionMethodVisitor(
     descriptor: String,
     access: Int,
     methodInfo: MethodInformation,
+    context: TraceContext,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
-) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
+) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, context, adapter, methodVisitor) {
 
     /**
      * Tracks the current instruction index being processed.

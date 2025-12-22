@@ -12,7 +12,6 @@ package org.jetbrains.lincheck.trace.recorder
 
 import org.jetbrains.lincheck.analysis.ShadowStackFrame
 import org.jetbrains.lincheck.descriptors.Types
-import org.jetbrains.lincheck.trace.TRACE_CONTEXT
 import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.trace.*
@@ -207,6 +206,7 @@ class TraceCollectingEventTracker(
     private val traceDumpPath: String?,
     private val mode: TraceCollectorMode,
     private val packTrace: Boolean,
+    private val context: TraceContext
 ) : EventTracker {
     // We don't want to re-create this object each time we need it
     private val analysisProfile: AnalysisProfile = AnalysisProfile(false)
@@ -237,17 +237,17 @@ class TraceCollectingEventTracker(
         when (mode) {
             TraceCollectorMode.BINARY_STREAM -> {
                 check(traceDumpPath != null) { "Stream output type needs non-empty output file name" }
-                strategy = FileStreamingTraceCollecting(traceDumpPath, TRACE_CONTEXT)
+                strategy = FileStreamingTraceCollecting(traceDumpPath, context)
             }
             TraceCollectorMode.BINARY_DUMP -> {
                 check(traceDumpPath != null) { "Binary output type needs non-empty output file name" }
-                strategy = MemoryTraceCollecting(TRACE_CONTEXT)
+                strategy = MemoryTraceCollecting(context)
             }
             TraceCollectorMode.NULL -> {
-                strategy = NullTraceCollecting(TRACE_CONTEXT)
+                strategy = NullTraceCollecting(context)
             }
             else -> {
-                strategy = MemoryTraceCollecting(TRACE_CONTEXT)
+                strategy = MemoryTraceCollecting(context)
             }
         }
     }
@@ -270,9 +270,10 @@ class TraceCollectingEventTracker(
         fun appendMethodCall(obj: TRObject?, className: String, methodName: String, methodType: Types.MethodType, codeLocationId: Int, params: List<TRObject> = emptyList()) {
             val parentTracePoint = threadData.currentMethodCallTracePoint()
             val methodCall = TRMethodCallTracePoint(
+                context = context,
                 threadId = threadData.threadId,
                 codeLocationId = codeLocationId,
-                methodId = TRACE_CONTEXT.getOrCreateMethodId(className, methodName, methodType),
+                methodId = context.getOrCreateMethodId(className, methodName, methodType),
                 obj = obj,
                 parameters = params,
                 flags = INCOMPLETE_METHOD_FLAG.toShort(),
@@ -325,10 +326,11 @@ class TraceCollectingEventTracker(
         threadDescriptor.runInsideInjectedCode {
             strategy.registerCurrentThread(threadData.threadId)
             val tracePoint = TRMethodCallTracePoint(
+                context = context,
                 threadId = threadData.threadId,
                 codeLocationId = -1,
-                methodId = TRACE_CONTEXT.getOrCreateMethodId("Thread", "run", Types.MethodType(Types.VOID_TYPE)),
-                obj = TRObject(thread),
+                methodId = context.getOrCreateMethodId("Thread", "run", Types.MethodType(Types.VOID_TYPE)),
+                obj = TRObject(context, thread),
                 parameters = emptyList()
             )
             strategy.tracePointCreated(null, tracePoint)
@@ -394,7 +396,7 @@ class TraceCollectingEventTracker(
 
     override fun getNextTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker): Long = runInsideIgnoredSection {
         Logger. error { "Trace Recorder mode doesn't support Trace Debugger-specific instrumentation" }
-        return 0
+        return 0L
     }
 
     override fun advanceCurrentTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker, oldId: Long) =
@@ -455,11 +457,12 @@ class TraceCollectingEventTracker(
     ) = threadDescriptor.runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
         val tracePoint = TRReadTracePoint(
+            context = context,
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
             fieldId = fieldId,
-            obj = TRObjectOrNull(obj),
-            value = TRObjectOrNull(value)
+            obj = TRObjectOrNull(context, obj),
+            value = TRObjectOrNull(context, value)
         )
         strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
     }
@@ -474,11 +477,12 @@ class TraceCollectingEventTracker(
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
         val tracePoint = TRReadArrayTracePoint(
+            context = context,
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
-            array = TRObject(array),
+            array = TRObject(context, array),
             index = index,
-            value = TRObjectOrNull(value)
+            value = TRObjectOrNull(context, value)
         )
         strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
     }
@@ -490,7 +494,7 @@ class TraceCollectingEventTracker(
         value: Any?,
         fieldId: Int
     ): Unit = threadDescriptor.runInsideInjectedCode {
-        val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(fieldId)
+        val fieldDescriptor = context.getFieldDescriptor(fieldId)
         if (!fieldDescriptor.isStatic && obj == null) {
             // Ignore, NullPointerException will be thrown
             return
@@ -498,11 +502,12 @@ class TraceCollectingEventTracker(
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
         val tracePoint = TRWriteTracePoint(
+            context = context,
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
             fieldId = fieldId,
-            obj = TRObjectOrNull(obj),
-            value = TRObjectOrNull(value)
+            obj = TRObjectOrNull(context, obj),
+            value = TRObjectOrNull(context, value)
         )
         strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
     }
@@ -517,11 +522,12 @@ class TraceCollectingEventTracker(
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
         val tracePoint = TRWriteArrayTracePoint(
+            context = context,
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
-            array = TRObject(array),
+            array = TRObject(context, array),
             index = index,
-            value = TRObjectOrNull(value)
+            value = TRObjectOrNull(context, value)
         )
         strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
     }
@@ -536,10 +542,11 @@ class TraceCollectingEventTracker(
     ) = threadDescriptor.runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
         val tracePoint = TRReadLocalVariableTracePoint(
+            context = context,
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
             localVariableId = variableId,
-            value = TRObjectOrNull(value)
+            value = TRObjectOrNull(context, value)
         )
         strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
     }
@@ -552,10 +559,11 @@ class TraceCollectingEventTracker(
     ) = threadDescriptor.runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
         val tracePoint = TRWriteLocalVariableTracePoint(
+            context = context,
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
             localVariableId = variableId,
-            value = TRObjectOrNull(value)
+            value = TRObjectOrNull(context, value)
         )
         strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
     }
@@ -568,7 +576,7 @@ class TraceCollectingEventTracker(
         params: Array<Any?>
     ): Any? = threadDescriptor.runInsideInjectedCode<Any?> {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return null
-        val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
+        val methodDescriptor = context.getMethodDescriptor(methodId)
 
         val methodSection = methodAnalysisSectionType(receiver, methodDescriptor.className, methodDescriptor.methodName)
 
@@ -580,11 +588,12 @@ class TraceCollectingEventTracker(
 
         val parentTracepoint = threadData.currentTopTracePoint()
         val tracePoint = TRMethodCallTracePoint(
+            context = context,
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
             methodId = methodId,
-            obj = TRObjectOrNull(receiver),
-            parameters = params.map { TRObjectOrNull(it) },
+            obj = TRObjectOrNull(context, receiver),
+            parameters = params.map { TRObjectOrNull(context, it) },
             parentTracePoint = parentTracepoint,
         )
         strategy.tracePointCreated(parentTracepoint, tracePoint)
@@ -605,7 +614,7 @@ class TraceCollectingEventTracker(
     ): Any? = threadDescriptor.runInsideInjectedCode(result) {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return result
         val thread = Thread.currentThread()
-        val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
+        val methodDescriptor = context.getMethodDescriptor(methodId)
 
         val methodSection = methodAnalysisSectionType(receiver, methodDescriptor.className, methodDescriptor.methodName)
         if (methodSection == AnalysisSectionType.IGNORED) {
@@ -639,7 +648,7 @@ class TraceCollectingEventTracker(
             }
         }
 
-        tracePoint.result = TRObjectOrVoid(result)
+        tracePoint.result = TRObjectOrVoid(context, result)
         strategy.completeContainerTracePoint(thread, tracePoint)
 
         threadData.leaveAnalysisSection(methodSection)
@@ -658,7 +667,7 @@ class TraceCollectingEventTracker(
     ): Throwable = threadDescriptor.runInsideInjectedCode(t) {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return t
         val thread = Thread.currentThread()
-        val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
+        val methodDescriptor = context.getMethodDescriptor(methodId)
 
         val methodSection = methodAnalysisSectionType(receiver, methodDescriptor.className, methodDescriptor.methodName)
         if (methodSection == AnalysisSectionType.IGNORED) {
@@ -709,10 +718,11 @@ class TraceCollectingEventTracker(
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
         val tracePoint = TRMethodCallTracePoint(
+            context = context,
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
             methodId = methodId,
-            obj = TRObjectOrNull(owner),
+            obj = TRObjectOrNull(context, owner),
             parameters = emptyList(),
             parentTracePoint = threadData.currentTopTracePoint()
         )
@@ -728,7 +738,7 @@ class TraceCollectingEventTracker(
 
         val tracePoint = threadData.popStackFrame()
         if (tracePoint.methodId != methodId) {
-            val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
+            val methodDescriptor = context.getMethodDescriptor(methodId)
             Logger.error {
                 "Return from inline method $methodId ${methodDescriptor.className}.${methodDescriptor.methodName}" +
                 "but on stack ${tracePoint.methodId} ${tracePoint.className}.${tracePoint.methodName}"
@@ -747,7 +757,7 @@ class TraceCollectingEventTracker(
 
         val tracePoint = threadData.popStackFrame()
         if (tracePoint.methodId != methodId) {
-            val methodDescriptor = TRACE_CONTEXT.getMethodDescriptor(methodId)
+            val methodDescriptor = context.getMethodDescriptor(methodId)
             Logger.error {
                 "Exception in inline method $methodId ${methodDescriptor.className}.${methodDescriptor.methodName}" +
                 "but on stack ${tracePoint.methodId} ${tracePoint.className}.${tracePoint.methodName}"
@@ -768,6 +778,7 @@ class TraceCollectingEventTracker(
         // create a new loop if required
         if (loopId != threadData.currentLoopTracePoint()?.loopId) {
             val tracePoint = TRLoopTracePoint(
+                context = context,
                 threadId = threadData.threadId,
                 codeLocationId = codeLocation,
                 loopId = loopId,
@@ -783,6 +794,7 @@ class TraceCollectingEventTracker(
         }
 
         val tracePoint = TRLoopIterationTracePoint(
+            context = context,
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
             loopId = loopId,
@@ -878,9 +890,10 @@ class TraceCollectingEventTracker(
         threads[thread] = threadData
 
         val tracePoint = TRMethodCallTracePoint(
+            context = context,
             threadId = threadData.threadId,
             codeLocationId = startingCodeLocationId,
-            methodId = TRACE_CONTEXT.getOrCreateMethodId(className, methodName, Types.MethodType(Types.VOID_TYPE)),
+            methodId = context.getOrCreateMethodId(className, methodName, Types.MethodType(Types.VOID_TYPE)),
             obj = null,
             parameters = emptyList()
         )
@@ -1006,7 +1019,7 @@ class TraceCollectingEventTracker(
             allThreads.forEach { threadData ->
                 val rootCall = threadData.rootCall
                 if (rootCall == null) {
-                    Logger.error { "Trace Recorder: Thread #${threadData.threadId + 1} (\"${TRACE_CONTEXT.getThreadName(threadData.threadId)}\"): No root call found" }
+                    Logger.error { "Trace Recorder: Thread #${threadData.threadId + 1} (\"${context.getThreadName(threadData.threadId)}\"): No root call found" }
                 } else {
                     roots.add(rootCall)
                 }
@@ -1014,7 +1027,7 @@ class TraceCollectingEventTracker(
 
             when (mode) {
                 TraceCollectorMode.BINARY_DUMP -> {
-                    saveRecorderTrace(traceDumpPath!!, TRACE_CONTEXT, roots)
+                    saveRecorderTrace(traceDumpPath!!, context, roots)
                     if (packTrace) {
                         packRecordedTrace(traceDumpPath, metaInfo)
                     }
@@ -1024,8 +1037,8 @@ class TraceCollectingEventTracker(
                         packRecordedTrace(traceDumpPath!!, metaInfo)
                     }
                 }
-                TraceCollectorMode.TEXT -> printPostProcessedTrace(traceDumpPath, TRACE_CONTEXT, roots, false)
-                TraceCollectorMode.TEXT_VERBOSE -> printPostProcessedTrace(traceDumpPath, TRACE_CONTEXT, roots, true)
+                TraceCollectorMode.TEXT -> printPostProcessedTrace(traceDumpPath, context, roots, false)
+                TraceCollectorMode.TEXT_VERBOSE -> printPostProcessedTrace(traceDumpPath, context, roots, true)
                 TraceCollectorMode.NULL -> {}
             }
         } catch (t: Throwable) {

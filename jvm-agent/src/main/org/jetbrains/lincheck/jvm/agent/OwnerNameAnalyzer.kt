@@ -10,8 +10,8 @@
 
 package org.jetbrains.lincheck.jvm.agent
 
-import org.jetbrains.lincheck.trace.TRACE_CONTEXT
 import org.jetbrains.lincheck.descriptors.*
+import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.*
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
@@ -50,6 +50,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
     descriptor: String,
     methodVisitor: MethodVisitor?,
     val methodVariables: MethodVariables,
+    private val context: TraceContext
 ) : MethodVisitor(api, methodVisitor) {
     /**
      * Tracks [OwnerName]-s for objects stored in local variables.
@@ -90,7 +91,8 @@ class OwnerNameAnalyzerAdapter protected constructor(
         descriptor: String,
         methodVisitor: MethodVisitor?,
         methodVariables: MethodVariables,
-    ) : this( /* latest api = */Opcodes.ASM9, owner, access, name, descriptor, methodVisitor, methodVariables)
+        context: TraceContext
+    ) : this( /* latest api = */Opcodes.ASM9, owner, access, name, descriptor, methodVisitor, methodVariables, context)
 
     /**
      * Constructs a new [OwnerNameAnalyzerAdapter].
@@ -427,7 +429,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
             /* Field access instructions */
 
             Opcodes.GETSTATIC -> {
-                val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(
+                val fieldDescriptor = context.getFieldDescriptor(
                     className = className!!.toCanonicalClassName(),
                     fieldName = fieldName!!,
                     isStatic = true,
@@ -446,7 +448,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
 
             Opcodes.GETFIELD -> {
                 val ownerName = pop()
-                val fieldDescriptor = TRACE_CONTEXT.getFieldDescriptor(
+                val fieldDescriptor = context.getFieldDescriptor(
                     className = className!!.toCanonicalClassName(),
                     fieldName = fieldName!!,
                     isStatic = false,
@@ -495,7 +497,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
 
             Opcodes.ARRAYLENGTH -> {
                 val arrayName = pop()
-                val arrayLengthAccess = ArrayLengthAccessLocation
+                val arrayLengthAccess = ObjectFieldAccessLocation.createArrayLengthLocation(context)
                 if (arrayName != null) {
                     push(arrayName + arrayLengthAccess)
                 } else {
@@ -778,7 +780,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
             this.locals = mutableListOf()
         }
         for (localVar in localVariables) {
-            val localVarDescriptor = TRACE_CONTEXT.getVariableDescriptor(localVar.name)
+            val localVarDescriptor = context.getVariableDescriptor(localVar.name)
             val localVarAccess = LocalVariableAccessLocation(localVarDescriptor)
             set(localVar.index, OwnerName(localVarAccess))
         }

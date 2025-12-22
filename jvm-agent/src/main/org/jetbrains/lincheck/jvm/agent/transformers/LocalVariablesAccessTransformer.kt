@@ -26,10 +26,11 @@ internal class LocalVariablesAccessTransformer(
     descriptor: String,
     access: Int,
     methodInfo: MethodInformation,
+    context: TraceContext,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
     val configuration: TransformationConfiguration,
-) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, adapter, methodVisitor) {
+) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, context, adapter, methodVisitor) {
 
     override val requiresTypeAnalyzer: Boolean = true
 
@@ -116,7 +117,7 @@ internal class LocalVariablesAccessTransformer(
         // STACK: <empty>
         invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
         loadNewCodeLocationId()
-        val variableId = TRACE_CONTEXT.getOrCreateVariableId(variableInfo.name)
+        val variableId = context.getOrCreateVariableId(variableInfo.name)
         push(variableId)
         // VerifyError with `loadLocal(..)`, here is a workaround
         visitVarInsn(variableInfo.type.getVarInsnOpcode(), variableInfo.index)
