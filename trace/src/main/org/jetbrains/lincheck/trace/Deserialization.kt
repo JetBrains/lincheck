@@ -327,16 +327,23 @@ class LazyTraceReader private constructor(
                 postprocessor = postprocessor
             )
 
-    private fun readTracePointWithPostprocessor(): TRTracePoint? =
-        postprocessor.postprocess(
-            reader = this@LazyTraceReader,
-            tracePoint = readTracePointWithChildAddresses()
-        )
-
-    // Context is a per-reader entity to isolate traces
     val context: TraceContext = TraceContext()
 
     val metaInfo: TraceMetaInfo? get() = input.metaInfo
+
+    val isDiff: Boolean get() = input.metaInfo?.isDiff ?: false
+
+    val leftTraceMetaInfo: TraceMetaInfo?
+        get() {
+            check(isDiff) { "Cannot provide left trace meta info if trace is not a diff" }
+            return input.metaInfo?.leftTraceMetaInfo
+        }
+
+    val rightTraceMetaInfo: TraceMetaInfo?
+        get() {
+            check(isDiff) { "Cannot provide right trace meta info if trace is not a diff" }
+            return input.metaInfo?.rightTraceMetaInfo
+        }
 
     private val dataStream: SeekableInputStream
     private val data: SeekableDataInput
@@ -445,6 +452,12 @@ class LazyTraceReader private constructor(
         data.seek(oldPosition)
         return parent.events[childIdx]
     }
+
+    private fun readTracePointWithPostprocessor(): TRTracePoint? =
+        postprocessor.postprocess(
+            reader = this@LazyTraceReader,
+            tracePoint = readTracePointWithChildAddresses()
+        )
 
     private fun loadTracePoints(threadId: Int, maxRead: Int, reader: () -> TRTracePoint?, registrator: TracepointRegistrator) {
         val blocks = dataBlocks[threadId] ?: error("No data blocks for Thread $threadId")

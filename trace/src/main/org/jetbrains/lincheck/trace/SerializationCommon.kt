@@ -33,7 +33,7 @@ import java.lang.management.ManagementFactory
 
 internal const val TRACE_MAGIC : Long = 0x706e547124ee5f70L
 internal const val INDEX_MAGIC : Long = TRACE_MAGIC.inv()
-internal const val TRACE_VERSION : Long = 13
+internal const val TRACE_VERSION : Long = 14
 
 // This suffix is not enforced, but IDEA plugin rely on it
 const val DATA_FILENAME_EXT = "trace"
@@ -66,7 +66,10 @@ data class TraceMetaInfo private constructor(
     val agentArgs: String,
     val className: String,
     val methodName: String,
-    val startTime: Long
+    val startTime: Long,
+    val isDiff: Boolean = false,
+    val leftTraceMetaInfo: TraceMetaInfo? = null,
+    val rightTraceMetaInfo: TraceMetaInfo? = null
 ) {
     var endTime: Long = -1
         private set
@@ -430,6 +433,19 @@ internal fun DataInput.readKind(): ObjectKind {
         throw IOException("Cannot read ObjectKind: unknown ordinal $ordinal")
     }
     return values[ordinal.toInt()]
+}
+
+internal fun DataOutput.writeDiffStatus(value: DiffStatus?): Unit = writeByte(value?.ordinal ?: - 1)
+
+internal fun DataInput.readDiffStatus(): DiffStatus? {
+    val ordinal = readByte().toInt()
+    if (ordinal == -1) return null
+
+    val values = DiffStatus.entries
+    if (ordinal < 0 || ordinal > values.size) {
+        throw IOException("Cannot read DiffStatus: unknown ordinal $ordinal")
+    }
+    return values[ordinal]
 }
 
 internal fun openNewFile(name: String): OutputStream {

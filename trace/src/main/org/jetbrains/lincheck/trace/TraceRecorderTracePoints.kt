@@ -27,6 +27,7 @@ import java.io.DataInput
 import java.io.DataOutput
 import java.math.BigDecimal
 import java.math.BigInteger
+import java.util.EnumSet
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.reflect.KClass
 
@@ -34,12 +35,51 @@ private val EVENT_ID_GENERATOR = AtomicInteger(0)
 
 var INJECTIONS_VOID_OBJECT: Any? = null
 
+/**
+ * Describes status of tracepoint in trace diff
+ */
+enum class DiffStatus {
+    /**
+     * This tracepoint is identical in two traces.
+     */
+    UNCHANGED,
+
+    /**
+     * This tracepoint was found in the first, but not in the second trace, when diff was created.
+     */
+    REMOVED,
+
+    /**
+     * This tracepoint was not found in the first, but found in the second trace, when diff was created.
+     */
+    ADDED,
+
+    /**
+     * Tracepoint was edited.
+     *
+     * For example, if it is a method called tracepoint, it has the same method in both traces but differs in arguments values.
+     */
+    EDITED,
+}
+
 sealed class TRTracePoint(
     internal val context: TraceContext,
     val codeLocationId: Int,
     val threadId: Int,
     val eventId: Int
 ) {
+    /**
+     * Diff status of this trace point.
+     *
+     * `null` means tracepoint doesn't belong to diff, and is part of simple trace.
+     */
+    var diffStatus: DiffStatus? = null
+        internal set(value)  {
+            require(value != null)  { "Diff status cannot be set to null"}
+            check(field == null) { "Diff status can be changed only once" }
+            field = value
+        }
+
     internal open fun save(out: TraceWriter) {
         saveReferences(out)
 
@@ -48,6 +88,7 @@ sealed class TRTracePoint(
         out.writeInt(codeLocationId)
         out.writeInt(threadId)
         out.writeInt(eventId)
+        out.writeDiffStatus(diffStatus)
     }
 
     internal open fun saveReferences(out: TraceWriter) {
@@ -78,8 +119,12 @@ sealed class TRContainerTracePoint(
     protected var childrenAddresses: AddressIndex = AddressIndex.create()
         private set
 
-    // TODO: do we need this, why not just leave only children/events
+    protected var childrenDiffStatuses: MutableSet<DiffStatus>? = null
+
+    // We need this to have unmodifiable list here, ad "children" list needs some bookkeeping
     val events: List<TRTracePoint?> get() = children
+
+    val subtreeDiffStatuses: Set<DiffStatus> get() = childrenDiffStatuses ?: emptySet()
 
     private fun TRTracePoint.setParentIfContainer(parent: TRContainerTracePoint) {
         if (this !is TRContainerTracePoint) return
@@ -94,6 +139,8 @@ sealed class TRContainerTracePoint(
     internal fun addChild(child: TRTracePoint, address: Long = -1) {
         childrenAddresses.add(address)
         children.add(child)
+
+        addChildStatus(child)
         child.setParentIfContainer(this)
     }
 
@@ -107,7 +154,14 @@ sealed class TRContainerTracePoint(
     internal fun replaceChildren(from: TRContainerTracePoint) {
         children = from.children
         childrenAddresses = from.childrenAddresses
-        from.children.forEach { it?.setParentIfContainer(this) }
+        childrenDiffStatuses = null
+        // .filter can be very expensive in case of huge children list
+        from.children.forEach {
+            if (it != null) {
+                addChildStatus(it)
+                it.setParentIfContainer(this)
+            }
+        }
     }
 
     internal fun loadChild(index: Int, child: TRTracePoint) {
@@ -116,6 +170,7 @@ sealed class TRContainerTracePoint(
         }
         // Should we check for override? Lets skip for now
         children[index] = child
+        addChildStatus(child)
         child.setParentIfContainer(this)
     }
 
@@ -130,8 +185,46 @@ sealed class TRContainerTracePoint(
         children.forgetAll()
     }
 
+    override fun save(out: TraceWriter) {
+        super.save(out)
+        // Save statuses of all children in diff, if it is diff
+        val cds = childrenDiffStatuses
+        out.writeByte(cds?.size ?: 0)
+        cds?.forEach { out.writeDiffStatus(it) }
+    }
+
+    private fun addChildStatus(child: TRTracePoint) {
+        val s = child.diffStatus
+        if (s == null || s == DiffStatus.UNCHANGED) return
+        if (childrenDiffStatuses == null) {
+            childrenDiffStatuses = EnumSet.of(s)
+        } else {
+            childrenDiffStatuses!!.add(s)
+        }
+    }
+
+    private fun removeChildStatus(child: TRTracePoint) {
+        val s = child.diffStatus
+        if (childrenDiffStatuses == null || s == null || s == DiffStatus.UNCHANGED) return
+        childrenDiffStatuses!!.remove(s)
+        if (childrenDiffStatuses!!.isEmpty()) childrenDiffStatuses = null
+    }
+
     internal abstract fun saveFooter(out: TraceWriter)
     internal abstract fun loadFooter(inp: DataInput)
+
+    companion object {
+        internal fun loadChildrenDiffStatuses(inp: DataInput): MutableSet<DiffStatus>? {
+            val size = inp.readByte().toInt()
+            if (size == 0) return null
+            val first = inp.readDiffStatus()
+            val set = EnumSet.of(first)
+            repeat(size - 1) {
+                set.add(inp.readDiffStatus())
+            }
+            return set
+        }
+    }
 }
 
 class TRMethodCallTracePoint(
@@ -240,10 +333,11 @@ class TRMethodCallTracePoint(
     }
 
     companion object {
-        // Flag which tells that the method was not tracked from its start and has some missing tracepoints
+        // Flag that tells that the method was not tracked from its start and has some missing tracepoints
         const val INCOMPLETE_METHOD_FLAG: Int = 1
 
         internal fun load(context: TraceContext, inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRMethodCallTracePoint {
+            val childrenDiffStatus = loadChildrenDiffStatuses(inp)
             val methodId = inp.readInt()
             val obj = inp.readTRObject(context)
             val pcount = inp.readInt()
@@ -253,7 +347,7 @@ class TRMethodCallTracePoint(
             }
             val flags = inp.readShort()
 
-            val tracePoint = TRMethodCallTracePoint(
+            return TRMethodCallTracePoint(
                 context = context,
                 threadId = threadId,
                 codeLocationId = codeLocationId,
@@ -262,9 +356,9 @@ class TRMethodCallTracePoint(
                 parameters = parameters,
                 flags = flags,
                 eventId = eventId,
-            )
-
-            return tracePoint
+            ).also {
+                it.childrenDiffStatuses = childrenDiffStatus
+            }
         }
     }
 }
@@ -328,15 +422,17 @@ class TRLoopTracePoint(
     companion object {
 
         internal fun load(context: TraceContext, inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRLoopTracePoint {
+            val childrenDiffStatus = loadChildrenDiffStatuses(inp)
             val loopId = inp.readInt()
-            val tracePoint = TRLoopTracePoint(
+            return TRLoopTracePoint(
                 context = context,
                 threadId = threadId,
                 codeLocationId = codeLocationId,
                 loopId = loopId,
                 eventId = eventId,
-            )
-            return tracePoint
+            ).also {
+                it.childrenDiffStatuses = childrenDiffStatus
+            }
         }
     }
 }
@@ -378,19 +474,20 @@ class TRLoopIterationTracePoint(
     companion object {
 
         internal fun load(context: TraceContext, inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRLoopIterationTracePoint {
+            val childrenDiffStatus = loadChildrenDiffStatuses(inp)
             val loopId = inp.readInt()
             val loopIteration = inp.readInt()
 
-            val tracePoint = TRLoopIterationTracePoint(
+            return TRLoopIterationTracePoint(
                 context = context,
                 threadId = threadId,
                 codeLocationId = codeLocationId,
                 loopId = loopId,
                 loopIteration = loopIteration,
                 eventId = eventId,
-            )
-
-            return tracePoint
+            ).also {
+                it.childrenDiffStatuses = childrenDiffStatus
+            }
         }
     }
 }
@@ -667,7 +764,8 @@ fun loadTRTracePoint(context: TraceContext, inp: DataInput): TRTracePoint {
     val codeLocationId = inp.readInt()
     val threadId = inp.readInt()
     val eventId = inp.readInt()
-    return loader(context, inp, codeLocationId, threadId, eventId)
+    val diffStatus = inp.readDiffStatus()
+    return loader(context, inp, codeLocationId, threadId, eventId).also { if (diffStatus != null) it.diffStatus = diffStatus }
 }
 
 private fun String.escape() = this
