@@ -51,6 +51,14 @@ fun <T, R> List<T>.findMapped(transform: (T) -> R?): R? {
     return null
 }
 
+inline fun Boolean.ensure(): Boolean {
+    // TODO: add contract?
+    // contract {
+    //     returns() implies this
+    // }
+    check(this)
+    return this
+}
 
 inline fun<T> T?.ensureNull(lazyMessage: (T?) -> Any): T? {
     check(this == null) { lazyMessage(this) }

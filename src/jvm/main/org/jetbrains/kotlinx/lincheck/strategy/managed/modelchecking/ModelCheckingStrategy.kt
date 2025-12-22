@@ -645,11 +645,23 @@ internal class ModelCheckingMonitorTracker : MonitorTracker {
         waitingMonitor.clear()
     }
 
+    fun copy(): ModelCheckingMonitorTracker {
+        val tracker = ModelCheckingMonitorTracker()
+        acquiredMonitors.forEach { (monitor, info) ->
+            tracker.acquiredMonitors[monitor] = info.copy()
+        }
+        waitingMonitor.forEach { thread, info ->
+            tracker.waitingMonitor[thread] = info?.copy()
+        }
+        return tracker
+    }
+
+
     /**
      * Stores the [monitor], id of the thread acquired the monitor [threadId],
      * and the number of reentrant acquisitions [timesAcquired].
      */
-    private class MonitorAcquiringInfo(
+    private data class MonitorAcquiringInfo(
         val monitor: Any,
         val threadId: Int,
         var timesAcquired: Int = 0,
