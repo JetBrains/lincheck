@@ -170,7 +170,7 @@ sealed class TRContainerTracePoint(
         }
         // Should we check for override? Lets skip for now
         children[index] = child
-        addChild(child)
+        addChildStatus(child)
         child.setParentIfContainer(this)
     }
 
