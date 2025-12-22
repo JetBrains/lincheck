@@ -79,8 +79,6 @@ public interface EventTracker {
     void onInlineMethodCallReturn(ThreadDescriptor descriptor, int methodId);
     void onInlineMethodCallException(ThreadDescriptor descriptor, int methodId, Throwable t);
 
-    BootstrapResult<?> invokeDeterministicallyOrNull(ThreadDescriptor threadDescriptor, long descriptorId, Object descriptor, Object receiver, Object[] params);
-
     void onLoopIteration(ThreadDescriptor descriptor, int codeLocation, int loopId);
     void afterLoopExit(ThreadDescriptor descriptor, int codeLocation, int loopId, Throwable exception, boolean isReachableFromOutsideLoop);
 

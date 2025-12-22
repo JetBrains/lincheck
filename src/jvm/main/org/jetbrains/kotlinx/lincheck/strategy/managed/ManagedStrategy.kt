@@ -1973,28 +1973,6 @@ internal abstract class ManagedStrategy(
         error("Lincheck managed strategy does not support CFG-based loops tracking.")
     }
 
-    private fun <T> KResult<T>.toBootstrapResult() =
-        if (isSuccess) BootstrapResult.fromSuccess(getOrThrow())
-        else BootstrapResult.fromFailure(exceptionOrNull()!!)
-
-    override fun invokeDeterministicallyOrNull(
-        threadDescriptor: ThreadDescriptor,
-        descriptorId: Long,
-        descriptor: Any?,
-        receiver: Any?,
-        params: Array<Any?>
-    ): BootstrapResult<*>? = threadDescriptor.runInsideIgnoredSection {
-        when {
-            descriptor !is DeterministicMethodDescriptor<*, *> -> null
-            !isInTraceDebuggerMode -> descriptor.runFake(receiver, params).toBootstrapResult()
-            isFirstReplay -> null
-            else -> {
-                val state = nativeMethodCallStatesTracker.getState(descriptorId, descriptor.methodCallInfo)
-                descriptor.runFromStateWithCast(receiver, params, state).toBootstrapResult()
-            }
-        }
-    }
-
     private fun methodAnalysisSectionType(
         owner: Any?,
         className: String,

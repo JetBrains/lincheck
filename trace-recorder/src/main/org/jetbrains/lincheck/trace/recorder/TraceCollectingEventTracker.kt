@@ -840,14 +840,6 @@ class TraceCollectingEventTracker(
         threadData.exitLoop()
     }
 
-    override fun invokeDeterministicallyOrNull(
-        threadDescriptor: ThreadDescriptor,
-        descriptorId: Long,
-        descriptor: Any?,
-        receiver: Any?,
-        params: Array<out Any?>
-    ): BootstrapResult<*>? = null
-
     override fun getThreadLocalRandom(): InjectedRandom  = runInsideIgnoredSection {
         val msg = "Trace Recorder mode doesn't support Random calls determinism"
         Logger.error { msg }
