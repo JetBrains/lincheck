@@ -145,7 +145,7 @@ internal fun TransformationConfiguration.shouldApplyVisitor(visitorClass: Class<
         LocalVariablesAccessTransformer::class.java -> trackLocalVariableAccesses
         SharedMemoryAccessTransformer::class.java -> trackSharedMemoryAccesses
 
-        MethodCallTransformerBase::class.java -> trackMethodCalls
+        MethodCallTransformer::class.java -> trackMethodCalls
         InlineMethodCallTransformer::class.java -> trackInlineMethodCalls
 
         ThreadRunTransformer::class.java -> trackThreadRun
