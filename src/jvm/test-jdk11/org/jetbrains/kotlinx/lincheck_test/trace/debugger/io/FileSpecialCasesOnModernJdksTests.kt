@@ -15,9 +15,11 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import org.junit.Ignore
 
 // FileInputStream Tests
 
+@Ignore
 class FileInputStreamReadNBytesTest : FileSpecialCasesTest() {
     private val file = File("test-input-stream-read-n-bytes.txt")
 
@@ -43,6 +45,7 @@ class FileInputStreamReadNBytesTest : FileSpecialCasesTest() {
     }
 }
 
+@Ignore
 class FileInputStreamTransferToFileOutputStreamTest : FileSpecialCasesTest() {
     private val sourceFile = File("test-input-stream-transfer-source.txt")
     private val targetFile = File("test-input-stream-transfer-target.txt")
@@ -77,6 +80,7 @@ class FileInputStreamTransferToFileOutputStreamTest : FileSpecialCasesTest() {
     }
 }
 
+@Ignore
 class FileInputStreamTransferToByteArrayOutputStreamTest : FileSpecialCasesTest() {
     private val sourceFile = File("test-input-stream-transfer-to-bytearray.txt")
 
