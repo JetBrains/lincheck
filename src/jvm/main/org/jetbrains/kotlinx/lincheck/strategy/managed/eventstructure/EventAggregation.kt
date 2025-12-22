@@ -21,6 +21,9 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.lincheck.util.ensure
+import org.jetbrains.lincheck.util.ensureNotNull
+import org.jetbrains.lincheck.util.ensureNull
 import kotlin.collections.mapValues
 
 interface EventAggregator {

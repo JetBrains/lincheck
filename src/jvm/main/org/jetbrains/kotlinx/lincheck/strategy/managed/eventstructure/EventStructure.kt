@@ -15,6 +15,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.util.ensure
+import org.jetbrains.lincheck.util.ensureNull
 
 
 class EventStructure(
