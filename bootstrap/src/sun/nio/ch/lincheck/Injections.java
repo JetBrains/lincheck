@@ -698,9 +698,34 @@ public class Injections {
 
     /**
      * Called from the instrumented code before any method call.
+     * <br>
      *
-     * @param receiver is `null` for public static methods.
-     * @return Deterministic call descriptor or null.
+     * <b>Method result interception protocol:</b>
+     * if the method interception instrumentation is enabled for the given method,
+     * the instrumentation injects a code to create a {@link ResultInterceptor} object and pass it to this injection.
+     * The {@link EventTracker} may use the interceptor object to intercept the method call and return a custom result.
+     * To do that, the event tracker needs to set the result of the interceptor object
+     * via {@link ResultInterceptor#interceptResult(Object)}
+     * or {@link ResultInterceptor#interceptException(Throwable)} method.
+     * The instrumentation injects a code to check if the result was intercepted, and if so,
+     * it does not perform the original method call but instead uses the result from the interceptor object.
+     * <br>
+     *
+     * Note that a single interceptor object is created per each method call, and it is passed to both
+     * {@link #onMethodCall} and {@link #onMethodCallReturn}/{@link #onMethodCallException} methods.
+     * This allows the {@link #onMethodCall} to assign some meta-data to the interceptor object,
+     * so that later {@link #onMethodCallReturn} or {@link #onMethodCallException} can use this metadata.
+     * For instance, this can be used to implement record-replay debugging,
+     * where on the first run the method is called normally and its result is recorded in some persistent storage,
+     * and on the second run the method call is intercepted and the recorded result is used instead of calling the method.
+     *
+     * @param descriptor The thread descriptor of the current thread.
+     * @param codeLocation The location of the method call in the source code.
+     * @param methodId The id of the called method.
+     * @param receiver The receiver object of the called method. Equals to `null` for static methods.
+     * @param params The parameters of the called method.
+     * @param interceptor The interceptor object that can be used to intercept the result of the method call.
+     *                    Equals to `null` if the result interception is disabled for the given method.
      */
     public static void onMethodCall(ThreadDescriptor descriptor, int codeLocation, int methodId, Object receiver, Object[] params, ResultInterceptor interceptor) {
         EventTracker eventTracker = getEventTracker(descriptor);
@@ -709,57 +734,79 @@ public class Injections {
     }
 
     /**
-     * Called from the instrumented code after any method successful call, i.e., without any exception.
+     * Called from the instrumented code after any successful (i.e., without any exception) method call.
      *
-     * @param result The call result.
+     * @param descriptor The thread descriptor of the current thread.
+     * @param methodId The id of the called method.
+     * @param receiver The receiver object of the called method. Equals to `null` for static methods.
+     * @param params The parameters of the called method.
+     * @param result The result of the method call.
+     * @param interceptor The interceptor object.
      */
-    public static void onMethodCallReturn(ThreadDescriptor threadDescriptor, int methodId, Object receiver, Object[] params, Object result, ResultInterceptor interceptor) {
-        EventTracker eventTracker = getEventTracker(threadDescriptor);
-        if (eventTracker == null || threadDescriptor == null) return;
-        eventTracker.onMethodCallReturn(threadDescriptor, methodId, receiver, params, result, interceptor);
+    public static void onMethodCallReturn(ThreadDescriptor descriptor, int methodId, Object receiver, Object[] params, Object result, ResultInterceptor interceptor) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        if (eventTracker == null || descriptor == null) return;
+        eventTracker.onMethodCallReturn(descriptor, methodId, receiver, params, result, interceptor);
     }
 
     /**
-     * Called from the instrumented code after any method that returns void successful call, i.e., without any exception.
+     * Called from the instrumented code after any successful (i.e., without any exception) method call returning void.
+     * See {@link #onMethodCallReturn} for details.
      */
-    public static void onMethodCallReturnVoid(ThreadDescriptor threadDescriptor, int methodId, Object receiver, Object[] params, ResultInterceptor interceptor) {
-        onMethodCallReturn(threadDescriptor, methodId, receiver, params, VOID_RESULT, interceptor);
+    public static void onMethodCallReturnVoid(ThreadDescriptor descriptor, int methodId, Object receiver, Object[] params, ResultInterceptor interceptor) {
+        onMethodCallReturn(descriptor, methodId, receiver, params, VOID_RESULT, interceptor);
     }
 
     /**
      * Called from the instrumented code after any method call threw an exception
      *
+     * @param descriptor The thread descriptor of the current thread.
+     * @param methodId The id of the called method.
+     * @param receiver The receiver object of the called method. Equals to `null` for static methods.
+     * @param params The parameters of the called method.
      * @param exception Thrown exception.
-     * @return The potentially modified {@code t}.
+     * @param interceptor The interceptor object.
      */
-    public static void onMethodCallException(ThreadDescriptor threadDescriptor, int methodId, Object receiver, Object[] params, Throwable exception, ResultInterceptor interceptor) {
-        EventTracker eventTracker = getEventTracker(threadDescriptor);
-        if (eventTracker == null || threadDescriptor == null) return;
-        eventTracker.onMethodCallException(threadDescriptor, methodId, receiver, params, exception, interceptor);
+    public static void onMethodCallException(ThreadDescriptor descriptor, int methodId, Object receiver, Object[] params, Throwable exception, ResultInterceptor interceptor) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        if (eventTracker == null || descriptor == null) return;
+        eventTracker.onMethodCallException(descriptor, methodId, receiver, params, exception, interceptor);
     }
 
+    /**
+     * Creates and returns a new instance of result interceptor.
+     *
+     * @return a new {@link ResultInterceptor} instance.
+     */
     public static ResultInterceptor createResultInterceptor() {
         return new ResultInterceptor();
     }
 
-    public static boolean isResultOrExceptionIntercepted(ResultInterceptor resultInterceptor) {
+    /**
+     * Checks if the result was intercepted in the given {@link ResultInterceptor} object.
+     *
+     * @param interceptor the non-null interceptor object.
+     * @return if a normal or exceptional result was intercepted.
+     */
+    public static boolean isResultOrExceptionIntercepted(ResultInterceptor interceptor) {
         // No result intercepted if there is no result interceptor in the first place
-        if (resultInterceptor == null) return false;
-        return resultInterceptor.isResultIntercepted() || resultInterceptor.isExceptionIntercepted();
+        if (interceptor == null) return false;
+        return interceptor.isResultIntercepted() || interceptor.isExceptionIntercepted();
     }
 
     /**
-     * Retrieves a value from the provided ResultInterceptor object or throws an exception if the result contains it.
+     * Retrieves a value from the provided {@link ResultInterceptor} object
+     * or throws an exception if the result contains it.
      *
-     * @param resultInterceptor the ResultInterceptor object from which the value is to be retrieved. Assumes that it is not null
-     * @return the value contained in the BootstrapResult object
-     * @throws Throwable if the result contains it
+     * @param interceptor the non-null interceptor object from which the value is to be retrieved.
+     * @return the intercepted value, if the normal result value was intercepted.
+     * @throws Throwable the intercepted exception, if an exception result was intercepted.
      */
-    public static Object getOrThrowInterceptedResult(ResultInterceptor resultInterceptor) throws Throwable {
-        if (resultInterceptor.isExceptionIntercepted()) {
-            throw resultInterceptor.getInterceptedException();
+    public static Object getOrThrowInterceptedResult(ResultInterceptor interceptor) throws Throwable {
+        if (interceptor.isExceptionIntercepted()) {
+            throw interceptor.getInterceptedException();
         }
-        return resultInterceptor.getInterceptedResult();
+        return interceptor.getInterceptedResult();
     }
 
 

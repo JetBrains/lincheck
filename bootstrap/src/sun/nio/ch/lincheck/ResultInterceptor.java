@@ -10,6 +10,26 @@
 
 package sun.nio.ch.lincheck;
 
+/**
+ * Result interceptor allows intercepting the result of a method invocation (or other operations).
+ * <br>
+ *
+ * Result interceptor works in tandem with the instrumentation and the {@link EventTracker} class.
+ * When method call interception instrumentation is enabled, the event tracker may use
+ * the interceptor object passed to method call tracking injections to intercept the result of the method call.
+ * In that case, instead of performing an actual method call,
+ * the code will use the intercepted object or exception will be used as a result of the method call.
+ * Similar mechanism can be used to intercept other operations, such as field access or array access.
+ * <br>
+ *
+ * The result interception allows implementing various useful features,
+ * such as record-replay debugging, or read operations result interception
+ * (to model different relaxed memory consistency effects).
+ * <br>
+ *
+ * See {@link Injections#onMethodCall}, {@link Injections#onMethodCallReturn},
+ * and {@link Injections#onMethodCallException} for details on result interception protocol.
+ */
 public class ResultInterceptor {
     private Object interceptedResult = null;
     private Throwable interceptedException = null;
