@@ -19,18 +19,18 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
-import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
+//import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import sun.nio.ch.lincheck.TestThread
 import java.lang.reflect.*
 import org.objectweb.asm.Type
 
 internal class EventStructureStrategy(
-        testCfg: ModelCheckingCTestConfiguration,
-        testClass: Class<*>,
-        scenario: ExecutionScenario,
-        validationFunction: Actor?,
-        stateRepresentation: Method?
-) : ManagedStrategy(testClass, scenario, validationFunction, stateRepresentation, testCfg) {
+    runner: Runner,
+    settings: ManagedStrategySettings,
+    // TODO: Should we turn this on or not?
+    // The flag to enable IntelliJ IDEA plugin mode
+    //  val inIdeaPluginReplayMode: Boolean = false,
+) : ManagedStrategy(runner, settings) {
 
     private val memoryInitializer: MemoryInitializer = { location ->
         runInIgnoredSection {
@@ -257,19 +257,28 @@ internal class EventStructureStrategy(
         )
     }
 
-    override fun shouldSwitch(iThread: Int): ThreadSwitchDecision {
+    // TODO: This is a very hacky way to reproduce the old behaviour of shouldSwitch
+    var threadToSwitch : ThreadId? = null
+    override fun onSwitchPoint(iThread: ThreadId) {
+        threadToSwitch = iThread;
+    }
+
+    override fun shouldSwitch(): Boolean {
+
+        // TODO: this has changed see what the new semantics are
         // If strategy is in replay phase we first need to execute replaying threads
-        if (eventStructure.inReplayPhase() && !eventStructure.inReplayPhase(iThread)) {
-            return ThreadSwitchDecision.MAY
-        }
+//        if (eventStructure.inReplayPhase() && !eventStructure.inReplayPhase(iThread)) {
+//            return ThreadSwitchDecision.MAY
+//        }
+
         // If strategy is in replay mode for given thread
         // we should wait until replaying the next event become possible
         // (i.e. when all the dependencies will be replayed too)
-        if (eventStructure.inReplayPhase(iThread)) {
-            return if (eventStructure.canReplayNextEvent(iThread))
-                ThreadSwitchDecision.NOT
+        if (threadToSwitch != null && eventStructure.inReplayPhase(threadToSwitch!!)) {
+            return if (eventStructure.canReplayNextEvent(threadToSwitch!!))
+                false
             else
-                ThreadSwitchDecision.MUST
+               true
         }
 
         /* For event structure strategy enforcing context switches is not necessary,
@@ -282,7 +291,7 @@ internal class EventStructureStrategy(
          * Thus we might want to customize scheduling strategy.
          * TODO: make scheduling strategy configurable
          */
-        return ThreadSwitchDecision.NOT
+        return false
     }
 
     override fun chooseThread(iThread: Int): Int {
