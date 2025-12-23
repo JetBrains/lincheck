@@ -25,15 +25,17 @@ internal object TraceRecorderInjections {
     @JvmStatic
     fun startTraceRecorder(startingCodeLocationId: Int) {
         try {
-            TraceRecorder.installAndStartTrace(
-                className = TraceAgentParameters.classUnderTraceDebugging,
-                methodName = TraceAgentParameters.methodUnderTraceDebugging,
+            TraceRecorder.install(
                 traceFileName = TraceAgentParameters.traceDumpFilePath,
                 format = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FORMAT),
                 formatOption = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FOPTION),
                 pack = (TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_PACK) ?: "true").toBoolean(),
-                startingCodeLocationId = startingCodeLocationId,
                 context = LincheckInstrumentation.context
+            )
+            TraceRecorder.startRecording(
+                className = TraceAgentParameters.classUnderTraceDebugging,
+                methodName = TraceAgentParameters.methodUnderTraceDebugging,
+                startingCodeLocationId = startingCodeLocationId
             )
         } catch (t: Throwable) {
             Logger.error { "Cannot start Trace Recorder: $t"}

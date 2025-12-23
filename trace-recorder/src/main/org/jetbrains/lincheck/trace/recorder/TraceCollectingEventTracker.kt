@@ -200,8 +200,6 @@ fun parseOutputMode(outputMode: String?, outputOption: String?): TraceCollectorM
 }
 
 class TraceCollectingEventTracker(
-    private val className: String,
-    private val methodName: String,
     private val traceDumpPath: String?,
     private val mode: TraceCollectorMode,
     private val packTrace: Boolean,
@@ -209,9 +207,6 @@ class TraceCollectingEventTracker(
 ) : EventTracker {
     // Analysis profile for tracing --- tells what methods should be analyzed or ignored
     private val analysisProfile: AnalysisProfile = AnalysisProfile(analyzeStdLib = false)
-
-    // Meta-information about the current tracing session
-    private val metaInfo = TraceMetaInfo.create(TraceAgentParameters.rawArgs, className, methodName)
 
     // [ThreadDescriptor.eventTrackerData] is a weak reference,
     // so store it here too, but use only at the end
@@ -252,6 +247,20 @@ class TraceCollectingEventTracker(
     // when Main thread finishes and decides to "finish" all other running threads.
     // By "finish" here we imply that it will dump their recorded data.
     private val spinner = Spinner()
+
+    /**
+     * This class hierarchy denotes various modes of tracing start.
+     *
+     * - [FromMethod] means that the tracing was started from a specific method.
+     * - [Dynamic] means that the tracing was started dynamically by external request during application run.
+     */
+    private sealed class TracingStartMode {
+        data class FromMethod(val className: String, val methodName: String) : TracingStartMode()
+        object Dynamic : TracingStartMode()
+    }
+
+    private var tracingStartMode: TracingStartMode? = null
+    private var tracingStartTime = -1L
 
     override fun registerRunningThread(descriptor: ThreadDescriptor, thread: Thread): Unit = runInsideIgnoredSection {
         // must be outside of the `computeIfAbsent` call, because its body
@@ -866,29 +875,36 @@ class TraceCollectingEventTracker(
         return -1
     }
 
-    private var startTime = System.currentTimeMillis()
+    fun startTracing() {
+        tracingStartMode = TracingStartMode.Dynamic
+        tracingStartTime = System.currentTimeMillis()
+    }
 
-    fun enableTrace(startingCodeLocationId: Int) {
-        // Start tracing in this thread
+    fun startTracing(className: String, methodName: String, codeLocationId: Int) {
+        registerCurrentThread(className, methodName, codeLocationId)
+        tracingStartMode = TracingStartMode.FromMethod(className, methodName)
+        tracingStartTime = System.currentTimeMillis()
+    }
+
+    private fun registerCurrentThread(className: String, methodName: String, codeLocationId: Int) {
         val thread = Thread.currentThread()
         val threadData = ThreadData(nextThreadId.getAndIncrement())
         ThreadDescriptor.getCurrentThreadDescriptor().eventTrackerData = threadData
         threads[thread] = threadData
+        strategy.registerCurrentThread(threadData.threadId)
 
         val tracePoint = TRMethodCallTracePoint(
             context = context,
             threadId = threadData.threadId,
-            codeLocationId = startingCodeLocationId,
+            codeLocationId = codeLocationId,
             methodId = context.getOrCreateMethodId(className, methodName, Types.MethodType(Types.VOID_TYPE)),
             obj = null,
             parameters = emptyList()
         )
-        strategy.registerCurrentThread(threadData.threadId)
-        strategy.tracePointCreated(null,tracePoint)
+        strategy.tracePointCreated(null, tracePoint)
+
         threadData.setRootCall(tracePoint)
         threadData.pushStackFrame(tracePoint, null, isInline = false)
-
-        startTime = System.currentTimeMillis()
     }
 
     /**
@@ -987,16 +1003,33 @@ class TraceCollectingEventTracker(
         // Close this thread call stack (it must be 1 element, complain about problems otherwise)
         completeMainThread(mainThread, ThreadDescriptor.getCurrentThreadDescriptor())
 
-
         val allThreads = mutableListOf<ThreadData>()
         allThreads.addAll(threads.values)
         threads.clear()
 
         strategy.traceEnded()
-        metaInfo.traceEnded()
 
-        Logger.debug { "Trace collected in ${System.currentTimeMillis() - startTime} ms" }
-        startTime = System.currentTimeMillis()
+        var className: String? = null
+        var methodName: String? = null
+        when (val mode = tracingStartMode) {
+            is TracingStartMode.FromMethod -> {
+                className = mode.className
+                methodName = mode.methodName
+            }
+            else -> {}
+        }
+
+        val metaInfo = TraceMetaInfo.create(
+            agentArgs = TraceAgentParameters.rawArgs,
+            className = className ?: "",
+            methodName = methodName ?: "",
+            startTime = tracingStartTime,
+            endTime = System.currentTimeMillis(),
+        )
+
+        Logger.debug { "Trace collected in ${metaInfo.endTime - metaInfo.startTime} ms" }
+
+        val traceWriteStartTime = System.currentTimeMillis()
 
         try {
             val roots = mutableListOf<TRTracePoint>()
@@ -1032,7 +1065,7 @@ class TraceCollectingEventTracker(
             return
         } finally {
             if (mode != TraceCollectorMode.NULL) {
-                Logger.debug { "Trace finalized in ${System.currentTimeMillis() - startTime} ms" }
+                Logger.debug { "Trace written in ${System.currentTimeMillis() - traceWriteStartTime} ms" }
             }
         }
     }

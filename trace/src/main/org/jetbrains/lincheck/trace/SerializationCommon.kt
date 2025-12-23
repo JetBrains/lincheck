@@ -53,10 +53,10 @@ internal const val INDEX_CELL_SIZE: Int = Byte.SIZE_BYTES + Int.SIZE_BYTES + Lon
 /**
  * Information about conditions in which trace was collected.
  *
- *  - [className] — Name of traced class.
- *  - [methodName] — Name of traced method.
- *  - [startTime] — start time of trace collection, as returned by [System.currentTimeMillis]
- *  - [endTime] — end time of trace collection, as returned by [System.currentTimeMillis]
+ *  - [className] — Name of traced class; can be null if tracing started not from a specific method.
+ *  - [methodName] — Name of traced method; can be null if tracing started not from a specific method.
+ *  - [startTime] — start time of the trace collection, as returned by [System.currentTimeMillis].
+ *  - [endTime] — end time of the trace collection, as returned by [System.currentTimeMillis].
  *  - [systemProperties] — state of system properties ([System.getProperties]) at the beginning of trace collection.
  *  - [environment] — state of system environment ([System.getenv]) at the beginning of trace collection.
  */
@@ -67,24 +67,16 @@ data class TraceMetaInfo private constructor(
     val className: String,
     val methodName: String,
     val startTime: Long,
+    val endTime: Long,
     val isDiff: Boolean = false,
     val leftTraceMetaInfo: TraceMetaInfo? = null,
     val rightTraceMetaInfo: TraceMetaInfo? = null
 ) {
-    var endTime: Long = -1
-        private set
-
     private val props: MutableMap<String, String> = mutableMapOf()
     private val env: MutableMap<String, String> = mutableMapOf()
 
     val systemProperties: Map<String, String> get() = props
     val environment: Map<String, String> get() = env
-
-    fun traceEnded() {
-        if (endTime <= 0) {
-            endTime = System.currentTimeMillis()
-        }
-    }
 
     /**
      * Prints this meta info in human-readable way to given [Appendable].
@@ -115,12 +107,18 @@ data class TraceMetaInfo private constructor(
          * Creates new object: sets [className] and [methodName] to passed parameters,
          * [startTime] to current time and fetch current system properties and environment.
          */
-        fun create(agentArgs: String, className: String, methodName: String): TraceMetaInfo {
+        fun create(
+            agentArgs: String,
+            className: String,
+            methodName: String,
+            startTime: Long,
+            endTime: Long
+        ): TraceMetaInfo {
             val bean = ManagementFactory.getRuntimeMXBean()
             // Read JVM args
             val jvmArgs = bean.inputArguments.joinToString(" ") { arg -> arg.escapeShell() }
 
-            val meta = TraceMetaInfo(jvmArgs, agentArgs, className, methodName, System.currentTimeMillis())
+            val meta = TraceMetaInfo(jvmArgs, agentArgs, className, methodName, startTime, endTime)
             with (meta) {
                 System.getProperties().forEach {
                     props[it.key as String] = it.value as String
@@ -143,8 +141,7 @@ data class TraceMetaInfo private constructor(
             val jvmArgs = reader.readLine(JVM_ARGS_HEADER) ?: return null
             val agentArgs = reader.readLine(AGENT_ARGS_HEADER) ?: return null
 
-            val meta = TraceMetaInfo(jvmArgs, agentArgs, className, methodName, startTime)
-            meta.endTime = endTime
+            val meta = TraceMetaInfo(jvmArgs, agentArgs, className, methodName, startTime, endTime)
 
             if (!reader.readMap(PROPERTIES_HEADER, meta.props)) return null
             if (!reader.readMap(ENV_HEADER, meta.env)) return null
@@ -153,21 +150,23 @@ data class TraceMetaInfo private constructor(
         }
 
         private fun BufferedReader.readLine(prefix: String): String? {
-            val line = readLine() ?: return readError("No \"$prefix\" line")
-            if (!line.startsWith(prefix)) return readError("Wrong \"$prefix\" line")
+            val line = readLine().ensureValueRead { "Unexpected EOF" } ?: return null
+            if (!line.startsWith(prefix)) {
+                readError { "Wrong \"$prefix\" line" }
+                return null
+            }
             return line.substring(prefix.length)
         }
 
         private fun BufferedReader.readLong(prefix: String): Long? {
             val str = readLine(prefix) ?: return null
-            val long = str.toLongOrNull() ?: return readError("Invalid format for \"$prefix\": not a number")
-            return long
+            return str.toLongOrNull().ensureValueRead { "Invalid format for \"$prefix\": not a number" }
         }
 
         private fun BufferedReader.checkHeader(prefix: String): Boolean {
             val str = readLine(prefix) ?: return false
             if (str.isEmpty()) return true
-            readError<Any>("Section header \"$prefix\" contains unexpected characters")
+            readError { "Section header \"$prefix\" contains unexpected characters" }
             return false
         }
 
@@ -177,12 +176,12 @@ data class TraceMetaInfo private constructor(
                 val line = readLine() ?: break // EOF is Ok
                 if (line.isEmpty()) break // Empty line is end-of-map, Ok
                 if (line[0] != ' ') {
-                    readError<Any>("Wrong line in \"$header\" section: must start from space")
+                    readError { "Wrong line in \"$header\" section: must start from space" }
                     return false
                 }
                 val p = line.parseKV()
                 if (p == null) {
-                    readError<Any>("Wrong line in \"$header\" section: doesn't contains '='")
+                    readError { "Wrong line in \"$header\" section: doesn't contains '='" }
                     return false
                 }
                 map[p.first] = p.second
@@ -227,8 +226,13 @@ data class TraceMetaInfo private constructor(
             return idx to sb.toString()
         }
 
-        private fun <T> readError(msg: String): T? {
-            Logger.error { "Cannot read trace meta info: $msg" }
+        private fun readError(lazyMessage: () -> String) {
+            Logger.error { "Cannot read trace meta info: ${lazyMessage()}" }
+        }
+
+        private fun <T> T?.ensureValueRead(lazyMessage: () -> String): T? {
+            if (this != null) return this
+            Logger.error { "Cannot read trace meta info: ${lazyMessage()}" }
             return null
         }
 
