@@ -123,23 +123,18 @@ internal class MethodCallTransformer(
             ownerName,
             argumentNames,
             threadDescriptorLocal,
-            resultInterceptorLocal
+            resultInterceptorLocal,
         )
         // STACK: <empty>
 
         tryCatchFinally(
             tryBlock = {
                 // Stack <empty>
-                ifStatement(
-                    condition =  {
-                        isMethodIntercepted(resultInterceptorLocal)
-                    },
-                    thenClause = {
-                        getOrThrowInterceptedResult(resultInterceptorLocal, returnType)
-                    },
-                    elseClause = {
-                        runMethod(opcode, owner, name, desc, itf, receiverLocal, argumentLocals)
-                    },
+                processMethodCall(opcode, owner, name, desc, itf,
+                    returnType,
+                    receiverLocal,
+                    argumentLocals,
+                    resultInterceptorLocal,
                 )
                 // STACK: result?
                 processMethodCallReturn(
@@ -192,6 +187,35 @@ internal class MethodCallTransformer(
         invokeStatic(Injections::onMethodCall)
         // STACK: deterministicCallDescriptor (NOTE: Isn't the stack empty here?)
         invokeBeforeEventIfPluginEnabled("method call ${this@MethodCallTransformer.methodName}")
+    }
+
+    private fun GeneratorAdapter.processMethodCall(
+        opcode: Int,
+        owner: String,
+        name: String,
+        desc: String,
+        itf: Boolean,
+        returnType: Type,
+        receiverLocal: Int?,
+        argumentLocals: IntArray,
+        resultInterceptorLocal: Int
+    ) {
+        if (!configuration.interceptMethodCallResults) {
+            runMethod(opcode, owner, name, desc, itf, receiverLocal, argumentLocals)
+            return
+        }
+
+        ifStatement(
+            condition = {
+                isMethodIntercepted(resultInterceptorLocal)
+            },
+            thenClause = {
+                getOrThrowInterceptedResult(resultInterceptorLocal, returnType)
+            },
+            elseClause = {
+                runMethod(opcode, owner, name, desc, itf, receiverLocal, argumentLocals)
+            },
+        )
     }
 
     private fun GeneratorAdapter.processMethodCallReturn(
