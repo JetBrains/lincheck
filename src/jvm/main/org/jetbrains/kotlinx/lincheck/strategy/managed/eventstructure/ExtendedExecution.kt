@@ -124,11 +124,11 @@ interface MutableExtendedExecution : ExtendedExecution, MutableExecution<AtomicT
     fun checkConsistency(): Inconsistency?
 }
 
-fun ExtendedExecution(nThreads: Int): ExtendedExecution =
-    MutableExtendedExecution(nThreads)
+fun ExtendedExecution(): ExtendedExecution =
+    MutableExtendedExecution()
 
-fun MutableExtendedExecution(nThreads: Int): MutableExtendedExecution =
-    ExtendedExecutionImpl(ResettableExecution(nThreads))
+fun MutableExtendedExecution(): MutableExtendedExecution =
+    ExtendedExecutionImpl(ResettableExecution())
 
 
 /* private */ class ExtendedExecutionImpl(
@@ -254,11 +254,11 @@ fun MutableExtendedExecution(nThreads: Int): MutableExtendedExecution =
 
 }
 
-/* private */ class ResettableExecution(nThreads: Int) : MutableExecution<AtomicThreadEvent> {
+/* private */ class ResettableExecution() : MutableExecution<AtomicThreadEvent> {
 
-    private var execution = MutableExecution<AtomicThreadEvent>(nThreads)
+    private var execution = MutableExecution<AtomicThreadEvent>()
 
-    constructor(execution: MutableExecution<AtomicThreadEvent>) : this(0) {
+    constructor(execution: MutableExecution<AtomicThreadEvent>) : this() {
         this.execution = execution
     }
 

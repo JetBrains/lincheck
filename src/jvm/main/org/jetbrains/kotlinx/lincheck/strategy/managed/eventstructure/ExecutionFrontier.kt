@@ -93,17 +93,17 @@ inline fun <reified E : ThreadEvent> MutableExecutionFrontier<E>.cut(events: Lis
     }
 }
 
-fun<E : ThreadEvent> ExecutionFrontier(nThreads: Int): ExecutionFrontier<E> =
-    MutableExecutionFrontier(nThreads)
+fun<E : ThreadEvent> ExecutionFrontier(): ExecutionFrontier<E> =
+    MutableExecutionFrontier()
 
-fun<E : ThreadEvent> MutableExecutionFrontier(nThreads: Int): MutableExecutionFrontier<E> =
-    ExecutionFrontierImpl(ArrayIntMap(nThreads))
+fun<E : ThreadEvent> MutableExecutionFrontier(): MutableExecutionFrontier<E> =
+    ExecutionFrontierImpl(mutableMapOf())
 
 fun<E : ThreadEvent> executionFrontierOf(vararg pairs: Pair<ThreadId, E?>): ExecutionFrontier<E> =
     mutableExecutionFrontierOf(*pairs)
 
 fun<E : ThreadEvent> mutableExecutionFrontierOf(vararg pairs: Pair<ThreadId, E?>): MutableExecutionFrontier<E> =
-    ExecutionFrontierImpl(ArrayIntMap(*pairs))
+    ExecutionFrontierImpl(mutableMapOf(*pairs))
 
 fun<E : ThreadEvent> ExecutionFrontier<E>.copy(): MutableExecutionFrontier<E> {
     check(this is ExecutionFrontierImpl)
@@ -111,7 +111,7 @@ fun<E : ThreadEvent> ExecutionFrontier<E>.copy(): MutableExecutionFrontier<E> {
 }
 
 private class ExecutionFrontierImpl<E : ThreadEvent>(
-    override val threadMap: ArrayIntMap<E?>
+    override val threadMap: MutableThreadMap<E?>
 ): MutableExecutionFrontier<E>
 
 inline fun<reified E : ThreadEvent> ExecutionFrontier<E>.toExecution(): Execution<E> =

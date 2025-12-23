@@ -132,26 +132,21 @@ fun<E : ThreadEvent> Execution<E>.nextEvent(event: E): E? =
     }
 
 // TODO: make default constructor
-fun<E : ThreadEvent> Execution(nThreads: Int): Execution<E> =
-    MutableExecution(nThreads)
+fun<E : ThreadEvent> Execution(): Execution<E> =
+    MutableExecution()
 
-fun<E : ThreadEvent> MutableExecution(nThreads: Int): MutableExecution<E> =
-    ExecutionImpl(ArrayIntMap(*(0 until nThreads)
-        .map { (it to sortedArrayListOf<E>()) }
-        .toTypedArray()
-    ))
+// TODO: not sure if this code works as intended
+fun<E : ThreadEvent> MutableExecution(): MutableExecution<E> =
+    ExecutionImpl(mutableMapOf<ThreadId, SortedMutableList<E>>().withDefault{ _ -> sortedArrayListOf() })
 
 fun<E : ThreadEvent> executionOf(vararg pairs: Pair<ThreadId, List<E>>): Execution<E> =
     mutableExecutionOf(*pairs)
 
 fun<E : ThreadEvent> mutableExecutionOf(vararg pairs: Pair<ThreadId, List<E>>): MutableExecution<E> =
-    ExecutionImpl(ArrayIntMap(*pairs
-        .map { (tid, events) -> (tid to SortedArrayList(events)) }
-        .toTypedArray()
-    ))
+    ExecutionImpl(pairs.associate { (tid, events) -> (tid to SortedArrayList(events)) }.withDefault{ _ -> sortedArrayListOf() })
 
 private class ExecutionImpl<E : ThreadEvent>(
-    override val threadMap: ArrayIntMap<SortedMutableList<E>>
+    override val threadMap: ThreadMap<SortedMutableList<E>>
 ) : MutableExecution<E> {
 
     override var size: Int = threadMap.values.sumOf { it.size }

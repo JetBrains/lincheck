@@ -1,25 +1,16 @@
 /*
  * Lincheck
  *
- * Copyright (C) 2019 - 2023 JetBrains s.r.o.
+ * Copyright (C) 2019 - 2025 JetBrains s.r.o.
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as
- * published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Lesser Public License for more details.
- *
- * You should have received a copy of the GNU General Lesser Public
- * License along with this program.  If not, see
- * <http://www.gnu.org/licenses/lgpl-3.0.html>
+ * This Source Code Form is subject to the terms of the
+ * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
+ * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
 package org.jetbrains.kotlinx.lincheck.util
 
+import org.jetbrains.lincheck.util.update
 import kotlin.math.max
 
 interface IntMap<out T> {
@@ -108,6 +99,18 @@ fun <T> MutableIntMap<T>.mergeReduce(other: IntMap<T>, reduce: (T, T) -> T) {
     other.forEach { (key, value) ->
         update(key, default = value) { reduce(it, value) }
     }
+}
+
+// TODO: probably we should remove this file altogether and move this to utils?
+fun <T> MutableThreadMap<T>.mergeReduce(other: ThreadMap<T>, reduce: (T, T) -> T) {
+    other.forEach { (key, value) ->
+        update(key, default = value) { reduce(it, value) }
+    }
+}
+
+// TODO: Why is this needed? See how to make error in execution frontier go away
+fun <T> MutableThreadMap<T>.copy(): MutableThreadMap<T> {
+    return copy()
 }
 
 class ArrayIntMap<T>(capacity: Int) : MutableIntMap<T> {

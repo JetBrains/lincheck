@@ -19,16 +19,13 @@ import org.jetbrains.lincheck.util.ensureNull
 
 
 class EventStructure(
-    nParallelThreads: Int,
     val memoryInitializer: MemoryInitializer,
     // TODO: refactor --- avoid using callbacks!
     private val reportInconsistencyCallback: ReportInconsistencyCallback,
     private val internalThreadSwitchCallback: InternalThreadSwitchCallback,
 ) {
     val mainThreadId = 0
-    val initThreadId = nParallelThreads
-    val maxThreadId = initThreadId
-    val nThreads = maxThreadId + 1
+    val initThreadId = -1 //TODO: Make the initThread -1 since we do not know how many threads we have in advance
 
     /**
      * Mutable list of the event structure events.
@@ -66,7 +63,7 @@ class EventStructure(
     /**
      * The mutable execution currently being explored.
      */
-    private var _execution = MutableExtendedExecution(this.nThreads)
+    private var _execution = MutableExtendedExecution()
 
     /**
      * The execution currently being explored.
@@ -77,7 +74,7 @@ class EventStructure(
     /**
      * The frontier representing an already replayed part of the execution currently being explored.
      */
-    private var playedFrontier = MutableExecutionFrontier<AtomicThreadEvent>(this.nThreads)
+    private var playedFrontier = MutableExecutionFrontier<AtomicThreadEvent>()
 
     /**
      * An object managing the replay process of the execution currently being explored.
@@ -95,7 +92,7 @@ class EventStructure(
      * Pinned events cannot be revisited and thus do not participate in the synchronization
      * with newly added events.
      */
-    private var pinnedEvents = ExecutionFrontier<AtomicThreadEvent>(this.nThreads)
+    private var pinnedEvents = ExecutionFrontier<AtomicThreadEvent>()
 
     /**
      * The object registry, storing information about all objects
@@ -126,8 +123,7 @@ class EventStructure(
      * At this point the current [BlockedEventDescriptor] is removed
      * from the [blockedEvents] mapping, and the thread becomes fully unblocked.
      */
-    private val blockedEvents: MutableThreadMap<BlockedEventDescriptor> =
-        ArrayIntMap(this.nThreads)
+    private val blockedEvents: MutableThreadMap<BlockedEventDescriptor> = mutableMapOf()
 
     private val delayedConsistencyCheckBuffer = mutableListOf<AtomicThreadEvent>()
 
@@ -154,7 +150,7 @@ class EventStructure(
 
     fun initializeExploration() {
         // reset re-played frontier
-        playedFrontier = MutableExecutionFrontier(nThreads)
+        playedFrontier = MutableExecutionFrontier()
         playedFrontier[initThreadId] = execution[initThreadId]!!.last()
         // reset replayer state
         replayer.reset()
