@@ -532,7 +532,7 @@ internal abstract class ManagedStrategy(
      * Returns whether the specified thread is active and
      * can continue its execution (i.e., is not blocked/finished).
      */
-    private fun isActive(iThread: Int): Boolean =
+    protected open fun isActive(iThread: Int): Boolean =
         threadScheduler.isSchedulable(iThread) && !isTestThreadCoroutineSuspended(iThread)
 
     /**
