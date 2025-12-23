@@ -44,50 +44,69 @@ import java.util.concurrent.atomic.AtomicInteger
 object TraceRecorder {
     private var eventTracker: TraceCollectingEventTracker? = null
 
-    private val installCount = AtomicInteger(0)
+    private val startCount = AtomicInteger(0)
 
     @Volatile
     private var traceStarterThread: Thread? = null
 
-    fun installAndStartTrace(
-        className: String,
-        methodName: String,
+    fun install(
         traceFileName: String?,
         format: String?,
         formatOption: String?,
         pack: Boolean,
-        startingCodeLocationId: Int,
         context: TraceContext
     ) {
-        val startedCount = installCount.incrementAndGet()
-        Logger.info { "Trace recorder has been started from $className::$methodName in thread \"${Thread.currentThread().name}\" (installCount=$startedCount)" }
-
-        if (startedCount > 1) return
-
         // Set a signal "void" object from Injections for better text output
         INJECTIONS_VOID_OBJECT = Injections.VOID_RESULT
 
+        check(eventTracker == null) {
+            "Trace recorder has already been installed"
+        }
+
         // this method does not need 'runInsideIgnoredSection' because analysis is not enabled until its completion
         eventTracker = TraceCollectingEventTracker(
-            className = className,
-            methodName = methodName,
             traceDumpPath = traceFileName,
             mode = parseOutputMode(format, formatOption),
             packTrace = pack,
             context = context,
         )
+    }
+
+    fun startRecording(className: String, methodName: String, startingCodeLocationId: Int) {
+        val count = startCount.incrementAndGet()
+        Logger.info {
+            val threadName = Thread.currentThread().name
+            "Trace recorder has been started from $className::$methodName in thread $threadName (startCount=$count)"
+        }
+        if (count > 1) return
+
+        val eventTracker = this.eventTracker ?: error("Trace recorder has not been installed")
+
         traceStarterThread = Thread.currentThread()
         val descriptor = ThreadDescriptor.getCurrentThreadDescriptor()
             ?: Injections.registerCurrentThread(eventTracker)
 
-        Injections.enableGlobalEventTracking(eventTracker)
-
-        eventTracker!!.enableTrace(startingCodeLocationId)
+        eventTracker.startTracing(className, methodName, startingCodeLocationId)
+        Injections.enableGlobalEventTracking(TraceRecorder.eventTracker)
         descriptor.enableAnalysis()
     }
 
+    fun startRecording() {
+        val count = startCount.incrementAndGet()
+        Logger.info {
+            val threadName = Thread.currentThread().name
+            "Trace recorder has been started in thread $threadName (startCount=$count)"
+        }
+        if (count > 1) return
+
+        val eventTracker = this.eventTracker ?: error("Trace recorder has not been installed")
+
+        eventTracker.startTracing()
+        Injections.enableGlobalEventTracking(TraceRecorder.eventTracker)
+    }
+
     fun finishTraceAndDumpResults() {
-        val startedCount = installCount.decrementAndGet()
+        val startedCount = startCount.decrementAndGet()
         Logger.info { "Trace recorder has been stopped in thread \"${Thread.currentThread().name}\" (installCount=$startedCount)" }
 
         if (startedCount > 0) {
