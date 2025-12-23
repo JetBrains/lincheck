@@ -20,6 +20,7 @@ import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.trace.Trace
+import org.jetbrains.lincheck.util.runInsideIgnoredSection
 //import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import sun.nio.ch.lincheck.TestThread
 import java.lang.reflect.*
@@ -34,7 +35,7 @@ internal class EventStructureStrategy(
 ) : ManagedStrategy(runner, settings) {
 
     private val memoryInitializer: MemoryInitializer = { location ->
-        runInIgnoredSection {
+        runInsideIgnoredSection {
             location.read(eventStructure.objectRegistry::getValue)?.opaque()
         }
     }
@@ -365,9 +366,9 @@ internal class EventStructureStrategy(
     override fun onActorStart(iThread: Int) {
         super.onActorStart(iThread)
         // TODO: move ignored section to ManagedStrategyRunner
-        runInIgnoredSection {
+        runInsideIgnoredSection {
             if (runner.currentExecutionPart == ExecutionPart.VALIDATION)
-                return@runInIgnoredSection
+                return@runInsideIgnoredSection
             val actor = scenario.threads[iThread][currentActorId[iThread]]
             eventStructure.addActorStartEvent(iThread, actor)
         }
@@ -375,9 +376,9 @@ internal class EventStructureStrategy(
 
     override fun onActorFinish(iThread: Int) {
         // TODO: move ignored section to ManagedStrategyRunner
-        runInIgnoredSection {
+        runInsideIgnoredSection {
             if (runner.currentExecutionPart == ExecutionPart.VALIDATION)
-                return@runInIgnoredSection
+                return@runInsideIgnoredSection
             val actor = scenario.threads[iThread][currentActorId[iThread]]
             eventStructure.addActorEndEvent(iThread, actor)
         }
