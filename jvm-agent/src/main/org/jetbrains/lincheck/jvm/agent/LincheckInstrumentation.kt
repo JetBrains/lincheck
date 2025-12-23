@@ -32,23 +32,16 @@ import java.util.*
  * Executes [block] with the Lincheck java agent attached for byte-code instrumentation.
  */
 inline fun withLincheckJavaAgent(instrumentationMode: InstrumentationMode, block: () -> Unit) {
-    if (isTraceJavaAgentAttached) {
-        // In case if trace agent is attached we don't do anything
+    if (LincheckInstrumentation.javaAgentAttachType == JavaAgentAttachType.STATIC) {
+        // In case when the java agent was already attached to the process, we don't need to do anything
         block()
     } else {
-        // Otherwise we perform instrumentation via ByteBuddy dynamic agent.
-        // Initialize instrumentation with dynamic ByteBuddy agent
-        // if no agent is attached yet.
-        if (!isInstrumentationInitialized) {
-            /**
-             * Dynamically attaches byte buddy instrumentation to this JVM instance.
-             * Please note that the dynamic attach feature will be disabled in future JVM releases,
-             * but at the moment of implementing this logic (March 2024), it was the smoothest way
-             * to inject code in the user codebase when the `java.base` module also needs to be instrumented.
-             */
-            instrumentation = ByteBuddyAgent.install()
-            isInstrumentationInitialized = true
+        // Otherwise we perform dynamic attach (if the agent has not been attached yet).
+        if (LincheckInstrumentation.javaAgentAttachType == null) {
+            LincheckInstrumentation.attachJavaAgentDynamically()
         }
+        // Instrumentation should be initialized at this point.
+        check(LincheckInstrumentation.isInitialized)
 
         // run the testing code with instrumentation
         install(instrumentationMode)
@@ -58,6 +51,18 @@ inline fun withLincheckJavaAgent(instrumentationMode: InstrumentationMode, block
             LincheckInstrumentation.uninstall()
         }
     }
+}
+
+/**
+ * Enum representing the different attachment types for a Java Agent.
+ *
+ * Java agents can be attached to a JVM in either of the following ways:
+ *
+ * - [STATIC]: The agent is specified at JVM startup and loaded before the main application begins execution.
+ * - [DYNAMIC]: The agent is attached to a running JVM process at runtime, without requiring a restart.
+ */
+enum class JavaAgentAttachType {
+    STATIC, DYNAMIC,
 }
 
 enum class InstrumentationMode {
@@ -144,17 +149,35 @@ object LincheckInstrumentation {
      * [withLincheckJavaAgent] which will use [ByteBuddyAgent] dynamic agent instead.
      */
     lateinit var instrumentation: Instrumentation
+        private set
 
     /**
-     * Determines how to transform classes;
-     * see [InstrumentationMode.STRESS] and [InstrumentationMode.MODEL_CHECKING].
+     * Indicates whether the instrumentation was initialized.
+     */
+    val isInitialized: Boolean get() =
+        ::instrumentation.isInitialized
+
+    /**
+     * Determines how the java agent was attached (statically or dynamically),
+     * null means that the agent was not attached yet.
+     *
+     * @see [JavaAgentAttachType].
+     */
+    var javaAgentAttachType: JavaAgentAttachType? = null
+        private set
+
+    /**
+     * Determines instrumentation strategy, see [InstrumentationMode].
      */
     lateinit var instrumentationMode: InstrumentationMode
+        // TODO: currently set externally in Playground.kt, refactor it later
+        // private set
 
     /**
      * Strategy that controls whether classes are transformed lazily (during call time) or eagerly (during load time).
      */
     lateinit var instrumentationStrategy: InstrumentationStrategy
+        private set
 
     /**
      * Indicates whether the "bootstrap.jar" (see the "bootstrap" project module)
@@ -172,6 +195,43 @@ object LincheckInstrumentation {
      * Trace context for the current agent run.
      */
     val context = TraceContext()
+
+    fun attachJavaAgentStatically(instrumentation: Instrumentation) {
+        check(!isInitialized) {
+            "Lincheck instrumentation is already initialized"
+        }
+        check(javaAgentAttachType == null) {
+            "Java agent was already attached" + when (javaAgentAttachType) {
+                JavaAgentAttachType.STATIC -> " statically"
+                JavaAgentAttachType.DYNAMIC -> " dynamically"
+                null -> ""
+            }
+        }
+
+        this.instrumentation = instrumentation
+        this.javaAgentAttachType = JavaAgentAttachType.STATIC
+    }
+
+    fun attachJavaAgentDynamically() {
+        check(!isInitialized) {
+            "Lincheck instrumentation is already initialized"
+        }
+        check(javaAgentAttachType == null) {
+            "Java agent was already attached" + when (javaAgentAttachType) {
+                JavaAgentAttachType.STATIC -> " statically"
+                JavaAgentAttachType.DYNAMIC -> " dynamically"
+                null -> ""
+            }
+        }
+
+        /* Dynamically attaches byte buddy instrumentation to this JVM instance.
+         * Please note that the dynamic attach feature will be disabled by default in future JVM releases.
+         * However, at the moment of implementing this logic (March 2024), it was the smoothest way
+         * to inject code in the user codebase when the `java.base` module also needs to be instrumented.
+         */
+        instrumentation = ByteBuddyAgent.install()
+        javaAgentAttachType = JavaAgentAttachType.DYNAMIC
+    }
 
     /**
      * Adds [LincheckClassFileTransformer] to this JVM instance.
@@ -538,9 +598,6 @@ object LincheckInstrumentation {
      */
     internal val INSTRUMENT_ALL_CLASSES = System.getProperty("lincheck.instrumentAllClasses")?.toBoolean() ?: false
 }
-
-var isTraceJavaAgentAttached: Boolean = false
-var isInstrumentationInitialized: Boolean = false
 
 internal val dumpTransformedSources by lazy {
     System.getProperty(DUMP_TRANSFORMED_SOURCES_PROPERTY, "false").toBoolean()

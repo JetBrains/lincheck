@@ -14,8 +14,6 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.jvm.agent.TraceAgentTransformer
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
-import org.jetbrains.lincheck.jvm.agent.isInstrumentationInitialized
-import org.jetbrains.lincheck.jvm.agent.isTraceJavaAgentAttached
 import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import org.jetbrains.lincheck.util.isInTraceRecorderMode
 import java.lang.instrument.Instrumentation
@@ -44,9 +42,7 @@ object TraceDebuggerAgent {
             "Rerun with `-Dlincheck.traceDebuggerMode=true` or `-Dlincheck.traceRecorderMode=true` but not both."
         }
         TraceAgentParameters.parseArgs(agentArgs, emptyList())
-        LincheckInstrumentation.instrumentation = inst
-        isTraceJavaAgentAttached = true
-        isInstrumentationInitialized = true
+        LincheckInstrumentation.attachJavaAgentStatically(inst)
         // We are in Trace debugger mode
         LincheckInstrumentation.instrumentation.addTransformer(TraceAgentTransformer(LincheckInstrumentation.context, ::TraceDebuggerMethodTransformer), true)
         LincheckInstrumentation.install(InstrumentationMode.TRACE_DEBUGGING)

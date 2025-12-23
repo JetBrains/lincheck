@@ -15,8 +15,6 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentTransformer
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_EXCLUDE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_INCLUDE
-import org.jetbrains.lincheck.jvm.agent.isInstrumentationInitialized
-import org.jetbrains.lincheck.jvm.agent.isTraceJavaAgentAttached
 import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import org.jetbrains.lincheck.util.isInTraceRecorderMode
 import java.lang.instrument.Instrumentation
@@ -64,9 +62,7 @@ internal object TraceRecorderAgent {
             "Rerun with `-Dlincheck.traceDebuggerMode=true` or `-Dlincheck.traceRecorderMode=true` but not both."
         }
         TraceAgentParameters.parseArgs(agentArgs, ADDITIONAL_ARGS)
-        LincheckInstrumentation.instrumentation = inst
-        isTraceJavaAgentAttached = true
-        isInstrumentationInitialized = true
+        LincheckInstrumentation.attachJavaAgentStatically(inst)
         // We are in Trace Recorder mode (by exclusion)
         // This adds turn-on and turn-off of tracing to the method in question
         LincheckInstrumentation.instrumentation.addTransformer(TraceAgentTransformer(LincheckInstrumentation.context, ::TraceRecorderMethodTransformer), true)
