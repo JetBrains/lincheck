@@ -339,7 +339,7 @@ internal class EventStructureStrategy(
 
     private fun registerTestInstance() {
         check(!isTestInstanceRegistered)
-        eventStructure.addObjectAllocationEvent(eventStructure.mainThreadId, runner.testInstance.opaque())
+        eventStructure.addObjectAllocationEvent(eventStructure.mainThreadId, (runner as ExecutionScenarioRunner).testInstance.opaque())
         isTestInstanceRegistered = true
     }
 
