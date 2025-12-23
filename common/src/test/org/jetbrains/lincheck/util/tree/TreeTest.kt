@@ -210,6 +210,159 @@ class TreeTest {
         assertEquals(expected, mappedTree)
     }
 
+    @Test
+    fun `filter on empty tree returns empty tree`() {
+        val tree = tree<Int> {}
+
+        val filteredTree = tree.filter { it > 5 }
+            .apply { validate() }
+
+        val expected = tree<Int> {}
+        assertEquals(expected, filteredTree)
+    }
+
+    @Test
+    fun `filter removes some elements but not all`() {
+        val tree = tree {
+            node(1) {
+                node(2) {
+                    node(4)
+                    node(5)
+                }
+                node(3) {
+                    node(6)
+                }
+            }
+        }
+
+        val filteredTree = tree.filter { it % 2 == 0 }
+            .apply { validate() }
+
+        val expected = tree {
+            node(1) {
+                node(2) {
+                    node(4)
+                }
+                node(3) {
+                    node(6)
+                }
+            }
+        }
+        assertEquals(expected, filteredTree)
+    }
+
+    @Test
+    fun `filter removes all elements returns empty tree`() {
+        val tree = tree {
+            node(1) {
+                node(2) {
+                    node(3)
+                }
+                node(4)
+            }
+        }
+
+        val filteredTree = tree.filter { it > 10 }
+            .apply { validate() }
+
+        val expected = tree<Int> {}
+        assertEquals(expected, filteredTree)
+    }
+
+    @Test
+    fun `filter does not remove any element returns same tree`() {
+        val tree = tree {
+            node(1) {
+                node(2) {
+                    node(3)
+                    node(4)
+                }
+                node(5) {
+                    node(6)
+                }
+            }
+        }
+
+        val filteredTree = tree.filter { it > 0 }
+            .apply { validate() }
+
+        val expected = tree {
+            node(1) {
+                node(2) {
+                    node(3)
+                    node(4)
+                }
+                node(5) {
+                    node(6)
+                }
+            }
+        }
+        assertEquals(expected, filteredTree)
+    }
+
+    @Test
+    fun `filter removes only leafs keeps parent nodes`() {
+        val tree = tree {
+            node(1) {
+                node(2) {
+                    node(4)
+                    node(5)
+                }
+                node(3) {
+                    node(6)
+                    node(7)
+                }
+            }
+        }
+
+        val filteredTree = tree.filter { it <= 3 }
+            .apply { validate() }
+
+        val expected = tree {
+            node(1) {
+                node(2)
+                node(3)
+            }
+        }
+        assertEquals(expected, filteredTree)
+    }
+
+    @Test
+    fun `filter removes intermediate nodes but keeps leafs`() {
+        val tree = tree {
+            node(1) {
+                node(2) {
+                    node(5)
+                    node(6)
+                }
+                node(3) {
+                    node(7)
+                }
+                node(4) {
+                    node(8)
+                }
+            }
+        }
+
+        val filteredTree = tree.filter { it == 1 || it >= 5 }
+            .apply { validate() }
+
+        val expected = tree {
+            node(1) {
+                node(2) {
+                    node(5)
+                    node(6)
+                }
+                node(3) {
+                    node(7)
+                }
+                node(4) {
+                    node(8)
+                }
+            }
+        }
+        assertEquals(expected, filteredTree)
+    }
 
     @Test
     fun `transform on tree with null root`() {

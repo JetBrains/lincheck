@@ -212,6 +212,21 @@ private fun <T, U> Tree.Node<T>.map(parent: Tree.Node<U>?, transform: (T) -> U):
 }
 
 // ========================================================
+//   Filter
+// ========================================================
+
+fun <T> Tree<T>.filter(predicate: (T) -> Boolean): Tree<T> =
+    Tree(root?.filter(parent = null, predicate))
+
+private fun <T> Tree.Node<T>.filter(parent: Tree.Node<T>?, predicate: (T) -> Boolean): NodeImpl<T>? {
+    val children = this.children.mapNotNull { child -> child.filter(this, predicate) }
+    if (predicate(data) || children.isNotEmpty()) {
+        return NodeImpl(data, parent).also { node -> node.children.addAll(children) }
+    }
+    return null
+}
+
+// ========================================================
 //   Transform
 // ========================================================
 
