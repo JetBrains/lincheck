@@ -13,6 +13,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.nativecalls
 import org.jetbrains.kotlinx.lincheck.strategy.nativecalls.io.getDeterministicFileMethodDescriptorOrNull
 import org.jetbrains.lincheck.descriptors.MethodSignature
 import org.jetbrains.lincheck.descriptors.Types
+import sun.nio.ch.lincheck.ResultInterceptor
 
 internal data class MethodCallInfo(
     val ownerType: Types.ObjectType,
@@ -56,4 +57,14 @@ internal fun getDeterministicMethodDescriptorOrNull(receiver: Any?, params: Arra
     getDeterministicRandomMethodDescriptorOrNull(methodCallInfo)?.let { return it }
     getDeterministicFileMethodDescriptorOrNull(receiver, params, methodCallInfo)?.let { return it }
     return null
+}
+
+internal data class DeterministicMethodCallInterceptorData(
+    val deterministicCallId: Long,
+    val deterministicMethodDescriptor: DeterministicMethodDescriptor<*, *>,
+)
+
+internal fun ResultInterceptor.getDeterministicMethodDescriptor(): DeterministicMethodDescriptor<*, *>? {
+    val interceptorData = (eventTrackerData as? DeterministicMethodCallInterceptorData)
+    return interceptorData?.deterministicMethodDescriptor
 }

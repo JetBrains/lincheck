@@ -573,9 +573,10 @@ class TraceCollectingEventTracker(
         codeLocation: Int,
         methodId: Int,
         receiver: Any?,
-        params: Array<Any?>
-    ): Any? = threadDescriptor.runInsideInjectedCode<Any?> {
-        val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return null
+        params: Array<Any?>,
+        interceptor: ResultInterceptor?,
+    ): Unit = threadDescriptor.runInsideInjectedCode {
+        val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
         val methodDescriptor = context.getMethodDescriptor(methodId)
 
         val methodSection = methodAnalysisSectionType(receiver, methodDescriptor.className, methodDescriptor.methodName)
@@ -583,7 +584,7 @@ class TraceCollectingEventTracker(
         // Should this method call be ignored?
         if (methodSection == AnalysisSectionType.IGNORED) {
             threadData.enterAnalysisSection(methodSection)
-            return null
+            return
         }
 
         val parentTracepoint = threadData.currentTopTracePoint()
@@ -600,26 +601,24 @@ class TraceCollectingEventTracker(
         threadData.pushStackFrame(tracePoint, receiver, isInline = false)
         // if the method has certain guarantees, enter the corresponding section
         threadData.enterAnalysisSection(methodSection)
-        return null
     }
 
     override fun onMethodCallReturn(
         threadDescriptor: ThreadDescriptor,
-        descriptorId: Long,
-        deterministicMethodDescriptor: Any?,
         methodId: Int,
         receiver: Any?,
         params: Array<Any?>,
-        result: Any?
-    ): Any? = threadDescriptor.runInsideInjectedCode(result) {
-        val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return result
+        result: Any?,
+        interceptor: ResultInterceptor?,
+    ): Unit = threadDescriptor.runInsideInjectedCode {
+        val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
         val thread = Thread.currentThread()
         val methodDescriptor = context.getMethodDescriptor(methodId)
 
         val methodSection = methodAnalysisSectionType(receiver, methodDescriptor.className, methodDescriptor.methodName)
         if (methodSection == AnalysisSectionType.IGNORED) {
             threadData.leaveAnalysisSection(methodSection)
-            return result
+            return
         }
 
         // TODO: what about inline method calls? Inside them also could be loops.
@@ -652,27 +651,24 @@ class TraceCollectingEventTracker(
         strategy.completeContainerTracePoint(thread, tracePoint)
 
         threadData.leaveAnalysisSection(methodSection)
-
-        return result
     }
 
     override fun onMethodCallException(
         threadDescriptor: ThreadDescriptor,
-        descriptorId: Long,
-        deterministicMethodDescriptor: Any?,
         methodId: Int,
         receiver: Any?,
         params: Array<Any?>,
-        t: Throwable
-    ): Throwable = threadDescriptor.runInsideInjectedCode(t) {
-        val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return t
+        t: Throwable,
+        interceptor: ResultInterceptor?,
+    ): Unit = threadDescriptor.runInsideInjectedCode {
+        val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
         val thread = Thread.currentThread()
         val methodDescriptor = context.getMethodDescriptor(methodId)
 
         val methodSection = methodAnalysisSectionType(receiver, methodDescriptor.className, methodDescriptor.methodName)
         if (methodSection == AnalysisSectionType.IGNORED) {
             threadData.leaveAnalysisSection(methodSection)
-            return t
+            return
         }
 
         // TODO: what about inline method calls? Inside them also could be loops.
@@ -705,8 +701,6 @@ class TraceCollectingEventTracker(
         strategy.completeContainerTracePoint(thread, tracePoint)
 
         threadData.leaveAnalysisSection(methodSection)
-
-        return t
     }
 
     override fun onInlineMethodCall(
@@ -845,14 +839,6 @@ class TraceCollectingEventTracker(
         strategy.completeContainerTracePoint(thread, currentLoopTracePoint)
         threadData.exitLoop()
     }
-
-    override fun invokeDeterministicallyOrNull(
-        threadDescriptor: ThreadDescriptor,
-        descriptorId: Long,
-        descriptor: Any?,
-        receiver: Any?,
-        params: Array<out Any?>
-    ): BootstrapResult<*>? = null
 
     override fun getThreadLocalRandom(): InjectedRandom  = runInsideIgnoredSection {
         val msg = "Trace Recorder mode doesn't support Random calls determinism"

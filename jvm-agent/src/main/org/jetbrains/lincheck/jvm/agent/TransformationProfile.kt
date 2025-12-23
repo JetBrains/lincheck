@@ -31,6 +31,7 @@ class TransformationConfiguration(
     var trackArrayElementWrites: Boolean = false,
 
     var trackMethodCalls: Boolean = false,
+    var interceptMethodCallResults: Boolean = false,
     var trackConstructorCalls: Boolean = false,
     var trackInlineMethodCalls: Boolean = false,
 
@@ -145,7 +146,7 @@ internal fun TransformationConfiguration.shouldApplyVisitor(visitorClass: Class<
         LocalVariablesAccessTransformer::class.java -> trackLocalVariableAccesses
         SharedMemoryAccessTransformer::class.java -> trackSharedMemoryAccesses
 
-        MethodCallTransformerBase::class.java -> trackMethodCalls
+        MethodCallTransformer::class.java -> trackMethodCalls
         InlineMethodCallTransformer::class.java -> trackInlineMethodCalls
 
         ThreadRunTransformer::class.java -> trackThreadRun
@@ -326,6 +327,7 @@ object TraceDebuggerDefaultTransformationProfile : TransformationProfile {
 
             trackMethodCalls = true
             trackInlineMethodCalls = true
+            interceptMethodCallResults = true
 
             trackAllThreadsOperations = true
             trackAllSynchronizationOperations = true
@@ -386,6 +388,7 @@ object ModelCheckingDefaultTransformationProfile : TransformationProfile {
 
             trackMethodCalls = true
             trackInlineMethodCalls = true
+            interceptMethodCallResults = true
 
             trackAllThreadsOperations = true
             trackAllSynchronizationOperations = true

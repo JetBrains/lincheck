@@ -23,8 +23,8 @@ Detailed trace:
 |     doTest() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:53)                                                                                  |
 |       Companion.create(): Counter#1 at MethodHandlesFindGetterSetterRepresentationTest.doTest(MethodHandlesLookupTests.kt:116)                                                  |
 |         Counter.shared = Counter#1 at Counter.Companion.<unknown method>(MethodHandlesLookupTests.kt:165)                                                                       |
-|       Lookup#1.findGetter(Class#2, "value", Class#1): Accessor#1 at MethodHandlesFindGetterSetterRepresentationTest.doTest(MethodHandlesLookupTests.kt:118)                     |
-|       Lookup#2.findSetter(Class#2, "value", Class#1): Accessor#2 at MethodHandlesFindGetterSetterRepresentationTest.doTest(MethodHandlesLookupTests.kt:120)                     |
+|       Lookup#1.findGetter(Counter.class, "value", int.class): Accessor#1 at MethodHandlesFindGetterSetterRepresentationTest.doTest(MethodHandlesLookupTests.kt:118)             |
+|       Lookup#2.findSetter(Counter.class, "value", int.class): Accessor#2 at MethodHandlesFindGetterSetterRepresentationTest.doTest(MethodHandlesLookupTests.kt:120)             |
 |       setterHandle.invoke(Counter#1, 42) at MethodHandlesFindGetterSetterRepresentationTest.doTest(MethodHandlesLookupTests.kt:121)                                             |
 |       getterHandle.invoke(Counter#1): 42 at MethodHandlesFindGetterSetterRepresentationTest.doTest(MethodHandlesLookupTests.kt:122)                                             |
 |         DirectMethodHandle.internalMemberName(DirectMethodHandle#1): MemberName#1 at DirectMethodHandle.Holder.invokeStatic(DirectMethodHandle$Holder:0)                        |
