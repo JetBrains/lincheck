@@ -645,7 +645,7 @@ internal abstract class ManagedStrategy(
     /**
      * Threads to which an execution can be switched from thread [iThread].
      */
-    private fun switchableThreads(iThread: Int) =
+    protected fun switchableThreads(iThread: Int) =
         if (currentExecutionPart == PARALLEL) {
             (0 until threadScheduler.nThreads).filter { it != iThread && isActive(it) }
         } else {

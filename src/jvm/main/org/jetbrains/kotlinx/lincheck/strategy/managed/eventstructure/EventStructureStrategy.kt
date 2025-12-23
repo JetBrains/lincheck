@@ -299,7 +299,7 @@ internal class EventStructureStrategy(
     override fun chooseThread(iThread: Int): Int {
         // see comment in `shouldSwitch` method
         // TODO: make scheduling strategy configurable
-        return if (runner.currentExecutionPart == ExecutionPart.PARALLEL)
+        return if (currentExecutionPart == ExecutionPart.PARALLEL)
             switchableThreads(iThread).first()
         else
             eventStructure.mainThreadId
