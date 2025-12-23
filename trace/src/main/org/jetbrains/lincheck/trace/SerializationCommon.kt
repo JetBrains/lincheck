@@ -115,7 +115,7 @@ data class TraceMetaInfo private constructor(
          * Creates new object: sets [className] and [methodName] to passed parameters,
          * [startTime] to current time and fetch current system properties and environment.
          */
-        fun start(agentArgs: String, className: String, methodName: String): TraceMetaInfo {
+        fun create(agentArgs: String, className: String, methodName: String): TraceMetaInfo {
             val bean = ManagementFactory.getRuntimeMXBean()
             // Read JVM args
             val jvmArgs = bean.inputArguments.joinToString(" ") { arg -> arg.escapeShell() }

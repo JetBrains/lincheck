@@ -207,13 +207,14 @@ class TraceCollectingEventTracker(
     private val packTrace: Boolean,
     private val context: TraceContext
 ) : EventTracker {
-    // We don't want to re-create this object each time we need it
-    private val analysisProfile: AnalysisProfile = AnalysisProfile(false)
+    // Analysis profile for tracing --- tells what methods should be analyzed or ignored
+    private val analysisProfile: AnalysisProfile = AnalysisProfile(analyzeStdLib = false)
 
-    private val metaInfo = TraceMetaInfo.start(TraceAgentParameters.rawArgs, className, methodName)
+    // Meta-information about the current tracing session
+    private val metaInfo = TraceMetaInfo.create(TraceAgentParameters.rawArgs, className, methodName)
 
-    // [ThreadDescriptor.eventTrackerData] is weak ref, so store it here too, but use
-    // only at the end
+    // [ThreadDescriptor.eventTrackerData] is a weak reference,
+    // so store it here too, but use only at the end
     private val threads = ConcurrentHashMap<Thread, ThreadData>()
 
     // Assign unique, monotonically increasing ids to threads. Using threads.size for
@@ -222,15 +223,8 @@ class TraceCollectingEventTracker(
     // Atomic counter guarantees uniqueness across threads.
     private val nextThreadId = AtomicInteger(0)
 
+    // Strategy for collecting trace points
     private val strategy: TraceCollectingStrategy
-
-    // For proper completion of threads which are not tracked from the start of the agent,
-    // of those threads which are not joined by the Main thread,
-    // we need to perform operations in them under the flag `inInjectedCode`.
-    // Note: the only place where there is a waiting on the spinner is
-    // when Main thread finishes and decides to "finish" all other running threads.
-    // By "finish" here we imply that it will dump their recorded data.
-    private val spinner = Spinner()
 
     init {
         when (mode) {
@@ -250,6 +244,14 @@ class TraceCollectingEventTracker(
             }
         }
     }
+
+    // For proper completion of threads which are not tracked from the start of the agent,
+    // of those threads which are not joined by the Main thread,
+    // we need to perform operations in them under the flag `inInjectedCode`.
+    // Note: the only place where there is a waiting on the spinner is
+    // when Main thread finishes and decides to "finish" all other running threads.
+    // By "finish" here we imply that it will dump their recorded data.
+    private val spinner = Spinner()
 
     override fun registerRunningThread(descriptor: ThreadDescriptor, thread: Thread): Unit = runInsideIgnoredSection {
         // must be outside of the `computeIfAbsent` call, because its body
@@ -291,13 +293,12 @@ class TraceCollectingEventTracker(
             strategy.registerCurrentThread(threadData.threadId)
             for (frame in thread.stackTrace.reversed()) {
                 if (frame.className == "sun.nio.ch.lincheck.Injections") break
-                if (
-                    !frame.isLincheckInternals &&
-                    !frame.isNativeMethod &&
-                    !analysisProfile.shouldBeHidden(frame.className, frame.methodName)
-                ) {
-                    appendMethodCall(null, frame.className, frame.methodName,  UNKNOWN_METHOD_TYPE, UNKNOWN_CODE_LOCATION_ID)
-                }
+                if (frame.isLincheckInternals ||
+                    frame.isNativeMethod ||
+                    analysisProfile.shouldBeHidden(frame.className, frame.methodName)
+                ) continue
+
+                appendMethodCall(null, frame.className, frame.methodName,  UNKNOWN_METHOD_TYPE, UNKNOWN_CODE_LOCATION_ID)
             }
         }
     }
