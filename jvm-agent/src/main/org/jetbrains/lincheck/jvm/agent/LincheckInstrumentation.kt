@@ -164,30 +164,6 @@ object LincheckInstrumentation {
     private var isBootstrapJarAddedToClasspath = false
 
     /**
-     * Decide transformation strategy for the current installation and store it into [instrumentationStrategy].
-     *
-     * Rules:
-     * - For trace recorder always use `EAGER`.
-     * - If "instrument all classes" was requested, use `EAGER`.
-     * - If trace debugger java-agent provided the `lazy` argument, use `LAZY` (defaults to true).
-     * - Else use `LAZY` if [instrumentationMode] supports it, `EAGER` otherwise.
-     */
-    private fun setInstrumentationStrategy() {
-        instrumentationStrategy = when {
-            (instrumentationMode == TRACE_RECORDING) -> InstrumentationStrategy.EAGER
-
-            INSTRUMENT_ALL_CLASSES -> InstrumentationStrategy.EAGER
-
-            else -> {
-                if (instrumentationMode.supportsLazyTransformation)
-                    InstrumentationStrategy.LAZY
-                else
-                    InstrumentationStrategy.EAGER
-            }
-        }
-    }
-
-    /**
      * Names (canonical) of the classes that were instrumented since the last agent installation.
      */
     val instrumentedClasses = HashSet<String>()
@@ -263,6 +239,30 @@ object LincheckInstrumentation {
 
                 retransformClasses(eagerlyTransformedClasses.asList())
                 instrumentedClasses.addAll(eagerlyTransformedClasses.map { it.name })
+            }
+        }
+    }
+
+    /**
+     * Decide transformation strategy for the current installation and store it into [instrumentationStrategy].
+     *
+     * Rules:
+     * - For trace recorder always use `EAGER`.
+     * - If "instrument all classes" was requested, use `EAGER`.
+     * - If trace debugger java-agent provided the `lazy` argument, use `LAZY` (defaults to true).
+     * - Else use `LAZY` if [instrumentationMode] supports it, `EAGER` otherwise.
+     */
+    private fun setInstrumentationStrategy() {
+        instrumentationStrategy = when {
+            (instrumentationMode == TRACE_RECORDING) -> InstrumentationStrategy.EAGER
+
+            INSTRUMENT_ALL_CLASSES -> InstrumentationStrategy.EAGER
+
+            else -> {
+                if (instrumentationMode.supportsLazyTransformation)
+                    InstrumentationStrategy.LAZY
+                else
+                    InstrumentationStrategy.EAGER
             }
         }
     }
