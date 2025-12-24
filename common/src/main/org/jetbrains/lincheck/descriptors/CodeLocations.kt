@@ -12,6 +12,8 @@ package org.jetbrains.lincheck.descriptors
 
 import org.jetbrains.lincheck.trace.TraceContext
 import java.util.Objects
+import kotlin.String
+import kotlin.collections.List
 
 class CodeLocation(
     val stackTraceElement: StackTraceElement,
@@ -19,7 +21,8 @@ class CodeLocation(
 
     // TODO: this only makes sense for method call code locations,
     //   consider introducing proper type hierarchy for code locations
-    val argumentNames: List<AccessPath?>? = null
+    val argumentNames: List<AccessPath?>? = null,
+    val activeLocals: List<String>? = null
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -60,8 +63,9 @@ object CodeLocations {
         stackTraceElement: StackTraceElement,
         accessPath: AccessPath? = null,
         argumentNames: List<AccessPath?>? = null,
+        activeLocals: List<String>? = null
     ): Int =
-        context.newCodeLocation(stackTraceElement, accessPath, argumentNames)
+        context.newCodeLocation(stackTraceElement, accessPath, argumentNames, activeLocals)
 
     /**
      * Returns the [StackTraceElement] associated with the specified code location ID.
@@ -76,4 +80,8 @@ object CodeLocations {
     @JvmStatic
     @Synchronized
     fun accessPath(context: TraceContext, codeLocationId: Int): AccessPath? = context.accessPath(codeLocationId)
+
+    @JvmStatic
+    @Synchronized
+    fun activeLocals(context: TraceContext, codeLocationId: Int): List<String>? = context.activeLocalsNames(codeLocationId)
 }
