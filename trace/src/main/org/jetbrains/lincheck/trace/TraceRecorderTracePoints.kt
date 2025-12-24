@@ -12,6 +12,7 @@ package org.jetbrains.lincheck.trace
 
 import org.jetbrains.lincheck.descriptors.AccessPath
 import org.jetbrains.lincheck.descriptors.ClassDescriptor
+import org.jetbrains.lincheck.descriptors.CodeLocation
 import org.jetbrains.lincheck.descriptors.CodeLocations
 import org.jetbrains.lincheck.descriptors.FieldDescriptor
 import org.jetbrains.lincheck.descriptors.MethodDescriptor
@@ -116,6 +117,28 @@ sealed class TRTracePoint(
 
     internal fun editedEquals(other: TRTracePoint): Boolean =
         javaClass == other.javaClass && editIndependentHashForDiff == other.editIndependentHashForDiff
+
+    internal abstract fun cloneToNewContext(targetContext: TraceContext): TRTracePoint
+
+    protected fun CodeLocation.cloneToNewContext(targetContext: TraceContext): Int {
+        return targetContext.newCodeLocation(this.stackTraceElement, this.accessPath, this.argumentNames)
+    }
+
+    protected fun ClassDescriptor.cloneToNewContext(targetContext: TraceContext): Int {
+        return targetContext.getOrCreateClassId(className = this.name)
+    }
+
+    protected fun MethodDescriptor.cloneToNewContext(targetContext: TraceContext): Int {
+        return targetContext.getOrCreateMethodId(this.className, this.methodName, this.methodSignature.methodType)
+    }
+
+    protected fun FieldDescriptor.cloneToNewContext(targetContext: TraceContext): Int {
+        return targetContext.getOrCreateFieldId(this.className, this.fieldName, this.isStatic, this.isFinal)
+    }
+
+    protected fun VariableDescriptor.cloneToNewContext(targetContext: TraceContext): Int {
+        return targetContext.getOrCreateVariableId(this.name)
+    }
 }
 
 sealed class TRContainerTracePoint(
@@ -345,7 +368,14 @@ class TRMethodCallTracePoint(
     }
 
     override val strictHashForDiff: Int
-        get() = parameters.fold(31 * editIndependentHashForDiff + (obj?.hashForDiff ?: 0)) { h, tr -> h * 31 + (tr?.hashForDiff ?: 0) }
+        get() {
+            var hash = parameters.fold(
+                31 * editIndependentHashForDiff + (obj?.hashForDiff ?: 0)
+            ) { h, tr -> h * 31 + (tr?.hashForDiff ?: 0) }
+            if (result != null) hash = 31 * hash + result!!.hashForDiff
+            if (exceptionClassName != null) hash = 31 * hash + exceptionClassName!!.hashCode()
+            return hash
+        }
 
     override val editIndependentHashForDiff: Int
         // Location, class name, method name, static status, return type and types of arguments are components of loose hash
@@ -354,10 +384,28 @@ class TRMethodCallTracePoint(
                 codeLocation.lineNumber,
                 className,
                 methodName,
+                flags,
                 isStatic(),
                 returnType,
-                argumentTypes
+                argumentTypes,
+                exceptionClassName != null
             )
+
+    override fun cloneToNewContext(targetContext: TraceContext): TRTracePoint {
+        // Generate new eventId, don't copy old one.
+        return TRMethodCallTracePoint(
+            context = targetContext,
+            threadId = threadId,
+            codeLocationId = context.codeLocation(codeLocationId)?.cloneToNewContext(targetContext) ?: UNKNOWN_CODE_LOCATION_ID,
+            methodId = methodDescriptor.cloneToNewContext(targetContext),
+            obj = obj,
+            parameters = parameters,
+            flags = flags
+        ).also {
+            it.result = result
+            it.exceptionClassName = exceptionClassName
+        }
+    }
 
     companion object {
         // Flag that tells that the method was not tracked from its start and has some missing tracepoints
@@ -457,6 +505,16 @@ class TRLoopTracePoint(
             loopId
         )
 
+    override fun cloneToNewContext(targetContext: TraceContext): TRTracePoint {
+        // Generate new eventId, don't copy old one.
+        return TRLoopTracePoint(
+            context = targetContext,
+            threadId = threadId,
+            codeLocationId = context.codeLocation(codeLocationId)?.cloneToNewContext(targetContext) ?: UNKNOWN_CODE_LOCATION_ID,
+            loopId = loopId
+        )
+    }
+
     companion object {
 
         internal fun load(context: TraceContext, inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRLoopTracePoint {
@@ -516,6 +574,17 @@ class TRLoopIterationTracePoint(
             loopId,
             loopIteration
         )
+
+    override fun cloneToNewContext(targetContext: TraceContext): TRTracePoint {
+        // Generate new eventId, don't copy old one.
+        return TRLoopIterationTracePoint(
+            context = targetContext,
+            threadId = threadId,
+            codeLocationId = context.codeLocation(codeLocationId)?.cloneToNewContext(targetContext) ?: UNKNOWN_CODE_LOCATION_ID,
+            loopId = loopId,
+            loopIteration = loopIteration,
+        )
+    }
 
     companion object {
 
@@ -611,6 +680,18 @@ class TRReadTracePoint(
 
     override fun accessSymbol(): String = READ_ACCESS_SYMBOL
 
+    override fun cloneToNewContext(targetContext: TraceContext): TRTracePoint {
+        // Generate new eventId, don't copy old one.
+        return TRReadTracePoint(
+            context = targetContext,
+            threadId = threadId,
+            codeLocationId = context.codeLocation(codeLocationId)?.cloneToNewContext(targetContext) ?: UNKNOWN_CODE_LOCATION_ID,
+            fieldId = fieldDescriptor.cloneToNewContext(targetContext),
+            obj = obj,
+            value = value
+        )
+    }
+
     internal companion object {
         fun load(context: TraceContext, inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRReadTracePoint {
             return TRReadTracePoint(
@@ -637,6 +718,18 @@ class TRWriteTracePoint(
 ) : TRFieldTracePoint(context, threadId, codeLocationId,  fieldId, obj, value, eventId) {
 
     override fun accessSymbol(): String = WRITE_ACCESS_SYMBOL
+
+    override fun cloneToNewContext(targetContext: TraceContext): TRTracePoint {
+        // Generate new eventId, don't copy old one.
+        return TRWriteTracePoint(
+            context = targetContext,
+            threadId = threadId,
+            codeLocationId = context.codeLocation(codeLocationId)?.cloneToNewContext(targetContext) ?: UNKNOWN_CODE_LOCATION_ID,
+            fieldId = fieldDescriptor.cloneToNewContext(targetContext),
+            obj = obj,
+            value = value
+        )
+    }
 
     internal companion object {
         fun load(context: TraceContext, inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRWriteTracePoint {
@@ -714,6 +807,17 @@ class TRReadLocalVariableTracePoint(
 
     override fun accessSymbol(): String = READ_ACCESS_SYMBOL
 
+    override fun cloneToNewContext(targetContext: TraceContext): TRTracePoint {
+        // Generate new eventId, don't copy old one.
+        return TRReadLocalVariableTracePoint(
+            context = targetContext,
+            threadId = threadId,
+            codeLocationId = context.codeLocation(codeLocationId)?.cloneToNewContext(targetContext) ?: UNKNOWN_CODE_LOCATION_ID,
+            localVariableId = variableDescriptor.cloneToNewContext(targetContext),
+            value = value
+        )
+    }
+
     internal companion object {
         fun load(context: TraceContext, inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRReadLocalVariableTracePoint {
             return TRReadLocalVariableTracePoint(
@@ -738,6 +842,17 @@ class TRWriteLocalVariableTracePoint(
 ) : TRLocalVariableTracePoint(context, threadId, codeLocationId, localVariableId, value, eventId) {
 
     override fun accessSymbol(): String = WRITE_ACCESS_SYMBOL
+
+    override fun cloneToNewContext(targetContext: TraceContext): TRTracePoint {
+        // Generate new eventId, don't copy old one.
+        return TRWriteLocalVariableTracePoint(
+            context = targetContext,
+            threadId = threadId,
+            codeLocationId = context.codeLocation(codeLocationId)?.cloneToNewContext(targetContext) ?: UNKNOWN_CODE_LOCATION_ID,
+            localVariableId = variableDescriptor.cloneToNewContext(targetContext),
+            value = value
+        )
+    }
 
     internal companion object {
         fun load(context: TraceContext, inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRWriteLocalVariableTracePoint {
@@ -814,6 +929,18 @@ class TRReadArrayTracePoint(
 
     override fun accessSymbol(): String = READ_ACCESS_SYMBOL
 
+    override fun cloneToNewContext(targetContext: TraceContext): TRTracePoint {
+        // Generate new eventId, don't copy old one.
+        return TRReadArrayTracePoint(
+            context = targetContext,
+            threadId = threadId,
+            codeLocationId = context.codeLocation(codeLocationId)?.cloneToNewContext(targetContext) ?: UNKNOWN_CODE_LOCATION_ID,
+            array = array,
+            index = index,
+            value = value
+        )
+    }
+
     internal companion object {
         fun load(context: TraceContext, inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRReadArrayTracePoint {
             return TRReadArrayTracePoint(
@@ -840,6 +967,18 @@ class TRWriteArrayTracePoint(
 ) : TRArrayTracePoint(context, threadId, codeLocationId, array, index, value, eventId) {
 
     override fun accessSymbol(): String = WRITE_ACCESS_SYMBOL
+
+    override fun cloneToNewContext(targetContext: TraceContext): TRTracePoint {
+        // Generate new eventId, don't copy old one.
+        return TRWriteArrayTracePoint(
+            context = targetContext,
+            threadId = threadId,
+            codeLocationId = context.codeLocation(codeLocationId)?.cloneToNewContext(targetContext) ?: UNKNOWN_CODE_LOCATION_ID,
+            array = array,
+            index = index,
+            value = value
+        )
+    }
 
     internal companion object {
         fun load(context: TraceContext, inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRWriteArrayTracePoint {
