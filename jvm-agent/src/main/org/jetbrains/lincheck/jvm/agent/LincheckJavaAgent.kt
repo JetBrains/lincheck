@@ -413,7 +413,7 @@ object LincheckJavaAgent {
         if (clazz.name in instrumentedClasses) return // already instrumented
 
         val classesToTransform = mutableSetOf<Class<*>>()
-        ensureClassHierarchyIsTransformed(clazz, classesToTransform)
+        ensureClassHierarchyIsTransformed(clazz, mutableSetOf(), classesToTransform)
         retransformClasses(classesToTransform.toList())
     }
 
@@ -426,8 +426,15 @@ object LincheckJavaAgent {
      *   This set will be populated with all the classes that were traversed and should be transformed.
      *   It is the caller's responsibility to actually perform the transformation.
      */
-    private fun ensureClassHierarchyIsTransformed(clazz: Class<*>, classesToTransform: MutableSet<Class<*>>) {
+    private fun ensureClassHierarchyIsTransformed(
+        clazz: Class<*>,
+        visitedClasses: MutableSet<String>,
+        classesToTransform: MutableSet<Class<*>>,
+    ) {
         if (clazz.name in instrumentedClasses) return // already instrumented
+        if (clazz.name in visitedClasses) return // already traversed
+
+        visitedClasses += clazz.name
 
         if (shouldTransform(clazz, instrumentationMode)) {
             instrumentedClasses += clazz.name
@@ -435,22 +442,23 @@ object LincheckJavaAgent {
         } else if (isJavaLambdaClass(clazz.name)) {
             val enclosingClassName = getJavaLambdaEnclosingClass(clazz.name)
             if (enclosingClassName !in instrumentedClasses) {
-                ensureClassHierarchyIsTransformed(ClassCache.forName(enclosingClassName), classesToTransform)
+                val enclosingClass = ClassCache.forName(enclosingClassName)
+                ensureClassHierarchyIsTransformed(enclosingClass, visitedClasses, classesToTransform)
             }
         }
 
         // Traverse super classes, interfaces, and enclosing class
         clazz.superclass?.also {
-            ensureClassHierarchyIsTransformed(it, classesToTransform)
+            ensureClassHierarchyIsTransformed(it, visitedClasses, classesToTransform)
         }
         clazz.companion?.also {
-            ensureClassHierarchyIsTransformed(it, classesToTransform)
+            ensureClassHierarchyIsTransformed(it, visitedClasses, classesToTransform)
         }
         clazz.enclosingClass?.also {
-            ensureClassHierarchyIsTransformed(it, classesToTransform)
+            ensureClassHierarchyIsTransformed(it, visitedClasses, classesToTransform)
         }
         clazz.interfaces.forEach {
-            ensureClassHierarchyIsTransformed(it, classesToTransform)
+            ensureClassHierarchyIsTransformed(it, visitedClasses, classesToTransform)
         }
     }
 
@@ -506,7 +514,7 @@ object LincheckJavaAgent {
                 shouldTransform
 
             if (shouldTransform) {
-                ensureClassHierarchyIsTransformed(obj.javaClass, classesToTransform)
+                ensureClassHierarchyIsTransformed(obj.javaClass, mutableSetOf(), classesToTransform)
             }
             return@traverseObjectGraph shouldTraverse
         }
