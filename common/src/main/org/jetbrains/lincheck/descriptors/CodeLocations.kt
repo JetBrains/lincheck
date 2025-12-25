@@ -12,8 +12,6 @@ package org.jetbrains.lincheck.descriptors
 
 import org.jetbrains.lincheck.trace.TraceContext
 import java.util.Objects
-import kotlin.String
-import kotlin.collections.List
 
 class CodeLocation(
     val stackTraceElement: StackTraceElement,
