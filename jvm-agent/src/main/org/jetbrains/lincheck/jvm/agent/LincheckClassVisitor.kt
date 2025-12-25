@@ -77,10 +77,13 @@ internal class LincheckClassVisitor(
         val isSynchronized = (access and ACC_SYNCHRONIZED != 0)
 
         val methodInfo = classInformation.methodInformation(methodName, desc)
+        val config = profile.getMethodConfiguration(className.toCanonicalClassName(), methodName, desc)
 
         if (isNative) {
             Logger.debug { "Skipping transformation of the native method $className.$methodName" }
             return mv
+        } else if (config == TransformationConfiguration.UNTRACKED) {
+            Logger.debug { "Skipping transformation of the untracked method $className.$methodName" }
         } else {
             Logger.debug { "Transforming method $className.$methodName" }
         }
@@ -99,7 +102,6 @@ internal class LincheckClassVisitor(
         val adapter = GeneratorAdapter(mv, access, methodName, desc)
         mv = adapter
 
-        val config = profile.getMethodConfiguration(className.toCanonicalClassName(), methodName, desc)
         val chain = TransformerChain(
             config = config,
             adapter = adapter,
