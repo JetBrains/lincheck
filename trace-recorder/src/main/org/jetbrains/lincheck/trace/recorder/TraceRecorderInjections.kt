@@ -39,11 +39,6 @@ import org.jetbrains.lincheck.util.Logger
  * to enable very early instrumentation before `bootstrap.jar` is added to class.
  */
 internal object TraceRecorderInjections {
-    @JvmStatic
-    fun prepareTraceRecorder() {
-        // Must be first or classes will not be found
-        LincheckInstrumentation.install(InstrumentationMode.TRACE_RECORDING)
-    }
 
     @JvmStatic
     fun startTraceRecorder(startingCodeLocationId: Int) {
