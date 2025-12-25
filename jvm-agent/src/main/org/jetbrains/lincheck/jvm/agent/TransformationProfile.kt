@@ -407,6 +407,9 @@ private fun shouldWrapInIgnoredSection(className: String, methodName: String, de
     // Wrap static initialization blocks into ignored sections.
     if (methodName == "<clinit>")
         return true
+    // Wrapping constructors in ignored sections is not yet supported.
+    if (methodName == "<init>")
+        return false
     // Wrap `ClassLoader::loadClass(className)` calls into ignored sections
     // to ensure their code is not analyzed by the Lincheck.
     if (isClassLoaderClassName(className) && isLoadClassMethod(methodName, descriptor))
