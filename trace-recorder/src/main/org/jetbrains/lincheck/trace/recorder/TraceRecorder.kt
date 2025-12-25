@@ -41,11 +41,10 @@ object TraceRecorder {
     private var traceStarterThread: Thread? = null
 
     fun install(
-        traceFileName: String?,
         format: String?,
         formatOption: String?,
-        pack: Boolean,
-        context: TraceContext
+        traceDumpFilePath: String?,
+        context: TraceContext,
     ) {
         // Set a signal "void" object from Injections for better text output
         INJECTIONS_VOID_OBJECT = Injections.VOID_RESULT
@@ -54,12 +53,10 @@ object TraceRecorder {
             "Trace recorder has already been installed"
         }
 
+        val mode = parseOutputMode(format, formatOption)
         // this method does not need 'runInsideIgnoredSection' because analysis is not enabled until its completion
-        eventTracker = TraceCollectingEventTracker(
-            traceDumpPath = traceFileName,
-            mode = parseOutputMode(format, formatOption),
-            packTrace = pack,
-            context = context,
+        eventTracker = TraceCollectingEventTracker(mode, context,
+            traceDumpFilePath = if (mode == TraceCollectorMode.BINARY_STREAM) traceDumpFilePath else null
         )
     }
 
@@ -135,9 +132,9 @@ object TraceRecorder {
         eventTracker.finishTracing()
     }
 
-    fun dumpTrace() {
+    fun dumpTrace(traceDumpFilePath: String, packTrace: Boolean) {
         val eventTracker = this.eventTracker ?: error("Trace recorder has not been installed")
-        eventTracker.dumpTrace()
+        eventTracker.dumpTrace(traceDumpFilePath, packTrace)
     }
 
     fun uninstall() {

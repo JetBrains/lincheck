@@ -200,10 +200,9 @@ fun parseOutputMode(outputMode: String?, outputOption: String?): TraceCollectorM
 }
 
 class TraceCollectingEventTracker(
-    private val traceDumpPath: String?,
     private val mode: TraceCollectorMode,
-    private val packTrace: Boolean,
-    private val context: TraceContext
+    private val context: TraceContext,
+    private val traceDumpFilePath: String? = null, // should be non-null for BINARY_STREAM mode
 ) : EventTracker {
     // Analysis profile for tracing --- tells what methods should be analyzed or ignored
     private val analysisProfile: AnalysisProfile = AnalysisProfile(analyzeStdLib = false)
@@ -223,13 +222,12 @@ class TraceCollectingEventTracker(
 
     init {
         when (mode) {
-            TraceCollectorMode.BINARY_STREAM -> {
-                check(traceDumpPath != null) { "Stream output type needs non-empty output file name" }
-                strategy = FileStreamingTraceCollecting(traceDumpPath, context)
-            }
             TraceCollectorMode.BINARY_DUMP -> {
-                check(traceDumpPath != null) { "Binary output type needs non-empty output file name" }
                 strategy = MemoryTraceCollecting(context)
+            }
+            TraceCollectorMode.BINARY_STREAM -> {
+                check(traceDumpFilePath != null) { "Stream output type needs non-empty output file name" }
+                strategy = FileStreamingTraceCollecting(traceDumpFilePath, context)
             }
             TraceCollectorMode.NULL -> {
                 strategy = NullTraceCollecting(context)
@@ -1008,7 +1006,7 @@ class TraceCollectingEventTracker(
         tracingEndTime = System.currentTimeMillis()
     }
 
-    fun dumpTrace() {
+    fun dumpTrace(traceDumpFilePath: String, packTrace: Boolean) {
         var className: String? = null
         var methodName: String? = null
         when (val mode = tracingStartMode) {
@@ -1045,32 +1043,45 @@ class TraceCollectingEventTracker(
 
             when (mode) {
                 TraceCollectorMode.BINARY_DUMP -> {
-                    saveRecorderTrace(traceDumpPath!!, context, roots)
+                    saveRecorderTrace(traceDumpFilePath, context, roots)
                     if (packTrace) {
-                        packRecordedTrace(traceDumpPath, metaInfo)
+                        packRecordedTrace(traceDumpFilePath, metaInfo)
                     }
                 }
                 TraceCollectorMode.BINARY_STREAM -> {
+                    check(traceDumpFilePath == this.traceDumpFilePath) {
+                        // TODO: it should be easy to support dumping to a different file later: just copy file
+                        "Trace dump filename in binary stream mode should match the filename of streaming file"
+                    }
                     if (packTrace) {
-                        packRecordedTrace(traceDumpPath!!, metaInfo)
+                        packRecordedTrace(traceDumpFilePath, metaInfo)
                     }
                 }
                 TraceCollectorMode.TEXT -> {
-                    printPostProcessedTrace(traceDumpPath, context, roots, false)
+                    printPostProcessedTrace(traceDumpFilePath, context, roots, false)
                 }
                 TraceCollectorMode.TEXT_VERBOSE -> {
-                    printPostProcessedTrace(traceDumpPath, context, roots, true)
+                    printPostProcessedTrace(traceDumpFilePath, context, roots, true)
                 }
                 TraceCollectorMode.NULL -> {}
             }
         } catch (t: Throwable) {
-            Logger.error { "TraceRecorder: Cannot write output file $traceDumpPath: ${t.message} at ${t.stackTraceToString()}" }
+            Logger.error { "TraceRecorder: Cannot write output file $traceDumpFilePath: ${t.message} at ${t.stackTraceToString()}" }
             return
         } finally {
             if (mode != TraceCollectorMode.NULL) {
                 Logger.debug { "Trace written in ${System.currentTimeMillis() - traceWriteStartTime} ms" }
             }
         }
+    }
+
+    private fun packRecordedTrace(baseFileName: String, metaInfo: TraceMetaInfo) {
+        packRecordedTrace(
+            dataFileName = baseFileName,
+            indexFileName = "$baseFileName.$INDEX_FILENAME_EXT",
+            outputFileName = "$baseFileName.$PACK_FILENAME_EXT",
+            metaInfo = metaInfo,
+        )
     }
 
     private fun methodAnalysisSectionType(
