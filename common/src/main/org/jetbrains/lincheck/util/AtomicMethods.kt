@@ -248,7 +248,8 @@ internal fun AtomicMethodDescriptor.getAtomicFieldUpdaterAccessInfo(
         val offsetField = receiver.javaClass.getDeclaredField("offset")
         val offset = UnsafeHolder.UNSAFE.getLong(receiver, UnsafeHolder.UNSAFE.objectFieldOffset(offsetField))
         // lookup field descriptor
-        val fieldDescriptor = findFieldDescriptorByOffsetViaUnsafe(context, targetType, offset)
+        val fieldDescriptor = findFieldDescriptorByOffsetViaUnsafe(targetType, offset)
+            ?.toDescriptor(context)
             ?: error("Failed to find field descriptor by offset $offset in ${targetType.name}")
 
         return AtomicMethodAccessInfo(
@@ -298,7 +299,8 @@ internal fun AtomicMethodDescriptor.getUnsafeAccessInfo(
 
         // Static field access case
         targetObject is Class<*> -> {
-            val fieldDescriptor = findFieldDescriptorByOffsetViaUnsafe(context, targetObject, memoryOffset)
+            val fieldDescriptor = findFieldDescriptorByOffsetViaUnsafe(targetObject, memoryOffset)
+                ?.toDescriptor(context)
                 ?: error("Failed to find field descriptor by offset $memoryOffset in ${targetObject.name}")
             AtomicMethodAccessInfo(
                 obj = null,
@@ -311,7 +313,8 @@ internal fun AtomicMethodDescriptor.getUnsafeAccessInfo(
         // Instance field access case
         targetObject != null -> {
             val targetType = targetObject::class.java
-            val fieldDescriptor = findFieldDescriptorByOffsetViaUnsafe(context, targetType, memoryOffset)
+            val fieldDescriptor = findFieldDescriptorByOffsetViaUnsafe(targetType, memoryOffset)
+                ?.toDescriptor(context)
                 ?: error("Failed to find field descriptor by offset $memoryOffset in ${targetType.name}")
 
             AtomicMethodAccessInfo(
@@ -367,7 +370,8 @@ internal fun AtomicMethodDescriptor.getVarHandleAccessInfo(
                 }
                 val receiverType = extractor.extractBase(varHandle)
                 val fieldOffset = extractor.extractFieldOffset(varHandle)
-                val fieldDescriptor = findFieldDescriptorByOffsetViaUnsafe(context, receiverType, fieldOffset)
+                val fieldDescriptor = findFieldDescriptorByOffsetViaUnsafe(receiverType, fieldOffset)
+                    ?.toDescriptor(context)
                     ?: error("Failed to find field descriptor by offset $fieldOffset in ${receiverType.name}")
 
                 AtomicMethodAccessInfo(
@@ -396,7 +400,8 @@ internal fun AtomicMethodDescriptor.getVarHandleAccessInfo(
                 }
                 val receiverType = extractor.extractReceiverType(varHandle)
                 val fieldOffset = extractor.extractFieldOffset(varHandle)
-                val fieldDescriptor = findFieldDescriptorByOffsetViaUnsafe(context, receiverType, fieldOffset)
+                val fieldDescriptor = findFieldDescriptorByOffsetViaUnsafe(receiverType, fieldOffset)
+                    ?.toDescriptor(context)
                     ?: error("Failed to find field descriptor by offset $fieldOffset in ${receiverType.name}")
 
                 AtomicMethodAccessInfo(
