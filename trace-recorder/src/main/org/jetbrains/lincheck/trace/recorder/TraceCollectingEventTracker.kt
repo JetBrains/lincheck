@@ -248,6 +248,13 @@ class TraceCollectingEventTracker(
     private val spinner = Spinner()
 
     /**
+     * Represents the state of a tracing process:
+     * - RUNNING: tracing is currently running.
+     * - FINISHED: tracing was finished.
+     */
+    private enum class TracingState { RUNNING, FINISHED }
+
+    /**
      * This class hierarchy denotes various modes of tracing start.
      *
      * - [FromMethod] means that the tracing was started from a specific method.
@@ -258,6 +265,7 @@ class TraceCollectingEventTracker(
         object Dynamic : TracingStartMode()
     }
 
+    private var state: TracingState? = null
     private var tracingStartMode: TracingStartMode? = null
     private var tracingStartTime = -1L
     private var tracingEndTime = -1L
@@ -907,14 +915,20 @@ class TraceCollectingEventTracker(
     }
 
     fun startTracing() {
+        check(state == null) { "Tracing already started" }
+
         tracingStartMode = TracingStartMode.Dynamic
         tracingStartTime = System.currentTimeMillis()
+        state = TracingState.RUNNING
     }
 
     fun startTracing(className: String, methodName: String, codeLocationId: Int) {
+        check(state == null) { "Tracing already started" }
+
         registerCurrentThread(className, methodName, codeLocationId)
         tracingStartMode = TracingStartMode.FromMethod(className, methodName)
         tracingStartTime = System.currentTimeMillis()
+        state = TracingState.RUNNING
     }
 
     private fun registerCurrentThread(className: String, methodName: String, codeLocationId: Int) {
@@ -1010,6 +1024,8 @@ class TraceCollectingEventTracker(
     }
 
     fun finishTracing() {
+        check(state == TracingState.RUNNING) { "Tracing was not started" }
+
         // Finish existing threads, except for Main
         val mainThread = Thread.currentThread()
 
@@ -1036,9 +1052,14 @@ class TraceCollectingEventTracker(
 
         strategy.traceEnded()
         tracingEndTime = System.currentTimeMillis()
+        state = TracingState.FINISHED
+
+        Logger.debug { "Trace collected in ${tracingStartTime - tracingEndTime} ms" }
     }
 
     fun dumpTrace(traceDumpFilePath: String, packTrace: Boolean) {
+        check(state == TracingState.FINISHED) { "Tracing was not finished" }
+
         var className: String? = null
         var methodName: String? = null
         when (val mode = tracingStartMode) {
@@ -1056,8 +1077,6 @@ class TraceCollectingEventTracker(
             startTime = tracingStartTime,
             endTime = tracingEndTime,
         )
-
-        Logger.debug { "Trace collected in ${tracingStartTime - tracingEndTime} ms" }
 
         val traceWriteStartTime = System.currentTimeMillis()
 
