@@ -18,28 +18,19 @@ import sun.nio.ch.lincheck.ThreadDescriptor
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * This object is glue between injections into method user wants to record trace of and real trace recording code.
+ * The `TraceRecorder` object manages the trace recording process.
  *
- * Call which leads to [installAndStartTrace] must be placed as first instruction of method in question.
+ * The trace recording process involves:
+ * - Initializing the trace recorder using [install].
+ * - Starting the trace recording using [startRecording].
+ * - Stopping the trace recording using [stopRecording].
+ * - Optionally dumping the recorded trace output to a specified location using [dumpTrace].
+ * - Uninstalling the trace recorder to clean up resources with [uninstall].
  *
- * Call which leads to [finishTraceAndDumpResults] must be placed before each exit point (`return` or `throw`) in
- * a method in question.
- *
- * This is effectively an implementation of such Java code:
- *
- * ```java
- * methodInQuestion() {
- *  TraceRecorder.installAndStartTrace(...);
- *  try {
- *    <original method code>
- *  } finally {
- *    TraceRecorder.finishTraceAndDumpResults();
- *  }
- * }
- * ```
- *
- * This class is used to avoid coupling between instrumented code and `bootstrap.jar`, to enable very early
- * instrumentation before `bootstrap.jar` is added to class
+ * Proper usage of the [TraceRecorder] involves ensuring that:
+ * - the trace recorder is correctly installed before starting any recording;
+ * - the trace recorder is stopped before an attempt to dump the recorded trace to file;
+ * - the trace recorder is stopped before uninstallation.
  */
 object TraceRecorder {
     private var eventTracker: TraceCollectingEventTracker? = null

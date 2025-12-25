@@ -15,6 +15,29 @@ import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.util.Logger
 
+/**
+ * This object is glue between bytecode injections into a method under tracing and actual trace recording code.
+ *
+ * Call to [startTraceRecorder] should be injected as a first instruction of the method under tracing.
+ * Call to [stopTraceRecorderAndDumpTrace] should be injected on each exit point of the method under tracing
+ * (for either normal exit via `return` or exceptional exit via `throw` or via propagated exception).
+ *
+ * This is effectively an implementation of the following Java code:
+ *
+ * ```java
+ * methodInQuestion() {
+ *   TraceRecorderInjections.startTraceRecorder(...);
+ *   try {
+ *     <original method code>
+ *   } finally {
+ *     TraceRecorderInjections.stopTraceRecorderAndDumpTrace();
+ *   }
+ * }
+ * ```
+ *
+ * This class is used to avoid coupling between instrumented code and `bootstrap.jar`,
+ * to enable very early instrumentation before `bootstrap.jar` is added to class.
+ */
 internal object TraceRecorderInjections {
     @JvmStatic
     fun prepareTraceRecorder() {
