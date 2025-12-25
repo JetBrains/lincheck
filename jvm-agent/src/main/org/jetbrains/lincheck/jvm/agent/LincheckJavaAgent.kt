@@ -489,7 +489,9 @@ object LincheckJavaAgent {
     ) {
         traverseObjectGraph(obj, processedObjects,
             config = ObjectGraphTraversalConfig(
-                traverseStaticFields = true,
+                // static fields are not traversed here since Lincheck analysis
+                // transforms them itself lazily upon reads from static fields
+                traverseStaticFields = false,
             )
         ) { obj ->
             val shouldTransform = shouldTransform(obj.javaClass.name, instrumentationMode)
