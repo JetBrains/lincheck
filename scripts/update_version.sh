@@ -9,20 +9,22 @@
 # Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
 # with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Updates the project version across 4 gradle.properties files and commits the changes.
+# Updates the project version across gradle.properties files, README.md, docs/v.list and commits the changes.
 #
 # Usage:
-#   ./scripts/update_version_for_trace_modules.sh <new-version> [--commit]
+#   ./scripts/update_version.sh <new-version> [--commit]
 #
 # Example:
-#   ./scripts/update_version_for_trace_modules.sh 3.4.1
-#   ./scripts/update_version_for_trace_modules.sh 3.5-SNAPSHOT --commit
+#   ./scripts/update_version.sh 3.4.1
+#   ./scripts/update_version.sh 3.5-SNAPSHOT --commit
 #
 # What it changes:
-#   - gradle.properties:           version=
-#   - common/gradle.properties:    commonVersion=
-#   - jvm-agent/gradle.properties: jvmAgentVersion=
-#   - trace/gradle.properties:     traceVersion=
+#   - gradle.properties:           version=<version>
+#   - common/gradle.properties:    commonVersion=<version>
+#   - jvm-agent/gradle.properties: jvmAgentVersion=<version>
+#   - trace/gradle.properties:     traceVersion=<version>
+#   - README.md:                   testImplementation("org.jetbrains.lincheck:lincheck:<version>")
+#   - docs/v.list:                 <var name="lincheckVersion" value="<version>" type="string"/>
 #
 # Notes:
 #   - The script is portable across macOS and Linux (`sed -i` differences handled).
@@ -73,16 +75,38 @@ update_version() {
     echo -e "Updated $file: ${version_name}=$(grep "^${version_name}=" "$file" | cut -d'=' -f2-)"
 }
 
+update_readme() {
+  local file="${repo_root}/README.md"
+  if [[ ! -f "$file" ]]; then
+    echo -e "Missing file: $file"
+    return
+  fi
+  sed_inplace "s|(testImplementation\(\"org.jetbrains.lincheck:lincheck:).*(\"\))|\\1${VERSION}\\2|" "$file"
+  echo -e "Updated $file"
+}
+
+update_vlist() {
+  local file="${repo_root}/docs/v.list"
+  if [[ ! -f "$file" ]]; then
+    echo -e "Missing file: $file"
+    return
+  fi
+  sed_inplace "s|(<var name=\"lincheckVersion\" value=\").*(\" type=\"string\"/>)|\\1${VERSION}\\2|" "$file"
+  echo -e "Updated $file"
+}
+
 update_version "${repo_root}/gradle.properties" "version"
 update_version "${repo_root}/common/gradle.properties" "commonVersion"
 update_version "${repo_root}/jvm-agent/gradle.properties" "jvmAgentVersion"
 update_version "${repo_root}/trace/gradle.properties" "traceVersion"
+update_readme
+update_vlist
 
 if [[ "$COMMIT" == false ]]; then
   echo -e "\nDry-run complete. No files were committed."
 else
-  git add gradle.properties common/gradle.properties jvm-agent/gradle.properties trace/gradle.properties
-  git commit -m "Prepare minor release ${VERSION}"
+  git add gradle.properties common/gradle.properties jvm-agent/gradle.properties trace/gradle.properties README.md docs/v.list
+  git commit -m "Release lincheck-${VERSION}"
   echo -e "\nAll done."
 fi
 
