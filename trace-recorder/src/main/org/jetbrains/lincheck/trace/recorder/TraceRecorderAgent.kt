@@ -10,6 +10,7 @@
 
 package org.jetbrains.lincheck.trace.recorder
 
+import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.jvm.agent.TraceAgentTransformer
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
@@ -78,6 +79,11 @@ internal object TraceRecorderAgent {
         )
 
         // This prepares instrumentation of all future classes
-        TraceRecorderInjections.prepareTraceRecorder()
+        installInstrumentation()
+    }
+
+    @JvmStatic
+    private fun installInstrumentation() {
+        LincheckInstrumentation.install(InstrumentationMode.TRACE_RECORDING)
     }
 }
