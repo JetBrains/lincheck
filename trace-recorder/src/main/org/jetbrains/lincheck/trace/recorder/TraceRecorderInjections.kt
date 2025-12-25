@@ -46,7 +46,10 @@ internal object TraceRecorderInjections {
     fun stopTraceRecorderAndDumpTrace() {
         // This method should never throw an exception, or tracer state is undetermined
         try {
-            TraceRecorder.finishTraceAndDumpResults()
+            TraceRecorder.stopRecording()
+            TraceRecorder.dumpTrace()
+            TraceRecorder.uninstall()
+
             LincheckInstrumentation.reportStatistics()
         } catch (t: Throwable) {
             Logger.error { "Cannot stop Trace Recorder: $t"}

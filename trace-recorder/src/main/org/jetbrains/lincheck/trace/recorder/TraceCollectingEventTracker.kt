@@ -261,6 +261,7 @@ class TraceCollectingEventTracker(
 
     private var tracingStartMode: TracingStartMode? = null
     private var tracingStartTime = -1L
+    private var tracingEndTime = -1L
 
     override fun registerRunningThread(descriptor: ThreadDescriptor, thread: Thread): Unit = runInsideIgnoredSection {
         // must be outside of the `computeIfAbsent` call, because its body
@@ -978,7 +979,7 @@ class TraceCollectingEventTracker(
         }
     }
 
-    fun finishAndDumpTrace() {
+    fun finishTracing() {
         // Finish existing threads, except for Main
         val mainThread = Thread.currentThread()
 
@@ -1003,12 +1004,11 @@ class TraceCollectingEventTracker(
         // Close this thread call stack (it must be 1 element, complain about problems otherwise)
         completeMainThread(mainThread, ThreadDescriptor.getCurrentThreadDescriptor())
 
-        val allThreads = mutableListOf<ThreadData>()
-        allThreads.addAll(threads.values)
-        threads.clear()
-
         strategy.traceEnded()
+        tracingEndTime = System.currentTimeMillis()
+    }
 
+    fun dumpTrace() {
         var className: String? = null
         var methodName: String? = null
         when (val mode = tracingStartMode) {
@@ -1024,7 +1024,7 @@ class TraceCollectingEventTracker(
             className = className ?: "",
             methodName = methodName ?: "",
             startTime = tracingStartTime,
-            endTime = System.currentTimeMillis(),
+            endTime = tracingEndTime,
         )
 
         Logger.debug { "Trace collected in ${metaInfo.endTime - metaInfo.startTime} ms" }
@@ -1033,9 +1033,7 @@ class TraceCollectingEventTracker(
 
         try {
             val roots = mutableListOf<TRTracePoint>()
-
-            allThreads.sortBy { it.threadId }
-            allThreads.forEach { threadData ->
+            threads.values.sortedBy { it.threadId }.forEach { threadData ->
                 val rootCall = threadData.rootCall
                 if (rootCall == null) {
                     Logger.error { "Trace Recorder: Thread #${threadData.threadId + 1} (\"${context.getThreadName(threadData.threadId)}\"): No root call found" }

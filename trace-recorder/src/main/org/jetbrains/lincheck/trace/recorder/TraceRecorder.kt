@@ -105,7 +105,7 @@ object TraceRecorder {
         Injections.enableGlobalEventTracking(TraceRecorder.eventTracker)
     }
 
-    fun finishTraceAndDumpResults() {
+    fun stopRecording() {
         val startedCount = startCount.decrementAndGet()
         Logger.info { "Trace recorder has been stopped in thread \"${Thread.currentThread().name}\" (installCount=$startedCount)" }
 
@@ -123,6 +123,8 @@ object TraceRecorder {
             return
         }
 
+        val eventTracker = this.eventTracker ?: error("Trace recorder has not been installed")
+
         // this method does not need 'runInsideIgnoredSection' because we do not call instrumented code,
         // and we call `disableAnalysis` as a first action
         val descriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
@@ -139,7 +141,15 @@ object TraceRecorder {
             throw IllegalStateException("Unexpected event tracking mode $mode")
         }
 
-        eventTracker?.finishAndDumpTrace()
+        eventTracker.finishTracing()
+    }
+
+    fun dumpTrace() {
+        val eventTracker = this.eventTracker ?: error("Trace recorder has not been installed")
+        eventTracker.dumpTrace()
+    }
+
+    fun uninstall() {
         eventTracker = null
     }
 }
