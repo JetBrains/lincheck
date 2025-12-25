@@ -1027,7 +1027,7 @@ class TraceCollectingEventTracker(
             endTime = tracingEndTime,
         )
 
-        Logger.debug { "Trace collected in ${metaInfo.endTime - metaInfo.startTime} ms" }
+        Logger.debug { "Trace collected in ${tracingStartTime - tracingEndTime} ms" }
 
         val traceWriteStartTime = System.currentTimeMillis()
 
