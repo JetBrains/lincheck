@@ -96,6 +96,7 @@ sealed class TRTracePoint(
     }
 
     val codeLocation: StackTraceElement get() = CodeLocations.stackTrace(context, codeLocationId)
+    val activeLocals: List<String> get() = CodeLocations.activeLocals(context, codeLocationId) ?: emptyList() // used in plugin
 
     fun toText(verbose: Boolean): String {
         val sb = StringBuilder()

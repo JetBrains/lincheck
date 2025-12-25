@@ -139,9 +139,10 @@ class TraceContext {
         stackTraceElement: StackTraceElement,
         accessPath: AccessPath? = null,
         argumentNames: List<AccessPath?>? = null,
+        activeLocals: List<String>? = null
     ): Int {
         val id = locations.size
-        val location = CodeLocation(stackTraceElement, accessPath, argumentNames)
+        val location = CodeLocation(stackTraceElement, accessPath, argumentNames, activeLocals)
         locations.add(location)
         return id
     }
@@ -174,6 +175,12 @@ class TraceContext {
             error("Invalid code location id $codeLocationId")
         }
         return loc.argumentNames
+    }
+
+    fun activeLocalsNames(codeLocationId: Int): List<String>? {
+        if (codeLocationId == UNKNOWN_CODE_LOCATION_ID) return null
+        val loc = locations[codeLocationId] ?: error("Invalid code location id $codeLocationId")
+        return loc.activeLocals
     }
 
     fun getAccessPath(id: Int): AccessPath = accessPaths[id] ?: error("Referenced access path $id not loaded")

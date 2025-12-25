@@ -93,7 +93,13 @@ internal open class LincheckMethodVisitor(
                 /* fileName = */ fileName,
                 /* lineNumber = */ lineNumber)
         }
-        val codeLocationId = CodeLocations.newCodeLocation(context, stackTraceElement, accessPath, argumentNames)
+        val codeLocationId = CodeLocations.newCodeLocation(
+            context,
+            stackTraceElement,
+            accessPath,
+            argumentNames,
+            methodInfo.locals.activeVariables.map { it.name }.toList()
+        )
         push(codeLocationId)
         return codeLocationId
     }
