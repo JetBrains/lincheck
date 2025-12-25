@@ -53,6 +53,20 @@ fun MavenPublication.configureMavenPublication(configurePom: MavenPom.() -> Unit
                 organization.set("JetBrains")
                 organizationUrl.set("https://www.jetbrains.com")
             }
+            developer {
+                name.set("Dmitrii Artiukhov")
+                id.set("dmitrii.artiukhov")
+                email.set("dmitrii.artiukhov@jetbrains.com")
+                organization.set("JetBrains")
+                organizationUrl.set("https://www.jetbrains.com")
+            }
+            developer {
+                name.set("Bob Brockbernd")
+                id.set("bob.brockbernd")
+                email.set("bob.brockbernd@jetbrains.com")
+                organization.set("JetBrains")
+                organizationUrl.set("https://www.jetbrains.com")
+            }
         }
 
         licenses {
