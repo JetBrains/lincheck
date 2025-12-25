@@ -451,13 +451,16 @@ object LincheckJavaAgent {
         clazz.superclass?.also {
             ensureClassHierarchyIsTransformed(it, visitedClasses, classesToTransform)
         }
+        clazz.interfaces.forEach {
+            ensureClassHierarchyIsTransformed(it, visitedClasses, classesToTransform)
+        }
         clazz.companion?.also {
             ensureClassHierarchyIsTransformed(it, visitedClasses, classesToTransform)
         }
         clazz.enclosingClass?.also {
             ensureClassHierarchyIsTransformed(it, visitedClasses, classesToTransform)
         }
-        clazz.interfaces.forEach {
+        clazz.componentType?.also {
             ensureClassHierarchyIsTransformed(it, visitedClasses, classesToTransform)
         }
     }
