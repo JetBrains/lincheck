@@ -183,25 +183,29 @@ private val fieldDescriptorByOffsetCache = ConcurrentHashMap<Pair<Class<*>, Long
 private val DESCRIPTOR_NOT_FOUND = Any() // cannot store `null` in the cache.
 
 @Suppress("DEPRECATION")
-fun findFieldNameByOffsetViaUnsafe(context: TraceContext, targetType: Class<*>, offset: Long): String? =
-    findFieldDescriptorByOffsetViaUnsafe(context, targetType, offset)?.fieldName
+fun findFieldNameByOffsetViaUnsafe(targetType: Class<*>, offset: Long, kind: FieldKind): String? =
+    findFieldDescriptorByOffsetViaUnsafe(targetType, offset, kind)?.name
 
 @Suppress("DEPRECATION")
-fun findFieldDescriptorByOffsetViaUnsafe(context: TraceContext, targetType: Class<*>, offset: Long): FieldDescriptor? =
+fun findFieldDescriptorByOffsetViaUnsafe(targetType: Class<*>, offset: Long, kind: FieldKind): Field? =
     fieldDescriptorByOffsetCache.getOrPut(targetType to offset) {
-        findFieldNameByOffsetViaUnsafeImpl(context, targetType, offset) ?: DESCRIPTOR_NOT_FOUND
-    }.let { if (it === DESCRIPTOR_NOT_FOUND) null else (it as FieldDescriptor) }
+        findFieldNameByOffsetViaUnsafeImpl(targetType, offset, kind) ?: DESCRIPTOR_NOT_FOUND
+    }.let { if (it === DESCRIPTOR_NOT_FOUND) null else (it as Field) }
 
-private fun findFieldNameByOffsetViaUnsafeImpl(context: TraceContext, targetType: Class<*>, offset: Long): FieldDescriptor? {
+private fun findFieldNameByOffsetViaUnsafeImpl(targetType: Class<*>, offset: Long, kind: FieldKind): Field? {
     for (field in targetType.allDeclaredFieldWithSuperclasses) {
         try {
+            val isStatic = Modifier.isStatic(field.modifiers)
             if (Modifier.isNative(field.modifiers)) continue
-            val fieldOffset = if (Modifier.isStatic(field.modifiers)) {
+            if (kind == FieldKind.STATIC && !isStatic) continue
+            if (kind == FieldKind.INSTANCE && isStatic) continue
+
+            val fieldOffset = if (isStatic) {
                 UnsafeHolder.UNSAFE.staticFieldOffset(field)
             } else {
                 UnsafeHolder.UNSAFE.objectFieldOffset(field)
             }
-            if (fieldOffset == offset) return field.toDescriptor(context)
+            if (fieldOffset == offset) return field
         } catch (t: Throwable) {
             t.printStackTrace()
         }
