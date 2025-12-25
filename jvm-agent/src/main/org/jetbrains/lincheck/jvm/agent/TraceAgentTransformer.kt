@@ -41,7 +41,10 @@ typealias MethodVisitorProvider = (
 class TraceAgentTransformer(
     val context: TraceContext,
     val methodTransformer: MethodVisitorProvider,
+    val classUnderTracing: String,
+    val methodUnderTracing: String,
 ) : ClassFileTransformer {
+
     override fun transform(
         loader: ClassLoader?,
         internalClassName: String?,
@@ -54,7 +57,7 @@ class TraceAgentTransformer(
         // - https://youtrack.jetbrains.com/issue/KT-16727/
         if (internalClassName == null) return null
         // If the class should not be transformed, return immediately.
-        if (TraceAgentParameters.classUnderTraceDebugging != internalClassName.toCanonicalClassName()) {
+        if (classUnderTracing != internalClassName.toCanonicalClassName()) {
             return null
         }
         return transformImpl(loader, internalClassName, classBytes)
@@ -82,11 +85,11 @@ class TraceAgentTransformer(
             }.toMap()
 
             val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
-
-            reader.accept(
-                TraceAgentClassVisitor(writer, context, methodTransformer, methodToLine),
-                ClassReader.SKIP_FRAMES
+            val visitor = TraceAgentClassVisitor(writer, context, methodTransformer,
+                classUnderTracing, methodUnderTracing, methodToLine
             )
+
+            reader.accept(visitor, ClassReader.SKIP_FRAMES)
             bytes = writer.toByteArray()
 
             return bytes
@@ -102,6 +105,8 @@ private class TraceAgentClassVisitor(
     classVisitor: ClassVisitor,
     val context: TraceContext,
     val methodTransformer: MethodVisitorProvider,
+    val classUnderTracing: String,
+    val methodUnderTracing: String,
     val methodToFirstLine: Map<String, Int>
 ): ClassVisitor(ASM_API, classVisitor) {
     private lateinit var className: String
@@ -137,8 +142,8 @@ private class TraceAgentClassVisitor(
 
         var mv = super.visitMethod(access, methodName, desc, signature, exceptions)
         // Don't transform synthetic methods, as they cannot be asked for by the user
-        if (className == TraceAgentParameters.classUnderTraceDebugging &&
-            methodName == TraceAgentParameters.methodUnderTraceDebugging &&
+        if (className == classUnderTracing &&
+            methodName == methodUnderTracing &&
             isNotSynthetic) {
             val firstLine = methodToFirstLine[methodKey(methodName, desc)] ?: 0
             mv = methodTransformer(

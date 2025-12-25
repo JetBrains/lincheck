@@ -69,9 +69,18 @@ internal object TraceRecorderAgent {
         }
         TraceAgentParameters.parseArgs(agentArgs, ADDITIONAL_ARGS)
         LincheckInstrumentation.attachJavaAgentStatically(inst)
-        // We are in Trace Recorder mode (by exclusion)
-        // This adds turn-on and turn-off of tracing to the method in question
-        LincheckInstrumentation.instrumentation.addTransformer(TraceAgentTransformer(LincheckInstrumentation.context, ::TraceRecorderMethodTransformer), true)
+
+        // This transformer adds tracing turn-on and turn-off at the given method entry/exit.
+        LincheckInstrumentation.instrumentation.addTransformer(
+            /* transformer = */ TraceAgentTransformer(
+                LincheckInstrumentation.context,
+                ::TraceRecorderMethodTransformer,
+                classUnderTracing = TraceAgentParameters.classUnderTraceDebugging,
+                methodUnderTracing = TraceAgentParameters.methodUnderTraceDebugging,
+            ),
+            /* canRetransform = */ true
+        )
+
         // This prepares instrumentation of all future classes
         TraceRecorderInjections.prepareTraceRecorder()
     }
