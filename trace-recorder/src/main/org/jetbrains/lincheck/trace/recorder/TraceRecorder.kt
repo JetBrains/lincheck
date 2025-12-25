@@ -13,6 +13,7 @@ package org.jetbrains.lincheck.trace.recorder
 import org.jetbrains.lincheck.trace.INJECTIONS_VOID_OBJECT
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.*
+import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import sun.nio.ch.lincheck.Injections
 import sun.nio.ch.lincheck.ThreadDescriptor
 import java.util.concurrent.atomic.AtomicInteger
@@ -130,6 +131,7 @@ object TraceRecorder {
         }
 
         eventTracker.finishTracing()
+        LincheckInstrumentation.reportStatistics()
     }
 
     fun dumpTrace(traceDumpFilePath: String, packTrace: Boolean) {

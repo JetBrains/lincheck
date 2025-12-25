@@ -74,8 +74,6 @@ internal object TraceRecorderInjections {
             TraceRecorder.stopRecording()
             TraceRecorder.dumpTrace(traceDumpPath, pack)
             TraceRecorder.uninstall()
-
-            LincheckInstrumentation.reportStatistics()
         } catch (t: Throwable) {
             Logger.error { "Cannot stop Trace Recorder: $t"}
         }
