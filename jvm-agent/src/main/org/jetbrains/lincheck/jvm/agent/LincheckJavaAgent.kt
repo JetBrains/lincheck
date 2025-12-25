@@ -412,23 +412,42 @@ object LincheckJavaAgent {
         if (instrumentationStrategy == InstrumentationStrategy.EAGER) return
         if (clazz.name in instrumentedClasses) return // already instrumented
 
+        val classesToTransform = mutableSetOf<Class<*>>()
+        ensureClassHierarchyIsTransformed(clazz, classesToTransform)
+        retransformClasses(classesToTransform.toList())
+    }
+
+    /**
+     * Ensures that the whole hierarchy of the given class is transformed for Lincheck analysis.
+     * See the description above.
+     *
+     * @param clazz The class to be transformed.
+     * @param classesToTransform A mutable set of classes that should be transformed.
+     *   This set will be populated with all the classes that were traversed and should be transformed.
+     *   It is the caller's responsibility to actually perform the transformation.
+     */
+    private fun ensureClassHierarchyIsTransformed(clazz: Class<*>, classesToTransform: MutableSet<Class<*>>) {
+        if (clazz.name in instrumentedClasses) return // already instrumented
+
         if (shouldTransform(clazz, instrumentationMode)) {
             instrumentedClasses += clazz.name
-            retransformClass(clazz)
+            classesToTransform += clazz
         } else if (isJavaLambdaClass(clazz.name)) {
             val enclosingClassName = getJavaLambdaEnclosingClass(clazz.name)
-            ensureClassHierarchyIsTransformed(enclosingClassName)
+            if (enclosingClassName !in instrumentedClasses) {
+                ensureClassHierarchyIsTransformed(ClassCache.forName(enclosingClassName), classesToTransform)
+            }
         }
 
         // Traverse super classes, interfaces, and enclosing class
         clazz.superclass?.also {
-            ensureClassHierarchyIsTransformed(it)
+            ensureClassHierarchyIsTransformed(it, classesToTransform)
         }
         clazz.enclosingClass?.also {
-            ensureClassHierarchyIsTransformed(it)
+            ensureClassHierarchyIsTransformed(it, classesToTransform)
         }
         clazz.interfaces.forEach {
-            ensureClassHierarchyIsTransformed(it)
+            ensureClassHierarchyIsTransformed(it, classesToTransform)
         }
     }
 
@@ -448,7 +467,10 @@ object LincheckJavaAgent {
      */
     fun ensureObjectIsTransformed(obj: Any) {
         if (instrumentationStrategy == InstrumentationStrategy.EAGER) return
-        ensureObjectIsTransformed(obj, identityHashSetOf())
+
+        val classesToTransform = mutableSetOf<Class<*>>()
+        ensureObjectIsTransformed(obj, identityHashSetOf(), classesToTransform)
+        retransformClasses(classesToTransform.toList())
     }
 
     /**
@@ -456,8 +478,15 @@ object LincheckJavaAgent {
      *
      * @param obj The object to be ensured for transformation.
      * @param processedObjects A set of already processed objects.
+     * @param classesToTransform A mutable set of classes that should be transformed.
+     *   This set will be populated with all the classes that were traversed and should be transformed.
+     *   It is the caller's responsibility to actually perform the transformation.
      */
-    private fun ensureObjectIsTransformed(obj: Any, processedObjects: MutableSet<Any>) {
+    private fun ensureObjectIsTransformed(
+        obj: Any,
+        processedObjects: MutableSet<Any>,
+        classesToTransform: MutableSet<Class<*>>,
+    ) {
         traverseObjectGraph(obj, processedObjects,
             config = ObjectGraphTraversalConfig(
                 traverseStaticFields = true,
@@ -472,7 +501,7 @@ object LincheckJavaAgent {
                 shouldTransform
 
             if (shouldTransform) {
-                ensureClassHierarchyIsTransformed(obj.javaClass)
+                ensureClassHierarchyIsTransformed(obj.javaClass, classesToTransform)
             }
             return@traverseObjectGraph shouldTraverse
         }
