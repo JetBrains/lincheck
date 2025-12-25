@@ -1036,7 +1036,8 @@ class TraceCollectingEventTracker(
             threads.values.sortedBy { it.threadId }.forEach { threadData ->
                 val rootCall = threadData.rootCall
                 if (rootCall == null) {
-                    Logger.error { "Trace Recorder: Thread #${threadData.threadId + 1} (\"${context.getThreadName(threadData.threadId)}\"): No root call found" }
+                    val threadName = context.getThreadName(threadData.threadId)
+                    Logger.error { "Trace Recorder: Thread #${threadData.threadId + 1} ($threadName): No root call found" }
                 } else {
                     roots.add(rootCall)
                 }
@@ -1054,8 +1055,12 @@ class TraceCollectingEventTracker(
                         packRecordedTrace(traceDumpPath!!, metaInfo)
                     }
                 }
-                TraceCollectorMode.TEXT -> printPostProcessedTrace(traceDumpPath, context, roots, false)
-                TraceCollectorMode.TEXT_VERBOSE -> printPostProcessedTrace(traceDumpPath, context, roots, true)
+                TraceCollectorMode.TEXT -> {
+                    printPostProcessedTrace(traceDumpPath, context, roots, false)
+                }
+                TraceCollectorMode.TEXT_VERBOSE -> {
+                    printPostProcessedTrace(traceDumpPath, context, roots, true)
+                }
                 TraceCollectorMode.NULL -> {}
             }
         } catch (t: Throwable) {
