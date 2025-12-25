@@ -49,10 +49,9 @@ internal object TraceRecorderInjections {
     fun startTraceRecorder(startingCodeLocationId: Int) {
         try {
             TraceRecorder.install(
-                traceFileName = TraceAgentParameters.traceDumpFilePath,
                 format = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FORMAT),
                 formatOption = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FOPTION),
-                pack = (TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_PACK) ?: "true").toBoolean(),
+                traceDumpFilePath = TraceAgentParameters.traceDumpFilePath,
                 context = LincheckInstrumentation.context
             )
             TraceRecorder.startRecording(
@@ -69,8 +68,11 @@ internal object TraceRecorderInjections {
     fun stopTraceRecorderAndDumpTrace() {
         // This method should never throw an exception, or tracer state is undetermined
         try {
+            val traceDumpPath = TraceAgentParameters.traceDumpFilePath ?: error("Trace dump path is not set")
+            val pack = (TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_PACK) ?: "true").toBoolean()
+
             TraceRecorder.stopRecording()
-            TraceRecorder.dumpTrace()
+            TraceRecorder.dumpTrace(traceDumpPath, pack)
             TraceRecorder.uninstall()
 
             LincheckInstrumentation.reportStatistics()
