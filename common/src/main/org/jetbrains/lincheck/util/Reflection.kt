@@ -35,6 +35,12 @@ object ClassCache {
 }
 
 /**
+ * Returns the companion object's class of this class if it exists.
+ */
+val Class<*>.companion: Class<*>? get() =
+    declaredFields.firstOrNull { it.name == "Companion" }?.type
+
+/**
  * Returns all found fields in the hierarchy.
  * Multiple fields with the same name and the same type may be returned
  * if they appear in the subclass and a parent class.

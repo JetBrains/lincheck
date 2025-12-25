@@ -443,6 +443,9 @@ object LincheckJavaAgent {
         clazz.superclass?.also {
             ensureClassHierarchyIsTransformed(it, classesToTransform)
         }
+        clazz.companion?.also {
+            ensureClassHierarchyIsTransformed(it, classesToTransform)
+        }
         clazz.enclosingClass?.also {
             ensureClassHierarchyIsTransformed(it, classesToTransform)
         }
