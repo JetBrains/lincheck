@@ -37,7 +37,7 @@ object ClassCache {
 /**
  * Returns the companion object's class of this class if it exists.
  */
-val Class<*>.companion: Class<*>? get() =
+val Class<*>.companionClass: Class<*>? get() =
     declaredFields.firstOrNull { it.name == "Companion" }?.type
 
 /**

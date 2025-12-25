@@ -11,7 +11,6 @@
 package org.jetbrains.lincheck.jvm.agent
 
 import net.bytebuddy.agent.ByteBuddyAgent
-import org.jetbrains.lincheck.descriptors.CodeLocations
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.*
 import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent.install
 import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent.instrumentation
@@ -454,7 +453,7 @@ object LincheckJavaAgent {
         clazz.interfaces.forEach {
             ensureClassHierarchyIsTransformed(it, visitedClasses, classesToTransform)
         }
-        clazz.companion?.also {
+        clazz.companionClass?.also {
             ensureClassHierarchyIsTransformed(it, visitedClasses, classesToTransform)
         }
         clazz.enclosingClass?.also {
