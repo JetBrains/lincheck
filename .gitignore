@@ -14,6 +14,9 @@ out
 target
 local.properties
 
+# Junie
+.junie/*
+
 # Common
 *~
 *.bak
