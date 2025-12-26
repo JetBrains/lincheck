@@ -18,11 +18,21 @@ import org.jetbrains.lincheck.descriptors.Types.DOUBLE_TYPE
 import org.jetbrains.lincheck.descriptors.Types.FLOAT_TYPE
 import org.jetbrains.lincheck.descriptors.Types.INT_TYPE
 import org.jetbrains.lincheck.descriptors.Types.LONG_TYPE
-import org.jetbrains.lincheck.descriptors.Types.ObjectType
 import org.jetbrains.lincheck.descriptors.Types.SHORT_TYPE
+import org.jetbrains.lincheck.descriptors.Types.BOOLEAN_TYPE_BOXED
+import org.jetbrains.lincheck.descriptors.Types.BYTE_TYPE_BOXED
+import org.jetbrains.lincheck.descriptors.Types.CHAR_TYPE_BOXED
+import org.jetbrains.lincheck.descriptors.Types.DOUBLE_TYPE_BOXED
+import org.jetbrains.lincheck.descriptors.Types.FLOAT_TYPE_BOXED
+import org.jetbrains.lincheck.descriptors.Types.INT_TYPE_BOXED
+import org.jetbrains.lincheck.descriptors.Types.LONG_TYPE_BOXED
+import org.jetbrains.lincheck.descriptors.Types.SHORT_TYPE_BOXED
+import org.jetbrains.lincheck.descriptors.Types.OBJECT_TYPE
+import org.jetbrains.lincheck.descriptors.Types.ObjectType
 import org.jetbrains.lincheck.descriptors.Types.Type
 import java.util.*
 import kotlin.math.max
+import kotlin.reflect.KClass
 
 object Types {
     private fun convertAsmTypeName(className: String): Type {
@@ -75,18 +85,20 @@ object Types {
     }
 
     fun isPrimitive(type: Type?): Boolean {
-        return (type is IntType ||
-                type is LongType ||
-                type is DoubleType ||
-                type is FloatType ||
-                type is BooleanType ||
-                type is ByteType ||
-                type is ShortType ||
-                type is CharType
-                )
+        return (
+            type is IntType ||
+            type is LongType ||
+            type is DoubleType ||
+            type is FloatType ||
+            type is BooleanType ||
+            type is ByteType ||
+            type is ShortType ||
+            type is CharType
+        )
     }
 
     val VOID_TYPE: VoidType = VoidType()
+
     val INT_TYPE: IntType = IntType()
     val LONG_TYPE: LongType = LongType()
     val DOUBLE_TYPE: DoubleType = DoubleType()
@@ -95,6 +107,17 @@ object Types {
     val BYTE_TYPE: ByteType = ByteType()
     val SHORT_TYPE: ShortType = ShortType()
     val CHAR_TYPE: CharType = CharType()
+
+    val INT_TYPE_BOXED: ObjectType = ObjectType("java.lang.Integer")
+    val LONG_TYPE_BOXED: ObjectType = ObjectType("java.lang.Long")
+    val DOUBLE_TYPE_BOXED: ObjectType = ObjectType("java.lang.Double")
+    val FLOAT_TYPE_BOXED: ObjectType = ObjectType("java.lang.Float")
+    val BOOLEAN_TYPE_BOXED: ObjectType = ObjectType("java.lang.Boolean")
+    val BYTE_TYPE_BOXED: ObjectType = ObjectType("java.lang.Byte")
+    val SHORT_TYPE_BOXED: ObjectType = ObjectType("java.lang.Short")
+    val CHAR_TYPE_BOXED: ObjectType = ObjectType("java.lang.Character")
+
+    val OBJECT_TYPE: ObjectType = ObjectType(Object::class.java.name)
 
     sealed class Type
 
@@ -220,6 +243,42 @@ object Types {
     }
 }
 
+fun Type.getKClass(): KClass<*> = when (this) {
+    INT_TYPE     -> Int::class
+    BYTE_TYPE    -> Byte::class
+    SHORT_TYPE   -> Short::class
+    LONG_TYPE    -> Long::class
+    FLOAT_TYPE   -> Float::class
+    DOUBLE_TYPE  -> Double::class
+    CHAR_TYPE    -> Char::class
+    BOOLEAN_TYPE -> Boolean::class
+
+    INT_TYPE_BOXED      -> Int::class
+    BYTE_TYPE_BOXED     -> Byte::class
+    SHORT_TYPE_BOXED    -> Short::class
+    LONG_TYPE_BOXED     -> Long::class
+    FLOAT_TYPE_BOXED   -> Float::class
+    DOUBLE_TYPE_BOXED  -> Double::class
+    CHAR_TYPE_BOXED     -> Char::class
+    BOOLEAN_TYPE_BOXED  -> Boolean::class
+
+    is ArrayType   -> when (elementType) {
+        INT_TYPE     -> IntArray::class
+        BYTE_TYPE    -> ByteArray::class
+        SHORT_TYPE   -> ShortArray::class
+        LONG_TYPE    -> LongArray::class
+        FLOAT_TYPE   -> FloatArray::class
+        DOUBLE_TYPE  -> DoubleArray::class
+        CHAR_TYPE    -> CharArray::class
+        BOOLEAN_TYPE -> BooleanArray::class
+        else         -> Array::class
+    }
+
+    is ObjectType -> Any::class
+
+    else -> throw IllegalArgumentException()
+}
+
 fun String.toType(): Type {
     return when (this) {
         "I", "java.lang.Integer" -> INT_TYPE
@@ -230,15 +289,17 @@ fun String.toType(): Type {
         "B", "java.lang.Byte" -> BYTE_TYPE
         "S", "java.lang.Short" -> SHORT_TYPE
         "C", "java.lang.Character" -> CHAR_TYPE
-        else -> if (startsWith("[")) {
+
+        else if startsWith("[") -> {
             ArrayType(substring(1).toType())
-        } else {
-            if (startsWith("L") && endsWith(";")) {
-                ObjectType(substring(1, length - 1))
-            }
-            else {
-                ObjectType(this)
-            }
+        }
+
+        else if startsWith("L") && endsWith(";") -> {
+            ObjectType(substring(1, length - 1))
+        }
+
+        else -> {
+            ObjectType(this)
         }
     }
 }

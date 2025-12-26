@@ -1319,7 +1319,7 @@ internal abstract class ManagedStrategy(
         val threadId = threadScheduler.getCurrentThreadId()
         newSwitchPoint(threadId, codeLocation)
         if (memoryTracker != null) {
-            val type = Type.getType(typeDescriptor)
+            val type = typeDescriptor.toType()
             val location = objectTracker.getFieldAccessMemoryLocation(obj, fieldDescriptor.className, fieldDescriptor.fieldName, type,
                 isStatic = fieldDescriptor.isStatic,
                 isFinal = fieldDescriptor.isFinal,
@@ -1346,7 +1346,7 @@ internal abstract class ManagedStrategy(
         newSwitchPoint(threadId, codeLocation)
         // TODO: this is a mess
         if (memoryTracker != null && typeDescriptor != VOID_TYPE.toString()) {
-            val type = Type.getType(typeDescriptor)
+            val type = typeDescriptor.toType()
             val location = objectTracker.getArrayAccessMemoryLocation(array, index, type)
             // TODO: Should we use threadID or thread Descriptor here?
             memoryTracker!!.beforeRead(threadId, codeLocation, location)
@@ -1467,7 +1467,7 @@ internal abstract class ManagedStrategy(
         }
         traceCollector?.addTracePointInternal(tracePoint)
         if (memoryTracker != null) {
-            val type = Type.getType(typeDescriptor)
+            val type = typeDescriptor.toType()
             val location = objectTracker.getFieldAccessMemoryLocation(obj, fieldDescriptor.className, fieldDescriptor.fieldName, type,
                 isStatic = fieldDescriptor.isStatic,
                 isFinal = fieldDescriptor.isFinal,
@@ -1517,7 +1517,7 @@ internal abstract class ManagedStrategy(
         }
         traceCollector?.addTracePointInternal(tracePoint)
         if (memoryTracker != null) {
-            val type = Type.getType(typeDescriptor)
+            val type = typeDescriptor.toType()
             val location = objectTracker.getArrayAccessMemoryLocation(array, index, type)
             memoryTracker!!.beforeWrite(threadId, codeLocation, location, value)
         }
@@ -1871,7 +1871,7 @@ internal abstract class ManagedStrategy(
     }
 
     private fun trackAtomicMethodMemoryAccess(
-        owner: Any?,
+        owner: Any,
         className: String,
         methodName: String,
         codeLocation: Int,
@@ -1881,7 +1881,7 @@ internal abstract class ManagedStrategy(
         if (memoryTracker == null)
             return false
         val iThread = threadScheduler.getCurrentThreadId()
-        val location = objectTracker.getAtomicAccessMemoryLocation(className, methodName, owner, params)
+        val location = objectTracker.getAtomicAccessMemoryLocation(context, className, methodName, owner, params, methodDescriptor)
             ?: return false
         var argOffset = 0
         // atomic reflection case (AFU, VarHandle or Unsafe) - the first argument is a reflection object
