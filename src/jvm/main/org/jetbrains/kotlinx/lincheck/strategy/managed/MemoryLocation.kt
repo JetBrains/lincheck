@@ -20,13 +20,12 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import org.jetbrains.kotlinx.lincheck.util.unreachable
-import org.jetbrains.lincheck.descriptors.*
 import org.jetbrains.lincheck.trace.TraceContext
-import java.lang.reflect.*
+import org.jetbrains.lincheck.descriptors.*
 import org.jetbrains.lincheck.util.*
-import kotlin.reflect.KClass
 import java.lang.reflect.Array as ReflectArray
+import java.lang.reflect.*
+import kotlin.reflect.KClass
 
 typealias ValueMapper = (Types.Type, ValueID) -> OpaqueValue?
 
