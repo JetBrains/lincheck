@@ -83,8 +83,7 @@ internal class SharedMemoryAccessTransformer(
         val codeLocationId = loadNewCodeLocationId()
         pushNull()
         push(fieldId)
-        push(desc)
-        // STACK: descriptor, codeLocation, null, fieldId, desc
+        // STACK: descriptor, codeLocation, null, fieldId
         invokeStatic(Injections::beforeReadField)
         // STACK: <empty>
         if(configuration.interceptReadResults) {
@@ -115,8 +114,7 @@ internal class SharedMemoryAccessTransformer(
         val codeLocationId = loadNewCodeLocationId(accessPath = ownerName)
         loadLocal(ownerLocal)
         push(fieldId)
-        push(desc)
-        // STACK: descriptor, codeLocation, obj, fieldId, desc
+        // STACK: descriptor, codeLocation, obj, fieldId
         invokeStatic(Injections::beforeReadField)
         // STACK: obj
         if(configuration.interceptReadResults) {
@@ -153,8 +151,7 @@ internal class SharedMemoryAccessTransformer(
         loadLocal(valueLocal)
         box(valueType)
         push(fieldId)
-        push(desc)
-        // STACK: value, descriptor, codeLocation, null, value, fieldId, desc
+        // STACK: value, descriptor, codeLocation, null, value, fieldId
         invokeStatic(Injections::beforeWriteField)
         // STACK: value
         invokeBeforeEventIfPluginEnabled("write static field")
@@ -185,8 +182,7 @@ internal class SharedMemoryAccessTransformer(
         loadLocal(valueLocal)
         box(valueType)
         push(fieldId)
-        push(desc)
-        // STACK: descriptor, codeLocation, obj, value, fieldId, desc
+        // STACK: descriptor, codeLocation, obj, value, fieldId
         invokeStatic(Injections::beforeWriteField)
         // STACK: <empty>
         invokeBeforeEventIfPluginEnabled("write field")
@@ -235,8 +231,7 @@ internal class SharedMemoryAccessTransformer(
         val codeLocationId = loadNewCodeLocationId(accessPath = ownerName)
         loadLocal(arrayLocal)
         loadLocal(indexLocal)
-        push(arrayElementType.descriptor)
-        // STACK: descriptor, codeLocation, array, index, desc
+        // STACK: descriptor, codeLocation, array, index
         invokeStatic(Injections::beforeReadArray)
         // STACK: <empty>
         loadLocal(arrayLocal)
@@ -273,8 +268,7 @@ internal class SharedMemoryAccessTransformer(
         loadLocal(indexLocal)
         loadLocal(valueLocal)
         box(arrayElementType)
-        push(arrayElementType.descriptor)
-        // STACK: descriptor, codeLocation, array, index, value, desc
+        // STACK: descriptor, codeLocation, array, index, value
         invokeStatic(Injections::beforeWriteArray)
         invokeBeforeEventIfPluginEnabled("write array")
         // STACK: <empty>

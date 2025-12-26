@@ -1300,7 +1300,6 @@ internal abstract class ManagedStrategy(
         codeLocation: Int,
         obj: Any?,
         fieldId: Int,
-        typeDescriptor: String,
     ): Unit = threadDescriptor.runInsideIgnoredSection {
         val fieldDescriptor = context.getFieldDescriptor(fieldId)
         if (!fieldDescriptor.isStatic && obj == null) {
@@ -1319,8 +1318,10 @@ internal abstract class ManagedStrategy(
         val threadId = threadScheduler.getCurrentThreadId()
         newSwitchPoint(threadId, codeLocation)
         if (memoryTracker != null) {
-            val type = typeDescriptor.toType()
-            val location = objectTracker.getFieldAccessMemoryLocation(obj, fieldDescriptor.className, fieldDescriptor.fieldName, type,
+            val location = objectTracker.getFieldAccessMemoryLocation(obj,
+                className = fieldDescriptor.className,
+                fieldName = fieldDescriptor.fieldName,
+                type = fieldDescriptor.type,
                 isStatic = fieldDescriptor.isStatic,
                 isFinal = fieldDescriptor.isFinal,
             )
@@ -1335,7 +1336,6 @@ internal abstract class ManagedStrategy(
         codeLocation: Int,
         array: Any?,
         index: Int,
-        typeDescriptor: String,
     ): Unit = threadDescriptor.runInsideIgnoredSection {
         if (array == null) return // ignore, `NullPointerException` will be thrown
         updateSnapshotOnArrayElementAccess(array, index)
@@ -1345,8 +1345,8 @@ internal abstract class ManagedStrategy(
         val threadId = threadScheduler.getCurrentThreadId()
         newSwitchPoint(threadId, codeLocation)
         // TODO: this is a mess
-        if (memoryTracker != null && typeDescriptor != VOID_TYPE.toString()) {
-            val type = typeDescriptor.toType()
+        if (memoryTracker != null) {
+            val type = array.javaClass.kotlin.getArrayElementType()
             val location = objectTracker.getArrayAccessMemoryLocation(array, index, type)
             // TODO: Should we use threadID or thread Descriptor here?
             memoryTracker!!.beforeRead(threadId, codeLocation, location)
@@ -1432,7 +1432,6 @@ internal abstract class ManagedStrategy(
         obj: Any?,
         value: Any?,
         fieldId: Int,
-        typeDescriptor: String,
     ): Unit = threadDescriptor.runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
         val fieldDescriptor = context.getFieldDescriptor(fieldId)
@@ -1467,8 +1466,10 @@ internal abstract class ManagedStrategy(
         }
         traceCollector?.addTracePointInternal(tracePoint)
         if (memoryTracker != null) {
-            val type = typeDescriptor.toType()
-            val location = objectTracker.getFieldAccessMemoryLocation(obj, fieldDescriptor.className, fieldDescriptor.fieldName, type,
+            val location = objectTracker.getFieldAccessMemoryLocation(obj,
+                className = fieldDescriptor.className,
+                fieldName = fieldDescriptor.fieldName,
+                type = fieldDescriptor.type,
                 isStatic = fieldDescriptor.isStatic,
                 isFinal = fieldDescriptor.isFinal,
             )
@@ -1483,7 +1484,6 @@ internal abstract class ManagedStrategy(
         array: Any?,
         index: Int,
         value: Any?,
-        typeDescriptor: String,
     ): Unit = threadDescriptor.runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
         if (array == null) {
@@ -1517,7 +1517,7 @@ internal abstract class ManagedStrategy(
         }
         traceCollector?.addTracePointInternal(tracePoint)
         if (memoryTracker != null) {
-            val type = typeDescriptor.toType()
+            val type = array.javaClass.kotlin.getArrayElementType()
             val location = objectTracker.getArrayAccessMemoryLocation(array, index, type)
             memoryTracker!!.beforeWrite(threadId, codeLocation, location, value)
         }
@@ -1533,7 +1533,6 @@ internal abstract class ManagedStrategy(
     }
 
     // TODO: Should we intercept on array copy?
-
 
     override fun afterLocalRead(threadDescriptor: ThreadDescriptor, codeLocation: Int, variableId: Int, value: Any?) {}
 

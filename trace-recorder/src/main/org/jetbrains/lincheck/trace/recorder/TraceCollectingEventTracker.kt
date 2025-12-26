@@ -431,7 +431,6 @@ class TraceCollectingEventTracker(
         codeLocation: Int,
         obj: Any?,
         fieldId: Int,
-        typeDescriptor: String,
     ) {}
 
     override fun beforeReadArrayElement(
@@ -439,8 +438,9 @@ class TraceCollectingEventTracker(
         codeLocation: Int,
         array: Any,
         index: Int,
-        typeDescriptor: String,
     ) {}
+
+    override fun interceptReadResult(): Any? = null
 
     // Needs to run inside ignored section
     // as uninstrumented std lib code can be overshadowed by instrumented project code.
@@ -494,7 +494,7 @@ class TraceCollectingEventTracker(
         codeLocation: Int,
         obj: Any?,
         value: Any?,
-        fieldId: Int
+        fieldId: Int,
     ): Unit = threadDescriptor.runInsideInjectedCode {
         val fieldDescriptor = context.getFieldDescriptor(fieldId)
         if (!fieldDescriptor.isStatic && obj == null) {

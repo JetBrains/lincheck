@@ -618,19 +618,19 @@ public class Injections {
     /**
      * Called from the instrumented code before each field read.
      */
-    public static void beforeReadField(ThreadDescriptor descriptor, int codeLocation, Object obj, int fieldId, String typeDescriptor) {
+    public static void beforeReadField(ThreadDescriptor descriptor, int codeLocation, Object obj, int fieldId) {
         EventTracker eventTracker = getEventTracker(descriptor);
         if (descriptor == null || eventTracker == null) return;
-        eventTracker.beforeReadField(descriptor, codeLocation, obj, fieldId, typeDescriptor);
+        eventTracker.beforeReadField(descriptor, codeLocation, obj, fieldId);
     }
 
     /**
      * Called from the instrumented code before any array cell read.
      */
-    public static void beforeReadArray(ThreadDescriptor descriptor, int codeLocation, Object array, int index, String typeDescriptor) {
+    public static void beforeReadArray(ThreadDescriptor descriptor, int codeLocation, Object array, int index) {
         EventTracker eventTracker = getEventTracker(descriptor);
         if (descriptor == null || eventTracker == null) return;
-        eventTracker.beforeReadArrayElement(descriptor, codeLocation, array, index, typeDescriptor);
+        eventTracker.beforeReadArrayElement(descriptor, codeLocation, array, index);
     }
 
     public static Object interceptReadResult() {
@@ -677,19 +677,19 @@ public class Injections {
     /**
      * Called from the instrumented code before each field write.
      */
-    public static void beforeWriteField(ThreadDescriptor descriptor, int codeLocation, Object obj, Object value, int fieldId, String typeDescriptor) {
+    public static void beforeWriteField(ThreadDescriptor descriptor, int codeLocation, Object obj, Object value, int fieldId) {
         EventTracker eventTracker = getEventTracker(descriptor);
         if (descriptor == null || eventTracker == null) return;
-        eventTracker.beforeWriteField(descriptor, codeLocation, obj, value, fieldId, typeDescriptor);
+        eventTracker.beforeWriteField(descriptor, codeLocation, obj, value, fieldId);
     }
 
     /**
      * Called from the instrumented code before any array cell write.
      */
-    public static void beforeWriteArray(ThreadDescriptor descriptor, int codeLocation, Object array, int index, Object value, String typeDescriptor) {
+    public static void beforeWriteArray(ThreadDescriptor descriptor, int codeLocation, Object array, int index, Object value) {
         EventTracker eventTracker = getEventTracker(descriptor);
         if (descriptor == null || eventTracker == null) return;
-        eventTracker.beforeWriteArrayElement(descriptor, codeLocation, array, index, value, typeDescriptor);
+        eventTracker.beforeWriteArrayElement(descriptor, codeLocation, array, index, value);
     }
 
     /**
