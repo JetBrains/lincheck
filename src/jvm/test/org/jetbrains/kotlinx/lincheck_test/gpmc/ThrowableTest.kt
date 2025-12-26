@@ -11,7 +11,7 @@
 package org.jetbrains.kotlinx.lincheck_test.gpmc
 
 import org.jetbrains.lincheck.Lincheck
-import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent.ensureClassHierarchyIsTransformed
+import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.ensureClassHierarchyIsTransformed
 import kotlin.concurrent.thread
 import org.junit.Test
 

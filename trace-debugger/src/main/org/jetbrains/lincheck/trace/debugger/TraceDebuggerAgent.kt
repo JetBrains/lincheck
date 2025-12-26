@@ -13,9 +13,7 @@ package org.jetbrains.lincheck.trace.debugger
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.jvm.agent.TraceAgentTransformer
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
-import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent
-import org.jetbrains.lincheck.jvm.agent.isInstrumentationInitialized
-import org.jetbrains.lincheck.jvm.agent.isTraceJavaAgentAttached
+import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import org.jetbrains.lincheck.util.isInTraceRecorderMode
 import java.lang.instrument.Instrumentation
@@ -44,12 +42,10 @@ object TraceDebuggerAgent {
             "Rerun with `-Dlincheck.traceDebuggerMode=true` or `-Dlincheck.traceRecorderMode=true` but not both."
         }
         TraceAgentParameters.parseArgs(agentArgs, emptyList())
-        LincheckJavaAgent.instrumentation = inst
-        isTraceJavaAgentAttached = true
-        isInstrumentationInitialized = true
+        LincheckInstrumentation.attachJavaAgentStatically(inst)
         // We are in Trace debugger mode
-        LincheckJavaAgent.instrumentation.addTransformer(TraceAgentTransformer(LincheckJavaAgent.context, ::TraceDebuggerMethodTransformer), true)
-        LincheckJavaAgent.install(InstrumentationMode.TRACE_DEBUGGING)
-        LincheckJavaAgent.ensureClassHierarchyIsTransformed(TraceAgentParameters.classUnderTraceDebugging)
+        LincheckInstrumentation.instrumentation.addTransformer(TraceAgentTransformer(LincheckInstrumentation.context, ::TraceDebuggerMethodTransformer), true)
+        LincheckInstrumentation.install(InstrumentationMode.TRACE_DEBUGGING)
+        LincheckInstrumentation.ensureClassHierarchyIsTransformed(TraceAgentParameters.classUnderTraceDebugging)
     }
 }
