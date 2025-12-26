@@ -12,7 +12,6 @@ package org.jetbrains.lincheck.trace.recorder
 
 import org.jetbrains.lincheck.analysis.ShadowStackFrame
 import org.jetbrains.lincheck.descriptors.Types
-import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.trace.TRMethodCallTracePoint.Companion.INCOMPLETE_METHOD_FLAG

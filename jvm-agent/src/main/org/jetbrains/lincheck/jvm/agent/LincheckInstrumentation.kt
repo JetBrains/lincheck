@@ -12,9 +12,9 @@ package org.jetbrains.lincheck.jvm.agent
 
 import net.bytebuddy.agent.ByteBuddyAgent
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.*
-import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent.install
-import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent.instrumentation
-import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent.instrumentationMode
+import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.install
+import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.instrumentation
+import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.instrumentationMode
 import org.jetbrains.lincheck.jvm.agent.LincheckClassFileTransformer.isEagerlyInstrumentedClass
 import org.jetbrains.lincheck.jvm.agent.LincheckClassFileTransformer.shouldTransform
 import org.jetbrains.lincheck.jvm.agent.LincheckClassFileTransformer.transformedClassesCache
@@ -29,7 +29,7 @@ import java.util.jar.JarFile
 import java.util.*
 
 /**
- * Executes [block] with the Lincheck java agent for byte-code instrumentation.
+ * Executes [block] with the Lincheck java agent attached for byte-code instrumentation.
  */
 inline fun withLincheckJavaAgent(instrumentationMode: InstrumentationMode, block: () -> Unit) {
     if (isTraceJavaAgentAttached) {
@@ -55,7 +55,7 @@ inline fun withLincheckJavaAgent(instrumentationMode: InstrumentationMode, block
         return try {
             block()
         } finally {
-            LincheckJavaAgent.uninstall()
+            LincheckInstrumentation.uninstall()
         }
     }
 }
@@ -131,12 +131,12 @@ enum class InstrumentationStrategy {
 }
 
 /**
- * LincheckJavaAgent represents the Lincheck Java agent responsible for instrumenting bytecode.
+ * [LincheckInstrumentation] implements the Lincheck bytecode instrumenting service.
  *
  * @property instrumentation The ByteBuddy instrumentation instance.
- * @property instrumentationMode The instrumentation mode to determine which classes to transform.
+ * @property instrumentationMode The instrumentation mode, see [InstrumentationMode] for details.
  */
-object LincheckJavaAgent {
+object LincheckInstrumentation {
     /**
      * The [Instrumentation] instance is used to perform bytecode transformations during runtime.
      *

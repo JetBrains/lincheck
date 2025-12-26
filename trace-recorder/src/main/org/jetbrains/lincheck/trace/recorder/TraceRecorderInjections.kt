@@ -12,14 +12,14 @@ package org.jetbrains.lincheck.trace.recorder
 
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
-import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent
+import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.util.Logger
 
 internal object TraceRecorderInjections {
     @JvmStatic
     fun prepareTraceRecorder() {
         // Must be first or classes will not be found
-        LincheckJavaAgent.install(InstrumentationMode.TRACE_RECORDING)
+        LincheckInstrumentation.install(InstrumentationMode.TRACE_RECORDING)
     }
 
     @JvmStatic
@@ -33,7 +33,7 @@ internal object TraceRecorderInjections {
                 formatOption = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FOPTION),
                 pack = (TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_PACK) ?: "true").toBoolean(),
                 startingCodeLocationId = startingCodeLocationId,
-                context = LincheckJavaAgent.context
+                context = LincheckInstrumentation.context
             )
         } catch (t: Throwable) {
             Logger.error { "Cannot start Trace Recorder: $t"}
@@ -45,7 +45,7 @@ internal object TraceRecorderInjections {
         // This method should never throw an exception, or tracer state is undetermined
         try {
             TraceRecorder.finishTraceAndDumpResults()
-            LincheckJavaAgent.reportStatistics()
+            LincheckInstrumentation.reportStatistics()
         } catch (t: Throwable) {
             Logger.error { "Cannot stop Trace Recorder: $t"}
         }
