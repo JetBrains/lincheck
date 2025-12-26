@@ -371,6 +371,7 @@ internal fun DataInput.readMethodSignature(): MethodSignature {
 internal fun DataOutput.writeFieldDescriptor(value: FieldDescriptor) {
     writeInt(value.classId)
     writeUTF(value.fieldName)
+    writeType(value.type)
     writeBoolean(value.isStatic)
     writeBoolean(value.isFinal)
 }
@@ -380,6 +381,7 @@ internal fun DataInput.readFieldDescriptor(context: TraceContext): FieldDescript
         context = context,
         classId = readInt(),
         fieldName = readUTF(),
+        type = readType(),
         isStatic = readBoolean(),
         isFinal = readBoolean()
     )

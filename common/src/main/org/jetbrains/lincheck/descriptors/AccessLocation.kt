@@ -61,6 +61,7 @@ data class ObjectFieldAccessLocation(
                  */
                 className = "java.lang.Array",
                 fieldName = "length",
+                type = Types.INT_TYPE,
                 isStatic = false,
                 isFinal = true,
             )
@@ -156,6 +157,7 @@ fun Field.toAccessLocation(context: TraceContext): FieldAccessLocation {
     val isStatic = Modifier.isStatic(modifiers)
     val isFinal = Modifier.isFinal(modifiers)
     val descriptorId = context.getOrCreateFieldId(className, fieldName,
+        type = type.kotlin.getType(),
         isStatic = isStatic,
         isFinal = isFinal,
     )

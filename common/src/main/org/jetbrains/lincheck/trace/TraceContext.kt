@@ -85,12 +85,13 @@ class TraceContext {
         return fields.contains(field)
     }
 
-    fun getOrCreateFieldId(className: String, fieldName: String, isStatic: Boolean, isFinal: Boolean): Int {
+    fun getOrCreateFieldId(className: String, fieldName: String, type: Types.Type, isStatic: Boolean, isFinal: Boolean): Int {
         return getOrCreateFieldId(
             FieldDescriptor(
                 context = this,
                 classId = getOrCreateClassId(className),
                 fieldName = fieldName,
+                type = type,
                 isStatic = isStatic,
                 isFinal = isFinal
             )
@@ -101,8 +102,8 @@ class TraceContext {
         return fields.getOrCreateId(field)
     }
 
-    fun getFieldDescriptor(className: String, fieldName: String, isStatic: Boolean, isFinal: Boolean): FieldDescriptor =
-        getFieldDescriptor(getOrCreateFieldId(className, fieldName, isStatic, isFinal))
+    fun getFieldDescriptor(className: String, fieldName: String, type: Types.Type, isStatic: Boolean, isFinal: Boolean): FieldDescriptor =
+        getFieldDescriptor(getOrCreateFieldId(className, fieldName, type, isStatic, isFinal))
 
     fun getFieldDescriptor(fieldId: Int): FieldDescriptor = fields[fieldId]
 

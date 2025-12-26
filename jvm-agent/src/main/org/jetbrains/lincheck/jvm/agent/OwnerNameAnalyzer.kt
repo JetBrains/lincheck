@@ -432,6 +432,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
                 val fieldDescriptor = context.getFieldDescriptor(
                     className = className!!.toCanonicalClassName(),
                     fieldName = fieldName!!,
+                    type = descriptor!!.toType(),
                     isStatic = true,
                     isFinal = FinalFields.isFinalField(className, fieldName)
                 )
@@ -451,6 +452,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
                 val fieldDescriptor = context.getFieldDescriptor(
                     className = className!!.toCanonicalClassName(),
                     fieldName = fieldName!!,
+                    type = descriptor!!.toType(),
                     isStatic = false,
                     isFinal = FinalFields.isFinalField(className, fieldName)
                 )

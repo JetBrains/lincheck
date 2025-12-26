@@ -16,6 +16,7 @@ import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import org.jetbrains.lincheck.jvm.agent.*
+import org.jetbrains.lincheck.descriptors.toType
 import org.jetbrains.lincheck.trace.TraceContext
 import org.objectweb.asm.MethodVisitor
 import sun.nio.ch.lincheck.*
@@ -72,6 +73,7 @@ internal class SharedMemoryAccessTransformer(
         val fieldId = context.getOrCreateFieldId(
             className = owner.toCanonicalClassName(),
             fieldName = fieldName,
+            type = desc.toType(),
             isStatic = true,
             isFinal = FinalFields.isFinalField(owner, fieldName)
         )
@@ -101,6 +103,7 @@ internal class SharedMemoryAccessTransformer(
         val fieldId = context.getOrCreateFieldId(
             className = owner.toCanonicalClassName(),
             fieldName = fieldName,
+            type = desc.toType(),
             isStatic = false,
             isFinal = FinalFields.isFinalField(owner, fieldName)
         )
@@ -135,6 +138,7 @@ internal class SharedMemoryAccessTransformer(
         val fieldId = context.getOrCreateFieldId(
             className = owner.toCanonicalClassName(),
             fieldName = fieldName,
+            type = desc.toType(),
             isStatic = true,
             isFinal = FinalFields.isFinalField(owner, fieldName)
         )
@@ -167,6 +171,7 @@ internal class SharedMemoryAccessTransformer(
         val fieldId = context.getOrCreateFieldId(
             className = owner.toCanonicalClassName(),
             fieldName = fieldName,
+            type = desc.toType(),
             isStatic = false,
             isFinal = FinalFields.isFinalField(owner, fieldName)
         )
