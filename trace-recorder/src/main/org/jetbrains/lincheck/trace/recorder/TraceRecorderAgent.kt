@@ -10,6 +10,7 @@
 
 package org.jetbrains.lincheck.trace.recorder
 
+import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.jvm.agent.TraceAgentTransformer
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
@@ -48,25 +49,41 @@ internal object TraceRecorderAgent {
          *
          * It is an error not to set it.
          */
-        // Check if one of the required parameters is set.
         check(isInTraceRecorderMode) {
-            "When lincheck agent is attached to process, " +
-            "mode should be selected by VM parameter `lincheck.traceRecorderMode`. It is expected to be `true`. " +
-            "Rerun with `-Dlincheck.traceRecorderMode=true`."
+            """
+            When trace recorder agent is attached to process mode should be selected by VM parameter. 
+            Rerun with `-Dlincheck.traceRecorderMode=true`.
+            """
+            .trimIndent()
         }
-        // Check that only one parameter is set: one of two must be `false`
-        check(!isInTraceDebuggerMode || !isInTraceRecorderMode) {
-            "When lincheck agent is attached to process, " +
-            "mode should be selected by one of VM parameters `lincheck.traceDebuggerMode` or " +
-            "`lincheck.traceRecorderMode`. Only one of them expected to be `true`. " +
-            "Rerun with `-Dlincheck.traceDebuggerMode=true` or `-Dlincheck.traceRecorderMode=true` but not both."
+        check(!isInTraceDebuggerMode) {
+            """ 
+            When trace recorder agent is attached to process, trace debugger mode should be disabled.
+            It looks like you have enabled it via `-Dlincheck.traceDebuggerMode=true`.
+            Rerun with `-Dlincheck.traceRecorderMode=true` only instead.
+            """
+            .trimIndent()
         }
         TraceAgentParameters.parseArgs(agentArgs, ADDITIONAL_ARGS)
         LincheckInstrumentation.attachJavaAgentStatically(inst)
-        // We are in Trace Recorder mode (by exclusion)
-        // This adds turn-on and turn-off of tracing to the method in question
-        LincheckInstrumentation.instrumentation.addTransformer(TraceAgentTransformer(LincheckInstrumentation.context, ::TraceRecorderMethodTransformer), true)
+
+        // This transformer adds tracing turn-on and turn-off at the given method entry/exit.
+        LincheckInstrumentation.instrumentation.addTransformer(
+            /* transformer = */ TraceAgentTransformer(
+                LincheckInstrumentation.context,
+                ::TraceRecorderMethodTransformer,
+                classUnderTracing = TraceAgentParameters.classUnderTraceDebugging,
+                methodUnderTracing = TraceAgentParameters.methodUnderTraceDebugging,
+            ),
+            /* canRetransform = */ true
+        )
+
         // This prepares instrumentation of all future classes
-        TraceRecorderInjections.prepareTraceRecorder()
+        installInstrumentation()
+    }
+
+    @JvmStatic
+    private fun installInstrumentation() {
+        LincheckInstrumentation.install(InstrumentationMode.TRACE_RECORDING)
     }
 }

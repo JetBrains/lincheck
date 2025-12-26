@@ -18,13 +18,15 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlin.io.path.Path
 
-fun packRecordedTrace(baseFileName: String, metaInfo: TraceMetaInfo, deleteSources: Boolean = true) {
-    val dataName = baseFileName
-    val indexName = "$baseFileName.$INDEX_FILENAME_EXT"
-    val outputName = "$baseFileName.$PACK_FILENAME_EXT"
-
+fun packRecordedTrace(
+    dataFileName: String,
+    indexFileName: String,
+    outputFileName: String,
+    metaInfo: TraceMetaInfo,
+    deleteSources: Boolean = true
+) {
     try {
-        ZipOutputStream(openNewFile(outputName).buffered(OUTPUT_BUFFER_SIZE)).use { zip ->
+        ZipOutputStream(openNewFile(outputFileName).buffered(OUTPUT_BUFFER_SIZE)).use { zip ->
             var input: InputStream
 
             // Don't compress for now, but STORED requires pre-compute CRC32, and we don't want to do it.
@@ -40,7 +42,7 @@ fun packRecordedTrace(baseFileName: String, metaInfo: TraceMetaInfo, deleteSourc
 
             // Store data
             zip.putNextEntry(ZipEntry(PACKED_DATA_ITEM_NAME))
-            input = openExistingFile(dataName) ?: throw IllegalArgumentException("Cannot open trace file \"$dataName\"")
+            input = openExistingFile(dataFileName) ?: throw IllegalArgumentException("Cannot open trace file \"$dataFileName\"")
             input.use { data ->
                 data.copyTo(zip)
             }
@@ -48,19 +50,19 @@ fun packRecordedTrace(baseFileName: String, metaInfo: TraceMetaInfo, deleteSourc
 
             // Store Index
             zip.putNextEntry(ZipEntry(PACKED_INDEX_ITEM_NAME))
-            input = openExistingFile(indexName) ?: throw IllegalArgumentException("Cannot open trace index file \"$indexName\"")
+            input = openExistingFile(indexFileName) ?: throw IllegalArgumentException("Cannot open trace index file \"$indexFileName\"")
             input.use { data ->
                 data.copyTo(zip)
             }
             zip.closeEntry()
         }
         if (deleteSources) {
-            Files.deleteIfExists(Path(dataName))
-            Files.deleteIfExists(Path(indexName))
+            Files.deleteIfExists(Path(dataFileName))
+            Files.deleteIfExists(Path(indexFileName))
         }
-        Logger.info { "Packed trace size: ${Files.size(Path(outputName))} bytes" }
+        Logger.info { "Packed trace size: ${Files.size(Path(outputFileName))} bytes" }
     } catch (e: Throwable) {
-        Files.deleteIfExists(Path(outputName))
+        Files.deleteIfExists(Path(outputFileName))
         throw e
     }
 }
