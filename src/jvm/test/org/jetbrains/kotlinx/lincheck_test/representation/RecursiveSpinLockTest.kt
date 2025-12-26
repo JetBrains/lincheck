@@ -310,3 +310,19 @@ class RecursiveParametersDependentSpinLockTest {
         .checkImpl(this::class.java)
         .checkLincheckOutput("spin_lock/recursive_spin_lock_param_dependent")
 }
+
+class RecursiveSpinLockRepeatsOperationTest {
+    private val value = AtomicBoolean(false)
+
+    fun foo() {
+        if (value.get()) return
+        foo()
+    }
+
+    @Test
+    fun test() = ModelCheckingOptions()
+        .iterations(0)
+        .addCustomScenario { parallel { thread { actor(::foo) } } }
+        .checkImpl(this::class.java)
+        .checkLincheckOutput("spin_lock/recursive_spin_lock_repeats_operation.txt")
+}
