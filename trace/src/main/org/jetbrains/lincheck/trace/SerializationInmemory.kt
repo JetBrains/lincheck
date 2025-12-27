@@ -114,7 +114,7 @@ private class SimpleContextSavingState: ContextSavingState {
     }
 }
 
-private class DirectTraceWriter(
+internal class DirectTraceWriter(
     dataStream: OutputStream,
     indexStream: OutputStream,
     context: TraceContext,
@@ -211,13 +211,15 @@ class MemoryTraceCollecting(private val context: TraceContext): TraceCollectingS
 /**
  * Top-level function to save full-depth recorded trace old-style (all in once)
  */
-fun saveRecorderTrace(baseFileName: String, context: TraceContext, rootCallsPerThread: List<TRTracePoint>) =
-    saveRecorderTrace(
-        data = openNewFile(baseFileName).buffered(OUTPUT_BUFFER_SIZE),
-        index = openNewFile("$baseFileName.$INDEX_FILENAME_EXT").buffered(OUTPUT_BUFFER_SIZE),
+fun saveRecorderTrace(baseFileName: String, context: TraceContext, rootCallsPerThread: List<TRTracePoint>) {
+    val streams = openNewStandardDataAndIndex(baseFileName)
+    return saveRecorderTrace(
+        data = streams.first,
+        index = streams.second,
         context = context,
         rootCallsPerThread = rootCallsPerThread
     )
+}
 
 fun saveRecorderTrace(data: OutputStream, index: OutputStream, context: TraceContext, rootCallsPerThread: List<TRTracePoint>) {
     DirectTraceWriter(data, index, context).use { tw ->
