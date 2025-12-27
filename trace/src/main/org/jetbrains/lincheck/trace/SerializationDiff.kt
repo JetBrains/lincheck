@@ -224,7 +224,7 @@ private fun diffTracePointLists(leftPoints: List<TRTracePoint?>, rightPoints: Li
                 v[index - 1] + 1
             }
             var r = l - k
-            while (l < ls && r < rs && leftPoints[l]?.editIndependentHashForDiff == rightPoints[r]?.editIndependentHashForDiff) {
+            while (l < ls && r < rs && leftPoints[l]!!.editedEquals(rightPoints[r]!!)) {
                 l++
                 r++
             }

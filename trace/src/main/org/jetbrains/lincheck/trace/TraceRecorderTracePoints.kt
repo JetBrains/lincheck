@@ -103,6 +103,13 @@ sealed class TRTracePoint(
 
     fun toText(verbose: Boolean): String {
         val sb = StringBuilder()
+        when (diffStatus) {
+            DiffStatus.UNCHANGED -> sb.append("  ")
+            DiffStatus.REMOVED -> sb.append("- ")
+            DiffStatus.ADDED -> sb.append("+ ")
+            DiffStatus.EDITED -> sb.append("! ")
+            null -> Unit
+        }
         toText(DefaultTRTextAppendable(sb, verbose))
         return sb.toString()
     }
@@ -111,7 +118,7 @@ sealed class TRTracePoint(
 
     internal abstract val strictHashForDiff: Int
 
-    internal open val editIndependentHashForDiff: Int = strictHashForDiff
+    internal abstract val editIndependentHashForDiff: Int
 
     internal fun strictlyEquals(other: TRTracePoint): Boolean =
         javaClass == other.javaClass && strictHashForDiff == other.strictHashForDiff
@@ -139,6 +146,24 @@ sealed class TRTracePoint(
 
     protected fun VariableDescriptor.cloneToNewContext(targetContext: TraceContext): Int {
         return targetContext.getOrCreateVariableId(this.name)
+    }
+
+    protected fun TRObject?.cloneToNewContext(targetContext: TraceContext): TRObject? {
+        if (this == null) return null
+        return if (isPrimitive) {
+            TRObject(classNameId, identityHashCode, primitiveValue!!)
+        } else {
+            val cid = targetContext.getOrCreateClassId(className)
+            TRObject(cid, identityHashCode, targetContext.getClassDescriptor(cid))
+        }
+    }
+
+    protected fun List<TRObject?>.cloneToNewContext(targetContext: TraceContext): List<TRObject?> {
+        val rv = mutableListOf<TRObject?>()
+        this.forEach {
+            rv.add(it?.cloneToNewContext(targetContext))
+        }
+        return rv
     }
 }
 
@@ -399,11 +424,11 @@ class TRMethodCallTracePoint(
             threadId = targetThreadId,
             codeLocationId = context.codeLocation(codeLocationId)?.cloneToNewContext(targetContext) ?: UNKNOWN_CODE_LOCATION_ID,
             methodId = methodDescriptor.cloneToNewContext(targetContext),
-            obj = obj,
-            parameters = parameters,
+            obj = obj?.cloneToNewContext(targetContext),
+            parameters = parameters.cloneToNewContext(targetContext),
             flags = flags
         ).also {
-            it.result = result
+            it.result = result.cloneToNewContext(targetContext)
             it.exceptionClassName = exceptionClassName
         }
     }
@@ -576,6 +601,8 @@ class TRLoopIterationTracePoint(
             loopIteration
         )
 
+    override val editIndependentHashForDiff: Int = strictHashForDiff
+
     override fun cloneToNewContext(targetContext: TraceContext, targetThreadId: Int): TRTracePoint {
         // Generate new eventId, don't copy old one.
         return TRLoopIterationTracePoint(
@@ -688,8 +715,8 @@ class TRReadTracePoint(
             threadId = targetThreadId,
             codeLocationId = context.codeLocation(codeLocationId)?.cloneToNewContext(targetContext) ?: UNKNOWN_CODE_LOCATION_ID,
             fieldId = fieldDescriptor.cloneToNewContext(targetContext),
-            obj = obj,
-            value = value
+            obj = obj.cloneToNewContext(targetContext),
+            value = value.cloneToNewContext(targetContext)
         )
     }
 
@@ -727,8 +754,8 @@ class TRWriteTracePoint(
             threadId = targetThreadId,
             codeLocationId = context.codeLocation(codeLocationId)?.cloneToNewContext(targetContext) ?: UNKNOWN_CODE_LOCATION_ID,
             fieldId = fieldDescriptor.cloneToNewContext(targetContext),
-            obj = obj,
-            value = value
+            obj = obj.cloneToNewContext(targetContext),
+            value = value.cloneToNewContext(targetContext)
         )
     }
 
@@ -815,7 +842,7 @@ class TRReadLocalVariableTracePoint(
             threadId = targetThreadId,
             codeLocationId = context.codeLocation(codeLocationId)?.cloneToNewContext(targetContext) ?: UNKNOWN_CODE_LOCATION_ID,
             localVariableId = variableDescriptor.cloneToNewContext(targetContext),
-            value = value
+            value = value.cloneToNewContext(targetContext)
         )
     }
 
@@ -851,7 +878,7 @@ class TRWriteLocalVariableTracePoint(
             threadId = targetThreadId,
             codeLocationId = context.codeLocation(codeLocationId)?.cloneToNewContext(targetContext) ?: UNKNOWN_CODE_LOCATION_ID,
             localVariableId = variableDescriptor.cloneToNewContext(targetContext),
-            value = value
+            value = value.cloneToNewContext(targetContext)
         )
     }
 
@@ -990,9 +1017,9 @@ class TRReadArrayTracePoint(
             context = targetContext,
             threadId = targetThreadId,
             codeLocationId = context.codeLocation(codeLocationId)?.cloneToNewContext(targetContext) ?: UNKNOWN_CODE_LOCATION_ID,
-            array = array,
+            array = array.cloneToNewContext(targetContext)!!,
             index = index,
-            value = value
+            value = value.cloneToNewContext(targetContext)
         )
     }
 
@@ -1029,9 +1056,9 @@ class TRWriteArrayTracePoint(
             context = targetContext,
             threadId = targetThreadId,
             codeLocationId = context.codeLocation(codeLocationId)?.cloneToNewContext(targetContext) ?: UNKNOWN_CODE_LOCATION_ID,
-            array = array,
+            array = array.cloneToNewContext(targetContext)!!,
             index = index,
-            value = value
+            value = value.cloneToNewContext(targetContext)
         )
     }
 
