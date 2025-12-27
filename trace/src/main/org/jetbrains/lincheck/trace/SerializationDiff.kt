@@ -120,7 +120,7 @@ private fun copyTracepointSubtree(
     }
 }
 
-private data class DiffLine(val status: DiffStatus, val leftIdx: Int, val rightIDx: Int)
+data class DiffLine(val status: DiffStatus, val leftIdx: Int, val rightIDx: Int)
 
 private fun diffTracepointSubtree(
     output: TraceWriter,
@@ -140,10 +140,21 @@ private fun diffTracepointSubtree(
                 val lp = leftPoints[leftIdx]!!
                 val rp = rightPoints[rightIdx]!!
                 // It is editing-equivalent trace points
-                val realStatus = if (lp.strictHashForDiff == rp.strictHashForDiff) DiffStatus.UNCHANGED else DiffStatus.EDITED
+                val rightStatus = if (lp.strictHashForDiff == rp.strictHashForDiff) DiffStatus.UNCHANGED else DiffStatus.ADDED
+
+                if (lp.strictHashForDiff != rp.strictHashForDiff) {
+                    // "Remove" left and make it without children, add right
+                    val removedPoint = lp.cloneToNewContext(outputContext, outputThreadId)
+                    removedPoint.diffStatus = DiffStatus.REMOVED
+                    outputRoot.addChild(removedPoint)
+                    removedPoint.save(output)
+                    if (removedPoint is TRContainerTracePoint) {
+                        removedPoint.saveFooter(output)
+                    }
+                }
                 // Copy tracepoint itself from right subtree for now
                 val outputPoint = rp.cloneToNewContext(outputContext, outputThreadId)
-                outputPoint.diffStatus = realStatus
+                outputPoint.diffStatus = rightStatus
                 outputRoot.addChild(outputPoint)
                 outputPoint.save(output)
 
@@ -199,82 +210,81 @@ private fun diffTracepointSubtree(
 }
 
 /**
- * Calculates the diff between two lists of trace points and updates their [TRTracePoint.diffStatus] property.
- * [TRTracePoint.strictHashForDiff] is used to compare trace points.
+ * Calculates the diff between two lists and updates their [TRTracePoint.diffStatus] property.
  *
  * This implementation uses Myers' diff algorithm.
  */
-private fun diffTracePointLists(leftPoints: List<TRTracePoint?>, rightPoints: List<TRTracePoint?>): List<DiffLine> {
-    val ls = leftPoints.size
-    val rs = rightPoints.size
-    if (ls == 0 && rs == 0) return emptyList()
+private fun <T> diffLists(left: List<T>, right: List<T>, equals: (T, T) -> Boolean): List<DiffLine> {
+    val n = left.size
+    val m = right.size
+    if (n == 0 && m == 0) return emptyList()
 
-    val v = IntArray(2 * (ls + rs) + 1)
-    val vOffset = ls + rs
-    val paths = mutableListOf<IntArray>()
+    val max = n + m
+    val v = IntArray(2 * max + 1)
+    val trace = mutableListOf<IntArray>()
 
-    v[vOffset + 1] = 0
-    var found = false
-    for (d in 0..(ls + rs)) {
+    v[max + 1] = 0
+
+    var x: Int
+    var y: Int
+    outer@ for (d in 0..max) {
+        val currentV = v.copyOf()
+        trace.add(currentV)
         for (k in -d..d step 2) {
-            val index = vOffset + k
-            var l = if (k == -d || (k != d && v[index - 1] < v[index + 1])) {
-                v[index + 1]
+            val idx = k + max
+            if (k == -d || (k != d && v[idx - 1] < v[idx + 1])) {
+                x = v[idx + 1]
             } else {
-                v[index - 1] + 1
+                x = v[idx - 1] + 1
             }
-            var r = l - k
-            while (l < ls && r < rs && leftPoints[l]!!.editedEquals(rightPoints[r]!!)) {
-                l++
-                r++
+            y = x - k
+            while (x < n && y < m && equals(left[x], right[y])) {
+                x++
+                y++
             }
-            v[index] = l
-            if (l >= ls && r >= rs) {
-                paths.add(v.copyOf())
-                found = true
-                break
+            v[idx] = x
+            if (x >= n && y >= m) {
+                break@outer
             }
         }
-        paths.add(v.copyOf())
-        if (found) break
     }
 
-    // Backtrack to find the path and set statuses
-    var currL = ls
-    var currR = rs
-    val diff = mutableListOf<DiffLine>() // type, xIdx, yIdx.
-    for (d in (paths.size - 1) downTo 1) {
-        val vPrev = paths[d - 1]
-        val k = currL - currR
+    val result = mutableListOf<DiffLine>()
+    x = n
+    y = m
 
-        val kPrev = if (k == -d || (k != d && vPrev[vOffset + k - 1] < vPrev[vOffset + k + 1])) {
+    for (d in trace.size - 1 downTo 0) {
+        val k = x - y
+        val idx = k + max
+        val currentV = trace[d]
+
+        val prevK = if (k == -d || (k != d && currentV[idx - 1] < currentV[idx + 1])) {
             k + 1
         } else {
             k - 1
         }
+        val prevX = currentV[prevK + max]
+        val prevY = prevX - prevK
 
-        val nextL = vPrev[vOffset + kPrev]
-        val nextR = nextL - kPrev
-
-        while (currL > nextL && currR > nextR) {
-            diff.add(DiffLine(DiffStatus.UNCHANGED, currL - 1, currR - 1))
-            currL--
-            currR--
+        while (x > prevX && y > prevY) {
+            result.add(DiffLine(DiffStatus.UNCHANGED, x - 1, y - 1))
+            x--
+            y--
         }
 
-        if (currL > nextL) {
-            diff.add(DiffLine(DiffStatus.REMOVED, currL - 1, -1))
-            currL--
-        } else if (currR > nextR) {
-            diff.add(DiffLine(DiffStatus.ADDED, -1, currR - 1))
-            currR--
+        if (d > 0) {
+            if (x > prevX) {
+                result.add(DiffLine(DiffStatus.REMOVED, x - 1, -1))
+                x--
+            } else if (y > prevY) {
+                result.add(DiffLine(DiffStatus.ADDED, -1, y - 1))
+                y--
+            }
         }
     }
-    while (currL > 0 && currR > 0) {
-        diff.add(DiffLine(DiffStatus.UNCHANGED, currL - 1, currR - 1))
-        currL--
-        currR--
-    }
-    diff.reverse()
-    return diff
+
+    return result.reversed()
 }
+
+private fun diffTracePointLists(leftPoints: List<TRTracePoint?>, rightPoints: List<TRTracePoint?>): List<DiffLine> =
+    diffLists(leftPoints, rightPoints) { l, r -> l!!.editedEquals(r!!) }
