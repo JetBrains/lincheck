@@ -24,7 +24,6 @@ import java.nio.file.Files
 import java.nio.file.StandardOpenOption
 import kotlin.io.path.Path
 import org.jetbrains.lincheck.descriptors.CodeLocation
-import org.jetbrains.lincheck.descriptors.CodeLocations
 import org.jetbrains.lincheck.descriptors.LocalVariableAccessLocation
 import org.jetbrains.lincheck.descriptors.ObjectFieldAccessLocation
 import org.jetbrains.lincheck.descriptors.StaticFieldAccessLocation
@@ -304,6 +303,7 @@ class LazyTraceReader private constructor(
                 zip?.close()
                 throw e
             }
+            // It is not ZIP, it is raw trace file (we hope)
             if (indexStream == null) {
                 indexStream = wrapStream(openExistingFile("$baseFileName.$INDEX_FILENAME_EXT"))
             }
@@ -781,7 +781,8 @@ fun loadRecordedTrace(traceFileName: String): TraceWithContext {
         } else {
             // Not ZIP at all, raw trace
             input.close()
-            val rawInput = openExistingFile(traceFileName)?.buffered(INPUT_BUFFER_SIZE)
+            // Don't buffer this stream, [loadRecordedTrace] will do it
+            val rawInput = openExistingFile(traceFileName)
             require(rawInput != null) { "Cannot open trace \"$traceFileName\"" }
             rawInput.use {
                 return loadRecordedTrace(it, null)

@@ -448,6 +448,10 @@ internal fun DataInput.readDiffStatus(): DiffStatus? {
     return values[ordinal]
 }
 
+internal fun openNewStandardDataAndIndex(baseFileName: String): Pair<OutputStream, OutputStream> {
+    return openNewFile(baseFileName).buffered(OUTPUT_BUFFER_SIZE) to openNewFile("$baseFileName.$INDEX_FILENAME_EXT").buffered(OUTPUT_BUFFER_SIZE)
+}
+
 internal fun openNewFile(name: String): OutputStream {
     val f = File(name)
     f.parentFile?.mkdirs()

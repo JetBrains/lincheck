@@ -183,7 +183,7 @@ internal interface ContextSavingState {
  * `dataStream` can be relaxed to [Closeable], but it will hide its intention even more.
  */
 internal sealed class TraceWriterBase(
-    private val context: TraceContext,
+    val context: TraceContext,
     private val contextState: ContextSavingState,
     protected val dataStream: OutputStream,
     protected val dataOutput: DataOutput

@@ -10,11 +10,9 @@
 
 package org.jetbrains.lincheck.trace
 
-import com.sun.org.apache.bcel.internal.classfile.Code
 import org.jetbrains.lincheck.descriptors.AccessPath
 import org.jetbrains.lincheck.descriptors.ClassDescriptor
 import org.jetbrains.lincheck.descriptors.CodeLocation
-import org.jetbrains.lincheck.descriptors.CodeLocations
 import org.jetbrains.lincheck.descriptors.FieldDescriptor
 import org.jetbrains.lincheck.descriptors.MethodDescriptor
 import org.jetbrains.lincheck.descriptors.MethodSignature
@@ -31,7 +29,8 @@ val UNKNOWN_METHOD_TYPE = Types.MethodType(Types.VOID_TYPE, Types.VOID_TYPE)
 private val EMPTY_STACK_TRACE = StackTraceElement("", "", "", 0)
 
 class TraceContext {
-    private val threadNames = ConcurrentHashMap<Int, String>()
+    private val threadsId2Name = mutableMapOf<Int, String>()
+    private val threadsName2Id = mutableMapOf<String, Int>()
     private val accessPaths = ArrayList<AccessPath?>()
     private val locations = ArrayList<CodeLocation?>()
     private val classes = IndexedPool<ClassDescriptor>()
@@ -39,9 +38,18 @@ class TraceContext {
     private val fields = IndexedPool<FieldDescriptor>()
     private val variables = IndexedPool<VariableDescriptor>()
 
-    fun setThreadName(id: Int, name: String) { threadNames[id] = name }
+    fun setThreadName(id: Int, name: String) {
+        synchronized(threadsId2Name) {
+            threadsId2Name[id] = name
+            threadsName2Id[name] = id
+        }
+    }
 
-    fun getThreadName(id: Int): String = threadNames[id] ?: ""
+    fun getThreadName(id: Int): String = synchronized(threadsId2Name) { threadsId2Name[id] ?: "" }
+
+    fun getThreadId(name: String): Int = synchronized(threadsId2Name) { threadsName2Id[name] ?: -1 }
+
+    val threadNames: List<String> get() = synchronized(threadsId2Name) { threadsId2Name.values.toList() }
 
     val classDescriptors: List<ClassDescriptor?> get() = classes.content
 
