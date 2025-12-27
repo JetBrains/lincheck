@@ -118,7 +118,7 @@ sealed class TRTracePoint(
     internal fun editedEquals(other: TRTracePoint): Boolean =
         javaClass == other.javaClass && editIndependentHashForDiff == other.editIndependentHashForDiff
 
-    internal abstract fun cloneToNewContext(targetContext: TraceContext): TRTracePoint
+    internal abstract fun cloneToNewContext(targetContext: TraceContext, targetThreadId: Int): TRTracePoint
 
     protected fun CodeLocation.cloneToNewContext(targetContext: TraceContext): Int {
         return targetContext.newCodeLocation(this.stackTraceElement, this.accessPath, this.argumentNames)
@@ -391,11 +391,11 @@ class TRMethodCallTracePoint(
                 exceptionClassName != null
             )
 
-    override fun cloneToNewContext(targetContext: TraceContext): TRTracePoint {
+    override fun cloneToNewContext(targetContext: TraceContext, targetThreadId: Int): TRTracePoint {
         // Generate new eventId, don't copy old one.
         return TRMethodCallTracePoint(
             context = targetContext,
-            threadId = threadId,
+            threadId = targetThreadId,
             codeLocationId = context.codeLocation(codeLocationId)?.cloneToNewContext(targetContext) ?: UNKNOWN_CODE_LOCATION_ID,
             methodId = methodDescriptor.cloneToNewContext(targetContext),
             obj = obj,
@@ -505,11 +505,11 @@ class TRLoopTracePoint(
             loopId
         )
 
-    override fun cloneToNewContext(targetContext: TraceContext): TRTracePoint {
+    override fun cloneToNewContext(targetContext: TraceContext, targetThreadId: Int): TRTracePoint {
         // Generate new eventId, don't copy old one.
         return TRLoopTracePoint(
             context = targetContext,
-            threadId = threadId,
+            threadId = targetThreadId,
             codeLocationId = context.codeLocation(codeLocationId)?.cloneToNewContext(targetContext) ?: UNKNOWN_CODE_LOCATION_ID,
             loopId = loopId
         )
@@ -575,11 +575,11 @@ class TRLoopIterationTracePoint(
             loopIteration
         )
 
-    override fun cloneToNewContext(targetContext: TraceContext): TRTracePoint {
+    override fun cloneToNewContext(targetContext: TraceContext, targetThreadId: Int): TRTracePoint {
         // Generate new eventId, don't copy old one.
         return TRLoopIterationTracePoint(
             context = targetContext,
-            threadId = threadId,
+            threadId = targetThreadId,
             codeLocationId = context.codeLocation(codeLocationId)?.cloneToNewContext(targetContext) ?: UNKNOWN_CODE_LOCATION_ID,
             loopId = loopId,
             loopIteration = loopIteration,
@@ -680,11 +680,11 @@ class TRReadTracePoint(
 
     override fun accessSymbol(): String = READ_ACCESS_SYMBOL
 
-    override fun cloneToNewContext(targetContext: TraceContext): TRTracePoint {
+    override fun cloneToNewContext(targetContext: TraceContext, targetThreadId: Int): TRTracePoint {
         // Generate new eventId, don't copy old one.
         return TRReadTracePoint(
             context = targetContext,
-            threadId = threadId,
+            threadId = targetThreadId,
             codeLocationId = context.codeLocation(codeLocationId)?.cloneToNewContext(targetContext) ?: UNKNOWN_CODE_LOCATION_ID,
             fieldId = fieldDescriptor.cloneToNewContext(targetContext),
             obj = obj,
@@ -719,11 +719,11 @@ class TRWriteTracePoint(
 
     override fun accessSymbol(): String = WRITE_ACCESS_SYMBOL
 
-    override fun cloneToNewContext(targetContext: TraceContext): TRTracePoint {
+    override fun cloneToNewContext(targetContext: TraceContext, targetThreadId: Int): TRTracePoint {
         // Generate new eventId, don't copy old one.
         return TRWriteTracePoint(
             context = targetContext,
-            threadId = threadId,
+            threadId = targetThreadId,
             codeLocationId = context.codeLocation(codeLocationId)?.cloneToNewContext(targetContext) ?: UNKNOWN_CODE_LOCATION_ID,
             fieldId = fieldDescriptor.cloneToNewContext(targetContext),
             obj = obj,
@@ -807,11 +807,11 @@ class TRReadLocalVariableTracePoint(
 
     override fun accessSymbol(): String = READ_ACCESS_SYMBOL
 
-    override fun cloneToNewContext(targetContext: TraceContext): TRTracePoint {
+    override fun cloneToNewContext(targetContext: TraceContext, targetThreadId: Int): TRTracePoint {
         // Generate new eventId, don't copy old one.
         return TRReadLocalVariableTracePoint(
             context = targetContext,
-            threadId = threadId,
+            threadId = targetThreadId,
             codeLocationId = context.codeLocation(codeLocationId)?.cloneToNewContext(targetContext) ?: UNKNOWN_CODE_LOCATION_ID,
             localVariableId = variableDescriptor.cloneToNewContext(targetContext),
             value = value
@@ -843,11 +843,11 @@ class TRWriteLocalVariableTracePoint(
 
     override fun accessSymbol(): String = WRITE_ACCESS_SYMBOL
 
-    override fun cloneToNewContext(targetContext: TraceContext): TRTracePoint {
+    override fun cloneToNewContext(targetContext: TraceContext, targetThreadId: Int): TRTracePoint {
         // Generate new eventId, don't copy old one.
         return TRWriteLocalVariableTracePoint(
             context = targetContext,
-            threadId = threadId,
+            threadId = targetThreadId,
             codeLocationId = context.codeLocation(codeLocationId)?.cloneToNewContext(targetContext) ?: UNKNOWN_CODE_LOCATION_ID,
             localVariableId = variableDescriptor.cloneToNewContext(targetContext),
             value = value
@@ -929,11 +929,11 @@ class TRReadArrayTracePoint(
 
     override fun accessSymbol(): String = READ_ACCESS_SYMBOL
 
-    override fun cloneToNewContext(targetContext: TraceContext): TRTracePoint {
+    override fun cloneToNewContext(targetContext: TraceContext, targetThreadId: Int): TRTracePoint {
         // Generate new eventId, don't copy old one.
         return TRReadArrayTracePoint(
             context = targetContext,
-            threadId = threadId,
+            threadId = targetThreadId,
             codeLocationId = context.codeLocation(codeLocationId)?.cloneToNewContext(targetContext) ?: UNKNOWN_CODE_LOCATION_ID,
             array = array,
             index = index,
@@ -968,11 +968,11 @@ class TRWriteArrayTracePoint(
 
     override fun accessSymbol(): String = WRITE_ACCESS_SYMBOL
 
-    override fun cloneToNewContext(targetContext: TraceContext): TRTracePoint {
+    override fun cloneToNewContext(targetContext: TraceContext, targetThreadId: Int): TRTracePoint {
         // Generate new eventId, don't copy old one.
         return TRWriteArrayTracePoint(
             context = targetContext,
-            threadId = threadId,
+            threadId = targetThreadId,
             codeLocationId = context.codeLocation(codeLocationId)?.cloneToNewContext(targetContext) ?: UNKNOWN_CODE_LOCATION_ID,
             array = array,
             index = index,
