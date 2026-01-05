@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.trace
 
 import org.jetbrains.lincheck.descriptors.Types
+import org.jetbrains.lincheck.trace.diff.TracePointComparator
 
 fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName: String) {
     // Prepare strategy to save result
@@ -132,7 +133,8 @@ private fun diffTracepointSubtree(
     rightReader: LazyTraceReader,
     rightPoints: List<TRTracePoint?>
 ) {
-    val diff = diffTracePointLists(leftPoints, rightPoints)
+    val cmp = TracePointComparator()
+    val diff = diffTracePointLists(cmp, leftPoints, rightPoints)
     diff.forEach { (status, leftIdx, rightIdx) ->
         when (status) {
             DiffStatus.UNCHANGED -> {
@@ -140,9 +142,9 @@ private fun diffTracepointSubtree(
                 val lp = leftPoints[leftIdx]!!
                 val rp = rightPoints[rightIdx]!!
                 // It is editing-equivalent trace points
-                val rightStatus = if (lp.strictHashForDiff == rp.strictHashForDiff) DiffStatus.UNCHANGED else DiffStatus.ADDED
+                val rightStatus = if (cmp.strictEqual(lp, rp)) DiffStatus.UNCHANGED else DiffStatus.ADDED
 
-                if (lp.strictHashForDiff != rp.strictHashForDiff) {
+                if (rightStatus == DiffStatus.ADDED) {
                     // "Remove" left and make it without children, add right
                     val removedPoint = lp.cloneToNewContext(outputContext, outputThreadId)
                     removedPoint.diffStatus = DiffStatus.REMOVED
@@ -232,10 +234,10 @@ private fun <T> diffLists(left: List<T>, right: List<T>, equals: (T, T) -> Boole
         trace.add(currentV)
         for (k in -d..d step 2) {
             val idx = k + max
-            if (k == -d || (k != d && v[idx - 1] < v[idx + 1])) {
-                x = v[idx + 1]
+            x = if (k == -d || (k != d && v[idx - 1] < v[idx + 1])) {
+                v[idx + 1]
             } else {
-                x = v[idx - 1] + 1
+                v[idx - 1] + 1
             }
             y = x - k
             while (x < n && y < m && equals(left[x], right[y])) {
@@ -286,5 +288,5 @@ private fun <T> diffLists(left: List<T>, right: List<T>, equals: (T, T) -> Boole
     return result.reversed()
 }
 
-private fun diffTracePointLists(leftPoints: List<TRTracePoint?>, rightPoints: List<TRTracePoint?>): List<DiffLine> =
-    diffLists(leftPoints, rightPoints) { l, r -> l!!.editedEquals(r!!) }
+private fun diffTracePointLists(cmp: TracePointComparator, leftPoints: List<TRTracePoint?>, rightPoints: List<TRTracePoint?>): List<DiffLine> =
+    diffLists(leftPoints, rightPoints) { l, r -> cmp.editIndependentEqual(l!!,r!!) }

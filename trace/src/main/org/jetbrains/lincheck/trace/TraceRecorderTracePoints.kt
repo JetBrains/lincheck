@@ -30,7 +30,6 @@ import java.io.DataOutput
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.util.EnumSet
-import java.util.Objects
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.reflect.KClass
 
@@ -115,16 +114,6 @@ sealed class TRTracePoint(
     }
 
     abstract fun toText(appendable: TRAppendable)
-
-    internal abstract val strictHashForDiff: Int
-
-    internal abstract val editIndependentHashForDiff: Int
-
-    internal fun strictlyEquals(other: TRTracePoint): Boolean =
-        javaClass == other.javaClass && strictHashForDiff == other.strictHashForDiff
-
-    internal fun editedEquals(other: TRTracePoint): Boolean =
-        javaClass == other.javaClass && editIndependentHashForDiff == other.editIndependentHashForDiff
 
     internal abstract fun cloneToNewContext(targetContext: TraceContext, targetThreadId: Int): TRTracePoint
 
@@ -393,30 +382,6 @@ class TRMethodCallTracePoint(
         appendable.append(tracePoint = this)
     }
 
-    override val strictHashForDiff: Int
-        get() {
-            var hash = parameters.fold(
-                31 * editIndependentHashForDiff + (obj?.hashForDiff ?: 0)
-            ) { h, tr -> h * 31 + (tr?.hashForDiff ?: 0) }
-            if (result != null) hash = 31 * hash + result!!.hashForDiff
-            if (exceptionClassName != null) hash = 31 * hash + exceptionClassName!!.hashCode()
-            return hash
-        }
-
-    override val editIndependentHashForDiff: Int
-        // Location, class name, method name, static status, return type and types of arguments are components of loose hash
-        get() = Objects.hash(
-                codeLocation.fileName,
-                codeLocation.lineNumber,
-                className,
-                methodName,
-                flags,
-                isStatic(),
-                returnType,
-                argumentTypes,
-                exceptionClassName != null
-            )
-
     override fun cloneToNewContext(targetContext: TraceContext, targetThreadId: Int): TRTracePoint {
         // Generate new eventId, don't copy old one.
         return TRMethodCallTracePoint(
@@ -520,17 +485,6 @@ class TRLoopTracePoint(
         appendable.append(tracePoint = this)
     }
 
-    override val strictHashForDiff: Int
-        get() = 31 * editIndependentHashForDiff + iterations
-
-    override val editIndependentHashForDiff: Int
-        // Location and loop id
-        get() = Objects.hash(
-            codeLocation.fileName,
-            codeLocation.lineNumber,
-            loopId
-        )
-
     override fun cloneToNewContext(targetContext: TraceContext, targetThreadId: Int): TRTracePoint {
         // Generate new eventId, don't copy old one.
         return TRLoopTracePoint(
@@ -592,16 +546,6 @@ class TRLoopIterationTracePoint(
     override fun toText(appendable: TRAppendable) {
         appendable.append(tracePoint = this)
     }
-
-    override val strictHashForDiff: Int
-        get() = Objects.hash(
-            codeLocation.fileName,
-            codeLocation.lineNumber,
-            loopId,
-            loopIteration
-        )
-
-    override val editIndependentHashForDiff: Int = strictHashForDiff
 
     override fun cloneToNewContext(targetContext: TraceContext, targetThreadId: Int): TRTracePoint {
         // Generate new eventId, don't copy old one.
@@ -676,24 +620,6 @@ sealed class TRFieldTracePoint(
         appendable.append(tracePoint = this)
     }
 
-    override val strictHashForDiff: Int
-        get() {
-            var hash = editIndependentHashForDiff
-            if (obj != null) hash = 31 * hash + obj.hashForDiff
-            if (value != null) hash = 31 * hash + value.hashForDiff
-            return hash
-        }
-
-    override val editIndependentHashForDiff: Int
-        // Location and loop id
-        get() = Objects.hash(
-            codeLocation.fileName,
-            codeLocation.lineNumber,
-            className,
-            name,
-            isStatic,
-            accessSymbol()
-        )
 }
 
 class TRReadTracePoint(
@@ -805,22 +731,6 @@ sealed class TRLocalVariableTracePoint(
     override fun toText(appendable: TRAppendable) {
         appendable.append(tracePoint = this)
     }
-
-    override val strictHashForDiff: Int
-        get() {
-            var hash = editIndependentHashForDiff
-            if (value != null) hash = 31 * hash + value.hashForDiff
-            return hash
-        }
-
-    override val editIndependentHashForDiff: Int
-        // Location and loop id
-        get() = Objects.hash(
-            codeLocation.fileName,
-            codeLocation.lineNumber,
-            name,
-            accessSymbol()
-        )
 
 }
 
@@ -980,23 +890,6 @@ sealed class TRArrayTracePoint(
         appendable.append(tracePoint = this)
     }
 
-    override val strictHashForDiff: Int
-        get() {
-            var hash = editIndependentHashForDiff
-            if (value != null) hash = 31 * hash + value.hashForDiff
-            return hash
-        }
-
-    override val editIndependentHashForDiff: Int
-        // Location and loop id
-        get() = Objects.hash(
-            codeLocation.fileName,
-            codeLocation.lineNumber,
-            array.hashForDiff,
-            accessSymbol(),
-            index
-        )
-
 }
 
 class TRReadArrayTracePoint(
@@ -1107,7 +1000,7 @@ data class TRObject private constructor (
     val isSpecial: Boolean get() = classNameId < 0
     val value: Any? get() = primitiveValue
 
-    internal constructor (classNameId: Int, identityHashCode: Int, primitiveValue: Any):
+    internal constructor(classNameId: Int, identityHashCode: Int, primitiveValue: Any):
             this(classNameId, identityHashCode, primitiveValue, primitiveValue.javaClass.name)
 
     internal constructor(classNameId: Int, identityHashCode: Int, cd: ClassDescriptor):
@@ -1134,13 +1027,6 @@ data class TRObject private constructor (
             className.adornedClassNameRepresentation() + "@" + identityHashCode
         }
     }
-
-    // Must be stable for primitive values and classes, but wihtout hash codes as they will be different
-    // for each run
-    internal val hashForDiff: Int =
-        if (isPrimitive) value.hashCode()
-        else if (classNameId < 0) classNameId
-        else className.adornedClassNameRepresentation().hashCode()
 }
 
 const val TR_OBJECT_NULL_CLASSNAME = -1
