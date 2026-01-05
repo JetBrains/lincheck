@@ -11,8 +11,13 @@
 package org.jetbrains.lincheck.trace
 
 import org.jetbrains.lincheck.descriptors.Types
+import org.jetbrains.lincheck.trace.diff.AddedDiffLine
+import org.jetbrains.lincheck.trace.diff.DiffLine
+import org.jetbrains.lincheck.trace.diff.RemovedDiffLine
 import org.jetbrains.lincheck.trace.diff.TracePointCloner
 import org.jetbrains.lincheck.trace.diff.TracePointComparator
+import org.jetbrains.lincheck.trace.diff.UnchangedDiffLine
+import org.jetbrains.lincheck.trace.diff.diffLists
 
 fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName: String) {
     // Prepare strategy to save result
@@ -120,8 +125,6 @@ private fun copyTracepointSubtree(
     }
 }
 
-data class DiffLine(val status: DiffStatus, val leftIdx: Int, val rightIDx: Int)
-
 private fun diffTracepointSubtree(
     output: TraceWriter,
     cloner: TracePointCloner,
@@ -133,12 +136,12 @@ private fun diffTracepointSubtree(
 ) {
     val cmp = TracePointComparator()
     val diff = diffTracePointLists(cmp, leftPoints, rightPoints)
-    diff.forEach { (status, leftIdx, rightIdx) ->
-        when (status) {
-            DiffStatus.UNCHANGED -> {
+    diff.forEach { line ->
+        when (line) {
+            is UnchangedDiffLine -> {
                 // We know, it cannot be null
-                val lp = leftPoints[leftIdx]!!
-                val rp = rightPoints[rightIdx]!!
+                val lp = leftPoints[line.leftIdx]!!
+                val rp = rightPoints[line.rightIdx]!!
                 // It is editing-equivalent trace points
                 val rightStatus = if (cmp.strictEqual(lp, rp)) DiffStatus.UNCHANGED else DiffStatus.ADDED
 
@@ -181,107 +184,30 @@ private fun diffTracepointSubtree(
                     rc.unloadAllChildren()
                 }
             }
-            DiffStatus.REMOVED -> {
+            is RemovedDiffLine -> {
                 copyTracepointSubtree(
                     output = output,
                     cloner = cloner,
                     reader = leftReader,
-                    point = leftPoints[leftIdx]!!,
+                    point = leftPoints[line.leftIdx]!!,
                     diffStatus = DiffStatus.REMOVED,
                     outputParent = outputRoot
                 )
             }
-            DiffStatus.ADDED -> {
+            is AddedDiffLine -> {
                 copyTracepointSubtree(
                     output = output,
                     cloner = cloner,
                     reader = rightReader,
-                    point = rightPoints[rightIdx]!!,
+                    point = rightPoints[line.rightIdx]!!,
                     diffStatus = DiffStatus.ADDED,
                     outputParent = outputRoot
                 )
             }
-            DiffStatus.EDITED -> error("EDITED status cannot appear in raw diff")
         }
     }
 }
 
-/**
- * Calculates the diff between two lists and updates their [TRTracePoint.diffStatus] property.
- *
- * This implementation uses Myers' diff algorithm.
- */
-private fun <T> diffLists(left: List<T>, right: List<T>, equals: (T, T) -> Boolean): List<DiffLine> {
-    val n = left.size
-    val m = right.size
-    if (n == 0 && m == 0) return emptyList()
-
-    val max = n + m
-    val v = IntArray(2 * max + 1)
-    val trace = mutableListOf<IntArray>()
-
-    v[max + 1] = 0
-
-    var x: Int
-    var y: Int
-    outer@ for (d in 0..max) {
-        val currentV = v.copyOf()
-        trace.add(currentV)
-        for (k in -d..d step 2) {
-            val idx = k + max
-            x = if (k == -d || (k != d && v[idx - 1] < v[idx + 1])) {
-                v[idx + 1]
-            } else {
-                v[idx - 1] + 1
-            }
-            y = x - k
-            while (x < n && y < m && equals(left[x], right[y])) {
-                x++
-                y++
-            }
-            v[idx] = x
-            if (x >= n && y >= m) {
-                break@outer
-            }
-        }
-    }
-
-    val result = mutableListOf<DiffLine>()
-    x = n
-    y = m
-
-    for (d in trace.size - 1 downTo 0) {
-        val k = x - y
-        val idx = k + max
-        val currentV = trace[d]
-
-        val prevK = if (k == -d || (k != d && currentV[idx - 1] < currentV[idx + 1])) {
-            k + 1
-        } else {
-            k - 1
-        }
-        val prevX = currentV[prevK + max]
-        val prevY = prevX - prevK
-
-        while (x > prevX && y > prevY) {
-            result.add(DiffLine(DiffStatus.UNCHANGED, x - 1, y - 1))
-            x--
-            y--
-        }
-
-        if (d > 0) {
-            if (x > prevX) {
-                result.add(DiffLine(DiffStatus.REMOVED, x - 1, -1))
-                x--
-            } else if (y > prevY) {
-                result.add(DiffLine(DiffStatus.ADDED, -1, y - 1))
-                y--
-            }
-        }
-    }
-
-    return result.reversed()
-}
 
 private fun diffTracePointLists(cmp: TracePointComparator, leftPoints: List<TRTracePoint?>, rightPoints: List<TRTracePoint?>): List<DiffLine> =
     diffLists(leftPoints, rightPoints) { l, r -> cmp.editIndependentEqual(l!!,r!!) }
