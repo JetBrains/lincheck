@@ -1,23 +1,26 @@
 /*
  * Lincheck
  *
- * Copyright (C) 2019 - 2025 JetBrains s.r.o.
+ * Copyright (C) 2019 - 2026 JetBrains s.r.o.
  *
  * This Source Code Form is subject to the terms of the
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.trace
+package org.jetbrains.lincheck.trace.diff
 
 import org.jetbrains.lincheck.descriptors.Types
-import org.jetbrains.lincheck.trace.diff.AddedDiffLine
-import org.jetbrains.lincheck.trace.diff.DiffLine
-import org.jetbrains.lincheck.trace.diff.RemovedDiffLine
-import org.jetbrains.lincheck.trace.diff.TracePointCloner
-import org.jetbrains.lincheck.trace.diff.TracePointComparator
-import org.jetbrains.lincheck.trace.diff.UnchangedDiffLine
-import org.jetbrains.lincheck.trace.diff.diffLists
+import org.jetbrains.lincheck.trace.DiffStatus
+import org.jetbrains.lincheck.trace.DirectTraceWriter
+import org.jetbrains.lincheck.trace.LazyTraceReader
+import org.jetbrains.lincheck.trace.TRContainerTracePoint
+import org.jetbrains.lincheck.trace.TRMethodCallTracePoint
+import org.jetbrains.lincheck.trace.TRTracePoint
+import org.jetbrains.lincheck.trace.TraceContext
+import org.jetbrains.lincheck.trace.TraceWriter
+import org.jetbrains.lincheck.trace.UNKNOWN_CODE_LOCATION_ID
+import org.jetbrains.lincheck.trace.openNewStandardDataAndIndex
 
 fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName: String) {
     // Prepare strategy to save result
@@ -56,7 +59,11 @@ fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName:
                     context = output.context,
                     threadId = outputThreadId,
                     codeLocationId = UNKNOWN_CODE_LOCATION_ID,
-                    methodId = output.context.getOrCreateMethodId("<diff>", "<diff>", Types.MethodType(Types.VOID_TYPE)),
+                    methodId = output.context.getOrCreateMethodId(
+                        "<diff>",
+                        "<diff>",
+                        Types.MethodType(Types.VOID_TYPE)
+                    ),
                     obj = null,
                     parameters = emptyList()
                 )
