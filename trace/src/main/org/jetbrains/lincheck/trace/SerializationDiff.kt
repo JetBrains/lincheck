@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.trace
 
 import org.jetbrains.lincheck.descriptors.Types
+import org.jetbrains.lincheck.trace.diff.TracePointCloner
 import org.jetbrains.lincheck.trace.diff.TracePointComparator
 
 fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName: String) {
@@ -40,6 +41,8 @@ fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName:
     output.use {
         // Ok, we have all threads matched, work on them one by one.
         threadMap.forEach { name, (leftThreadId, rightThreadId, outputThreadId) ->
+            // Make cloner for this target thread
+            val cloner = TracePointCloner(output.context, outputThreadId)
             output.startNewRoot(outputThreadId)
             if (leftThreadId >= 0 && rightThreadId >= 0) {
                 output.context.setThreadName(outputThreadId, name)
@@ -56,8 +59,7 @@ fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName:
                 // Make diff!
                 diffTracepointSubtree(
                     output = output,
-                    outputContext = output.context,
-                    outputThreadId = outputThreadId,
+                    cloner = cloner,
                     outputRoot = outputRoot,
                     leftReader = left,
                     leftPoints = listOf(leftRoots[leftThreadId]),
@@ -70,8 +72,7 @@ fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName:
                 output.context.setThreadName(outputThreadId, "$name: Thread not present in right trace")
                 copyTracepointSubtree(
                     output = output,
-                    outputContext = output.context,
-                    outputThreadId = outputThreadId,
+                    cloner = cloner,
                     reader = left,
                     point = leftRoots[leftThreadId],
                     diffStatus = DiffStatus.REMOVED
@@ -81,8 +82,7 @@ fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName:
                 output.context.setThreadName(outputThreadId, "$name: Thread not present in left trace")
                 copyTracepointSubtree(
                     output = output,
-                    outputContext = output.context,
-                    outputThreadId = outputThreadId,
+                    cloner = cloner,
                     reader = right,
                     point = rightRoots[rightThreadId],
                     diffStatus = DiffStatus.ADDED
@@ -96,14 +96,13 @@ fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName:
 
 private fun copyTracepointSubtree(
     output: TraceWriter,
-    outputContext: TraceContext,
-    outputThreadId: Int,
+    cloner: TracePointCloner,
     reader: LazyTraceReader,
     point: TRTracePoint,
     diffStatus: DiffStatus,
     outputParent: TRContainerTracePoint? = null
 ) {
-    val outputPoint = point.cloneToNewContext(outputContext, outputThreadId)
+    val outputPoint =cloner.cloneTracePoint(point)
     outputPoint.diffStatus = diffStatus
     outputParent?.addChild(outputPoint)
     outputPoint.save(output)
@@ -112,7 +111,7 @@ private fun copyTracepointSubtree(
         // TODO: Batching
         reader.loadAllChildren(point)
         point.events.forEach { p ->
-            copyTracepointSubtree(output, outputContext, outputThreadId, reader, p!!, diffStatus, outputPoint)
+            copyTracepointSubtree(output, cloner, reader, p!!, diffStatus, outputPoint)
         }
         outputPoint.saveFooter(output)
         // Free memory
@@ -125,8 +124,7 @@ data class DiffLine(val status: DiffStatus, val leftIdx: Int, val rightIDx: Int)
 
 private fun diffTracepointSubtree(
     output: TraceWriter,
-    outputContext: TraceContext,
-    outputThreadId: Int,
+    cloner: TracePointCloner,
     outputRoot: TRContainerTracePoint,
     leftReader: LazyTraceReader,
     leftPoints: List<TRTracePoint?>,
@@ -146,7 +144,7 @@ private fun diffTracepointSubtree(
 
                 if (rightStatus == DiffStatus.ADDED) {
                     // "Remove" left and make it without children, add right
-                    val removedPoint = lp.cloneToNewContext(outputContext, outputThreadId)
+                    val removedPoint = cloner.cloneTracePoint(lp)
                     removedPoint.diffStatus = DiffStatus.REMOVED
                     outputRoot.addChild(removedPoint)
                     removedPoint.save(output)
@@ -155,7 +153,7 @@ private fun diffTracepointSubtree(
                     }
                 }
                 // Copy tracepoint itself from right subtree for now
-                val outputPoint = rp.cloneToNewContext(outputContext, outputThreadId)
+                val outputPoint = cloner.cloneTracePoint(rp)
                 outputPoint.diffStatus = rightStatus
                 outputRoot.addChild(outputPoint)
                 outputPoint.save(output)
@@ -169,8 +167,7 @@ private fun diffTracepointSubtree(
 
                     diffTracepointSubtree(
                         output = output,
-                        outputContext = outputContext,
-                        outputThreadId = outputThreadId,
+                        cloner = cloner,
                         outputRoot = outputPoint,
                         leftReader = leftReader,
                         leftPoints = lc.events,
@@ -187,8 +184,7 @@ private fun diffTracepointSubtree(
             DiffStatus.REMOVED -> {
                 copyTracepointSubtree(
                     output = output,
-                    outputContext = outputContext,
-                    outputThreadId = outputThreadId,
+                    cloner = cloner,
                     reader = leftReader,
                     point = leftPoints[leftIdx]!!,
                     diffStatus = DiffStatus.REMOVED,
@@ -198,8 +194,7 @@ private fun diffTracepointSubtree(
             DiffStatus.ADDED -> {
                 copyTracepointSubtree(
                     output = output,
-                    outputContext = outputContext,
-                    outputThreadId = outputThreadId,
+                    cloner = cloner,
                     reader = rightReader,
                     point = rightPoints[rightIdx]!!,
                     diffStatus = DiffStatus.ADDED,
