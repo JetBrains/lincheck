@@ -17,9 +17,11 @@ import org.jetbrains.lincheck.trace.*
 
 class TracePointCloner(
     val context: TraceContext,
-    val threadId: Int
+    val threadId: Int,
+    eventId: Int
 ) {
-    private var eventId = 0
+    var eventId = eventId
+        private set
 
     fun cloneTracePoint(tracePoint: TRTracePoint): TRTracePoint =
         when (tracePoint) {

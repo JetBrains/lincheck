@@ -46,11 +46,12 @@ fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName:
             threadMap[tn] = Triple(left.context.getThreadId(tn), right.context.getThreadId(tn), diffThreadId++)
         }
 
+    var globalOutputEventId = 0
     output.use {
         // Ok, we have all threads matched, work on them one by one.
         threadMap.forEach { name, (leftThreadId, rightThreadId, outputThreadId) ->
             // Make cloner for this target thread
-            val cloner = TracePointCloner(output.context, outputThreadId)
+            val cloner = TracePointCloner(output.context, outputThreadId, globalOutputEventId)
             output.startNewRoot(outputThreadId)
             if (leftThreadId >= 0 && rightThreadId >= 0) {
                 output.context.setThreadName(outputThreadId, name)
@@ -102,6 +103,8 @@ fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName:
             }
             output.writeThreadName(outputThreadId, output.context.getThreadName(outputThreadId))
             output.endRoot()
+            // Start from this in next thread
+            globalOutputEventId = cloner.eventId
         }
     }
 }
