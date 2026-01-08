@@ -23,6 +23,7 @@ import org.jetbrains.lincheck.trace.DefaultTRLocalVariableTracePointPrinter.appe
 import org.jetbrains.lincheck.trace.DefaultTRLoopIterationTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRLoopTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRMethodCallTracePointPrinter.append
+import org.jetbrains.lincheck.trace.DefaultTRLineBreakpointSnapshotTracePointPrinter.append
 import java.io.DataInput
 import java.io.DataOutput
 import java.math.BigDecimal
@@ -672,6 +673,34 @@ class TRWriteLocalVariableTracePoint(
     }
 }
 
+class TRLineBreakpointSnapshotTracePoint(
+    context: TraceContext,
+    codeLocationId: Int,
+    threadId: Int,
+    eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
+): TRTracePoint(context, codeLocationId, threadId, eventId) {
+
+    override fun save(out: TraceWriter) {
+        super.save(out)
+        out.endWriteLeafTracepoint()
+    }
+
+    override fun toText(appendable: TRAppendable) {
+        appendable.append(tracePoint = this)
+    }
+    
+    internal companion object {
+        fun load(context: TraceContext, inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRLineBreakpointSnapshotTracePoint {
+            return TRLineBreakpointSnapshotTracePoint(
+                context = context,
+                threadId = threadId,
+                codeLocationId = codeLocationId,
+                eventId = eventId,
+            )
+        }
+    }
+}
+
 sealed class TRArrayTracePoint(
     context: TraceContext,
     threadId: Int,
@@ -993,6 +1022,7 @@ private fun getClassId(point: TRTracePoint): Int {
         is TRWriteTracePoint -> 6
         is TRLoopTracePoint -> 7
         is TRLoopIterationTracePoint -> 8
+        is TRLineBreakpointSnapshotTracePoint -> 9
     }
 }
 
@@ -1007,6 +1037,7 @@ private fun getLoaderByClassId(id: Byte): TRLoader {
         6 -> TRWriteTracePoint::load
         7 -> TRLoopTracePoint::load
         8 -> TRLoopIterationTracePoint::load
+        9 -> TRLineBreakpointSnapshotTracePoint::load
         else -> error("Unknown TRTracePoint class id $id")
     }
 }

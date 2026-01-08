@@ -387,6 +387,14 @@ object DefaultTRArrayTracePointPrinter: AbstractTRArrayTracePointPrinter() {
     }
 }
 
+object DefaultTRLineBreakpointSnapshotTracePointPrinter {
+    fun TRAppendable.append(tracePoint: TRLineBreakpointSnapshotTracePoint): TRAppendable {
+        append("Live debugger breakpoint")
+        append(tracePoint, verbose)
+        return this
+    }
+}
+
 internal fun <V: TRAppendable> V.append(tracePoint: TRTracePoint, verbose: Boolean): V {
     if (!verbose) return this
     val cl = CodeLocations.stackTrace(tracePoint.context, tracePoint.codeLocationId)

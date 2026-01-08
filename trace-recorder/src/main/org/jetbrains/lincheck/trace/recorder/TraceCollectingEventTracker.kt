@@ -761,6 +761,17 @@ class TraceCollectingEventTracker(
         strategy.completeContainerTracePoint(Thread.currentThread(), tracePoint)
     }
 
+    override fun onSnapshotBreakpoint(threadDescriptor: ThreadDescriptor, codeLocation: Int) = threadDescriptor.runInsideInjectedCode {
+        val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
+        val tracePoint = TRLineBreakpointSnapshotTracePoint(
+            context = context,
+            threadId = threadData.threadId,
+            codeLocationId = codeLocation
+        )
+        // TODO maybe these tracepoints should be collected separately
+        strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
+    }
+
     override fun onLoopIteration(
         threadDescriptor: ThreadDescriptor,
         codeLocation: Int,

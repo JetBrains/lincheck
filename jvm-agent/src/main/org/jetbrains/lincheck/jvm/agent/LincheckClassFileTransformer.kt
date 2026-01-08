@@ -100,6 +100,8 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             includeClasses = includeClasses,
             excludeClasses = excludeClasses,
         )
+        
+        val liveDebuggerSettings = LiveDebuggerSettings.readList(TraceAgentParameters.getBreakpoints())
 
         // Don't use class/method visitors on classNode to collect labels, as
         // MethodNode reset all labels on a re-visit (WHY?!).
@@ -117,7 +119,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         )
 
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
-        val visitor = LincheckClassVisitor(writer, classInfo, instrumentationMode, profile, statsTracker, LincheckInstrumentation.context)
+        val visitor = LincheckClassVisitor(writer, classInfo, instrumentationMode, profile, statsTracker, liveDebuggerSettings, LincheckInstrumentation.context)
 
         try {
             val timeNano = measureTimeNano {
