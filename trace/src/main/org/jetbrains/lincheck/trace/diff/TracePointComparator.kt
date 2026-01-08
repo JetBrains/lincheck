@@ -174,6 +174,7 @@ private class Hasher {
         return h
     }
 
+    @Suppress("NOTHING_TO_INLINE")
     private inline fun updateHash(v: Int) {
         val h = hash
         hash = MUL * (v.toLong() xor (h shl 2) xor (h shr 2))
