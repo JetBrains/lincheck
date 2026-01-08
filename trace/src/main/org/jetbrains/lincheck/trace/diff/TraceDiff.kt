@@ -23,10 +23,10 @@ import org.jetbrains.lincheck.trace.UNKNOWN_CODE_LOCATION_ID
 import org.jetbrains.lincheck.trace.openNewStandardDataAndIndex
 
 fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName: String) {
-    // Prepare strategy to save result
+    // Prepare writer to save result
     val outputContext = TraceContext()
-    val streams = openNewStandardDataAndIndex(outputBaseName)
-    val output = DirectTraceWriter(streams.first, streams.second, outputContext)
+    val (outputData, outputIndex) = openNewStandardDataAndIndex(outputBaseName)
+    val output = DirectTraceWriter(outputData, outputIndex, outputContext)
 
     // Load all left and right roots.
     val leftRoots = left.readRoots()
@@ -73,6 +73,7 @@ fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName:
                 diffTracepointSubtree(
                     output = output,
                     cloner = cloner,
+                    cmp = TracePointComparator,
                     outputRoot = outputRoot,
                     leftReader = left,
                     leftPoints = listOf(leftRoots[leftThreadId]),
@@ -138,13 +139,13 @@ private fun copyTracepointSubtree(
 private fun diffTracepointSubtree(
     output: TraceWriter,
     cloner: TracePointCloner,
+    cmp: TracePointComparator,
     outputRoot: TRContainerTracePoint,
     leftReader: LazyTraceReader,
     leftPoints: List<TRTracePoint?>,
     rightReader: LazyTraceReader,
     rightPoints: List<TRTracePoint?>
 ) {
-    val cmp = TracePointComparator()
     val diff = diffTracePointLists(cmp, leftPoints, rightPoints)
     diff.forEach { line ->
         when (line) {
@@ -181,6 +182,7 @@ private fun diffTracepointSubtree(
                     diffTracepointSubtree(
                         output = output,
                         cloner = cloner,
+                        cmp = TracePointComparator,
                         outputRoot = outputPoint,
                         leftReader = leftReader,
                         leftPoints = lc.events,

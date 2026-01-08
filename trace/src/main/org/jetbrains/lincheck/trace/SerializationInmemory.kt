@@ -212,10 +212,10 @@ class MemoryTraceCollecting(private val context: TraceContext): TraceCollectingS
  * Top-level function to save full-depth recorded trace old-style (all in once)
  */
 fun saveRecorderTrace(baseFileName: String, context: TraceContext, rootCallsPerThread: List<TRTracePoint>) {
-    val streams = openNewStandardDataAndIndex(baseFileName)
+    val (data, index) = openNewStandardDataAndIndex(baseFileName)
     return saveRecorderTrace(
-        data = streams.first,
-        index = streams.second,
+        data = data,
+        index = index,
         context = context,
         rootCallsPerThread = rootCallsPerThread
     )

@@ -12,7 +12,7 @@ package org.jetbrains.lincheck.trace.diff
 
 import org.jetbrains.lincheck.trace.*
 
-internal class TracePointComparator {
+internal object TracePointComparator {
     private val hasher = Hasher()
 
     fun editIndependentHash(tracePoint: TRTracePoint): Long = prepareEditIndependentHash(tracePoint).finish()
