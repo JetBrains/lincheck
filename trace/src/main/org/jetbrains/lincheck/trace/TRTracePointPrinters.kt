@@ -389,8 +389,20 @@ object DefaultTRArrayTracePointPrinter: AbstractTRArrayTracePointPrinter() {
 
 object DefaultTRLineBreakpointSnapshotTracePointPrinter {
     fun TRAppendable.append(tracePoint: TRLineBreakpointSnapshotTracePoint): TRAppendable {
-        append("Live debugger breakpoint")
+        append("Live debugger breakpoint: ")
         append(tracePoint, verbose)
+
+        // Show condensed stack trace: depth and deepest 3 calls
+        val stackTrace = tracePoint.stackTrace
+        val depth = stackTrace.size
+        append(" [depth: ")
+        append(depth.toString())
+        append("]")
+
+        val deepestCalls = stackTrace.take(3).reversed()
+        append(" ... -> ")
+        append(deepestCalls.joinToString(" -> ") { it.methodName })
+
         return this
     }
 }

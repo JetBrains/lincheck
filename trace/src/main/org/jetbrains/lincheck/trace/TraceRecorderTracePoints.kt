@@ -676,13 +676,28 @@ class TRWriteLocalVariableTracePoint(
 class TRLineBreakpointSnapshotTracePoint(
     context: TraceContext,
     codeLocationId: Int,
+    val stackTraceCodeLocationIds: List<Int>,
     threadId: Int,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
 ): TRTracePoint(context, codeLocationId, threadId, eventId) {
 
+    val stackTrace: Array<StackTraceElement>
+        get() = stackTraceCodeLocationIds.map { CodeLocations.stackTrace(context, it) }.toTypedArray()
+
     override fun save(out: TraceWriter) {
         super.save(out)
+        out.writeInt(stackTraceCodeLocationIds.size)
+        stackTraceCodeLocationIds.forEach { id ->
+            out.writeInt(id)
+        }
         out.endWriteLeafTracepoint()
+    }
+
+    override fun saveReferences(out: TraceWriter) {
+        super.saveReferences(out)
+        stackTraceCodeLocationIds.forEach { id ->
+            out.writeCodeLocation(id)
+        }
     }
 
     override fun toText(appendable: TRAppendable) {
@@ -691,10 +706,15 @@ class TRLineBreakpointSnapshotTracePoint(
     
     internal companion object {
         fun load(context: TraceContext, inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRLineBreakpointSnapshotTracePoint {
+            val size = inp.readInt()
+            val stackTraceCodeLocationIds = List(size) {
+                inp.readInt()
+            }
             return TRLineBreakpointSnapshotTracePoint(
                 context = context,
                 threadId = threadId,
                 codeLocationId = codeLocationId,
+                stackTraceCodeLocationIds = stackTraceCodeLocationIds,
                 eventId = eventId,
             )
         }

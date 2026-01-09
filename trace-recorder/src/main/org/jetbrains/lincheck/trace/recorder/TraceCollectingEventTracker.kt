@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.trace.recorder
 
 import org.jetbrains.lincheck.analysis.ShadowStackFrame
+import org.jetbrains.lincheck.descriptors.CodeLocations
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.trace.*
@@ -763,10 +764,21 @@ class TraceCollectingEventTracker(
 
     override fun onSnapshotBreakpoint(threadDescriptor: ThreadDescriptor, codeLocation: Int) = threadDescriptor.runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
+        
+        // We do not use threadData.getStack() as we might not track (all) method calls in live debug mode
+        val stackTrace = Thread.currentThread().stackTrace
+            // Remove internal lincheck calls from the stack
+            .drop(3)
+        
+        val stackTraceCodeLocationIds = stackTrace.map { stackTraceElement ->
+            CodeLocations.newCodeLocation(context, stackTraceElement)
+        }
+        
         val tracePoint = TRLineBreakpointSnapshotTracePoint(
             context = context,
             threadId = threadData.threadId,
-            codeLocationId = codeLocation
+            codeLocationId = codeLocation,
+            stackTraceCodeLocationIds = stackTraceCodeLocationIds,
         )
         // TODO maybe these tracepoints should be collected separately
         strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
