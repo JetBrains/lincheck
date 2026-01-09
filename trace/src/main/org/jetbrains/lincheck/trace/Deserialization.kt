@@ -179,9 +179,9 @@ internal class CodeLocationsContext {
         shallowCodeLocations.forEachIndexed { id, value ->
             if (value != null) {
                 val stackTraceElement = StackTraceElement(
-                    /* declaringClass = */ stringCache[value.className] ?: "<unknown class>",
-                    /* methodName = */ stringCache[value.methodName] ?: "<unknown method>",
-                    /* fileName = */ stringCache[value.fileName] ?: "<unknown file>",
+                    /* declaringClass = */ stringCache.getOrNull(value.className) ?: "<unknown class>",
+                    /* methodName = */ stringCache.getOrNull(value.methodName) ?: "<unknown method>",
+                    /* fileName = */ stringCache.getOrNull(value.fileName) ?: "<unknown file>",
                     /* lineNumber = */ value.lineNumber
                 )
                 val accessPath = if (value.accessPath == -1) null else context.getAccessPath(value.accessPath)
