@@ -774,11 +774,14 @@ class TraceCollectingEventTracker(
             CodeLocations.newCodeLocation(context, stackTraceElement)
         }
         
+        val timeStamp = System.currentTimeMillis()
+        
         val tracePoint = TRLineBreakpointSnapshotTracePoint(
             context = context,
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
             stackTraceCodeLocationIds = stackTraceCodeLocationIds,
+            currentTimeMillis = timeStamp,
         )
         // TODO maybe these tracepoints should be collected separately
         strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)

@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.trace
 
 import org.jetbrains.lincheck.descriptors.*
+import java.time.Instant
 
 
 interface TRAppendable {
@@ -389,13 +390,14 @@ object DefaultTRArrayTracePointPrinter: AbstractTRArrayTracePointPrinter() {
 
 object DefaultTRLineBreakpointSnapshotTracePointPrinter {
     fun TRAppendable.append(tracePoint: TRLineBreakpointSnapshotTracePoint): TRAppendable {
-        append("Live debugger breakpoint: ")
+        val timeStampRepresentation = Instant.ofEpochMilli(tracePoint.currentTimeMillis).toString()
+        append("Live BP [$timeStampRepresentation] (${tracePoint.threadName}): ")
         append(tracePoint, verbose)
 
         // Show condensed stack trace: depth and deepest 3 calls
         val stackTrace = tracePoint.stackTrace
         val depth = stackTrace.size
-        append(" [depth: ")
+        append(" stack-size=$depth: ")
         append(depth.toString())
         append("]")
 
