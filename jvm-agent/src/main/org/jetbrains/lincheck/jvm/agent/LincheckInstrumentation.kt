@@ -197,15 +197,15 @@ object LincheckInstrumentation {
     val context = TraceContext()
 
     fun attachJavaAgentStatically(instrumentation: Instrumentation) {
-        check(!isInitialized) {
-            "Lincheck instrumentation is already initialized"
-        }
         check(javaAgentAttachType == null) {
             "Java agent was already attached" + when (javaAgentAttachType) {
                 JavaAgentAttachType.STATIC -> " statically"
                 JavaAgentAttachType.DYNAMIC -> " dynamically"
                 null -> ""
             }
+        }
+        check(!isInitialized) {
+            "Lincheck instrumentation is already initialized"
         }
 
         this.instrumentation = instrumentation
@@ -213,15 +213,15 @@ object LincheckInstrumentation {
     }
 
     fun attachJavaAgentDynamically() {
-        check(!isInitialized) {
-            "Lincheck instrumentation is already initialized"
-        }
         check(javaAgentAttachType == null) {
             "Java agent was already attached" + when (javaAgentAttachType) {
                 JavaAgentAttachType.STATIC -> " statically"
                 JavaAgentAttachType.DYNAMIC -> " dynamically"
                 null -> ""
             }
+        }
+        check(!isInitialized) {
+            "Lincheck instrumentation is already initialized"
         }
 
         /* Dynamically attaches byte buddy instrumentation to this JVM instance.
