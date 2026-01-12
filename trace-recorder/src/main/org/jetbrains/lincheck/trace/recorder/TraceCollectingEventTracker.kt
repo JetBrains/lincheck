@@ -767,8 +767,10 @@ class TraceCollectingEventTracker(
         
         // We do not use threadData.getStack() as we might not track (all) method calls in live debug mode
         val stackTrace = Thread.currentThread().stackTrace
-            // Remove internal lincheck calls from the stack
-            .drop(3)
+            // Removes lincheck related calls
+            .filter { !isInLincheckPackage(it.className) }
+            // Removes the getStackTrace method
+            .drop(1)
         
         val stackTraceCodeLocationIds = stackTrace.map { stackTraceElement ->
             CodeLocations.newCodeLocation(context, stackTraceElement)
