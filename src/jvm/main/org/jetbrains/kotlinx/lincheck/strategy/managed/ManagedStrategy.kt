@@ -1304,7 +1304,7 @@ internal abstract class ManagedStrategy(
         // We need to ensure all the classes related to the reading object are instrumented.
         // The following call checks all the static fields.
         if (fieldDescriptor.isStatic) {
-            LincheckJavaAgent.ensureClassHierarchyIsTransformed(fieldDescriptor.className)
+            LincheckInstrumentation.ensureClassHierarchyIsTransformed(fieldDescriptor.className)
         }
         // Do not track accesses to untracked objects
         if (!shouldTrackFieldAccess(obj, fieldDescriptor)) {
@@ -1342,7 +1342,7 @@ internal abstract class ManagedStrategy(
         val threadId = threadScheduler.getCurrentThreadId()
         val fieldDescriptor = context.getFieldDescriptor(fieldId)
         if (fieldDescriptor.isStatic && value !== null && !value.isImmutable) {
-            LincheckJavaAgent.ensureClassHierarchyIsTransformed(value.javaClass)
+            LincheckInstrumentation.ensureClassHierarchyIsTransformed(value.javaClass)
         }
         if (collectTrace) {
             val valueRepresentation = objectTracker.getObjectRepresentation(value)
@@ -1496,7 +1496,7 @@ internal abstract class ManagedStrategy(
         threadDescriptor: ThreadDescriptor,
         className: String
     ) = threadDescriptor.runInsideIgnoredSection {
-        LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
+        LincheckInstrumentation.ensureClassHierarchyIsTransformed(className)
     }
 
     override fun afterNewObjectCreation(threadDescriptor: ThreadDescriptor, obj: Any) {
@@ -1745,7 +1745,7 @@ internal abstract class ManagedStrategy(
         )
         // in case if a static method is called, ensure its class is instrumented
         if (receiver == null && methodSection < AnalysisSectionType.ATOMIC) {
-            LincheckJavaAgent.ensureClassHierarchyIsTransformed(methodDescriptor.className)
+            LincheckInstrumentation.ensureClassHierarchyIsTransformed(methodDescriptor.className)
         }
         // in the case of atomics API setter method call, notify the object tracker about a new link between objects
         if (atomicMethodDescriptor != null && atomicMethodDescriptor.kind.isSetter) {

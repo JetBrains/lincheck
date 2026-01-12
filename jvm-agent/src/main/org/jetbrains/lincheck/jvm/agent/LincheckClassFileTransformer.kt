@@ -11,9 +11,9 @@
 package org.jetbrains.lincheck.jvm.agent
 
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.*
-import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent.instrumentationStrategy
-import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent.instrumentationMode
-import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent.instrumentedClasses
+import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.instrumentationStrategy
+import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.instrumentationMode
+import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.instrumentedClasses
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.BasicBlockControlFlowGraph
 import org.jetbrains.lincheck.jvm.agent.analysis.*
 import org.jetbrains.lincheck.util.*
@@ -117,7 +117,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         )
 
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
-        val visitor = LincheckClassVisitor(writer, classInfo, instrumentationMode, profile, statsTracker, LincheckJavaAgent.context)
+        val visitor = LincheckClassVisitor(writer, classInfo, instrumentationMode, profile, statsTracker, LincheckInstrumentation.context)
 
         try {
             val timeNano = measureTimeNano {

@@ -18,7 +18,7 @@ import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
-import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent
+import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.util.*
 import sun.nio.ch.lincheck.*
 import java.lang.reflect.*
@@ -200,7 +200,7 @@ internal class ExecutionScenarioRunner(
             // that all the necessary classes and instrumented
             // after creating a test instance.
             if (!ensuredTestInstanceIsTransformed) {
-                LincheckJavaAgent.ensureObjectIsTransformed(testInstance)
+                LincheckInstrumentation.ensureObjectIsTransformed(testInstance)
                 ensuredTestInstanceIsTransformed = true
             }
         }

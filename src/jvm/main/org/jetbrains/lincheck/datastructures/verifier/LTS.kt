@@ -14,7 +14,7 @@ import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.lincheck.datastructures.verifier.LTS.*
 import org.jetbrains.lincheck.datastructures.verifier.OperationType.*
-import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent
+import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import sun.nio.ch.lincheck.Injections.lastSuspendedCancellableContinuationDuringVerification
 import java.util.*
 import kotlin.coroutines.*
@@ -265,7 +265,7 @@ class LTS(private val sequentialSpecification: Class<*>) {
             // the sequential version of the data structure used for verification
             // may differ from the original parallel version,
             // in this case we need to ensure that the sequential class is also instrumented
-            LincheckJavaAgent.ensureObjectIsTransformed(it)
+            LincheckInstrumentation.ensureObjectIsTransformed(it)
         }
     }
 
