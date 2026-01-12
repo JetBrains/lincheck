@@ -61,6 +61,7 @@ import java.lang.reflect.Modifier
  *       Example: `formatOption=dump`
  *
  * - jmxServer — boolean that enables JMX server for remote monitoring and management, it is off by default.
+ *     The server is started at the URL `service:jmx:rmi:///jndi/rmi://<jmxHost>:<jmxPort>/tracing`.
  *       Example: `jmxServer=on` or `jmxServer=off`
  *
  * - jmxHost — hostname or IP address for the JMX server, defaults to localhost.

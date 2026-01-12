@@ -46,7 +46,7 @@ object TraceRecorderJmxServer {
             val mbs = ManagementFactory.getPlatformMBeanServer()
 
             // Create JMX service URL
-            val serviceUrl = JMXServiceURL("service:jmx:rmi://$host:$port/jndi/rmi://$host:$rmi/jmxrmi")
+            val serviceUrl = JMXServiceURL("service:jmx:rmi://$host:$port/jndi/rmi://$host:$rmi/tracing")
 
             // Create and start the JMX connector server
             val connectorServer = JMXConnectorServerFactory.newJMXConnectorServer(serviceUrl, null, mbs)
