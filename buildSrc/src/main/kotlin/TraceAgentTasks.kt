@@ -90,6 +90,7 @@ fun Project.registerTraceAgentTasks(fatJarName: String, fatJarTaskName: String, 
             attributes(
                 mapOf(
                     "Premain-Class" to premainClass,
+                    "Agent-Class" to premainClass,
                     "Can-Redefine-Classes" to "true",
                     "Can-Retransform-Classes" to "true"
                 )

@@ -53,8 +53,49 @@ internal object TraceRecorderAgent {
         ARGUMENT_RMI_PORT,
     )
 
+    // entry point for a statically attached java agent
     @JvmStatic
     fun premain(agentArgs: String?, inst: Instrumentation) {
+        // parse and validate arguments and system properties
+        parseArguments(agentArgs)
+        validateTraceRecorderMode()
+
+        // attach java agent
+        LincheckInstrumentation.attachJavaAgentStatically(inst)
+
+        // start the JMX server if the specified argument was passed
+        setupJmxServerIfRequested()
+
+        // install trace entry points transformer and instrumentation
+        installTraceEntryPointTransformer()
+        installInstrumentation()
+    }
+
+    // entry point for a dynamically attached java agent
+    @JvmStatic
+    fun agentmain(agentArgs: String?, inst: Instrumentation) {
+        // parse and validate arguments and system properties
+        parseArguments(agentArgs)
+        validateTraceRecorderMode()
+
+        // attach java agent
+        LincheckInstrumentation.attachJavaAgentDynamically(inst)
+
+        // start the JMX server if the specified argument was passed
+        setupJmxServerIfRequested()
+
+        // install instrumentation and re-transform already loaded classes
+        installInstrumentation()
+        // TODO: Re-transform already loaded classes if needed
+    }
+
+    @JvmStatic
+    private fun parseArguments(agentArgs: String?) {
+        TraceAgentParameters.parseArgs(agentArgs, ADDITIONAL_ARGS)
+    }
+
+    @JvmStatic
+    private fun validateTraceRecorderMode() {
         /*
          * Static agent requires one of: Trace Recorder mode, Trace Debugger mode, or Live Debugger mode.
          * For now, the mode is selected by system property.
@@ -78,10 +119,10 @@ internal object TraceRecorderAgent {
             "`lincheck.traceRecorderMode`, or `lincheck.liveDebuggerMode`. Only one of them expected to be `true`. " +
             "Rerun with exactly one mode flag set."
         }
-        TraceAgentParameters.parseArgs(agentArgs, ADDITIONAL_ARGS)
-        LincheckInstrumentation.attachJavaAgentStatically(inst)
+    }
 
-        // Start JMX server if requested
+    @JvmStatic
+    private fun setupJmxServerIfRequested() {
         val jmxServerArg = TraceAgentParameters.getArg(ARGUMENT_JMX_SERVER)
         if (jmxServerArg == "on") {
             val jmxHost = TraceAgentParameters.getArg(ARGUMENT_JMX_HOST)
@@ -90,7 +131,10 @@ internal object TraceRecorderAgent {
             TraceRecorderJmxServer.start(jmxHost, jmxPort, rmiPort)
             TraceRecorderJmxController.register()
         }
+    }
 
+    @JvmStatic
+    private fun installTraceEntryPointTransformer() {
         // This transformer adds tracing turn-on and turn-off at the given method entry/exit.
         LincheckInstrumentation.instrumentation.addTransformer(
             /* transformer = */ TraceAgentTransformer(
@@ -101,9 +145,6 @@ internal object TraceRecorderAgent {
             ),
             /* canRetransform = */ true
         )
-
-        // This prepares instrumentation of all future classes
-        installInstrumentation()
     }
 
     @JvmStatic
