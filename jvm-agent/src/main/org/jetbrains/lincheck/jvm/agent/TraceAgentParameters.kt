@@ -63,6 +63,15 @@ import java.lang.reflect.Modifier
  * - jmxServer — boolean that enables JMX server for remote monitoring and management, it is off by default.
  *       Example: `jmxServer=on` or `jmxServer=off`
  *
+ * - jmxHost — hostname or IP address for the JMX server, defaults to localhost.
+ *       Example: `jmxHost=127.0.0.1`
+ *
+ * - jmxPort — port number for JMX connections, defaults to 9999.
+ *       Example: `jmxPort=9999`
+ *
+ * - rmiPort — port number for RMI registry, defaults to 9998.
+ *       Example: `rmiPort=9998`
+ *
  * Quotation rules:
  * - Unquoted values may contain any character; use backslash to escape comma (,) and backslash (\\).
  * - Values can be enclosed in double quotes ("...") to avoid escaping.
@@ -102,6 +111,13 @@ object TraceAgentParameters {
     const val ARGUMENT_EXCLUDE = "exclude"
     const val ARGUMENT_LINE_BREAKPOINT = "breakpoints"
     const val ARGUMENT_JMX_SERVER = "jmxServer"
+    const val ARGUMENT_JMX_HOST = "jmxHost"
+    const val ARGUMENT_JMX_PORT = "jmxPort"
+    const val ARGUMENT_RMI_PORT = "rmiPort"
+
+    const val DEFAULT_JMX_HOST = "localhost"
+    const val DEFAULT_JMX_PORT = 9999
+    const val DEFAULT_RMI_PORT = 9998
 
     @JvmStatic
     lateinit var rawArgs: String
@@ -165,8 +181,32 @@ object TraceAgentParameters {
 
             namedArgs.putAll(kvArguments)
         }
+
+        validateJmxParameters()
     }
-    
+
+    @JvmStatic
+    private fun validateJmxParameters() {
+        val jmxServerEnabled = getArg(ARGUMENT_JMX_SERVER) == "on"
+
+        if (!jmxServerEnabled) {
+            // JMX server is not enabled, check that JMX-related parameters are not set
+            val jmxHost = getArg(ARGUMENT_JMX_HOST)
+            val jmxPort = getArg(ARGUMENT_JMX_PORT)
+            val rmiPort = getArg(ARGUMENT_RMI_PORT)
+
+            if (jmxHost != null) {
+                Logger.warn { "JMX parameter \"$ARGUMENT_JMX_HOST\" is set but JMX server is not enabled (jmxServer=off)" }
+            }
+            if (jmxPort != null) {
+                Logger.warn { "JMX parameter \"$ARGUMENT_JMX_PORT\" is set but JMX server is not enabled (jmxServer=off)" }
+            }
+            if (rmiPort != null) {
+                Logger.warn { "JMX parameter \"$ARGUMENT_RMI_PORT\" is set but JMX server is not enabled (jmxServer=off)" }
+            }
+        }
+    }
+
     private fun setClassUnderTraceDebuggingToMethodOwner(
         startClass: String = classUnderTraceDebugging, method: String = methodUnderTraceDebugging
     ) {

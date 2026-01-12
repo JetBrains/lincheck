@@ -10,6 +10,7 @@
 
 package org.jetbrains.lincheck.trace.recorder.jmx
 
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import java.lang.management.ManagementFactory
 import java.rmi.registry.LocateRegistry
 import javax.management.remote.JMXServiceURL
@@ -21,32 +22,37 @@ import org.jetbrains.lincheck.util.Logger
  * This allows remote monitoring and management of the trace recording process.
  */
 object TraceRecorderJmxServer {
-    private const val DEFAULT_JMX_PORT = 9999
-    private const val DEFAULT_RMI_PORT = 9998
-
     /**
-     * Starts the JMX server on the specified port.
-     * 
+     * Starts the JMX server on the specified host and port.
+     *
+     * @param jmxHost The hostname or IP address for JMX connections (default: localhost)
      * @param jmxPort The port for JMX connections (default: 9999)
      * @param rmiPort The port for RMI registry (default: 9998)
      */
     @JvmStatic
-    fun start(jmxPort: Int = DEFAULT_JMX_PORT, rmiPort: Int = DEFAULT_RMI_PORT) {
+    fun start(
+        jmxHost: String? = null,
+        jmxPort: Int? = null,
+        rmiPort: Int? = null,
+    ) {
+        val host = jmxHost ?: TraceAgentParameters.DEFAULT_JMX_HOST
+        val port = jmxPort ?: TraceAgentParameters.DEFAULT_JMX_PORT
+        val rmi = rmiPort ?: TraceAgentParameters.DEFAULT_RMI_PORT
         try {
             // Create RMI registry on the specified port
-            LocateRegistry.createRegistry(rmiPort)
-            
+            LocateRegistry.createRegistry(rmi)
+
             // Get the platform MBean server
             val mbs = ManagementFactory.getPlatformMBeanServer()
-            
+
             // Create JMX service URL
-            val serviceUrl = JMXServiceURL("service:jmx:rmi://localhost:$jmxPort/jndi/rmi://localhost:$rmiPort/jmxrmi")
-            
+            val serviceUrl = JMXServiceURL("service:jmx:rmi://$host:$port/jndi/rmi://$host:$rmi/jmxrmi")
+
             // Create and start the JMX connector server
             val connectorServer = JMXConnectorServerFactory.newJMXConnectorServer(serviceUrl, null, mbs)
             connectorServer.start()
-            
-            println("JMX server started successfully on port $jmxPort (RMI port: $rmiPort)")
+
+            println("JMX server started successfully on $host:$port (RMI port: $rmi)")
         } catch (t: Throwable) {
             Logger.error { "Failed to start JMX server" }
             Logger.error(t)

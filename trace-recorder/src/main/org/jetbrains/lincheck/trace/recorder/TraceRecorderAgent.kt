@@ -18,6 +18,9 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_LINE_BREAK
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_EXCLUDE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_INCLUDE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_JMX_SERVER
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_JMX_HOST
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_JMX_PORT
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_RMI_PORT
 import org.jetbrains.lincheck.trace.recorder.jmx.TraceRecorderJmxServer
 import org.jetbrains.lincheck.trace.recorder.jmx.TraceRecorderJmxController
 import org.jetbrains.lincheck.util.isInLiveDebuggerMode
@@ -45,6 +48,9 @@ internal object TraceRecorderAgent {
         ARGUMENT_PACK,
         ARGUMENT_LINE_BREAKPOINT,
         ARGUMENT_JMX_SERVER,
+        ARGUMENT_JMX_HOST,
+        ARGUMENT_JMX_PORT,
+        ARGUMENT_RMI_PORT,
     )
 
     @JvmStatic
@@ -78,7 +84,10 @@ internal object TraceRecorderAgent {
         // Start JMX server if requested
         val jmxServerArg = TraceAgentParameters.getArg(ARGUMENT_JMX_SERVER)
         if (jmxServerArg == "on") {
-            TraceRecorderJmxServer.start()
+            val jmxHost = TraceAgentParameters.getArg(ARGUMENT_JMX_HOST)
+            val jmxPort = TraceAgentParameters.getArg(ARGUMENT_JMX_PORT)?.toIntOrNull()
+            val rmiPort = TraceAgentParameters.getArg(ARGUMENT_RMI_PORT)?.toIntOrNull()
+            TraceRecorderJmxServer.start(jmxHost, jmxPort, rmiPort)
             TraceRecorderJmxController.register()
         }
 
