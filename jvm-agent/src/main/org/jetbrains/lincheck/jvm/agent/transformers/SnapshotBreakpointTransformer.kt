@@ -35,10 +35,10 @@ internal class SnapshotBreakpointTransformer(
     
     override fun visitLineNumber(line: Int, start: Label) {
         super.visitLineNumber(line, start)
-        if (liveDebuggerSettings.breakPoints.any { it.lineNumber == line && it.fileName == fileName} ) {
+        if (liveDebuggerSettings.lineBreakPoints.any { it.lineNumber == line && it.fileName == fileName} ) {
             adapter.invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
             loadNewCodeLocationId()
-            adapter.invokeStatic(Injections::onSnapshotBreakpoint)
+            adapter.invokeStatic(Injections::onSnapshotLineBreakpoint)
         }
     }
 }

@@ -79,7 +79,7 @@ public interface EventTracker {
     void onInlineMethodCallReturn(ThreadDescriptor descriptor, int methodId);
     void onInlineMethodCallException(ThreadDescriptor descriptor, int methodId, Throwable t);
     
-    void onSnapshotBreakpoint(ThreadDescriptor descriptor, int codeLocation);
+    void onSnapshotLineBreakpoint(ThreadDescriptor descriptor, int codeLocation);
 
     void onLoopIteration(ThreadDescriptor descriptor, int codeLocation, int loopId);
     void afterLoopExit(ThreadDescriptor descriptor, int codeLocation, int loopId, Throwable exception, boolean isReachableFromOutsideLoop);

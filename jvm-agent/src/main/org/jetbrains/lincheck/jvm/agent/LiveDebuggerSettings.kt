@@ -11,7 +11,7 @@
 package org.jetbrains.lincheck.jvm.agent
 
 internal data class LiveDebuggerSettings(
-    val breakPoints: List<SnapshotBreakpoint>
+    val lineBreakPoints: List<SnapshotBreakpoint>
 ) {
     companion object {
         fun readList(list: List<String>): LiveDebuggerSettings {

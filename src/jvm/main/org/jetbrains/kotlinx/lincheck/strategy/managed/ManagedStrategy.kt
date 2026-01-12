@@ -1925,7 +1925,7 @@ internal abstract class ManagedStrategy(
         leaveAnalysisSection(threadId, methodSection)
     }
 
-    override fun onSnapshotBreakpoint(descriptor: ThreadDescriptor?, codeLocation: Int) {}
+    override fun onSnapshotLineBreakpoint(descriptor: ThreadDescriptor?, codeLocation: Int) {}
 
     override fun onInlineMethodCall(
         threadDescriptor: ThreadDescriptor,

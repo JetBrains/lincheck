@@ -673,7 +673,7 @@ class TRWriteLocalVariableTracePoint(
     }
 }
 
-class TRLineBreakpointSnapshotTracePoint(
+class TRSnapshotLineBreakpointTracePoint(
     context: TraceContext,
     codeLocationId: Int,
     val stackTraceCodeLocationIds: List<Int>,
@@ -685,8 +685,8 @@ class TRLineBreakpointSnapshotTracePoint(
     val threadName: String 
         get() = context.getThreadName(threadId)
 
-    val stackTrace: Array<StackTraceElement>
-        get() = stackTraceCodeLocationIds.map { CodeLocations.stackTrace(context, it) }.toTypedArray()
+    val stackTrace: List<StackTraceElement>
+        get() = stackTraceCodeLocationIds.map { CodeLocations.stackTrace(context, it) }
 
     override fun save(out: TraceWriter) {
         super.save(out)
@@ -710,12 +710,12 @@ class TRLineBreakpointSnapshotTracePoint(
     }
     
     internal companion object {
-        fun load(context: TraceContext, inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRLineBreakpointSnapshotTracePoint {
+        fun load(context: TraceContext, inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRSnapshotLineBreakpointTracePoint {
             val size = inp.readInt()
             val stackTraceCodeLocationIds = List(size) { inp.readInt() }
             val currentTimeMillis = inp.readLong()
             
-            return TRLineBreakpointSnapshotTracePoint(
+            return TRSnapshotLineBreakpointTracePoint(
                 context = context,
                 threadId = threadId,
                 codeLocationId = codeLocationId,
@@ -1048,7 +1048,7 @@ private fun getClassId(point: TRTracePoint): Int {
         is TRWriteTracePoint -> 6
         is TRLoopTracePoint -> 7
         is TRLoopIterationTracePoint -> 8
-        is TRLineBreakpointSnapshotTracePoint -> 9
+        is TRSnapshotLineBreakpointTracePoint -> 9
     }
 }
 
@@ -1063,7 +1063,7 @@ private fun getLoaderByClassId(id: Byte): TRLoader {
         6 -> TRWriteTracePoint::load
         7 -> TRLoopTracePoint::load
         8 -> TRLoopIterationTracePoint::load
-        9 -> TRLineBreakpointSnapshotTracePoint::load
+        9 -> TRSnapshotLineBreakpointTracePoint::load
         else -> error("Unknown TRTracePoint class id $id")
     }
 }

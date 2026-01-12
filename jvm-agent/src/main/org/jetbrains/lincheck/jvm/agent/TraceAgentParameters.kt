@@ -41,7 +41,7 @@ import java.lang.reflect.Modifier
  * - exclude — semicolon-separated list of exclude patterns (optional).
  *       Example: `exclude="org.example.internal.*;**.generated.*"`
  *       
- * - breakpoints — semicolon-separated list of line breakpoints to capture snapshots from.
+ * - lineBreakpoints — semicolon-separated list of line breakpoints to capture snapshots from.
  *       This is functionality for the live debugger project.
  *
  * - pack — boolean that enables zipping trace artifact files, it is false by default.
@@ -97,7 +97,7 @@ object TraceAgentParameters {
     const val ARGUMENT_OUTPUT = "output"
     const val ARGUMENT_INCLUDE = "include"
     const val ARGUMENT_EXCLUDE = "exclude"
-    const val ARGUMENT_BREAKPOINT = "breakpoints"
+    const val ARGUMENT_LINE_BREAKPOINT = "breakpoints"
 
     @JvmStatic
     lateinit var rawArgs: String
@@ -197,7 +197,7 @@ object TraceAgentParameters {
     fun getExcludePatterns(): List<String> = splitPatterns(namedArgs[ARGUMENT_EXCLUDE])
     
     @JvmStatic
-    fun getBreakpoints(): List<String> = splitPatterns(namedArgs[ARGUMENT_BREAKPOINT])
+    fun getLineBreakpoints(): List<String> = splitPatterns(namedArgs[ARGUMENT_LINE_BREAKPOINT])
 
     private fun splitPatterns(value: String?): List<String> {
         if (value.isNullOrBlank()) return emptyList()

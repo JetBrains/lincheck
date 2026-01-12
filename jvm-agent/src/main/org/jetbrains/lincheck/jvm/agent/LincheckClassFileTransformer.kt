@@ -101,7 +101,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             excludeClasses = excludeClasses,
         )
         
-        val liveDebuggerSettings = LiveDebuggerSettings.readList(TraceAgentParameters.getBreakpoints())
+        val liveDebuggerSettings = LiveDebuggerSettings.readList(TraceAgentParameters.getLineBreakpoints())
 
         // Don't use class/method visitors on classNode to collect labels, as
         // MethodNode reset all labels on a re-visit (WHY?!).

@@ -389,9 +389,9 @@ object DefaultTRArrayTracePointPrinter: AbstractTRArrayTracePointPrinter() {
 }
 
 object DefaultTRLineBreakpointSnapshotTracePointPrinter {
-    fun TRAppendable.append(tracePoint: TRLineBreakpointSnapshotTracePoint): TRAppendable {
+    fun TRAppendable.append(tracePoint: TRSnapshotLineBreakpointTracePoint): TRAppendable {
         val timeStampRepresentation = Instant.ofEpochMilli(tracePoint.currentTimeMillis).toString()
-        append("Live BP [$timeStampRepresentation] (${tracePoint.threadName}): ")
+append("Live line breakpoint [$timeStampRepresentation] (${tracePoint.threadName}): ")
         append(tracePoint, verbose)
 
         // Show condensed stack trace: depth and deepest 3 calls
