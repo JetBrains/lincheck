@@ -17,6 +17,9 @@ import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_LINE_BREAKPOINT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_EXCLUDE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_INCLUDE
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_JMX_SERVER
+import org.jetbrains.lincheck.trace.recorder.jmx.TraceRecorderJmxServer
+import org.jetbrains.lincheck.trace.recorder.jmx.TraceRecorderJmxController
 import org.jetbrains.lincheck.util.isInLiveDebuggerMode
 import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import org.jetbrains.lincheck.util.isInTraceRecorderMode
@@ -41,6 +44,7 @@ internal object TraceRecorderAgent {
         ARGUMENT_EXCLUDE,
         ARGUMENT_PACK,
         ARGUMENT_LINE_BREAKPOINT,
+        ARGUMENT_JMX_SERVER,
     )
 
     @JvmStatic
@@ -70,6 +74,13 @@ internal object TraceRecorderAgent {
         }
         TraceAgentParameters.parseArgs(agentArgs, ADDITIONAL_ARGS)
         LincheckInstrumentation.attachJavaAgentStatically(inst)
+
+        // Start JMX server if requested
+        val jmxServerArg = TraceAgentParameters.getArg(ARGUMENT_JMX_SERVER)
+        if (jmxServerArg == "on") {
+            TraceRecorderJmxServer.start()
+            TraceRecorderJmxController.register()
+        }
 
         // This transformer adds tracing turn-on and turn-off at the given method entry/exit.
         LincheckInstrumentation.instrumentation.addTransformer(

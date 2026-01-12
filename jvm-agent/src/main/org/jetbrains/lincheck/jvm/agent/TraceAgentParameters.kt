@@ -60,6 +60,9 @@ import java.lang.reflect.Modifier
  *       * for `text`: `verbose` --- enables verbose output.
  *       Example: `formatOption=dump`
  *
+ * - jmxServer — boolean that enables JMX server for remote monitoring and management, it is off by default.
+ *       Example: `jmxServer=on` or `jmxServer=off`
+ *
  * Quotation rules:
  * - Unquoted values may contain any character; use backslash to escape comma (,) and backslash (\\).
  * - Values can be enclosed in double quotes ("...") to avoid escaping.
@@ -98,6 +101,7 @@ object TraceAgentParameters {
     const val ARGUMENT_INCLUDE = "include"
     const val ARGUMENT_EXCLUDE = "exclude"
     const val ARGUMENT_LINE_BREAKPOINT = "breakpoints"
+    const val ARGUMENT_JMX_SERVER = "jmxServer"
 
     @JvmStatic
     lateinit var rawArgs: String
