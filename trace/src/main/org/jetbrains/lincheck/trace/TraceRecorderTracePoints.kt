@@ -547,7 +547,6 @@ sealed class TRFieldTracePoint(
     override fun toText(appendable: TRAppendable) {
         appendable.append(tracePoint = this)
     }
-
 }
 
 class TRReadTracePoint(
@@ -635,7 +634,6 @@ sealed class TRLocalVariableTracePoint(
     override fun toText(appendable: TRAppendable) {
         appendable.append(tracePoint = this)
     }
-
 }
 
 class TRReadLocalVariableTracePoint(
@@ -771,7 +769,6 @@ sealed class TRArrayTracePoint(
     override fun toText(appendable: TRAppendable) {
         appendable.append(tracePoint = this)
     }
-
 }
 
 class TRReadArrayTracePoint(
