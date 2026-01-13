@@ -16,11 +16,17 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectEntry
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.trace.SwitchReason
 import org.jetbrains.kotlinx.lincheck.trace.Trace
+import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent
+import org.jetbrains.lincheck.trace.TraceContext
+import org.jetbrains.lincheck.util.ensure
 import org.jetbrains.lincheck.util.runInsideIgnoredSection
+import org.jetbrains.lincheck.util.updateInplace
 //import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import sun.nio.ch.lincheck.TestThread
 import java.lang.reflect.*
