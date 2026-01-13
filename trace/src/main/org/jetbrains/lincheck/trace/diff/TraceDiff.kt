@@ -180,7 +180,7 @@ private fun diffTracepointSubtree(
                 if (!strict) {
                     // "Remove" left and make it without children
                     val oldPoint = cloner.cloneLeftTracePoint(lp, rp.eventId)
-                    oldPoint.diffStatus = DiffStatus.EDITED_NEW
+                    oldPoint.diffStatus = DiffStatus.EDITED_OLD
                     outputRoot.addChild(oldPoint)
                     oldPoint.save(output)
                     if (oldPoint is TRContainerTracePoint) {
