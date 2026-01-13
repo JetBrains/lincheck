@@ -114,14 +114,6 @@ sealed class TRTracePoint(
 
     fun toText(verbose: Boolean): String {
         val sb = StringBuilder()
-        when (diffStatus) {
-            DiffStatus.UNCHANGED -> sb.append("  ")
-            DiffStatus.REMOVED -> sb.append("- ")
-            DiffStatus.ADDED -> sb.append("+ ")
-            DiffStatus.EDITED_OLD -> sb.append("! ")
-            DiffStatus.EDITED_NEW -> sb.append("! ")
-            null -> Unit
-        }
         toText(DefaultTRTextAppendable(sb, verbose))
         return sb.toString()
     }
