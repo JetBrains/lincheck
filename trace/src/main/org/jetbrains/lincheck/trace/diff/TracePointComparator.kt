@@ -10,6 +10,7 @@
 
 package org.jetbrains.lincheck.trace.diff
 
+import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.trace.*
 
 internal object TracePointComparator {
@@ -36,6 +37,8 @@ internal object TracePointComparator {
                 .addTRList(tracePoint.parameters)
                 .add(tracePoint.result)
                 .add(tracePoint.exceptionClassName ?: "")
+            is TRSnapshotLineBreakpointTracePoint -> h
+                .add(tracePoint.stackTrace) // Should we add it as-is?
         }
         return h.finish()
     }
@@ -83,15 +86,21 @@ internal object TracePointComparator {
                     .add(tracePoint.flags)
                     .add(tracePoint.isStatic())
                     .add(tracePoint.returnType)
-                    .add(tracePoint.argumentTypes)
+                    .add(tracePoint.argumentTypes) // It is Ok, as we use hashcode for Types.Type anyway
+            // Only code location for now
+            is TRSnapshotLineBreakpointTracePoint ->
+                hasher
+                    .add(tracePoint.codeLocation)
         }
 
     // All tracepoint hashes includes code location.
     // Two tracepoints at different locations are different, we try to compare
     // Tracepoints from two runs over exactly same sources
     private fun Hasher.add(codeLocation: StackTraceElement): Hasher =
-        add(codeLocation.fileName ?: "")
-        .add(codeLocation.lineNumber)
+        add(codeLocation.fileName ?: "").add(codeLocation.lineNumber)
+
+    private fun Hasher.add(type: Types.Type): Hasher =
+        add(type.hashCode())
 
     private fun Hasher.add(obj: TRObject?): Hasher =
         if (obj == null) add(TR_OBJECT_NULL)
@@ -161,7 +170,7 @@ private class Hasher {
         return this
     }
 
-    fun add(v: Any): Hasher = add(v.hashCode())
+    // fun add(v: Any): Hasher = add(v.hashCode())
 
     fun <T> add(v: Collection<T>): Hasher {
         v.forEach { add(it.hashCode()) }
