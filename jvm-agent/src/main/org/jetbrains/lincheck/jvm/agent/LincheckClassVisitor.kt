@@ -24,6 +24,7 @@ internal class LincheckClassVisitor(
     private val instrumentationMode: InstrumentationMode,
     private val profile: TransformationProfile,
     private val statsTracker: TransformationStatisticsTracker?,
+    private val liveDebuggerSettings: LiveDebuggerSettings,
     private val context: TraceContext
 ) : ClassVisitor(ASM_API, classVisitor) {
     private var classVersion = 0
@@ -107,6 +108,8 @@ internal class LincheckClassVisitor(
             adapter = adapter,
             initialMethodVisitor = mv,
         )
+        
+        val filteredLiveDebuggerSettings = LiveDebuggerSettings(liveDebuggerSettings.lineBreakPoints.filter { it.fileName == fileName })
 
         // ======== Ignored Sections ========
         chain.addTransformer { adapter, mv ->
@@ -190,6 +193,13 @@ internal class LincheckClassVisitor(
         //   and most likely we have some bug in one of the transformers.
         chain.addTransformer { adapter, mv ->
             LoopTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv)
+        }
+        
+        // ======== SnapshotBreakpoints ========
+        if (filteredLiveDebuggerSettings.lineBreakPoints.isNotEmpty()) {
+            chain.addTransformer { adapter, mv ->
+                SnapshotBreakpointTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv, filteredLiveDebuggerSettings)
+            }
         }
 
         // ======== Analyzers ========

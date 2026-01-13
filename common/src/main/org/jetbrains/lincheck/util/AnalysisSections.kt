@@ -148,12 +148,14 @@ fun leaveIgnoredSection() {
  * @return result of the [block] invocation.
  */
 inline fun <R> ThreadDescriptor?.runInsideIgnoredSection(block: () -> R): R {
-    if (this == null) return block()
-    this.enterIgnoredSection()
+    this?.enterIgnoredSection()
     try {
         return block()
+    } catch (t: Throwable) {
+        Logger.error(t)
+        throw t
     } finally {
-        this.leaveIgnoredSection()
+        this?.leaveIgnoredSection()
     }
 }
 

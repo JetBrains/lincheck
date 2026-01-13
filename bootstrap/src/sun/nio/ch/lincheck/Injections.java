@@ -772,6 +772,12 @@ public class Injections {
         if (eventTracker == null || descriptor == null) return;
         eventTracker.onMethodCallException(descriptor, methodId, receiver, params, exception, interceptor);
     }
+    
+    public static void onSnapshotLineBreakpoint(ThreadDescriptor descriptor, int codeLocation) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        if (eventTracker == null || descriptor == null) return;
+        eventTracker.onSnapshotLineBreakpoint(descriptor, codeLocation);
+    }
 
     /**
      * Creates and returns a new instance of result interceptor.
