@@ -176,21 +176,21 @@ private fun diffTracepointSubtree(
                 val lp = leftPoints[line.leftIdx]!!
                 val rp = rightPoints[line.rightIdx]!!
                 // It is editing-equivalent trace points
-                val rightStatus = if (cmp.strictEqual(lp, rp)) DiffStatus.UNCHANGED else DiffStatus.ADDED
+                val strict = cmp.strictEqual(lp, rp)
 
-                if (rightStatus == DiffStatus.ADDED) {
-                    // "Remove" left and make it without children, add right
-                    val removedPoint = cloner.cloneLeftTracePoint(lp, rp.eventId)
-                    removedPoint.diffStatus = DiffStatus.REMOVED
-                    outputRoot.addChild(removedPoint)
-                    removedPoint.save(output)
-                    if (removedPoint is TRContainerTracePoint) {
-                        removedPoint.saveFooter(output)
+                if (!strict) {
+                    // "Remove" left and make it without children
+                    val oldPoint = cloner.cloneLeftTracePoint(lp, rp.eventId)
+                    oldPoint.diffStatus = DiffStatus.EDITED_NEW
+                    outputRoot.addChild(oldPoint)
+                    oldPoint.save(output)
+                    if (oldPoint is TRContainerTracePoint) {
+                        oldPoint.saveFooter(output)
                     }
                 }
                 // Copy tracepoint itself from right subtree for now
                 val outputPoint = cloner.cloneRightTracePoint(rp, lp.eventId)
-                outputPoint.diffStatus = rightStatus
+                outputPoint.diffStatus = if (strict) DiffStatus.UNCHANGED else DiffStatus.EDITED_NEW
                 outputRoot.addChild(outputPoint)
                 outputPoint.save(output)
 

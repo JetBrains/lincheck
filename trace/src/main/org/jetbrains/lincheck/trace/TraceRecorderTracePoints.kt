@@ -56,11 +56,24 @@ enum class DiffStatus {
     ADDED,
 
     /**
-     * Tracepoint was edited.
+     * Tracepoint is tracepoint from left (old) trace which was edited in right (new) trace.
+     *
+     * It can be seen as "removed" if no editing information is needed, but such container tracepoint
+     * will not have children, as children are linked to next [EDITED_NEW] tracepoint.
      *
      * For example, if it is a method called tracepoint, it has the same method in both traces but differs in arguments values.
      */
-    EDITED,
+    EDITED_OLD,
+
+    /**
+     * Tracepoint is tracepoint from right (new) trace which was edited in respect with left (old) trace.
+     *
+     * It can be seen as "added" if no editing information is needed, and is pair for previous sibling which should be
+     * [EDITED_OLD].
+
+     * For example, if it is a method called tracepoint, it has the same method in both traces but differs in arguments values.
+     */
+    EDITED_NEW,
 }
 
 sealed class TRTracePoint(
@@ -105,7 +118,8 @@ sealed class TRTracePoint(
             DiffStatus.UNCHANGED -> sb.append("  ")
             DiffStatus.REMOVED -> sb.append("- ")
             DiffStatus.ADDED -> sb.append("+ ")
-            DiffStatus.EDITED -> sb.append("! ")
+            DiffStatus.EDITED_OLD -> sb.append("! ")
+            DiffStatus.EDITED_NEW -> sb.append("! ")
             null -> Unit
         }
         toText(DefaultTRTextAppendable(sb, verbose))
