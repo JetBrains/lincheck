@@ -14,17 +14,33 @@ import org.jetbrains.lincheck.descriptors.FieldDescriptor
 import org.jetbrains.lincheck.descriptors.MethodDescriptor
 import org.jetbrains.lincheck.descriptors.VariableDescriptor
 import org.jetbrains.lincheck.trace.*
+import java.io.DataOutput
 
 class TracePointCloner(
     val context: TraceContext,
     val threadId: Int,
+    val idMapOutput: DataOutput,
     eventId: Int
 ) {
     var eventId = eventId
         private set
 
-    fun cloneTracePoint(tracePoint: TRTracePoint): TRTracePoint =
-        when (tracePoint) {
+    fun generateEventId(leftId: Int = -1, rightId: Int = -1): Int {
+        idMapOutput.writeInt(leftId)
+        idMapOutput.writeInt(rightId)
+        return eventId++
+    }
+
+    fun cloneLeftTracePoint(tracePoint: TRTracePoint, rightId: Int): TRTracePoint =
+        cloneTracePoint(tracePoint, tracePoint.eventId, rightId)
+
+    fun cloneRightTracePoint(tracePoint: TRTracePoint, leftId: Int): TRTracePoint =
+        cloneTracePoint(tracePoint, leftId, tracePoint.eventId)
+
+    fun cloneTracePoint(tracePoint: TRTracePoint, leftId: Int, rightId: Int): TRTracePoint {
+        idMapOutput.writeInt(leftId)
+        idMapOutput.writeInt(rightId)
+        return when (tracePoint) {
             is TRReadArrayTracePoint -> TRReadArrayTracePoint(
                 context = context,
                 threadId = threadId,
@@ -34,6 +50,7 @@ class TracePointCloner(
                 value = tracePoint.value?.clone(),
                 eventId = eventId++
             )
+
             is TRWriteArrayTracePoint -> TRWriteArrayTracePoint(
                 context = context,
                 threadId = threadId,
@@ -43,6 +60,7 @@ class TracePointCloner(
                 value = tracePoint.value?.clone(),
                 eventId = eventId++
             )
+
             is TRReadTracePoint -> TRReadTracePoint(
                 context = context,
                 threadId = threadId,
@@ -52,6 +70,7 @@ class TracePointCloner(
                 value = tracePoint.value?.clone(),
                 eventId = eventId++
             )
+
             is TRWriteTracePoint -> TRWriteTracePoint(
                 context = context,
                 threadId = threadId,
@@ -61,6 +80,7 @@ class TracePointCloner(
                 value = tracePoint.value?.clone(),
                 eventId = eventId++
             )
+
             is TRReadLocalVariableTracePoint -> TRReadLocalVariableTracePoint(
                 context = context,
                 threadId = threadId,
@@ -69,6 +89,7 @@ class TracePointCloner(
                 value = tracePoint.value?.clone(),
                 eventId = eventId++
             )
+
             is TRWriteLocalVariableTracePoint -> TRWriteLocalVariableTracePoint(
                 context = context,
                 threadId = threadId,
@@ -77,6 +98,7 @@ class TracePointCloner(
                 value = tracePoint.value?.clone(),
                 eventId = eventId++
             )
+
             is TRLoopTracePoint -> TRLoopTracePoint(
                 context = context,
                 threadId = threadId,
@@ -85,6 +107,7 @@ class TracePointCloner(
                 parentTracePoint = null,
                 eventId = eventId++
             )
+
             is TRLoopIterationTracePoint -> TRLoopIterationTracePoint(
                 context = context,
                 threadId = threadId,
@@ -94,6 +117,7 @@ class TracePointCloner(
                 parentTracePoint = null,
                 eventId = eventId++
             )
+
             is TRMethodCallTracePoint -> TRMethodCallTracePoint(
                 context = context,
                 threadId = threadId,
@@ -109,6 +133,7 @@ class TracePointCloner(
                 it.exceptionClassName = tracePoint.exceptionClassName
             }
         }
+    }
 
     private fun TRObject.clone(): TRObject =
         if (isPrimitive) {

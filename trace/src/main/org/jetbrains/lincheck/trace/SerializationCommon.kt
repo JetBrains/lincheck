@@ -37,13 +37,20 @@ internal const val TRACE_VERSION : Long = 14
 
 // This suffix is not enforced, but IDEA plugin rely on it
 const val DATA_FILENAME_EXT = "trace"
-// These two are enforced
+// These are enforced
 const val INDEX_FILENAME_EXT = "idx"
 const val PACK_FILENAME_EXT = "packedtrace"
+internal const val ID_MAP_FILENAME_EXT = "idmap"
+internal const val THREAD_MAP_FILENAME_EXT = "threadmap"
 
 internal const val PACKED_DATA_ITEM_NAME = "trace.$DATA_FILENAME_EXT"
 internal const val PACKED_INDEX_ITEM_NAME = "trace.$INDEX_FILENAME_EXT"
 internal const val PACKED_META_ITEM_NAME = "info.txt"
+internal const val PACKED_DIFF_MARKER_ITEM_NAME = ".diff"
+internal const val PACKED_ID_MAP_ITEM_NAME = "diff.${ID_MAP_FILENAME_EXT}"
+internal const val PACKED_THREAD_MAP_ITEM_NAME = "diff.${THREAD_MAP_FILENAME_EXT}"
+internal const val PACKED_LEFT_META_ITEM_NAME = "info.left.txt"
+internal const val PACKED_RIGHT_META_ITEM_NAME = "info.right.txt"
 
 internal const val BLOCK_HEADER_SIZE: Int = Byte.SIZE_BYTES + Int.SIZE_BYTES
 internal const val BLOCK_FOOTER_SIZE: Int = Byte.SIZE_BYTES
@@ -130,10 +137,39 @@ data class TraceMetaInfo private constructor(
             return meta
         }
 
+        fun startDiff(leftMetaInfo: TraceMetaInfo?, rightMetaInfo: TraceMetaInfo?): TraceMetaInfo {
+            val bean = ManagementFactory.getRuntimeMXBean()
+            // Read JVM args
+            val jvmArgs = bean.inputArguments.joinToString(" ") { arg -> arg.escapeShell() }
+
+            val meta = TraceMetaInfo(
+                jvmArgs = jvmArgs,
+                agentArgs = "",
+                className = "",
+                methodName = "",
+                startTime = System.currentTimeMillis(),
+                isDiff = true,
+                leftTraceMetaInfo = leftMetaInfo,
+                rightTraceMetaInfo = rightMetaInfo
+            )
+            with (meta) {
+                System.getProperties().forEach {
+                    props[it.key as String] = it.value as String
+                }
+                env.putAll(System.getenv())
+            }
+            return meta
+        }
+
         /**
          * Read meta info in same format as [print] writes.
          */
-        fun read(input: InputStream): TraceMetaInfo? {
+        fun read(
+            input: InputStream,
+            isDiff: Boolean = false,
+            leftTraceMetaInfo: TraceMetaInfo? = null,
+            rightTraceMetaInfo: TraceMetaInfo? = null
+        ): TraceMetaInfo? {
             val reader = BufferedReader(InputStreamReader(input))
 
             val className = reader.readLine(CLASS_HEADER) ?: return null
@@ -143,7 +179,16 @@ data class TraceMetaInfo private constructor(
             val jvmArgs = reader.readLine(JVM_ARGS_HEADER) ?: return null
             val agentArgs = reader.readLine(AGENT_ARGS_HEADER) ?: return null
 
-            val meta = TraceMetaInfo(jvmArgs, agentArgs, className, methodName, startTime)
+            val meta = TraceMetaInfo(
+                jvmArgs = jvmArgs,
+                agentArgs = agentArgs,
+                className = className,
+                methodName = methodName,
+                startTime = startTime,
+                isDiff = isDiff,
+                leftTraceMetaInfo = leftTraceMetaInfo,
+                rightTraceMetaInfo = rightTraceMetaInfo
+            )
             meta.endTime = endTime
 
             if (!reader.readMap(PROPERTIES_HEADER, meta.props)) return null
@@ -449,7 +494,7 @@ internal fun DataInput.readDiffStatus(): DiffStatus? {
 }
 
 internal fun openNewStandardDataAndIndex(baseFileName: String): Pair<OutputStream, OutputStream> {
-    return openNewFile(baseFileName).buffered(OUTPUT_BUFFER_SIZE) to openNewFile("$baseFileName.$INDEX_FILENAME_EXT").buffered(OUTPUT_BUFFER_SIZE)
+    return openNewFile(baseFileName).buffered(OUTPUT_BUFFER_SIZE)to openNewFile("$baseFileName.$INDEX_FILENAME_EXT").buffered(OUTPUT_BUFFER_SIZE)
 }
 
 internal fun openNewFile(name: String): OutputStream {
