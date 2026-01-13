@@ -420,6 +420,8 @@ class LazyTraceReader private constructor(
                 postprocessor = postprocessor
             )
 
+    private var contextLoaded = false
+
     val context: TraceContext = TraceContext()
 
     val metaInfo: TraceMetaInfo? get() = input.metaInfo
@@ -476,9 +478,13 @@ class LazyTraceReader private constructor(
 
     fun readRoots(): List<TRTracePoint> {
         var start = System.currentTimeMillis()
-        loadContext()
-        Logger.debug { "Context loaded in ${System.currentTimeMillis() - start} ms" }
-        start = System.currentTimeMillis()
+
+        if (!contextLoaded) {
+            loadContext()
+            Logger.debug { "Context loaded in ${System.currentTimeMillis() - start} ms" }
+            start = System.currentTimeMillis()
+            contextLoaded = true
+        }
 
         val roots = mutableMapOf<Int, TRTracePoint>()
 
