@@ -1778,19 +1778,35 @@ internal abstract class ManagedStrategy(
         )
 
         val deterministicMethodDescriptor = getDeterministicMethodDescriptorOrNull(receiver, params, methodCallInfo)
-        val shouldInterceptAtomicMethod = atomicMethodDescriptor != null && trackAtomicMethodMemoryAccess(
-            receiver,
-            methodDescriptor.className,
-            methodDescriptor.methodName,
-            codeLocation,
-            params,
-            atomicMethodDescriptor
-        )
+        var location: MemoryLocation? = null
+        if (receiver != null && atomicMethodDescriptor != null) {
+            location = objectTracker.getAtomicAccessMemoryLocation(
+                context,
+                methodDescriptor.className,
+                methodDescriptor.methodName,
+                receiver,
+                params,
+                atomicMethodDescriptor,
+            )
+        }
+
+        var shouldInterceptAtomicMethod: Boolean = false;
+        if (memoryTracker != null && location != null) {
+            shouldInterceptAtomicMethod = memoryTracker!!.trackAtomicMethodMemoryAccess(
+                receiver,
+                codeLocation,
+                params,
+                atomicMethodDescriptor,
+                threadId,
+                location,
+            )
+        }
 
         if (deterministicMethodDescriptor != null) {
             deterministicMethodDescriptor.processDeterministicMethodCall(receiver, params, methodCallInfo, interceptor)
         } else if (memoryTracker != null && shouldInterceptAtomicMethod) {
             interceptor?.interceptResult(memoryTracker!!.interceptReadResult(threadId))
+        } else {
             // we are at normal deterministic method => no need to enforce the deterministic result => do nothing
         }
 
@@ -1882,79 +1898,7 @@ internal abstract class ManagedStrategy(
         enterAnalysisSection(threadId, methodSection)
     }
 
-    private fun trackAtomicMethodMemoryAccess(
-        owner: Any?,
-        className: String,
-        methodName: String,
-        codeLocation: Int,
-        params: Array<Any?>,
-        methodDescriptor: AtomicMethodDescriptor,
-    ): Boolean {
-        if (owner == null)
-            return false
-        if (memoryTracker == null)
-            return false
-        val iThread = threadScheduler.getCurrentThreadId()
-        val location = objectTracker.getAtomicAccessMemoryLocation(context, className, methodName, owner, params, methodDescriptor)
-            ?: return false
-        var argOffset = 0
-        // atomic reflection case (AFU, VarHandle or Unsafe) - the first argument is a reflection object
-        argOffset += if (!isAtomic(owner) && !isAtomicArray(owner)) 1 else 0
-        // Unsafe has an additional offset argument
-        argOffset += if (isUnsafe(owner)) 1 else 0
-        // array accesses (besides Unsafe) take index as an additional argument
-        argOffset += if (location is ArrayElementMemoryLocation && !isUnsafe(owner)) 1 else 0
-        when (methodDescriptor.kind) {
-            AtomicMethodKind.SET -> {
-                memoryTracker!!.beforeWrite(iThread, codeLocation, location,
-                    value = params[argOffset]
-                )
-            }
-            AtomicMethodKind.GET -> {
-                memoryTracker!!.beforeRead(iThread, codeLocation, location)
-            }
-            AtomicMethodKind.GET_AND_SET -> {
-                memoryTracker!!.beforeGetAndSet(iThread, codeLocation, location,
-                    newValue = params[argOffset]
-                )
-            }
-            AtomicMethodKind.COMPARE_AND_SET, AtomicMethodKind.WEAK_COMPARE_AND_SET -> {
-                memoryTracker!!.beforeCompareAndSet(iThread, codeLocation, location,
-                    expectedValue = params[argOffset],
-                    newValue = params[argOffset + 1]
-                )
-            }
-            AtomicMethodKind.COMPARE_AND_EXCHANGE -> {
-                memoryTracker!!.beforeCompareAndExchange(iThread, codeLocation, location,
-                    expectedValue = params[argOffset],
-                    newValue = params[argOffset + 1]
-                )
-            }
-            AtomicMethodKind.GET_AND_ADD -> {
-                memoryTracker!!.beforeGetAndAdd(iThread, codeLocation, location,
-                    delta = (params[argOffset] as Number)
-                )
-            }
-            AtomicMethodKind.ADD_AND_GET -> {
-                memoryTracker!!.beforeAddAndGet(iThread, codeLocation, location,
-                    delta = (params[argOffset] as Number)
-                )
-            }
-            AtomicMethodKind.GET_AND_INCREMENT -> {
-                memoryTracker!!.beforeGetAndAdd(iThread, codeLocation, location, delta = 1.convert(location.type))
-            }
-            AtomicMethodKind.INCREMENT_AND_GET -> {
-                memoryTracker!!.beforeAddAndGet(iThread, codeLocation, location, delta = 1.convert(location.type))
-            }
-            AtomicMethodKind.GET_AND_DECREMENT -> {
-                memoryTracker!!.beforeGetAndAdd(iThread, codeLocation, location, delta = (-1).convert(location.type))
-            }
-            AtomicMethodKind.DECREMENT_AND_GET -> {
-                memoryTracker!!.beforeAddAndGet(iThread, codeLocation, location, delta = (-1).convert(location.type))
-            }
-        }
-        return (methodDescriptor.kind != AtomicMethodKind.SET)
-    }
+
 
     override fun onMethodCallReturn(
         threadDescriptor: ThreadDescriptor,
