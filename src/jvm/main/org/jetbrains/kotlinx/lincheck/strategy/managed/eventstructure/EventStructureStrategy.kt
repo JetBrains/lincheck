@@ -47,7 +47,8 @@ internal class EventStructureStrategy(
     }
 
     private val eventStructure: EventStructure =
-        EventStructure(nThreads, memoryInitializer, ::onInconsistency) { iThread, reason ->
+        EventStructure( memoryInitializer, ::onInconsistency) { iThread, reason ->
+            // NOTE: not sure if you want to keep this callback.
             switchCurrentThread(iThread, reason, mustSwitch = true)
         }
 
@@ -86,6 +87,7 @@ internal class EventStructureStrategy(
         eventStructure.initializeExploration()
     }
 
+    // NOTE: runInvocationImpl is not here and I think some version of it should be adapted, but I am not exactly sure how
     override fun runInvocationImpl(): InvocationResult {
         val (result, inconsistency) = runNextExploration()
         if (inconsistency != null) {
@@ -103,6 +105,7 @@ internal class EventStructureStrategy(
     }
 
     // TODO: rename & refactor!
+    // NOTE: There are some missing invocation results so no idea what I should do there
     fun runNextExploration(): Pair<InvocationResult?, Inconsistency?> {
         var result: InvocationResult? = null
         var inconsistency: Inconsistency? = eventStructure.checkConsistency()
@@ -177,6 +180,7 @@ internal class EventStructureStrategy(
             get() = consistentInvocations + inconsistentInvocations + blockedInvocations
 
         fun update(result: InvocationResult?, inconsistency: Inconsistency?) {
+            // NOTE: Invocation result changed here I need to check if this missing from the rebase or it has been actually removed.
             if (result is SpinLoopBoundInvocationResult) {
                 check(inconsistency == null)
                 blockedInvocations++
@@ -319,6 +323,7 @@ internal class EventStructureStrategy(
 
     override fun beforePart(part: ExecutionPart) {
         super.beforePart(part)
+        //TODO get rid of nThreads here
         val forkedThreads = (0 until eventStructure.nThreads)
             .filter { it != eventStructure.mainThreadId && it != eventStructure.initThreadId }
             .toSet()
@@ -349,6 +354,7 @@ internal class EventStructureStrategy(
         isTestInstanceRegistered = true
     }
 
+    //NOTE: There is both onStart and onActorStart (Is there any difference, or onStart is gone?)
     override fun onStart(iThread: Int) {
         super.onStart(iThread)
         if (iThread != eventStructure.mainThreadId && iThread != eventStructure.initThreadId) {
@@ -356,6 +362,7 @@ internal class EventStructureStrategy(
         }
     }
 
+    //NOTE: Same here
     override fun onFinish(iThread: Int) {
         // TODO: refactor, make `switchCurrentThread` private again in ManagedStrategy,
         //   call overridden `onStart` and `onFinish` methods only when thread is active
@@ -408,6 +415,7 @@ internal class EventStructureStrategy(
         eventStructure.addCoroutineSuspendResponseEvent(iThread, currentActorId[iThread])
     }
 
+    // NOTE: In ManagedStrategy we have two flavours of afterCoroutineCancelletion none of which contain promptCancellation (how do we translate it)
     override fun afterCoroutineCancelled(iThread: Int, promptCancellation: Boolean, cancellationResult: CancellationResult) {
         super.afterCoroutineCancelled(iThread, promptCancellation, cancellationResult)
         if (cancellationResult == CancellationResult.CANCELLATION_FAILED)
@@ -416,11 +424,13 @@ internal class EventStructureStrategy(
         eventStructure.addCoroutineCancelResponseEvent(iThread, currentActorId[iThread])
     }
 
-    override fun onResumeCoroutine(iThread: Int, iResumedThread: Int, iResumedActor: Int) {
+    // NOTE: I could not find any matching methods in managed strategy (There is something about coroutine suspended but I think it is different)
+    override fun afterCoroutineResumed(iThread: Int, iResumedThread: Int, iResumedActor: Int) {
         super.onResumeCoroutine(iThread, iResumedThread, iResumedActor)
         eventStructure.addCoroutineResumeEvent(iThread, iResumedThread, iResumedActor)
     }
 
+    //NOTE: I could not find any corresponding method, there is `isTestThreadCoroutineSuspended`, but I do not think it matches
     override fun isCoroutineResumed(iThread: Int, iActor: Int): Boolean {
         if (!super.isCoroutineResumed(iThread, iActor))
             return false
@@ -432,27 +442,51 @@ internal class EventStructureStrategy(
 }
 
 typealias ReportInconsistencyCallback = (Inconsistency) -> Unit
-typealias InternalThreadSwitchCallback = (ThreadID, SwitchReason) -> Unit
+typealias InternalThreadSwitchCallback = (ThreadId, SwitchReason) -> Unit
 
+//NOTE: things have also changed here but I have not looked it pretty deep.
 private class EventStructureObjectTracker(
     private val eventStructure: EventStructure,
 ) : ObjectTracker {
 
-    override fun registerNewObject(obj: Any) {
+    // NOTE: Some of these are new so I have no idea what to do here.
+    override fun registerThread(threadId: Int, thread: Thread) {
+        TODO("Not yet implemented")
+    }
+    override fun get(id: ObjectID): ObjectEntry? {
+        TODO("Not yet implemented")
+    }
+    override fun get(obj: Any?): ObjectEntry? {
+        TODO("Not yet implemented")
+    }
+    override fun registerExternalObject(obj: Any): ObjectEntry {
+        TODO("Not yet implemented")
+    }
+    override fun enumerateObjectEntries(): Sequence<ObjectEntry> {
+        TODO("Not yet implemented")
+    }
+
+    override fun retain(predicate: (ObjectEntry) -> Boolean) {
+        TODO("Not yet implemented")
+    }
+
+
+    override fun shouldTrackObjectAccess(obj: Any?): Boolean = true
+    override fun registerObjectLink(fromObject: Any?, toObject: Any?) {}
+
+    // NOTE: we shold return an obhect enty here. Not sure if we should use the objectRegistry of the eventStructure
+    override fun registerNewObject(obj: Any): ObjectEntry {
         val iThread = (Thread.currentThread() as TestThread).threadId
         eventStructure.addObjectAllocationEvent(iThread, obj.opaque())
     }
 
-    override fun registerObjectLink(fromObject: Any, toObject: Any?) {}
-
+    // NOTE: the two methods below seem to be gone
     override fun initializeObject(obj: Any) {
         val isRegistered = (eventStructure.objectRegistry[obj.opaque()] != null)
         if (!isRegistered && !obj.isPrimitive()) {
             registerNewObject(obj)
         }
     }
-
-    override fun shouldTrackObjectAccess(obj: Any): Boolean = true
 
     override fun getObjectId(obj: Any): ObjectID {
         return eventStructure.objectRegistry.getOrRegisterObjectID(obj.opaque())
@@ -622,6 +656,7 @@ private class EventStructureMemoryTracker(
 
 }
 
+// NOTE: Some issues here as well , there are some missing members
 private class EventStructureMonitorTracker(
     private val eventStructure: EventStructure,
     private val objectRegistry: ObjectRegistry,
@@ -634,6 +669,7 @@ private class EventStructureMonitorTracker(
 
     // for threads waiting on the mutex,
     // stores the lock stack of the current thread for the awaited mutex
+    // TODO: turn into a map
     private val waitLockStack = ArrayIntMap<MutableList<AtomicThreadEvent>>(eventStructure.nThreads)
 
     private fun canAcquireMonitor(iThread: Int, mutexID: ValueID): Boolean {
@@ -645,6 +681,20 @@ private class EventStructureMonitorTracker(
         val mutexID = objectRegistry[monitor]!!.id
         return canAcquireMonitor(iThread, mutexID)
     }
+
+    // Not sure how to proceed with these (I need to look into it)
+    override fun registerThread(threadId: Int) {
+        TODO("Not yet implemented")
+    }
+
+    override fun acquiringThreads(monitor: Any): List<Int> {
+        TODO("Not yet implemented")
+    }
+
+    override fun interruptWait(threadId: Int) {
+        TODO("Not yet implemented")
+    }
+
 
     override fun acquireMonitor(iThread: Int, monitor: Any): Boolean {
         // issue lock-request event
@@ -658,9 +708,14 @@ private class EventStructureMonitorTracker(
         return (lockResponse != null)
     }
 
-    override fun releaseMonitor(iThread: Int, monitor: Any) {
+    // NOTE: This should be a bool?
+    override fun releaseMonitor(iThread: Int, monitor: Any): Boolean {
         issueUnlock(iThread, monitor.opaque())
+        //NOTE: ???
+        return true;
     }
+
+
 
     private fun issueLockRequest(iThread: Int, monitor: OpaqueValue): AtomicThreadEvent {
         val mutexID = objectRegistry[monitor]!!.id
@@ -824,15 +879,27 @@ private class EventStructureMonitorTracker(
 
 }
 
+//NOTE: Same as the class above
 private class EventStructureParkingTracker(
     private val eventStructure: EventStructure,
 ) : ParkingTracker {
+
+    //NOTE: should we do anything here? This is a new method
+    override fun registerThread(threadId: Int) {
+        TODO("Not yet implemented")
+    }
+
+    // NOTE: not sure if we should handle this yet?
+    override fun interruptPark(threadId: Int) {
+        TODO("Not yet implemented")
+    }
 
     override fun park(iThread: Int) {
         eventStructure.addParkRequestEvent(iThread)
     }
 
-    override fun waitUnpark(iThread: Int): Boolean {
+    //NOTE: allowSpuriusWakeup has been added and not sure how to use that
+    override fun waitUnpark(iThread: Int, allowSpuriousWakeUp: Boolean): Boolean {
         val parkRequest = eventStructure.getPendingBlockingRequest(iThread)
             ?.takeIf { it.label is ParkLabel }
             ?: return false
@@ -843,6 +910,8 @@ private class EventStructureParkingTracker(
     override fun unpark(iThread: Int, unparkedThreadId: Int) {
         eventStructure.addUnparkEvent(iThread, unparkedThreadId)
     }
+
+
 
     override fun isParked(iThread: Int): Boolean {
         val blockingRequest = eventStructure.getPendingBlockingRequest(iThread)
