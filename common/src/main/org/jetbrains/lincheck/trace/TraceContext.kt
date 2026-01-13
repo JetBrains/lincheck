@@ -33,7 +33,7 @@ private val EMPTY_STACK_TRACE = StackTraceElement("", "", "", 0)
 class TraceContext {
     private val threadNames = ConcurrentHashMap<Int, String>()
     private val accessPaths = ArrayList<AccessPath?>()
-    private val locations = IndexedPool<CodeLocation>()
+    private val locations = ArrayList<CodeLocation?>()
     private val classes = IndexedPool<ClassDescriptor>()
     private val methods = IndexedPool<MethodDescriptor>()
     private val fields = IndexedPool<FieldDescriptor>()
@@ -133,7 +133,7 @@ class TraceContext {
         variables.restore(id, value)
     }
 
-    val codeLocations: List<CodeLocation?> get() = locations.content
+    val codeLocations: List<CodeLocation?> get() = locations
 
     fun newCodeLocation(
         stackTraceElement: StackTraceElement,
@@ -141,8 +141,10 @@ class TraceContext {
         argumentNames: List<AccessPath?>? = null,
         activeLocals: List<String>? = null
     ): Int {
+        val id = locations.size
         val location = CodeLocation(stackTraceElement, accessPath, argumentNames, activeLocals)
-        return locations.getOrCreateId(location)
+        locations.add(location)
+        return id
     }
 
     fun codeLocation(codeLocationId: Int): CodeLocation? =
@@ -151,24 +153,33 @@ class TraceContext {
     fun stackTrace(codeLocationId: Int): StackTraceElement {
         if (codeLocationId == UNKNOWN_CODE_LOCATION_ID) return EMPTY_STACK_TRACE
         val loc = locations[codeLocationId]
+        if (loc == null) {
+            error("Invalid code location id $codeLocationId")
+        }
         return loc.stackTraceElement
     }
 
     fun accessPath(codeLocationId: Int): AccessPath? {
         if (codeLocationId == UNKNOWN_CODE_LOCATION_ID) return null
         val loc = locations[codeLocationId]
+        if (loc == null) {
+            error("Invalid code location id $codeLocationId")
+        }
         return loc.accessPath
     }
     
     fun methodCallArgumentNames(codeLocationId: Int): List<AccessPath?>? {
         if (codeLocationId == UNKNOWN_CODE_LOCATION_ID) return null
         val loc = locations[codeLocationId]
+        if (loc == null) {
+            error("Invalid code location id $codeLocationId")
+        }
         return loc.argumentNames
     }
 
     fun activeLocalsNames(codeLocationId: Int): List<String>? {
         if (codeLocationId == UNKNOWN_CODE_LOCATION_ID) return null
-        val loc = locations[codeLocationId]
+        val loc = locations[codeLocationId] ?: error("Invalid code location id $codeLocationId")
         return loc.activeLocals
     }
 
@@ -185,7 +196,13 @@ class TraceContext {
     }
 
     fun restoreCodeLocation(id: Int, location: CodeLocation) {
-        locations.restore(id, location)
+        check(id >= locations.size || locations[id] == null || locations[id] == location) {
+            "CodeLocation with id $id is already present in context and differs from $location"
+        }
+        while (locations.size <= id) {
+            locations.add(null)
+        }
+        locations[id] = location
     }
 
     fun clear() {

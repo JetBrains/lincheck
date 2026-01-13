@@ -773,6 +773,7 @@ class TraceCollectingEventTracker(
             .drop(1)
         
         val stackTraceCodeLocationIds = stackTrace.map { stackTraceElement ->
+            // TODO JBRes-7631 prevent duplicate code locations
             CodeLocations.newCodeLocation(context, stackTraceElement)
         }
         
