@@ -1300,6 +1300,7 @@ internal abstract class ManagedStrategy(
         codeLocation: Int,
         obj: Any?,
         fieldId: Int,
+        resultInterceptor: ResultInterceptor?,
     ): Unit = threadDescriptor.runInsideIgnoredSection {
         val fieldDescriptor = context.getFieldDescriptor(fieldId)
         if (!fieldDescriptor.isStatic && obj == null) {
@@ -1326,6 +1327,9 @@ internal abstract class ManagedStrategy(
                 isFinal = fieldDescriptor.isFinal,
             )
             memoryTracker!!.beforeRead(threadId, codeLocation, location)
+            if(resultInterceptor != null) {
+                resultInterceptor.interceptResult(memoryTracker!!.interceptReadResult(threadId))
+            }
         }
         loopDetector.beforeReadField(obj)
         return
@@ -1336,6 +1340,7 @@ internal abstract class ManagedStrategy(
         codeLocation: Int,
         array: Any?,
         index: Int,
+        resultInterceptor: ResultInterceptor?,
     ): Unit = threadDescriptor.runInsideIgnoredSection {
         if (array == null) return // ignore, `NullPointerException` will be thrown
         updateSnapshotOnArrayElementAccess(array, index)
@@ -1350,14 +1355,12 @@ internal abstract class ManagedStrategy(
             val location = objectTracker.getArrayAccessMemoryLocation(array, index, type)
             // TODO: Should we use threadID or thread Descriptor here?
             memoryTracker!!.beforeRead(threadId, codeLocation, location)
+            if(resultInterceptor != null) {
+                resultInterceptor.interceptResult(memoryTracker!!.interceptReadResult(threadId))
+            }
         }
         loopDetector.beforeReadArrayElement(array, index)
         return
-    }
-
-    override fun interceptReadResult(): Any? {
-        val iThread = threadScheduler.getCurrentThreadId();
-        return memoryTracker?.interceptReadResult(iThread)
     }
 
     override fun afterReadField(

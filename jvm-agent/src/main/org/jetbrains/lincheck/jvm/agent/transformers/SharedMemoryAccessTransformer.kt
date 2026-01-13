@@ -78,19 +78,36 @@ internal class SharedMemoryAccessTransformer(
             isFinal = FinalFields.isFinalField(owner, fieldName)
         )
 
+        val resultInterceptorLocal = newLocal(OBJECT_TYPE).also {
+            if(configuration.interceptReadResults) {
+                invokeStatic(Injections::createResultInterceptor)
+            } else {
+                pushNull()
+            }
+            storeLocal(it)
+        }
+
         // STACK: <empty>
         invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
         val codeLocationId = loadNewCodeLocationId()
         pushNull()
         push(fieldId)
-        // STACK: descriptor, codeLocation, null, fieldId
+        loadLocal(resultInterceptorLocal)
+        // STACK: descriptor, codeLocation, null, fieldId, resultInterceptor
         invokeStatic(Injections::beforeReadField)
         // STACK: <empty>
-        if(configuration.interceptReadResults) {
-            invokeStatic(Injections::interceptReadResult)
-        } else {
-            super.visitFieldInsn(opcode, owner, fieldName, desc)
-        }
+        ifStatement(
+            condition = {
+                isReadResultIntercepted(resultInterceptorLocal)
+            },
+            thenClause = {
+                getIntreceptedReadResult(resultInterceptorLocal, getType(desc))
+            },
+            elseClause = {
+                super.visitFieldInsn(opcode, owner, fieldName, desc)
+            },
+        )
+
         // STACK: value
         invokeAfterReadField(null, fieldId, getType(desc), codeLocationId)
         // STACK: value
@@ -106,6 +123,15 @@ internal class SharedMemoryAccessTransformer(
             isStatic = false,
             isFinal = FinalFields.isFinalField(owner, fieldName)
         )
+        val resultInterceptorLocal = newLocal(OBJECT_TYPE).also {
+            if(configuration.interceptReadResults) {
+                invokeStatic(Injections::createResultInterceptor)
+            } else {
+                pushNull()
+            }
+            storeLocal(it)
+        }
+
         // STACK: obj
         val ownerName = ownerNameAnalyzer?.stack?.getStackElementAt(0)
         val ownerLocal = newLocal(getType("L$owner;")).also { copyLocal(it) }
@@ -114,17 +140,25 @@ internal class SharedMemoryAccessTransformer(
         val codeLocationId = loadNewCodeLocationId(accessPath = ownerName)
         loadLocal(ownerLocal)
         push(fieldId)
-        // STACK: descriptor, codeLocation, obj, fieldId
+        loadLocal(resultInterceptorLocal)
+        // STACK: descriptor, codeLocation, obj, fieldId, resultInterceptor
         invokeStatic(Injections::beforeReadField)
         // STACK: obj
-        if(configuration.interceptReadResults) {
-            pop()
-            invokeStatic(Injections::interceptReadResult)
-            unbox(getType(desc))
-        } else {
-            super.visitFieldInsn(opcode, owner, fieldName, desc)
-        }
-        // STACK: obj
+
+        ifStatement(
+            condition = {
+                isReadResultIntercepted(resultInterceptorLocal)
+            },
+            thenClause = {
+                pop()
+                getIntreceptedReadResult(resultInterceptorLocal, getType(desc))
+            },
+            elseClause = {
+                super.visitFieldInsn(opcode, owner, fieldName, desc)
+            },
+        )
+
+        // STACK: obj (NOTE: Shouldn't this be value?)
         invokeAfterReadField(ownerLocal, fieldId, getType(desc), codeLocationId)
         // STACK: value
         invokeBeforeEventIfPluginEnabled("read field")
@@ -225,26 +259,47 @@ internal class SharedMemoryAccessTransformer(
         val indexLocal = newLocal(INT_TYPE).also { storeLocal(it) }
         val arrayLocal = newLocal(getType("[$arrayElementType")).also { storeLocal(it) }
         val ownerName = ownerNameAnalyzer?.stack?.getStackElementAt(1)
+        val resultInterceptorLocal = newLocal(OBJECT_TYPE).also {
+            if(configuration.interceptReadResults) {
+                invokeStatic(Injections::createResultInterceptor)
+            } else {
+                pushNull()
+            }
+            storeLocal(it)
+        }
 
         // STACK: <empty>
         invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
         val codeLocationId = loadNewCodeLocationId(accessPath = ownerName)
         loadLocal(arrayLocal)
         loadLocal(indexLocal)
+        loadLocal(resultInterceptorLocal)
         // STACK: descriptor, codeLocation, array, index
         invokeStatic(Injections::beforeReadArray)
         // STACK: <empty>
         loadLocal(arrayLocal)
         loadLocal(indexLocal)
         // STACK: array, index
-        if(configuration.interceptReadResults) {
-            pop()
-            pop()
-            invokeStatic(Injections::interceptReadResult)
-            unbox(arrayElementType)
-        } else {
-            super.visitInsn(opcode)
-        }
+
+        ifStatement(
+            condition = {
+                isReadResultIntercepted(resultInterceptorLocal)
+            },
+            thenClause = {
+                // STACK: array, index
+                pop()
+                // STACK: array
+                pop()
+                // STACK: <empty>
+                getIntreceptedReadResult(resultInterceptorLocal, arrayElementType)
+                // STACK: value
+            },
+            elseClause = {
+                // STACK: array, index
+                super.visitInsn(opcode)
+            },
+        )
+
         // STACK: value
         invokeAfterReadArray(arrayLocal, indexLocal, arrayElementType, codeLocationId)
         // STACK: value
@@ -354,4 +409,24 @@ internal class SharedMemoryAccessTransformer(
         check(arrayType.dimensions > 0)
         return getType(arrayDesc.substring(1))
     }
+
+    private fun GeneratorAdapter.isReadResultIntercepted(resultInterceptorLocal: Int) {
+        // STACK: ...rest
+        loadLocal(resultInterceptorLocal)
+        // STACK: ...rest resultInterceptor
+        invokeStatic(Injections::isResultOrExceptionIntercepted)
+        // STACK: ...rest
+    }
+
+    private fun GeneratorAdapter.getIntreceptedReadResult(resultInterceptorLocal: Int, returnType: Type) {
+        // STACK: ...rest
+        loadLocal(resultInterceptorLocal)
+        // STACK: ...rest resultInterceptor
+        // NOTE: Can we ever decide to intercept with an exception?
+        invokeStatic(Injections::getOrThrowInterceptedResult)
+        // STACK: ...rest result
+        if (returnType == VOID_TYPE) pop() else unbox(returnType)
+        // STACK: ...rest result?
+    }
+
 }

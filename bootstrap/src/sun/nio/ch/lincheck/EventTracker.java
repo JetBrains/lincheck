@@ -59,10 +59,8 @@ public interface EventTracker {
 
     void updateSnapshotBeforeConstructorCall(Object[] objs);
 
-    void beforeReadField(ThreadDescriptor descriptor, int codeLocation, Object obj, int fieldId);
-    void beforeReadArrayElement(ThreadDescriptor descriptor, int codeLocation, Object array, int index);
-
-    Object interceptReadResult();
+    void beforeReadField(ThreadDescriptor descriptor, int codeLocation, Object obj, int fieldId, ResultInterceptor interceptor);
+    void beforeReadArrayElement(ThreadDescriptor descriptor, int codeLocation, Object array, int index, ResultInterceptor interceptor);
 
     void afterReadField(ThreadDescriptor descriptor, int codeLocation, Object obj, int fieldId, Object value);
     void afterReadArrayElement(ThreadDescriptor descriptor, int codeLocation, Object array, int index, Object value);

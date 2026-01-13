@@ -618,25 +618,20 @@ public class Injections {
     /**
      * Called from the instrumented code before each field read.
      */
-    public static void beforeReadField(ThreadDescriptor descriptor, int codeLocation, Object obj, int fieldId) {
+    public static void beforeReadField(ThreadDescriptor descriptor, int codeLocation, Object obj, int fieldId, ResultInterceptor interceptor) {
         EventTracker eventTracker = getEventTracker(descriptor);
         if (descriptor == null || eventTracker == null) return;
-        eventTracker.beforeReadField(descriptor, codeLocation, obj, fieldId);
+        eventTracker.beforeReadField(descriptor, codeLocation, obj, fieldId, interceptor);
     }
 
     /**
      * Called from the instrumented code before any array cell read.
      */
-    public static void beforeReadArray(ThreadDescriptor descriptor, int codeLocation, Object array, int index) {
+    public static void beforeReadArray(ThreadDescriptor descriptor, int codeLocation, Object array, int index, ResultInterceptor interceptor) {
         EventTracker eventTracker = getEventTracker(descriptor);
         if (descriptor == null || eventTracker == null) return;
-        eventTracker.beforeReadArrayElement(descriptor, codeLocation, array, index);
+        eventTracker.beforeReadArrayElement(descriptor, codeLocation, array, index, interceptor);
     }
-
-    public static Object interceptReadResult() {
-        return getEventTracker().interceptReadResult();
-    }
-
 
     /**
      * Called from the instrumented code after each local variable read.

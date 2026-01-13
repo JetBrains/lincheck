@@ -431,6 +431,7 @@ class TraceCollectingEventTracker(
         codeLocation: Int,
         obj: Any?,
         fieldId: Int,
+        resultInterceptor: ResultInterceptor?
     ) {}
 
     override fun beforeReadArrayElement(
@@ -438,9 +439,9 @@ class TraceCollectingEventTracker(
         codeLocation: Int,
         array: Any,
         index: Int,
+        resultInterceptor: ResultInterceptor?
     ) {}
 
-    override fun interceptReadResult(): Any? = null
 
     // Needs to run inside ignored section
     // as uninstrumented std lib code can be overshadowed by instrumented project code.
