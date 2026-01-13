@@ -1778,9 +1778,19 @@ internal abstract class ManagedStrategy(
         )
 
         val deterministicMethodDescriptor = getDeterministicMethodDescriptorOrNull(receiver, params, methodCallInfo)
+        val shouldInterceptAtomicMethod = atomicMethodDescriptor != null && trackAtomicMethodMemoryAccess(
+            receiver,
+            methodDescriptor.className,
+            methodDescriptor.methodName,
+            codeLocation,
+            params,
+            atomicMethodDescriptor
+        )
+
         if (deterministicMethodDescriptor != null) {
             deterministicMethodDescriptor.processDeterministicMethodCall(receiver, params, methodCallInfo, interceptor)
-        } else {
+        } else if (memoryTracker != null && shouldInterceptAtomicMethod) {
+            interceptor?.interceptResult(memoryTracker!!.interceptReadResult(threadId))
             // we are at normal deterministic method => no need to enforce the deterministic result => do nothing
         }
 
@@ -1873,13 +1883,15 @@ internal abstract class ManagedStrategy(
     }
 
     private fun trackAtomicMethodMemoryAccess(
-        owner: Any,
+        owner: Any?,
         className: String,
         methodName: String,
         codeLocation: Int,
         params: Array<Any?>,
         methodDescriptor: AtomicMethodDescriptor,
     ): Boolean {
+        if (owner == null)
+            return false
         if (memoryTracker == null)
             return false
         val iThread = threadScheduler.getCurrentThreadId()
