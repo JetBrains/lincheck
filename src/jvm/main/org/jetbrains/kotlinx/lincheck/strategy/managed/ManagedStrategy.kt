@@ -2217,7 +2217,7 @@ internal abstract class ManagedStrategy(
      *
      * @param iThread number of invoking thread.
      */
-    internal fun afterCoroutineSuspended(iThread: Int) = runInsideIgnoredSection {
+    open internal fun afterCoroutineSuspended(iThread: Int) = runInsideIgnoredSection {
         check(threadScheduler.getCurrentThreadId() == iThread)
         check(runner is ExecutionScenarioRunner)
         check(isScenarioThread(iThread)) {
@@ -2234,7 +2234,7 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    internal fun afterCoroutineResumed(iThread: Int) = runInsideIgnoredSection {
+    open internal fun afterCoroutineResumed(iThread: Int) = runInsideIgnoredSection {
         check(threadScheduler.getCurrentThreadId() == iThread)
         check(isScenarioThread(iThread)) {
             "Special coroutines handling methods should only be called from scenario threads"

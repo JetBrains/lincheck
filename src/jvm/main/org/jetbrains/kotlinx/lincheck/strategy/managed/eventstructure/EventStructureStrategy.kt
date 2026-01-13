@@ -396,11 +396,13 @@ internal class EventStructureStrategy(
         throw ForcibleExecutionFinishError
     }
 
+    // NOTE: I guess this should not be final anymore (this has been changed)
     override fun afterCoroutineSuspended(iThread: Int) {
         eventStructure.addCoroutineSuspendRequestEvent(iThread, currentActorId[iThread])
         super.afterCoroutineSuspended(iThread)
     }
 
+    // NOTE: same as above
     override fun afterCoroutineResumed(iThread: Int) {
         super.afterCoroutineResumed(iThread)
         eventStructure.addCoroutineSuspendResponseEvent(iThread, currentActorId[iThread])
