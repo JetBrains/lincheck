@@ -29,10 +29,10 @@ import org.objectweb.asm.Type
 internal class EventStructureStrategy(
     runner: Runner,
     settings: ManagedStrategySettings,
-    // TODO: Should we turn this on or not?
+    context: TraceContext,
+    // NOTE: Should we turn this on or not?
     // The flag to enable IntelliJ IDEA plugin mode
-    //  val inIdeaPluginReplayMode: Boolean = false,
-) : ManagedStrategy(runner, settings) {
+) : ManagedStrategy(runner, settings, context = context) {
 
     private val memoryInitializer: MemoryInitializer = { location ->
         runInsideIgnoredSection {
