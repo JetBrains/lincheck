@@ -16,6 +16,7 @@ import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_LINE_BREAKPOINT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_EXCLUDE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_INCLUDE
+import org.jetbrains.lincheck.util.isInLiveDebuggerMode
 import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import org.jetbrains.lincheck.util.isInTraceRecorderMode
 import java.lang.instrument.Instrumentation
@@ -23,8 +24,8 @@ import java.lang.instrument.Instrumentation
 /**
  * Agent that is set as `premain` entry class for fat trace debugger jar archive.
  * This archive when attached to the jvm process expects also an option
- * `-Dlincheck.traceDebuggerMode=true` or `-Dlincheck.traceRecorderMode=true`
- * in order to enable trace debugging plugin or trace recorder functionality accordingly.
+ * `-Dlincheck.traceDebuggerMode=true`, `-Dlincheck.traceRecorderMode=true`, or `-Dlincheck.liveDebuggerMode=true`
+ * in order to enable trace debugging plugin, trace recorder functionality, or live debugger functionality accordingly.
  */
 internal object TraceRecorderAgent {
     const val ARGUMENT_FORMAT = "format"
@@ -44,24 +45,27 @@ internal object TraceRecorderAgent {
     @JvmStatic
     fun premain(agentArgs: String?, inst: Instrumentation) {
         /*
-         * Static agent requires Trace Recorder mode.
+         * Static agent requires one of: Trace Recorder mode, Trace Debugger mode, or Live Debugger mode.
          * For now, the mode is selected by system property.
          * If you want to run Trace Recorder, you must set `-Dlincheck.traceRecorderMode=true`.
+         * If you want to run Live Debugger, you must set `-Dlincheck.liveDebuggerMode=true`.
          *
-         * It is an error not to set it.
+         * It is an error not to set any mode.
          */
         // Check if one of the required parameters is set.
-        check(isInTraceRecorderMode) {
+        check(isInTraceRecorderMode || isInLiveDebuggerMode) {
             "When lincheck agent is attached to process, " +
-            "mode should be selected by VM parameter `lincheck.traceRecorderMode`. It is expected to be `true`. " +
-            "Rerun with `-Dlincheck.traceRecorderMode=true`."
+            "mode should be selected by VM parameter `lincheck.traceRecorderMode` or `lincheck.liveDebuggerMode`. " +
+            "One of them is expected to be `true`. " +
+            "Rerun with `-Dlincheck.traceRecorderMode=true` or `-Dlincheck.liveDebuggerMode=true`."
         }
-        // Check that only one parameter is set: one of two must be `false`
-        check(!isInTraceDebuggerMode || !isInTraceRecorderMode) {
+        // Check that only one parameter is set
+        val modesEnabled = listOf(isInTraceDebuggerMode, isInTraceRecorderMode, isInLiveDebuggerMode).count { it }
+        check(modesEnabled == 1) {
             "When lincheck agent is attached to process, " +
-            "mode should be selected by one of VM parameters `lincheck.traceDebuggerMode` or " +
-            "`lincheck.traceRecorderMode`. Only one of them expected to be `true`. " +
-            "Rerun with `-Dlincheck.traceDebuggerMode=true` or `-Dlincheck.traceRecorderMode=true` but not both."
+            "mode should be selected by one of VM parameters `lincheck.traceDebuggerMode`, " +
+            "`lincheck.traceRecorderMode`, or `lincheck.liveDebuggerMode`. Only one of them expected to be `true`. " +
+            "Rerun with exactly one mode flag set."
         }
         TraceAgentParameters.parseArgs(agentArgs, ADDITIONAL_ARGS)
         LincheckInstrumentation.attachJavaAgentStatically(inst)

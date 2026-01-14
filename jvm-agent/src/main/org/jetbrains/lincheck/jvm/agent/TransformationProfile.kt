@@ -53,6 +53,8 @@ class TransformationConfiguration(
     var trackCoroutineSuspensions: Boolean = false,
     var interceptCoroutineDelays: Boolean = false,
 
+    var trackSnapshotLineBreakpoints: Boolean = false,
+
     var wrapInIgnoredSection: Boolean = false,
 
     // TODO: in the future, we may want to provide finer-grained control
@@ -166,6 +168,8 @@ internal fun TransformationConfiguration.shouldApplyVisitor(visitorClass: Class<
         CoroutineCancellabilitySupportTransformer::class.java -> trackCoroutineSuspensions
         CoroutineDelaySupportTransformer::class.java -> interceptCoroutineDelays
 
+        SnapshotBreakpointTransformer::class.java -> trackSnapshotLineBreakpoints
+
         IgnoredSectionWrapperTransformer::class.java -> wrapInIgnoredSection
 
         // the configuration does not govern other types of transformers,
@@ -179,6 +183,7 @@ fun createTransformationProfile(
     includeClasses: List<String> = emptyList(),
     excludeClasses: List<String> = emptyList(),
 ): TransformationProfile {
+    if (isInLiveDebuggerMode) return LiveDebuggerTransformationProfile
     val defaultProfile = when (mode) {
         STRESS -> StressDefaultTransformationProfile
         TRACE_RECORDING -> TraceRecorderDefaultTransformationProfile
@@ -399,6 +404,19 @@ object ModelCheckingDefaultTransformationProfile : TransformationProfile {
 
             trackCoroutineSuspensions = true
             interceptCoroutineDelays = true
+        }
+    }
+}
+
+object LiveDebuggerTransformationProfile : TransformationProfile {
+    override fun getMethodConfiguration(
+        className: String,
+        methodName: String,
+        descriptor: String
+    ): TransformationConfiguration {
+        // In live debugger mode, only track snapshot line breakpoints
+        return TransformationConfiguration().apply {
+            trackSnapshotLineBreakpoints = true
         }
     }
 }
