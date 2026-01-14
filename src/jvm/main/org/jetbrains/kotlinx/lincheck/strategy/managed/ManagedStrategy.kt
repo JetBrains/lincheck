@@ -1327,9 +1327,7 @@ internal abstract class ManagedStrategy(
                 isFinal = fieldDescriptor.isFinal,
             )
             memoryTracker!!.beforeRead(threadId, codeLocation, location)
-            if(resultInterceptor != null) {
-                resultInterceptor.interceptResult(memoryTracker!!.interceptReadResult(threadId))
-            }
+            resultInterceptor?.interceptResult(memoryTracker!!.interceptReadResult(threadId))
         }
         loopDetector.beforeReadField(obj)
         return
@@ -1355,9 +1353,7 @@ internal abstract class ManagedStrategy(
             val location = objectTracker.getArrayAccessMemoryLocation(array, index, type)
             // TODO: Should we use threadID or thread Descriptor here?
             memoryTracker!!.beforeRead(threadId, codeLocation, location)
-            if(resultInterceptor != null) {
-                resultInterceptor.interceptResult(memoryTracker!!.interceptReadResult(threadId))
-            }
+            resultInterceptor?.interceptResult(memoryTracker!!.interceptReadResult(threadId))
         }
         loopDetector.beforeReadArrayElement(array, index)
         return
@@ -1769,7 +1765,6 @@ internal abstract class ManagedStrategy(
             threadScheduler.abortCurrentThread()
         }
 
-        // obtain deterministic method descriptor if required
         val methodCallInfo = MethodCallInfo(
             ownerType = Types.ObjectType(methodDescriptor.className),
             methodSignature = methodDescriptor.methodSignature,
@@ -1777,7 +1772,9 @@ internal abstract class ManagedStrategy(
             methodId = methodId,
         )
 
+        // obtain deterministic method descriptor if required
         val deterministicMethodDescriptor = getDeterministicMethodDescriptorOrNull(receiver, params, methodCallInfo)
+
         var location: MemoryLocation? = null
         if (receiver != null && atomicMethodDescriptor != null) {
             location = objectTracker.getAtomicAccessMemoryLocation(
@@ -1789,8 +1786,7 @@ internal abstract class ManagedStrategy(
                 atomicMethodDescriptor,
             )
         }
-
-        var shouldInterceptAtomicMethod: Boolean = false;
+        var shouldInterceptAtomicMethod: Boolean = false
         if (memoryTracker != null && location != null) {
             shouldInterceptAtomicMethod = memoryTracker!!.trackAtomicMethodMemoryAccess(
                 receiver,
@@ -1822,7 +1818,6 @@ internal abstract class ManagedStrategy(
         if (receiver == null && methodSection < AnalysisSectionType.ATOMIC) {
             LincheckInstrumentation.ensureClassHierarchyIsTransformed(methodDescriptor.className)
         }
-
 
         // in the case of atomics API setter method call, notify the object tracker about a new link between objects
         if (atomicMethodDescriptor != null && atomicMethodDescriptor.kind.isSetter) {
@@ -1897,8 +1892,6 @@ internal abstract class ManagedStrategy(
         // if the method has certain guarantees, enter the corresponding section
         enterAnalysisSection(threadId, methodSection)
     }
-
-
 
     override fun onMethodCallReturn(
         threadDescriptor: ThreadDescriptor,

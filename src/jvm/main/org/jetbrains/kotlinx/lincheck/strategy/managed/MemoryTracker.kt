@@ -62,7 +62,7 @@ fun MemoryTracker.trackAtomicMethodMemoryAccess(
     iThread: ThreadId,
     location: MemoryLocation,
 ): Boolean {
-    if(methodDescriptor == null)
+    if (methodDescriptor == null)
         return false
     var argOffset = 0
     // atomic reflection case (AFU, VarHandle or Unsafe) - the first argument is a reflection object

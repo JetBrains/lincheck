@@ -79,7 +79,7 @@ internal class SharedMemoryAccessTransformer(
         )
 
         val resultInterceptorLocal = newLocal(OBJECT_TYPE).also {
-            if(configuration.interceptReadResults) {
+            if (configuration.interceptReadResults) {
                 invokeStatic(Injections::createResultInterceptor)
             } else {
                 pushNull()
@@ -124,7 +124,7 @@ internal class SharedMemoryAccessTransformer(
             isFinal = FinalFields.isFinalField(owner, fieldName)
         )
         val resultInterceptorLocal = newLocal(OBJECT_TYPE).also {
-            if(configuration.interceptReadResults) {
+            if (configuration.interceptReadResults) {
                 invokeStatic(Injections::createResultInterceptor)
             } else {
                 pushNull()
@@ -260,7 +260,7 @@ internal class SharedMemoryAccessTransformer(
         val arrayLocal = newLocal(getType("[$arrayElementType")).also { storeLocal(it) }
         val ownerName = ownerNameAnalyzer?.stack?.getStackElementAt(1)
         val resultInterceptorLocal = newLocal(OBJECT_TYPE).also {
-            if(configuration.interceptReadResults) {
+            if (configuration.interceptReadResults) {
                 invokeStatic(Injections::createResultInterceptor)
             } else {
                 pushNull()
