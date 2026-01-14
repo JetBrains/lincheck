@@ -73,21 +73,24 @@ fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName:
             output.startNewRoot(outputThreadId)
             if (leftThreadId >= 0 && rightThreadId >= 0) {
                 output.context.setThreadName(outputThreadId, name)
-                // Diff from roots into virtual root for diff, as it can have two children: added and removed
-                val outputRoot = TRMethodCallTracePoint(
-                    context = output.context,
-                    threadId = outputThreadId,
-                    codeLocationId = UNKNOWN_CODE_LOCATION_ID,
-                    methodId = output.context.getOrCreateMethodId(
-                        "<diff>",
-                        "<diff>",
-                        Types.MethodType(Types.VOID_TYPE)
-                    ),
-                    obj = null,
-                    parameters = emptyList(),
-                    eventId = cloner.generateEventId(),
-                )
-                outputRoot.save(output)
+                // Diff from roots into virtual root for diff, if we need it
+                val outputRoot = if (!TracePointComparator.strictEqual(leftRoots[leftThreadId], rightRoots[rightThreadId])) {
+                    TRMethodCallTracePoint(
+                        context = output.context,
+                        threadId = outputThreadId,
+                        codeLocationId = UNKNOWN_CODE_LOCATION_ID,
+                        methodId = output.context.getOrCreateMethodId(
+                            "<diff>",
+                            "<root>",
+                            Types.MethodType(Types.VOID_TYPE)
+                        ),
+                        obj = null,
+                        parameters = emptyList(),
+                        eventId = cloner.generateEventId(),
+                    ).also { it.save(output) }
+                } else {
+                    null
+                }
                 // Make diff!
                 diffTracepointSubtree(
                     output = output,
@@ -99,7 +102,7 @@ fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName:
                     rightReader = right,
                     rightPoints = listOf(rightRoots[rightThreadId])
                 )
-                outputRoot.saveFooter(output)
+                outputRoot?.saveFooter(output)
             } else if (leftThreadId >= 0) {
                 // Only in left -> whole thread is removed
                 output.context.setThreadName(outputThreadId, "$name: Thread not present in right trace")
@@ -161,7 +164,7 @@ private fun diffTracepointSubtree(
     output: TraceWriter,
     cloner: TracePointCloner,
     cmp: TracePointComparator,
-    outputRoot: TRContainerTracePoint,
+    outputRoot: TRContainerTracePoint?,
     leftReader: LazyTraceReader,
     leftPoints: List<TRTracePoint?>,
     rightReader: LazyTraceReader,
@@ -181,7 +184,7 @@ private fun diffTracepointSubtree(
                     // "Remove" left and make it without children
                     val oldPoint = cloner.cloneLeftTracePoint(lp, rp.eventId)
                     oldPoint.diffStatus = DiffStatus.EDITED_OLD
-                    outputRoot.addChild(oldPoint)
+                    outputRoot?.addChild(oldPoint)
                     oldPoint.save(output)
                     if (oldPoint is TRContainerTracePoint) {
                         oldPoint.saveFooter(output)
@@ -190,7 +193,7 @@ private fun diffTracepointSubtree(
                 // Copy tracepoint itself from right subtree for now
                 val outputPoint = cloner.cloneRightTracePoint(rp, lp.eventId)
                 outputPoint.diffStatus = if (strict) DiffStatus.UNCHANGED else DiffStatus.EDITED_NEW
-                outputRoot.addChild(outputPoint)
+                outputRoot?.addChild(outputPoint)
                 outputPoint.save(output)
 
                 // Maybe, we need to go deeper?
