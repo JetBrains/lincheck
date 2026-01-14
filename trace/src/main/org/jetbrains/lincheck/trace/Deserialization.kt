@@ -476,6 +476,7 @@ class LazyTraceReader private constructor(
         input.close()
     }
 
+    @Synchronized
     fun readRoots(): List<TRTracePoint> {
         var start = System.currentTimeMillis()
 
@@ -519,6 +520,7 @@ class LazyTraceReader private constructor(
         return roots.entries.sortedBy { it.key }.map { (_, tracePoint) -> tracePoint }
     }
 
+    @Synchronized
     fun loadAllChildren(parent: TRContainerTracePoint) {
         val (start, end) = callTracepointChildren[parent.eventId]
             ?: error("TRContainerTracePoint ${parent.eventId} is not found in index")
@@ -542,6 +544,7 @@ class LazyTraceReader private constructor(
 
     fun loadChild(parent: TRContainerTracePoint, childIdx: Int): Unit = loadChildrenRange(parent, childIdx, 1)
 
+    @Synchronized
     fun loadChildrenRange(parent: TRContainerTracePoint, from: Int, count: Int) {
         require(from in 0..<parent.events.size) { "From index $from must be in range 0..<${parent.events.size}" }
         require(count in 1..parent.events.size - from) { "Count $count must be in range 1..${parent.events.size - from}" }
@@ -557,6 +560,7 @@ class LazyTraceReader private constructor(
         )
     }
 
+    @Synchronized
     fun getChildAndRestorePosition(parent: TRContainerTracePoint, childIdx: Int): TRTracePoint? {
         val oldPosition = data.position()
         loadChild(parent, childIdx)
