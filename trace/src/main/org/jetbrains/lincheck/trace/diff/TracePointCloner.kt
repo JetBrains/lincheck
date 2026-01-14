@@ -10,9 +10,7 @@
 
 package org.jetbrains.lincheck.trace.diff
 
-import org.jetbrains.lincheck.descriptors.FieldDescriptor
-import org.jetbrains.lincheck.descriptors.MethodDescriptor
-import org.jetbrains.lincheck.descriptors.VariableDescriptor
+import org.jetbrains.lincheck.descriptors.*
 import org.jetbrains.lincheck.trace.*
 import java.io.DataOutput
 
@@ -176,6 +174,16 @@ class TracePointCloner(
         return result
     }
 
+    private fun AccessLocation.clone(): AccessLocation =
+        when (this) {
+            is LocalVariableAccessLocation -> LocalVariableAccessLocation(context.getVariableDescriptor(this.variableDescriptor.clone()))
+            is StaticFieldAccessLocation -> StaticFieldAccessLocation(context.getFieldDescriptor(this.fieldDescriptor.clone()))
+            is ObjectFieldAccessLocation -> ObjectFieldAccessLocation(context.getFieldDescriptor(this.fieldDescriptor.clone()))
+            is ArrayElementByIndexAccessLocation -> this
+            is ArrayElementByNameAccessLocation -> ArrayElementByNameAccessLocation(cloneAccessPath(this.indexAccessPath)!!)
+            else -> throw IllegalArgumentException("Unsupported access location $this")
+        }
+
     private fun cloneCodeLocation(tracePoint: TRTracePoint, codeLocationMap: MutableList<Int>): Int =
         cloneCodeLocation(tracePoint, tracePoint.codeLocationId, codeLocationMap)
 
@@ -183,9 +191,16 @@ class TracePointCloner(
         if (srcId == UNKNOWN_CODE_LOCATION_ID) return UNKNOWN_CODE_LOCATION_ID
         if (srcId < codeLocationMap.size && codeLocationMap[srcId] != UNKNOWN_CODE_LOCATION_ID) return codeLocationMap[srcId]
         val srcLoc = tracePoint.context.codeLocation(srcId)!!
-        val dstId = context.newCodeLocation(srcLoc.stackTraceElement, srcLoc.accessPath, srcLoc.argumentNames)
+        val dstId = context.newCodeLocation(srcLoc.stackTraceElement, cloneAccessPath(srcLoc.accessPath), srcLoc.argumentNames)
         addToMap(codeLocationMap, srcId, dstId)
         return dstId
+    }
+
+    private fun cloneAccessPath(accessPath: AccessPath?): AccessPath? {
+        if (accessPath == null) return null
+        val list = mutableListOf<AccessLocation>()
+        accessPath.locations.forEach { list.add(it.clone()) }
+        return AccessPath(list)
     }
 
     private fun cloneCodeLocationsByIds(tracePoint: TRTracePoint, codeLocationMap: MutableList<Int>, codeLocations: List<Int>): List<Int> {
