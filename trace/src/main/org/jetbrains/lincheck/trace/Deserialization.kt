@@ -69,9 +69,9 @@ private class DataBlock(
         this.accDataSize = accDataSize
     }
 
-    fun coversPhysicalOffset(offset: Long): Boolean = offset in physicalStart..<physicalEnd
+    fun coversPhysicalOffset(offset: Long): Boolean = offset in physicalStart ..< physicalEnd
 
-    fun coversLogicalOffset(offset: Long): Boolean = offset in logicalDataStart..<logicalDataStart + dataSize
+    fun coversLogicalOffset(offset: Long): Boolean = offset in logicalDataStart ..< logicalDataStart + dataSize
 
     /**
      * For usage with [List.binarySearch]
@@ -366,8 +366,8 @@ class LazyTraceReader private constructor(
 
     @Synchronized
     fun loadChildrenRange(parent: TRContainerTracePoint, from: Int, count: Int) {
-        require(from in 0..<parent.events.size) { "From index $from must be in range 0..<${parent.events.size}" }
-        require(count in 1..parent.events.size - from) { "Count $count must be in range 1..${parent.events.size - from}" }
+        require(from in 0 ..< parent.events.size) { "From index $from must be in range 0 ..< ${parent.events.size}" }
+        require(count in 1 ..parent.events.size - from) { "Count $count must be in range 1 .. ${parent.events.size - from}" }
 
         data.seek(calculatePhysicalOffset(parent.threadId, parent.getChildAddress(from)))
         loadTracePoints(
