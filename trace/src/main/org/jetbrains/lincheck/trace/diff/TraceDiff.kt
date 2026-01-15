@@ -16,6 +16,9 @@ import java.io.DataOutputStream
 import java.io.File
 import java.io.FileOutputStream
 
+private typealias ThreadMap = Map<String, Triple<Int, Int, Int>>
+
+
 fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName: String) {
     require(!left.isDiff) { "Cannot diff other diffs: left trace is diff" }
     require(!right.isDiff) { "Cannot diff other diffs: right trace is diff" }
@@ -28,31 +31,9 @@ fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName:
 
     // Match threads by name for now
     // Try to match same names
-    val threadMap = mutableMapOf<String, Triple<Int, Int, Int>>()
-    var diffThreadId = 0
-    left.context.threadNames
-        .forEach { tn ->
-            threadMap[tn] = Triple(left.context.getThreadId(tn), right.context.getThreadId(tn), diffThreadId++)
-        }
-    right.context.threadNames
-        .filter { !threadMap.contains(it) }
-        .forEach { tn ->
-            threadMap[tn] = Triple(left.context.getThreadId(tn), right.context.getThreadId(tn), diffThreadId++)
-        }
-
-    // Save thread map
-    val threadMapFile = File.createTempFile("trace-diff-", ".$THREAD_MAP_FILENAME_EXT")
-        .also { it.deleteOnExit() }
-    val threadMapStream = FileOutputStream(threadMapFile).buffered(OUTPUT_BUFFER_SIZE)
-    threadMapStream.use {
-        val out = DataOutputStream(it)
-        out.writeInt(threadMap.size)
-        threadMap.forEach { (_, triple) ->
-            out.writeInt(triple.third)
-            out.writeInt(triple.first)
-            out.writeInt(triple.second)
-        }
-    }
+    val threadMap = correlateThreadsByName(left, right)
+    // Save thread map to temporary file.
+    val threadMapFile = saveThreadMap(threadMap)
 
     // Prepare writer to save result
     val outputContext = TraceContext()
@@ -132,6 +113,40 @@ fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName:
 
     metaInfo.traceEnded()
     packDiff(outputBaseName, idMapFile.absolutePath, threadMapFile.absolutePath, metaInfo)
+}
+
+private fun correlateThreadsByName(
+    left: LazyTraceReader,
+    right: LazyTraceReader
+): ThreadMap {
+    val threadMap = mutableMapOf<String, Triple<Int, Int, Int>>()
+    var diffThreadId = 0
+    left.context.threadNames
+        .forEach { tn ->
+            threadMap[tn] = Triple(left.context.getThreadId(tn), right.context.getThreadId(tn), diffThreadId++)
+        }
+    right.context.threadNames
+        .filter { !threadMap.contains(it) }
+        .forEach { tn ->
+            threadMap[tn] = Triple(left.context.getThreadId(tn), right.context.getThreadId(tn), diffThreadId++)
+        }
+    return threadMap
+}
+
+private fun saveThreadMap(threadMap: ThreadMap): File {
+    val threadMapFile = File.createTempFile("trace-diff-", ".$THREAD_MAP_FILENAME_EXT")
+        .also { it.deleteOnExit() }
+    val threadMapStream = FileOutputStream(threadMapFile).buffered(OUTPUT_BUFFER_SIZE)
+    threadMapStream.use {
+        val out = DataOutputStream(it)
+        out.writeInt(threadMap.size)
+        threadMap.forEach { (_, triple) ->
+            out.writeInt(triple.third)
+            out.writeInt(triple.first)
+            out.writeInt(triple.second)
+        }
+    }
+    return threadMapFile
 }
 
 private fun copyTracepointSubtree(
