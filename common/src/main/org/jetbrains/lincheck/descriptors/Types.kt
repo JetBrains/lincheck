@@ -257,8 +257,8 @@ fun Type.getKClass(): KClass<*> = when (this) {
     BYTE_TYPE_BOXED     -> Byte::class
     SHORT_TYPE_BOXED    -> Short::class
     LONG_TYPE_BOXED     -> Long::class
-    FLOAT_TYPE_BOXED   -> Float::class
-    DOUBLE_TYPE_BOXED  -> Double::class
+    FLOAT_TYPE_BOXED    -> Float::class
+    DOUBLE_TYPE_BOXED   -> Double::class
     CHAR_TYPE_BOXED     -> Char::class
     BOOLEAN_TYPE_BOXED  -> Boolean::class
 
