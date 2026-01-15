@@ -14,7 +14,7 @@ import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.trace.*
 
 internal object TracePointComparator {
-    private val hasher = Hasher()
+    private val hasher = HasherMzHash64()
 
     fun editIndependentHash(tracePoint: TRTracePoint): Long = prepareEditIndependentHash(tracePoint).finish()
 
@@ -49,7 +49,7 @@ internal object TracePointComparator {
     fun strictEqual(a: TRTracePoint, b: TRTracePoint): Boolean =
         a.javaClass == b.javaClass && strictHash(a) == strictHash(b)
 
-    private fun prepareEditIndependentHash(tracePoint: TRTracePoint): Hasher =
+    private fun prepareEditIndependentHash(tracePoint: TRTracePoint): HasherMzHash64 =
         when (tracePoint) {
             // For next 3 classes value is not used in weak comparison,
             // read/write is not relevant because class is checked separately
@@ -96,96 +96,20 @@ internal object TracePointComparator {
     // All tracepoint hashes includes code location.
     // Two tracepoints at different locations are different, we try to compare
     // Tracepoints from two runs over exactly same sources
-    private fun Hasher.add(codeLocation: StackTraceElement): Hasher =
+    private fun HasherMzHash64.add(codeLocation: StackTraceElement): HasherMzHash64 =
         add(codeLocation.fileName ?: "").add(codeLocation.lineNumber)
 
-    private fun Hasher.add(type: Types.Type): Hasher =
+    private fun HasherMzHash64.add(type: Types.Type): HasherMzHash64 =
         add(type.hashCode())
 
-    private fun Hasher.add(obj: TRObject?): Hasher =
+    private fun HasherMzHash64.add(obj: TRObject?): HasherMzHash64 =
         if (obj == null) add(TR_OBJECT_NULL)
         else if (obj.isPrimitive) add(obj.classNameId).add(obj.primitiveValue.hashCode())
         else if (obj.classNameId < 0) add(obj.classNameId)
         else add(obj.className.adornedClassNameRepresentation())
 
-    private fun Hasher.addTRList(list: List<TRObject?>): Hasher {
+    private fun HasherMzHash64.addTRList(list: List<TRObject?>): HasherMzHash64 {
         list.forEach { add(it) }
         return this
-    }
-}
-
-// mzHash64 instead of standard Java hash to expand it to long
-// https://github.com/matteo65/mzHash64
-private class Hasher {
-    private companion object {
-        const val START: Long = -2390164861889055616L // 0xDED46DB8C47B7480L
-        const val MUL: Long = -1632365092264590397 // 0xE958AC98E3D243C3L
-    }
-
-    private var hash: Long = START
-
-    fun add(v: Byte): Hasher {
-        updateHash(v.toInt())
-        return this
-    }
-
-    fun add(v: Boolean): Hasher {
-        updateHash(if (v) 1 else 0)
-        return this
-    }
-
-    fun add(v: Char): Hasher {
-        val i = v.code
-        updateHash((i      ) and 0xff)
-        updateHash((i shr 8) and 0xff)
-        return this
-    }
-
-    fun add(v: Short): Hasher {
-        updateHash((v.toInt()      ) and 0xff)
-        updateHash((v.toInt() shr 8) and 0xff)
-        return this
-    }
-
-    fun add(v: Int): Hasher {
-        updateHash((v       ) and 0xff)
-        updateHash((v shr  8) and 0xff)
-        updateHash((v shr 16) and 0xff)
-        updateHash((v shr 24) and 0xff)
-        return this
-    }
-
-    fun add(v: Long): Hasher {
-        updateHash(((v       ) and 0xffffffffL).toInt())
-        updateHash(((v shr 32) and 0xffffffffL).toInt())
-        return this
-    }
-
-    fun add(v: String): Hasher {
-        v.forEach {
-            val i = it.code
-            updateHash((i      ) and 0xff)
-            updateHash((i shr 8) and 0xff)
-        }
-        return this
-    }
-
-    // fun add(v: Any): Hasher = add(v.hashCode())
-
-    fun <T> add(v: Collection<T>): Hasher {
-        v.forEach { add(it.hashCode()) }
-        return this
-    }
-
-    fun finish(): Long {
-        val h = hash
-        hash = START
-        return h
-    }
-
-    @Suppress("NOTHING_TO_INLINE")
-    private inline fun updateHash(v: Int) {
-        val h = hash
-        hash = MUL * (v.toLong() xor (h shl 2) xor (h shr 2))
     }
 }
