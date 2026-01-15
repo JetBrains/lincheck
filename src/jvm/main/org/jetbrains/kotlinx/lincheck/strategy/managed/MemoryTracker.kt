@@ -60,10 +60,11 @@ internal fun MemoryTracker.trackAtomicMethodMemoryAccess(
     params: Array<Any?>,
     methodDescriptor: AtomicMethodDescriptor?,
     iThread: ThreadId,
-    location: MemoryLocation,
+    location: MemoryLocation?,
 ): Boolean {
-    if (methodDescriptor == null)
-        return false
+    if (methodDescriptor == null) return false
+    if (location == null) return false
+
     var argOffset = 0
     // atomic reflection case (AFU, VarHandle or Unsafe) - the first argument is a reflection object
     argOffset += if (!isAtomic(owner) && !isAtomicArray(owner)) 1 else 0

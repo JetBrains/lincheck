@@ -1772,12 +1772,9 @@ internal abstract class ManagedStrategy(
             methodId = methodId,
         )
 
-        // obtain deterministic method descriptor if required
-        val deterministicMethodDescriptor = getDeterministicMethodDescriptorOrNull(receiver, params, methodCallInfo)
-
-        var location: MemoryLocation? = null
-        if (receiver != null && atomicMethodDescriptor != null) {
-            location = objectTracker.getAtomicAccessMemoryLocation(
+        var shouldInterceptAtomicMethod: Boolean = false
+        if (memoryTracker != null && atomicMethodDescriptor != null && receiver != null) {
+            val location = objectTracker.getAtomicAccessMemoryLocation(
                 context,
                 methodDescriptor.className,
                 methodDescriptor.methodName,
@@ -1785,9 +1782,6 @@ internal abstract class ManagedStrategy(
                 params,
                 atomicMethodDescriptor,
             )
-        }
-        var shouldInterceptAtomicMethod: Boolean = false
-        if (memoryTracker != null && location != null) {
             shouldInterceptAtomicMethod = memoryTracker!!.trackAtomicMethodMemoryAccess(
                 receiver,
                 codeLocation,
@@ -1797,6 +1791,9 @@ internal abstract class ManagedStrategy(
                 location,
             )
         }
+
+        // obtain deterministic method descriptor if required
+        val deterministicMethodDescriptor = getDeterministicMethodDescriptorOrNull(receiver, params, methodCallInfo)
 
         if (deterministicMethodDescriptor != null) {
             deterministicMethodDescriptor.processDeterministicMethodCall(receiver, params, methodCallInfo, interceptor)
