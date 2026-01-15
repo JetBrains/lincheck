@@ -14,6 +14,32 @@ import org.jetbrains.lincheck.descriptors.*
 import org.jetbrains.lincheck.trace.*
 import java.io.DataOutput
 
+/**
+ * This class is used to clone tracepoints from one [TraceContext] to another, with all needed descriptors and such.
+ *
+ * These clones must be logical, not physical. It means, that all end-user information (but threadId and eventId, see
+ * below) must remain the same, but ids of descriptors can be different and must refer new [TraceContext]. New tracepoint
+ * must be completely independent of context of source tracepoints.
+ *
+ * `threadId` and `eventId` are not copied as-is, though, even though they are simple numbers and doesn't refer anything
+ * in context.
+ *
+ *  - `threadId` is set from outside via [setThread]. Diff contains its own thread numbering, so no source threadIds
+ *    are used.
+ *
+ *  - `eventId` is generated from scratch, with strictly incrementing counter. As `eventId` can be not unique between
+ *     two source traces, it is needed to provide unique `eventId` in diff trace.
+ *
+ *     Also, this class saves correspondence between newly created tracepoint and its counterparts in source traces.
+ *     It allows to link tracepoint in diff with tracepoints in "left" ("old") and "right" ("new") source
+ *     traces. This mapping is written directly to provided [idMapOutput], as two integers. As generated
+ *     event ids are sequential, there is no need to store diff event id, it is calculated by position in
+ *     map. This map is logically `List<Pair<Int, Int>>` and index is `eventId` of tracepoint in diff.
+ *
+ *     If diff tracepoint doesn't have corresponded "left" or "right" counterparts, these absent source
+ *     event ids are written as `-1`.
+ *
+ */
 class TracePointCloner(
     private val context: TraceContext,
     private val idMapOutput: DataOutput,
@@ -27,15 +53,25 @@ class TracePointCloner(
         this.threadId = threadId
     }
 
+    /**
+     * Provide eventId for external use and save it correspondence to provided
+     * "left" and "right" ids.
+     */
     fun generateEventId(leftId: Int = -1, rightId: Int = -1): Int {
         idMapOutput.writeInt(leftId)
         idMapOutput.writeInt(rightId)
         return eventId++
     }
 
+    /**
+     * Clone tracepoint from "left" source trace, add provided "right" event id to id map.
+     */
     fun cloneLeftTracePoint(tracePoint: TRTracePoint, rightId: Int): TRTracePoint =
         cloneTracePoint(tracePoint, tracePoint.eventId, rightId, leftCodeLocationMap)
 
+    /**
+     * Clone tracepoint from "right" source trace, add provided "left" event id to id map.
+     */
     fun cloneRightTracePoint(tracePoint: TRTracePoint, leftId: Int): TRTracePoint =
         cloneTracePoint(tracePoint, leftId, tracePoint.eventId, rightCodeLocationMap)
 
