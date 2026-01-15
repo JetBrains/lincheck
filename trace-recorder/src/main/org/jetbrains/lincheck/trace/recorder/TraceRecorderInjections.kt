@@ -36,7 +36,7 @@ internal object TraceRecorderInjections {
                 context = LincheckInstrumentation.context
             )
         } catch (t: Throwable) {
-            Logger.error { "Cannot start Trace Recorder: $t"}
+            Logger.error { "Cannot start Trace Recorder: $t" }
         }
     }
 

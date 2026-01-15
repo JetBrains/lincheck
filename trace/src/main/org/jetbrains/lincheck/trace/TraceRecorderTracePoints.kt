@@ -56,11 +56,27 @@ enum class DiffStatus {
     ADDED,
 
     /**
-     * Tracepoint was edited.
+     * Tracepoint is tracepoint from left (old) trace which was edited in right (new) trace.
+     *
+     * It can be seen as "removed" if no editing information is needed. This tracepoint must be followed
+     * with tracepoint of same type with status [EDITED_NEW].
+     * Container tracepoint with this status will not have children, as children are linked to next
+     * [EDITED_NEW] tracepoint.
      *
      * For example, if it is a method called tracepoint, it has the same method in both traces but differs in arguments values.
      */
-    EDITED,
+    EDITED_OLD,
+
+    /**
+     * Tracepoint is tracepoint from right (new) trace which was edited in respect with left (old) trace.
+     *
+     * It can be seen as "added" if no editing information is needed, and is pair for previous sibling which should be
+     * [EDITED_OLD]. Difference between subtrees started from tracepoints which was compared to created here
+     * will be attached to this tracepoint, and its partner with [EDITED_OLD] status will not have any children.
+     *
+     * For example, if it is a method called tracepoint, it has the same method in both traces but differs in arguments values.
+     */
+    EDITED_NEW,
 }
 
 sealed class TRTracePoint(
@@ -842,7 +858,7 @@ data class TRObject private constructor (
     val isSpecial: Boolean get() = classNameId < 0
     val value: Any? get() = primitiveValue
 
-    internal constructor (classNameId: Int, identityHashCode: Int, primitiveValue: Any):
+    internal constructor(classNameId: Int, identityHashCode: Int, primitiveValue: Any):
             this(classNameId, identityHashCode, primitiveValue, primitiveValue.javaClass.name)
 
     internal constructor(classNameId: Int, identityHashCode: Int, cd: ClassDescriptor):

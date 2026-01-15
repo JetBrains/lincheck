@@ -10,11 +10,9 @@
 
 package org.jetbrains.lincheck.trace
 
-import com.sun.org.apache.bcel.internal.classfile.Code
 import org.jetbrains.lincheck.descriptors.AccessPath
 import org.jetbrains.lincheck.descriptors.ClassDescriptor
 import org.jetbrains.lincheck.descriptors.CodeLocation
-import org.jetbrains.lincheck.descriptors.CodeLocations
 import org.jetbrains.lincheck.descriptors.FieldDescriptor
 import org.jetbrains.lincheck.descriptors.MethodDescriptor
 import org.jetbrains.lincheck.descriptors.MethodSignature
@@ -42,6 +40,10 @@ class TraceContext {
     fun setThreadName(id: Int, name: String) { threadNames[id] = name }
 
     fun getThreadName(id: Int): String = threadNames[id] ?: ""
+
+    fun getThreadId(name: String): Int = threadNames.filter { (_, value) -> value == name }.keys.firstOrNull() ?: -1
+
+    fun threadNames(): List<String> = threadNames.values.toList()
 
     val classDescriptors: List<ClassDescriptor?> get() = classes.content
 

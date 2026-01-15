@@ -16,7 +16,9 @@ import java.time.Instant
 
 interface TRAppendable {
     val verbose: Boolean
+    val printDiff: Boolean
 
+    fun appendDiffStatus(status: DiffStatus?): TRAppendable
     fun appendClassName(cd: ClassDescriptor): TRAppendable
     fun appendMethodName(md: MethodDescriptor): TRAppendable
     fun appendFieldName(fd: FieldDescriptor): TRAppendable
@@ -109,8 +111,21 @@ abstract class AbstractTRAppendable: TRAppendable {
 
 class DefaultTRTextAppendable(
     private val destination: Appendable,
-    override val verbose: Boolean = false
+    override val verbose: Boolean = false,
+    override val printDiff: Boolean = true
 ): AbstractTRAppendable() {
+    override fun appendDiffStatus(status: DiffStatus?): TRAppendable {
+        if (!printDiff) return this
+        when (status) {
+            DiffStatus.UNCHANGED -> append("  ")
+            DiffStatus.REMOVED -> append("- ")
+            DiffStatus.ADDED -> append("+ ")
+            DiffStatus.EDITED_OLD -> append("! ")
+            DiffStatus.EDITED_NEW -> append("! ")
+            null -> Unit
+        }
+        return this
+    }
 
     override fun append(text: String?): TRAppendable {
         destination.append(text)
@@ -121,6 +136,7 @@ class DefaultTRTextAppendable(
 abstract class AbstractTRMethodCallTracePointPrinter() {
 
     protected fun TRAppendable.appendTracePoint(tracePoint: TRMethodCallTracePoint): TRAppendable {
+        appendDiffStatus(tracePoint.diffStatus)
         if (tracePoint.isConstructor()) {
             appendKeyword("new")
             appendSpecialSymbol(" ")
@@ -236,6 +252,7 @@ object DefaultTRMethodCallTracePointPrinter: AbstractTRMethodCallTracePointPrint
 abstract class AbstractTRLoopTracePointPrinter {
 
     protected fun TRAppendable.appendTracePoint(tracePoint: TRLoopTracePoint): TRAppendable {
+        appendDiffStatus(tracePoint.diffStatus)
         appendKeyword("loop")
         appendSpecialSymbol("(")
         append("${tracePoint.iterations} iterations")
@@ -255,6 +272,7 @@ object DefaultTRLoopTracePointPrinter: AbstractTRLoopTracePointPrinter() {
 abstract class AbstractTRLoopIterationTracePointPrinter {
 
     protected fun TRAppendable.appendTracePoint(tracePoint: TRLoopIterationTracePoint): TRAppendable {
+        appendDiffStatus(tracePoint.diffStatus)
         appendSpecialSymbol("<")
         appendKeyword("iteration ")
         append("${tracePoint.loopIteration + 1}")
@@ -274,6 +292,7 @@ object DefaultTRLoopIterationTracePointPrinter: AbstractTRLoopIterationTracePoin
 abstract class AbstractTRFieldTracePointPrinter {
 
     protected fun TRAppendable.appendTracePoint(tracePoint: TRFieldTracePoint): TRAppendable {
+        appendDiffStatus(tracePoint.diffStatus)
         appendOwner(tracePoint)
         appendFieldName(tracePoint)
         append(" ")
@@ -333,6 +352,7 @@ object DefaultTRFieldTracePointPrinter: AbstractTRFieldTracePointPrinter() {
 abstract class AbstractTRLocalVariableTracePointPrinter {
 
     protected fun TRAppendable.appendTracePoint(tracePoint: TRLocalVariableTracePoint): TRAppendable {
+        appendDiffStatus(tracePoint.diffStatus)
         appendVariableName(tracePoint.variableDescriptor)
         append(" ")
         appendSpecialSymbol(tracePoint.accessSymbol())
@@ -354,6 +374,7 @@ object DefaultTRLocalVariableTracePointPrinter: AbstractTRLocalVariableTracePoin
 abstract class AbstractTRArrayTracePointPrinter {
 
     protected fun TRAppendable.appendTracePoint(tracePoint: TRArrayTracePoint): TRAppendable {
+        appendDiffStatus(tracePoint.diffStatus)
         appendOwner(tracePoint)
         appendSpecialSymbol("[")
         appendArrayIndex(tracePoint.index)
