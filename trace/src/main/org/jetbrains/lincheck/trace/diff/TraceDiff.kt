@@ -15,9 +15,9 @@ import org.jetbrains.lincheck.trace.*
 import java.io.DataOutputStream
 import java.io.File
 import java.io.FileOutputStream
+import java.util.concurrent.ThreadLocalRandom
 
-private typealias ThreadMap = Map<String, Triple<Int, Int, Int>>
-
+internal data class ThreadIds(val leftId: Int, val rightId: Int, val diffId: Int)
 
 fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName: String) {
     require(!left.isDiff) { "Cannot diff other diffs: left trace is diff" }
@@ -140,22 +140,22 @@ private fun diffOneThread(
 private fun correlateThreadsByName(
     left: LazyTraceReader,
     right: LazyTraceReader
-): ThreadMap {
-    val threadMap = mutableMapOf<String, Triple<Int, Int, Int>>()
+): Map<String, ThreadIds> {
+    val threadMap = mutableMapOf<String, ThreadIds>()
     var diffThreadId = 0
     left.context.threadNames()
         .forEach { tn ->
-            threadMap[tn] = Triple(left.context.getThreadId(tn), right.context.getThreadId(tn), diffThreadId++)
+            threadMap[tn] = ThreadIds(left.context.getThreadId(tn), right.context.getThreadId(tn), diffThreadId++)
         }
     right.context.threadNames()
         .filter { !threadMap.contains(it) }
         .forEach { tn ->
-            threadMap[tn] = Triple(left.context.getThreadId(tn), right.context.getThreadId(tn), diffThreadId++)
+            threadMap[tn] = ThreadIds(left.context.getThreadId(tn), right.context.getThreadId(tn), diffThreadId++)
         }
     return threadMap
 }
 
-private fun saveThreadMap(threadMap: ThreadMap): File {
+private fun saveThreadMap(threadMap: Map<String, ThreadIds>): File {
     val threadMapFile = File.createTempFile("trace-diff-", ".$THREAD_MAP_FILENAME_EXT")
         .also { it.deleteOnExit() }
     val threadMapStream = FileOutputStream(threadMapFile).buffered(OUTPUT_BUFFER_SIZE)
@@ -163,9 +163,9 @@ private fun saveThreadMap(threadMap: ThreadMap): File {
         val out = DataOutputStream(it)
         out.writeInt(threadMap.size)
         threadMap.forEach { (_, triple) ->
-            out.writeInt(triple.third)
-            out.writeInt(triple.first)
-            out.writeInt(triple.second)
+            out.writeInt(triple.diffId)
+            out.writeInt(triple.leftId)
+            out.writeInt(triple.rightId)
         }
     }
     return threadMapFile
