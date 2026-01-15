@@ -54,7 +54,7 @@ interface MemoryTracker {
     fun reset()
 }
 
-fun MemoryTracker.trackAtomicMethodMemoryAccess(
+internal fun MemoryTracker.trackAtomicMethodMemoryAccess(
     owner: Any?,
     codeLocation: Int,
     params: Array<Any?>,
