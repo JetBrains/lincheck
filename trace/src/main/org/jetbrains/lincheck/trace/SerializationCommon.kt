@@ -493,8 +493,24 @@ internal fun DataInput.readDiffStatus(): DiffStatus? {
     return values[ordinal]
 }
 
-internal fun openNewStandardDataAndIndex(baseFileName: String): Pair<OutputStream, OutputStream> {
-    return openNewFile(baseFileName).buffered(OUTPUT_BUFFER_SIZE)to openNewFile("$baseFileName.$INDEX_FILENAME_EXT").buffered(OUTPUT_BUFFER_SIZE)
+data class TraceOutputStreams(
+    val dataStream: OutputStream,
+    val indexStream: OutputStream,
+)
+
+/**
+ * This function is used to create a pair of files for data and index in once.
+ *
+ * It uses [openNewFile] to open files and add [OUTPUT_BUFFER_SIZE] buffering
+ * around "naked" stream.
+ *
+ * Data stream is created with passed name (without any additional extension),
+ * and index file is named by adding [INDEX_FILENAME_EXT] extension to base name.
+ */
+internal fun openNewStandardDataAndIndex(baseFileName: String): TraceOutputStreams {
+    val dataStream = openNewFile(baseFileName).buffered(OUTPUT_BUFFER_SIZE)
+    val indexStream = openNewFile("$baseFileName.$INDEX_FILENAME_EXT").buffered(OUTPUT_BUFFER_SIZE)
+    return TraceOutputStreams(dataStream, indexStream)
 }
 
 internal fun openNewFile(name: String): OutputStream {
