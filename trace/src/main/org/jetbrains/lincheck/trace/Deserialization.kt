@@ -22,7 +22,7 @@ import java.util.zip.ZipInputStream
 import kotlin.concurrent.thread
 import kotlin.io.path.Path
 
-private const val INPUT_BUFFER_SIZE: Int = 16 * 1024 * 1024
+internal const val INPUT_BUFFER_SIZE: Int = 16 * 1024 * 1024
 
 private typealias TraceTree = MutableList<TRContainerTracePoint>
 private typealias TracePointReader = (DataInput, TraceContext, CodeLocationsContext) -> Boolean
@@ -229,186 +229,6 @@ class LazyTraceReader private constructor(
     private val input: TraceDataProvider,
     private val postprocessor: TracePostprocessor
 ) : Closeable {
-
-    /**
-     * This class try to detect is provided path points to packed (ZIP) trace or
-     * raw data file.
-     *
-     * If provided file is packed trace, it unpacks data file as it needs to be seekable
-     * and packed file is not seekable, unfortunately.
-     *
-     * In any case it provides these data elements:
-     *
-     *  - [dataFileName] — name of file with main trace data. It is [traceFileName] if trace in question
-     *    is not packed and name of temporary file with data unpacked to temporary file which will be deleted
-     *    after trace is closed.
-     *  - [indexStream] — stream with index, if it exists. It can be separate file in case of unpacked trace
-     *    ot ZIP stream prepared for reading index entry. Index is only read sequential, so reading directly
-     *    from ZIP is Ok.
-     *  - [metaInfo] — Trace meta information, if it exists for provided trace.
-     *  - [threadIdMap] — Map from diff's thread id to left (first) and right (second) thread ids, `-1` if thread
-     *    doesn't present in corresponding trace. `null` if trace is not diff.
-     *  - [eventIdMap] — Map from diff's event id to left (first) and right (second) event ids, `-1` if this event
-     *    doesn't present in corresponding trace. `null` if trace is not diff.
-     */
-    private class TraceDataProvider(val baseFileName: String) : AutoCloseable {
-        private var tmpDataFile: File? = null
-        private var tmpIdMapFile: File? = null
-        private var zip: ZipFile? = null
-        private var idMapDataInput: SeekableDataInput? = null
-
-        var indexStream: DataInputStream? = null
-            private set
-
-        var metaInfo: TraceMetaInfo? = null
-            private set
-
-        var threadIdMap: Map<Int, Pair<Int, Int>>? = null
-            private set
-
-        var eventIdMap: List<Pair<Int, Int>>? = null
-            private set
-
-        private fun tryReadZIP(): Boolean {
-            // Don't propagate zip error on open, simply return false
-            val zip = try {
-                ZipFile(baseFileName)
-            } catch (e: ZipException) {
-                return false
-            }
-
-            var isDiff: Boolean = false
-            var leftMetaInfo: TraceMetaInfo? = null
-            var rightMetaInfo: TraceMetaInfo? = null
-            var dataInputStream: InputStream? = null
-            var metaInfoStream: InputStream? = null
-            var idMapStream: InputStream? = null
-            try {
-                for (entry in zip.entries()) {
-                    when (entry.name) {
-                        PACKED_DATA_ITEM_NAME -> {
-                            dataInputStream = zip.getInputStream(entry)
-                        }
-                        PACKED_INDEX_ITEM_NAME -> {
-                            indexStream = wrapStream(zip.getInputStream(entry))
-                        }
-                        PACKED_META_ITEM_NAME -> {
-                            metaInfoStream = zip.getInputStream(entry)
-                        }
-                        PACKED_DIFF_MARKER_ITEM_NAME -> {
-                            isDiff = true
-                        }
-                        PACKED_ID_MAP_ITEM_NAME -> {
-                            idMapStream = zip.getInputStream(entry)
-                        }
-                        PACKED_THREAD_MAP_ITEM_NAME -> {
-                            // Load error is not a fatal error
-                            try {
-                                val m = mutableMapOf<Int, Pair<Int, Int>>()
-                                DataInputStream(zip.getInputStream(entry)).use { input ->
-                                    val size = input.readInt()
-                                    repeat(size) {
-                                        m[input.readInt()] = input.readInt() to input.readInt()
-                                    }
-                                }
-                                threadIdMap = m
-                            } catch (e: Throwable) {
-                                Logger.warn { "Packed trace \"$baseFileName\" has broken thread map: ${e.message}" }
-                            }
-                        }
-                        PACKED_LEFT_META_ITEM_NAME,
-                        PACKED_RIGHT_META_ITEM_NAME -> {
-                            // Load error is not a fatal error
-                            try {
-                                val meta = TraceMetaInfo.read(input = zip.getInputStream(entry))
-                                if (entry.name == PACKED_LEFT_META_ITEM_NAME) {
-                                    leftMetaInfo = meta
-                                } else {
-                                    rightMetaInfo = meta
-                                }
-                            } catch (e: Throwable) {
-                                Logger.warn { "Packed trace \"$baseFileName\" has broken left meta info: ${e.message}" }
-                            }
-                        }
-                        else -> throwZipError(baseFileName, "unknown entry name ${entry.name}")
-                    }
-                }
-                // Check fo minimal needed information, it is hard error
-                if (metaInfoStream == null) throwZipError(baseFileName, "file doesn't contain meta info")
-                if (dataInputStream == null) throwZipError(baseFileName, "file doesn't contain trace data")
-                if (indexStream == null) throwZipError(baseFileName, "file doesn't contain trace index")
-
-                this.zip = zip
-            } catch (e: Throwable) {
-                zip.close()
-                throw e
-            }
-
-            // Process all data, unpack data and id map if needed
-            if (!isDiff) {
-                if (threadIdMap != null) Logger.warn { "Packed trace \"$baseFileName\" has thread id map but no diff marker" }
-                if (idMapStream != null) Logger.warn { "Packed trace \"$baseFileName\" has diff id map but no diff marker" }
-                if (leftMetaInfo != null) Logger.warn { "Packed trace \"$baseFileName\" has left trace meta info but no diff marker" }
-                if (rightMetaInfo != null) Logger.warn { "Packed trace \"$baseFileName\" has right trace meta info but no diff marker" }
-            }
-
-            val maybeDiff = threadIdMap != null
-                    || idMapStream != null
-                    || leftMetaInfo != null
-                    || rightMetaInfo != null
-
-            val totalDiff = threadIdMap != null
-                    && idMapStream != null
-                    && leftMetaInfo != null
-                    && rightMetaInfo != null
-
-            if (!isDiff && totalDiff) {
-                Logger.warn { "Packed trace \"$baseFileName\" has all data of diff but no diff marker, mark as diff" }
-                isDiff = true
-            } else if (!isDiff && maybeDiff) {
-                Logger.warn { "Packed trace \"$baseFileName\" has some data of diff but no diff marker, mark as diff" }
-                isDiff = true
-            }
-
-            if (idMapStream != null) {
-                val rv = copyOutToTempFile("trace-unpacked-", ".$ID_MAP_FILENAME_EXT", idMapStream)
-                if (rv.isFailure) {
-                    Logger.warn { "Packed trace \"$baseFileName\" has id map but it cannot be unpacked: ${rv.exceptionOrNull()?.message ?: "<unknown error>"}" }
-                } else {
-                    tmpIdMapFile = rv.getOrNull()
-
-                    val channel = Files.newByteChannel(Path(tmpIdMapFile!!.absolutePath), StandardOpenOption.READ)
-
-                    idMapDataInput = SeekableDataInput(SeekableChannelBufferedInputStream(channel))
-                    eventIdMap = IdStreamList(idMapDataInput!!, channel.size())
-                }
-                idMapStream.close()
-            }
-
-            metaInfo = TraceMetaInfo.read(metaInfoStream, isDiff, leftMetaInfo, rightMetaInfo)
-            tmpDataFile = copyOutToTempFile("trace-unpacked-", ".$DATA_FILENAME_EXT", dataInputStream).getOrThrow()
-
-            return true
-        }
-
-        init {
-            // It is not ZIP, it is raw trace file (we hope)
-            if (!tryReadZIP()) {
-                indexStream = wrapStream(openExistingFile("$baseFileName.$INDEX_FILENAME_EXT"))
-            }
-        }
-
-        val dataFileName: String = tmpDataFile?.absolutePath ?: baseFileName
-
-        override fun close() {
-            idMapDataInput?.close()
-            tmpDataFile?.delete()
-            tmpIdMapFile?.delete()
-            indexStream?.close()
-            zip?.close()
-        }
-    }
-
     private fun interface TracepointRegistrator {
         fun register(indexInParent: Int, tracePoint: TRTracePoint?, physicalOffset: Long)
     }
@@ -838,27 +658,6 @@ class LazyTraceReader private constructor(
         val blockIdx = blocks.binarySearch { it.compareWithPhysicalOffset(physicalOffset) }
         return if (blockIdx < 0) null else blockIdx
     }
-
-    private companion object {
-        fun wrapStream(input: InputStream?): DataInputStream? {
-            if (input == null) return null
-            return DataInputStream(input.buffered(INPUT_BUFFER_SIZE))
-        }
-
-        fun copyOutToTempFile(prefix: String, suffix: String, input: InputStream): Result<File> {
-            val tmp = File.createTempFile(prefix, suffix)
-            tmp.deleteOnExit()
-            try {
-                val dataOutput = openNewFile(tmp.absolutePath)
-                dataOutput.use {
-                    input.copyTo(it)
-                }
-                return Result.success(tmp)
-            } catch (e: IOException) {
-                return Result.failure(e)
-            }
-        }
-    }
 }
 
 /**
@@ -876,7 +675,12 @@ data class TraceWithContext(
     /**
      * List of all root calls for all traced threads.
      */
-    val roots: List<TRTracePoint>
+    val roots: List<TRTracePoint>,
+    /**
+     *  If it is diff, map diff thread id to right and left thread ids. If no thread on left or right,
+     *  id will be -1
+     */
+    val diffThreadMap: Map<Int, Pair<Int, Int>>?
 )
 
 /**
@@ -890,35 +694,15 @@ fun loadRecordedTrace(traceFileName: String): TraceWithContext {
     val input = openExistingFile(traceFileName)?.buffered(INPUT_BUFFER_SIZE)
     require(input != null) { "Cannot open trace \"$traceFileName\"" }
 
-    input.use {
-        // Try as ZIP
-        val (stream, meta) = run {
-            val zip = ZipInputStream(input)
-            val metaEntry = zip.nextEntry ?: return@run null to null // Not ZIP
-            if (metaEntry.name != PACKED_META_ITEM_NAME) throwZipError(traceFileName)
-            // Try to load metainfo
-            val meta = TraceMetaInfo.read(zip)
-
-            // Check next entry
-            val dataEntry = zip.nextEntry ?: throwZipError(traceFileName)
-            if (dataEntry.name != PACKED_DATA_ITEM_NAME) throwZipError(traceFileName)
-
-            zip to meta
+    val dataProvider = TraceDataProvider(traceFileName)
+    // We need meta, data file and maybe maps
+    dataProvider.use { provider ->
+        val input = openExistingFile(provider.dataFileName)
+        if (input == null) {
+            throw IOException("Cannot open trace \"$traceFileName\" (data file is lost)")
         }
-
-        if (stream != null) {
-            stream.use {
-                return loadRecordedTrace(it, meta)
-            }
-        } else {
-            // Not ZIP at all, raw trace
-            input.close()
-            // Don't buffer this stream, [loadRecordedTrace] will do it
-            val rawInput = openExistingFile(traceFileName)
-            require(rawInput != null) { "Cannot open trace \"$traceFileName\"" }
-            rawInput.use {
-                return loadRecordedTrace(it, null)
-            }
+        input.use {
+            return loadRecordedTrace(it, provider.metaInfo, provider.threadIdMap)
         }
     }
 }
@@ -929,28 +713,9 @@ private fun readMagic(input: InputStream): Long {
     return buf.getLong(0)
 }
 
-fun isPackedTrace(traceFileName: String): Boolean {
-    val input = openExistingFile(traceFileName) ?: return false
-    return try {
-        ZipInputStream(input).use { zip ->
-            val metaInfoEntry = zip.nextEntry ?: return false
-            if (metaInfoEntry.name != PACKED_META_ITEM_NAME) return false
-
-            val dataEntry = zip.nextEntry ?: return false
-            if (dataEntry.name != PACKED_DATA_ITEM_NAME) return false
-            if (readMagic(zip) != TRACE_MAGIC) return false
-
-            val indexEntry = zip.nextEntry ?: return false
-            if (indexEntry.name != PACKED_INDEX_ITEM_NAME) return false
-            if (readMagic(zip) != INDEX_MAGIC) return false
-
-            return true
-        }
-    } catch (_: Throwable) {
-        false
-    }
-}
-
+/**
+ * Used by plugin to open files
+ */
 fun isTraceData(traceFileName: String): Boolean {
     return try {
         val input = openExistingFile(traceFileName) ?: return false
@@ -962,6 +727,9 @@ fun isTraceData(traceFileName: String): Boolean {
     }
 }
 
+/**
+ * Used by plugin to open files
+ */
 fun isTraceData(firstBytes: ByteBuffer): Boolean =
     firstBytes.capacity() >= 8 && firstBytes.getLong(0) == TRACE_MAGIC
 
@@ -971,9 +739,9 @@ fun isTraceData(firstBytes: ByteBuffer): Boolean =
 
  * [TraceWithContext.metaInfo] will be `null`.
  */
-fun loadRecordedTrace(inp: InputStream): TraceWithContext = loadRecordedTrace(inp, null)
+fun loadRecordedTrace(inp: InputStream): TraceWithContext = loadRecordedTrace(inp, null, null)
 
-private fun loadRecordedTrace(inp: InputStream, meta: TraceMetaInfo?): TraceWithContext {
+private fun loadRecordedTrace(inp: InputStream, meta: TraceMetaInfo?, threadMap: Map<Int, Pair<Int, Int>>?): TraceWithContext {
     DataInputStream(inp.buffered(INPUT_BUFFER_SIZE)).use { input ->
         checkDataHeader(input)
 
@@ -1005,7 +773,12 @@ private fun loadRecordedTrace(inp: InputStream, meta: TraceMetaInfo?): TraceWith
             }
         }
 
-        return TraceWithContext(context, meta, roots.values.map { it.first() })
+        return TraceWithContext(
+            context = context,
+            metaInfo = meta,
+            roots = roots.values.map { it.first() },
+            diffThreadMap = if (meta?.isDiff ?: false) threadMap else null
+        )
     }
 }
 
@@ -1276,26 +1049,5 @@ private fun checkDataHeader(input: DataInput) {
     val version = input.readLong()
     check(version == TRACE_VERSION) {
         "Wrong version $version (expected $TRACE_VERSION)"
-    }
-}
-
-@Suppress("NOTHING_TO_INLINE")
-private inline fun throwZipError(fileName: String, details: String? = null, cause: Throwable? = null): Nothing {
-    val d = if (details != null) " ($details)" else ""
-    throw IllegalArgumentException("File \"$fileName\" is a ZIP archive but is not a packed trace$d", cause)
-}
-
-private class IdStreamList(
-    private val data: SeekableDataInput,
-    fileSize: Long
-) : AbstractList<Pair<Int, Int>>() {
-    override val size: Int = (fileSize / (Int.SIZE_BYTES * 2)).toInt()
-
-    override fun get(index: Int): Pair<Int, Int> {
-        if (index !in 0..<size) return -1 to -1
-        data.seek(index * Int.SIZE_BYTES * 2L)
-        val l = data.readInt()
-        val r = data.readInt()
-        return l to r
     }
 }
