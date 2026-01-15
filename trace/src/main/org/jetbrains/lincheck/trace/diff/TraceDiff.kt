@@ -121,11 +121,11 @@ private fun correlateThreadsByName(
 ): ThreadMap {
     val threadMap = mutableMapOf<String, Triple<Int, Int, Int>>()
     var diffThreadId = 0
-    left.context.threadNames
+    left.context.threadNames()
         .forEach { tn ->
             threadMap[tn] = Triple(left.context.getThreadId(tn), right.context.getThreadId(tn), diffThreadId++)
         }
-    right.context.threadNames
+    right.context.threadNames()
         .filter { !threadMap.contains(it) }
         .forEach { tn ->
             threadMap[tn] = Triple(left.context.getThreadId(tn), right.context.getThreadId(tn), diffThreadId++)

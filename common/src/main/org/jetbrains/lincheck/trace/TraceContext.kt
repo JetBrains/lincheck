@@ -29,8 +29,7 @@ val UNKNOWN_METHOD_TYPE = Types.MethodType(Types.VOID_TYPE, Types.VOID_TYPE)
 private val EMPTY_STACK_TRACE = StackTraceElement("", "", "", 0)
 
 class TraceContext {
-    private val threadsId2Name = mutableMapOf<Int, String>()
-    private val threadsName2Id = mutableMapOf<String, Int>()
+    private val threadNames = ConcurrentHashMap<Int, String>()
     private val accessPaths = ArrayList<AccessPath?>()
     private val locations = ArrayList<CodeLocation?>()
     private val classes = IndexedPool<ClassDescriptor>()
@@ -38,18 +37,13 @@ class TraceContext {
     private val fields = IndexedPool<FieldDescriptor>()
     private val variables = IndexedPool<VariableDescriptor>()
 
-    fun setThreadName(id: Int, name: String) {
-        synchronized(threadsId2Name) {
-            threadsId2Name[id] = name
-            threadsName2Id[name] = id
-        }
-    }
+    fun setThreadName(id: Int, name: String) { threadNames[id] = name }
 
-    fun getThreadName(id: Int): String = synchronized(threadsId2Name) { threadsId2Name[id] ?: "" }
+    fun getThreadName(id: Int): String = threadNames[id] ?: ""
 
-    fun getThreadId(name: String): Int = synchronized(threadsId2Name) { threadsName2Id[name] ?: -1 }
+    fun getThreadId(name: String): Int = threadNames.filter { (_, value) -> value == name }.keys.firstOrNull() ?: -1
 
-    val threadNames: List<String> get() = synchronized(threadsId2Name) { threadsId2Name.values.toList() }
+    fun threadNames(): List<String> = threadNames.values.toList()
 
     val classDescriptors: List<ClassDescriptor?> get() = classes.content
 
