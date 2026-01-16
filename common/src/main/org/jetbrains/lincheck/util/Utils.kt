@@ -16,9 +16,9 @@ import java.lang.invoke.MethodHandles.Lookup
 import java.lang.invoke.MethodType
 
 // Trace agent modes
-private const val TRACE_DEBUGGER_MODE_PROPERTY = "lincheck.traceDebuggerMode"
-private const val TRACE_RECORDER_MODE_PROPERTY = "lincheck.traceRecorderMode"
-private const val LIVE_DEBUGGER_MODE_PROPERTY = "lincheck.liveDebuggerMode"
+const val TRACE_DEBUGGER_MODE_PROPERTY = "lincheck.traceDebuggerMode"
+const val TRACE_RECORDER_MODE_PROPERTY = "lincheck.traceRecorderMode"
+const val LIVE_DEBUGGER_MODE_PROPERTY = "lincheck.liveDebuggerMode"
 val isInTraceDebuggerMode by lazy { System.getProperty(TRACE_DEBUGGER_MODE_PROPERTY, "false").toBoolean() }
 val isInTraceRecorderMode by lazy { System.getProperty(TRACE_RECORDER_MODE_PROPERTY, "false").toBoolean() }
 val isInLiveDebuggerMode by lazy { System.getProperty(LIVE_DEBUGGER_MODE_PROPERTY, "false").toBoolean() }

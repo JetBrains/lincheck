@@ -23,6 +23,7 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_JMX_PORT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_RMI_PORT
 import org.jetbrains.lincheck.trace.recorder.jmx.TraceRecorderJmxServer
 import org.jetbrains.lincheck.trace.recorder.jmx.TraceRecorderJmxController
+import org.jetbrains.lincheck.util.TRACE_RECORDER_MODE_PROPERTY
 import org.jetbrains.lincheck.util.isInLiveDebuggerMode
 import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import org.jetbrains.lincheck.util.isInTraceRecorderMode
@@ -76,6 +77,8 @@ internal object TraceRecorderAgent {
     fun agentmain(agentArgs: String?, inst: Instrumentation) {
         // parse and validate arguments and system properties
         parseArguments(agentArgs)
+
+        System.setProperty(TRACE_RECORDER_MODE_PROPERTY, "true")
         validateTraceRecorderMode()
 
         // attach java agent
