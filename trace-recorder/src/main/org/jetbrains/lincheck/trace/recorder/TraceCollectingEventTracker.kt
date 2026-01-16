@@ -1116,6 +1116,7 @@ class TraceCollectingEventTracker(
                 }
                 TraceCollectorMode.NULL -> {}
             }
+            Logger.info { "Trace was saved to $traceDumpFilePath" }
         } catch (t: Throwable) {
             Logger.error { "TraceRecorder: Cannot write output file $traceDumpFilePath: ${t.message} at ${t.stackTraceToString()}" }
             return

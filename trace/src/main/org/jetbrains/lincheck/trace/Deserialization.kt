@@ -530,6 +530,7 @@ class LazyTraceReader private constructor(
                 }
             } catch (t: IOException) {
                 Logger.error { "TraceRecorder: Error reading index for $traceFileName: ${t.message}" }
+                Logger.error(t)
                 return false
             }
         }
