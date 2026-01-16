@@ -56,7 +56,7 @@ object TraceRecorderJmxController : TracingJmxController {
         }
     }
 
-    override fun stopTracing(traceDumpFilePath: String, packTrace: Boolean) {
+    override fun stopTracing() {
         try {
             TraceRecorder.stopRecording()
         } catch (t: Throwable) {

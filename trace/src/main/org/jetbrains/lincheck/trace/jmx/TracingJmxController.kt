@@ -15,7 +15,7 @@ interface TracingJmxController {
     fun uninstall()
 
     fun startTracing()
-    fun stopTracing(traceDumpFilePath: String, packTrace: Boolean)
+    fun stopTracing()
 
     fun dumpTrace(traceDumpFilePath: String, packTrace: Boolean)
 }
