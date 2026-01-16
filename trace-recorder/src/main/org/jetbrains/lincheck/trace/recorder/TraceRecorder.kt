@@ -116,10 +116,10 @@ object TraceRecorder {
 
         // this method does not need 'runInsideIgnoredSection' because we do not call instrumented code,
         // and we call `disableAnalysis` as a first action
-        val descriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
-        descriptor.disableAnalysis()
+        val descriptor = ThreadDescriptor.getCurrentThreadDescriptor()
+        descriptor?.disableAnalysis()
 
-        if (eventTracker != Injections.getEventTracker(descriptor)) {
+        if (descriptor != null && eventTracker != Injections.getEventTracker(descriptor)) {
             Logger.warn { "Unexpected event tracker observed during trace finishing" }
         }
 

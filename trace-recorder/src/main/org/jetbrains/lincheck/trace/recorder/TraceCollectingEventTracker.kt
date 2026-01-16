@@ -1046,9 +1046,14 @@ class TraceCollectingEventTracker(
                 completeRunningThread(thread, threadDescriptor)
             }
 
-
-        // Close this thread call stack (it must be 1 element, complain about problems otherwise)
-        completeMainThread(mainThread, ThreadDescriptor.getCurrentThreadDescriptor())
+        val mainThreadDeprecated = ThreadDescriptor.getCurrentThreadDescriptor()
+        if (mainThreadDeprecated != null) {
+            // Close this thread call stack (it must be 1 element, complain about problems otherwise)
+            completeMainThread(mainThread, mainThreadDeprecated)
+            // TODO: rename
+            //   - mainThread -> currentThread
+            //   - completeMainThread -> completeCurrentThread
+        }
 
         strategy.traceEnded()
         tracingEndTime = System.currentTimeMillis()
