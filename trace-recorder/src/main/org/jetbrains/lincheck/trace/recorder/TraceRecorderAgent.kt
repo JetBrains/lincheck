@@ -60,6 +60,7 @@ internal object TraceRecorderAgent {
         // parse and validate arguments and system properties
         parseArguments(agentArgs)
         validateTraceRecorderMode()
+        TraceAgentParameters.validateClassAndMethodArguments()
 
         // attach java agent
         LincheckInstrumentation.attachJavaAgentStatically(inst)

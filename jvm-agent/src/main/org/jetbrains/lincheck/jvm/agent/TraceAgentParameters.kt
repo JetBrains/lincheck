@@ -149,11 +149,14 @@ object TraceAgentParameters {
             Logger.warn { "Looks like old-style arguments found, consider migrate to key-value arguments" }
             val actualArguments = splitArgs(args)
 
-            classUnderTraceDebugging = actualArguments.getOrNull(0) ?: error("Class name was not provided")
+            classUnderTraceDebugging = actualArguments.getOrNull(0) ?: ""
+            methodUnderTraceDebugging = actualArguments.getOrNull(1) ?: ""
             namedArgs[ARGUMENT_CLASS] = classUnderTraceDebugging
-            methodUnderTraceDebugging = actualArguments.getOrNull(1) ?: error("Method name was not provided")
             namedArgs[ARGUMENT_METHOD] = methodUnderTraceDebugging
+
+            validateClassAndMethodArguments()
             setClassUnderTraceDebuggingToMethodOwner()
+
             traceDumpFilePath = actualArguments.getOrNull(2)
             namedArgs[ARGUMENT_OUTPUT] = traceDumpFilePath
 
@@ -165,11 +168,12 @@ object TraceAgentParameters {
                 namedArgs[validAdditionalArgs[idx - 3]] = actualArguments[idx]
             }
         } else {
-            classUnderTraceDebugging = kvArguments[ARGUMENT_CLASS]
-                ?: error("Class name argument \"$ARGUMENT_CLASS\" was not provided")
-            methodUnderTraceDebugging = kvArguments[ARGUMENT_METHOD]
-                ?: error("Method name argument \"$ARGUMENT_METHOD\" was not provided")
-            setClassUnderTraceDebuggingToMethodOwner()
+            classUnderTraceDebugging = kvArguments[ARGUMENT_CLASS] ?: ""
+            methodUnderTraceDebugging = kvArguments[ARGUMENT_METHOD] ?: ""
+            if (!classUnderTraceDebugging.isEmpty() && !methodUnderTraceDebugging.isEmpty()) {
+                setClassUnderTraceDebuggingToMethodOwner()
+            }
+
             traceDumpFilePath = kvArguments[ARGUMENT_OUTPUT]
 
             val allowedKeys = mutableSetOf(ARGUMENT_CLASS, ARGUMENT_METHOD, ARGUMENT_OUTPUT)
@@ -184,6 +188,16 @@ object TraceAgentParameters {
         }
 
         validateJmxParameters()
+    }
+
+    @JvmStatic
+    fun validateClassAndMethodArguments() {
+        if (classUnderTraceDebugging.isBlank()) {
+            error("Class name was not provided")
+        }
+        if (methodUnderTraceDebugging.isBlank()) {
+            error("Method name was not provided")
+        }
     }
 
     @JvmStatic
@@ -209,7 +223,8 @@ object TraceAgentParameters {
     }
 
     private fun setClassUnderTraceDebuggingToMethodOwner(
-        startClass: String = classUnderTraceDebugging, method: String = methodUnderTraceDebugging
+        startClass: String = classUnderTraceDebugging,
+        method: String = methodUnderTraceDebugging,
     ) {
         classUnderTraceDebugging =
             runCatching { Class.forName(startClass) }.getOrNull()
