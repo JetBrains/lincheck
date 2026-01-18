@@ -199,7 +199,7 @@ class TracePointCloner(
         context.getOrCreateVariableId(this.name)
 
     private fun FieldDescriptor.clone(): Int =
-        context.getOrCreateFieldId(this.className, this.fieldName, this.isStatic, this.isFinal)
+        context.getOrCreateFieldId(this.className, this.fieldName, this.type, this.isStatic, this.isFinal)
 
     private fun MethodDescriptor.clone(): Int =
         context.getOrCreateMethodId(this.className, this.methodName, this.methodSignature.methodType)
