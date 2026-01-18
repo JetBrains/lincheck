@@ -499,6 +499,13 @@ internal fun isAtomicFUClass(className: String) =
 internal fun isAtomicMethod(className: String, methodName: String) =
     isAtomicClass(className) && methodName in atomicMethods
 
+internal fun getAtomicType(atomic: Any?): Types.Type? = when (atomic) {
+    is AtomicReference<*>       -> Types.OBJECT_TYPE
+    is AtomicBoolean            -> Types.BOOLEAN_TYPE
+    is AtomicInteger            -> Types.INT_TYPE
+    else                        -> null
+}
+
 internal fun isAtomicArray(receiver: Any?) =
     isAtomicArrayJava(receiver) ||
     isAtomicFUArray(receiver)
@@ -538,6 +545,13 @@ internal fun isAtomicFUArrayClass(className: String) =
 
 internal fun isAtomicArrayMethod(className: String, methodName: String) =
     isAtomicArrayClass(className) && methodName in atomicMethods
+
+internal fun getAtomicArrayType(atomic: Any?): Types.Type? = when (atomic) {
+    is AtomicReferenceArray<*>  -> Types.OBJECT_TYPE
+    is AtomicIntegerArray       -> Types.INT_TYPE
+    is AtomicLongArray          -> Types.LONG_TYPE
+    else                        -> null
+}
 
 internal fun isAtomicFieldUpdater(obj: Any?) =
     obj is AtomicReferenceFieldUpdater<*, *> ||
@@ -684,6 +698,23 @@ internal fun isVarHandleInstanceFieldClass(className: String) =
 internal fun isVarHandleMethod(className: String, methodName: String) =
     isVarHandleClass(className) && methodName in varHandleMethods
 
+internal fun getVarHandleAccessType(varHandle: Any?): Types.Type? {
+    val className = varHandle?.javaClass?.name ?: return null
+    return when {
+        "Int"       in className -> Types.INT_TYPE
+        "Long"      in className -> Types.LONG_TYPE
+        "Short"     in className -> Types.SHORT_TYPE
+        "Byte"      in className -> Types.BYTE_TYPE
+        "Char"      in className -> Types.CHAR_TYPE
+        "Boolean"   in className -> Types.BOOLEAN_TYPE
+        "Double"    in className -> Types.DOUBLE_TYPE
+        "Float"     in className -> Types.FLOAT_TYPE
+        "Reference" in className -> Types.OBJECT_TYPE
+        "Object"    in className -> Types.OBJECT_TYPE
+        else                     -> null
+    }
+}
+
 internal fun isUnsafe(receiver: Any?): Boolean =
     if (receiver != null) isUnsafeClass(receiver::class.java.name) else false
 
@@ -693,6 +724,19 @@ internal fun isUnsafeClass(className: String) =
 
 internal fun isUnsafeMethod(className: String, methodName: String) =
     isUnsafeClass(className) && methodName in unsafeMethods
+
+internal fun parseUnsafeMethodAccessType(methodName: String): Types.Type? = when {
+    "Boolean"   in methodName -> Types.BOOLEAN_TYPE
+    "Byte"      in methodName -> Types.BYTE_TYPE
+    "Short"     in methodName -> Types.SHORT_TYPE
+    "Int"       in methodName -> Types.INT_TYPE
+    "Long"      in methodName -> Types.LONG_TYPE
+    "Float"     in methodName -> Types.FLOAT_TYPE
+    "Double"    in methodName -> Types.DOUBLE_TYPE
+    "Reference" in methodName -> Types.OBJECT_TYPE
+    "Object"    in methodName -> Types.OBJECT_TYPE
+    else                      -> null
+}
 
 private val atomicMethods = mapOf(
     // get

@@ -98,6 +98,19 @@ fun <T> List<T>.indexOfLast(from: Int, predicate: (T) -> Boolean): Int {
 }
 
 /**
+ * Returns the first non-null transformed element.
+ *
+ * @param transform a transformation function.
+ * @return the first non-null result of the transformation function, or null if no such result exists.
+ */
+fun <T, R> List<T>.findMapped(transform: (T) -> R?): R? {
+    for (element in this) {
+        transform(element)?.let { return it }
+    }
+    return null
+}
+
+/**
  * Returns a view of the portion of this mutable list within the specified range.
  *
  * @param range the range of indices defining the sublist,
@@ -187,10 +200,138 @@ fun <T> List<T>.isSortedWith(comparator: Comparator<in T>): Boolean {
 }
 
 /**
+ * Validates that a range specified by [fromIndex] and [toIndex] is within the bounds of the given collection.
+ * Throws exceptions if the range is invalid.
+ *
+ * @param this the collection to check the range against.
+ * @param fromIndex the starting index of the range, inclusive.
+ * @param toIndex the ending index of the range, exclusive.
+ * @throws IllegalArgumentException if [fromIndex] is greater than [toIndex].
+ * @throws IndexOutOfBoundsException if [fromIndex] is negative or [toIndex] exceeds [size].
+ */
+fun <T> Collection<T>.validateRangeBounds(fromIndex: Int, toIndex: Int) {
+    when {
+        fromIndex > toIndex -> throw IllegalArgumentException("fromIndex ($fromIndex) is greater than toIndex ($toIndex).")
+        fromIndex < 0 -> throw IndexOutOfBoundsException("fromIndex ($fromIndex) is less than zero.")
+        toIndex > size -> throw IndexOutOfBoundsException("toIndex ($toIndex) is greater than size ($size).")
+    }
+}
+
+/**
+ * Performs a binary search to find the first index where the [predicate] returns `true`.
+ *
+ * The list is assumed to be partitioned according to the predicate, meaning all elements
+ * for which the predicate returns `false` must precede all elements for which it returns `true`.
+ *
+ * @param fromIndex the starting index of the search range, inclusive; defaults to `0`.
+ * @param toIndex the ending index of the search range, exclusive; defaults to list size.
+ * @param predicate a function that returns `true` for elements in the "upper" partition
+ *        and `false` for elements in the "lower" partition.
+ * @return the index of the first element for which [predicate] returns `true`,
+ *         or [toIndex] if no such element exists within the specified range.
+ * @throws IllegalArgumentException if [fromIndex] is greater than [toIndex].
+ * @throws IndexOutOfBoundsException if [fromIndex] is negative or [toIndex] exceeds list size.
+ */
+fun<T> List<T>.binarySearch(fromIndex: Int = 0, toIndex: Int = size, predicate: (T) -> Boolean): Int {
+    validateRangeBounds(fromIndex, toIndex)
+
+    var low = fromIndex - 1
+    var high = toIndex
+    while (low + 1 < high) {
+        val mid = (low + high).ushr(1) // safe from overflows
+        if (predicate(get(mid)))
+            high = mid
+        else
+            low = mid
+    }
+    return high
+}
+
+/**
  * Returns the average value of the elements in the list, or `null` if the list is empty.
  */
 fun List<Long>.averageOrNull(): Double? {
     return if (isEmpty()) null else average()
+}
+
+/**
+ * Splits the list into sublists where each sublist contains consecutive elements that satisfy the given relation.
+ *
+ * @param relation A binary relation that determines whether two consecutive elements should be in the same sublist.
+ * @return A list of sublists, where each sublist contains consecutive elements that satisfy the relation.
+ */
+fun <T> List<T>.squash(relation: (T, T) -> Boolean): List<List<T>> {
+    if (isEmpty()) return emptyList()
+    var pos = 0
+    val squashed = arrayListOf<List<T>>()
+    while (pos < size) {
+        val i = pos
+        var j = i
+        while (++j < size) {
+            if (!relation(get(j - 1), get(j))) break
+        }
+        squashed.add(subList(i, j))
+        pos = j
+    }
+    return squashed
+}
+
+/**
+ * Computes the cartesian product of a list of sequences.
+ *
+ * Each element of the resulting sequence is a list representing one combination of elements,
+ * where one element is taken from each input sequence.
+ * The order of combinations adheres to the order of elements in the input sequences.
+ * If any input sequence is empty, the resulting sequence will also be empty.
+ *
+ * @return a sequence of lists, where each list represents a tuple of elements from the input sequences.
+ */
+fun <T> List<Sequence<T>>.cartesianProduct(): Sequence<List<T>> = sequence {
+    val sequences = this@cartesianProduct
+    if (sequences.isEmpty()) return@sequence
+
+    // prepare iterators of argument sequences
+    val iterators = sequences.map { it.iterator() }.toMutableList()
+
+    // compute the first element of each argument sequence,
+    // while also count the number of non-empty sequences
+    var count = 0
+    val elements = iterators
+        .map { if (it.hasNext()) it.next().also { count++ } else null }
+        .toMutableList()
+    // return the empty sequence if at least one of the argument sequences is empty
+    if (count != iterators.size) return@sequence
+    // can cast here since the list can only contain elements
+    // returned by iterators' `next()` function
+    @Suppress("UNCHECKED_CAST")
+    elements as MutableList<T>
+
+    // produce tuples in a loop
+    while (true) {
+        // yield current tuple (make a copy)
+        yield(elements.toMutableList())
+
+        // prepare the next tuple:
+        // while the last sequence has elements, spawn it
+        if (iterators.last().hasNext()) {
+            elements[iterators.lastIndex] = iterators.last().next()
+            continue
+        }
+
+        // otherwise, reset the last sequence iterator,
+        // advance a preceding sequence, and repeat this process
+        // until we find a non-exceeded sequence
+        var idx = iterators.indices.last
+        while (idx >= 0 && !iterators[idx].hasNext()) {
+            iterators[idx] = sequences[idx].iterator()
+            elements[idx] = iterators[idx].next()
+            idx -= 1
+        }
+        // if all sequences have been exceeded, return
+        if (idx < 0) return@sequence
+        // otherwise, advance the non-exceeded sequence
+        elements[idx] = iterators[idx].next()
+    }
 }
 
 /**

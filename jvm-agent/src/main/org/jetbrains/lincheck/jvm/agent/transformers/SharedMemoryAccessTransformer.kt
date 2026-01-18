@@ -16,6 +16,7 @@ import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import org.jetbrains.lincheck.jvm.agent.*
+import org.jetbrains.lincheck.descriptors.toType
 import org.jetbrains.lincheck.trace.TraceContext
 import org.objectweb.asm.MethodVisitor
 import sun.nio.ch.lincheck.*
@@ -72,19 +73,33 @@ internal class SharedMemoryAccessTransformer(
         val fieldId = context.getOrCreateFieldId(
             className = owner.toCanonicalClassName(),
             fieldName = fieldName,
+            type = desc.toType(),
             isStatic = true,
             isFinal = FinalFields.isFinalField(owner, fieldName)
         )
+        val resultInterceptorLocal = newLocal(OBJECT_TYPE).also {
+            pushResultInterceptor()
+            storeLocal(it)
+        }
 
         // STACK: <empty>
         invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
         val codeLocationId = loadNewCodeLocationId()
         pushNull()
         push(fieldId)
-        // STACK: descriptor, codeLocation, null, fieldId
+        loadLocal(resultInterceptorLocal)
+        // STACK: descriptor, codeLocation, null, fieldId, resultInterceptor
         invokeStatic(Injections::beforeReadField)
         // STACK: <empty>
-        super.visitFieldInsn(opcode, owner, fieldName, desc)
+
+        processRead(resultInterceptorLocal, getType(desc),
+            emitReadInstruction = {
+                // STACK: <empty>
+                super.visitFieldInsn(opcode, owner, fieldName, desc)
+                // STACK: value
+            }
+        )
+
         // STACK: value
         invokeAfterReadField(null, fieldId, getType(desc), codeLocationId)
         // STACK: value
@@ -96,9 +111,15 @@ internal class SharedMemoryAccessTransformer(
         val fieldId = context.getOrCreateFieldId(
             className = owner.toCanonicalClassName(),
             fieldName = fieldName,
+            type = desc.toType(),
             isStatic = false,
             isFinal = FinalFields.isFinalField(owner, fieldName)
         )
+        val resultInterceptorLocal = newLocal(OBJECT_TYPE).also {
+            pushResultInterceptor()
+            storeLocal(it)
+        }
+
         // STACK: obj
         val ownerName = ownerNameAnalyzer?.stack?.getStackElementAt(0)
         val ownerLocal = newLocal(getType("L$owner;")).also { copyLocal(it) }
@@ -107,11 +128,25 @@ internal class SharedMemoryAccessTransformer(
         val codeLocationId = loadNewCodeLocationId(accessPath = ownerName)
         loadLocal(ownerLocal)
         push(fieldId)
-        // STACK: descriptor, codeLocation, obj, fieldId
+        loadLocal(resultInterceptorLocal)
+        // STACK: descriptor, codeLocation, obj, fieldId, resultInterceptor
         invokeStatic(Injections::beforeReadField)
         // STACK: obj
-        super.visitFieldInsn(opcode, owner, fieldName, desc)
-        // STACK: obj
+
+        processRead(resultInterceptorLocal, getType(desc),
+            cleanStack = {
+                // STACK: obj
+                pop()
+                // STACK: <empty>
+            },
+            emitReadInstruction = {
+                // STACK: obj
+                super.visitFieldInsn(opcode, owner, fieldName, desc)
+                // STACK: value
+            }
+        )
+
+        // STACK: value
         invokeAfterReadField(ownerLocal, fieldId, getType(desc), codeLocationId)
         // STACK: value
         invokeBeforeEventIfPluginEnabled("read field")
@@ -123,11 +158,11 @@ internal class SharedMemoryAccessTransformer(
         val fieldId = context.getOrCreateFieldId(
             className = owner.toCanonicalClassName(),
             fieldName = fieldName,
+            type = desc.toType(),
             isStatic = true,
             isFinal = FinalFields.isFinalField(owner, fieldName)
         )
         val valueLocal = newLocal(valueType).also { storeLocal(it) } // we cannot use DUP as long/double require DUP2
-
 
         loadLocal(valueLocal)
         // STACK: value
@@ -154,6 +189,7 @@ internal class SharedMemoryAccessTransformer(
         val fieldId = context.getOrCreateFieldId(
             className = owner.toCanonicalClassName(),
             fieldName = fieldName,
+            type = desc.toType(),
             isStatic = false,
             isFinal = FinalFields.isFinalField(owner, fieldName)
         )
@@ -210,19 +246,37 @@ internal class SharedMemoryAccessTransformer(
         val indexLocal = newLocal(INT_TYPE).also { storeLocal(it) }
         val arrayLocal = newLocal(getType("[$arrayElementType")).also { storeLocal(it) }
         val ownerName = ownerNameAnalyzer?.stack?.getStackElementAt(1)
+        val resultInterceptorLocal = newLocal(OBJECT_TYPE).also {
+            pushResultInterceptor()
+            storeLocal(it)
+        }
 
         // STACK: <empty>
         invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
         val codeLocationId = loadNewCodeLocationId(accessPath = ownerName)
         loadLocal(arrayLocal)
         loadLocal(indexLocal)
+        loadLocal(resultInterceptorLocal)
         // STACK: descriptor, codeLocation, array, index
         invokeStatic(Injections::beforeReadArray)
         // STACK: <empty>
         loadLocal(arrayLocal)
         loadLocal(indexLocal)
         // STACK: array, index
-        super.visitInsn(opcode)
+
+        processRead(resultInterceptorLocal, arrayElementType,
+            cleanStack = {
+                // STACK: array, index
+                pop(); pop()
+                // STACK: <empty>
+            },
+            emitReadInstruction = {
+                // STACK: array, index
+                super.visitInsn(opcode)
+                // STACK: value
+            }
+        )
+
         // STACK: value
         invokeAfterReadArray(arrayLocal, indexLocal, arrayElementType, codeLocationId)
         // STACK: value
@@ -258,6 +312,33 @@ internal class SharedMemoryAccessTransformer(
         // STACK: <empty>
         invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
         invokeStatic(Injections::afterWrite)
+    }
+
+    private fun GeneratorAdapter.processRead(
+        resultInterceptorLocal: Int,
+        returnType: Type,
+        cleanStack: GeneratorAdapter.() -> Unit = {},
+        emitReadInstruction: GeneratorAdapter.() -> Unit,
+    ) {
+        if (!configuration.interceptReadResults) {
+            emitReadInstruction()
+            return
+        }
+
+        ifStatement(
+            condition = {
+                isReadResultIntercepted(resultInterceptorLocal)
+            },
+            thenClause = {
+                cleanStack()
+                // STACK: <empty>
+                getInterceptedReadResult(resultInterceptorLocal, returnType)
+                // STACK: value
+            },
+            elseClause = {
+                emitReadInstruction()
+            },
+        )
     }
 
     private fun GeneratorAdapter.invokeAfterReadField(ownerLocal: Int?, fieldId: Int, valueType: Type, codeLocationId: Int) {
@@ -332,4 +413,33 @@ internal class SharedMemoryAccessTransformer(
         check(arrayType.dimensions > 0)
         return getType(arrayDesc.substring(1))
     }
+
+    // TODO: extract helper result interceptor methods and unify with `MethodCallTransformer`
+
+    private fun GeneratorAdapter.pushResultInterceptor() {
+        if (configuration.interceptReadResults) {
+            invokeStatic(Injections::createResultInterceptor)
+        } else {
+            pushNull()
+        }
+    }
+
+    private fun GeneratorAdapter.isReadResultIntercepted(resultInterceptorLocal: Int) {
+        // STACK: <empty>
+        loadLocal(resultInterceptorLocal)
+        // STACK: interceptor
+        invokeStatic(Injections::isResultOrExceptionIntercepted)
+        // STACK: isIntercepted
+    }
+
+    private fun GeneratorAdapter.getInterceptedReadResult(resultInterceptorLocal: Int, returnType: Type) {
+        // STACK: <empty>
+        loadLocal(resultInterceptorLocal)
+        // STACK: interceptor
+        invokeStatic(Injections::getOrThrowInterceptedResult) // NOTE: Can we ever decide to intercept with an exception?
+        // STACK: result
+        if (returnType == VOID_TYPE) pop() else unbox(returnType)
+        // STACK: result?
+    }
+
 }

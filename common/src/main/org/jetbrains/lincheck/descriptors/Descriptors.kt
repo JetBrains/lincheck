@@ -45,6 +45,7 @@ data class FieldDescriptor(
     private val context: TraceContext,
     val classId: Int,
     val fieldName: String,
+    val type: Types.Type,
     val isStatic: Boolean,
     val isFinal: Boolean,
 ) {
@@ -55,6 +56,7 @@ data class FieldDescriptor(
 fun Field.toDescriptor(context: TraceContext) = context.getFieldDescriptor(
     className = this.declaringClass.name,
     fieldName = this.name,
+    type = this.type.kotlin.getType(),
     isStatic = Modifier.isStatic(this.modifiers),
     isFinal = Modifier.isFinal(this.modifiers),
 )

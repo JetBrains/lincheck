@@ -419,7 +419,7 @@ class TraceCollectingEventTracker(
         descriptor: String,
         bootstrapMethodData: Injections.HandlePojo,
         bootstrapMethodArguments: Array<out Any?>,
-        callSite: CallSite
+        callSite: CallSite,
     ) = runInsideIgnoredSection {
         Logger. error { "Trace Recorder mode doesn't support invoke dynamic instrumentation" }
     }
@@ -430,7 +430,8 @@ class TraceCollectingEventTracker(
         threadDescriptor: ThreadDescriptor,
         codeLocation: Int,
         obj: Any?,
-        fieldId: Int
+        fieldId: Int,
+        resultInterceptor: ResultInterceptor?
     ) {}
 
     override fun beforeReadArrayElement(
@@ -438,7 +439,9 @@ class TraceCollectingEventTracker(
         codeLocation: Int,
         array: Any,
         index: Int,
+        resultInterceptor: ResultInterceptor?
     ) {}
+
 
     // Needs to run inside ignored section
     // as uninstrumented std lib code can be overshadowed by instrumented project code.
@@ -492,7 +495,7 @@ class TraceCollectingEventTracker(
         codeLocation: Int,
         obj: Any?,
         value: Any?,
-        fieldId: Int
+        fieldId: Int,
     ): Unit = threadDescriptor.runInsideInjectedCode {
         val fieldDescriptor = context.getFieldDescriptor(fieldId)
         if (!fieldDescriptor.isStatic && obj == null) {

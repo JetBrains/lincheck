@@ -22,6 +22,7 @@ import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.analysis.*
 import org.jetbrains.lincheck.datastructures.*
 import org.jetbrains.lincheck.descriptors.*
+import org.jetbrains.lincheck.descriptors.Types.VOID_TYPE
 import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.*
@@ -95,6 +96,9 @@ internal abstract class ManagedStrategy(
 
     // Tracker of objects' allocations and object graph topology.
     protected abstract val objectTracker: ObjectTracker
+    // Tracker of shared memory accesses.
+    protected abstract val memoryTracker: MemoryTracker?
+
     // Tracker of objects' identity hash codes.
     private val identityHashCodeTracker = ObjectIdentityHashCodeTracker()
     // Tracker of native method call states.
@@ -231,6 +235,7 @@ internal abstract class ManagedStrategy(
         suddenInvocationResult = null
         loopDetector.reset()
         objectTracker.reset()
+        memoryTracker?.reset()
         monitorTracker.reset()
         parkingTracker.reset()
         currentEventId = -1
@@ -1294,7 +1299,8 @@ internal abstract class ManagedStrategy(
         threadDescriptor: ThreadDescriptor,
         codeLocation: Int,
         obj: Any?,
-        fieldId: Int
+        fieldId: Int,
+        resultInterceptor: ResultInterceptor?,
     ): Unit = threadDescriptor.runInsideIgnoredSection {
         val fieldDescriptor = context.getFieldDescriptor(fieldId)
         if (!fieldDescriptor.isStatic && obj == null) {
@@ -1312,7 +1318,19 @@ internal abstract class ManagedStrategy(
         }
         val threadId = threadScheduler.getCurrentThreadId()
         newSwitchPoint(threadId, codeLocation)
+        if (memoryTracker != null) {
+            val location = objectTracker.getFieldAccessMemoryLocation(obj,
+                className = fieldDescriptor.className,
+                fieldName = fieldDescriptor.fieldName,
+                type = fieldDescriptor.type,
+                isStatic = fieldDescriptor.isStatic,
+                isFinal = fieldDescriptor.isFinal,
+            )
+            memoryTracker!!.beforeRead(threadId, codeLocation, location)
+            resultInterceptor?.interceptResult(memoryTracker!!.interceptReadResult(threadId))
+        }
         loopDetector.beforeReadField(obj)
+        return
     }
 
     override fun beforeReadArrayElement(
@@ -1320,6 +1338,7 @@ internal abstract class ManagedStrategy(
         codeLocation: Int,
         array: Any?,
         index: Int,
+        resultInterceptor: ResultInterceptor?,
     ): Unit = threadDescriptor.runInsideIgnoredSection {
         if (array == null) return // ignore, `NullPointerException` will be thrown
         updateSnapshotOnArrayElementAccess(array, index)
@@ -1328,7 +1347,16 @@ internal abstract class ManagedStrategy(
         }
         val threadId = threadScheduler.getCurrentThreadId()
         newSwitchPoint(threadId, codeLocation)
+        // TODO: this is a mess
+        if (memoryTracker != null) {
+            val type = array.javaClass.kotlin.getArrayElementType()
+            val location = objectTracker.getArrayAccessMemoryLocation(array, index, type)
+            // TODO: Should we use threadID or thread Descriptor here?
+            memoryTracker!!.beforeRead(threadId, codeLocation, location)
+            resultInterceptor?.interceptResult(memoryTracker!!.interceptReadResult(threadId))
+        }
         loopDetector.beforeReadArrayElement(array, index)
+        return
     }
 
     override fun afterReadField(
@@ -1402,7 +1430,7 @@ internal abstract class ManagedStrategy(
         codeLocation: Int,
         obj: Any?,
         value: Any?,
-        fieldId: Int
+        fieldId: Int,
     ): Unit = threadDescriptor.runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
         val fieldDescriptor = context.getFieldDescriptor(fieldId)
@@ -1436,6 +1464,16 @@ internal abstract class ManagedStrategy(
             null
         }
         traceCollector?.addTracePointInternal(tracePoint)
+        if (memoryTracker != null) {
+            val location = objectTracker.getFieldAccessMemoryLocation(obj,
+                className = fieldDescriptor.className,
+                fieldName = fieldDescriptor.fieldName,
+                type = fieldDescriptor.type,
+                isStatic = fieldDescriptor.isStatic,
+                isFinal = fieldDescriptor.isFinal,
+            )
+            memoryTracker!!.beforeWrite(threadId, codeLocation, location, value)
+        }
         loopDetector.beforeWriteField(obj, value)
     }
 
@@ -1477,6 +1515,11 @@ internal abstract class ManagedStrategy(
             null
         }
         traceCollector?.addTracePointInternal(tracePoint)
+        if (memoryTracker != null) {
+            val type = array.javaClass.kotlin.getArrayElementType()
+            val location = objectTracker.getArrayAccessMemoryLocation(array, index, type)
+            memoryTracker!!.beforeWrite(threadId, codeLocation, location, value)
+        }
         loopDetector.beforeWriteArrayElement(array, index, value)
     }
 
@@ -1487,6 +1530,8 @@ internal abstract class ManagedStrategy(
             }
         }
     }
+
+    // TODO: Should we intercept on array copy?
 
     override fun afterLocalRead(threadDescriptor: ThreadDescriptor, codeLocation: Int, variableId: Int, value: Any?) {}
 
@@ -1642,7 +1687,7 @@ internal abstract class ManagedStrategy(
             result?.let { afterNewObjectCreation(threadDescriptor, it) }
         }
     }
-    
+
     private fun DeterministicMethodDescriptor<*, *>.processDeterministicMethodCall(
         receiver: Any?,
         params: Array<Any?>,
@@ -1667,7 +1712,7 @@ internal abstract class ManagedStrategy(
             interceptor?.intercept(interceptedResult)
         }
     }
-    
+
     private fun DeterministicMethodDescriptor<*, *>.processDeterministicMethodResult(
         receiver: Any?,
         params: Array<Any?>,
@@ -1720,7 +1765,6 @@ internal abstract class ManagedStrategy(
             threadScheduler.abortCurrentThread()
         }
 
-        // obtain deterministic method descriptor if required
         val methodCallInfo = MethodCallInfo(
             ownerType = Types.ObjectType(methodDescriptor.className),
             methodSignature = methodDescriptor.methodSignature,
@@ -1728,9 +1772,33 @@ internal abstract class ManagedStrategy(
             methodId = methodId,
         )
 
+        var shouldInterceptAtomicMethod: Boolean = false
+        if (memoryTracker != null && atomicMethodDescriptor != null && receiver != null) {
+            val location = objectTracker.getAtomicAccessMemoryLocation(
+                context,
+                methodDescriptor.className,
+                methodDescriptor.methodName,
+                receiver,
+                params,
+                atomicMethodDescriptor,
+            )
+            shouldInterceptAtomicMethod = memoryTracker!!.trackAtomicMethodMemoryAccess(
+                receiver,
+                codeLocation,
+                params,
+                atomicMethodDescriptor,
+                threadId,
+                location,
+            )
+        }
+
+        // obtain deterministic method descriptor if required
         val deterministicMethodDescriptor = getDeterministicMethodDescriptorOrNull(receiver, params, methodCallInfo)
+
         if (deterministicMethodDescriptor != null) {
             deterministicMethodDescriptor.processDeterministicMethodCall(receiver, params, methodCallInfo, interceptor)
+        } else if (memoryTracker != null && shouldInterceptAtomicMethod) {
+            interceptor?.interceptResult(memoryTracker!!.interceptReadResult(threadId))
         } else {
             // we are at normal deterministic method => no need to enforce the deterministic result => do nothing
         }
@@ -1747,6 +1815,7 @@ internal abstract class ManagedStrategy(
         if (receiver == null && methodSection < AnalysisSectionType.ATOMIC) {
             LincheckInstrumentation.ensureClassHierarchyIsTransformed(methodDescriptor.className)
         }
+
         // in the case of atomics API setter method call, notify the object tracker about a new link between objects
         if (atomicMethodDescriptor != null && atomicMethodDescriptor.kind.isSetter) {
             objectTracker.registerObjectLink(
@@ -1838,7 +1907,7 @@ internal abstract class ManagedStrategy(
 
         val deterministicMethodDescriptor = interceptor?.getDeterministicMethodDescriptor()
         if (deterministicMethodDescriptor != null) {
-            deterministicMethodDescriptor.processDeterministicMethodResult(receiver, params, result, interceptor)    
+            deterministicMethodDescriptor.processDeterministicMethodResult(receiver, params, result, interceptor)
         }
 
         val threadId = threadScheduler.getCurrentThreadId()
