@@ -11,9 +11,9 @@
 package org.jetbrains.lincheck.trace.recorder
 
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
-import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.jvm.agent.TraceAgentTransformer
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_LINE_BREAKPOINT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_EXCLUDE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_INCLUDE
@@ -139,7 +139,11 @@ internal object TraceRecorderAgent {
             val jmxHost = TraceAgentParameters.getArg(ARGUMENT_JMX_HOST)
             val jmxPort = TraceAgentParameters.getArg(ARGUMENT_JMX_PORT)?.toIntOrNull()
             val rmiPort = TraceAgentParameters.getArg(ARGUMENT_RMI_PORT)?.toIntOrNull()
-            TraceRecorderJmxServer.start(jmxHost, jmxPort, rmiPort)
+            TraceRecorderJmxServer.start(
+                jmxHost = jmxHost ?: TraceAgentParameters.DEFAULT_JMX_HOST,
+                jmxPort = jmxPort ?: TraceAgentParameters.DEFAULT_JMX_PORT,
+                rmiPort = rmiPort ?: TraceAgentParameters.DEFAULT_RMI_PORT,
+            )
             TraceRecorderJmxController.register()
         }
     }

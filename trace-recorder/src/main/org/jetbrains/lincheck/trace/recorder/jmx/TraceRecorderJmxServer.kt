@@ -29,31 +29,24 @@ object TraceRecorderJmxServer {
      * @param rmiPort The port for RMI registry (default: 9998)
      */
     @JvmStatic
-    fun start(
-        jmxHost: String? = null,
-        jmxPort: Int? = null,
-        rmiPort: Int? = null,
-    ) {
-        val host = jmxHost ?: TraceAgentParameters.DEFAULT_JMX_HOST
-        val port = jmxPort ?: TraceAgentParameters.DEFAULT_JMX_PORT
-        val rmi = rmiPort ?: TraceAgentParameters.DEFAULT_RMI_PORT
+    fun start(jmxHost: String, jmxPort: Int, rmiPort: Int) {
         try {
-            // Create RMI registry on the specified port
-            LocateRegistry.createRegistry(rmi)
+            // Create an RMI registry on the specified port
+            LocateRegistry.createRegistry(rmiPort)
 
             // Get the platform MBean server
             val mbs = ManagementFactory.getPlatformMBeanServer()
 
             // Create JMX service URL
-            val serviceUrl = TraceAgentParameters.getJmxServerUrl(host, port, rmi)
+            val serviceUrl = TraceAgentParameters.getJmxServerUrl(jmxHost, jmxPort, rmiPort)
 
             // Create and start the JMX connector server
             val connectorServer = JMXConnectorServerFactory.newJMXConnectorServer(serviceUrl, null, mbs)
             connectorServer.start()
 
-            println("JMX server started successfully on $host:$port (RMI port: $rmi)")
+            println("JMX server started successfully on $jmxHost:$jmxPort (RMI port: $rmiPort)")
         } catch (t: Throwable) {
-            Logger.error { "Failed to start JMX server on $host:$port (RMI port: $rmi)" }
+            Logger.error { "Failed to start JMX server on $jmxHost:$jmxPort (RMI port: $rmiPort)" }
             Logger.error(t)
         }
     }
