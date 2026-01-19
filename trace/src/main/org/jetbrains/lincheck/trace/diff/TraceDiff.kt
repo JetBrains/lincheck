@@ -23,7 +23,7 @@ fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName:
     require(!left.isDiff) { "Cannot diff other diffs: left trace is diff" }
     require(!right.isDiff) { "Cannot diff other diffs: right trace is diff" }
 
-    val metaInfo = TraceMetaInfo.startDiff(left.metaInfo, right.metaInfo)
+    val diffStartTime = System.currentTimeMillis()
 
     // Load all left and right roots.
     val leftRoots = left.readRoots()
@@ -90,7 +90,9 @@ fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName:
     }
     idMapStream.close()
 
-    metaInfo.traceEnded()
+    val diffEndTime = System.currentTimeMillis()
+    val metaInfo = TraceMetaInfo.createDiff(left.metaInfo, right.metaInfo, diffStartTime, diffEndTime)
+
     packDiff(outputBaseName, idMapFile.absolutePath, threadMapFile.absolutePath, metaInfo)
 }
 

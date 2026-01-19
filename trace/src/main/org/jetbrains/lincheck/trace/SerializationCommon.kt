@@ -135,7 +135,12 @@ data class TraceMetaInfo private constructor(
             return meta
         }
 
-        fun startDiff(leftMetaInfo: TraceMetaInfo?, rightMetaInfo: TraceMetaInfo?): TraceMetaInfo {
+        fun createDiff(
+            leftMetaInfo: TraceMetaInfo?,
+            rightMetaInfo: TraceMetaInfo?,
+            startTime: Long,
+            endTime: Long
+        ): TraceMetaInfo {
             val bean = ManagementFactory.getRuntimeMXBean()
             // Read JVM args
             val jvmArgs = bean.inputArguments.joinToString(" ") { arg -> arg.escapeShell() }
@@ -145,7 +150,8 @@ data class TraceMetaInfo private constructor(
                 agentArgs = "",
                 className = "",
                 methodName = "",
-                startTime = System.currentTimeMillis(),
+                startTime = startTime,
+                endTime = endTime,
                 isDiff = true,
                 leftTraceMetaInfo = leftMetaInfo,
                 rightTraceMetaInfo = rightMetaInfo
@@ -183,11 +189,11 @@ data class TraceMetaInfo private constructor(
                 className = className,
                 methodName = methodName,
                 startTime = startTime,
+                endTime = endTime,
                 isDiff = isDiff,
                 leftTraceMetaInfo = leftTraceMetaInfo,
                 rightTraceMetaInfo = rightTraceMetaInfo
             )
-            meta.endTime = endTime
 
             if (!reader.readMap(PROPERTIES_HEADER, meta.props)) return null
             if (!reader.readMap(ENV_HEADER, meta.env)) return null
