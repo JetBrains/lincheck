@@ -108,20 +108,27 @@ internal object TraceRecorderAgent {
          *
          * It is an error not to set any mode.
          */
+
         // Check if one of the required parameters is set.
         check(isInTraceRecorderMode || isInLiveDebuggerMode) {
-            "When lincheck agent is attached to process, " +
-            "mode should be selected by VM parameter `lincheck.traceRecorderMode` or `lincheck.liveDebuggerMode`. " +
-            "One of them is expected to be `true`. " +
-            "Rerun with `-Dlincheck.traceRecorderMode=true` or `-Dlincheck.liveDebuggerMode=true`."
+            """
+            When lincheck agent is attached to process,
+            mode should be selected by VM parameter: 
+            `lincheck.traceRecorderMode` or `lincheck.liveDebuggerMode`.
+            One of them is expected to be `true`.
+            Rerun with `-Dlincheck.traceRecorderMode=true` or `-Dlincheck.liveDebuggerMode=true`.
+            """.trimIndent()
         }
         // Check that only one parameter is set
         val modesEnabled = listOf(isInTraceDebuggerMode, isInTraceRecorderMode, isInLiveDebuggerMode).count { it }
         check(modesEnabled == 1) {
-            "When lincheck agent is attached to process, " +
-            "mode should be selected by one of VM parameters `lincheck.traceDebuggerMode`, " +
-            "`lincheck.traceRecorderMode`, or `lincheck.liveDebuggerMode`. Only one of them expected to be `true`. " +
-            "Rerun with exactly one mode flag set."
+            """
+            When lincheck agent is attached to process,
+            mode should be selected by one of VM parameters: 
+            `lincheck.traceDebuggerMode`, `lincheck.traceRecorderMode`, or `lincheck.liveDebuggerMode`. 
+            Only one of them expected to be `true`. 
+            Rerun with exactly exactly one mode flag set.
+            """.trimIndent()
         }
     }
 
