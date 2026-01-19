@@ -13,7 +13,6 @@ package org.jetbrains.lincheck.trace.recorder.jmx
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import java.lang.management.ManagementFactory
 import java.rmi.registry.LocateRegistry
-import javax.management.remote.JMXServiceURL
 import javax.management.remote.JMXConnectorServerFactory
 import org.jetbrains.lincheck.util.Logger
 
@@ -46,7 +45,7 @@ object TraceRecorderJmxServer {
             val mbs = ManagementFactory.getPlatformMBeanServer()
 
             // Create JMX service URL
-            val serviceUrl = JMXServiceURL("service:jmx:rmi://$host:$port/jndi/rmi://$host:$rmi/tracing")
+            val serviceUrl = TraceAgentParameters.getJmxServerUrl(host, port, rmi)
 
             // Create and start the JMX connector server
             val connectorServer = JMXConnectorServerFactory.newJMXConnectorServer(serviceUrl, null, mbs)
@@ -54,7 +53,7 @@ object TraceRecorderJmxServer {
 
             println("JMX server started successfully on $host:$port (RMI port: $rmi)")
         } catch (t: Throwable) {
-            Logger.error { "Failed to start JMX server" }
+            Logger.error { "Failed to start JMX server on $host:$port (RMI port: $rmi)" }
             Logger.error(t)
         }
     }

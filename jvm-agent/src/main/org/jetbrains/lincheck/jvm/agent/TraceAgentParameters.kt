@@ -14,6 +14,7 @@ import org.jetbrains.annotations.TestOnly
 import org.jetbrains.lincheck.util.Logger
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
+import javax.management.remote.JMXServiceURL
 
 /**
  * Parses and stores arguments passed to Lincheck JVM javaagents (trace-recorder and trace-debugger).
@@ -61,7 +62,7 @@ import java.lang.reflect.Modifier
  *       Example: `formatOption=dump`
  *
  * - jmxServer — boolean that enables JMX server for remote monitoring and management, it is off by default.
- *     The server is started at the URL `service:jmx:rmi:///jndi/rmi://<jmxHost>:<jmxPort>/tracing`.
+ *     The server is available at the URL `service:jmx:rmi:///jndi/rmi://<jmxHost>:<jmxPort>/tracing`.
  *       Example: `jmxServer=on` or `jmxServer=off`
  *
  * - jmxHost — hostname or IP address for the JMX server, defaults to localhost.
@@ -274,6 +275,10 @@ object TraceAgentParameters {
             ?: error("Method \"${methodUnderTraceDebugging}\" was not found in class \"${classUnderTraceDebugging}\". Check that method exists and it is public.")
         return testClass to testMethod
     }
+
+    @JvmStatic
+    fun getJmxServerUrl(jmxHost: String, jmxPort: Int, rmiPort: Int): JMXServiceURL =
+        JMXServiceURL("service:jmx:rmi://$jmxHost:$jmxPort/jndi/rmi://$jmxHost:$rmiPort/tracing")
 
     @TestOnly
     fun reset() {
