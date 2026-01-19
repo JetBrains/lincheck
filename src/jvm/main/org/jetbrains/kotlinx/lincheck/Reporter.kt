@@ -386,6 +386,8 @@ internal fun Appendable.appendFailure(failure: LincheckFailure): Appendable {
         }
         is ObstructionFreedomViolationFailure -> appendObstructionFreedomViolationFailure(failure, exceptionStackTraces)
         is ManagedDeadlockFailure -> appendManagedDeadlockWithDumpFailure(failure, exceptionStackTraces)
+//        TODO: verify livelock handling
+        is ManagedLivelockFailure -> appendManagedDeadlockWithDumpFailure(failure, exceptionStackTraces)
     }
     if (failure.trace != null) {
         appendLine()

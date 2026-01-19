@@ -334,6 +334,7 @@ private val LincheckFailure.type: String
         is UnexpectedExceptionFailure -> "UNEXPECTED_EXCEPTION"
         is ValidationFailure -> "VALIDATION_FAILURE"
         is ManagedDeadlockFailure, is TimeoutFailure -> "DEADLOCK"
+        is ManagedLivelockFailure -> "LIVELOCK_SPINLOOP"
     }
 
 /**
