@@ -13,7 +13,6 @@ package org.jetbrains.lincheck.trace.recorder
 import org.jetbrains.lincheck.analysis.ShadowStackFrame
 import org.jetbrains.lincheck.descriptors.CodeLocations
 import org.jetbrains.lincheck.descriptors.Types
-import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.trace.TRMethodCallTracePoint.Companion.INCOMPLETE_METHOD_FLAG
 import org.jetbrains.lincheck.util.*
@@ -201,9 +200,9 @@ fun parseOutputMode(outputMode: String?, outputOption: String?): TraceCollectorM
 }
 
 class TraceCollectingEventTracker(
-    private val mode: TraceCollectorMode,
-    private val context: TraceContext,
-    private val traceDumpFilePath: String? = null, // should be non-null for BINARY_STREAM mode
+    internal val mode: TraceCollectorMode,
+    internal val context: TraceContext,
+    internal val traceStreamingFilePath: String? = null, // should be non-null for BINARY_STREAM mode
 ) : EventTracker {
     // Analysis profile for tracing --- tells what methods should be analyzed or ignored
     private val analysisProfile: AnalysisProfile = AnalysisProfile(analyzeStdLib = false)
@@ -227,8 +226,8 @@ class TraceCollectingEventTracker(
                 strategy = MemoryTraceCollecting(context)
             }
             TraceCollectorMode.BINARY_STREAM -> {
-                check(traceDumpFilePath != null) { "Stream output type needs non-empty output file name" }
-                strategy = FileStreamingTraceCollecting(traceDumpFilePath, context)
+                check(traceStreamingFilePath != null) { "Stream output type needs non-empty output file name" }
+                strategy = FileStreamingTraceCollecting(traceStreamingFilePath, context)
             }
             TraceCollectorMode.NULL -> {
                 strategy = NullTraceCollecting(context)
@@ -246,29 +245,6 @@ class TraceCollectingEventTracker(
     // when Main thread finishes and decides to "finish" all other running threads.
     // By "finish" here we imply that it will dump their recorded data.
     private val spinner = Spinner()
-
-    /**
-     * Represents the state of a tracing process:
-     * - RUNNING: tracing is currently running.
-     * - FINISHED: tracing was finished.
-     */
-    private enum class TracingState { RUNNING, FINISHED }
-
-    /**
-     * This class hierarchy denotes various modes of tracing start.
-     *
-     * - [FromMethod] means that the tracing was started from a specific method.
-     * - [Dynamic] means that the tracing was started dynamically by external request during application run.
-     */
-    private sealed class TracingStartMode {
-        data class FromMethod(val className: String, val methodName: String) : TracingStartMode()
-        object Dynamic : TracingStartMode()
-    }
-
-    private var state: TracingState? = null
-    private var tracingStartMode: TracingStartMode? = null
-    private var tracingStartTime = -1L
-    private var tracingEndTime = -1L
 
     override fun registerRunningThread(descriptor: ThreadDescriptor, thread: Thread): Unit = runInsideIgnoredSection {
         // must be outside of the `computeIfAbsent` call, because its body
@@ -914,24 +890,7 @@ class TraceCollectingEventTracker(
         return -1
     }
 
-    fun startTracing() {
-        check(state == null) { "Tracing already started" }
-
-        tracingStartMode = TracingStartMode.Dynamic
-        tracingStartTime = System.currentTimeMillis()
-        state = TracingState.RUNNING
-    }
-
-    fun startTracing(className: String, methodName: String, codeLocationId: Int) {
-        check(state == null) { "Tracing already started" }
-
-        registerCurrentThread(className, methodName, codeLocationId)
-        tracingStartMode = TracingStartMode.FromMethod(className, methodName)
-        tracingStartTime = System.currentTimeMillis()
-        state = TracingState.RUNNING
-    }
-
-    private fun registerCurrentThread(className: String, methodName: String, codeLocationId: Int) {
+    internal fun registerCurrentThread(className: String, methodName: String, codeLocationId: Int) {
         val thread = Thread.currentThread()
         val threadData = ThreadData(nextThreadId.getAndIncrement())
         ThreadDescriptor.getCurrentThreadDescriptor().eventTrackerData = threadData
@@ -1024,8 +983,6 @@ class TraceCollectingEventTracker(
     }
 
     fun finishTracing() {
-        check(state == TracingState.RUNNING) { "Tracing was not started" }
-
         // Finish existing threads, except for Main
         val currentThread = Thread.currentThread()
 
@@ -1053,89 +1010,23 @@ class TraceCollectingEventTracker(
         }
 
         strategy.traceEnded()
-        tracingEndTime = System.currentTimeMillis()
-        state = TracingState.FINISHED
-
-        Logger.debug { "Trace collected in ${tracingStartTime - tracingEndTime} ms" }
     }
 
-    fun dumpTrace(traceDumpFilePath: String, packTrace: Boolean) {
-        check(state == TracingState.FINISHED) { "Tracing was not finished" }
-
-        var className: String? = null
-        var methodName: String? = null
-        when (val mode = tracingStartMode) {
-            is TracingStartMode.FromMethod -> {
-                className = mode.className
-                methodName = mode.methodName
-            }
-            else -> {}
-        }
-
-        val metaInfo = TraceMetaInfo.create(
-            agentArgs = TraceAgentParameters.rawArgs,
-            className = className ?: "",
-            methodName = methodName ?: "",
-            startTime = tracingStartTime,
-            endTime = tracingEndTime,
-        )
-
-        val traceWriteStartTime = System.currentTimeMillis()
-
-        try {
-            val roots = mutableListOf<TRTracePoint>()
-            threads.values.sortedBy { it.threadId }.forEach { threadData ->
-                val rootCall = threadData.rootCall
-                if (rootCall == null) {
-                    val threadName = context.getThreadName(threadData.threadId)
-                    Logger.error { "Trace Recorder: Thread #${threadData.threadId + 1} ($threadName): No root call found" }
-                } else {
-                    roots.add(rootCall)
-                }
-            }
-
-            when (mode) {
-                TraceCollectorMode.BINARY_DUMP -> {
-                    saveRecorderTrace(traceDumpFilePath, context, roots)
-                    if (packTrace) {
-                        packRecordedTrace(traceDumpFilePath, metaInfo)
-                    }
-                }
-                TraceCollectorMode.BINARY_STREAM -> {
-                    check(traceDumpFilePath == this.traceDumpFilePath) {
-                        // TODO: it should be easy to support dumping to a different file later: just copy file
-                        "Trace dump filename in binary stream mode should match the filename of streaming file"
-                    }
-                    if (packTrace) {
-                        packRecordedTrace(traceDumpFilePath, metaInfo)
-                    }
-                }
-                TraceCollectorMode.TEXT -> {
-                    printPostProcessedTrace(traceDumpFilePath, context, roots, false)
-                }
-                TraceCollectorMode.TEXT_VERBOSE -> {
-                    printPostProcessedTrace(traceDumpFilePath, context, roots, true)
-                }
-                TraceCollectorMode.NULL -> {}
-            }
-            Logger.info { "Trace was saved to $traceDumpFilePath" }
-        } catch (t: Throwable) {
-            Logger.error { "TraceRecorder: Cannot write output file $traceDumpFilePath: ${t.message} at ${t.stackTraceToString()}" }
-            return
-        } finally {
-            if (mode != TraceCollectorMode.NULL) {
-                Logger.debug { "Trace written in ${System.currentTimeMillis() - traceWriteStartTime} ms" }
+    /**
+     * Returns a list of all thread root trace points.
+     */
+    fun getThreadRoots(): List<TRTracePoint> {
+        val roots = mutableListOf<TRTracePoint>()
+        threads.values.sortedBy { it.threadId }.forEach { threadData ->
+            val rootCall = threadData.rootCall
+            if (rootCall == null) {
+                val threadName = context.getThreadName(threadData.threadId)
+                Logger.error { "Trace Recorder: Thread #${threadData.threadId + 1} ($threadName): No root call found" }
+            } else {
+                roots.add(rootCall)
             }
         }
-    }
-
-    private fun packRecordedTrace(baseFileName: String, metaInfo: TraceMetaInfo) {
-        packRecordedTrace(
-            dataFileName = baseFileName,
-            indexFileName = "$baseFileName.$INDEX_FILENAME_EXT",
-            outputFileName = "$baseFileName.$PACK_FILENAME_EXT",
-            metaInfo = metaInfo,
-        )
+        return roots
     }
 
     private fun methodAnalysisSectionType(
