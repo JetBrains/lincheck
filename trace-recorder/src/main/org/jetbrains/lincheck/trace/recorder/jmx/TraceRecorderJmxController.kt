@@ -44,7 +44,7 @@ object TraceRecorderJmxController : TracingJmxController {
     }
     
     override fun install(format: String?, formatOption: String?, traceDumpFilePath: String?) {
-        TraceRecorder.install(format, formatOption, traceDumpFilePath, LincheckInstrumentation.context)
+        TraceRecorder.install(format, formatOption, traceDumpFilePath)
     }
 
     override fun startTracing() {

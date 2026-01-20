@@ -47,7 +47,6 @@ internal object TraceRecorderInjections {
                 format = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FORMAT),
                 formatOption = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FOPTION),
                 traceDumpFilePath = TraceAgentParameters.traceDumpFilePath,
-                context = LincheckInstrumentation.context
             )
             TraceRecorder.startRecording(
                 className = TraceAgentParameters.classUnderTraceDebugging,

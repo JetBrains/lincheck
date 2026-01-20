@@ -42,7 +42,6 @@ object TraceRecorder {
         format: String?,
         formatOption: String?,
         traceDumpFilePath: String?,
-        context: TraceContext,
     ) {
         // Set a signal "void" object from Injections for better text output
         INJECTIONS_VOID_OBJECT = Injections.VOID_RESULT
@@ -53,7 +52,7 @@ object TraceRecorder {
 
         val mode = parseOutputMode(format, formatOption)
         // this method does not need 'runInsideIgnoredSection' because analysis is not enabled until its completion
-        val eventTracker = TraceCollectingEventTracker(mode, context,
+        val eventTracker = TraceCollectingEventTracker(mode, createTraceContext(),
             traceStreamingFilePath = if (mode == TraceCollectorMode.BINARY_STREAM) traceDumpFilePath else null
         )
         session = TraceRecorderSession(eventTracker)
@@ -158,5 +157,10 @@ object TraceRecorder {
 
     fun uninstall() {
         session = null
+    }
+
+    private fun createTraceContext(): TraceContext {
+        // TODO: currently we always re-use the same global context
+        return LincheckInstrumentation.context
     }
 }
