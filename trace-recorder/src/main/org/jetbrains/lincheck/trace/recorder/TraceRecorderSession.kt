@@ -42,6 +42,7 @@ class TraceRecorderSession(val eventTracker: TraceCollectingEventTracker) {
             val thread: Thread,
             val className: String,
             val methodName: String,
+            val startingCodeLocationId: Int,
         ) : StartMode()
 
         object Dynamic : StartMode()
@@ -91,14 +92,13 @@ class TraceRecorderSession(val eventTracker: TraceCollectingEventTracker) {
     /**
      * Starts the tracing session from a specific method.
      */
-    fun startFromMethod(thread: Thread, className: String, methodName: String) {
+    fun startFromMethod(thread: Thread, className: String, methodName: String, startingCodeLocationId: Int) {
         val currentState = state
         check(currentState is State.NotStarted)
 
-        val startTime = System.currentTimeMillis()
         state = State.InProgress(
-            startMode = StartMode.FromMethod(thread, className, methodName),
-            startTime = startTime,
+            startMode = StartMode.FromMethod(thread, className, methodName, startingCodeLocationId),
+            startTime = System.currentTimeMillis(),
         )
     }
 

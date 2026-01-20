@@ -58,11 +58,34 @@ object TraceRecorder {
         session = TraceRecorderSession(eventTracker)
     }
 
+    fun startRecording() {
+        startRecording(TraceRecorderSession.StartMode.Dynamic)
+    }
+
     fun startRecording(className: String, methodName: String, startingCodeLocationId: Int) {
+        startRecording(TraceRecorderSession.StartMode.FromMethod(
+            thread = Thread.currentThread(),
+            className = className,
+            methodName = methodName,
+            startingCodeLocationId = startingCodeLocationId,
+        ))
+    }
+
+    private fun startRecording(startMode: TraceRecorderSession.StartMode) {
         val count = startCount.incrementAndGet()
         Logger.info {
-            val threadName = Thread.currentThread().name
-            "Trace recorder has been started from $className::$methodName in thread $threadName (startCount=$count)"
+            when (startMode) {
+                is TraceRecorderSession.StartMode.FromMethod -> {
+                    val className = startMode.className
+                    val methodName = startMode.methodName
+                    val threadName = Thread.currentThread().name
+                    "Trace recorder has been started from $className::$methodName in thread $threadName (startCount=$count)"
+                }
+                is TraceRecorderSession.StartMode.Dynamic -> {
+                    val threadName = Thread.currentThread().name
+                    "Trace recorder has been started in thread $threadName (startCount=$count)"
+                }
+            }
         }
         if (count > 1) return
 
@@ -73,39 +96,38 @@ object TraceRecorder {
 
         val eventTracker = session.eventTracker
 
-        val traceStarterThread = Thread.currentThread()
-        val descriptor = ThreadDescriptor.getCurrentThreadDescriptor()
-            ?: Injections.registerCurrentThread(eventTracker)
+        var currentThreadDescriptor: ThreadDescriptor? = null
+        when (startMode) {
+            is TraceRecorderSession.StartMode.Dynamic -> {
+                session.startDynamic()
+            }
 
-        eventTracker.registerCurrentThread(className, methodName, startingCodeLocationId)
-        session.startFromMethod(traceStarterThread, className, methodName)
+            is TraceRecorderSession.StartMode.FromMethod -> {
+                val className = startMode.className
+                val methodName = startMode.methodName
+                val startingCodeLocationId = startMode.startingCodeLocationId
+                val traceStarterThread = startMode.thread.ensure {
+                    it == Thread.currentThread()
+                }
 
-        Injections.enableGlobalEventTracking(eventTracker)
-        descriptor.enableAnalysis()
-    }
+                currentThreadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor()
+                    ?: Injections.registerCurrentThread(eventTracker)
 
-    fun startRecording() {
-        val count = startCount.incrementAndGet()
-        Logger.info {
-            val threadName = Thread.currentThread().name
-            "Trace recorder has been started in thread $threadName (startCount=$count)"
-        }
-        if (count > 1) return
-
-        val session = this.session ?: error("Session has not been initialized")
-        check(!session.hasStarted()) {
-            "Trace recording session has already been started"
+                eventTracker.registerCurrentThread(className, methodName, startingCodeLocationId)
+                session.startFromMethod(traceStarterThread, className, methodName, startingCodeLocationId)
+            }
         }
 
-        val eventTracker = session.eventTracker
-
-        session.startDynamic()
         Injections.enableGlobalEventTracking(eventTracker)
+        currentThreadDescriptor?.enableAnalysis()
     }
 
     fun stopRecording() {
         val startedCount = startCount.decrementAndGet()
-        Logger.info { "Trace recorder has been stopped in thread \"${Thread.currentThread().name}\" (installCount=$startedCount)" }
+        Logger.info {
+            val threadName = Thread.currentThread().name
+            "Trace recorder has been stopped in thread $threadName (installCount=$startedCount)"
+        }
 
         if (startedCount > 0) {
             val traceStarterThread = (session?.startMode as? TraceRecorderSession.StartMode.FromMethod)?.thread
