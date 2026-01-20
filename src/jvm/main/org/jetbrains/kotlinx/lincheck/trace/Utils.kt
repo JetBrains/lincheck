@@ -11,7 +11,6 @@
 package org.jetbrains.kotlinx.lincheck.trace
 
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
-import org.jetbrains.kotlinx.lincheck.strategy.managed.recomputeSpinCycleStartCallStack
 import org.jetbrains.lincheck.util.indexOf
 import org.jetbrains.lincheck.util.indexOfLast
 import org.jetbrains.lincheck.util.move
@@ -149,6 +148,8 @@ internal fun Trace.moveStartingSwitchPointsOutOfMethodCalls(): Trace {
  *
  * @return A new trace instance with updated trace point ordering.
  */
+
+//TODO: refactor to work for new loop detector
 internal fun Trace.moveSpinCycleStartTracePoints(): Trace {
     val newTrace = this.trace.toMutableList()
 
@@ -184,11 +185,11 @@ internal fun Trace.moveSpinCycleStartTracePoints(): Trace {
 
         // compute the patched stack trace of the spin cycle trace point
         val spinCycleStartStackTrace = tracePoint.callStackTrace
-        val spinCycleStartPatchedStackTrace = recomputeSpinCycleStartCallStack(
-            spinCycleStartTracePoint = newTrace[currentPosition],
-            spinCycleEndTracePoint = newTrace[nextThreadSwitchPosition],
-        )
-        val stackTraceElementsDropCount = spinCycleStartStackTrace.size - spinCycleStartPatchedStackTrace.size
+//        val spinCycleStartPatchedStackTrace = recomputeSpinCycleStartCallStack(
+//            spinCycleStartTracePoint = newTrace[currentPosition],
+//            spinCycleEndTracePoint = newTrace[nextThreadSwitchPosition],
+//        )
+        val stackTraceElementsDropCount = spinCycleStartStackTrace.size //- spinCycleStartPatchedStackTrace.size
         val spinCycleStartStackTraceSize = stackTraces.lastOrNull()?.size ?: 0
         val callStackSize = (spinCycleStartStackTraceSize - stackTraceElementsDropCount).coerceAtLeast(0)
 
