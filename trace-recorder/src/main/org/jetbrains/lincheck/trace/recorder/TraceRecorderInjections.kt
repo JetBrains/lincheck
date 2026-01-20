@@ -44,8 +44,10 @@ internal object TraceRecorderInjections {
     fun startTraceRecorder(startingCodeLocationId: Int) {
         try {
             TraceRecorder.install(
-                format = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FORMAT),
-                formatOption = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FOPTION),
+                mode = parseOutputMode(
+                    outputMode = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FORMAT),
+                    outputOption = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FOPTION),
+                ),
                 traceDumpFilePath = TraceAgentParameters.traceDumpFilePath,
             )
             TraceRecorder.startRecording(

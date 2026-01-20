@@ -38,11 +38,7 @@ object TraceRecorder {
     @Volatile
     private var session: TraceRecorderSession? = null
 
-    fun install(
-        format: String?,
-        formatOption: String?,
-        traceDumpFilePath: String?,
-    ) {
+    fun install(mode: TraceCollectorMode, traceDumpFilePath: String?) {
         // Set a signal "void" object from Injections for better text output
         INJECTIONS_VOID_OBJECT = Injections.VOID_RESULT
 
@@ -50,7 +46,6 @@ object TraceRecorder {
             "Trace recorder session has already been started"
         }
 
-        val mode = parseOutputMode(format, formatOption)
         // this method does not need 'runInsideIgnoredSection' because analysis is not enabled until its completion
         val eventTracker = TraceCollectingEventTracker(mode, createTraceContext(),
             traceStreamingFilePath = if (mode == TraceCollectorMode.BINARY_STREAM) traceDumpFilePath else null

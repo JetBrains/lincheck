@@ -11,8 +11,11 @@
 package org.jetbrains.lincheck.trace.recorder.jmx
 
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.trace.jmx.TracingJmxController
 import org.jetbrains.lincheck.trace.recorder.TraceRecorder
+import org.jetbrains.lincheck.trace.recorder.TraceRecorderAgent
+import org.jetbrains.lincheck.trace.recorder.parseOutputMode
 import org.jetbrains.lincheck.util.Logger
 import java.lang.management.ManagementFactory
 import javax.management.ObjectName
@@ -44,7 +47,13 @@ object TraceRecorderJmxController : TracingJmxController {
     }
     
     override fun install(format: String?, formatOption: String?, traceDumpFilePath: String?) {
-        TraceRecorder.install(format, formatOption, traceDumpFilePath)
+        TraceRecorder.install(
+            mode = parseOutputMode(
+                outputMode = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FORMAT),
+                outputOption = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FOPTION),
+            ),
+            traceDumpFilePath = traceDumpFilePath,
+        )
     }
 
     override fun startTracing() {
