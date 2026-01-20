@@ -44,7 +44,7 @@ object TraceRecorderJmxServer {
             val connectorServer = JMXConnectorServerFactory.newJMXConnectorServer(serviceUrl, null, mbs)
             connectorServer.start()
 
-            println("JMX server started successfully on $jmxHost:$jmxPort (RMI port: $rmiPort)")
+            Logger.info { "JMX server started successfully on $jmxHost:$jmxPort (RMI port: $rmiPort)" }
         } catch (t: Throwable) {
             Logger.error { "Failed to start JMX server on $jmxHost:$jmxPort (RMI port: $rmiPort)" }
             Logger.error(t)

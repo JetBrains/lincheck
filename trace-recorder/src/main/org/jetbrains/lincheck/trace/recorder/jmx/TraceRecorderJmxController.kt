@@ -38,7 +38,7 @@ object TraceRecorderJmxController : TracingJmxController {
 
             Logger.info { "JMX MBean registered successfully at $MBEAN_OBJECT_NAME" }
         } catch (e: Exception) {
-            Logger.error { "Failed to register JMX MBean" }
+            Logger.error { "Failed to register JMX MBean at $MBEAN_OBJECT_NAME" }
             Logger.error(e)
         }
     }
