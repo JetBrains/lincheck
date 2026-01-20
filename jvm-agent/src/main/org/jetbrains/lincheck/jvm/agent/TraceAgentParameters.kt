@@ -155,7 +155,7 @@ object TraceAgentParameters {
             namedArgs[ARGUMENT_CLASS] = classUnderTraceDebugging
             namedArgs[ARGUMENT_METHOD] = methodUnderTraceDebugging
 
-            validateClassAndMethodArguments()
+            validateClassAndMethodArgumentsAreProvided()
             setClassUnderTraceDebuggingToMethodOwner()
 
             traceDumpFilePath = actualArguments.getOrNull(2)
@@ -192,7 +192,7 @@ object TraceAgentParameters {
     }
 
     @JvmStatic
-    fun validateClassAndMethodArguments() {
+    fun validateClassAndMethodArgumentsAreProvided() {
         if (classUnderTraceDebugging.isBlank()) {
             error("Class name was not provided")
         }
