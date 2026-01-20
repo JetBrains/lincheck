@@ -63,4 +63,5 @@ fun Field.toDescriptor(context: TraceContext) = context.getFieldDescriptor(
 
 data class VariableDescriptor(
     val name: String,
+    val type: Types.Type
 )

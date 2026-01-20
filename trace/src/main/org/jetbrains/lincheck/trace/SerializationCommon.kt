@@ -434,10 +434,11 @@ internal fun DataInput.readFieldDescriptor(context: TraceContext): FieldDescript
 
 internal fun DataOutput.writeVariableDescriptor(value: VariableDescriptor) {
     writeUTF(value.name)
+    writeType(value.type)
 }
 
 internal fun DataInput.readVariableDescriptor(): VariableDescriptor {
-    return VariableDescriptor(readUTF())
+    return VariableDescriptor(readUTF(), readType())
 }
 
 internal fun DataInput.readAccessLocation(): ShallowAccessLocation {

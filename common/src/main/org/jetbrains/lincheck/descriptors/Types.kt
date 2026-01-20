@@ -35,6 +35,8 @@ import kotlin.math.max
 import kotlin.reflect.KClass
 
 object Types {
+    fun convertAsmTypeName(asmType: org.objectweb.asm.Type): Type = convertAsmTypeName(asmType.descriptor)
+
     private fun convertAsmTypeName(className: String): Type {
         when (className) {
             "V" -> return VOID_TYPE
@@ -46,11 +48,14 @@ object Types {
             "B" -> return BYTE_TYPE
             "S" -> return SHORT_TYPE
             "C" -> return CHAR_TYPE
-            else -> if (className.startsWith("[")) {
-                return ArrayType(convertAsmTypeName(className.substring(1)))
+            else -> return if (className.startsWith("[")) {
+                ArrayType(convertAsmTypeName(className.substring(1)))
             } else {
-                require(!(!className.startsWith("L") || !className.endsWith(";"))) { "Invalid type name: $className" }
-                return ObjectType(className.substring(1, className.length - 1).replace('/', '.'))
+                // class name might be given in wrapping L and ; symbols or without them
+                ObjectType(className
+                    .run { if (startsWith("L") && endsWith(";")) substring(1, length - 1) else this }
+                    .replace('/', '.')
+                )
             }
         }
     }

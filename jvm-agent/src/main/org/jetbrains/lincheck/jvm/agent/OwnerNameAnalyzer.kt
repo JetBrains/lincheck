@@ -782,7 +782,8 @@ class OwnerNameAnalyzerAdapter protected constructor(
             this.locals = mutableListOf()
         }
         for (localVar in localVariables) {
-            val localVarDescriptor = context.getVariableDescriptor(localVar.name)
+            val localVarType = Types.convertAsmTypeName(localVar.type)
+            val localVarDescriptor = context.getVariableDescriptor(localVar.name, localVarType)
             val localVarAccess = LocalVariableAccessLocation(localVarDescriptor)
             set(localVar.index, OwnerName(localVarAccess))
         }
