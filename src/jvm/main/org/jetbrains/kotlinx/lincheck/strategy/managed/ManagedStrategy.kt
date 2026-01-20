@@ -2000,14 +2000,32 @@ internal abstract class ManagedStrategy(
 
     override fun onLoopIteration(threadDescriptor: ThreadDescriptor, codeLocation: Int, loopId: Int): Unit =
         runInsideIgnoredSection {
+            val threadId = threadScheduler.getCurrentThreadId()
+
             // if loop with loopId is called for first time, call beforeLoopEnter and then continue
             val loop = activeLoops.find { it.threadId == threadScheduler.getCurrentThreadId() && it.loopId == loopId }
             if (loop == null) {
                 loopDetector.beforeLoopEnter(threadDescriptor, codeLocation, loopId)
                 activeLoops.add(Loop(threadScheduler.getCurrentThreadId(), loopId))
+
+                if (collectTrace) {
+                    val eventId = getNextEventId()
+                    val tracePoint = addBeforeMethodCallTracePoint(
+                        eventId = eventId,
+                        threadId = threadId,
+                        owner = null,
+                        codeLocation = codeLocation,
+                        methodId = loopId,
+                        className = "Loop",
+                        methodName = "loop_$loopId",
+                        methodParams = emptyArray(),
+                        atomicMethodDescriptor = null,
+                        callType = MethodCallTracePoint.CallType.NORMAL,
+                    )
+                    traceCollector?.addTracePointInternal(tracePoint)
+                }
             }
 
-            val threadId = threadScheduler.getCurrentThreadId()
             val methodInvocationId = currentMethodInvocationId(threadId)
 
             val decision = loopDetector.onLoopIteration(threadDescriptor, codeLocation, loopId, methodInvocationId)
@@ -2024,11 +2042,24 @@ internal abstract class ManagedStrategy(
                 }
             }
         }
-
+//TODO: need to remake a function similar to the one that was used for printing the spincycles in the old loop detector
     override fun afterLoopExit(threadDescriptor: ThreadDescriptor, codeLocation: Int, loopId: Int, exception: Throwable?, isReachableFromOutsideLoop: Boolean) {
         val threadId = threadScheduler.getCurrentThreadId()
         val methodId = currentMethodInvocationId(threadId)
         loopDetector.afterLoopExit(threadDescriptor, codeLocation, loopId, methodId)
+
+        if (collectTrace) {
+            val stack = callStackTrace[threadId]
+            if (stack != null && stack.isNotEmpty()) {
+                val top = stack.last()
+                if (top.tracePoint.methodName == "loop_$loopId") {
+                    val tracePoint = top.tracePoint
+                    tracePoint.initializeVoidReturnedValue()
+                    afterMethodCall(threadId, tracePoint)
+                    traceCollector?.addStateRepresentation()
+                }
+            }
+        }
     }
 
     override fun onThrow(threadDescriptor: ThreadDescriptor, codeLocation: Int, exception: Throwable) {
