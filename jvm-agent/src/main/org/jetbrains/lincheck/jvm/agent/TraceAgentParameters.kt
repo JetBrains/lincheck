@@ -134,6 +134,22 @@ object TraceAgentParameters {
     var traceDumpFilePath: String? = null
 
     @JvmStatic
+    val jmxServerEnabled: Boolean
+        get() = getArg(ARGUMENT_JMX_SERVER)?.lowercase() == "on"
+
+    @JvmStatic
+    val jmxHost: String
+        get() = getArg(ARGUMENT_JMX_HOST) ?: DEFAULT_JMX_HOST
+
+    @JvmStatic
+    val jmxPort: Int
+        get() = getArg(ARGUMENT_JMX_PORT)?.toIntOrNull() ?: DEFAULT_JMX_PORT
+
+    @JvmStatic
+    val rmiPort: Int
+        get() = getArg(ARGUMENT_RMI_PORT)?.toIntOrNull() ?: DEFAULT_RMI_PORT
+
+    @JvmStatic
     private val namedArgs: MutableMap<String, String?> = mutableMapOf()
 
     @JvmStatic

@@ -24,9 +24,9 @@ object TraceRecorderJmxServer {
     /**
      * Starts the JMX server on the specified host and port.
      *
-     * @param jmxHost The hostname or IP address for JMX connections (default: localhost)
-     * @param jmxPort The port for JMX connections (default: 9999)
-     * @param rmiPort The port for RMI registry (default: 9998)
+     * @param jmxHost The hostname or IP address for JMX connections.
+     * @param jmxPort The port for JMX connections.
+     * @param rmiPort The port for RMI registry.
      */
     @JvmStatic
     fun start(jmxHost: String, jmxPort: Int, rmiPort: Int) {

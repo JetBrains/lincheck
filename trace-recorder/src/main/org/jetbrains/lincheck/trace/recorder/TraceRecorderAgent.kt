@@ -136,13 +136,10 @@ internal object TraceRecorderAgent {
     private fun setupJmxServerIfRequested() {
         val jmxServerArg = TraceAgentParameters.getArg(ARGUMENT_JMX_SERVER)
         if (jmxServerArg == "on") {
-            val jmxHost = TraceAgentParameters.getArg(ARGUMENT_JMX_HOST)
-            val jmxPort = TraceAgentParameters.getArg(ARGUMENT_JMX_PORT)?.toIntOrNull()
-            val rmiPort = TraceAgentParameters.getArg(ARGUMENT_RMI_PORT)?.toIntOrNull()
             TraceRecorderJmxServer.start(
-                jmxHost = jmxHost ?: TraceAgentParameters.DEFAULT_JMX_HOST,
-                jmxPort = jmxPort ?: TraceAgentParameters.DEFAULT_JMX_PORT,
-                rmiPort = rmiPort ?: TraceAgentParameters.DEFAULT_RMI_PORT,
+                jmxHost = TraceAgentParameters.jmxHost,
+                jmxPort = TraceAgentParameters.jmxPort,
+                rmiPort = TraceAgentParameters.rmiPort,
             )
             TraceRecorderJmxController.register()
         }
