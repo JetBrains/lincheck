@@ -21,16 +21,13 @@ import java.util.concurrent.atomic.AtomicInteger
  * The `TraceRecorder` object manages the trace recording process.
  *
  * The trace recording process involves:
- * - Initializing the trace recorder using [install].
  * - Starting the trace recording using [startRecording].
  * - Stopping the trace recording using [stopRecording].
  * - Optionally dumping the recorded trace output to a specified location using [dumpTrace].
- * - Uninstalling the trace recorder to clean up resources with [uninstall].
  *
  * Proper usage of the [TraceRecorder] involves ensuring that:
- * - the trace recorder is correctly installed before starting any recording;
  * - the trace recorder is stopped before an attempt to dump the recorded trace to file;
- * - the trace recorder is stopped before uninstallation.
+ * - the trace recorder is stopped before the next trace recording sessions start.
  */
 object TraceRecorder {
     private val startCount = AtomicInteger(0)
@@ -38,35 +35,33 @@ object TraceRecorder {
     @Volatile
     private var session: TraceRecorderSession? = null
 
-    fun install(mode: TraceCollectorMode, traceDumpFilePath: String?) {
+    fun startRecording(mode: TraceCollectorMode, traceDumpFilePath: String?) {
+        startRecording(mode, traceDumpFilePath, TraceRecorderSession.StartMode.Dynamic)
+    }
+
+    fun startRecording(mode: TraceCollectorMode, traceDumpFilePath: String?,
+       className: String,
+       methodName: String,
+       startingCodeLocationId: Int,
+    ) {
+        startRecording(mode, traceDumpFilePath,
+            TraceRecorderSession.StartMode.FromMethod(
+                thread = Thread.currentThread(),
+                className = className,
+                methodName = methodName,
+                startingCodeLocationId = startingCodeLocationId,
+            )
+        )
+    }
+
+    private fun startRecording(
+        collectionMode: TraceCollectorMode,
+        traceDumpFilePath: String?,
+        startMode: TraceRecorderSession.StartMode,
+    ) {
         // Set a signal "void" object from Injections for better text output
         INJECTIONS_VOID_OBJECT = Injections.VOID_RESULT
 
-        check(session == null) {
-            "Trace recorder session has already been started"
-        }
-
-        // this method does not need 'runInsideIgnoredSection' because analysis is not enabled until its completion
-        val eventTracker = TraceCollectingEventTracker(mode, createTraceContext(),
-            traceStreamingFilePath = if (mode == TraceCollectorMode.BINARY_STREAM) traceDumpFilePath else null
-        )
-        session = TraceRecorderSession(eventTracker)
-    }
-
-    fun startRecording() {
-        startRecording(TraceRecorderSession.StartMode.Dynamic)
-    }
-
-    fun startRecording(className: String, methodName: String, startingCodeLocationId: Int) {
-        startRecording(TraceRecorderSession.StartMode.FromMethod(
-            thread = Thread.currentThread(),
-            className = className,
-            methodName = methodName,
-            startingCodeLocationId = startingCodeLocationId,
-        ))
-    }
-
-    private fun startRecording(startMode: TraceRecorderSession.StartMode) {
         val count = startCount.incrementAndGet()
         Logger.info {
             when (startMode) {
@@ -84,12 +79,20 @@ object TraceRecorder {
         }
         if (count > 1) return
 
-        val session = this.session ?: error("Trace recording session has not been initialized")
-        check(!session.hasStarted()) {
-            "Trace recording session has already been started"
+        val previousSession = this.session
+        if (previousSession != null) {
+            check(previousSession.isFinished()) {
+                "Previous trace recorder session was not stopped before starting a new one"
+            }
+            this.session = null
         }
 
-        val eventTracker = session.eventTracker
+        // this method does not need 'runInsideIgnoredSection' because analysis is not enabled until its completion
+        val eventTracker = TraceCollectingEventTracker(collectionMode, createTraceContext(),
+            traceStreamingFilePath = if (collectionMode == TraceCollectorMode.BINARY_STREAM) traceDumpFilePath else null
+        )
+        val session = TraceRecorderSession(eventTracker)
+            .also { this.session = it }
 
         var currentThreadDescriptor: ThreadDescriptor? = null
         when (startMode) {
@@ -170,10 +173,6 @@ object TraceRecorder {
         check(session.isFinished()) { "Tracing was not stopped" }
 
         session.dumpTrace(traceDumpFilePath, packTrace)
-    }
-
-    fun uninstall() {
-        session = null
     }
 
     private fun createTraceContext(): TraceContext {

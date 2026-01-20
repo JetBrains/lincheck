@@ -11,10 +11,7 @@
 package org.jetbrains.lincheck.trace.jmx
 
 interface TracingJmxController {
-    fun install(format: String?, formatOption: String?, traceDumpFilePath: String?)
-    fun uninstall()
-
-    fun startTracing()
+    fun startTracing(traceDumpFilePath: String?)
     fun stopTracing()
 
     fun dumpTrace(traceDumpFilePath: String, packTrace: Boolean)

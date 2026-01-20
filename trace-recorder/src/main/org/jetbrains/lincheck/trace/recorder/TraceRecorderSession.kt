@@ -48,6 +48,7 @@ class TraceRecorderSession(val eventTracker: TraceCollectingEventTracker) {
         object Dynamic : StartMode()
     }
 
+    @Volatile
     internal var state: State = State.NotStarted
         private set
 

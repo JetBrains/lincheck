@@ -43,17 +43,15 @@ internal object TraceRecorderInjections {
     @JvmStatic
     fun startTraceRecorder(startingCodeLocationId: Int) {
         try {
-            TraceRecorder.install(
+            TraceRecorder.startRecording(
                 mode = parseOutputMode(
                     outputMode = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FORMAT),
                     outputOption = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FOPTION),
                 ),
                 traceDumpFilePath = TraceAgentParameters.traceDumpFilePath,
-            )
-            TraceRecorder.startRecording(
                 className = TraceAgentParameters.classUnderTraceDebugging,
                 methodName = TraceAgentParameters.methodUnderTraceDebugging,
-                startingCodeLocationId = startingCodeLocationId
+                startingCodeLocationId = startingCodeLocationId,
             )
         } catch (t: Throwable) {
             Logger.error { "Cannot start Trace Recorder: $t" }
@@ -69,7 +67,6 @@ internal object TraceRecorderInjections {
 
             TraceRecorder.stopRecording()
             TraceRecorder.dumpTrace(traceDumpPath, pack)
-            TraceRecorder.uninstall()
         } catch (t: Throwable) {
             Logger.error { "Cannot stop Trace Recorder: $t"}
         }

@@ -45,20 +45,16 @@ object TraceRecorderJmxController : TracingJmxController {
             Logger.error(e)
         }
     }
-    
-    override fun install(format: String?, formatOption: String?, traceDumpFilePath: String?) {
-        TraceRecorder.install(
-            mode = parseOutputMode(
-                outputMode = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FORMAT),
-                outputOption = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FOPTION),
-            ),
-            traceDumpFilePath = traceDumpFilePath,
-        )
-    }
 
-    override fun startTracing() {
+    override fun startTracing(traceDumpFilePath: String?) {
         try {
-            TraceRecorder.startRecording()
+            TraceRecorder.startRecording(
+                mode = parseOutputMode(
+                    outputMode = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FORMAT),
+                    outputOption = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FOPTION),
+                ),
+                traceDumpFilePath = traceDumpFilePath,
+            )
         } catch (t: Throwable) {
             Logger.error { "Cannot start trace recording" }
             Logger.error(t)
@@ -81,10 +77,6 @@ object TraceRecorderJmxController : TracingJmxController {
             Logger.error { "Cannot dump trace"}
             Logger.error(t)
         }
-    }
-
-    override fun uninstall() {
-        TraceRecorder.uninstall()
     }
 }
 
