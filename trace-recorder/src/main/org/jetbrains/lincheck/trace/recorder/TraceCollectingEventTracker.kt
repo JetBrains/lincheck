@@ -996,7 +996,7 @@ class TraceCollectingEventTracker(
         completeInvokedMethodCalls(thread, threadData) { _, tp -> tp.result = TR_OBJECT_UNFINISHED_METHOD_RESULT }
     }
 
-    private fun completeMainThread(thread: Thread, threadDescriptor: ThreadDescriptor) {
+    private fun completeCurrentThread(thread: Thread, threadDescriptor: ThreadDescriptor) {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData?
         if (threadData == null) {
             Logger.error { "Main tracing thread ${thread.name} doesn't have event tracker data" }
@@ -1027,11 +1027,11 @@ class TraceCollectingEventTracker(
         check(state == TracingState.RUNNING) { "Tracing was not started" }
 
         // Finish existing threads, except for Main
-        val mainThread = Thread.currentThread()
+        val currentThread = Thread.currentThread()
 
         threads
             .mapNotNull { (thread, _) ->
-                if (thread == mainThread) null
+                if (thread == currentThread) null
                 else {
                     val threadDescriptor = ThreadDescriptor.getThreadDescriptor(thread)
                     if (threadDescriptor == null || !threadDescriptor.isAnalysisEnabled) null
@@ -1046,13 +1046,10 @@ class TraceCollectingEventTracker(
                 completeRunningThread(thread, threadDescriptor)
             }
 
-        val mainThreadDeprecated = ThreadDescriptor.getCurrentThreadDescriptor()
-        if (mainThreadDeprecated != null) {
+        val currentThreadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor()
+        if (currentThreadDescriptor != null) {
             // Close this thread call stack (it must be 1 element, complain about problems otherwise)
-            completeMainThread(mainThread, mainThreadDeprecated)
-            // TODO: rename
-            //   - mainThread -> currentThread
-            //   - completeMainThread -> completeCurrentThread
+            completeCurrentThread(currentThread, currentThreadDescriptor)
         }
 
         strategy.traceEnded()
