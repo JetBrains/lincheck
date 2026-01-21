@@ -362,6 +362,7 @@ class AnalysisProfile(val analyzeStdLib: Boolean) {
         // Finally, we should never instrument the Lincheck classes.
         if (className.startsWith(LINCHECK_PACKAGE_NAME)) return false
         if (className.startsWith(LINCHECK_KOTLINX_PACKAGE_NAME)) return false
+        if (className.startsWith(LINCHECK_RELOCATED_PACKAGE_PREFIX)) return false
         // All the classes that were not filtered out are eligible for transformation.
         return true
     }
