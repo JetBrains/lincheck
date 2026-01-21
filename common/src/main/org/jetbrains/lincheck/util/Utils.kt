@@ -37,7 +37,7 @@ internal const val LINCHECK_PACKAGE_NAME             = "org.jetbrains.lincheck."
 internal const val LINCHECK_KOTLINX_PACKAGE_NAME     = "org.jetbrains.kotlinx.lincheck."
 internal const val LINCHECK_RUNNER_PACKAGE_NAME      = "org.jetbrains.kotlinx.lincheck.runner."
 internal const val LINCHECK_BOOTSTRAP_PACKAGE_NAME   = "sun.nio.ch.lincheck."
-internal const val LINCHECK_RELOCATED_PACKAGE_PREFIX = "shadow."
+internal const val LINCHECK_RELOCATED_PACKAGE_PREFIX = "org.jetbrains.lincheck.shadow."
 
 /**
  * Test if the given class name corresponds to a Java lambda class.
