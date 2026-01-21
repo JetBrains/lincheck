@@ -773,10 +773,10 @@ public class Injections {
         eventTracker.onMethodCallException(descriptor, methodId, receiver, params, exception, interceptor);
     }
     
-    public static void onSnapshotLineBreakpoint(ThreadDescriptor descriptor, int codeLocation) {
+    public static void onSnapshotLineBreakpoint(ThreadDescriptor descriptor, int codeLocation, Object[] params, String[] paramNames) {
         EventTracker eventTracker = getEventTracker(descriptor);
         if (eventTracker == null || descriptor == null) return;
-        eventTracker.onSnapshotLineBreakpoint(descriptor, codeLocation);
+        eventTracker.onSnapshotLineBreakpoint(descriptor, codeLocation, params, paramNames);
     }
 
     /**

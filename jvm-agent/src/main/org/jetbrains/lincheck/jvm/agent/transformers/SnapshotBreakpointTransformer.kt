@@ -10,13 +10,11 @@
 
 package org.jetbrains.lincheck.jvm.agent.transformers
 
-import org.jetbrains.lincheck.jvm.agent.LincheckMethodVisitor
-import org.jetbrains.lincheck.jvm.agent.LiveDebuggerSettings
-import org.jetbrains.lincheck.jvm.agent.MethodInformation
-import org.jetbrains.lincheck.jvm.agent.invokeStatic
+import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.trace.TraceContext
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
+import org.objectweb.asm.Type
 import org.objectweb.asm.commons.GeneratorAdapter
 import sun.nio.ch.lincheck.Injections
 
@@ -38,6 +36,30 @@ internal class SnapshotBreakpointTransformer(
         if (liveDebuggerSettings.lineBreakPoints.any { it.lineNumber == line && it.fileName == fileName} ) {
             adapter.invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
             loadNewCodeLocationId()
+
+            adapter.loadArgArray()
+
+            // Load parameter names
+            val argumentTypes = Type.getArgumentTypes(descriptor)
+            val isStatic = (access and org.objectweb.asm.Opcodes.ACC_STATIC) != 0
+            val paramNames = mutableListOf<String>()
+            var slot = if (isStatic) 0 else 1
+            for (type in argumentTypes) {
+                val name = methodInfo.locals.variables[slot]?.firstOrNull()?.name ?: "arg${paramNames.size}"
+                paramNames.add(name)
+                slot += type.size
+            }
+
+            // Push names onto stack
+            adapter.push(paramNames.size)
+            adapter.newArray(Type.getType(String::class.java))
+            paramNames.forEachIndexed { index, name ->
+                adapter.dup()
+                adapter.push(index)
+                adapter.push(name)
+                adapter.arrayStore(Type.getType(String::class.java))
+            }
+
             adapter.invokeStatic(Injections::onSnapshotLineBreakpoint)
         }
     }
