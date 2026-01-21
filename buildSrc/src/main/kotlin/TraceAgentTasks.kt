@@ -82,7 +82,7 @@ fun Project.registerTraceAgentTasks(fatJarName: String, fatJarTaskName: String, 
         )
         
         packagesToShade.forEach { packageName ->
-            relocate(packageName, "shadow.$packageName")
+            relocate(packageName, "org.jetbrains.lincheck.shadow.$packageName")
         }
 
         manifest {
