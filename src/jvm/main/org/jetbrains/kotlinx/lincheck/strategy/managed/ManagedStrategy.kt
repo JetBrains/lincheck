@@ -2065,6 +2065,14 @@ internal abstract class ManagedStrategy(
         error("Lincheck managed strategy does not support CFG-based loops tracking.")
     }
 
+    override fun onThrow(threadDescriptor: ThreadDescriptor, codeLocation: Int, exception: Throwable) {
+        error("Lincheck managed strategy does not support throw tracking.")
+    }
+
+    override fun onCatch(threadDescriptor: ThreadDescriptor, codeLocation: Int, exception: Throwable) {
+        error("Lincheck managed strategy does not support catch tracking.")
+    }
+
     private fun methodAnalysisSectionType(
         owner: Any?,
         className: String,

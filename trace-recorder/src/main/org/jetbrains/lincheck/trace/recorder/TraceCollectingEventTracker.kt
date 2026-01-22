@@ -846,6 +846,36 @@ class TraceCollectingEventTracker(
         }
     }
 
+    override fun onThrow(
+        threadDescriptor: ThreadDescriptor,
+        codeLocation: Int,
+        exception: Throwable
+    ) {
+        val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
+        val tracePoint = TRThrowTracePoint(
+            context = context,
+            threadId = threadData.threadId,
+            codeLocationId = codeLocation,
+            exception = TRObject(context, exception)
+        )
+        strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
+    }
+
+    override fun onCatch(
+        threadDescriptor: ThreadDescriptor,
+        codeLocation: Int,
+        exception: Throwable
+    ) {
+        val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
+        val tracePoint = TRCatchTracePoint(
+            context = context,
+            threadId = threadData.threadId,
+            codeLocationId = codeLocation,
+            exception = TRObject(context, exception)
+        )
+        strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
+    }
+
     /**
      * Method takes the currently open loop trace point in [thread] and finishes
      * its last open iteration (if it exists) and then the loop itself.

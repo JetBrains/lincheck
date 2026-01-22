@@ -780,6 +780,24 @@ public class Injections {
     }
 
     /**
+     * Called before traced method throws exception
+     */
+    public static void onThrow(ThreadDescriptor descriptor, int codeLocation, Throwable exception) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        if (eventTracker == null || descriptor == null) return;
+        eventTracker.onThrow(descriptor, codeLocation, exception);
+    }
+
+    /**
+     * Called before traced method starts any catch block
+     */
+    public static void onCatch(ThreadDescriptor descriptor, int codeLocation, Throwable exception) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        if (eventTracker == null || descriptor == null) return;
+        eventTracker.onCatch(descriptor, codeLocation, exception);
+    }
+
+    /**
      * Creates and returns a new instance of result interceptor.
      *
      * @return a new {@link ResultInterceptor} instance.
