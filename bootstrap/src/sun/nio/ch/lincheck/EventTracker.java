@@ -85,6 +85,9 @@ public interface EventTracker {
     void onLoopIteration(ThreadDescriptor descriptor, int codeLocation, int loopId);
     void afterLoopExit(ThreadDescriptor descriptor, int codeLocation, int loopId, Throwable exception, boolean isReachableFromOutsideLoop);
 
+    void onThrow(ThreadDescriptor descriptor, int codeLocation, Throwable exception);
+    void onCatch(ThreadDescriptor descriptor, int codeLocation, Throwable exception);
+
     InjectedRandom getThreadLocalRandom();
     int randomNextInt();
 
