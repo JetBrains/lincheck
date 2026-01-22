@@ -33,7 +33,7 @@ import java.lang.management.ManagementFactory
 
 internal const val TRACE_MAGIC : Long = 0x706e547124ee5f70L
 internal const val INDEX_MAGIC : Long = TRACE_MAGIC.inv()
-internal const val TRACE_VERSION : Long = 15
+internal const val TRACE_VERSION : Long = 16
 
 // This suffix is not enforced, but IDEA plugin rely on it
 const val DATA_FILENAME_EXT = "trace"
@@ -434,10 +434,11 @@ internal fun DataInput.readFieldDescriptor(context: TraceContext): FieldDescript
 
 internal fun DataOutput.writeVariableDescriptor(value: VariableDescriptor) {
     writeUTF(value.name)
+    writeType(value.type)
 }
 
 internal fun DataInput.readVariableDescriptor(): VariableDescriptor {
-    return VariableDescriptor(readUTF())
+    return VariableDescriptor(readUTF(), readType())
 }
 
 internal fun DataInput.readAccessLocation(): ShallowAccessLocation {
