@@ -431,6 +431,47 @@ object DefaultTRLineBreakpointSnapshotTracePointPrinter {
     }
 }
 
+abstract class AbstractTRThrowTracePointPrinter {
+
+    protected fun TRAppendable.appendTracePoint(tracePoint: TRThrowTracePoint): TRAppendable {
+        appendDiffStatus(tracePoint.diffStatus)
+        appendKeyword("throw")
+        append(" ")
+        appendObject(tracePoint.exception)
+        return this
+    }
+}
+
+object DefaultTRThrowTracePointPrinter: AbstractTRThrowTracePointPrinter() {
+
+    fun TRAppendable.append(tracePoint: TRThrowTracePoint): TRAppendable {
+        appendTracePoint(tracePoint)
+        append(tracePoint, verbose)
+        return this
+    }
+}
+
+abstract class AbstractTRCatchTracePointPrinter {
+
+    protected fun TRAppendable.appendTracePoint(tracePoint: TRCatchTracePoint): TRAppendable {
+        appendDiffStatus(tracePoint.diffStatus)
+        appendKeyword("catch")
+        append("(")
+        appendObject(tracePoint.exception)
+        append(")")
+        return this
+    }
+}
+
+object DefaultTRCatchTracePointPrinter: AbstractTRCatchTracePointPrinter() {
+
+    fun TRAppendable.append(tracePoint: TRCatchTracePoint): TRAppendable {
+        appendTracePoint(tracePoint)
+        append(tracePoint, verbose)
+        return this
+    }
+}
+
 internal fun <V: TRAppendable> V.append(tracePoint: TRTracePoint, verbose: Boolean): V {
     if (!verbose) return this
     val cl = CodeLocations.stackTrace(tracePoint.context, tracePoint.codeLocationId)
