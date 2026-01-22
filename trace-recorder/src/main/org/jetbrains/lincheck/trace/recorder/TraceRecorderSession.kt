@@ -13,7 +13,6 @@ package org.jetbrains.lincheck.trace.recorder
 import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.util.Logger
-import org.jetbrains.lincheck.util.ensure
 
 class TraceRecorderSession(val eventTracker: TraceCollectingEventTracker) {
     internal sealed class State {
@@ -60,6 +59,8 @@ class TraceRecorderSession(val eventTracker: TraceCollectingEventTracker) {
         is State.InProgress -> s.startMode
         is State.Finished   -> s.startMode
     }
+
+    private val finishHooks = mutableListOf<TraceRecorderSession.() -> Unit>()
 
     /**
      * Checks if the session has been started.
@@ -116,8 +117,13 @@ class TraceRecorderSession(val eventTracker: TraceCollectingEventTracker) {
             startTime = currentState.startTime,
             endTime = endTime,
         )
-
         Logger.debug { "Trace collected in ${endTime - currentState.startTime} ms" }
+
+        finishHooks.forEach { it() }
+    }
+
+    fun installOnFinishHook(hook: TraceRecorderSession.() -> Unit) {
+        finishHooks.add(hook)
     }
 
     /**
