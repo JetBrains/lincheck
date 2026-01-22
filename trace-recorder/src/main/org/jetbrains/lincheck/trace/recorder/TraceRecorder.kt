@@ -10,92 +10,129 @@
 
 package org.jetbrains.lincheck.trace.recorder
 
-import org.jetbrains.lincheck.trace.INJECTIONS_VOID_OBJECT
-import org.jetbrains.lincheck.trace.TraceContext
+import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
+import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.util.*
 import sun.nio.ch.lincheck.Injections
 import sun.nio.ch.lincheck.ThreadDescriptor
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * This object is glue between injections into method user wants to record trace of and real trace recording code.
+ * The `TraceRecorder` object manages the trace recording process.
  *
- * Call which leads to [installAndStartTrace] must be placed as first instruction of method in question.
+ * The trace recording process involves:
+ * - Starting the trace recording using [startRecording].
+ * - Stopping the trace recording using [stopRecording].
+ * - Optionally dumping the recorded trace output to a specified location using [dumpTrace].
  *
- * Call which leads to [finishTraceAndDumpResults] must be placed before each exit point (`return` or `throw`) in
- * a method in question.
- *
- * This is effectively an implementation of such Java code:
- *
- * ```java
- * methodInQuestion() {
- *  TraceRecorder.installAndStartTrace(...);
- *  try {
- *    <original method code>
- *  } finally {
- *    TraceRecorder.finishTraceAndDumpResults();
- *  }
- * }
- * ```
- *
- * This class is used to avoid coupling between instrumented code and `bootstrap.jar`, to enable very early
- * instrumentation before `bootstrap.jar` is added to class
+ * Proper usage of the [TraceRecorder] involves ensuring that:
+ * - the trace recorder is stopped before an attempt to dump the recorded trace to file;
+ * - the trace recorder is stopped before the next trace recording sessions start.
  */
 object TraceRecorder {
-    private var eventTracker: TraceCollectingEventTracker? = null
-
-    private val installCount = AtomicInteger(0)
+    private val startCount = AtomicInteger(0)
 
     @Volatile
-    private var traceStarterThread: Thread? = null
+    private var session: TraceRecorderSession? = null
 
-    fun installAndStartTrace(
-        className: String,
-        methodName: String,
-        traceFileName: String?,
-        format: String?,
-        formatOption: String?,
-        pack: Boolean,
-        startingCodeLocationId: Int,
-        context: TraceContext
+    fun startRecording(mode: TraceCollectorMode, traceDumpFilePath: String?) {
+        startRecording(mode, traceDumpFilePath, TraceRecorderSession.StartMode.Dynamic)
+    }
+
+    fun startRecording(mode: TraceCollectorMode, traceDumpFilePath: String?,
+       className: String,
+       methodName: String,
+       startingCodeLocationId: Int,
     ) {
-        val startedCount = installCount.incrementAndGet()
-        Logger.info { "Trace recorder has been started from $className::$methodName in thread \"${Thread.currentThread().name}\" (installCount=$startedCount)" }
+        startRecording(mode, traceDumpFilePath,
+            TraceRecorderSession.StartMode.FromMethod(
+                thread = Thread.currentThread(),
+                className = className,
+                methodName = methodName,
+                startingCodeLocationId = startingCodeLocationId,
+            )
+        )
+    }
 
-        if (startedCount > 1) return
-
+    private fun startRecording(
+        collectionMode: TraceCollectorMode,
+        traceDumpFilePath: String?,
+        startMode: TraceRecorderSession.StartMode,
+    ) {
         // Set a signal "void" object from Injections for better text output
         INJECTIONS_VOID_OBJECT = Injections.VOID_RESULT
 
+        val count = startCount.incrementAndGet()
+        Logger.info {
+            when (startMode) {
+                is TraceRecorderSession.StartMode.FromMethod -> {
+                    val className = startMode.className
+                    val methodName = startMode.methodName
+                    val threadName = Thread.currentThread().name
+                    "Trace recorder has been started from $className::$methodName in thread $threadName (startCount=$count)"
+                }
+                is TraceRecorderSession.StartMode.Dynamic -> {
+                    val threadName = Thread.currentThread().name
+                    "Trace recorder has been started in thread $threadName (startCount=$count)"
+                }
+            }
+        }
+        if (count > 1) return
+
+        val previousSession = this.session
+        if (previousSession != null) {
+            check(previousSession.isFinished()) {
+                "Previous trace recorder session was not stopped before starting a new one"
+            }
+            this.session = null
+        }
+
         // this method does not need 'runInsideIgnoredSection' because analysis is not enabled until its completion
-        eventTracker = TraceCollectingEventTracker(
-            className = className,
-            methodName = methodName,
-            traceDumpPath = traceFileName,
-            mode = parseOutputMode(format, formatOption),
-            packTrace = pack,
-            context = context,
+        val eventTracker = TraceCollectingEventTracker(collectionMode, createTraceContext(),
+            traceStreamingFilePath = if (collectionMode == TraceCollectorMode.BINARY_STREAM) traceDumpFilePath else null
         )
-        traceStarterThread = Thread.currentThread()
-        val descriptor = ThreadDescriptor.getCurrentThreadDescriptor()
-            ?: Injections.registerCurrentThread(eventTracker)
+        val session = TraceRecorderSession(eventTracker)
+            .also { this.session = it }
+
+        var currentThreadDescriptor: ThreadDescriptor? = null
+        when (startMode) {
+            is TraceRecorderSession.StartMode.Dynamic -> {
+                session.startDynamic()
+            }
+
+            is TraceRecorderSession.StartMode.FromMethod -> {
+                val className = startMode.className
+                val methodName = startMode.methodName
+                val startingCodeLocationId = startMode.startingCodeLocationId
+                val traceStarterThread = startMode.thread.ensure {
+                    it == Thread.currentThread()
+                }
+
+                currentThreadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor()
+                    ?: Injections.registerCurrentThread(eventTracker)
+
+                eventTracker.registerCurrentThread(className, methodName, startingCodeLocationId)
+                session.startFromMethod(traceStarterThread, className, methodName, startingCodeLocationId)
+            }
+        }
 
         Injections.enableGlobalEventTracking(eventTracker)
-
-        eventTracker!!.enableTrace(startingCodeLocationId)
-        descriptor.enableAnalysis()
+        currentThreadDescriptor?.enableAnalysis()
     }
 
-    fun finishTraceAndDumpResults() {
-        val startedCount = installCount.decrementAndGet()
-        Logger.info { "Trace recorder has been stopped in thread \"${Thread.currentThread().name}\" (installCount=$startedCount)" }
+    fun stopRecording() {
+        val startedCount = startCount.decrementAndGet()
+        Logger.info {
+            val threadName = Thread.currentThread().name
+            "Trace recorder has been stopped in thread $threadName (installCount=$startedCount)"
+        }
 
         if (startedCount > 0) {
+            val traceStarterThread = (session?.startMode as? TraceRecorderSession.StartMode.FromMethod)?.thread
             // Try to deregister itself as the root descriptor if we started tracing
             if (traceStarterThread == Thread.currentThread()) {
                 val descriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
                 ThreadDescriptor.unsetRootThread().ensure { it == descriptor }
-                traceStarterThread = null
             }
             return
         }
@@ -104,12 +141,17 @@ object TraceRecorder {
             return
         }
 
+        val session = this.session ?: error("Session has not been initialized")
+        check(session.isRunning()) { "Tracing was not started" }
+
+        val eventTracker = session.eventTracker
+
         // this method does not need 'runInsideIgnoredSection' because we do not call instrumented code,
         // and we call `disableAnalysis` as a first action
-        val descriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
-        descriptor.disableAnalysis()
+        val descriptor = ThreadDescriptor.getCurrentThreadDescriptor()
+        descriptor?.disableAnalysis()
 
-        if (eventTracker != Injections.getEventTracker(descriptor)) {
+        if (descriptor != null && eventTracker != Injections.getEventTracker(descriptor)) {
             Logger.warn { "Unexpected event tracker observed during trace finishing" }
         }
 
@@ -120,7 +162,21 @@ object TraceRecorder {
             throw IllegalStateException("Unexpected event tracking mode $mode")
         }
 
-        eventTracker?.finishAndDumpTrace()
-        eventTracker = null
+        eventTracker.finishTracing()
+        session.finish()
+
+        LincheckInstrumentation.reportStatistics()
+    }
+
+    fun dumpTrace(traceDumpFilePath: String, packTrace: Boolean) {
+        val session = this.session ?: error("Session has not been initialized")
+        check(session.isFinished()) { "Tracing was not stopped" }
+
+        session.dumpTrace(traceDumpFilePath, packTrace)
+    }
+
+    private fun createTraceContext(): TraceContext {
+        // TODO: currently we always re-use the same global context
+        return LincheckInstrumentation.context
     }
 }

@@ -43,8 +43,18 @@ object TraceDebuggerAgent {
         }
         TraceAgentParameters.parseArgs(agentArgs, emptyList())
         LincheckInstrumentation.attachJavaAgentStatically(inst)
+
         // We are in Trace debugger mode
-        LincheckInstrumentation.instrumentation.addTransformer(TraceAgentTransformer(LincheckInstrumentation.context, ::TraceDebuggerMethodTransformer), true)
+        LincheckInstrumentation.instrumentation.addTransformer(
+            /* transformer = */ TraceAgentTransformer(
+                LincheckInstrumentation.context,
+                ::TraceDebuggerMethodTransformer,
+                classUnderTracing = TraceAgentParameters.classUnderTraceDebugging,
+                methodUnderTracing = TraceAgentParameters.methodUnderTraceDebugging,
+            ),
+            /* canRetransform = */ true,
+        )
+
         LincheckInstrumentation.install(InstrumentationMode.TRACE_DEBUGGING)
         LincheckInstrumentation.ensureClassHierarchyIsTransformed(TraceAgentParameters.classUnderTraceDebugging)
     }
