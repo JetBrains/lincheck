@@ -179,9 +179,9 @@ class TracePointCloner(
             is TRSnapshotLineBreakpointTracePoint -> TRSnapshotLineBreakpointTracePoint(
                 context = context,
                 codeLocationId = cloneCodeLocation(tracePoint, codeLocationMap),
+                threadId = threadId,
                 stackTraceCodeLocationIds = cloneCodeLocationsByIds(tracePoint, codeLocationMap, tracePoint.stackTraceCodeLocationIds),
                 currentTimeMillis = tracePoint.currentTimeMillis,
-                threadId = threadId,
                 eventId = eventId++
             )
 

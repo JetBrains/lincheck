@@ -777,8 +777,8 @@ class TraceCollectingEventTracker(
         
         val tracePoint = TRSnapshotLineBreakpointTracePoint(
             context = context,
-            threadId = threadData.threadId,
             codeLocationId = codeLocation,
+            threadId = threadData.threadId,
             stackTraceCodeLocationIds = stackTraceCodeLocationIds,
             currentTimeMillis = timeStamp,
         )

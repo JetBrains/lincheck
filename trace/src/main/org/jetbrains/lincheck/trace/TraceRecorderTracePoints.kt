@@ -695,9 +695,9 @@ class TRWriteLocalVariableTracePoint(
 class TRSnapshotLineBreakpointTracePoint(
     context: TraceContext,
     codeLocationId: Int,
+    threadId: Int,
     val stackTraceCodeLocationIds: List<Int>,
     val currentTimeMillis: Long,
-    threadId: Int,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
 ): TRTracePoint(context, codeLocationId, threadId, eventId) {
     
@@ -736,8 +736,8 @@ class TRSnapshotLineBreakpointTracePoint(
             
             return TRSnapshotLineBreakpointTracePoint(
                 context = context,
-                threadId = threadId,
                 codeLocationId = codeLocationId,
+                threadId = threadId,
                 stackTraceCodeLocationIds = stackTraceCodeLocationIds,
                 currentTimeMillis = currentTimeMillis,
                 eventId = eventId,
