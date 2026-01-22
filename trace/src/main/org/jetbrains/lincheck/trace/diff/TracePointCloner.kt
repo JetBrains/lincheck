@@ -185,6 +185,22 @@ class TracePointCloner(
                 threadId = threadId,
                 eventId = eventId++
             )
+
+            is TRThrowTracePoint -> TRThrowTracePoint(
+                context = context,
+                threadId = threadId,
+                codeLocationId = cloneCodeLocation(tracePoint, codeLocationMap),
+                exception = tracePoint.exception.clone(),
+                eventId = eventId++
+            )
+
+            is TRCatchTracePoint -> TRCatchTracePoint(
+                context = context,
+                threadId = threadId,
+                codeLocationId = cloneCodeLocation(tracePoint, codeLocationMap),
+                exception = tracePoint.exception.clone(),
+                eventId = eventId++
+            )
         }
     }
 
