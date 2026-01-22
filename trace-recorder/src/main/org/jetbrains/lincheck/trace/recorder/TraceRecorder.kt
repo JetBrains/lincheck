@@ -38,17 +38,17 @@ object TraceRecorder {
     fun isRecording(): Boolean =
         session?.isRunning() ?: false
 
-    fun startRecording(mode: TraceCollectorMode, traceDumpFilePath: String?): TraceRecorderSession? {
-        return startRecording(mode, TraceRecorderSession.StartMode.Dynamic, traceDumpFilePath)
-    }
+    fun startRecording(mode: TraceCollectorMode, traceDumpFilePath: String?): TraceRecorderSession? =
+        startRecording(mode, TraceRecorderSession.StartMode.Dynamic, traceDumpFilePath)
 
     fun startRecording(mode: TraceCollectorMode, traceDumpFilePath: String?,
        className: String,
        methodName: String,
        startingCodeLocationId: Int,
-    ): TraceRecorderSession? {
-        return startRecording(
-            mode, TraceRecorderSession.StartMode.FromMethod(
+    ): TraceRecorderSession? =
+        startRecording(
+            mode,
+            TraceRecorderSession.StartMode.FromMethod(
                 thread = Thread.currentThread(),
                 className = className,
                 methodName = methodName,
@@ -56,7 +56,6 @@ object TraceRecorder {
             ),
             traceDumpFilePath
         )
-    }
 
     private fun startRecording(
         collectionMode: TraceCollectorMode,
