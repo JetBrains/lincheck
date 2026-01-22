@@ -694,8 +694,8 @@ class TRSnapshotLineBreakpointTracePoint(
     codeLocationId: Int,
     val stackTraceCodeLocationIds: List<Int>,
     val currentTimeMillis: Long,
-    val parameters: List<TRObject?>,
-    val parameterNames: List<String>,
+    val locals: List<TRObject?>,
+    val localNames: List<String>,
     threadId: Int,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
 ): TRTracePoint(context, codeLocationId, threadId, eventId) {
@@ -713,10 +713,10 @@ class TRSnapshotLineBreakpointTracePoint(
             out.writeInt(id)
         }
         out.writeLong(currentTimeMillis)
-        out.writeInt(parameters.size)
-        parameters.forEach { out.writeTRObject(it) }
-        out.writeInt(parameterNames.size)
-        parameterNames.forEach { out.writeUTF(it) }
+        out.writeInt(locals.size)
+        locals.forEach { out.writeTRObject(it) }
+        out.writeInt(localNames.size)
+        localNames.forEach { out.writeUTF(it) }
         out.endWriteLeafTracepoint()
     }
 
@@ -725,7 +725,7 @@ class TRSnapshotLineBreakpointTracePoint(
         stackTraceCodeLocationIds.forEach { id ->
             out.writeCodeLocation(id)
         }
-        parameters.forEach { out.preWriteTRObject(it) }
+        locals.forEach { out.preWriteTRObject(it) }
     }
 
     override fun toText(appendable: TRAppendable) {
@@ -737,10 +737,10 @@ class TRSnapshotLineBreakpointTracePoint(
             val size = inp.readInt()
             val stackTraceCodeLocationIds = List(size) { inp.readInt() }
             val currentTimeMillis = inp.readLong()
-            val paramsSize = inp.readInt()
-            val parameters = List(paramsSize) { inp.readTRObject(context) }
+            val localsSize = inp.readInt()
+            val locals = List(localsSize) { inp.readTRObject(context) }
             val namesSize = inp.readInt()
-            val parameterNames = List(namesSize) { inp.readUTF() }
+            val localNames = List(namesSize) { inp.readUTF() }
             
             return TRSnapshotLineBreakpointTracePoint(
                 context = context,
@@ -748,8 +748,8 @@ class TRSnapshotLineBreakpointTracePoint(
                 codeLocationId = codeLocationId,
                 stackTraceCodeLocationIds = stackTraceCodeLocationIds,
                 currentTimeMillis = currentTimeMillis,
-                parameters = parameters,
-                parameterNames = parameterNames,
+                locals = locals,
+                localNames = localNames,
                 eventId = eventId,
             )
         }

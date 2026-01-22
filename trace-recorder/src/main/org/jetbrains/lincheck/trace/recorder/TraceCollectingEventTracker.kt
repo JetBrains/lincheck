@@ -761,8 +761,8 @@ class TraceCollectingEventTracker(
     override fun onSnapshotLineBreakpoint(
         threadDescriptor: ThreadDescriptor, 
         codeLocation: Int,
-        params: Array<Any?>,
-        paramNames: Array<String>,
+        locals: Array<Any?>,
+        localNames: Array<String>,
     ) = threadDescriptor.runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
         
@@ -786,8 +786,8 @@ class TraceCollectingEventTracker(
             codeLocationId = codeLocation,
             stackTraceCodeLocationIds = stackTraceCodeLocationIds,
             currentTimeMillis = timeStamp,
-            parameters = params.map { TRObjectOrNull(context, it) },
-            parameterNames = paramNames.toList(),
+            locals = locals.map { TRObjectOrNull(context, it) },
+            localNames = localNames.toList(),
         )
         // TODO maybe these tracepoints should be collected separately
         strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)

@@ -16,6 +16,7 @@ import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Type
 import org.objectweb.asm.commons.GeneratorAdapter
+import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import sun.nio.ch.lincheck.Injections
 
 internal class SnapshotBreakpointTransformer(
@@ -37,26 +38,29 @@ internal class SnapshotBreakpointTransformer(
             adapter.invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
             loadNewCodeLocationId()
 
-            adapter.loadArgArray()
-
-            // Load parameter names
-            val argumentTypes = Type.getArgumentTypes(descriptor)
-            val isStatic = (access and org.objectweb.asm.Opcodes.ACC_STATIC) != 0
-            val paramNames = mutableListOf<String>()
-            var slot = if (isStatic) 0 else 1
-            for (type in argumentTypes) {
-                val name = methodInfo.locals.variables[slot]?.firstOrNull()?.name ?: "arg${paramNames.size}"
-                paramNames.add(name)
-                slot += type.size
-            }
-
-            // Push names onto stack
-            adapter.push(paramNames.size)
-            adapter.newArray(Type.getType(String::class.java))
-            paramNames.forEachIndexed { index, name ->
+            // Load active local variables
+            val activeLocals = methodInfo.locals.activeVariables
+                .filter { !it.isInlineCallMarker && !it.isInlineLambdaMarker }
+                .sortedBy { it.index }
+            
+            // Push values onto stack as Object[]
+            adapter.push(activeLocals.size)
+            adapter.newArray(OBJECT_TYPE)
+            activeLocals.forEachIndexed { index, local ->
                 adapter.dup()
                 adapter.push(index)
-                adapter.push(name)
+                adapter.visitVarInsn(local.type.getOpcode(org.objectweb.asm.Opcodes.ILOAD), local.index)
+                adapter.box(local.type)
+                adapter.arrayStore(OBJECT_TYPE)
+            }
+
+            // Push names onto stack as String[]
+            adapter.push(activeLocals.size)
+            adapter.newArray(Type.getType(String::class.java))
+            activeLocals.forEachIndexed { index, local ->
+                adapter.dup()
+                adapter.push(index)
+                adapter.push(local.name)
                 adapter.arrayStore(Type.getType(String::class.java))
             }
 
