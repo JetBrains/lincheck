@@ -124,7 +124,7 @@ class TraceRecorderSession(val eventTracker: TraceCollectingEventTracker) {
     }
 
     fun installOnFinishHook(hook: TraceRecorderSession.() -> Unit) {
-        val wasAlreadySet = finishHook.compareAndSet(null, hook)
+        val wasAlreadySet = !finishHook.compareAndSet(null, hook)
         if (wasAlreadySet) {
             error("Finish hook was already set for this session")
         }
