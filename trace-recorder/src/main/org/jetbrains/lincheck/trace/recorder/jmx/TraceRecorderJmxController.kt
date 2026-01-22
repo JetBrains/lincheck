@@ -27,6 +27,7 @@ import javax.management.StandardMBean
 object TraceRecorderJmxController : TracingJmxController {
 
     fun register() {
+        // register JMX MBean
         try {
             val mbs = ManagementFactory.getPlatformMBeanServer()
             val objectName = ObjectName(MBEAN_OBJECT_NAME)
@@ -44,17 +45,28 @@ object TraceRecorderJmxController : TracingJmxController {
             Logger.error { "Failed to register JMX MBean at $MBEAN_OBJECT_NAME" }
             Logger.error(e)
         }
+
+        // register shutdown hook
+        try {
+            Runtime.getRuntime().addShutdownHook(Thread(this::shutdownHook))
+        } catch (e: Exception) {
+            Logger.error { "Failed to register shutdown hook for JMX MBean at $MBEAN_OBJECT_NAME" }
+            Logger.error(e)
+        }
     }
 
-    override fun startTracing(traceDumpFilePath: String?) {
+    override fun startTracing(traceDumpFilePath: String, packTrace: Boolean) {
         try {
-            TraceRecorder.startRecording(
+            val session = TraceRecorder.startRecording(
                 mode = parseOutputMode(
                     outputMode = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FORMAT),
                     outputOption = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FOPTION),
                 ),
                 traceDumpFilePath = traceDumpFilePath,
             )
+            session?.installOnFinishHook {
+                dumpTrace(traceDumpFilePath, packTrace)
+            }
         } catch (t: Throwable) {
             Logger.error { "Cannot start trace recording" }
             Logger.error(t)
@@ -70,12 +82,9 @@ object TraceRecorderJmxController : TracingJmxController {
         }
     }
 
-    override fun dumpTrace(traceDumpFilePath: String, packTrace: Boolean) {
-        try {
-            TraceRecorder.dumpTrace(traceDumpFilePath, packTrace)
-        } catch (t: Throwable) {
-            Logger.error { "Cannot dump trace"}
-            Logger.error(t)
+    private fun shutdownHook() {
+        if (TraceRecorder.isRecording()) {
+            stopTracing()
         }
     }
 }

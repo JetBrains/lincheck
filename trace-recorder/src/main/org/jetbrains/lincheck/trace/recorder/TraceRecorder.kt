@@ -35,30 +35,33 @@ object TraceRecorder {
     @Volatile
     private var session: TraceRecorderSession? = null
 
-    fun startRecording(mode: TraceCollectorMode, traceDumpFilePath: String?) {
-        startRecording(mode, traceDumpFilePath, TraceRecorderSession.StartMode.Dynamic)
-    }
+    fun isRecording(): Boolean =
+        session?.isRunning() ?: false
+
+    fun startRecording(mode: TraceCollectorMode, traceDumpFilePath: String?): TraceRecorderSession? =
+        startRecording(mode, TraceRecorderSession.StartMode.Dynamic, traceDumpFilePath)
 
     fun startRecording(mode: TraceCollectorMode, traceDumpFilePath: String?,
        className: String,
        methodName: String,
        startingCodeLocationId: Int,
-    ) {
-        startRecording(mode, traceDumpFilePath,
+    ): TraceRecorderSession? =
+        startRecording(
+            mode,
             TraceRecorderSession.StartMode.FromMethod(
                 thread = Thread.currentThread(),
                 className = className,
                 methodName = methodName,
                 startingCodeLocationId = startingCodeLocationId,
-            )
+            ),
+            traceDumpFilePath
         )
-    }
 
     private fun startRecording(
         collectionMode: TraceCollectorMode,
-        traceDumpFilePath: String?,
         startMode: TraceRecorderSession.StartMode,
-    ) {
+        traceDumpFilePath: String?,
+    ): TraceRecorderSession? {
         // Set a signal "void" object from Injections for better text output
         INJECTIONS_VOID_OBJECT = Injections.VOID_RESULT
 
@@ -77,7 +80,7 @@ object TraceRecorder {
                 }
             }
         }
-        if (count > 1) return
+        if (count > 1) return null
 
         val previousSession = this.session
         if (previousSession != null) {
@@ -118,6 +121,8 @@ object TraceRecorder {
 
         Injections.enableGlobalEventTracking(eventTracker)
         currentThreadDescriptor?.enableAnalysis()
+
+        return session
     }
 
     fun stopRecording() {
