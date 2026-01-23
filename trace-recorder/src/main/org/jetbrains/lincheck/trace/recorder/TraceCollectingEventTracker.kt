@@ -760,7 +760,7 @@ class TraceCollectingEventTracker(
 
     override fun onSnapshotLineBreakpoint(
         threadDescriptor: ThreadDescriptor,
-        codeLocationId: Int,
+        codeLocation: Int,
         locals: Array<Any?>,
     ) = threadDescriptor.runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
@@ -782,7 +782,7 @@ class TraceCollectingEventTracker(
         val tracePoint = TRSnapshotLineBreakpointTracePoint(
             context = context,
             threadId = threadData.threadId,
-            codeLocationId = codeLocationId,
+            codeLocationId = codeLocation,
             stackTraceCodeLocationIds = stackTraceCodeLocationIds,
             currentTimeMillis = timeStamp,
             locals = locals.map { TRObjectOrNull(context, it) },

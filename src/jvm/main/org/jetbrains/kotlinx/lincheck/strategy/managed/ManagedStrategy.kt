@@ -1994,7 +1994,7 @@ internal abstract class ManagedStrategy(
     }
 
     // SnapshotLineBreakpoint not supported for lincheck/gpmc
-    override fun onSnapshotLineBreakpoint(descriptor: ThreadDescriptor?, codeLocationId: Int, locals: Array<Any?>) {}
+    override fun onSnapshotLineBreakpoint(descriptor: ThreadDescriptor?, codeLocation: Int, locals: Array<Any?>) {}
 
     override fun onInlineMethodCall(
         threadDescriptor: ThreadDescriptor,

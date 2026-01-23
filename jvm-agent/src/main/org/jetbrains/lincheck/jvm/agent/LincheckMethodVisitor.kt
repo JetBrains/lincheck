@@ -98,7 +98,7 @@ internal open class LincheckMethodVisitor(
             stackTraceElement,
             accessPath,
             argumentNames,
-            getCurrentActiveVariables().map { it.name }.toList()
+            currentActiveLocals.map { it.name }.toList()
         )
         push(codeLocationId)
         return codeLocationId
@@ -112,5 +112,5 @@ internal open class LincheckMethodVisitor(
         super.visitLineNumber(line, start)
     }
     
-    protected fun getCurrentActiveVariables() = methodInfo.locals.activeVariables
+    protected val currentActiveLocals get() = methodInfo.locals.activeVariables
 }

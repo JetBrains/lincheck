@@ -37,19 +37,34 @@ internal class SnapshotBreakpointTransformer(
         if (liveDebuggerSettings.lineBreakPoints.any { it.lineNumber == line && it.fileName == fileName} ) {
             adapter.invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
             loadNewCodeLocationId()
-            val activeLocals = getCurrentActiveVariables()
+            val activeLocals = currentActiveLocals
             
-            // Push local variable values onto the stack as Object[], including
+            // Pushes local variable values onto the stack as Object[], including
             // - this
             // - method parameters
             // - local variables
+            
+            // Push new array size
             adapter.push(activeLocals.size)
+            
+            // Create new array of size activeLocals.size 
             adapter.newArray(OBJECT_TYPE)
-            activeLocals.forEachIndexed { index, local ->
+            
+            activeLocals.forEachIndexed { index, localVariableInfo ->
+                
+                // Duplicate reference of the newly created array, as it will be consumed by arrayStore
                 adapter.dup()
+                
+                // Push the array index of where to store the variable value
                 adapter.push(index)
-                adapter.visitVarInsn(local.type.getOpcode(ILOAD), local.index)
-                adapter.box(local.type)
+                
+                // Load the variable at slot localVariableInfo.index
+                adapter.visitVarInsn(localVariableInfo.type.getOpcode(ILOAD), localVariableInfo.index)
+                
+                // Boxes primitive values
+                adapter.box(localVariableInfo.type)
+                
+                // Stores the boxed variable value in the new array
                 adapter.arrayStore(OBJECT_TYPE)
             }
 
