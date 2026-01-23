@@ -251,7 +251,7 @@ object CompressingPostprocessor : TracePostprocessor {
      */
     private fun TRTracePoint.removeCoverageInstructions(reader: LazyTraceReader): TRTracePoint? {
         fun TRTracePoint.isCoverageArrayAccess(varNames: Set<String>) = this is TRArrayTracePoint && varNames.any {
-            val ownerName = CodeLocations.accessPath(reader.context, codeLocationId)
+            val ownerName = accessPath
             ownerName != null && ownerName.toString().contains(it)
         }
         fun TRTracePoint.isCoverageLocalVarAccess(varNames: Set<String>) = this is TRLocalVariableTracePoint && varNames.contains(name)
