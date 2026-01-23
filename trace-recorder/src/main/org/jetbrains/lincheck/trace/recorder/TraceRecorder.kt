@@ -38,29 +38,9 @@ object TraceRecorder {
     fun isRecording(): Boolean =
         session?.isRunning() ?: false
 
-    fun startRecording(mode: TraceCollectorMode, traceDumpFilePath: String?): TraceRecorderSession? =
-        startRecording(mode, TraceRecorderSession.StartMode.Dynamic, traceDumpFilePath)
-
-    fun startRecording(mode: TraceCollectorMode, traceDumpFilePath: String?,
-       className: String,
-       methodName: String,
-       startingCodeLocationId: Int,
-    ): TraceRecorderSession? =
-        startRecording(
-            mode,
-            TraceRecorderSession.StartMode.FromMethod(
-                thread = Thread.currentThread(),
-                className = className,
-                methodName = methodName,
-                startingCodeLocationId = startingCodeLocationId,
-            ),
-            traceDumpFilePath
-        )
-
-    private fun startRecording(
-        collectionMode: TraceCollectorMode,
+    fun startRecording(
+        recordingMode: TraceRecordingMode,
         startMode: TraceRecorderSession.StartMode,
-        traceDumpFilePath: String?,
     ): TraceRecorderSession? {
         // Set a signal "void" object from Injections for better text output
         INJECTIONS_VOID_OBJECT = Injections.VOID_RESULT
@@ -91,8 +71,9 @@ object TraceRecorder {
         }
 
         // this method does not need 'runInsideIgnoredSection' because analysis is not enabled until its completion
-        val eventTracker = TraceCollectingEventTracker(collectionMode, createTraceContext(),
-            traceStreamingFilePath = if (collectionMode == TraceCollectorMode.BINARY_STREAM) traceDumpFilePath else null
+        val eventTracker = TraceCollectingEventTracker(recordingMode, createTraceContext(),
+            traceStreamingFilePath =
+                if (recordingMode is TraceRecordingMode.BinaryStream) recordingMode.streamingFilePath else null
         )
         val session = TraceRecorderSession(eventTracker)
             .also { this.session = it }
