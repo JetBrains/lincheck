@@ -58,6 +58,9 @@ class TransformationConfiguration(
 
     var trackSnapshotLineBreakpoints: Boolean = false,
 
+    var trackThrows: Boolean = false,
+    var trackCatchBlocks: Boolean = false,
+
     var wrapInIgnoredSection: Boolean = false,
 
     // TODO: in the future, we may want to provide finer-grained control
@@ -175,6 +178,9 @@ internal fun TransformationConfiguration.shouldApplyVisitor(visitorClass: Class<
 
         IgnoredSectionWrapperTransformer::class.java -> wrapInIgnoredSection
 
+        ThrowTransformer::class.java -> trackThrows
+        CatchBlockStartTransformer::class.java -> trackCatchBlocks
+
         // the configuration does not govern other types of transformers,
         // so they should be applied by default
         else -> true
@@ -284,6 +290,9 @@ object TraceRecorderDefaultTransformationProfile : TransformationProfile {
             trackLoops = true
 
             trackThreadRun = true
+
+            trackThrows = TraceAgentParameters.isInstrumentThrowCatch()
+            trackCatchBlocks = TraceAgentParameters.isInstrumentThrowCatch()
         }
     }
 }
