@@ -758,7 +758,11 @@ class TraceCollectingEventTracker(
         strategy.completeContainerTracePoint(Thread.currentThread(), tracePoint)
     }
 
-    override fun onSnapshotLineBreakpoint(threadDescriptor: ThreadDescriptor, codeLocation: Int) = threadDescriptor.runInsideInjectedCode {
+    override fun onSnapshotLineBreakpoint(
+        threadDescriptor: ThreadDescriptor,
+        codeLocation: Int,
+        locals: Array<Any?>,
+    ) = threadDescriptor.runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
         
         // We do not use threadData.getStack() as we might not track (all) method calls in live debug mode
@@ -781,6 +785,7 @@ class TraceCollectingEventTracker(
             codeLocationId = codeLocation,
             stackTraceCodeLocationIds = stackTraceCodeLocationIds,
             currentTimeMillis = timeStamp,
+            locals = locals.map { TRObjectOrNull(context, it) },
         )
         // TODO maybe these tracepoints should be collected separately
         strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)

@@ -39,6 +39,7 @@ internal object TracePointComparator {
                 .add(tracePoint.exceptionClassName ?: "")
             is TRSnapshotLineBreakpointTracePoint -> h
                 .add(tracePoint.stackTrace) // Should we add it as-is?
+                .addTRList(tracePoint.locals)
         }
         return h.finish()
     }
