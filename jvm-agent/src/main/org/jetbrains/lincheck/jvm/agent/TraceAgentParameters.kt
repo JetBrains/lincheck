@@ -58,8 +58,8 @@ import javax.management.remote.JMXServiceURL
  * - formatOption — extra options for the selected format. Possible options are:
  *       * for `binary`:
  *           * `dump` --- keeps the whole trace in-memory and dumps it to the file at the end;
- *           * `stream` --- writes the trace points incrementally during the execution;
- *       * for `text`: `verbose` --- enables verbose output.
+ *           * `stream` --- writes the trace points incrementally during the execution (default);
+ *       * for `text`: `verbose` --- enables verbose output (disabled by default).
  *       Example: `formatOption=dump`
  *
  * - jmxServer — boolean that enables JMX server for remote monitoring and management, it is off by default.

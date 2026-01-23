@@ -136,71 +136,8 @@ private class ThreadData(
     }
 }
 
-/**
- * Style of trace collecting and output
- *
- * Can be passed as a fourth argument to agent, in any case.
- *
- * Default is [BINARY_STREAM]
- */
-enum class TraceCollectorMode {
-    /**
-     * Write a binary format directly to the output file, without
-     * collecting it in memory.
-     *
-     * It is the default mode if a parameter is not passed or cannot be
-     * recognized.
-     */
-    BINARY_STREAM,
-
-    /**
-     * Collect full trace in the memory and dump to the output file at the end
-     * of the run.
-     */
-    BINARY_DUMP,
-
-    /**
-     * Collect full trace in memory and print it as text to the output file,
-     * without code locations.
-     */
-    TEXT,
-
-    /**
-     * Collect full trace in memory and print it as text to the output file,
-     * with code locations.
-     */
-    TEXT_VERBOSE,
-
-    /**
-     * Throw away all data, for benchmarking purposes
-     */
-    NULL
-}
-
-fun parseOutputMode(outputMode: String?, outputOption: String?): TraceCollectorMode {
-    if (outputMode == null) return TraceCollectorMode.BINARY_STREAM
-    if ("binary".startsWith(outputMode, ignoreCase = true)) {
-        if (outputOption != null && "dump".startsWith(outputOption, ignoreCase = true)) {
-            return TraceCollectorMode.BINARY_DUMP
-        } else {
-            return TraceCollectorMode.BINARY_STREAM
-        }
-    } else if ("text".startsWith(outputMode, true)) {
-        if (outputOption != null && "verbose".startsWith(outputOption, ignoreCase = true)) {
-            return TraceCollectorMode.TEXT_VERBOSE
-        } else {
-            return TraceCollectorMode.TEXT
-        }
-    } else if ("null".equals(outputMode, ignoreCase = true)) {
-        return TraceCollectorMode.NULL
-    } else {
-        // Default
-        return TraceCollectorMode.BINARY_STREAM
-    }
-}
-
 class TraceCollectingEventTracker(
-    internal val mode: TraceCollectorMode,
+    internal val mode: TraceRecordingMode,
     internal val context: TraceContext,
     internal val traceStreamingFilePath: String? = null, // should be non-null for BINARY_STREAM mode
 ) : EventTracker {
@@ -222,14 +159,14 @@ class TraceCollectingEventTracker(
 
     init {
         when (mode) {
-            TraceCollectorMode.BINARY_DUMP -> {
+            is TraceRecordingMode.BinaryDump -> {
                 strategy = MemoryTraceCollecting(context)
             }
-            TraceCollectorMode.BINARY_STREAM -> {
+            is TraceRecordingMode.BinaryStream -> {
                 check(traceStreamingFilePath != null) { "Stream output type needs non-empty output file name" }
                 strategy = FileStreamingTraceCollecting(traceStreamingFilePath, context)
             }
-            TraceCollectorMode.NULL -> {
+            is TraceRecordingMode.Null -> {
                 strategy = NullTraceCollecting(context)
             }
             else -> {

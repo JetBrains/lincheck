@@ -44,14 +44,17 @@ internal object TraceRecorderInjections {
     fun startTraceRecorder(startingCodeLocationId: Int) {
         try {
             TraceRecorder.startRecording(
-                mode = parseOutputMode(
+                recordingMode = TraceRecordingMode.parse(
                     outputMode = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FORMAT),
                     outputOption = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FOPTION),
+                    outputFilePath = TraceAgentParameters.traceDumpFilePath,
                 ),
-                traceDumpFilePath = TraceAgentParameters.traceDumpFilePath,
-                className = TraceAgentParameters.classUnderTraceDebugging,
-                methodName = TraceAgentParameters.methodUnderTraceDebugging,
-                startingCodeLocationId = startingCodeLocationId,
+                startMode = TraceRecorderSession.StartMode.FromMethod(
+                    thread = Thread.currentThread(),
+                    className = TraceAgentParameters.classUnderTraceDebugging,
+                    methodName = TraceAgentParameters.methodUnderTraceDebugging,
+                    startingCodeLocationId = startingCodeLocationId,
+                ),
             )
         } catch (t: Throwable) {
             Logger.error { "Cannot start Trace Recorder: $t" }
