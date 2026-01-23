@@ -19,12 +19,13 @@ import org.objectweb.asm.MethodVisitor
  * Unknown labels are arbitrarily considered less than any known ones and equals to other unknown ones.
  */
 class MethodLabels internal constructor(
-    labels: Map<Label, Int>
+    labels: Map<Label, Int>,
+    catchTargets: Set<Label>
 ): Comparator<Label> {
     // Index is a serial number of the labels (starting from 0) in order method instructions visited.
-    private class LabelInfo(val index: Int, var seen: Boolean)
+    private class LabelInfo(val index: Int, val catchStart: Boolean, var seen: Boolean)
 
-    private val labels = labels.mapValues { (_, v) -> LabelInfo(v, false) }
+    private val labels = labels.mapValues { (k, v) -> LabelInfo(v, catchTargets.contains(k),false) }
 
     override fun compare(
         o1: Label,
@@ -45,8 +46,10 @@ class MethodLabels internal constructor(
 
     fun isLabelSeen(label: Label): Boolean = labels[label]?.seen ?: false
 
+    fun isCatchTarget(label: Label): Boolean = labels[label]?.catchStart ?: false
+
     companion object {
-        val EMPTY = MethodLabels(emptyMap())
+        val EMPTY = MethodLabels(emptyMap(), emptySet())
     }
 }
 
