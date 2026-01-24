@@ -24,6 +24,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.SpanLabelKind.*
 import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.lincheck.util.implies
 
 /**
  * EventLabel is a base class for the hierarchy of classes
@@ -207,15 +208,15 @@ val EventLabel.type: LabelType get() = when (this) {
  *   - memory locations of external objects - these are the objects
  *     allocated outside the tracked code sections.
  *
- * @property initThreadID thread id used for the special initial thread;
+ * @property initThreadId thread id used for the special initial thread;
  *   this thread should contain only the initialization event itself.
- * @property mainThreadID thread id of the main thread, starting the execution of a program.
+ * @property mainThreadId thread id of the main thread, starting the execution of a program.
  * @property memoryInitializer a callback performing a load of the initial values
  *   of a passed memory location.
  */
 class InitializationLabel(
-    val initThreadID: ThreadID,
-    val mainThreadID: ThreadID,
+    val initThreadId: ThreadId,
+    val mainThreadId: ThreadId,
     val memoryInitializer: MemoryIDInitializer,
 ) : EventLabel(LabelKind.Send) {
 
@@ -341,7 +342,7 @@ data class ThreadForkLabel(
  * Interprets the initialization label as a thread fork of the main thread.
  */
 fun InitializationLabel.asThreadForkLabel() =
-    ThreadForkLabel(setOf(mainThreadID))
+    ThreadForkLabel(setOf(mainThreadId))
 
 /**
  * Attempts to interpret a given event label as a thread fork label.
@@ -1208,7 +1209,7 @@ data class CoroutineResumeLabel(
 // TODO: generalize actor labels to method call/return labels?
 data class ActorLabel(
     override val spanKind: SpanLabelKind,
-    val threadId: ThreadID,
+    val threadId: ThreadId,
     val actor: Actor
 ) : EventLabel(
     kind = spanKind.toLabelKind(), 
