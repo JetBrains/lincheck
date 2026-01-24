@@ -22,6 +22,16 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.lincheck.descriptors.Types.BOOLEAN_TYPE_BOXED
+import org.jetbrains.lincheck.descriptors.Types.BYTE_TYPE_BOXED
+import org.jetbrains.lincheck.descriptors.Types.CHAR_TYPE_BOXED
+import org.jetbrains.lincheck.descriptors.Types.INT_TYPE_BOXED
+import org.jetbrains.lincheck.descriptors.Types.LONG_TYPE_BOXED
+import org.jetbrains.lincheck.descriptors.Types.SHORT_TYPE_BOXED
+import org.jetbrains.lincheck.util.ensureNull
+import org.jetbrains.lincheck.util.implies
+import org.jetbrains.lincheck.util.toBoolean
+import org.jetbrains.lincheck.util.toInt
 import kotlin.collections.HashMap
 import java.util.IdentityHashMap
 import org.objectweb.asm.Type

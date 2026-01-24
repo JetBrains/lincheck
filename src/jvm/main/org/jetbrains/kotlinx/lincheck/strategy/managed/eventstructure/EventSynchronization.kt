@@ -21,6 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.lincheck.util.implies
 
 /**
  * Synchronization algebra describes how event labels can synchronize to form new labels.

@@ -20,7 +20,8 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
-import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.lincheck.util.Enumerator
+import org.jetbrains.lincheck.util.ensureNull
 
 fun buildEnumerator(events: List<AtomicThreadEvent>) = object : Enumerator<AtomicThreadEvent> {
 
