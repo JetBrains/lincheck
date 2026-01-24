@@ -1,26 +1,14 @@
 /*
  * Lincheck
  *
- * Copyright (C) 2019 - 2022 JetBrains s.r.o.
+ * Copyright (C) 2019 - 2026 JetBrains s.r.o.
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as
- * published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Lesser Public License for more details.
- *
- * You should have received a copy of the GNU General Lesser Public
- * License along with this program.  If not, see
- * <http://www.gnu.org/licenses/lgpl-3.0.html>
+ * This Source Code Form is subject to the terms of the
+ * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
+ * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
-
-import org.jetbrains.kotlinx.lincheck.util.*
+package org.jetbrains.lincheck.util
 
 fun interface Relation<in T> {
     operator fun invoke(x: T, y: T): Boolean
@@ -225,23 +213,4 @@ class RelationMatrix<T>(
         return true
     }
 
-    fun toGraph(): Graph<T> = toGraph(nodes, enumerator)
-
-}
-
-fun<T> Relation<T>.toGraph(nodes: Collection<T>, enumerator: Enumerator<T>) = object : Graph<T> {
-    private val relation = this@toGraph
-
-    override val nodes: Collection<T>
-        get() = nodes
-
-    private val adjacencyList = Array(nodes.size) { i ->
-        val x = enumerator[i]
-        nodes.filter { y -> relation(x, y) }
-    }
-
-    override fun adjacent(node: T): List<T> {
-        val idx = enumerator[node]
-        return adjacencyList[idx]
-    }
 }

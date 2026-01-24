@@ -20,7 +20,10 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
-import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.lincheck.util.Enumerator
+import org.jetbrains.lincheck.util.Relation
+import org.jetbrains.lincheck.util.RelationMatrix
+import org.jetbrains.lincheck.util.updateInplace
 import java.util.*
 
 // adjacency list is a function that
@@ -121,3 +124,23 @@ private fun<T> Graph<T>.initializeTopoSortState(): TopoSortState<T> {
     }
     return state
 }
+
+
+fun<T> Relation<T>.toGraph(nodes: Collection<T>, enumerator: Enumerator<T>) = object : Graph<T> {
+    private val relation = this@toGraph
+
+    override val nodes: Collection<T>
+        get() = nodes
+
+    private val adjacencyList = Array(nodes.size) { i ->
+        val x = enumerator[i]
+        nodes.filter { y -> relation(x, y) }
+    }
+
+    override fun adjacent(node: T): List<T> {
+        val idx = enumerator[node]
+        return adjacencyList[idx]
+    }
+}
+
+fun<T> RelationMatrix<T>.toGraph(): Graph<T> = toGraph(nodes, enumerator)
