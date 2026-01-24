@@ -21,7 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
-import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.lincheck.util.refine
 
 class LockConsistencyViolation(val event1: Event, val event2: Event) : Inconsistency()
 
