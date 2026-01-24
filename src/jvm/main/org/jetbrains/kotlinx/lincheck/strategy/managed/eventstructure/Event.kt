@@ -22,6 +22,14 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.MemoryLocation
 import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.lincheck.util.Covering
+import org.jetbrains.lincheck.util.Relation
+import org.jetbrains.lincheck.util.ensureNotNull
+import org.jetbrains.lincheck.util.equivalent
+import org.jetbrains.lincheck.util.findMapped
+import org.jetbrains.lincheck.util.implies
+import org.jetbrains.lincheck.util.refine
+import org.jetbrains.lincheck.util.satisfies
 
 typealias EventID = Int
 
