@@ -268,7 +268,7 @@ internal abstract class ManagedStrategy(
     override fun runInvocation(): InvocationResult {
         initializeInvocation()
         val result: InvocationResult = try {
-            runner.runInvocation()
+            runInvocationImpl()
         } finally {
             restoreMemorySnapshot()
         }
@@ -291,6 +291,11 @@ internal abstract class ManagedStrategy(
         }
         // Otherwise return the sudden result
         return suddenResult
+    }
+
+    // (OLD) TODO: better name?
+    protected open fun runInvocationImpl(): InvocationResult {
+        return runner.runInvocation()
     }
 
     protected open fun enableSpinCycleReplay() {}
@@ -533,7 +538,7 @@ internal abstract class ManagedStrategy(
      * Returns whether the specified thread is active and
      * can continue its execution (i.e., is not blocked/finished).
      */
-    private fun isActive(iThread: Int): Boolean =
+    protected open fun isActive(iThread: Int): Boolean =
         threadScheduler.isSchedulable(iThread) && !isTestThreadCoroutineSuspended(iThread)
 
     /**
@@ -646,7 +651,7 @@ internal abstract class ManagedStrategy(
     /**
      * Threads to which an execution can be switched from thread [iThread].
      */
-    private fun switchableThreads(iThread: Int) =
+    fun switchableThreads(iThread: Int) =
         if (currentExecutionPart == PARALLEL) {
             (0 until threadScheduler.nThreads).filter { it != iThread && isActive(it) }
         } else {

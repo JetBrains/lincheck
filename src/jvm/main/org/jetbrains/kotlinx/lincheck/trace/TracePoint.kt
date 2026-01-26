@@ -621,6 +621,9 @@ internal sealed class SwitchReason(private val reason: String) {
     object ParkWait     : SwitchReason("thread is parked")
     object ActiveLock   : SwitchReason("active lock detected")
     object Suspended    : SwitchReason("coroutine is suspended")
+    // NOTE: This seems to overlap with the loop detection a lot. But I think for now I will just port this switch reason as it was.
+    // Then someone more knowledgeable can think of way to combine this nicely with the rest of the codebase.
+    object SpinBound    : SwitchReason("spinning bound is reached")
     class  ThreadJoinWait(threadDisplayNumber: ThreadId)
                         : SwitchReason("waiting for Thread $threadDisplayNumber to finish")
 

@@ -35,7 +35,7 @@ import org.jetbrains.lincheck.util.sortedMutableListOf
 import org.jetbrains.lincheck.util.unreachable
 
 
-class EventStructure(
+internal class EventStructure(
     val memoryInitializer: MemoryInitializer,
     // TODO: refactor --- avoid using callbacks!
     private val reportInconsistencyCallback: ReportInconsistencyCallback,
@@ -516,7 +516,7 @@ class EventStructure(
             //   and also grouping events for which there is no reason to make switch in-between
             //   (e.g. `Alloc` followed by a `Write`).
             do {
-                internalThreadSwitchCallback(iThread, SwitchReason.STRATEGY_SWITCH)
+                internalThreadSwitchCallback(iThread, SwitchReason.StrategySwitch)
             } while (inReplayPhase() && !canReplayNextEvent(iThread))
         }
         return replayer.currentEvent
@@ -998,7 +998,7 @@ class EventStructure(
         //  What about initialization-related issues?
         checkNotNull(responseEvent)
         if (isSpinLoopBoundReached(responseEvent)) {
-            internalThreadSwitchCallback(responseEvent.threadId, SwitchReason.SPIN_BOUND)
+            internalThreadSwitchCallback(responseEvent.threadId, SwitchReason.SpinBound)
         }
         return responseEvent
     }

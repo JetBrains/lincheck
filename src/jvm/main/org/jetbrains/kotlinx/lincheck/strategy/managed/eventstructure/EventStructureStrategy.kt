@@ -29,27 +29,38 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
-import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
+import org.jetbrains.kotlinx.lincheck.trace.SwitchReason
+import org.jetbrains.kotlinx.lincheck.trace.Trace
+import org.jetbrains.lincheck.datastructures.scenario
+import org.jetbrains.lincheck.descriptors.getType
+import org.jetbrains.lincheck.trace.TraceContext
+import org.jetbrains.lincheck.util.ensure
+import org.jetbrains.lincheck.util.ensureNull
+import org.jetbrains.lincheck.util.implies
+import org.jetbrains.lincheck.util.runInsideIgnoredSection
+import org.jetbrains.lincheck.util.satisfies
+import org.jetbrains.lincheck.util.toInt
+import org.jetbrains.lincheck.util.updateInplace
 import sun.nio.ch.lincheck.TestThread
 import java.lang.reflect.*
 import org.objectweb.asm.Type
 
-class EventStructureStrategy(
-        testCfg: ModelCheckingCTestConfiguration,
-        testClass: Class<*>,
-        scenario: ExecutionScenario,
-        validationFunction: Actor?,
-        stateRepresentation: Method?
-) : ManagedStrategy(testClass, scenario, validationFunction, stateRepresentation, testCfg) {
+internal class EventStructureStrategy(
+    runner: Runner,
+    settings: ManagedStrategySettings,
+    inIdeaPluginReplayMode: Boolean = false,
+    context: TraceContext
+) : ManagedStrategy(runner, settings, inIdeaPluginReplayMode, context) {
 
     private val memoryInitializer: MemoryInitializer = { location ->
-        runInIgnoredSection {
-            location.read(eventStructure.objectRegistry::getValue)?.opaque()
+        runInsideIgnoredSection {
+            //TODO, fix the signature or convert between types
+            location.read(eventStructure.objectRegistry::getValue)
         }
     }
 
     private val eventStructure: EventStructure =
-        EventStructure(nThreads, memoryInitializer, ::onInconsistency) { iThread, reason ->
+        EventStructure( memoryInitializer, ::onInconsistency) { iThread, reason ->
             switchCurrentThread(iThread, reason, mustSwitch = true)
         }
 
@@ -68,6 +79,7 @@ class EventStructureStrategy(
     override val parkingTracker: ParkingTracker =
         EventStructureParkingTracker(eventStructure)
 
+    //TODO: Figure out what happened here?
     override val trackFinalFields: Boolean = true
 
     val stats = Stats()
@@ -136,10 +148,10 @@ class EventStructureStrategy(
         return (result to inconsistency)
     }
 
-    // TODO: temporarily disable trace collection for event structure strategy
-    override fun tryCollectTrace(result: InvocationResult): Trace? {
+    // (OLD) TODO: temporarily disable trace collection for event structure strategy
+    override fun tryCollectTrace(result: InvocationResult): Pair<Trace?, InvocationResult> {
         // return super.tryCollectTrace(result)
-        return null
+        return null to result
     }
 
     class Stats {
@@ -267,19 +279,26 @@ class EventStructureStrategy(
         )
     }
 
-    override fun shouldSwitch(iThread: Int): ThreadSwitchDecision {
+    var threadToSwitch : ThreadId? = null
+    override fun onSwitchPoint(iThread: ThreadId) {
+        threadToSwitch = iThread;
+    }
+
+    override fun shouldSwitch(): Boolean {
+        // TODO: this has changed, see what the new semantics are
         // If strategy is in replay phase we first need to execute replaying threads
-        if (eventStructure.inReplayPhase() && !eventStructure.inReplayPhase(iThread)) {
-            return ThreadSwitchDecision.MAY
-        }
+//        if (eventStructure.inReplayPhase() && !eventStructure.inReplayPhase(iThread)) {
+//            return ThreadSwitchDecision.MAY
+//        }
+
         // If strategy is in replay mode for given thread
         // we should wait until replaying the next event become possible
         // (i.e. when all the dependencies will be replayed too)
-        if (eventStructure.inReplayPhase(iThread)) {
-            return if (eventStructure.canReplayNextEvent(iThread))
-                ThreadSwitchDecision.NOT
+        if (threadToSwitch != null && eventStructure.inReplayPhase(threadToSwitch!!)) {
+            return if (eventStructure.canReplayNextEvent(threadToSwitch!!))
+                false
             else
-                ThreadSwitchDecision.MUST
+                true
         }
 
         /* For event structure strategy enforcing context switches is not necessary,
@@ -292,13 +311,13 @@ class EventStructureStrategy(
          * Thus we might want to customize scheduling strategy.
          * TODO: make scheduling strategy configurable
          */
-        return ThreadSwitchDecision.NOT
+        return false
     }
 
     override fun chooseThread(iThread: Int): Int {
         // see comment in `shouldSwitch` method
         // TODO: make scheduling strategy configurable
-        return if (runner.currentExecutionPart == ExecutionPart.PARALLEL)
+        return if (currentExecutionPart == ExecutionPart.PARALLEL)
             switchableThreads(iThread).first()
         else
             eventStructure.mainThreadId
