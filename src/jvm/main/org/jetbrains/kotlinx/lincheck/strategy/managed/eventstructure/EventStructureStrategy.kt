@@ -60,7 +60,7 @@ internal class EventStructureStrategy(
 
     private val eventStructure: EventStructure =
         EventStructure( memoryInitializer, ::onInconsistency) { iThread, reason ->
-            switchCurrentThread(iThread, reason, mustSwitch = true)
+            switchCurrentThread(iThread, reason)
         }
 
     private var isTestInstanceRegistered = false

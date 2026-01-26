@@ -67,6 +67,8 @@ sealed class BlockingReason {
     data object Waiting : BlockingReason()
     data object Suspended : BlockingReason()
     data object Parked : BlockingReason()
+    data object SpinBound : BlockingReason()
+    data object StrategySwitch : BlockingReason() // We need this since we want to have some BlockingReason that maps in toSwitchReason to StrategySwtich
     data class  ThreadJoin(val joinedThreadId: ThreadId) : BlockingReason()
 }
 

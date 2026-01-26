@@ -637,6 +637,7 @@ internal fun BlockingReason?.toSwitchReason(iThreadToDisplayNumber: (Int) -> Int
     is BlockingReason.Waiting       -> SwitchReason.MonitorWait
     is BlockingReason.Parked        -> SwitchReason.ParkWait
     is BlockingReason.Suspended     -> SwitchReason.Suspended
+    is BlockingReason.SpinBound     -> SwitchReason.SpinBound
     is BlockingReason.ThreadJoin    -> SwitchReason.ThreadJoinWait(iThreadToDisplayNumber(joinedThreadId))
     else                            -> SwitchReason.StrategySwitch
 }

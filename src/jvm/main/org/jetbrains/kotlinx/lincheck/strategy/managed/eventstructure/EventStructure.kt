@@ -21,9 +21,9 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.strategy.BlockingReason
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.*
-import org.jetbrains.kotlinx.lincheck.trace.SwitchReason
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.util.SortedList
 import org.jetbrains.lincheck.util.ensure
@@ -516,7 +516,7 @@ internal class EventStructure(
             //   and also grouping events for which there is no reason to make switch in-between
             //   (e.g. `Alloc` followed by a `Write`).
             do {
-                internalThreadSwitchCallback(iThread, SwitchReason.StrategySwitch)
+                internalThreadSwitchCallback(iThread, BlockingReason.StrategySwitch)
             } while (inReplayPhase() && !canReplayNextEvent(iThread))
         }
         return replayer.currentEvent
@@ -998,7 +998,7 @@ internal class EventStructure(
         //  What about initialization-related issues?
         checkNotNull(responseEvent)
         if (isSpinLoopBoundReached(responseEvent)) {
-            internalThreadSwitchCallback(responseEvent.threadId, SwitchReason.SpinBound)
+            internalThreadSwitchCallback(responseEvent.threadId, BlockingReason.SpinBound)
         }
         return responseEvent
     }
