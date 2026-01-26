@@ -683,6 +683,7 @@ internal abstract class ManagedStrategy(
         val threadEndTracePoint = threadRunTracePoint?.let { MethodReturnTracePoint(context, eventId, it) }
         if (threadEndTracePoint != null) traceCollector?.addTracePoint(threadEndTracePoint)
         disableAnalysis()
+        loopDetector.resetThread(threadDescriptor)
         onThreadFinish(currentThreadId)
     }
 
@@ -708,6 +709,7 @@ internal abstract class ManagedStrategy(
             methodType = Types.MethodType(Types.VOID_TYPE)
         )
         popMethodId(currentThreadId, methodId)
+        loopDetector.resetThread(threadDescriptor)
         // check if the exception is internal
         if (isLincheckInternalException(exception)) {
             onInternalException(currentThreadId, exception)
@@ -768,6 +770,7 @@ internal abstract class ManagedStrategy(
         analysisSectionStack.clear()
         randoms.clear()
         methodIdStack.clear()
+        loopDetector.resetAll()
     }
 
     override fun awaitUserThreads(timeoutNano: Long): Long {

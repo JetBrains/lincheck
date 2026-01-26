@@ -20,6 +20,8 @@ interface LoopDetector {
         STUCK // M iterations
     }
 
+    fun resetAll()              // between iterations
+    fun resetThread(threadDescriptor: ThreadDescriptor) // when a thread finishes
 
     fun beforeLoopEnter(threadDescriptor: ThreadDescriptor, codeLocation: Int, loopId: Int)
     fun onLoopIteration(threadDescriptor: ThreadDescriptor, codeLocation: Int, loopId: Int, methodId: Int): Decision
@@ -78,6 +80,14 @@ class BoundedLoopDetector(
     // shouldSwitch(): Boolean ???
 
     private val threadStates = IdentityHashMap<ThreadDescriptor, LoopDetectorThreadState>()
+
+    override fun resetAll() {
+        threadStates.clear()
+    }
+
+    override fun resetThread(threadDescriptor: ThreadDescriptor) {
+        threadStates.remove(threadDescriptor)
+    }
 
     private fun state(threadDescriptor: ThreadDescriptor): LoopDetectorThreadState =
         threadStates.getOrPut(threadDescriptor) {
