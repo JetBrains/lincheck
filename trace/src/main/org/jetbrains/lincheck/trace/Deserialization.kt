@@ -299,7 +299,7 @@ class LazyTraceReader private constructor(
         input.close()
     }
 
-    fun readRoots(): List<TRTracePoint> = lock.withLock {
+    fun readTopLevelTracePoints(): List<List<TRTracePoint>> = lock.withLock {
         var start = System.currentTimeMillis()
 
         if (!contextLoaded) {
@@ -309,7 +309,7 @@ class LazyTraceReader private constructor(
             contextLoaded = true
         }
 
-        val roots = mutableMapOf<Int, TRTracePoint>()
+        val threadTracepoints = mutableMapOf<Int, List<TRTracePoint>>()
 
         dataBlocks.forEach {
             val (threadId, blocks) = it
@@ -328,18 +328,26 @@ class LazyTraceReader private constructor(
                     if (tracePoint != null) tracepoints.add(tracePoint)
                 }
             )
-            if (tracepoints.isEmpty()) {
-                Logger.warn { "Thread $threadId doesn't write any tracepoints" }
-            } else {
-                if (tracepoints.size > 1) {
-                    Logger.error { "Thread $threadId wrote too many root tracepoints: ${tracepoints.size}" }
-                }
-                roots[threadId] = tracepoints.first()
-            }
-        }
-        Logger.debug { "Roots loaded in ${System.currentTimeMillis() - start} ms" }
 
-        return roots.entries.sortedBy { it.key }.map { (_, tracePoint) -> tracePoint }
+            threadTracepoints[threadId] = tracepoints
+        }
+        Logger.debug { "Loaded top-level trace points in ${System.currentTimeMillis() - start} ms" }
+
+        return threadTracepoints.entries
+            .sortedBy { it.key }
+            .map { (_, tracepoints) -> tracepoints }
+    }
+
+    fun readRoots(): List<TRTracePoint> = lock.withLock {
+        val threadTracepoints = readTopLevelTracePoints()
+        return threadTracepoints.mapIndexedNotNull { threadId, tracepoints ->
+            if (tracepoints.isEmpty()) {
+                Logger.warn { "Thread $threadId does not contain any tracepoints" }
+            } else if (tracepoints.size > 1) {
+                Logger.warn { "Thread $threadId has more than one root tracepoints: ${tracepoints.size}" }
+            }
+            tracepoints.firstOrNull()
+        }
     }
 
     fun loadAllChildren(parent: TRContainerTracePoint) = lock.withLock {
