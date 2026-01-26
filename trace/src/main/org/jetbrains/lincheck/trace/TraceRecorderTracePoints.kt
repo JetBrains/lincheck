@@ -83,8 +83,8 @@ enum class DiffStatus {
 
 sealed class TRTracePoint(
     internal val context: TraceContext,
-    val codeLocationId: Int,
     val threadId: Int,
+    val codeLocationId: Int,
     val eventId: Int
 ) {
     /**
@@ -133,7 +133,7 @@ sealed class TRContainerTracePoint(
     codeLocationId: Int,
     var parentTracePoint: TRContainerTracePoint? = null,
     eventId: Int
-) : TRTracePoint(context, codeLocationId, threadId, eventId) {
+) : TRTracePoint(context, threadId, codeLocationId, eventId) {
     protected var children: ChunkedList<TRTracePoint> = ChunkedList()
         private set
 
@@ -521,7 +521,7 @@ sealed class TRFieldTracePoint(
     val obj: TRObject?,
     val value: TRObject?,
     eventId: Int
-) : TRTracePoint(context, codeLocationId, threadId, eventId) {
+) : TRTracePoint(context, threadId, codeLocationId, eventId) {
 
     internal abstract fun accessSymbol(): String
 
@@ -616,7 +616,7 @@ sealed class TRLocalVariableTracePoint(
     val localVariableId: Int,
     val value: TRObject?,
     eventId: Int
-) : TRTracePoint(context, codeLocationId, threadId, eventId) {
+) : TRTracePoint(context, threadId, codeLocationId, eventId) {
 
     internal abstract fun accessSymbol(): String
 
@@ -700,7 +700,7 @@ class TRSnapshotLineBreakpointTracePoint(
     val currentTimeMillis: Long,
     val locals: List<TRObject?>,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-): TRTracePoint(context, codeLocationId, threadId, eventId) {
+): TRTracePoint(context, threadId, codeLocationId, eventId) {
     
     val threadName: String 
         get() = context.getThreadName(threadId)
@@ -761,7 +761,7 @@ sealed class TRArrayTracePoint(
     val index: Int,
     val value: TRObject?,
     eventId: Int
-) : TRTracePoint(context, codeLocationId, threadId, eventId) {
+) : TRTracePoint(context, threadId, codeLocationId, eventId) {
 
     internal abstract fun accessSymbol(): String
 
