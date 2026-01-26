@@ -136,8 +136,23 @@ private class ThreadData(
     }
 }
 
+/**
+ * Represents the layout of stored trace data:
+ * - [FLAT]: a flat structure where trace events are stored sequentially as a flat list;
+ * - [TREE]: a hierarchical structure where trace events are organized in a tree.
+ */
+enum class TraceDataLayout { FLAT, TREE }
+
+fun TraceDataLayout.isFlat(): Boolean =
+    (this == TraceDataLayout.FLAT)
+
+fun TraceDataLayout.isTree(): Boolean =
+    (this == TraceDataLayout.TREE)
+
+
 class TraceCollectingEventTracker(
     internal val mode: TraceRecordingMode,
+    internal val layout: TraceDataLayout,
     internal val context: TraceContext,
     internal val traceStreamingFilePath: String? = null, // should be non-null for BINARY_STREAM mode
 ) : EventTracker {
@@ -202,7 +217,9 @@ class TraceCollectingEventTracker(
         // be enabled first in order for this method to even invoke its lambda
         descriptor.runInsideInjectedCode {
             strategy.registerCurrentThread(threadData.threadId)
-            pushInvokedMethodCalls(thread, threadData)
+            if (layout.isTree()) {
+                pushInvokedMethodCalls(thread, threadData)
+            }
         }
     }
 
@@ -229,17 +246,20 @@ class TraceCollectingEventTracker(
 
         threadDescriptor.runInsideInjectedCode {
             strategy.registerCurrentThread(threadData.threadId)
-            val tracePoint = TRMethodCallTracePoint(
-                context = context,
-                threadId = threadData.threadId,
-                codeLocationId = -1,
-                methodId = context.getOrCreateMethodId("Thread", "run", Types.MethodType(Types.VOID_TYPE)),
-                obj = TRObject(context, thread),
-                parameters = emptyList()
-            )
-            strategy.tracePointCreated(null, tracePoint)
-            threadData.setRootCall(tracePoint)
-            threadData.pushStackFrame(tracePoint, thread, isInline = false)
+
+            if (layout.isTree()) {
+                val tracePoint = TRMethodCallTracePoint(
+                    context = context,
+                    threadId = threadData.threadId,
+                    codeLocationId = -1,
+                    methodId = context.getOrCreateMethodId("Thread", "run", Types.MethodType(Types.VOID_TYPE)),
+                    obj = TRObject(context, thread),
+                    parameters = emptyList()
+                )
+                strategy.tracePointCreated(null, tracePoint)
+                threadData.setRootCall(tracePoint)
+                threadData.pushStackFrame(tracePoint, thread, isInline = false)
+            }
         }
     }
 
@@ -845,18 +865,20 @@ class TraceCollectingEventTracker(
         threads[thread] = threadData
         strategy.registerCurrentThread(threadData.threadId)
 
-        val tracePoint = TRMethodCallTracePoint(
-            context = context,
-            threadId = threadData.threadId,
-            codeLocationId = codeLocationId,
-            methodId = context.getOrCreateMethodId(className, methodName, Types.MethodType(Types.VOID_TYPE)),
-            obj = null,
-            parameters = emptyList()
-        )
-        strategy.tracePointCreated(null, tracePoint)
+        if (layout.isTree()) {
+            val tracePoint = TRMethodCallTracePoint(
+                context = context,
+                threadId = threadData.threadId,
+                codeLocationId = codeLocationId,
+                methodId = context.getOrCreateMethodId(className, methodName, Types.MethodType(Types.VOID_TYPE)),
+                obj = null,
+                parameters = emptyList()
+            )
+            strategy.tracePointCreated(null, tracePoint)
 
-        threadData.setRootCall(tracePoint)
-        threadData.pushStackFrame(tracePoint, null, isInline = false)
+            threadData.setRootCall(tracePoint)
+            threadData.pushStackFrame(tracePoint, null, isInline = false)
+        }
     }
 
     private fun pushMethodCall(
